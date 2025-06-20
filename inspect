@@ -1,0 +1,95 @@
+#!/bin/sh
+
+# Clean and create tmp directory
+[ -d ~/tmp ] && rm -rf ~/tmp/*
+mkdir -p ~/tmp
+
+# Homebrew packages
+brew list --formula > ~/tmp/brew-formulas.txt
+brew list --cask > ~/tmp/brew-casks.txt
+
+# Mac App Store apps
+if command -v mas >/dev/null 2>&1; then
+   mas list > ~/tmp/mas-apps.txt
+else
+   brew install mas
+   mas list > ~/tmp/mas-apps.txt
+fi
+
+# All applications in /Applications
+ls -la /Applications > ~/tmp/applications-list.txt
+
+# System Profiler method (comprehensive)
+system_profiler SPApplicationsDataType > ~/tmp/system-applications.txt
+
+# Audio Units (AU)
+[ -d /Library/Audio/Plug-Ins/Components/ ] && ls -la /Library/Audio/Plug-Ins/Components/ > ~/tmp/au-plugins.txt
+[ -d ~/Library/Audio/Plug-Ins/Components/ ] && ls -la ~/Library/Audio/Plug-Ins/Components/ >> ~/tmp/au-plugins.txt
+
+# VST/VST3
+[ -d /Library/Audio/Plug-Ins/VST/ ] && ls -la /Library/Audio/Plug-Ins/VST/ > ~/tmp/vst-plugins.txt
+[ -d /Library/Audio/Plug-Ins/VST3/ ] && ls -la /Library/Audio/Plug-Ins/VST3/ >> ~/tmp/vst-plugins.txt
+[ -d ~/Library/Audio/Plug-Ins/VST/ ] && ls -la ~/Library/Audio/Plug-Ins/VST/ >> ~/tmp/vst-plugins.txt
+[ -d ~/Library/Audio/Plug-Ins/VST3/ ] && ls -la ~/Library/Audio/Plug-Ins/VST3/ >> ~/tmp/vst-plugins.txt
+
+# AAX (Pro Tools)
+[ -d "/Library/Application Support/Avid/Audio/Plug-Ins/" ] && ls -la "/Library/Application Support/Avid/Audio/Plug-Ins/" > ~/tmp/aax-plugins.txt
+
+# MIDI plugins specifically
+[ -d "/Library/Audio/MIDI Drivers/" ] && ls -la "/Library/Audio/MIDI Drivers/" > ~/tmp/midi-drivers.txt
+
+# More application directories
+ls -la /Applications/Utilities/ > ~/tmp/utilities-applications.txt
+[ -d ~/Applications/ ] && ls -la ~/Applications/ > ~/tmp/ddp-applications.txt
+
+# Package receipts from direct installers
+pkgutil --pkgs > ~/tmp/pkgs.txt
+
+# System information
+system_profiler SPHardwareDataType > ~/tmp/hardware.txt
+system_profiler SPSoftwareDataType > ~/tmp/software.txt
+system_profiler SPMemoryDataType > ~/tmp/memory.txt
+system_profiler SPStorageDataType > ~/tmp/storage.txt
+system_profiler SPDisplaysDataType > ~/tmp/displays.txt
+system_profiler SPNetworkDataType > ~/tmp/network.txt
+
+# Network configuration
+ifconfig > ~/tmp/ifconfig.txt
+scutil --nwi > ~/tmp/network-info.txt
+netstat -rn > ~/tmp/routes.txt
+
+# Process and system state
+ps aux > ~/tmp/processes.txt
+vm_stat > ~/tmp/memory-stats.txt
+df -h > ~/tmp/disk-usage.txt
+uptime > ~/tmp/uptime.txt
+
+# Security settings
+[ -f /etc/krb5.conf ] && sudo cat /etc/krb5.conf > ~/tmp/krb5.conf
+[ -f ~/.ssh/config ] && cp ~/.ssh/config ~/tmp/ssh-config.txt
+
+# OCaml environment info (add to existing system info section)
+if command -v opam >/dev/null 2>&1; then
+    opam --version > ~/tmp/opam-version.txt
+    opam switch show > ~/tmp/opam-switch.txt
+fi
+
+if command -v ocaml >/dev/null 2>&1; then
+    ocaml -version > ~/tmp/ocaml-version.txt
+fi
+
+# Create archive with hostname, timestamp, and UUID
+HOSTNAME=$(hostname -s)
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+ARCHIVE="${HOSTNAME}-${TIMESTAMP}-${UUID}.tar.zst"
+
+cd ~/tmp
+tar --zstd -cf "${ARCHIVE}" *
+ssh www.yoyodyne.com 'mkdir -p ~/places/hosts/'
+scp "${ARCHIVE}" "www.yoyodyne.com:places/hosts/"
+
+# Clean up individual files but keep the archive
+rm -f *.txt krb5.conf ssh-config.txt
+
+echo "✅ Upload complete: ~/tmp/${ARCHIVE} → 🌐 places/hosts/${ARCHIVE}"

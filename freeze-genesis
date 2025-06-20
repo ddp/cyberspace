@@ -1,0 +1,86 @@
+#!/bin/sh
+
+pushd ~/. > /dev/null 2>&1
+
+rm -rf ~/tmp/*
+touch ~/tmp/genesis.log
+
+# Archive .ssh directory, excluding sockets and pipes
+find .ssh \( -type s -o -type p \) -prune -o -type f -print | tar czf ~/src/ssh.tar.zst -T -
+
+# Create a file list to ensure no sockets or device files are included
+TMPFILES=/tmp/genesis.files.$$
+> "$TMPFILES"
+
+# Add bin files
+find bin -type f -o -type l >> "$TMPFILES"
+
+# Add specific files if they exist
+for f in .emacs .gitconfig .hints .tcshrc .twmrc .Xdefaults krb5.conf; do
+  [ -e src/$f ] && echo "src/$f" >> "$TMPFILES"
+done
+
+# Add elisp files
+find src/.emacs.d -type f -o -type l >> "$TMPFILES"
+
+# Add specific directories if they exist
+for dir in dvcs/clone dvcs/build dvcs/update lisp scheme osx; do
+  [ -d src/$dir ] && echo "src/$dir" >> "$TMPFILES"
+done
+
+# Add the ssh archive
+[ -e src/ssh.tar.zst ] && echo "src/ssh.tar.zst" >> "$TMPFILES"
+
+# Add OCaml toolchain state
+if command -v opam >/dev/null 2>&1; then
+    opam switch export "$HOME/tmp/opam-switch.txt"
+    opam list --installed --short > "$HOME/tmp/opam-packages.txt"
+fi
+
+# Add to TMPFILES section
+[ -e ~/tmp/opam-switch.txt ] && echo "tmp/opam-switch.txt" >> "$TMPFILES"
+[ -e ~/tmp/opam-packages.txt ] && echo "tmp/opam-packages.txt" >> "$TMPFILES"
+
+# Archive opam root if it exists
+if [ -d ~/.opam ]; then
+    cd ~ && tar czf tmp/opam-root.tar.gz .opam
+    echo "tmp/opam-root.tar.gz" >> "$TMPFILES"
+fi
+
+# Create the genesis archive
+echo "Genesis archive started at $(date)" > ~/tmp/genesis.log
+cat $TMPFILES >> ~/tmp/genesis.log
+tar --zstd --no-xattrs -cvf ~/tmp/genesis.tar.zst -T "$TMPFILES" >> ~/tmp/genesis.log 2>&1
+rm -f "$TMPFILES"
+sha256sum ~/tmp/genesis.tar.zst > ~/tmp/genesis.sha256
+
+# Check for dry-run mode
+dry_run=false
+case "$1" in
+  -n)
+    dry_run=true
+    ;;
+esac
+
+# Only do the copy if not in dry-run mode
+if ! $dry_run; then
+  printf "Genesis uploading..." >> ~/tmp/genesis.log
+  case "$OSTYPE" in
+    darwin*)
+      [ -d ~/iCloud ] && cp -v ~/bin/genesis ~/iCloud/
+      [ -d ~/iCloud ] && cp -v ~/tmp/genesis.sha256 ~/iCloud/
+      [ -d ~/iCloud ] && cp -v ~/tmp/genesis.tar.zst ~/iCloud/
+      [ -d ~/iCloud ] && cp -v ~/bin/imp ~/iCloud/
+      [ -d ~/OneDrive ] && cp -v ~/bin/genesis ~/OneDrive/
+      [ -d ~/OneDrive ] && cp -v ~/tmp/genesis.sha256 ~/OneDrive/
+      [ -d ~/OneDrive ] && cp -v ~/tmp/genesis.tar.zst ~/OneDrive/
+      [ -d ~/OneDrive ] && cp -v ~/bin/imp ~/OneDrive/
+      
+      ;;
+  esac
+  printf "done at $(date)\n" >> ~/tmp/genesis.log
+else
+  echo "Genesis archive written at $(date)" >> ~/tmp/genesis.log
+fi
+
+popd > /dev/null 2>&1
