@@ -19,9 +19,15 @@ if [ $? -eq 0 ]; then
     if [ $? -eq 0 ]; then
         echo "✅ Integrity verified"
         
-        # Decrypt archive
-        age --decrypt genesis.tar.zst.age > genesis.tar.zst
-        
+        # Decrypt archive with Keychain integration
+        PASSPHRASE=$(security find-generic-password -a "$USER" -s "cyberspace-genesis" -w 2>/dev/null)
+        if [ -n "$PASSPHRASE" ]; then
+            echo "✅ Using passphrase from Keychain"
+            echo "$PASSPHRASE" | age --decrypt genesis.tar.zst.age > genesis.tar.zst
+        else
+            echo "⚠️ Passphrase not found in Keychain, prompting..."
+            age --decrypt genesis.tar.zst.age > genesis.tar.zst
+        fi
         printf "Do you want to transfer to cyberspace/genesis? [y|N] "
         read ans
         case "$ans" in
@@ -39,8 +45,16 @@ if [ $? -eq 0 ]; then
         read ans
         case "$ans" in
           [yY]* )
-            # Try to decrypt anyway
-            age --decrypt genesis.tar.zst.age > genesis.tar.zst
+            # Try to decrypt anyway with Keychain integration
+            PASSPHRASE=$(security find-generic-password -a "$USER" -s "cyberspace-genesis" -w 2>/dev/null)            
+            if [ -n "$PASSPHRASE" ]; then
+                echo "✅ Using passphrase from Keychain"
+                echo "$PASSPHRASE" | age --decrypt genesis.tar.zst.age > genesis.tar.zst
+            else
+                echo "⚠️ Passphrase not found in Keychain, prompting..."
+                age --decrypt genesis.tar.zst.age > genesis.tar.zst
+            fi
+            
             printf "Do you want to transfer to cyberspace/genesis? [y|N] "
             read ans2
             case "$ans2" in
