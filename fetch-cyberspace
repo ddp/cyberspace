@@ -1,37 +1,10 @@
-# #!/bin/sh
-
-# REMOTE=www.yoyodyne.com
-# REMOTE_PATH=places/cyberspace/genesis.tar.zst
-# LOCAL_PATH=~/cyberspace/genesis.tar.zst
-
-# echo "Fetching cyberspace/genesis archive from $REMOTE:$REMOTE_PATH..."
-# scp "$REMOTE:$REMOTE_PATH" "$LOCAL_PATH"
-
-# if [ $? -eq 0 ]; then
-#   echo "✅ Download complete: $REMOTE_PATH → 🌐 $LOCAL_PATH"
-
-#   printf "Do you want to transfer to cyberspace/genesis? [y/N] "
-#   read ans
-#   case "$ans" in
-#     [Yy]* )
-#       echo "3..2..1..🛰️"
-#       "$HOME/bin/genesis" "$LOCAL_PATH"
-#       ;;
-#     * )
-#       echo "📦 Skipping transfer to cyberspace/genesis."
-#       ;;
-#   esac
-# else
-#   echo "❌ Failed to fetch cyberspace/genesis archive."
-# fi
-
 #!/bin/sh
 
 REMOTE=www.yoyodyne.com
-REMOTE_PATH=places/cyberspace/genesis.tar.zst
-CHECKSUM_PATH=places/cyberspace/genesis.sha256
-LOCAL_PATH=~/cyberspace/genesis.tar.zst
-LOCAL_CHECKSUM=~/cyberspace/genesis.sha256
+REMOTE_PATH=places/cyberspace/genesis.tar.zst.age
+CHECKSUM_PATH=places/cyberspace/genesis.tar.zst.age.sha256
+LOCAL_PATH=~/cyberspace/genesis.tar.zst.age
+LOCAL_CHECKSUM=~/cyberspace/genesis.tar.zst.age.sha256
 
 # Check for existing cyberspace installation
 if [ ! -d ~/cyberspace ]; then
@@ -53,16 +26,19 @@ if [ $? -eq 0 ]; then
     
     # Verify integrity
     cd ~/cyberspace
-    sha256sum -c genesis.sha256 >/dev/null 2>&1
+    sha256sum -c genesis.tar.zst.age.sha256 >/dev/null 2>&1
     if [ $? -eq 0 ]; then
       echo "✅ Integrity verified"
+
+      # Decrypt archive
+      age --decrypt ~/cyberspace/genesis.tar.zst.age > ~/cyberspace/genesis.tar.zst
       
       printf "Do you want to transfer to cyberspace/genesis? [y/N] "
       read ans
       case "$ans" in
         [Yy]* )
           echo "3..2..1..🛰️"
-          "$HOME/bin/genesis" "$LOCAL_PATH"
+          "$HOME/bin/genesis" "$HOME/cyberspace/genesis.tar.zst"
           ;;
         * )
           echo "📦 Skipping transfer to cyberspace/genesis."
@@ -83,7 +59,7 @@ if [ $? -eq 0 ]; then
         case "$ans2" in
           [Yy]* )
             echo "3..2..1..🛰️"
-            "$HOME/bin/genesis" "$LOCAL_PATH"
+            "$HOME/bin/genesis" "$HOME/cyberspace/genesis.tar.zst"
             ;;
           * )
             echo "📦 Skipping transfer to cyberspace/genesis."
@@ -99,4 +75,3 @@ if [ $? -eq 0 ]; then
 else
   echo "❌ Failed to fetch cyberspace/genesis archive."
 fi
-

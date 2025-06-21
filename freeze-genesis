@@ -52,7 +52,12 @@ echo "Genesis archive started at $(date)" > ~/tmp/genesis.log
 cat $TMPFILES >> ~/tmp/genesis.log
 tar --zstd --no-xattrs -cvf ~/tmp/genesis.tar.zst -T "$TMPFILES" >> ~/tmp/genesis.log 2>&1
 rm -f "$TMPFILES"
-sha256sum ~/tmp/genesis.tar.zst > ~/tmp/genesis.sha256
+
+# Encrypt the archive
+age --passphrase --output ~/tmp/genesis.tar.zst.age ~/tmp/genesis.tar.zst
+
+# Hash the encrypted file (what gets distributed)
+sha256sum ~/tmp/genesis.tar.zst.age > ~/tmp/genesis.tar.zst.age.sha256
 
 # Check for dry-run mode
 dry_run=false
