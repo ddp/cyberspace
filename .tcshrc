@@ -1,0 +1,142 @@
+    
+if ($?prompt) then
+    # An interactive shell
+
+    set filec
+	set autolist                        # list completions on double-TAB
+    set autoexpand                      # expands history automagically
+    set history = 10
+    set savehist = 10
+
+    stty -parenb -istrip cs8
+
+    # set prompt = `hostname | awk -F. '{print $1}'`"% "
+    set prompt = '%n@%m%# '
+
+if ($OSTYPE == "darwin") then
+    setenv OS_DISTRO `uname -a | awk '{ print $4 }'`
+else if ($OSTYPE == "linux") then
+    setenv OS_DISTRO `uname -a | awk '{ print $6 }'`
+endif
+
+    setenv EGG_FRECKELS T
+
+    setenv HOMEBREW_CELLAR /opt/homebrew/Cellar
+    setenv HOMEBREW_PREFIX /opt/homebrew
+    setenv HOMEBREW_REPOSITORY /opt/homebrew
+    setenv HOMEBREW_NO_ENV_HINTS T
+
+    setenv MANPATH /opt/homebrew/share/man`[ ${?MANPATH} == 1 ] && echo ":${MANPATH}"`:;
+    setenv INFOPATH /opt/homebrew/share/info`[ ${?INFOPATH} == 1 ] && echo ":${INFOPATH}"`;
+
+    setenv JAVA_HOME /Users/ddp/Library/Caches/Coursier/arc/https/cdn.azul.com/zulu/bin/zulu21.42.19-ca-jdk21.0.7-macosx_aarch64.tar.gz/zulu21.42.19-ca-jdk21.0.7-macosx_aarch64
+
+    set path = ( $path ~/bin \
+        /opt/homebrew/bin \
+        /Library/Frameworks/Python.framework/Versions/3.13/bin \
+        ~/src/plan9 )
+
+    set hosts = `sed -e 's/^ *//' -e '/^#/d' -e 's/[, ].*//' -e '/\[/d' ~/.ssh/known_hosts | sort -u`
+    complete ssh 'p/1/$hosts/' 'p/2/c'
+
+    setenv BLOCKSIZE	K
+    setenv LANG         en_US.ISO_8859-1
+    setenv LC_ALL       en_US.UTF-8
+    setenv LC_CTYPE     en_US.UTF-8
+#    setenv LS_COLORS    "rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=01;37;41:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=01;36:*.au=01;36:*.flac=01;36:*.m4a=01;36:*.mid=01;36:*.midi=01;36:*.mka=01;36:*.mp3=01;36:*.mpc=01;36:*.ogg=01;36:*.ra=01;36:*.wav=01;36:*.oga=01;36:*.opus=01;36:*.spx=01;36:*.xspf=01;36:"
+    setenv TZ           :/etc/localtime
+
+    if ($?TMPDIR) then
+    setenv EMACS_PATH   /Applications/Emacs.app/Contents/MacOS
+    alias emacs         $EMACS_PATH/Emacs -nw
+    alias emacsclient   $EMACS_PATH/bin/emacsclient -n -s $TMPDIR/emacs501/editor $1
+    alias ec            $EMACS_PATH/bin/emacsclient -n -s $TMPDIR/emacs501/editor $1
+    setenv EDITOR       emacs
+    endif
+    setenv EDITOR       emacs
+    setenv TOOLCHAINS   swift
+
+    alias aliases       "alias | sort"
+    alias lsacc         ls -lau
+    alias lsacl         ls -lae
+    alias lsattr        ls -la@
+    alias lsctl         ls -lac
+    alias lsdot         "ls -lad .*"
+    alias lsenv         "env | sort"
+    alias lsflags       ls -laO
+    alias lsflag        ls -laO
+    alias lsmod         ls -lat
+    alias lsnew         ls -laU
+    alias lssym         "ls -la | grep -e '->' | sort"
+    alias lsuse         ls -lau
+
+    alias netscan       "nmap -sT -v 192.168.0.0/24"
+    alias portscan      "nmap -sT -Pn -v 192.168.0.0/24"
+    alias portmap       "nmap -sT -Pn -v 192.168.0.0/24"
+
+    alias csi           rlwrap csi
+    alias epoch         date +%s
+    alias fen           ~/bin/forge-word
+    alias gstat         git status -uno # ignore Untracked files
+    alias grep          grep -i         # ignore case
+    alias hd            xxd -g 4
+    alias hst           ~/bin/hst.pl
+    alias pdp10         rlwrap ~/src/dvcs/BIN/pdp10
+    alias pids          ps -eo pid,comm
+    alias purge         ~/bin/purge
+#    alias sbcl          rlwrap /usr/local/bin/sbcl --core ~/lsrc/sbcl.core --noinform
+    alias sbcl          rlwrap /usr/local/bin/sbcl --noinform
+    alias ssh           ssh -X -K       # X11 forwarding, delegate Kerberos
+    alias stash         ssh-add --apple-use-keychain
+    alias top           top -r
+    alias mayfair       rlwrap ~/src/dvcs/BIN/microvax3900
+
+    alias weather       curl http://wttr.in/94903
+
+    if ($HOST == "om" || $HOST == "ombra" || $HOST == "fedora") then
+        setenv DISPLAY 192.168.1.33:0.0
+    endif
+    
+    # SSH key management - platform specific
+    if (`uname -s` == "Darwin") then
+        # macOS - use keychain (UseKeychain yes in ~/.ssh/config)
+        # No agent startup needed
+    else
+        # Linux/FreeBSD - use ssh-agent with persistence
+        set agent_env = ~/.ssh/agent-env
+        
+        if (-f $agent_env) then
+            source $agent_env > /dev/null
+        endif
+        
+        ssh-add -l >& /dev/null
+        if ($status == 2) then
+            eval `ssh-agent -c`
+            echo "setenv SSH_AUTH_SOCK $SSH_AUTH_SOCK" > $agent_env
+            echo "setenv SSH_AGENT_PID $SSH_AGENT_PID" >> $agent_env
+            ssh-add
+        endif
+    endif
+
+    # # SSH key management - platform specific
+    # if (`uname -s` == "Darwin") then
+    #     # macOS - use keychain (UseKeychain yes in ~/.ssh/config)
+    #     # No agent startup needed
+    # else
+    #     # Linux/FreeBSD - use ssh-agent
+    #     ssh-add -l >& /dev/null
+    #     if ($status == 2) then
+    #         eval `ssh-agent -c`
+    #     endif
+    #     ssh-add -l >& /dev/null || ssh-add
+    # endif    
+endif
+
+
+# BEGIN opam configuration
+# This is useful if you're using opam as it adds:
+#   - the correct directories to the PATH
+#   - auto-completion for the opam binary
+# This section can be safely removed at any time if needed.
+if ( -f '/Users/ddp/.opam/opam-init/init.csh' ) source '/Users/ddp/.opam/opam-init/init.csh' >& /dev/null
+# END opam configuration
