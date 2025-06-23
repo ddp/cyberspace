@@ -127,7 +127,7 @@ if [[ -o interactive ]]; then
     alias portmap="nmap -sT -Pn -v 192.168.0.0/24"
     alias portscan="nmap -sT -Pn -v 192.168.0.0/24"
     alias purge="~/bin/purge"
-    alias sbcl="rlwrap /usr/local/bin/sbcl --noinform"
+    alias sbcl="rlwrap /opt/local/bin/sbcl --noinform"
     alias ssh="ssh -X -K"       # X11 forwarding, delegate Kerberos
     alias stash="ssh-add --apple-use-keychain"
     alias top="top -r"
