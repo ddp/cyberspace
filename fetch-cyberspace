@@ -1,0 +1,84 @@
+#!/bin/sh
+
+REMOTE=www.yoyodyne.com
+REMOTE_PATH=places/cyberspace/genesis.tar.zst.age
+CHECKSUM_PATH=places/cyberspace/genesis.tar.zst.age.sha256
+LOCAL_PATH=~/cyberspace/genesis.tar.zst.age
+LOCAL_CHECKSUM=~/cyberspace/genesis.tar.zst.age.sha256
+
+# Check for existing cyberspace installation
+if [ ! -d ~/cyberspace ]; then
+    echo "❌ No cyberspace installation found. Use 'imp' for initial setup."
+    exit 1
+fi
+  
+echo "Fetching cyberspace/genesis archive from $REMOTE:$REMOTE_PATH..."
+scp "$REMOTE:$REMOTE_PATH" "$LOCAL_PATH"
+
+if [ $? -eq 0 ]; then
+  echo "✅ Download complete: $REMOTE_PATH → 🌐 $LOCAL_PATH"
+  
+  echo "Fetching checksum from $REMOTE:$CHECKSUM_PATH..."
+  scp "$REMOTE:$CHECKSUM_PATH" "$LOCAL_CHECKSUM"
+  
+  if [ $? -eq 0 ]; then
+    echo "✅ Checksum downloaded"
+    
+    # Verify integrity
+    cd ~/cyberspace
+    sha256sum -c genesis.tar.zst.age.sha256 >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      echo "✅ Integrity verified"
+
+      # Decrypt with SSH private key
+      echo "Decrypting with SSH private key..."
+      age --decrypt -i ~/.ssh/id_ed25519 ~/cyberspace/genesis.tar.zst.age > ~/cyberspace/genesis.tar.zst
+      if [ $? -eq 0 ]; then
+          echo "✅ Archive decrypted"
+      else
+          echo "❌ Decryption failed"
+          exit 1
+      fi
+      
+      printf "Do you want to transfer to cyberspace/genesis? [y/N] "
+      read ans
+      case "$ans" in
+        [Yy]* )
+          echo "3..2..1..🛰️"
+          "$HOME/bin/genesis" "$HOME/cyberspace/genesis.tar.zst"
+          ;;
+        * )
+          echo "📦 Skipping transfer to cyberspace/genesis."
+          ;;
+      esac
+    else
+      echo "❌ Checksum mismatch - archive corrupted"
+      exit 1
+    fi
+  else
+    echo "❌ Failed to fetch checksum - proceeding without verification"
+    printf "Continue without integrity check? [y/N] "
+    read ans
+    case "$ans" in
+      [Yy]* )
+        printf "Do you want to transfer to cyberspace/genesis? [y/N] "
+        read ans2
+        case "$ans2" in
+          [Yy]* )
+            echo "3..2..1..🛰️"
+            "$HOME/bin/genesis" "$HOME/cyberspace/genesis.tar.zst"
+            ;;
+          * )
+            echo "📦 Skipping transfer to cyberspace/genesis."
+            ;;
+        esac
+        ;;
+      * )
+        echo "❌ Aborting due to missing checksum."
+        exit 1
+        ;;
+    esac
+  fi
+else
+  echo "❌ Failed to fetch cyberspace/genesis archive."
+fi

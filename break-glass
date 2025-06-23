@@ -1,0 +1,271 @@
+#!/bin/sh
+
+#
+# break-glass: Emergency cyberspace restoration
+#
+# Use this if you accidentally run singularity and need immediate resurrection
+# This script attempts multiple restoration paths to get you back to operational status
+#
+
+echo "🚨 CYBERSPACE BREAK-GLASS EMERGENCY RESTORATION 🚨"
+echo "Attempting computational resurrection..."
+
+# Function to find and execute a command from multiple possible locations
+find_and_run() {
+    local cmd="$1"
+    shift
+    
+    # Try multiple possible locations
+    for path in \
+        ~/bin/"$cmd" \
+        ~/iCloud/bin/"$cmd" \
+        ~/Library/Mobile\ Documents/com~apple~CloudDocs/bin/"$cmd" \
+        ~/cyberspace/tools/"$cmd" \
+        ./"$cmd"; do
+        
+        if [ -x "$path" ]; then
+            echo "✅ Found $cmd at: $path"
+            "$path" "$@"
+            return $?
+        fi
+    done
+    
+    echo "❌ Could not locate $cmd"
+    return 1
+}
+
+# Check if we have local archives to work with
+check_local_archives() {
+    echo "🔍 Checking for local archives..."
+    
+    for dir in ~/tmp ~/cyberspace ~/Downloads ~/iCloud ~/OneDrive; do
+        if [ -f "$dir/genesis.tar.zst.age" ]; then
+            echo "✅ Found encrypted archive: $dir/genesis.tar.zst.age"
+            LOCAL_ARCHIVE="$dir/genesis.tar.zst.age"
+            LOCAL_ARCHIVE_DIR="$dir"
+            return 0
+        fi
+        if [ -f "$dir/genesis.tar.zst" ]; then
+            echo "✅ Found unencrypted archive: $dir/genesis.tar.zst"
+            LOCAL_ARCHIVE="$dir/genesis.tar.zst"
+            LOCAL_ARCHIVE_DIR="$dir"
+            return 0
+        fi
+    done
+    
+    echo "⚠️ No local archives found"
+    return 1
+}
+
+# Attempt local restoration first
+local_restoration() {
+    echo "🏠 Attempting local restoration..."
+    
+    if ! check_local_archives; then
+        return 1
+    fi
+    
+    # Create working directory
+    mkdir -p ~/cyberspace
+    cd ~/cyberspace
+    
+    # Handle encrypted archives
+    if echo "$LOCAL_ARCHIVE" | grep -q "\.age$"; then
+        echo "🔐 Decrypting archive with SSH key..."
+        
+        # Copy files to working directory
+        cp "$LOCAL_ARCHIVE" .
+        [ -f "$LOCAL_ARCHIVE_DIR/genesis.tar.zst.age.sha256" ] && cp "$LOCAL_ARCHIVE_DIR/genesis.tar.zst.age.sha256" .
+        
+        # Decrypt with primary key
+        if age --decrypt -i ~/.ssh/id_ed25519 genesis.tar.zst.age > genesis.tar.zst 2>/dev/null; then
+            echo "✅ Decryption successful"
+            LOCAL_ARCHIVE="./genesis.tar.zst"
+        else
+            echo "❌ Decryption failed - trying alternative keys..."
+            # Try alternative key locations
+            for key in ~/.ssh/id_rsa ~/.ssh/id_ecdsa ~/.ssh/id_dsa; do
+                if [ -f "$key" ]; then
+                    echo "🔑 Trying $key..."
+                    if age --decrypt -i "$key" genesis.tar.zst.age > genesis.tar.zst 2>/dev/null; then
+                        echo "✅ Decryption successful with $key"
+                        LOCAL_ARCHIVE="./genesis.tar.zst"
+                        break
+                    fi
+                fi
+            done
+            
+            # If all SSH keys failed, check if decryption happened anyway
+            if [ ! -f "./genesis.tar.zst" ] || [ ! -s "./genesis.tar.zst" ]; then
+                echo "❌ All decryption attempts failed"
+                return 1
+            fi
+        fi
+    else
+        # Copy unencrypted archive
+        cp "$LOCAL_ARCHIVE" ./genesis.tar.zst
+        LOCAL_ARCHIVE="./genesis.tar.zst"
+    fi
+    
+    # Run genesis restoration
+    echo "🔄 Running genesis restoration..."
+    if find_and_run genesis "$LOCAL_ARCHIVE"; then
+        echo "✅ Genesis restoration successful!"
+        
+        # Check and restore OCaml environment
+        echo "🔍 Checking OCaml environment..."
+        if ! command -v opam >/dev/null 2>&1; then
+            echo "⚠️ opam not found, skipping OCaml restoration"
+        elif [ ! -d ~/.opam ]; then
+            echo "🔧 Initializing fresh opam environment..."
+            opam init --disable-sandboxing --yes
+            eval $(opam env)
+        else
+            echo "✅ OCaml environment detected"
+            eval $(opam env)
+            
+            # Restore packages if available
+            if [ -f ~/src/tmp/opam-switch.txt ]; then
+                echo "📦 Restoring OCaml packages..."
+                opam switch import ~/src/tmp/opam-switch.txt --yes
+            fi
+        fi
+        
+        echo "✅ Local restoration complete!"
+        return 0
+    else
+        echo "❌ Genesis restoration failed"
+        return 1
+    fi
+}
+
+# Attempt network restoration
+network_restoration() {
+    echo "🌐 Attempting network restoration..."
+    
+    if find_and_run imp; then
+        echo "✅ Network restoration successful!"
+        
+        # Check and restore OCaml environment after network restoration
+        echo "🔍 Checking OCaml environment..."
+        if ! command -v opam >/dev/null 2>&1; then
+            echo "⚠️ opam not found, skipping OCaml restoration"
+        elif [ ! -d ~/.opam ]; then
+            echo "🔧 Initializing fresh opam environment..."
+            opam init --disable-sandboxing --yes
+            eval $(opam env)
+        else
+            echo "✅ OCaml environment detected"
+            eval $(opam env)
+            
+            # Restore packages if available
+            if [ -f ~/src/tmp/opam-switch.txt ]; then
+                echo "📦 Restoring OCaml packages..."
+                opam switch import ~/src/tmp/opam-switch.txt --yes
+            fi
+        fi
+        
+        return 0
+    else
+        echo "❌ Network restoration failed"
+        return 1
+    fi
+}
+
+# Manual instructions if all else fails
+manual_instructions() {
+    echo ""
+    echo "🆘 MANUAL RESTORATION REQUIRED"
+    echo "================================================="
+    echo ""
+    echo "If you see this message, automatic restoration failed."
+    echo "Here are manual steps to try:"
+    echo ""
+    echo "1. Check for archives in cloud storage:"
+    echo "   - Look in iCloud Drive for genesis.tar.zst.age"
+    echo "   - Check OneDrive for backup copies"
+    echo ""
+    echo "2. Download from remote server:"
+    echo "   mkdir -p ~/cyberspace && cd ~/cyberspace"
+    echo "   scp www.yoyodyne.com:places/cyberspace/genesis.tar.zst.age ."
+    echo "   scp www.yoyodyne.com:places/cyberspace/genesis.tar.zst.age.sha256 ."
+    echo ""
+    echo "3. Verify and decrypt manually:"
+    echo "   sha256sum -c genesis.tar.zst.age.sha256"
+    echo "   age --decrypt -i ~/.ssh/id_ed25519 genesis.tar.zst.age > genesis.tar.zst"
+    echo ""
+    echo "4. Extract and restore:"
+    echo "   tar --zstd -xvf genesis.tar.zst"
+    echo "   chmod +x */bin/genesis"
+    echo "   */bin/genesis genesis.tar.zst"
+    echo ""
+    echo "5. Initialize OCaml environment:"
+    echo "   opam init --disable-sandboxing --yes"
+    echo "   eval \$(opam env)"
+    echo ""
+    echo "6. If SSH keys are gone, you may need to:"
+    echo "   - Regenerate SSH keys: ssh-keygen -t ed25519"
+    echo "   - Add public key to GitHub/authorized_keys"
+    echo "   - Use password authentication temporarily"
+    echo ""
+    echo "7. Test restoration:"
+    echo "   exec \$SHELL"
+    echo "   opam --version && ocaml -version"
+    echo ""
+    echo "Remember: The void is temporary, cyberspace is eternal."
+    echo "🌌 Your computational identity will survive this."
+}
+
+# Main restoration sequence
+main() {
+    echo ""
+    echo "Starting emergency restoration sequence..."
+    echo "========================================"
+    
+    # Ensure Homebrew is in PATH for age command
+    case ":$PATH:" in
+        *:/opt/homebrew/bin:*) ;;
+        *) export PATH="/opt/homebrew/bin:$PATH" ;;
+    esac
+    
+    # Try local restoration first (fastest)
+    if local_restoration; then
+        echo ""
+        echo "🎉 RESTORATION COMPLETE!"
+        echo "Your cyberspace identity has been resurrected."
+        echo ""
+        echo "Recommended next steps:"
+        echo "1. exec \$SHELL  # Reload your shell environment"
+        echo "2. Test key functionality: opam --version, ocaml -version"
+        echo "3. Run freeze-genesis to capture current state"
+        echo "4. Run publish-genesis to update remote copies"
+        echo ""
+        return 0
+    fi
+    
+    echo ""
+    echo "Local restoration failed, trying network..."
+    
+    # Try network restoration as backup
+    if network_restoration; then
+        echo ""
+        echo "🎉 RESTORATION COMPLETE!"
+        echo "Your cyberspace identity has been resurrected from the network."
+        echo ""
+        echo "Recommended next steps:"
+        echo "1. exec \$SHELL  # Reload your shell environment"  
+        echo "2. Test key functionality: opam --version, ocaml -version"
+        echo "3. Verify environment integrity"
+        echo ""
+        return 0
+    fi
+    
+    # All automatic methods failed
+    echo ""
+    echo "❌ Automatic restoration methods failed."
+    manual_instructions
+    return 1
+}
+
+# Execute main function
+main "$@"

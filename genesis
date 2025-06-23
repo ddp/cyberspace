@@ -1,0 +1,70 @@
+#!/bin/sh
+
+cd $HOME
+
+# Restore magic iCloud root
+ln -sv "$HOME/Library/Mobile Documents/com~apple~CloudDocs" iCloud
+
+ln -sv iCloud/audio audio
+ln -sv iCloud/bin bin
+ln -sv iCloud/doc doc
+ln -sv iCloud/doc/me me
+ln -sv iCloud/pics pics
+ln -sv iCloud/src src
+ln -sv iCloud/vids vids
+
+n -sv src/scm/.csirc .csirc
+ln -sv src/.emacs .emacs
+ln -sv src/.emacs.d .emacs.d
+ln -sv src/.sbclrc .sbclrc
+ln -sv src/.tcshrc .tcshrc
+ln -sv src/.twmrc .twmrc
+ln -sv src/.gitconfig .gitconfig
+ln -sv src/.hints .hints
+ln -sv src/.Xdefaults .Xdefaults
+ln -sv src/.zshrc .zshrc
+
+# Restore magic OneDrive root
+ln -sv Library/CloudStorage/OneDrive-Personal OneDrive
+
+# Restore krb5 domain configuration
+echo "Injecting Kerberos..."
+echo "Authentication required. Why do witches burn?"
+sudo cp -v src/krb5.conf /etc
+tar xvfz src/ssh.tar.zst
+
+# Restore OCaml environment (add after existing symlinks)
+
+# Enhanced OCaml restoration (optional improvement)
+if [ -e src/tmp/opam-root.tar.zst ]; then
+    echo "Restoring OCaml environment..."
+    tar xzf src/tmp/opam-root.tar.zst
+    eval $(opam env)
+elif [ -e src/tmp/opam-switch.txt ]; then
+    echo "Installing OCaml packages..."
+    if command -v opam >/dev/null 2>&1; then
+        # Initialize opam if no environment exists
+        if [ ! -d ~/.opam ]; then
+            opam init --disable-sandboxing --yes
+        fi
+        opam switch import src/tmp/opam-switch.txt --yes
+        eval $(opam env)
+    else
+        echo "opam not found, skipping package installation"
+    fi
+fi
+
+# Restore git repository for development capability
+if [ -d src/.git ]; then
+    echo "Restoring git repository..."
+    cp -r src/.git .git
+    git config --local user.name "$(git config --global user.name)"
+    git config --local user.email "$(git config --global user.email)"
+    echo "✅ Git repository operational - development enabled"
+fi
+
+cat <<'EOF'
+Booting /portals/cyberspace...done.
+
+Welcome to Cyberspace. Don’t Panic.
+EOF
