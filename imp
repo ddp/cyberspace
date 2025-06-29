@@ -5,23 +5,42 @@ if [ ! -e $HOME/cyberspace ]; then
     mkdir -vp cyberspace
 fi
 
-# Ensure Homebrew is in PATH for age command
-case ":$PATH:" in
-    *:/opt/homebrew/bin:*) ;;
-    *) export PATH="/opt/homebrew/bin:$PATH" ;;
+# Platform-specific setup
+case "$OSTYPE" in
+    darwin*)
+        # macOS - ensure Homebrew is in PATH for age command
+        case ":$PATH:" in
+            *:/opt/homebrew/bin:*) ;;
+            *) export PATH="/opt/homebrew/bin:$PATH" ;;
+        esac
+        GENESIS_SCRIPT="genesis"
+        ;;
+    linux*)
+        # Linux - ensure age is available
+        if ! command -v age >/dev/null 2>&1; then
+            echo "❌ age command not found. Please install age encryption tool."
+            exit 1
+        fi
+        GENESIS_SCRIPT="genesis-fedora"
+        ;;
+    *)
+        echo "❌ Unsupported platform: $OSTYPE"
+        exit 1
+        ;;
 esac
 
 echo "Downloading cyberspace bootstrap tools..."
 scp www.yoyodyne.com:places/cyberspace/genesis $HOME/cyberspace/genesis
+scp www.yoyodyne.com:places/cyberspace/genesis-fedora $HOME/cyberspace/genesis-fedora
 scp www.yoyodyne.com:places/cyberspace/genesis.tar.zst.age $HOME/cyberspace/genesis.tar.zst.age
 scp www.yoyodyne.com:places/cyberspace/genesis.tar.zst.age.sha256 $HOME/cyberspace/genesis.tar.zst.age.sha256
 
 if [ $? -eq 0 ]; then
-    echo "Download complete: 🌐 places/cyberspace/genesis → cyberspace/genesis"
+    echo "✅ Download complete: 🌐 places/cyberspace/genesis → cyberspace/genesis"
     
     # Verify integrity of encrypted archive
     cd $HOME/cyberspace
-    sha256sum -c genesis.tar.zst.age.sha256 >/dev/null 2>&1
+    shasum -a 256 -c genesis.tar.zst.age.sha256 >/dev/null 2>&1 || sha256sum -c genesis.tar.zst.age.sha256 >/dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo "✅ Integrity verified"
         
@@ -35,15 +54,15 @@ if [ $? -eq 0 ]; then
             exit 1
         fi
 
-        printf "Do you want to transfer to cyberspace/genesis? [y|N] "
+        printf "Do you want to transfer to cyberspace/%s? [y|N] " "$GENESIS_SCRIPT"
         read ans
         case "$ans" in
           [yY]* )
             echo "3..2..1..🛰️"
-            sh "$HOME/cyberspace/genesis" "$HOME/cyberspace/genesis.tar.zst"
+            sh "$HOME/cyberspace/$GENESIS_SCRIPT" "$HOME/cyberspace/genesis.tar.zst"
             ;;
           * )
-            echo "📦 Skipping transfer to cyberspace/genesis."
+            echo "📦 Skipping transfer to cyberspace/$GENESIS_SCRIPT."
             ;;
         esac
     else
@@ -62,15 +81,15 @@ if [ $? -eq 0 ]; then
                     exit 1
                 fi
 
-            printf "Do you want to transfer to cyberspace/genesis? [y|N] "
+            printf "Do you want to transfer to cyberspace/%s? [y|N] " "$GENESIS_SCRIPT"
             read ans2
             case "$ans2" in
               [yY]* )
                 echo "3..2..1..🛰️"
-                sh "$HOME/cyberspace/genesis" "$HOME/cyberspace/genesis.tar.zst"
+                sh "$HOME/cyberspace/$GENESIS_SCRIPT" "$HOME/cyberspace/genesis.tar.zst"
                 ;;
               * )
-                echo "📦 Skipping transfer to cyberspace/genesis."
+                echo "📦 Skipping transfer to cyberspace/$GENESIS_SCRIPT."
                 ;;
             esac
             ;;
