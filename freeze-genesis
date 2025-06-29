@@ -2,6 +2,7 @@
 
 pushd ~/. > /dev/null 2>&1
 
+echo "Creating archive started at $(date)"
 rm -rf ~/tmp/*
 touch ~/tmp/genesis.log
 
@@ -12,20 +13,27 @@ find .ssh \( -type s -o -type p \) -prune -o -type f -print | tar czf ~/src/ssh.
 TMPFILES=/tmp/genesis.files.$$
 > "$TMPFILES"
 
-# Add bin files
-find bin -type f -o -type l >> "$TMPFILES"
+# Add bin files (works for both symlinks and real directories)
+find -L bin -type f -o -type l >> "$TMPFILES"
+
+# Add elisp files
+find -L src/.emacs.d -type f -o -type l >> "$TMPFILES"
 
 # Add specific files if they exist
 for f in .emacs .gitconfig .hints .tcshrc .twmrc .Xdefaults krb5.conf .zprofile .zshrc; do
   [ -e src/$f ] && echo "src/$f" >> "$TMPFILES"
 done
 
-# Add elisp files
-find src/.emacs.d -type f -o -type l >> "$TMPFILES"
-
 # Add specific directories if they exist
 for dir in dvcs/clone dvcs/build dvcs/update lisp scheme osx; do
-  [ -d src/$dir ] && echo "src/$dir" >> "$TMPFILES"
+  [ -d src/$dir ] && find -L src/$dir >> "$TMPFILES"
+done
+
+# Capture media files with error handling
+for dir in audio doc pics vids; do
+    if [ -d "$dir" ]; then
+        find -L "$dir" -type f 2>/dev/null >> "$TMPFILES"
+    fi
 done
 
 # Add git repository if it exists
@@ -53,14 +61,24 @@ fi
 # Create the genesis archive
 echo "Genesis archive started at $(date)" > ~/tmp/genesis.log
 cat $TMPFILES >> ~/tmp/genesis.log
-tar --zstd --no-xattrs -cvf ~/tmp/genesis.tar.zst -T "$TMPFILES" >> ~/tmp/genesis.log 2>&1
+
+# Check for verbose flag
+verbose=""
+case "$1" in
+    *v* | *verbose* | *debug* )
+        verbose="v"
+        ;;
+esac
+case "$OSTYPE" in
+    darwin*)
+        tar --no-xattrs -c${verbose}f - -T "$TMPFILES" | zstd -T0 | age --encrypt -R ~/.ssh/id_ed25519.pub > ~/tmp/genesis.tar.zst.age
+        ;;
+    linux*)
+        tar -c${verbose}f - -T "$TMPFILES" | zstd -T0 | age --encrypt -R ~/.ssh/id_ed25519.pub > ~/tmp/genesis.tar.zst.age
+        ;;
+esac
 rm -f "$TMPFILES"
-
-# Encrypt the archive with SSH key
-echo "Encrypting genesis archive with SSH key..."
-age --encrypt -R ~/.ssh/id_ed25519.pub ~/tmp/genesis.tar.zst > ~/tmp/genesis.tar.zst.age
-echo "✅ Archive encrypted with SSH public key"
-
+echo "Archive encrypted with SSH public key at $(date)"
 # Hash the encrypted file
 cd ~/tmp && sha256sum genesis.tar.zst.age > genesis.tar.zst.age.sha256
 
