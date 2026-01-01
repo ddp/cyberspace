@@ -1,28 +1,43 @@
 # Distributed Agent Cluster Architecture
 **Cryptographically-Secured, Eventually-Consistent Agent System**
 
-## Vision
+## Vision: Cyberspace
 Loosely coupled cluster of Claude agents with:
-- Eventual ACID consistency
+- SPKI/SDSI authorization (no hierarchical CAs)
 - Threshold cryptography (Shamir secret sharing)
 - Actor model semantics
 - Byzantine fault tolerance capability
+- Eventual ACID consistency
 
 ## Core Requirements
 
-### Cryptographic Foundation
-- **Bootstrap**: Shamir threshold scheme (k-of-n shares unlock cluster)
-- **Identity**: Per-agent keypairs derived from shared secret
-- **Authentication**: Message-level HMAC or Ed25519 signatures
-- **Attestation**: Merkle trees + vector clocks with cryptographic proofs
-- **Privacy**: Encrypted-at-rest with distributed key shares
+### Cryptographic Foundation: SPKI/SDSI + Shamir
+
+**Identity Model** (SPKI/SDSI):
+- **Keys are principals** — agent identity IS the public key
+- **No global namespace** — local names only (`ddp's-cluster/coordinator`)
+- **Authorization certificates** — not "who you are" but "what you can do"
+- **No hierarchical CAs** — direct trust delegation
+- **Certificate chains** — transitive authorization without central authority
+
+**Threshold Control** (Shamir):
+- **Bootstrap**: Cluster master key split into k-of-n shares
+- **Agent spawning**: Threshold reconstruction required (k shares collaborate)
+- **Key derivation**: New agent keypairs derived from reconstructed master
+- **No single point of control**: No agent holds complete cluster secret
+- **Privacy**: Encrypted state requires threshold decryption
+
+**Authentication**:
+- Message-level signatures (Ed25519)
+- SPKI signature chains prove authorization
+- Attestation via Merkle trees + vector clocks + crypto proofs
 
 ### Distributed Coordination
 - **Consistency Model**: CRDTs for conflict-free convergence
 - **Membership**: Gossip protocol for cluster awareness
 - **Location**: Distributed hash table for agent registry
-- **Authorization**: Capability tokens for cross-agent invocation
-- **Quorum Operations**: Threshold signatures for critical operations
+- **Authorization**: SPKI authorization certificates (not capability tokens)
+- **Quorum Operations**: Threshold signatures for cluster-wide decisions
 
 ### Storage Layer
 **Event-Oriented Persistence** (no SQL):
