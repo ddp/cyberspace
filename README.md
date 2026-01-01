@@ -36,13 +36,6 @@ Personal knowledge repository for distributed systems, cryptographic security, p
 - Acquired by Nokia (2000)
 - See [INDEX.md](network-alchemy-patents/INDEX.md) for full catalog
 
-**[multics/](multics/LIBRARY-CATALOG.md)** - Multics Operating System Archive
-- Comprehensive catalog of Multicians.org resources
-- 5,065 bibliographic entries (3,161 online)
-- B2 security certification documentation
-- Source code and DPS8M simulator
-- See [LIBRARY-CATALOG.md](multics/LIBRARY-CATALOG.md) for full catalog
-
 **[library/](library/)** - Technical Library (671 MB)
 - 312 PDFs: papers, books, technical documentation
 - Topics: cryptography, security, OS design, programming languages
@@ -143,7 +136,6 @@ This repository traces the evolution of distributed security from foundational r
 ### Commercial Systems
 - DEC VAXcluster (distributed lock manager, SCS/SCA)
 - Network Alchemy (TCP/IP clustering, certificate enrollment)
-- Multics (B2 security certification, protection rings)
 
 ### Modern Applications
 - Distributed databases (Spanner, CockroachDB using Paxos)
@@ -162,7 +154,6 @@ This repository traces the evolution of distributed security from foundational r
 - [dssa-ncsc-papers/](dssa-ncsc-papers/INDEX.md) - Authentication and security
 - [network-alchemy-patents/](network-alchemy-patents/INDEX.md) - Load balancing and failover
 - [lamport-papers/](lamport-papers/INDEX.md) - Consensus and causality
-- [multics/](multics/LIBRARY-CATALOG.md) - B2 security architecture
 
 ### For Distributed Agent Development
 - [distributed-agent-architecture.md](distributed-agent-architecture.md) - System design
@@ -174,9 +165,8 @@ This repository traces the evolution of distributed security from foundational r
 
 - **Research Papers**: 53 indexed documents
 - **Technical Library**: 312 PDFs (671 MB)
-- **Multics Archive**: 5,065 entries cataloged
-- **Documentation**: 28 markdown files
-- **Collections**: 7 specialized subdirectories
+- **Documentation**: 27 markdown files
+- **Collections**: 6 specialized subdirectories
 - **Total Repository Size**: ~800 MB
 
 ## Deployment
@@ -192,20 +182,18 @@ ln -s ~/cyberspace/.zshrc ~/.zshrc
 
 ## Contributing
 
-This is a personal knowledge repository, but corrections and additions to documentation are welcome. For Multics content, see contribution guidelines at https://www.multicians.org/
+This is a personal knowledge repository, but corrections and additions to documentation are welcome.
 
 ## License
 
 - **Dotfiles** (.emacs, .zshrc): Personal configuration, use freely
 - **Documentation** (*.md): Original work, CC BY 4.0
 - **Papers/PDFs**: Respective copyright holders (research/educational use)
-- **Multics catalog**: Derived from multicians.org (courtesy Bull HN, MIT)
 
 ## Acknowledgments
 
 - Leslie Lamport (papers and inspiration)
 - Butler Lampson and Digital DSSA team
-- Multicians.org community (Tom Van Vleck et al.)
 - DEC research labs (SRC, WRL)
 - Network Alchemy team (Derrell Piper et al.)
 - NIST/NSA NCSC conference organizers
