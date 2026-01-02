@@ -137,3 +137,24 @@ Then install dependencies:
 - SBCL to `~/bin/sbcl`
 - opam and OCaml tools
 - Required Emacs packages via `M-x package-list-packages`
+
+## Library Index Management
+
+The `~/cyberspace/library/` directory contains 312+ research PDFs organized by topic (Cryptology, Type Theory, infosec, etc.).
+
+**Permuted Index**: `library/index.html`
+- LaTeX-style KWIC (KeyWord In Context) permuted index
+- Every significant word indexed with clickable links
+- Deduplicated, hierarchical (letter → keyword → documents)
+- Regenerate after adding new documents: `~/cyberspace/bin/generate-library-index`
+
+**When to Regenerate**:
+- After adding/removing PDFs from library
+- When directory structure changes
+- When updating DESIGN-SPECIFICATIONS.md or other indexed docs
+- Commit both the script and generated index.html to version control
+
+The index integrates with:
+- `PERMUTED-INDEX.md` - Main document collection index
+- `DESIGN-SPECIFICATIONS.html` - Cyberspace design specifications
+- Published at: https://www.yoyodyne.com/ (via `~/bin/publish`)
