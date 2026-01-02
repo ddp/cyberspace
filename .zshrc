@@ -149,9 +149,11 @@ if [[ -o interactive ]]; then
     alias -g L='| less'             # global alias: cmd L
 
     alias aliases="alias | sort"
+    alias cc="claude --continue"
     alias chibi="rlwrap chibi-scheme"
     alias chez="rlwrap chez"
     alias chicken="rlwrap csi"
+    alias cr="claude --resume"
     alias clone="stash && clone-fluffy --with-dotfiles"
     alias csi="rlwrap csi"
     alias epoch="date +%s"
