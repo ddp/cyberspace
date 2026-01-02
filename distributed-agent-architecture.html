@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Distributed Agent Architecture</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="data:text/css,body{max-width:50rem;margin:2rem auto;padding:0 1rem;font-family:system-ui,sans-serif;line-height:1.6}pre,code{font-family:'SF Mono',Monaco,Consolas,monospace;background:#f5f5f5;padding:0.2rem 0.4rem;border-radius:3px}pre{padding:1rem;overflow-x:auto}h1,h2,h3{margin-top:2rem}" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Distributed Agent Architecture</h1>
+</header>
+<h1 id="distributed-agent-cluster-architecture">Distributed Agent
+Cluster Architecture</h1>
+<p><strong>Cryptographically-Secured, Eventually-Consistent Agent
+System</strong></p>
+<h2 id="vision-cyberspace">Vision: Cyberspace</h2>
+<p>Loosely coupled cluster of Claude agents with: - SPKI/SDSI
+authorization (no hierarchical CAs) - Threshold cryptography (Shamir
+secret sharing) - Actor model semantics - Byzantine fault tolerance
+capability - Eventual ACID consistency</p>
+<h2 id="core-requirements">Core Requirements</h2>
+<h3 id="cryptographic-foundation-spkisdsi-shamir">Cryptographic
+Foundation: SPKI/SDSI + Shamir</h3>
+<p><strong>Identity Model</strong> (SPKI/SDSI): - <strong>Keys are
+principals</strong> — agent identity IS the public key - <strong>No
+global namespace</strong> — local names only
+(<code>ddp's-cluster/coordinator</code>) - <strong>Authorization
+certificates</strong> — not “who you are” but “what you can do” -
+<strong>No hierarchical CAs</strong> — direct trust delegation -
+<strong>Certificate chains</strong> — transitive authorization without
+central authority</p>
+<p><strong>Threshold Control</strong> (Shamir): -
+<strong>Bootstrap</strong>: Cluster master key split into k-of-n shares
+- <strong>Agent spawning</strong>: Threshold reconstruction required (k
+shares collaborate) - <strong>Key derivation</strong>: New agent
+keypairs derived from reconstructed master - <strong>No single point of
+control</strong>: No agent holds complete cluster secret -
+<strong>Privacy</strong>: Encrypted state requires threshold
+decryption</p>
+<p><strong>Authentication</strong>: - Message-level signatures (Ed25519)
+- SPKI signature chains prove authorization - Attestation via Merkle
+trees + vector clocks + crypto proofs</p>
+<h3 id="distributed-coordination">Distributed Coordination</h3>
+<ul>
+<li><strong>Consistency Model</strong>: CRDTs for conflict-free
+convergence</li>
+<li><strong>Membership</strong>: Gossip protocol for cluster
+awareness</li>
+<li><strong>Location</strong>: Distributed hash table for agent
+registry</li>
+<li><strong>Authorization</strong>: SPKI authorization certificates (not
+capability tokens)</li>
+<li><strong>Quorum Operations</strong>: Threshold signatures for
+cluster-wide decisions</li>
+</ul>
+<h3 id="storage-layer">Storage Layer</h3>
+<p><strong>Event-Oriented Persistence</strong> (no SQL): - Distributed
+append-only log (Kafka / NATS JetStream) - Content-addressed storage for
+agent state (IPFS-like) - Merkle DAG for causal history tracking -
+Immutable event sourcing for state reconstruction</p>
+<p><strong>Candidates:</strong> - <strong>Event Store</strong>: Kafka,
+EventStoreDB - <strong>KV/Snapshot</strong>: Redis (pub/sub), etcd
+(registry), Riak (AP-mode) - <strong>Document</strong>: CouchDB
+(replication), MongoDB (if needed) - <strong>Actor-Native</strong>:
+Datomic (time-travel), FoundationDB (ACID)</p>
+<h2 id="claude-agent-sdk-mapping">Claude Agent SDK Mapping</h2>
+<h3 id="agent-primitives-distributed-system">Agent Primitives →
+Distributed System</h3>
+<pre><code>Claude Agent          →  Cluster Node (actor with mailbox)
+Subagent             →  Supervised worker pool
+Session State        →  Cryptographically-signed event log
+Tool Calls           →  Capability-based operations
+Session Resume       →  State reconstruction from event log</code></pre>
+<h3 id="supervision-hierarchy">Supervision Hierarchy</h3>
+<ul>
+<li>Main agents manage subagent lifecycle (Erlang-style
+supervision)</li>
+<li>Let-it-crash semantics with cryptographic checkpointing</li>
+<li>State recovery via event replay + Shamir key reconstruction</li>
+</ul>
+<h3 id="agent-coordination-pattern">Agent Coordination Pattern</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pseudo-architecture</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>session_id <span class="op">=</span> spawn_agent(capabilities, crypto_context)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>→ Store session_id <span class="kw">in</span> DHT <span class="cf">with</span> crypto signature</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>→ Agents communicate via signed messages</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>→ State changes append to distributed log</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>→ CRDT merge on reads <span class="cf">for</span> eventual consistency</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>→ Threshold signatures <span class="cf">for</span> cluster<span class="op">-</span>wide decisions</span></code></pre></div>
+<h2 id="architecture-layers">Architecture Layers</h2>
+<h3 id="layer-1-cryptographic-substrate">Layer 1: Cryptographic
+Substrate</h3>
+<ul>
+<li>Shamir secret sharing for cluster unlock</li>
+<li>Key derivation hierarchy for agent identities</li>
+<li>Message authentication codes (HMAC)</li>
+<li>Merkle proofs for state verification</li>
+</ul>
+<h3 id="layer-2-consensus-coordination">Layer 2: Consensus &amp;
+Coordination</h3>
+<ul>
+<li>Gossip protocol (membership, failure detection)</li>
+<li>Vector clocks / hybrid logical clocks</li>
+<li>CRDT merge semantics</li>
+<li>Byzantine agreement (if untrusted nodes)</li>
+</ul>
+<h3 id="layer-3-storage-persistence">Layer 3: Storage &amp;
+Persistence</h3>
+<ul>
+<li>Distributed event log (immutable, append-only)</li>
+<li>Content-addressed state snapshots</li>
+<li>Causal ordering via Merkle DAG</li>
+<li>Encrypted blobs with threshold decryption</li>
+</ul>
+<h3 id="layer-4-agent-runtime">Layer 4: Agent Runtime</h3>
+<ul>
+<li>Claude Agent SDK integration</li>
+<li>Session state persistence/recovery</li>
+<li>Tool invocation with capabilities</li>
+<li>Subagent spawning and supervision</li>
+</ul>
+<h3 id="layer-5-application-logic">Layer 5: Application Logic</h3>
+<ul>
+<li>Multi-tenant agent isolation</li>
+<li>Cross-agent collaboration protocols</li>
+<li>Query routing and load balancing</li>
+<li>Audit trails and forensics</li>
+</ul>
+<h2 id="open-questions">Open Questions</h2>
+<ol type="1">
+<li><strong>Threat Model</strong>: Byzantine nodes? Honest-but-curious?
+Fully trusted?</li>
+<li><strong>Application Domain</strong>: Code generation? Distributed
+analysis? Multi-tenant SaaS?</li>
+<li><strong>Latency vs. Consistency</strong>: How eventual is
+“eventual”?</li>
+<li><strong>Agent Mobility</strong>: Can agents migrate between
+nodes?</li>
+<li><strong>Upgrade Strategy</strong>: How to evolve crypto/consensus
+without downtime?</li>
+</ol>
+<h2 id="technology-stack-candidates">Technology Stack Candidates</h2>
+<p><strong>Message Transport</strong>: - NATS (lightweight,
+crypto-friendly) - Kafka (durable log, proven at scale) - ZeroMQ
+(actor-oriented messaging)</p>
+<p><strong>Coordination</strong>: - etcd (configuration, service
+discovery) - Consul (service mesh, gossip) - Raft consensus library</p>
+<p><strong>Storage</strong>: - Riak KV (AP, eventual consistency, CRDTs)
+- FoundationDB (ACID, ordered key-value) - EventStoreDB (native event
+sourcing)</p>
+<p><strong>Crypto</strong>: - libsodium (modern crypto primitives) -
+OpenSSL/BoringSSL (TLS, certificates) - IPFS libraries (content
+addressing, Merkle DAGs)</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Shamir Secret Sharing (1979)</li>
+<li>CRDTs: Shapiro et al., “Conflict-free Replicated Data Types”
+(2011)</li>
+<li>Actor Model: Hewitt, Agha</li>
+<li>Byzantine Generals Problem: Lamport et al.</li>
+<li>Vector Clocks: Fidge, Mattern</li>
+<li>Capability-Based Security: Dennis &amp; Van Horn (1966)</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<ol type="1">
+<li>Define concrete use case / application domain</li>
+<li>Specify threat model and trust assumptions</li>
+<li>Select storage backend based on consistency requirements</li>
+<li>Prototype Shamir scheme integration with Claude Agent SDK</li>
+<li>Design message format with crypto primitives</li>
+<li>Implement gossip protocol for cluster membership</li>
+<li>Build CRDT layer for agent state convergence</li>
+</ol>
+<hr />
+<p><strong>Created</strong>: 2025-12-31 <strong>Context</strong>:
+Exploring distributed agent architecture with cryptographic
+guarantees</p>
+</body>
+</html>
