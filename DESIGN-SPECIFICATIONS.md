@@ -1,7 +1,7 @@
 # Cyberspace Project: Design Specifications
 **Version**: 2026-01-01 (Rev. 2)
 **Status**: Active Development
-**Architect**: DDP (os/language polyglot)
+**Architect**: ddp@eludom.net / derrell@mit.edu
 **Librarian**: Claude Code (semantic abstraction layer)
 
 ---
