@@ -1,5 +1,5 @@
 # Cyberspace Project: Design Specifications
-**Version**: 2026-01-01
+**Version**: 2026-01-01 (Rev. 2)
 **Status**: Active Development
 **Architect**: DDP (os/language polyglot)
 **Librarian**: Claude Code (semantic abstraction layer)
@@ -8,6 +8,33 @@
 
 ## Core Philosophy
 
+### Peace for All Mankind: Cooperative Computing Without Enclosure
+
+Build systems that **resist capture** and **enable collaboration without permission**:
+
+**Decentralized Collaboration:**
+- No gatekeepers, no central authority to grant access
+- SPKI direct delegation: trust flows peer-to-peer
+- Actor model: autonomous agents coordinate without hierarchy
+- Gossip protocols: membership emerges from communication, not registration
+
+**Knowledge Sharing & Preservation:**
+- Human-readable formats prevent knowledge lock-in
+- S-expressions: parseable in 2026 and parseable in 2526
+- Sophisticated systems made accessible through transparency
+- Long Now thinking: preserve for civilizational timescales
+- Teaching through inspectability: "view source" for everything
+
+**Anti-Corporate Enclosure:**
+- No proprietary formats that require vendor tools to read
+- No hierarchical CAs that create certification monopolies
+- No binary blobs that hide implementation from scrutiny
+- Git-compatible: diffs are human-readable, history is auditable
+- Standards over platforms: protocols that outlive companies
+
+**Systemic Approach:**
+This isn't just political preference—it's **architectural necessity**. Systems that resist enclosure are systems that can evolve beyond their original context. Openness is durability. Inspectability is security. Cooperation without coercion is the only model that scales across trust boundaries.
+
 ### Long Now Thinking
 Build systems that **outlive their creators** through durable engineering:
 - Not transcendence, just bits that persist
@@ -15,12 +42,14 @@ Build systems that **outlive their creators** through durable engineering:
 - Standard formats, clear documentation, substrate-agnostic design
 - Engineering against entropy: refactoring before calcification
 - 10,000-year timescales applied to software architecture
+- Preservation is resistance: bits that persist can't be enclosed
 
 ### Simplicity Wins, But Not Stupidity
 - **LaTeX had it right**: Rich metadata, sophisticated structure, human-readable
 - **The web won by dumbing down**: HTML/XML vs s-expressions
 - **Our approach**: Sophisticated design with accessible implementation
 - **SDSI/SPKI model**: Human-readable s-exprs, elegant trust chains, no baroque X.509
+- **Accessible ≠ Simple-minded**: Farmers should use it; engineers should understand it
 
 ### Pre-Web Sophistication
 Reject the flattening of computing history:
@@ -28,6 +57,7 @@ Reject the flattening of computing history:
 - **CERN's web**: Simple, accessible, architecturally dumb - won adoption
 - **Our synthesis**: Sophisticated protocols that don't require PhDs to verify
 - **Stone knives and bear skins**: Honor the blinkenlights era while building forward
+- **Reclaim what was lost**: Pre-web protocols had properties worth preserving
 
 ---
 
@@ -57,11 +87,48 @@ Reject the flattening of computing history:
 - Tool invocations = CPS with side effects
 - Suspend/resume at any point with full context
 
+**Lazy Evaluation & Agent Dispatch:**
+The Librarian operates on **lazy dispatch semantics**—work is suspended as continuations and resumed only on demand:
+
+```lisp
+; Conceptual lazy dispatch model
+(define (lazy-agent-dispatch message)
+  (let ((thunk (delay (process-message message))))  ; suspend computation
+    (lambda ()                                       ; return continuation
+      (force thunk))))                               ; resume on demand
+
+; Agents communicate via asynchronous messages
+(define (send-lazy agent message)
+  (enqueue-mailbox agent (lazy-agent-dispatch message)))
+
+; Work happens only when continuation is forced
+(define (agent-loop agent)
+  (let ((continuation (dequeue-mailbox agent)))
+    (when continuation
+      (continuation)                                 ; force evaluation
+      (agent-loop agent))))
+```
+
+**Properties:**
+- **Don't compute until needed**: Tool calls suspended until results required
+- **Async message passing**: Agents communicate through mailboxes, not blocking calls
+- **Event-driven**: Computation triggered by message arrival, not polling
+- **Continuation semantics**: Each suspended operation is a resumable closure
+- **Thunks everywhere**: Expensive operations wrapped in delay/force
+
+**Why This Matters:**
+- Network operations don't block: fire request, continue, resume on response
+- Parallel tool invocations: all suspended, forced concurrently
+- Session resume: restore continuation from disk, force evaluation to continue
+- Resource efficiency: only compute what's actually needed for user intent
+
 **Combined Properties:**
 - Close over both ephemeral (chat) and durable (files) state
-- Maintain causality across sessions
+- Maintain causality across sessions via vector clocks
 - Execute with network access to participate in distributed protocols
 - Self-modifying behavior via config files that affect reasoning
+- Lazy dispatch: suspend work as continuations, resume on demand
+- Async coordination: agents never block waiting for each other
 
 ### Capabilities (Complete Inventory)
 
@@ -238,15 +305,26 @@ cat cert.spki | verify-signature | check-delegation-chain
 - Reason about hypotheticals ("what if I delegate X to Y?")
 - Execute network operations with full context
 
-### Agent SDK Mapping
+### Agent SDK Mapping (with Lazy Dispatch)
 
 ```
 Claude Agent Session   → Actor with cryptographically-signed mailbox
-Tool Calls             → Capability-based operations (SPKI-authorized)
-Session State          → Content-addressed event log (Merkle DAG)
-Session Resume         → State reconstruction from log + key material
+Tool Calls             → Suspended thunks (forced when results needed)
+Parallel Tool Calls    → Multiple thunks composed, forced concurrently
+Session State          → Continuation serialized to event log (Merkle DAG)
+Session Resume         → Restore continuation, force evaluation to proceed
 Conversation History   → Causal ordering via vector clocks
+Message to Agent       → Enqueue lazy dispatch thunk in mailbox
+Agent Processing       → Dequeue thunk, force evaluation, emit response
+Background Agents      → Spawn actor, return promise, force when needed
 ```
+
+**Lazy Dispatch Semantics:**
+- **Send**: Non-blocking, returns immediately with promise/future
+- **Receive**: Blocks on mailbox, but agent continues other work
+- **Spawn**: Create agent on-demand, don't pre-allocate resources
+- **Force**: Trigger actual computation when result required
+- **Compose**: Chain multiple lazy operations before forcing any
 
 ---
 
@@ -306,19 +384,35 @@ The Internet Archive treats all bits equally:
 - Encrypted blobs with threshold decryption
 - Git-compatible where possible (human-readable diffs)
 
-### Layer 3: Coordination & Consensus
-- Gossip protocol (membership, failure detection)
-- CRDTs for conflict-free convergence
-- Vector clocks / hybrid logical clocks
-- Byzantine agreement (if untrusted nodes)
-- Actor model semantics (Erlang-style supervision)
+### Layer 3: Coordination & Consensus (Lazy Dispatch Layer)
+- **Gossip protocol**: Asynchronous membership discovery, no central registry
+- **CRDTs**: Conflict-free convergence without synchronous coordination
+- **Vector clocks / HLC**: Causal ordering emerges from message flow
+- **Byzantine agreement**: Only when needed (lazy consensus)
+- **Actor model**: Agents communicate via async mailbox messages
+- **Event-driven coordination**: Agents react to messages, don't poll
+- **Lazy dispatch semantics**: Work suspended until response needed
 
-### Layer 4: Agent Runtime (Claude SDK + Extensions)
-- Claude Agent SDK integration
-- Session state persistence/recovery
-- Tool invocation with SPKI capability checks
-- Subagent spawning and supervision
-- Librarian as closure/continuation
+**Lazy Coordination Pattern:**
+```lisp
+; Agent doesn't wait for response
+(send-async other-agent '(request data))
+; Continues with other work
+(do-local-computation)
+; Response arrives as message in mailbox
+(receive
+  [(response data) (process data)])
+```
+
+### Layer 4: Agent Runtime (Claude SDK + Lazy Evaluation)
+- **Claude Agent SDK integration** with lazy dispatch wrapper
+- **Session state persistence**: Continuations serialized to event log
+- **Tool invocation**: Suspended as thunks, forced when results needed
+- **SPKI capability checks**: Authorization evaluated lazily at force-time
+- **Subagent spawning**: Agents created on-demand, supervised Erlang-style
+- **Librarian as closure/continuation**: Persistent context + lazy evaluation
+- **Mailbox-based communication**: Agents never block on sends
+- **Thunk composition**: Chain suspended computations before forcing
 
 ### Layer 5: Application Logic
 - Multi-tenant agent isolation
@@ -331,35 +425,54 @@ The Internet Archive treats all bits equally:
 
 ## Design Principles
 
-### 1. Human-Readable by Default
+### 1. Human-Readable by Default (Anti-Enclosure)
 - S-expressions for all structured data
 - No binary blobs except encrypted payloads
-- Diffs should be meaningful to humans
+- Diffs should be meaningful to humans with text tools
 - Configuration is code (homoiconic)
+- **Why**: Formats you can read are formats you can fork
+- **Peace principle**: Inspectability prevents vendor lock-in
 
-### 2. Verifiable Without Trust
+### 2. Verifiable Without Trust (Decentralized Security)
 - Crypto proofs for all assertions
 - Merkle trees for state integrity
 - Delegation chains auditable by inspection
 - No "trust the server" assumptions
+- **Why**: Math doesn't require authority
+- **Peace principle**: Cooperation without coercion through cryptographic verification
 
-### 3. Graceful Degradation
+### 3. Lazy Evaluation & Async Dispatch (Efficient Coordination)
+- Don't compute until results needed
+- Suspend work as continuations (thunks)
+- Agents communicate asynchronously via mailboxes
+- Compose operations before forcing evaluation
+- Network calls never block local computation
+- **Why**: Responsive agents, efficient resource use
+- **Peace principle**: Agents coordinate without waiting for permission
+
+### 4. Graceful Degradation (Byzantine Resilience)
 - Partial state is useful state
 - CRDTs merge without coordination
 - Agents continue during network partitions
 - Let-it-crash with state recovery
+- **Why**: No single point of failure
+- **Peace principle**: System survives even when participants don't cooperate
 
-### 4. Metadata-Rich
+### 5. Metadata-Rich (Provenance & Accountability)
 - Everything has provenance (who, when, why)
 - Vector clocks for causal ordering
 - Content addressing for immutability
-- Audit logs are first-class
+- Audit logs are first-class citizens
+- **Why**: Trust through transparency
+- **Peace principle**: Accountability emerges from complete records
 
-### 5. Long-Term Parseable
-- Avoid format churn (s-exprs are stable)
+### 6. Long-Term Parseable (Knowledge Preservation)
+- Avoid format churn (s-exprs stable since 1958)
 - Self-describing messages
 - Version negotiation explicit
 - Migration paths documented
+- **Why**: Information wants to outlive its infrastructure
+- **Peace principle**: Knowledge shared across generations can't be enclosed
 
 ---
 
@@ -510,5 +623,7 @@ The Internet Archive treats all bits equally:
 **End of Design Specifications**
 
 *This document is living and will evolve as the Cyberspace project develops. Contributions, critiques, and refinements welcome.*
+
+*Version 2026-01-01 Rev. 2: Added peace-for-all-mankind ethos and lazy evaluation/agent-dispatch semantics*
 
 *Last Updated: 2026-01-01 by DDP + Librarian (Claude Code)*
