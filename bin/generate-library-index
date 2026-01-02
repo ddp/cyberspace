@@ -1,0 +1,221 @@
+#!/bin/bash
+# Generate clickable permuted index for ~/cyberspace/library
+# Usage: ~/cyberspace/bin/generate-library-index
+#
+# Creates a LaTeX-style permuted index with cross-references and no duplicates
+
+set -e
+
+LIBRARY_DIR="$HOME/cyberspace/library"
+OUTPUT_FILE="$LIBRARY_DIR/index.html"
+
+cd "$LIBRARY_DIR" || exit 1
+
+echo "Generating library permuted index..."
+
+cat > "$OUTPUT_FILE" <<'HEADER'
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cyberspace Library - Permuted Index</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #00ff00;
+            line-height: 1.8;
+        }
+        h1, h2, h3 {
+            color: #00ffff;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 2em;
+            margin-top: 40px;
+        }
+        h3 {
+            font-size: 1.2em;
+            color: #ffff00;
+            border-bottom: 1px solid #444;
+            margin-top: 20px;
+        }
+        .index-entry {
+            margin: 3px 0 3px 20px;
+            padding: 2px 0;
+        }
+        .keyword {
+            color: #ffff00;
+            font-weight: bold;
+        }
+        .context {
+            color: #00ff00;
+        }
+        .path {
+            color: #666;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+        a {
+            color: #00ffff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+            color: #ff00ff;
+        }
+        .letter-section {
+            margin-top: 50px;
+            page-break-before: always;
+        }
+        .keyword-group {
+            margin: 15px 0;
+        }
+        .stats {
+            color: #888;
+            font-style: italic;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cyberspace Library - Permuted Index</h1>
+    <p class="stats">
+        <strong>Format:</strong> Fully Permuted KeyWord In Context (LaTeX makeindex style)<br>
+        <strong>Generated:</strong> $(date '+%Y-%m-%d %H:%M:%S')<br>
+        <strong>Total Documents:</strong> $(find . -name "*.pdf" -o -name "*.md" -o -name "*.txt" | wc -l | tr -d ' ')<br>
+        <strong>Style:</strong> Cross-referenced, deduplicated, hierarchical
+    </p>
+
+    <hr style="border-color: #00ff00;">
+
+HEADER
+
+# Generate ALL permuted entries (every word gets indexed)
+echo "Extracting entries..."
+find . \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) | while IFS= read -r file; do
+    filename=$(basename "$file")
+    title="${filename%.*}"
+    dirpath=$(dirname "$file" | sed 's|^\./||')
+
+    # URL-encode the path
+    urlpath=$(echo "$file" | sed 's/ /%20/g')
+
+    # Split title into words
+    echo "$title" | tr ' ' '\n' | grep -v '^$' | while IFS= read -r word; do
+        # Skip common stop words
+        case "$word" in
+            a|an|the|of|in|on|for|to|and|with|or|is|are|as|at|be|by|it|from|that|this|was|were|has|have|had|will|would|could|should|A|An|The|Of|In|On|For|To|And|With|Or|Is|Are|As|At|Be|By|It|From|That|This|Was|Were|Has|Have|Had|Will|Would|Could|Should)
+                continue
+                ;;
+            # Skip very short words
+            ??|?)
+                continue
+                ;;
+        esac
+
+        # Normalize keyword (lowercase for grouping)
+        keyword_lower=$(echo "$word" | tr '[:upper:]' '[:lower:]')
+
+        # Output: keyword_lower|original_word|title|filepath|dirpath
+        echo "$keyword_lower|$word|$title|$urlpath|$dirpath"
+    done
+done | sort -t'|' -k1,1 -k3,3 -u > /tmp/permuted_entries_$$.txt
+
+echo "Building HTML index..."
+
+# Generate HTML by keyword
+current_letter=""
+current_keyword=""
+
+while IFS='|' read -r kw_lower orig_word title filepath dirpath; do
+    first_letter=$(echo "$kw_lower" | cut -c1 | tr '[:lower:]' '[:upper:]')
+
+    # Skip non-alphanumeric
+    if ! echo "$first_letter" | grep -q '[A-Z0-9]'; then
+        continue
+    fi
+
+    # New letter section
+    if [ "$first_letter" != "$current_letter" ]; then
+        if [ -n "$current_letter" ]; then
+            echo "</div>"
+        fi
+        echo "<div class='letter-section'>"
+        echo "<h2 id='letter-$first_letter'>$first_letter</h2>"
+        current_letter="$first_letter"
+        current_keyword=""
+    fi
+
+    # New keyword subsection
+    if [ "$kw_lower" != "$current_keyword" ]; then
+        if [ -n "$current_keyword" ]; then
+            echo "</div>"
+        fi
+        echo "<div class='keyword-group'>"
+        echo "<h3 id='kw-$kw_lower'>$orig_word</h3>"
+        current_keyword="$kw_lower"
+    fi
+
+    # Highlight keyword in title
+    highlighted_title=$(echo "$title" | sed "s/\($orig_word\)/<span class='keyword'>\1<\/span>/ig")
+
+    # Show directory context if not root
+    dir_context=""
+    if [ "$dirpath" != "." ] && [ -n "$dirpath" ]; then
+        dir_context=" <span class='path'>[$dirpath]</span>"
+    fi
+
+    echo "<div class='index-entry'>"
+    echo "  <span class='context'>$highlighted_title</span>$dir_context "
+    echo "  <a href=\"$filepath\" title=\"Open: $title\">→</a>"
+    echo "</div>"
+
+done < /tmp/permuted_entries_$$.txt >> "$OUTPUT_FILE"
+
+# Close last group
+echo "</div>" >> "$OUTPUT_FILE"
+echo "</div>" >> "$OUTPUT_FILE"
+
+cat >> "$OUTPUT_FILE" <<'FOOTER'
+
+<hr style="border-color: #00ff00; margin-top: 40px;">
+<p class="stats">
+    <strong>Index Features:</strong><br>
+    • Every significant word indexed (KWIC permuted)<br>
+    • Duplicate entries removed<br>
+    • Alphabetically sorted with letter sections<br>
+    • Directory context preserved<br>
+    • Clickable links to all documents<br>
+    <br>
+    <strong>Navigation:</strong><br>
+    <a href="#letter-A">A</a> | <a href="#letter-B">B</a> | <a href="#letter-C">C</a> |
+    <a href="#letter-D">D</a> | <a href="#letter-E">E</a> | <a href="#letter-F">F</a> |
+    <a href="#letter-G">G</a> | <a href="#letter-H">H</a> | <a href="#letter-I">I</a> |
+    <a href="#letter-J">J</a> | <a href="#letter-K">K</a> | <a href="#letter-L">L</a> |
+    <a href="#letter-M">M</a> | <a href="#letter-N">N</a> | <a href="#letter-O">O</a> |
+    <a href="#letter-P">P</a> | <a href="#letter-Q">Q</a> | <a href="#letter-R">R</a> |
+    <a href="#letter-S">S</a> | <a href="#letter-T">T</a> | <a href="#letter-U">U</a> |
+    <a href="#letter-V">V</a> | <a href="#letter-W">W</a> | <a href="#letter-X">X</a> |
+    <a href="#letter-Y">Y</a> | <a href="#letter-Z">Z</a>
+    <br><br>
+    Generated by <strong>Claude Code Librarian</strong><br>
+    Part of the Cyberspace Project<br>
+    <a href="../DESIGN-SPECIFICATIONS.html">Design Specifications</a> |
+    <a href="../PERMUTED-INDEX.md">Main Index</a> |
+    <a href="https://github.com/ddp/cyberspace">GitHub</a>
+</p>
+
+</body>
+</html>
+FOOTER
+
+rm -f /tmp/permuted_entries_$$.txt
+
+echo "✓ Generated: $OUTPUT_FILE"
+echo "  $(wc -l < "$OUTPUT_FILE" | tr -d ' ') lines"
+echo "  $(find "$LIBRARY_DIR" -name "*.pdf" | wc -l | tr -d ' ') PDFs indexed"
