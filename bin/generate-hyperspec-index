@@ -1,0 +1,418 @@
+#!/bin/bash
+# Generate beautiful HyperSpec-style index for ~/cyberspace collection
+# Inspired by the Common Lisp HyperSpec design
+# Usage: ~/cyberspace/bin/generate-hyperspec-index
+
+set -e
+
+CYBERSPACE_DIR="$HOME/cyberspace"
+OUTPUT_FILE="$CYBERSPACE_DIR/library/library-catalog.html"
+
+cd "$CYBERSPACE_DIR" || exit 1
+
+echo "Generating HyperSpec-style library catalog..."
+
+# Count all documents in the entire cyberspace collection
+TOTAL_PDFS=$(find . -name "*.pdf" ! -path "*/.*" | wc -l | tr -d ' ')
+TOTAL_DOCS=$(find . \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -path "*/.*" ! -name ".*" | wc -l | tr -d ' ')
+
+cat > "$OUTPUT_FILE" <<HEADER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberspace Library Catalog</title>
+    <style>
+        /* Authentic Common Lisp HyperSpec CSS */
+        body {
+            background-color: #ffffff;
+            color: #000000;
+            font-family: "New Century Schoolbook", "Century Schoolbook", "Century Schoolbook L",
+                         Georgia, serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Header styling - HyperSpec title area */
+        .header {
+            background-color: #ffffff;
+            padding: 10px;
+            margin: 10px;
+        }
+
+        .header h1 {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+            padding: 0;
+        }
+
+        .header .subtitle {
+            font-size: 10pt;
+            font-style: italic;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Horizontal rules - classic HyperSpec style */
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: #000000;
+            margin: 10px 0;
+        }
+
+        /* Navigation bar */
+        .nav-bar {
+            background-color: #ffffff;
+            padding: 5px 10px;
+            border-top: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+            font-size: 9pt;
+        }
+
+        .nav-bar a {
+            margin-right: 10px;
+        }
+
+        /* Container */
+        .container {
+            margin: 10px;
+            padding: 0;
+        }
+
+        /* Links - authentic browser default colors */
+        a:link {
+            color: #0000EE;
+            text-decoration: underline;
+        }
+
+        a:visited {
+            color: #551A8B;
+            text-decoration: underline;
+        }
+
+        a:active {
+            color: #FF0000;
+        }
+
+        /* Table of Contents */
+        .toc {
+            margin: 10px 0;
+            padding: 0;
+        }
+
+        .toc h2 {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+        }
+
+        .toc ul {
+            list-style-type: disc;
+            margin-left: 30px;
+            padding: 0;
+        }
+
+        .toc li {
+            margin: 3px 0;
+        }
+
+        /* Sections */
+        .section {
+            margin: 20px 0;
+        }
+
+        .section h2 {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+        }
+
+        .section h3 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 15px 0 8px 0;
+        }
+
+        .section p {
+            margin: 10px 0;
+        }
+
+        .subsection {
+            margin: 10px 0 10px 20px;
+        }
+
+        /* Document lists */
+        .doc-list {
+            list-style-type: none;
+            margin: 10px 0;
+            padding: 0;
+        }
+
+        .doc-item {
+            margin: 2px 0;
+            padding: 0;
+        }
+
+        .doc-title {
+            font-weight: normal;
+        }
+
+        .doc-meta {
+            font-size: 9pt;
+            color: #666666;
+            font-style: italic;
+        }
+
+        /* Stats box */
+        .stats {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #F0F0F0;
+            border: 1px solid #000000;
+        }
+
+        .stats strong {
+            font-weight: bold;
+        }
+
+        /* Letter index */
+        .letter-index {
+            margin: 10px 0;
+            padding: 5px 0;
+            text-align: center;
+            border-top: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+        }
+
+        .letter-index a {
+            margin: 0 3px;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #000000;
+            text-align: center;
+            font-size: 9pt;
+        }
+
+        /* Emphasis */
+        strong, b {
+            font-weight: bold;
+        }
+
+        em, i {
+            font-style: italic;
+        }
+
+        /* Code/monospace */
+        code, tt {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 9pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cyberspace Library Catalog</h1>
+        <div class="subtitle">A comprehensive collection of computer science research papers and technical documentation</div>
+    </div>
+
+    <div class="nav-bar">
+        <a href="#overview">Overview</a>
+        <a href="#toc">Table of Contents</a>
+        <a href="#collections">Collections</a>
+        <a href="#alphabetical">Alphabetical Index</a>
+        <a href="../PERMUTED-INDEX.md">Permuted Index</a>
+        <a href="index.html">KWIC Index</a>
+    </div>
+
+    <div class="container">
+        <div id="overview" class="stats">
+            <strong>Library Statistics</strong><br>
+            Total Documents: <strong>$TOTAL_DOCS</strong><br>
+            PDF Documents: <strong>$TOTAL_PDFS</strong><br>
+            Last Updated: <strong>$(date '+%B %d, %Y')</strong><br>
+            Format: HyperSpec-style hierarchical catalog
+        </div>
+
+        <div id="toc" class="toc">
+            <h2>Table of Contents</h2>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#collections">Subject Collections</a>
+                    <ul>
+HEADER
+
+# Dynamically generate TOC links for all collections
+find . -maxdepth 1 -type d ! -name "." ! -name ".git" ! -name "bin" ! -name ".emacs.d" | sort | while IFS= read -r dir; do
+    dirname=$(basename "$dir")
+    doc_count=$(find "$dir" -name "*.pdf" -o -name "*.md" -o -name "*.txt" | wc -l | tr -d ' ')
+
+    # Skip if no documents
+    if [ "$doc_count" -eq 0 ]; then
+        continue
+    fi
+
+    dir_id=$(echo "$dirname" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g')
+    echo "                        <li><a href=\"#$dir_id\">$dirname</a></li>" >> "$OUTPUT_FILE"
+done
+
+cat >> "$OUTPUT_FILE" <<'HEADER2'
+                    </ul>
+                </li>
+                <li><a href="#root-collection">Root Collection</a></li>
+                <li><a href="#alphabetical">Alphabetical Index</a></li>
+            </ul>
+        </div>
+HEADER2
+
+# Generate Collections section
+cat >> "$OUTPUT_FILE" <<'COLLECTIONS'
+
+        <div id="collections" class="section">
+            <h2>Subject Collections</h2>
+            <p>The Cyberspace collection is organized into the following areas:</p>
+COLLECTIONS
+
+# Dynamically discover all subdirectories with documents
+find . -maxdepth 1 -type d ! -name "." ! -name ".git" ! -name "bin" ! -name ".emacs.d" | sort | while IFS= read -r dir; do
+    dirname=$(basename "$dir")
+    doc_count=$(find "$dir" -name "*.pdf" -o -name "*.md" -o -name "*.txt" | wc -l | tr -d ' ')
+
+    # Skip if no documents
+    if [ "$doc_count" -eq 0 ]; then
+        continue
+    fi
+
+    dir_id=$(echo "$dirname" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g')
+
+    echo "        <div id=\"$dir_id\" class=\"subsection\">" >> "$OUTPUT_FILE"
+    echo "            <h3>$dirname ($doc_count documents)</h3>" >> "$OUTPUT_FILE"
+    echo "            <ul class=\"doc-list\">" >> "$OUTPUT_FILE"
+
+    find "$dir" \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" | sort | while IFS= read -r file; do
+        filename=$(basename "$file")
+        title="${filename%.*}"
+        # Make path relative to library/ since output is in library/library-catalog.html
+        urlpath=$(echo "$file" | sed 's|^\./|../|' | sed 's/ /%20/g')
+
+        # Get file size
+        size=$(ls -lh "$file" | awk '{print $5}')
+
+        echo "                <li class=\"doc-item\">" >> "$OUTPUT_FILE"
+        echo "                    <a href=\"$urlpath\" class=\"doc-title\">$title</a>" >> "$OUTPUT_FILE"
+        echo "                    <span class=\"doc-meta\">[$size]</span>" >> "$OUTPUT_FILE"
+        echo "                </li>" >> "$OUTPUT_FILE"
+    done
+
+    echo "            </ul>" >> "$OUTPUT_FILE"
+    echo "        </div>" >> "$OUTPUT_FILE"
+done
+
+echo "        </div>" >> "$OUTPUT_FILE"
+
+# Generate Root Collection
+echo "        <div id=\"root-collection\" class=\"section\">" >> "$OUTPUT_FILE"
+echo "            <h2>Root Collection</h2>" >> "$OUTPUT_FILE"
+echo "            <p>Documents in the root of the Cyberspace directory:</p>" >> "$OUTPUT_FILE"
+echo "            <ul class=\"doc-list\">" >> "$OUTPUT_FILE"
+
+find . -maxdepth 1 \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" ! -name "index.html" ! -name "library-catalog.html" ! -name "LIBRARY-TREE.*" | sort | while IFS= read -r file; do
+    filename=$(basename "$file")
+    title="${filename%.*}"
+    # Make path relative to library/ directory
+    urlpath=$(echo "$file" | sed 's|^\./|../|' | sed 's/ /%20/g')
+    size=$(ls -lh "$file" | awk '{print $5}')
+
+    echo "                <li class=\"doc-item\">" >> "$OUTPUT_FILE"
+    echo "                    <a href=\"$urlpath\" class=\"doc-title\">$title</a>" >> "$OUTPUT_FILE"
+    echo "                    <span class=\"doc-meta\">[$size]</span>" >> "$OUTPUT_FILE"
+    echo "                </li>" >> "$OUTPUT_FILE"
+done
+
+echo "            </ul>" >> "$OUTPUT_FILE"
+echo "        </div>" >> "$OUTPUT_FILE"
+
+# Generate Alphabetical Index
+echo "        <div id=\"alphabetical\" class=\"section\">" >> "$OUTPUT_FILE"
+echo "            <h2>Alphabetical Index</h2>" >> "$OUTPUT_FILE"
+echo "            <p class=\"letter-index\">" >> "$OUTPUT_FILE"
+
+# Generate letter links
+for letter in {A..Z} {0..9}; do
+    echo "                <a href=\"#letter-$letter\">$letter</a>" >> "$OUTPUT_FILE"
+done
+
+echo "            </p>" >> "$OUTPUT_FILE"
+
+# Generate alphabetical listing
+find . \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" ! -name "index.html" ! -name "library-catalog.html" ! -name "LIBRARY-TREE.*" | while IFS= read -r file; do
+    filename=$(basename "$file")
+    title="${filename%.*}"
+    # Make path relative to library/ directory
+    urlpath=$(echo "$file" | sed 's|^\./|../|' | sed 's/ /%20/g')
+    first_char=$(echo "$title" | cut -c1 | tr '[:lower:]' '[:upper:]')
+    dirpath=$(dirname "$file" | sed 's|^\./||')
+
+    if [ "$dirpath" = "." ]; then
+        dirpath="cyberspace"
+    fi
+
+    size=$(ls -lh "$file" | awk '{print $5}')
+
+    echo "$first_char|$title|$urlpath|$dirpath|$size"
+done | sort -t'|' -k1,1 -k2,2 > /tmp/alpha_index_$$.txt
+
+current_letter=""
+while IFS='|' read -r letter title urlpath dirpath size; do
+    if [ "$letter" != "$current_letter" ]; then
+        if [ -n "$current_letter" ]; then
+            echo "            </ul>" >> "$OUTPUT_FILE"
+            echo "        </div>" >> "$OUTPUT_FILE"
+        fi
+        echo "        <div id=\"letter-$letter\" class=\"subsection\">" >> "$OUTPUT_FILE"
+        echo "            <h3>$letter</h3>" >> "$OUTPUT_FILE"
+        echo "            <ul class=\"doc-list\">" >> "$OUTPUT_FILE"
+        current_letter="$letter"
+    fi
+
+    echo "                <li class=\"doc-item\">" >> "$OUTPUT_FILE"
+    echo "                    <a href=\"$urlpath\" class=\"doc-title\">$title</a>" >> "$OUTPUT_FILE"
+    echo "                    <span class=\"doc-meta\">[$dirpath] [$size]</span>" >> "$OUTPUT_FILE"
+    echo "                </li>" >> "$OUTPUT_FILE"
+done < /tmp/alpha_index_$$.txt
+
+echo "            </ul>" >> "$OUTPUT_FILE"
+echo "        </div>" >> "$OUTPUT_FILE"
+echo "        </div>" >> "$OUTPUT_FILE"
+
+rm -f /tmp/alpha_index_$$.txt
+
+# Footer
+cat >> "$OUTPUT_FILE" <<'FOOTER'
+
+        <div class="footer">
+            Generated by <strong>Claude Code Librarian</strong><br>
+            Part of the Cyberspace Project<br>
+            <a href="../DESIGN-SPECIFICATIONS.html">Design Specifications</a> |
+            <a href="../PERMUTED-INDEX.md">Permuted Index</a> |
+            <a href="LIBRARY-TREE.pdf">Library Tree (PDF)</a>
+            <br><br>
+            Style inspired by the Common Lisp HyperSpec
+        </div>
+    </div>
+</body>
+</html>
+FOOTER
+
+echo "✓ Generated: $OUTPUT_FILE"
+echo "  $(wc -l < "$OUTPUT_FILE" | tr -d ' ') lines"
+echo "  $TOTAL_PDFS PDFs indexed"
+echo "  $TOTAL_DOCS total documents"

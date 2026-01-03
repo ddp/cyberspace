@@ -556,15 +556,20 @@ given as arguments are successfully loaded and NIL otherwise."
 (use-package monet
   :vc (:url "https://github.com/stevemolitor/monet" :rev :newest))
 
-;; for vterm terminal backend:
+;; Terminal backends:
 (use-package vterm :ensure t)
-(setq claude-code-terminal-backend 'vterm)
+(use-package eat :ensure t)
+;; Try eat instead of vterm to fix 1-second bounce issue
+(setq claude-code-terminal-backend 'eat)
 
 ;; install claude-code.el
 (use-package claude-code
   :vc (:url "https://github.com/stevemolitor/claude-code.el" :rev :newest)
   :demand t
   :config
+  ;; Skip welcome screen to avoid 1-second periodic bounce issue
+  (setq claude-code-program-switches '("--continue"))
+
   ;; optional IDE integration with Monet
   (add-hook 'claude-code-process-environment-functions
             #'monet-start-server-function)
