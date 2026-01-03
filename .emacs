@@ -539,6 +539,15 @@ given as arguments are successfully loaded and NIL otherwise."
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
 
+;; Ensure projectile is loaded and configured
+(use-package projectile
+  :ensure t
+  :init
+  (projectile-mode +1)
+  :config
+  (setq projectile-project-search-path '("~/src" "~/"))
+  (setq projectile-indexing-method 'alien))
+
 ;; install required inheritenv dependency:
 (use-package inheritenv
   :vc (:url "https://github.com/purcell/inheritenv" :rev :newest))
@@ -562,6 +571,9 @@ given as arguments are successfully loaded and NIL otherwise."
   (monet-mode 1)
   ;; Bind to the transient menu (as recommended in the docs)
   (keymap-global-set "C-c c" #'claude-code-transient))
+
+;; Prevent scroll bouncing in vterm/claude-code sessions
+(setq-default scroll-margin 0)
 
 ;;; Global overrides (Emacs 29+)
 (keymap-global-set "C-j" #'backward-kill-word)
