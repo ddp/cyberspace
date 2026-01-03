@@ -586,7 +586,14 @@ given as arguments are successfully loaded and NIL otherwise."
             (lambda ()
               (setq-local scroll-margin 0
                           scroll-conservatively 101
-                          auto-window-vscroll nil))))
+                          auto-window-vscroll nil)))
+
+  ;; Prevent vterm from auto-scrolling during process output (fixes thinking mode bounce)
+  (advice-add 'vterm--redraw :around
+              (lambda (orig-fun &rest args)
+                (let ((scroll-conservatively 101)
+                      (scroll-margin 0))
+                  (apply orig-fun args)))))
 
 ;;; Global overrides (Emacs 29+)
 (keymap-global-set "C-j" #'backward-kill-word)
