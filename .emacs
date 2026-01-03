@@ -99,14 +99,14 @@ given as arguments are successfully loaded and NIL otherwise."
       nil
       t))
 
-;;; set up package manager
+;;; Set up package manager
 
 (require 'package)
 (setq package-archives
-      '(("gnu"         . "https://elpa.gnu.org/packages/")
+      '(("gnu"          . "https://elpa.gnu.org/packages/")
         ("melpa-stable" . "https://stable.melpa.org/packages/")
-        ("melpa"       . "https://melpa.org/packages/")))
-(package-initialize)
+        ("melpa"        . "https://melpa.org/packages/")
+        ("nongnu"       . "https://elpa.nongnu.org/nongnu/")))
 
 ;; Keep warnings you care about; suppress "obsolete" noise.
 (setq byte-compile-warnings '(docstrings unresolved (not obsolete)))
@@ -240,7 +240,7 @@ given as arguments are successfully loaded and NIL otherwise."
             '((width . 100) (height . 46)))
            ((or (string= *host* "fluffy")
                 (string= *host* "fluffy.local"))
-            '((width . 108) (height . 108)))
+            '((width . 140) (height . 86)))
            (t
             '((width . 108) (height . 50)))))))
     (setq initial-frame-alist frame-config
@@ -531,6 +531,37 @@ given as arguments are successfully loaded and NIL otherwise."
   "Connect to norns for script development."
   (interactive)
   (find-file "/ssh:we@192.168.0.161:/home/we/dust/code/"))
+
+;;;; claude-code
+
+;; add melpa to package archives, as vterm is on melpa:
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(package-initialize)
+
+;; install required inheritenv dependency:
+(use-package inheritenv
+  :vc (:url "https://github.com/purcell/inheritenv" :rev :newest))
+
+;; install Monet IDE
+(use-package monet
+  :vc (:url "https://github.com/stevemolitor/monet" :rev :newest))
+
+;; for vterm terminal backend:
+(use-package vterm :ensure t)
+(setq claude-code-terminal-backend 'vterm)
+
+;; install claude-code.el
+(use-package claude-code
+  :vc (:url "https://github.com/stevemolitor/claude-code.el" :rev :newest)
+  :demand t
+  :config
+  ;; optional IDE integration with Monet
+  (add-hook 'claude-code-process-environment-functions
+            #'monet-start-server-function)
+  (monet-mode 1)
+  ;; Bind to the transient menu (as recommended in the docs)
+  (keymap-global-set "C-c c" #'claude-code-transient))
 
 ;;; Global overrides (Emacs 29+)
 (keymap-global-set "C-j" #'backward-kill-word)

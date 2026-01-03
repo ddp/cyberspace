@@ -156,6 +156,7 @@ if [[ -o interactive ]]; then
     alias cr="claude --resume"
     alias clone="stash && clone-fluffy --with-dotfiles"
     alias csi="rlwrap csi"
+    alias cyberspace="cd ~/cyberspace && claude -c"
     alias epoch="date +%s"
     alias fen="~/bin/forge-word"
     alias gonorns="ssh we@192.168.0.161"
