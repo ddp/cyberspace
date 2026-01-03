@@ -573,7 +573,20 @@ given as arguments are successfully loaded and NIL otherwise."
   (keymap-global-set "C-c c" #'claude-code-transient))
 
 ;; Prevent scroll bouncing in vterm/claude-code sessions
-(setq-default scroll-margin 0)
+(setq-default scroll-margin 0
+              scroll-conservatively 101        ; never recenter, scroll 1 line at a time
+              scroll-step 1                    ; scroll smoothly, not in jumps
+              scroll-preserve-screen-position t ; keep cursor position when scrolling
+              auto-window-vscroll nil)         ; prevent automatic vertical scrolling
+
+;; VTerm-specific: disable aggressive scrolling
+(with-eval-after-load 'vterm
+  (setq vterm-max-scrollback 10000)           ; reasonable scrollback
+  (add-hook 'vterm-mode-hook
+            (lambda ()
+              (setq-local scroll-margin 0
+                          scroll-conservatively 101
+                          auto-window-vscroll nil))))
 
 ;;; Global overrides (Emacs 29+)
 (keymap-global-set "C-j" #'backward-kill-word)
