@@ -1,0 +1,158 @@
+<h1 id="claude.md">CLAUDE.md</h1>
+<p>This file provides guidance to Claude Code (claude.ai/code) when
+working with code in this repository.</p>
+<h2 id="repository-overview">Repository Overview</h2>
+<p>This is a personal dotfiles repository containing Emacs and zsh shell
+configurations for macOS. The files in this repository are designed to
+be symlinked from the home directory: - <code>.emacs</code> →
+<code>~/.emacs</code> - <code>.zshrc</code> → <code>~/.zshrc</code></p>
+<h2 id="file-structure">File Structure</h2>
+<h3 id="emacs-24kb-700-lines">.emacs (24KB, ~700 lines)</h3>
+<p>Comprehensive Emacs configuration targeting macOS (NS build) with: -
+Custom personal keymap (<code>C-c d</code> prefix for ddp-specific
+commands) - Lisp development: SLY integration with SBCL at
+<code>~/bin/sbcl/bin/sbcl</code> - OCaml development: tuareg-mode,
+merlin, company-mode with opam integration - Scheme development:
+paredit-mode, pretty lambda (λ), multiple implementations (chibi, chez,
+guile) - Lua development: lua-mode for norns script development - TRAMP
+configuration for multi-hop SSH editing (servfail→ns1, norns, yoyodyne)
+- Custom ibuffer “Seen” column tracking buffer last-viewed timestamps -
+Package management via MELPA, MELPA-stable, GNU ELPA</p>
+<p>Key paths referenced: - <code>~/src/.emacs.d</code> - Emacs packages
+and load-path root - <code>~/src/lisp</code> - Common Lisp working
+directory - <code>~/src/scm</code> - Scheme working directory -
+<code>~/src/ocaml</code> - OCaml working directory -
+<code>~/bin/sbcl</code> - SBCL installation - <code>~/.saves/</code> -
+Backup file directory</p>
+<h3 id="zshrc-8kb-250-lines">.zshrc (8KB, ~250 lines)</h3>
+<p>Zsh configuration translated from tcsh with: - Large history (50K
+lines) with sharing across sessions - Homebrew detection for both Apple
+Silicon (<code>/opt/homebrew</code>) and Intel (<code>/usr/local</code>)
+- Emacsclient wrappers (<code>ec</code>, <code>ect</code>,
+<code>ecg</code>) connecting to server named “ns” - SSH host completion
+from <code>~/.ssh/known_hosts</code> - Extensive alias collection (ls
+variants, rlwrap for REPLs, development tools) - OCaml/opam
+initialization - SBCL path configuration - Platform-specific SSH agent
+handling (macOS Keychain vs Linux ssh-agent)</p>
+<h2 id="key-dependencies">Key Dependencies</h2>
+<p>External tools expected to be available: - <strong>Emacs.app</strong>
+at <code>/Applications/Emacs.app</code> (macOS GUI version) -
+<strong>SBCL</strong> at <code>~/bin/sbcl/bin/sbcl</code> with
+<code>SBCL_HOME=~/bin/sbcl/lib/sbcl</code> - <strong>opam</strong>
+(OCaml package manager) - auto-detected via <code>opam var share</code>
+- <strong>Homebrew</strong> - architecture-detected
+(<code>/opt/homebrew</code> or <code>/usr/local</code>) -
+<strong>rlwrap</strong> - used for REPL readline support (sbcl, chibi,
+chez, csi, guile) - <strong>utop</strong> - OCaml REPL (used in shell
+mode, not integrated with tuareg)</p>
+<p>Emacs packages (via package manager): - <code>sly</code> - Superior
+Lisp Interaction for Common Lisp - <code>paredit</code> - structured
+editing for S-expressions - <code>tuareg</code> - OCaml major mode -
+<code>merlin</code> - OCaml type information and completion -
+<code>company</code> - completion framework - <code>lua-mode</code> -
+Lua editing - <code>exec-path-from-shell</code> - inherit macOS
+environment in GUI Emacs</p>
+<h2 id="important-configuration-details">Important Configuration
+Details</h2>
+<h3 id="emacs-customizations">Emacs Customizations</h3>
+<ul>
+<li><strong>Server name</strong>: “ns” (NeXTStep) - emacsclient must use
+<code>-s ns</code></li>
+<li><strong>Lexical binding</strong>: enabled in .emacs</li>
+<li><strong>Custom file</strong>: <code>~/src/.emacs.d/custom.el</code>
+(auto-generated)</li>
+<li><strong>No tabs</strong>: <code>indent-tabs-mode nil</code>
+globally</li>
+<li><strong>Fill column</strong>: 72 for text/comments</li>
+<li><strong>Debug loading</strong>: Set <code>ddp-debug-loading</code>
+to <code>t</code> to trace require/load timing</li>
+</ul>
+<h3 id="custom-functions-worth-noting">Custom Functions Worth
+Noting</h3>
+<ul>
+<li><code>ddp-become-nameserver</code>: Multi-hop TRAMP to
+servfail→ns1</li>
+<li><code>ddp-become-servfail</code>: Direct TRAMP to servfail</li>
+<li><code>ddp-become-yoyodyne</code>: TRAMP to www.yoyodyne.com</li>
+<li><code>ddp-become-other</code>: Toggle local/remote on
+fluffy.eludom.net</li>
+<li><code>ddp-norns-connect</code>: SSH to norns at 192.168.0.161</li>
+<li><code>ddp-copy-char-above</code> /
+<code>ddp-copy-to-eol-above</code>: Copy from line above (C-c <up> with
+repeat-mode)</li>
+<li><code>ddp-run-lisp</code>: cd to ~/src/lisp and start SLY</li>
+<li><code>ddp-run-scheme</code>: cd to ~/src/scm</li>
+<li><code>ddp-run-ocaml</code>: Start utop in ~/src/ocaml</li>
+</ul>
+<h3 id="tramp-multi-hop-configuration">TRAMP Multi-hop
+Configuration</h3>
+<p>The <code>.emacs</code> configures TRAMP proxies for accessing hosts
+behind a bastion:</p>
+<pre class="elisp"><code>;; Access ns1.adelman.com via servfail.adelman.com
+(add-to-list &#39;tramp-default-proxies-alist
+             &#39;(&quot;\\`ns1\\.adelman\\.com\\&#39;&quot; nil
+               &quot;/ssh:servfail.adelman.com|ssh:%h:&quot;))</code></pre>
+<h3 id="key-bindings-changed-from-defaults">Key Bindings Changed from
+Defaults</h3>
+<ul>
+<li><code>C-j</code>: <code>backward-kill-word</code> (not
+newline-and-indent)</li>
+<li><code>C-r</code>: <code>query-replace</code> (not
+isearch-backward)</li>
+<li><code>C-s</code>: <code>isearch-forward-regexp</code> (not
+isearch-forward)</li>
+<li><code>C-c e</code>: Open ~/.emacs</li>
+<li><code>C-c z</code>: Open ~/.zshrc</li>
+<li><code>C-c d</code>: Prefix for personal keymap (see ddp-map)</li>
+<li><code>&lt;f1&gt;</code>/<code>&lt;f2&gt;</code>: Scroll other
+window</li>
+<li><code>&lt;f3&gt;</code>: <code>delete-other-windows</code></li>
+<li><code>&lt;f4&gt;</code>: <code>blank-mode</code> (show
+whitespace)</li>
+<li><code>&lt;f8&gt;</code>: Call last keyboard macro</li>
+</ul>
+<h2 id="making-changes">Making Changes</h2>
+<p>When editing these configuration files: 1. <strong>Test in a new
+Emacs instance</strong> before committing changes to <code>.emacs</code>
+2. <strong>Use <code>source ~/.zshrc</code></strong> to test zsh changes
+in current shell 3. <strong>Preserve the symlink structure</strong> -
+edit in <code>~/cyberspace/</code>, changes reflect to <code>~</code> 4.
+<strong>Check platform assumptions</strong> - configurations assume
+macOS (darwin) 5. <strong>Respect existing code style</strong>: - Emacs:
+4-space indentation, no tabs, 72-column fill for comments - Use
+<code>try-require</code> for optional Emacs packages to avoid load
+failures - Use <code>with-eval-after-load</code> for deferred
+configuration</p>
+<h2 id="testing-emacs-configuration">Testing Emacs Configuration</h2>
+<p>Load .emacs with debug mode enabled:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/Applications/Emacs.app/Contents/MacOS/Emacs</span> <span class="at">-nw</span> <span class="at">-Q</span> <span class="at">-l</span> ~/.emacs <span class="at">--eval</span> <span class="st">&#39;(setq ddp-debug-loading t)&#39;</span></span></code></pre></div>
+<p>Check for errors in <em>Messages</em> buffer or warnings during
+startup.</p>
+<h2 id="deployment">Deployment</h2>
+<p>To deploy these dotfiles on a new system:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone <span class="op">&lt;</span>repo-url<span class="op">&gt;</span> cyberspace</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-s</span> ~/cyberspace/.emacs ~/.emacs</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-s</span> ~/cyberspace/.zshrc ~/.zshrc</span></code></pre></div>
+<p>Then install dependencies: - Homebrew (if macOS) - SBCL to
+<code>~/bin/sbcl</code> - opam and OCaml tools - Required Emacs packages
+via <code>M-x package-list-packages</code></p>
+<h2 id="library-index-management">Library Index Management</h2>
+<p>The <code>~/cyberspace/library/</code> directory contains 312+
+research PDFs organized by topic (Cryptology, Type Theory, infosec,
+etc.).</p>
+<p><strong>Permuted Index</strong>: <code>library/index.html</code> -
+LaTeX-style KWIC (KeyWord In Context) permuted index - Every significant
+word indexed with clickable links - Deduplicated, hierarchical (letter →
+keyword → documents) - Regenerate after adding new documents:
+<code>~/cyberspace/bin/generate-library-index</code></p>
+<p><strong>When to Regenerate</strong>: - After adding/removing PDFs
+from library - When directory structure changes - When updating
+DESIGN-SPECIFICATIONS.md or other indexed docs - Commit both the script
+and generated index.html to version control</p>
+<p>The index integrates with: - <code>PERMUTED-INDEX.md</code> - Main
+document collection index - <code>DESIGN-SPECIFICATIONS.html</code> -
+Cyberspace design specifications - Published at:
+https://www.yoyodyne.com/ (via <code>~/bin/publish</code>)</p>
