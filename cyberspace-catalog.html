@@ -5024,12 +5024,28 @@
                 return;
             }
 
+            // Normalize RFC searches: rfc-822, rfc822, rfc 822 all match
+            const rfcMatch = query.match(/^rfc[-\s]?(\d+)$/i);
+            const normalizedQuery = rfcMatch ? `rfc${rfcMatch[1]}` : query;
+
             // Search and filter
             let matchCount = 0;
 
             allDocItems.forEach(item => {
                 const text = item.textContent.toLowerCase();
-                if (text.includes(query)) {
+                // Normalize RFC references in text for comparison
+                const normalizedText = text.replace(/rfc[-\s]?(\d+)/gi, (match, num) => `rfc${num}`);
+
+                let matches = false;
+                if (rfcMatch) {
+                    // RFC search: match normalized RFC number
+                    matches = normalizedText.includes(normalizedQuery);
+                } else {
+                    // Regular search: match as-is
+                    matches = text.includes(query);
+                }
+
+                if (matches) {
                     item.classList.remove('hidden');
                     matchCount++;
                     highlightText(item, query);
