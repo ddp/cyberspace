@@ -167,6 +167,18 @@ cat > "$OUTPUT_FILE" <<HEADER
             font-style: italic;
         }
 
+        .index-link {
+            font-size: 9pt;
+            color: #0000EE;
+            font-weight: normal;
+            text-decoration: none;
+            margin-left: 8px;
+        }
+
+        .index-link:hover {
+            text-decoration: underline;
+        }
+
         /* Stats box */
         .stats {
             margin: 10px 0;
@@ -310,7 +322,15 @@ find . -maxdepth 1 -type d ! -name "." ! -name ".git" ! -name "bin" ! -name ".em
     dir_id=$(echo "$dirname" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g')
 
     echo "        <div id=\"$dir_id\" class=\"subsection\">" >> "$OUTPUT_FILE"
-    echo "            <h3>$dirname ($doc_count documents)</h3>" >> "$OUTPUT_FILE"
+
+    # Check if INDEX.md exists and add link
+    if [ -f "$dir/INDEX.md" ]; then
+        index_path=$(echo "$dir/INDEX.md" | sed 's|^\./||' | sed 's/ /%20/g')
+        echo "            <h3>$dirname ($doc_count documents) <a href=\"$index_path\" class=\"index-link\" title=\"View collection index\">[INDEX]</a></h3>" >> "$OUTPUT_FILE"
+    else
+        echo "            <h3>$dirname ($doc_count documents)</h3>" >> "$OUTPUT_FILE"
+    fi
+
     echo "            <ul class=\"doc-list\">" >> "$OUTPUT_FILE"
 
     find "$dir" \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" | sort | while IFS= read -r file; do
@@ -350,7 +370,15 @@ if [ -d "library" ]; then
         dir_id=$(echo "$dirname" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g')
 
         echo "            <div id=\"library-$dir_id\" class=\"subsection\">" >> "$OUTPUT_FILE"
-        echo "                <h4>$dirname ($doc_count documents)</h4>" >> "$OUTPUT_FILE"
+
+        # Check if INDEX.md exists and add link
+        if [ -f "$dir/INDEX.md" ]; then
+            index_path=$(echo "$dir/INDEX.md" | sed 's|^\./||' | sed 's/ /%20/g')
+            echo "                <h4>$dirname ($doc_count documents) <a href=\"$index_path\" class=\"index-link\" title=\"View collection index\">[INDEX]</a></h4>" >> "$OUTPUT_FILE"
+        else
+            echo "                <h4>$dirname ($doc_count documents)</h4>" >> "$OUTPUT_FILE"
+        fi
+
         echo "                <ul class=\"doc-list\">" >> "$OUTPUT_FILE"
 
         find "$dir" \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" | sort | while IFS= read -r file; do
