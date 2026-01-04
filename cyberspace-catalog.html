@@ -235,6 +235,59 @@
         .hidden {
             display: none;
         }
+
+        /* Remote search results */
+        .remote-results {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #F0F0F0;
+            border-left: 3px solid #0000EE;
+        }
+
+        .remote-results h3 {
+            font-size: 10pt;
+            margin: 0 0 10px 0;
+            color: #0000EE;
+        }
+
+        .remote-result-item {
+            margin: 8px 0;
+            padding: 8px;
+            background-color: #FFFFFF;
+            border: 1px solid #CCCCCC;
+        }
+
+        .remote-result-item .result-title {
+            font-weight: bold;
+            color: #0000EE;
+            text-decoration: none;
+        }
+
+        .remote-result-item .result-title:hover {
+            text-decoration: underline;
+        }
+
+        .remote-result-item .result-meta {
+            font-size: 8pt;
+            color: #666666;
+            margin-top: 3px;
+        }
+
+        .remote-result-item .result-type {
+            display: inline-block;
+            padding: 2px 6px;
+            background-color: #0000EE;
+            color: #FFFFFF;
+            font-size: 7pt;
+            font-weight: bold;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+
+        .loading {
+            font-style: italic;
+            color: #999999;
+        }
     </style>
 </head>
 <body>
@@ -253,8 +306,9 @@
     </div>
 
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search repository by title, author, keyword..." autocomplete="off">
+        <input type="text" id="searchInput" placeholder="Search repository by title, author, keyword... (includes IETF datatracker)" autocomplete="off">
         <div class="search-results" id="searchResults"></div>
+        <div id="remoteResults" class="remote-results hidden"></div>
     </div>
 
     <div class="container">
@@ -5009,8 +5063,11 @@
         // Real-time search functionality
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
+        const remoteResults = document.getElementById('remoteResults');
         const allSections = document.querySelectorAll('.subsection, .section');
         const allDocItems = document.querySelectorAll('.doc-item');
+
+        let remoteSearchTimeout = null;
 
         searchInput.addEventListener('input', function(e) {
             const query = e.target.value.toLowerCase().trim();
@@ -5020,7 +5077,10 @@
                 allDocItems.forEach(item => item.classList.remove('hidden'));
                 allSections.forEach(section => section.classList.remove('hidden'));
                 searchResults.textContent = '';
+                remoteResults.classList.add('hidden');
+                remoteResults.innerHTML = '';
                 removeHighlights();
+                clearTimeout(remoteSearchTimeout);
                 return;
             }
 
@@ -5065,7 +5125,13 @@
             });
 
             // Update results counter
-            searchResults.textContent = `Found ${matchCount} document${matchCount !== 1 ? 's' : ''} matching "${e.target.value}"`;
+            searchResults.textContent = `Found ${matchCount} local document${matchCount !== 1 ? 's' : ''} matching "${e.target.value}"`;
+
+            // Trigger remote search with debounce
+            clearTimeout(remoteSearchTimeout);
+            remoteSearchTimeout = setTimeout(() => {
+                searchIETF(e.target.value.trim());
+            }, 500);
         });
 
         function highlightText(element, query) {
@@ -5126,6 +5192,70 @@
                     parent.replaceChild(wrapper, link);
                 }
             });
+        }
+
+        // Search IETF datatracker via API
+        async function searchIETF(query) {
+            if (query.length < 3) {
+                remoteResults.classList.add('hidden');
+                remoteResults.innerHTML = '';
+                return;
+            }
+
+            // Show loading state
+            remoteResults.classList.remove('hidden');
+            remoteResults.innerHTML = '<h3>IETF Datatracker Results</h3><p class="loading">Searching datatracker.ietf.org...</p>';
+
+            try {
+                // Search all IETF document types
+                const types = ['rfc', 'draft', 'bcp', 'fyi', 'charter', 'conflict-review', 'review', 'agenda', 'slides', 'minutes'];
+                const searchPromises = types.map(type =>
+                    fetch(`https://datatracker.ietf.org/api/v1/doc/document/?type=${type}&title__icontains=${encodeURIComponent(query)}&limit=10`)
+                        .then(r => r.json())
+                        .catch(() => ({ objects: [] }))
+                );
+
+                const results = await Promise.all(searchPromises);
+
+                // Combine and flatten results
+                let allDocs = [];
+                results.forEach((result, idx) => {
+                    if (result.objects) {
+                        allDocs = allDocs.concat(result.objects.map(doc => ({
+                            ...doc,
+                            type: types[idx]
+                        })));
+                    }
+                });
+
+                // Display results
+                if (allDocs.length === 0) {
+                    remoteResults.innerHTML = `<h3>IETF Datatracker Results</h3><p class="loading">No results found on datatracker.ietf.org for "${query}"</p>`;
+                } else {
+                    let html = `<h3>IETF Datatracker Results (${allDocs.length})</h3>`;
+                    allDocs.slice(0, 20).forEach(doc => {
+                        const url = `https://datatracker.ietf.org/doc/html/${doc.name}`;
+                        const typeLabel = doc.type.toUpperCase();
+                        const time = doc.time ? new Date(doc.time).getFullYear() : 'N/A';
+
+                        html += `
+                            <div class="remote-result-item">
+                                <span class="result-type">${typeLabel}</span>
+                                <a href="${url}" target="_blank" class="result-title">${doc.name}: ${doc.title || 'No title'}</a>
+                                <div class="result-meta">${time}${doc.pages ? ` • ${doc.pages} pages` : ''}</div>
+                            </div>
+                        `;
+                    });
+
+                    if (allDocs.length > 20) {
+                        html += `<p class="loading">Showing first 20 of ${allDocs.length} results</p>`;
+                    }
+
+                    remoteResults.innerHTML = html;
+                }
+            } catch (error) {
+                remoteResults.innerHTML = `<h3>IETF Datatracker Results</h3><p class="loading">Error searching datatracker: ${error.message}</p>`;
+            }
         }
 
         // Run on page load
