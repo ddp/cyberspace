@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyberspace Library Catalog</title>
+    <title>Cyberspace Repository</title>
     <style>
         /* Authentic Common Lisp HyperSpec CSS */
         body {
@@ -209,11 +209,102 @@
             font-family: "Courier New", Courier, monospace;
             font-size: 9pt;
         }
+
+        /* Search box */
+        .search-box {
+            margin: 10px;
+            padding: 15px;
+            background-color: #F8F8F8;
+            border: 1px solid #000000;
+        }
+
+        .search-box input {
+            width: 100%;
+            max-width: 600px;
+            padding: 8px 12px;
+            font-size: 12pt;
+            font-family: "New Century Schoolbook", Georgia, serif;
+            border: 2px solid #000000;
+            box-sizing: border-box;
+        }
+
+        .search-box input:focus {
+            outline: 2px solid #0000EE;
+            outline-offset: 2px;
+        }
+
+        .search-results {
+            margin-top: 10px;
+            font-size: 9pt;
+            color: #666666;
+        }
+
+        .highlight {
+            background-color: #FFFF00;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Remote search results */
+        .remote-results {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #F0F0F0;
+            border-left: 3px solid #0000EE;
+        }
+
+        .remote-results h3 {
+            font-size: 10pt;
+            margin: 0 0 10px 0;
+            color: #0000EE;
+        }
+
+        .remote-result-item {
+            margin: 8px 0;
+            padding: 8px;
+            background-color: #FFFFFF;
+            border: 1px solid #CCCCCC;
+        }
+
+        .remote-result-item .result-title {
+            font-weight: bold;
+            color: #0000EE;
+            text-decoration: none;
+        }
+
+        .remote-result-item .result-title:hover {
+            text-decoration: underline;
+        }
+
+        .remote-result-item .result-meta {
+            font-size: 8pt;
+            color: #666666;
+            margin-top: 3px;
+        }
+
+        .remote-result-item .result-type {
+            display: inline-block;
+            padding: 2px 6px;
+            background-color: #0000EE;
+            color: #FFFFFF;
+            font-size: 7pt;
+            font-weight: bold;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+
+        .loading {
+            font-style: italic;
+            color: #999999;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Cyberspace Library Catalog</h1>
+        <h1>Cyberspace Repository</h1>
         <div class="subtitle">A comprehensive collection of computer science research papers and technical documentation</div>
     </div>
 
@@ -224,6 +315,12 @@
         <a href="#alphabetical">Alphabetical Index</a>
         <a href="../PERMUTED-INDEX.md">Permuted Index</a>
         <a href="index.html">KWIC Index</a>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search repository by title, author, keyword... (includes IETF datatracker)" autocomplete="off">
+        <div class="search-results" id="searchResults"></div>
+        <div id="remoteResults" class="remote-results hidden"></div>
     </div>
 
     <div class="container">
@@ -4973,5 +5070,208 @@
             Style inspired by the Common Lisp HyperSpec
         </div>
     </div>
+
+    <script>
+        // Real-time search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const remoteResults = document.getElementById('remoteResults');
+        const allSections = document.querySelectorAll('.subsection, .section');
+        const allDocItems = document.querySelectorAll('.doc-item');
+
+        let remoteSearchTimeout = null;
+
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+
+            if (query === '') {
+                // Reset: show all items
+                allDocItems.forEach(item => item.classList.remove('hidden'));
+                allSections.forEach(section => section.classList.remove('hidden'));
+                searchResults.textContent = '';
+                remoteResults.classList.add('hidden');
+                remoteResults.innerHTML = '';
+                removeHighlights();
+                clearTimeout(remoteSearchTimeout);
+                return;
+            }
+
+            // Normalize RFC searches: rfc-822, rfc822, rfc 822 all match
+            const rfcMatch = query.match(/^rfc[-\s]?(\d+)$/i);
+            const normalizedQuery = rfcMatch ? `rfc${rfcMatch[1]}` : query;
+
+            // Search and filter
+            let matchCount = 0;
+
+            allDocItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                // Normalize RFC references in text for comparison
+                const normalizedText = text.replace(/rfc[-\s]?(\d+)/gi, (match, num) => `rfc${num}`);
+
+                let matches = false;
+                if (rfcMatch) {
+                    // RFC search: match normalized RFC number
+                    matches = normalizedText.includes(normalizedQuery);
+                } else {
+                    // Regular search: match as-is
+                    matches = text.includes(query);
+                }
+
+                if (matches) {
+                    item.classList.remove('hidden');
+                    matchCount++;
+                    highlightText(item, query);
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Hide empty sections
+            allSections.forEach(section => {
+                const visibleItems = section.querySelectorAll('.doc-item:not(.hidden)');
+                if (visibleItems.length === 0) {
+                    section.classList.add('hidden');
+                } else {
+                    section.classList.remove('hidden');
+                }
+            });
+
+            // Update results counter
+            searchResults.textContent = `Found ${matchCount} local document${matchCount !== 1 ? 's' : ''} matching "${e.target.value}"`;
+
+            // Trigger remote search with debounce
+            clearTimeout(remoteSearchTimeout);
+            remoteSearchTimeout = setTimeout(() => {
+                searchIETF(e.target.value.trim());
+            }, 500);
+        });
+
+        function highlightText(element, query) {
+            const links = element.querySelectorAll('a');
+            links.forEach(link => {
+                const text = link.textContent;
+                const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+                const highlighted = text.replace(regex, '<span class="highlight">$1</span>');
+                if (highlighted !== text) {
+                    link.innerHTML = highlighted;
+                }
+            });
+        }
+
+        function removeHighlights() {
+            const highlights = document.querySelectorAll('.highlight');
+            highlights.forEach(highlight => {
+                const parent = highlight.parentNode;
+                parent.textContent = parent.textContent;
+            });
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Clear search on Escape key
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
+        });
+
+        // Linkify RFC references to IETF datatracker
+        function linkifyRFCs() {
+            const docTitles = document.querySelectorAll('.doc-title');
+            const rfcPattern = /\b(rfc[-\s]?(\d{4,5}))\b/gi;
+
+            docTitles.forEach(link => {
+                const text = link.textContent;
+                const matches = text.match(rfcPattern);
+
+                if (matches) {
+                    // Store original href
+                    const originalHref = link.getAttribute('href');
+
+                    // Replace text with linkified version
+                    const newHTML = text.replace(rfcPattern, function(match, fullMatch, rfcNum) {
+                        const datatrackerUrl = `https://datatracker.ietf.org/doc/html/rfc${rfcNum}`;
+                        return `<a href="${datatrackerUrl}" target="_blank" title="View RFC ${rfcNum} on IETF Datatracker" style="color: #0000EE; text-decoration: underline;">${match}</a>`;
+                    });
+
+                    // Create wrapper to preserve original file link
+                    const parent = link.parentNode;
+                    const wrapper = document.createElement('span');
+                    wrapper.innerHTML = newHTML + ` <a href="${originalHref}" class="doc-title" style="color: #666; font-size: 9pt;">[PDF]</a>`;
+                    parent.replaceChild(wrapper, link);
+                }
+            });
+        }
+
+        // Search IETF datatracker via API
+        async function searchIETF(query) {
+            if (query.length < 3) {
+                remoteResults.classList.add('hidden');
+                remoteResults.innerHTML = '';
+                return;
+            }
+
+            // Show loading state
+            remoteResults.classList.remove('hidden');
+            remoteResults.innerHTML = '<h3>IETF Datatracker Results</h3><p class="loading">Searching datatracker.ietf.org...</p>';
+
+            try {
+                // Search all IETF document types
+                const types = ['rfc', 'draft', 'bcp', 'fyi', 'charter', 'conflict-review', 'review', 'agenda', 'slides', 'minutes'];
+                const searchPromises = types.map(type =>
+                    fetch(`https://datatracker.ietf.org/api/v1/doc/document/?type=${type}&title__icontains=${encodeURIComponent(query)}&limit=10`)
+                        .then(r => r.json())
+                        .catch(() => ({ objects: [] }))
+                );
+
+                const results = await Promise.all(searchPromises);
+
+                // Combine and flatten results
+                let allDocs = [];
+                results.forEach((result, idx) => {
+                    if (result.objects) {
+                        allDocs = allDocs.concat(result.objects.map(doc => ({
+                            ...doc,
+                            type: types[idx]
+                        })));
+                    }
+                });
+
+                // Display results
+                if (allDocs.length === 0) {
+                    remoteResults.innerHTML = `<h3>IETF Datatracker Results</h3><p class="loading">No results found on datatracker.ietf.org for "${query}"</p>`;
+                } else {
+                    let html = `<h3>IETF Datatracker Results (${allDocs.length})</h3>`;
+                    allDocs.slice(0, 20).forEach(doc => {
+                        const url = `https://datatracker.ietf.org/doc/html/${doc.name}`;
+                        const typeLabel = doc.type.toUpperCase();
+                        const time = doc.time ? new Date(doc.time).getFullYear() : 'N/A';
+
+                        html += `
+                            <div class="remote-result-item">
+                                <span class="result-type">${typeLabel}</span>
+                                <a href="${url}" target="_blank" class="result-title">${doc.name}: ${doc.title || 'No title'}</a>
+                                <div class="result-meta">${time}${doc.pages ? ` • ${doc.pages} pages` : ''}</div>
+                            </div>
+                        `;
+                    });
+
+                    if (allDocs.length > 20) {
+                        html += `<p class="loading">Showing first 20 of ${allDocs.length} results</p>`;
+                    }
+
+                    remoteResults.innerHTML = html;
+                }
+            } catch (error) {
+                remoteResults.innerHTML = `<h3>IETF Datatracker Results</h3><p class="loading">Error searching datatracker: ${error.message}</p>`;
+            }
+        }
+
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', linkifyRFCs);
+    </script>
 </body>
 </html>
