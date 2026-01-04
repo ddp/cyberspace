@@ -6,7 +6,7 @@
 set -e
 
 CYBERSPACE_DIR="$HOME/cyberspace"
-OUTPUT_FILE="$CYBERSPACE_DIR/library/library-catalog.html"
+OUTPUT_FILE="$CYBERSPACE_DIR/cyberspace-catalog.html"
 
 cd "$CYBERSPACE_DIR" || exit 1
 
@@ -264,6 +264,22 @@ find . -maxdepth 1 -type d ! -name "." ! -name ".git" ! -name "bin" ! -name ".em
     echo "                        <li><a href=\"#$dir_id\">$dirname</a></li>" >> "$OUTPUT_FILE"
 done
 
+# Add library subcollections to TOC
+echo "                        <li><a href=\"#library-subcollections\">Library Subcollections</a>" >> "$OUTPUT_FILE"
+if [ -d "library" ]; then
+    echo "                            <ul>" >> "$OUTPUT_FILE"
+    find library -maxdepth 1 -type d ! -name "library" | sort | while IFS= read -r dir; do
+        dirname=$(basename "$dir")
+        doc_count=$(find "$dir" -name "*.pdf" -o -name "*.md" -o -name "*.txt" | wc -l | tr -d ' ')
+        if [ "$doc_count" -gt 0 ]; then
+            dir_id=$(echo "$dirname" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g')
+            echo "                                <li><a href=\"#library-$dir_id\">$dirname</a></li>" >> "$OUTPUT_FILE"
+        fi
+    done
+    echo "                            </ul>" >> "$OUTPUT_FILE"
+fi
+echo "                        </li>" >> "$OUTPUT_FILE"
+
 cat >> "$OUTPUT_FILE" <<'HEADER2'
                     </ul>
                 </li>
@@ -300,8 +316,8 @@ find . -maxdepth 1 -type d ! -name "." ! -name ".git" ! -name "bin" ! -name ".em
     find "$dir" \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" | sort | while IFS= read -r file; do
         filename=$(basename "$file")
         title="${filename%.*}"
-        # Make path relative to library/ since output is in library/library-catalog.html
-        urlpath=$(echo "$file" | sed 's|^\./|../|' | sed 's/ /%20/g')
+        # Make path relative to cyberspace root (remove leading ./)
+        urlpath=$(echo "$file" | sed 's|^\./||' | sed 's/ /%20/g')
 
         # Get file size
         size=$(ls -lh "$file" | awk '{print $5}')
@@ -316,6 +332,46 @@ find . -maxdepth 1 -type d ! -name "." ! -name ".git" ! -name "bin" ! -name ".em
     echo "        </div>" >> "$OUTPUT_FILE"
 done
 
+# Special handling for library/ subdirectories
+if [ -d "library" ]; then
+    echo "        <div id=\"library-subcollections\" class=\"subsection\">" >> "$OUTPUT_FILE"
+    echo "            <h3>Library Subcollections</h3>" >> "$OUTPUT_FILE"
+    echo "            <p>The library/ directory contains the following specialized collections:</p>" >> "$OUTPUT_FILE"
+
+    find library -maxdepth 1 -type d ! -name "library" | sort | while IFS= read -r dir; do
+        dirname=$(basename "$dir")
+        doc_count=$(find "$dir" -name "*.pdf" -o -name "*.md" -o -name "*.txt" | wc -l | tr -d ' ')
+
+        # Skip if no documents
+        if [ "$doc_count" -eq 0 ]; then
+            continue
+        fi
+
+        dir_id=$(echo "$dirname" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g')
+
+        echo "            <div id=\"library-$dir_id\" class=\"subsection\">" >> "$OUTPUT_FILE"
+        echo "                <h4>$dirname ($doc_count documents)</h4>" >> "$OUTPUT_FILE"
+        echo "                <ul class=\"doc-list\">" >> "$OUTPUT_FILE"
+
+        find "$dir" \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" | sort | while IFS= read -r file; do
+            filename=$(basename "$file")
+            title="${filename%.*}"
+            urlpath=$(echo "$file" | sed 's|^\./||' | sed 's/ /%20/g')
+            size=$(ls -lh "$file" | awk '{print $5}')
+
+            echo "                    <li class=\"doc-item\">" >> "$OUTPUT_FILE"
+            echo "                        <a href=\"$urlpath\" class=\"doc-title\">$title</a>" >> "$OUTPUT_FILE"
+            echo "                        <span class=\"doc-meta\">[$size]</span>" >> "$OUTPUT_FILE"
+            echo "                    </li>" >> "$OUTPUT_FILE"
+        done
+
+        echo "                </ul>" >> "$OUTPUT_FILE"
+        echo "            </div>" >> "$OUTPUT_FILE"
+    done
+
+    echo "        </div>" >> "$OUTPUT_FILE"
+fi
+
 echo "        </div>" >> "$OUTPUT_FILE"
 
 # Generate Root Collection
@@ -324,11 +380,11 @@ echo "            <h2>Root Collection</h2>" >> "$OUTPUT_FILE"
 echo "            <p>Documents in the root of the Cyberspace directory:</p>" >> "$OUTPUT_FILE"
 echo "            <ul class=\"doc-list\">" >> "$OUTPUT_FILE"
 
-find . -maxdepth 1 \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" ! -name "index.html" ! -name "library-catalog.html" ! -name "LIBRARY-TREE.*" | sort | while IFS= read -r file; do
+find . -maxdepth 1 \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" ! -name "index.html" ! -name "cyberspace-catalog.html" ! -name "LIBRARY-TREE.*" | sort | while IFS= read -r file; do
     filename=$(basename "$file")
     title="${filename%.*}"
-    # Make path relative to library/ directory
-    urlpath=$(echo "$file" | sed 's|^\./|../|' | sed 's/ /%20/g')
+    # Make path relative to cyberspace root (remove leading ./)
+    urlpath=$(echo "$file" | sed 's|^\./||' | sed 's/ /%20/g')
     size=$(ls -lh "$file" | awk '{print $5}')
 
     echo "                <li class=\"doc-item\">" >> "$OUTPUT_FILE"
@@ -353,11 +409,11 @@ done
 echo "            </p>" >> "$OUTPUT_FILE"
 
 # Generate alphabetical listing
-find . \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" ! -name "index.html" ! -name "library-catalog.html" ! -name "LIBRARY-TREE.*" | while IFS= read -r file; do
+find . \( -name "*.pdf" -o -name "*.md" -o -name "*.txt" \) ! -name ".*" ! -name "index.html" ! -name "cyberspace-catalog.html" ! -name "LIBRARY-TREE.*" | while IFS= read -r file; do
     filename=$(basename "$file")
     title="${filename%.*}"
-    # Make path relative to library/ directory
-    urlpath=$(echo "$file" | sed 's|^\./|../|' | sed 's/ /%20/g')
+    # Make path relative to cyberspace root (remove leading ./)
+    urlpath=$(echo "$file" | sed 's|^\./||' | sed 's/ /%20/g')
     first_char=$(echo "$title" | cut -c1 | tr '[:lower:]' '[:upper:]')
     dirpath=$(dirname "$file" | sed 's|^\./||')
 
