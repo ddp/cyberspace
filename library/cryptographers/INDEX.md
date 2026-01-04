@@ -2,13 +2,13 @@
 
 **Collection Date**: 2026-01-03
 **Location**: ~/cyberspace/library/cryptographers/
-**Total Size**: ~17 MB
-**Collections**: 11 subdirectories
-**Files**: 42 papers and RFCs
+**Total Size**: ~18.1 MB
+**Collections**: 12 subdirectories
+**Files**: 54 papers and RFCs
 
 ## Overview
 
-This collection brings together foundational papers and protocol specifications from eleven of the most influential figures and developments in modern cryptography and network security. From the birth of public-key cryptography in 1976 to modern elliptic curve implementations, from anonymous digital cash to distributed authentication, from the first TCP/IP security analysis to the crypto wars of the 1990s, these documents trace the evolution of cryptographic and network security systems that secure today's Internet.
+This collection brings together foundational papers and protocol specifications from twelve of the most influential figures and developments in modern cryptography and network security. From the birth of public-key cryptography in 1976 to modern elliptic curve implementations, from anonymous digital cash to distributed authentication, from IPsec key management to Kerberos authentication, from the first TCP/IP security analysis to the crypto wars of the 1990s, these documents trace the evolution of cryptographic and network security systems that secure today's Internet.
 
 ## Collections
 
@@ -158,6 +158,39 @@ This collection brings together foundational papers and protocol specifications 
 
 **See**: [kaufman/INDEX.md](kaufman/INDEX.md)
 
+### 12. Key Management Protocols (~1.2 MB, 12 RFCs and documents)
+**Path**: `key-management-protocols/`
+
+**Three Approaches to IPsec/Network Key Management**:
+
+**Photuris** (191 KB, 2 RFCs):
+- RFC 2522 - Session-Key Management Protocol (1999)
+- RFC 2523 - Extended Schemes and Attributes (1999)
+- Cookie-based DoS protection (inspired IKEv2)
+- Perfect forward secrecy by default
+- Lost to IKE but influenced later protocols
+
+**SKIP** (75 KB, 1 Internet Draft):
+- draft-ietf-ipsec-skip-06 - Simple Key Management for IP
+- Zero-round-trip key establishment
+- Stateless operation
+- Never standardized (key escrow concerns)
+
+**Kerberos** (881 KB, 6 RFCs):
+- RFC 1510 - Kerberos V5 (1993, historic)
+- RFC 4120 - Updated Kerberos V5 (2005)
+- RFC 3961 - Encryption and Checksum Specifications
+- RFC 3962 - AES Encryption for Kerberos
+- RFC 4121 - GSS-API Mechanism
+- RFC 4556 - PKINIT (Public Key Initial Authentication)
+- Symmetric-key authentication protocol
+- Centralized KDC (Key Distribution Center)
+- Enterprise standard (Active Directory)
+
+**Why It Matters**: These three protocols represent different philosophies for key management and authentication. Photuris and SKIP competed with IKE for IPsec key management in the 1990s—IKE won, but Photuris's cookie mechanism lives on in IKEv2, DTLS, and QUIC. Kerberos took a completely different approach: centralized, symmetric-key authentication that became the foundation of enterprise authentication (Microsoft Active Directory). Together they show the evolution and tradeoffs in key management: stateless vs stateful, centralized vs distributed, symmetric vs asymmetric cryptography.
+
+**See**: [key-management-protocols/photuris/INDEX.md](key-management-protocols/photuris/INDEX.md), [key-management-protocols/skip/INDEX.md](key-management-protocols/skip/INDEX.md), [key-management-protocols/kerberos/INDEX.md](key-management-protocols/kerberos/INDEX.md)
+
 ## Thematic Connections
 
 ### Public-Key Cryptography
@@ -195,31 +228,68 @@ This collection brings together foundational papers and protocol specifications 
 - **Crypto Wars**: Bellovin, Blaze opposition to government backdoors
 - **Modern Debates**: Lessons from 1990s apply to current encryption policy
 
+### Key Management and Authentication
+- **Distributed Authentication**: Lampson DSSA, Kaufman DASS - Public-key based, no central authority
+- **IPsec Key Management Competition**: Photuris vs SKIP vs IKE - Different approaches to session key establishment
+- **Centralized Authentication**: Kerberos - Symmetric-key, KDC-based, enterprise scale
+- **Hybrid Approaches**: PKINIT (Kerberos with public-key), IKEv2 (borrowed Photuris cookies)
+- **VPN Security**: IKEv2 (Kaufman) won standardization, secures millions of connections
+- **Enterprise Security**: Kerberos/Active Directory authentication for Windows domains
+- **Design Philosophies**: Stateless (SKIP) vs stateful (IKE), centralized (Kerberos) vs distributed (DSSA)
+
+### Distributed Security Architecture
+- **DSSA (1989)**: Lampson, Kaufman, Gasser, Goldstein - No central authority, public-key based
+- **DASS (1993)**: Kaufman - Distributed authentication service at DEC
+- **SDSI/SPKI**: Lampson, Rivest - Alternative to X.509 PKI
+- **Kerberos**: MIT - Centralized alternative using symmetric keys and trusted KDC
+- **Contrast**: Kerberos centralized vs DSSA/DASS distributed approaches
+
 ## Timeline of Innovations
 
+**1971**: Lampson - "Protection" paper (access control, capabilities)
 **1976**: Diffie-Hellman - Public-key cryptography invented
+**1981**: Chaum - Mix networks for anonymous email
+**1982**: Chaum - Blind signatures for untraceable payments
+**1988**: Chaum - Untraceable electronic cash (with Fiat, Naor)
+**1988**: Chaum - Dining cryptographers problem
 **1989**: Bellovin - First comprehensive TCP/IP security analysis
+**1989**: DSSA - Digital Distributed System Security Architecture (Lampson, Kaufman, Gasser, Goldstein)
 **1991**: Zimmermann PGP - First widespread public-key encryption
 **1992**: Blaze CFS - Cryptographic File System for Unix
 **1992**: Bellovin - "There be Dragons" Internet security analysis
+**1992**: Lampson - Authentication in distributed systems (with Abadi, Burrows, Wobber)
 **1993**: Blaze - CFS paper at first ACM CCS conference
+**1993**: Kaufman - DASS (RFC 1507)
+**1993**: Kerberos V5 - Original specification (RFC 1510)
 **1994**: Blaze - Discovered Clipper chip key escrow flaw
 **1994**: Schneier Blowfish - Fast, free block cipher
 **1994**: Bellovin & Cheswick - First firewalls book
 **1995**: Ylönen SSH-1 - Secure remote login protocol
 **1995**: Bellovin - DNS security vulnerabilities
+**1995**: DigiCash eCash - First digital currency (Chaum)
+**1996**: Lampson - SDSI (with Rivest)
 **1998**: Schneier Twofish - AES finalist
 **1999**: Bellovin - Distributed firewalls concept
+**1999**: Eastlake - DNSSEC (RFC 2535)
+**1999**: Photuris - IPsec key management (RFC 2522-2523)
+**1999**: Lampson - SPKI/SDSI (RFC 2693, with Ylönen, Rivest, Ellison)
+**2000**: Eastlake - TSIG (RFC 2845)
 **2004**: Blaze - Safecracking for computer scientists
 **2005**: djb Poly1305 - High-speed MAC
 **2005**: djb Cache-timing attacks - Side-channel vulnerabilities discovered
+**2005**: Eastlake - Randomness Requirements (RFC 4086, BCP)
+**2005**: Kerberos V5 - Updated specification (RFC 4120, obsoletes 1510)
+**2005**: Kerberos - AES encryption (RFC 3962)
 **2006**: djb Curve25519 - Modern elliptic curve cryptography
 **2006**: SSH-2 RFCs published - Standardized protocol
+**2006**: PKINIT - Public-key initial auth for Kerberos (RFC 4556)
 **2008**: djb ChaCha20 - Improved stream cipher
 **2010**: Schneier Skein - SHA-3 finalist
+**2010**: Kaufman - IKEv2 (RFC 5996)
 **2011**: djb Ed25519 - Modern signature algorithm
 **2011**: djb NaCl - Easy-to-use crypto library
 **2011**: Blaze - Crypto wars retrospective paper
+**2014**: Kaufman - IKEv2 Internet Standard (RFC 7296)
 
 ## Impact on Modern Security
 
@@ -306,7 +376,13 @@ cryptographers/
 │   ├── clipper-protocol-failure-1994.pdf
 │   ├── key-escrow-retrospective-2011.pdf
 │   └── safecracking-2004.pdf
-├── diffie-hellman/         (1 file,  260 KB)
+├── chaum/                  (4 files, 1.8 MB)
+│   ├── INDEX.md
+│   ├── blind-signatures-1982.pdf
+│   ├── dining-cryptographers-1988.pdf
+│   ├── untraceable-electronic-cash-1988.pdf
+│   └── untraceable-email-mix-1981.pdf
+├── diffie-hellman/         (1 file, 260 KB)
 │   ├── INDEX.md
 │   └── diffie-hellman-1976-new-directions-in-cryptography.pdf
 ├── djb/                    (8 files, 3.2 MB)
@@ -319,6 +395,40 @@ cryptographers/
 │   ├── poly1305-aes-2005.pdf
 │   ├── salsa20-family-2007.pdf
 │   └── salsa20-spec.pdf
+├── eastlake/               (4 files, 280 KB)
+│   ├── INDEX.md
+│   ├── rfc2535-dnssec-1999.txt
+│   ├── rfc2536-dsa-dns-1999.txt
+│   ├── rfc2845-tsig-2000.txt
+│   └── rfc4086-randomness-2005.txt
+├── kaufman/                (3 files, 1 MB)
+│   ├── INDEX.md
+│   ├── rfc1507-dass-1993.txt
+│   ├── rfc5996-ikev2-2010.txt
+│   └── rfc7296-ikev2-2014.txt
+├── key-management-protocols/ (12 files, 1.2 MB)
+│   ├── kerberos/           (6 files, 881 KB)
+│   │   ├── INDEX.md
+│   │   ├── rfc1510-kerberos-v5-1993.txt
+│   │   ├── rfc3961-encryption-checksum-2005.txt
+│   │   ├── rfc3962-aes-encryption-2005.txt
+│   │   ├── rfc4120-kerberos-v5-2005.txt
+│   │   ├── rfc4121-gss-api-v2-2005.txt
+│   │   └── rfc4556-pkinit-2006.txt
+│   ├── photuris/           (2 files, 191 KB)
+│   │   ├── INDEX.md
+│   │   ├── rfc2522-photuris-session-key-1999.txt
+│   │   └── rfc2523-photuris-extended-schemes-1999.txt
+│   └── skip/               (1 file, 75 KB)
+│       ├── INDEX.md
+│       └── draft-ietf-ipsec-skip-06.txt
+├── lampson/                (5 files, 700 KB)
+│   ├── INDEX.md
+│   ├── authentication-distributed-systems-1992.pdf
+│   ├── dssa-1989.pdf
+│   ├── protection-1971.pdf
+│   ├── sdsi-1996.pdf
+│   └── spki-certificate-theory-1999.pdf
 ├── schneier/               (2 files, 1.0 MB)
 │   ├── INDEX.md
 │   ├── skein-hash-function-2010.pdf
@@ -406,4 +516,4 @@ cryptographers/
 
 **Curator**: Collected 2026-01-03 for cyberspace library on distributed systems security and cryptographic protocols.
 
-**Last Updated**: 2026-01-03
+**Last Updated**: 2026-01-04
