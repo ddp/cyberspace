@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyberspace Library Catalog</title>
+    <title>Cyberspace Repository</title>
     <style>
         /* Authentic Common Lisp HyperSpec CSS */
         body {
@@ -197,11 +197,49 @@
             font-family: "Courier New", Courier, monospace;
             font-size: 9pt;
         }
+
+        /* Search box */
+        .search-box {
+            margin: 10px;
+            padding: 15px;
+            background-color: #F8F8F8;
+            border: 1px solid #000000;
+        }
+
+        .search-box input {
+            width: 100%;
+            max-width: 600px;
+            padding: 8px 12px;
+            font-size: 12pt;
+            font-family: "New Century Schoolbook", Georgia, serif;
+            border: 2px solid #000000;
+            box-sizing: border-box;
+        }
+
+        .search-box input:focus {
+            outline: 2px solid #0000EE;
+            outline-offset: 2px;
+        }
+
+        .search-results {
+            margin-top: 10px;
+            font-size: 9pt;
+            color: #666666;
+        }
+
+        .highlight {
+            background-color: #FFFF00;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Cyberspace Library Catalog</h1>
+        <h1>Cyberspace Repository</h1>
         <div class="subtitle">A comprehensive collection of computer science research papers and technical documentation</div>
     </div>
 
@@ -212,6 +250,11 @@
         <a href="#alphabetical">Alphabetical Index</a>
         <a href="../PERMUTED-INDEX.md">Permuted Index</a>
         <a href="index.html">KWIC Index</a>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search repository by title, author, keyword..." autocomplete="off">
+        <div class="search-results" id="searchResults"></div>
     </div>
 
     <div class="container">
@@ -4961,5 +5004,85 @@
             Style inspired by the Common Lisp HyperSpec
         </div>
     </div>
+
+    <script>
+        // Real-time search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const allSections = document.querySelectorAll('.subsection, .section');
+        const allDocItems = document.querySelectorAll('.doc-item');
+
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+
+            if (query === '') {
+                // Reset: show all items
+                allDocItems.forEach(item => item.classList.remove('hidden'));
+                allSections.forEach(section => section.classList.remove('hidden'));
+                searchResults.textContent = '';
+                removeHighlights();
+                return;
+            }
+
+            // Search and filter
+            let matchCount = 0;
+
+            allDocItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    item.classList.remove('hidden');
+                    matchCount++;
+                    highlightText(item, query);
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Hide empty sections
+            allSections.forEach(section => {
+                const visibleItems = section.querySelectorAll('.doc-item:not(.hidden)');
+                if (visibleItems.length === 0) {
+                    section.classList.add('hidden');
+                } else {
+                    section.classList.remove('hidden');
+                }
+            });
+
+            // Update results counter
+            searchResults.textContent = `Found ${matchCount} document${matchCount !== 1 ? 's' : ''} matching "${e.target.value}"`;
+        });
+
+        function highlightText(element, query) {
+            const links = element.querySelectorAll('a');
+            links.forEach(link => {
+                const text = link.textContent;
+                const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+                const highlighted = text.replace(regex, '<span class="highlight">$1</span>');
+                if (highlighted !== text) {
+                    link.innerHTML = highlighted;
+                }
+            });
+        }
+
+        function removeHighlights() {
+            const highlights = document.querySelectorAll('.highlight');
+            highlights.forEach(highlight => {
+                const parent = highlight.parentNode;
+                parent.textContent = parent.textContent;
+            });
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Clear search on Escape key
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
+        });
+    </script>
 </body>
 </html>
