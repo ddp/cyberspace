@@ -5083,6 +5083,37 @@
                 searchInput.dispatchEvent(new Event('input'));
             }
         });
+
+        // Linkify RFC references to IETF datatracker
+        function linkifyRFCs() {
+            const docTitles = document.querySelectorAll('.doc-title');
+            const rfcPattern = /\b(rfc[-\s]?(\d{4,5}))\b/gi;
+
+            docTitles.forEach(link => {
+                const text = link.textContent;
+                const matches = text.match(rfcPattern);
+
+                if (matches) {
+                    // Store original href
+                    const originalHref = link.getAttribute('href');
+
+                    // Replace text with linkified version
+                    const newHTML = text.replace(rfcPattern, function(match, fullMatch, rfcNum) {
+                        const datatrackerUrl = `https://datatracker.ietf.org/doc/html/rfc${rfcNum}`;
+                        return `<a href="${datatrackerUrl}" target="_blank" title="View RFC ${rfcNum} on IETF Datatracker" style="color: #0000EE; text-decoration: underline;">${match}</a>`;
+                    });
+
+                    // Create wrapper to preserve original file link
+                    const parent = link.parentNode;
+                    const wrapper = document.createElement('span');
+                    wrapper.innerHTML = newHTML + ` <a href="${originalHref}" class="doc-title" style="color: #666; font-size: 9pt;">[PDF]</a>`;
+                    parent.replaceChild(wrapper, link);
+                }
+            });
+        }
+
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', linkifyRFCs);
     </script>
 </body>
 </html>
