@@ -108,6 +108,10 @@ given as arguments are successfully loaded and NIL otherwise."
         ("melpa"        . "https://melpa.org/packages/")
         ("nongnu"       . "https://elpa.nongnu.org/nongnu/")))
 
+;; Pin cond-let to nongnu archive (more stable than MELPA)
+(setq package-pinned-packages
+      '((cond-let . "nongnu")))
+
 ;; Keep warnings you care about; suppress "obsolete" noise.
 (setq byte-compile-warnings '(docstrings unresolved (not obsolete)))
 
