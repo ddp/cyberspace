@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""
+Security Probe Analyzer
+Analyzes intrusion attempts and security probes from centralized security logs.
+Displays ASCII art visualizations of attacks by hour and day.
+"""
+
+import subprocess
+import re
+import json
+import sys
+from datetime import datetime
+from collections import defaultdict
+from typing import Dict, List, Tuple
+
+# Security probe patterns to detect
+# Primarily SSH-related, but extensible to other services
+PROBE_PATTERNS = [
+    r'Failed password',
+    r'Invalid user',
+    r'authentication failure',
+    r'Connection closed by authenticating user',
+    r'maximum authentication attempts exceeded',
+    r'Bad protocol version',
+    r'Did not receive identification string',
+    r'Connection reset by',
+]
+
+def fetch_logs_from_moria() -> str:
+    """Fetch security logs from moria via SSH"""
+    try:
+        result = subprocess.run(
+            ['ssh', 'moria.eludom.net',
+             'sudo cat /var/log/mac_security/om.eludom.net_*.log 2>/dev/null || echo ""'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        return result.stdout
+    except subprocess.TimeoutExpired:
+        print("ERROR: Timeout connecting to moria.eludom.net", file=sys.stderr)
+        return ""
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return ""
+
+def parse_syslog_entry(line: str) -> Tuple[datetime, str]:
+    """Parse a syslog entry and return timestamp and message"""
+    # Format: 2026-01-03T22:15:42 om.eludom.net program[pid]: message
+    match = re.match(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\s+\S+\s+(.+)', line)
+    if match:
+        timestamp_str = match.group(1)
+        message = match.group(2)
+        try:
+            timestamp = datetime.fromisoformat(timestamp_str)
+            return timestamp, message
+        except ValueError:
+            pass
+    return None, None
+
+def is_security_probe(message: str) -> bool:
+    """Check if message indicates a security probe/attack"""
+    for pattern in PROBE_PATTERNS:
+        if re.search(pattern, message, re.IGNORECASE):
+            return True
+    return False
+
+def analyze_logs(log_data: str) -> Dict:
+    """Analyze logs and return statistics"""
+    probes_by_hour = defaultdict(int)  # 0-23
+    probes_by_day = defaultdict(int)   # Mon-Sun
+    probes_by_date = defaultdict(int)  # YYYY-MM-DD
+    total_probes = 0
+
+    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    for line in log_data.split('\n'):
+        timestamp, message = parse_syslog_entry(line)
+        if timestamp and message and is_security_probe(message):
+            total_probes += 1
+            hour = timestamp.hour
+            day = day_names[timestamp.weekday()]
+            date = timestamp.strftime('%Y-%m-%d')
+
+            probes_by_hour[hour] += 1
+            probes_by_day[day] += 1
+            probes_by_date[date] += 1
+
+    return {
+        'total_probes': total_probes,
+        'by_hour': dict(probes_by_hour),
+        'by_day': dict(probes_by_day),
+        'by_date': dict(probes_by_date)
+    }
+
+def ascii_bar_chart(data: Dict[str, int], title: str, max_width: int = 60) -> str:
+    """Generate ASCII bar chart"""
+    if not data:
+        return f"{title}\n  No data available\n"
+
+    max_value = max(data.values()) if data else 1
+    lines = [title, "=" * (max_width + 20)]
+
+    for key in sorted(data.keys(), key=lambda x: (isinstance(x, int), x)):
+        count = data[key]
+        bar_width = int((count / max_value) * max_width) if max_value > 0 else 0
+        bar = '█' * bar_width
+        label = f"{key:>10}" if isinstance(key, str) else f"{key:>10}"
+        lines.append(f"{label} | {bar} {count}")
+
+    lines.append("")
+    return '\n'.join(lines)
+
+def ascii_hourly_chart(hourly_data: Dict[int, int], max_width: int = 60) -> str:
+    """Generate ASCII bar chart for 24-hour data"""
+    title = "Security Probes by Hour of Day"
+    lines = [title, "=" * (max_width + 20)]
+
+    # Fill in all 24 hours
+    all_hours = {h: hourly_data.get(h, 0) for h in range(24)}
+    max_value = max(all_hours.values()) if all_hours else 1
+
+    for hour in range(24):
+        count = all_hours[hour]
+        bar_width = int((count / max_value) * max_width) if max_value > 0 else 0
+        bar = '█' * bar_width
+        lines.append(f"{hour:02d}:00-{hour:02d}:59 | {bar} {count}")
+
+    lines.append("")
+    return '\n'.join(lines)
+
+def ascii_day_chart(day_data: Dict[str, int], max_width: int = 60) -> str:
+    """Generate ASCII bar chart for day of week"""
+    title = "Security Probes by Day of Week"
+    day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    lines = [title, "=" * (max_width + 20)]
+
+    # Fill in all days
+    all_days = {day: day_data.get(day, 0) for day in day_order}
+    max_value = max(all_days.values()) if all_days else 1
+
+    for day in day_order:
+        count = all_days[day]
+        bar_width = int((count / max_value) * max_width) if max_value > 0 else 0
+        bar = '█' * bar_width
+        lines.append(f"    {day:>3} | {bar} {count}")
+
+    lines.append("")
+    return '\n'.join(lines)
+
+def main():
+    print("Security Probe Analyzer")
+    print("=" * 70)
+    print("Fetching logs from moria.eludom.net...")
+
+    log_data = fetch_logs_from_moria()
+
+    if not log_data:
+        print("ERROR: No log data available. Check SSH access to moria.", file=sys.stderr)
+        sys.exit(1)
+
+    print("Analyzing logs...")
+    stats = analyze_logs(log_data)
+
+    print(f"\nTotal security probes detected: {stats['total_probes']}")
+    print()
+
+    # Display ASCII charts
+    print(ascii_hourly_chart(stats['by_hour']))
+    print(ascii_day_chart(stats['by_day']))
+
+    # Show recent dates if available
+    if stats['by_date']:
+        recent_dates = dict(sorted(stats['by_date'].items(), reverse=True)[:7])
+        print(ascii_bar_chart(recent_dates, "Security Probes by Date (Recent 7 days)"))
+
+    # Export JSON
+    json_file = '/tmp/security-probe-stats.json'
+    with open(json_file, 'w') as f:
+        json.dump(stats, f, indent=2)
+    print(f"Statistics exported to: {json_file}")
+
+if __name__ == '__main__':
+    main()
