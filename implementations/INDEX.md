@@ -66,17 +66,36 @@ cd merkle-tree
 - Powers Certificate Transparency (append-only logs)
 - Single root hash authenticates entire dataset
 
-## Future Implementations
+### Capability-Based Authentication (`capabilities/`)
 
-### Capability System (`capability-auth/`)
-
-**From**: Butler Lampson & others (1970s-1980s)
+**From**: Butler Lampson & others (1970s-1980s), "Protection" (1971), "Authentication in Distributed Systems" (1992)
 **Paper Location**: `~/cyberspace/library/cryptographers/lampson/`
 
-**Planned Features**:
-- Unforgeable access tokens
-- Delegation without central authority
-- Demonstrates capability-based security
+**What It Does**:
+- Unforgeable access tokens (HMAC-signed)
+- Delegation with attenuation (subset of rights)
+- Time-limited access (expiry timestamps)
+- No ambient authority (possession = authority)
+
+**Status**: ✅ Working implementation in Chicken Scheme
+
+**Quick Start**:
+```bash
+cd capabilities
+./capabilities.scm demo-basic        # Basic operations
+./capabilities.scm demo-serialize    # Unforgeable tokens
+./capabilities.scm demo-delegation   # Delegation chain
+./capabilities.scm demo-expiry       # Time-limited access
+```
+
+**Research → Practice**:
+- Powers seL4 microkernel (capability-based OS)
+- Powers CloudFlare Workers (V8 isolates with capabilities)
+- Powers Amazon S3 pre-signed URLs (time-limited capability tokens)
+- Powers WebAssembly WASI (capability-based system interface)
+- Demonstrates "don't separate designation from authority"
+
+## Future Implementations
 
 ### Cryptographic File System (`cfs/`)
 
@@ -139,6 +158,8 @@ These implementations demonstrate:
 **Cryptography Concepts**:
 - Hash chains (Lamport OTP)
 - Merkle trees (content addressing)
+- HMAC authentication (capabilities)
+- Unforgeable tokens (capabilities)
 - Public-key systems (future)
 - Zero-knowledge proofs (future)
 
@@ -211,7 +232,7 @@ Each implementation should link back to research:
 |---------------|--------|------------------|--------|
 | Lamport OTP | Lamport 1981, OPIE 1995 | `library/cryptographers/nrl-one-time-passwords/` | ✅ |
 | Merkle Tree | Merkle 1979 | `library/cryptographers/merkle/` | ✅ |
-| Capability Auth | Lampson 1971, DSSA 1992 | `library/cryptographers/lampson/` | 📋 |
+| Capability Auth | Lampson 1971, DSSA 1992 | `library/cryptographers/lampson/` | ✅ |
 | CFS | Blaze 1993 | `library/cryptographers/blaze/` | 📋 |
 | L4 IPC | Liedtke 1993 | `library/verified-systems/l4-microkernel/` | 📋 |
 
@@ -247,12 +268,12 @@ The cycle:
 **✅ Implemented**:
 - Lamport One-Time Passwords (hash-chain authentication)
 - Merkle Trees (authenticated data structures, content-addressable storage)
+- Capability-Based Authentication (unforgeable tokens, delegation, time-limited access)
 
 **🚧 In Progress**:
 - (None currently)
 
 **📋 Planned**:
-- Capability System (unforgeable tokens)
 - Cryptographic File System (transparent encryption)
 - L4-style IPC (microkernel messaging)
 
