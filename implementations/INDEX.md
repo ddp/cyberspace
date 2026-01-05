@@ -95,6 +95,37 @@ cd capabilities
 - Powers WebAssembly WASI (capability-based system interface)
 - Demonstrates "don't separate designation from authority"
 
+### ChaCha20 Stream Cipher (`chacha20/`)
+
+**From**: Daniel J. Bernstein (2008), "ChaCha, a variant of Salsa20"
+**RFC**: RFC 7539 (2015), "ChaCha20 and Poly1305 for IETF Protocols"
+**Paper Location**: `~/cyberspace/library/cryptographers/djb/chacha20-2008.pdf`
+
+**What It Does**:
+- Fast, secure stream cipher using ARX operations
+- 256-bit key, 96-bit nonce, 32-bit counter
+- Constant-time (no timing attacks)
+- 20 rounds of quarter-round mixing
+
+**Status**: ✅ Working implementation in Chicken Scheme
+
+**Quick Start**:
+```bash
+cd chacha20
+./chacha20.scm test         # RFC 7539 test vectors
+./chacha20.scm demo-basic   # Basic encryption
+./chacha20.scm demo-stream  # Stream cipher properties
+./chacha20.scm demo-nonce   # Nonce importance
+```
+
+**Research → Practice**:
+- Powers TLS 1.3 (ChaCha20-Poly1305 cipher suite)
+- Powers WireGuard VPN (all encrypted tunnels)
+- Powers Google QUIC/HTTP/3 (default cipher)
+- Powers OpenSSH (chacha20-poly1305@openssh.com)
+- Used by Signal, WhatsApp end-to-end encryption
+- ARX construction: constant-time, no cache-timing attacks
+
 ## Future Implementations
 
 ### Cryptographic File System (`cfs/`)
@@ -160,6 +191,8 @@ These implementations demonstrate:
 - Merkle trees (content addressing)
 - HMAC authentication (capabilities)
 - Unforgeable tokens (capabilities)
+- Stream ciphers (ChaCha20)
+- ARX construction (ChaCha20)
 - Public-key systems (future)
 - Zero-knowledge proofs (future)
 
@@ -233,6 +266,7 @@ Each implementation should link back to research:
 | Lamport OTP | Lamport 1981, OPIE 1995 | `library/cryptographers/nrl-one-time-passwords/` | ✅ |
 | Merkle Tree | Merkle 1979 | `library/cryptographers/merkle/` | ✅ |
 | Capability Auth | Lampson 1971, DSSA 1992 | `library/cryptographers/lampson/` | ✅ |
+| ChaCha20 | Bernstein 2008, RFC 7539 | `library/cryptographers/djb/` | ✅ |
 | CFS | Blaze 1993 | `library/cryptographers/blaze/` | 📋 |
 | L4 IPC | Liedtke 1993 | `library/verified-systems/l4-microkernel/` | 📋 |
 
@@ -269,11 +303,13 @@ The cycle:
 - Lamport One-Time Passwords (hash-chain authentication)
 - Merkle Trees (authenticated data structures, content-addressable storage)
 - Capability-Based Authentication (unforgeable tokens, delegation, time-limited access)
+- ChaCha20 Stream Cipher (ARX construction, constant-time encryption)
 
 **🚧 In Progress**:
 - (None currently)
 
 **📋 Planned**:
+- ChaCha20-Poly1305 AEAD (authenticated encryption)
 - Cryptographic File System (transparent encryption)
 - L4-style IPC (microkernel messaging)
 
