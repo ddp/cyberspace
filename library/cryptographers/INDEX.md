@@ -2,9 +2,9 @@
 
 **Collection Date**: 2026-01-03
 **Location**: ~/cyberspace/library/cryptographers/
-**Total Size**: ~18.1 MB
-**Collections**: 12 subdirectories
-**Files**: 54 papers and RFCs
+**Total Size**: ~40 MB
+**Collections**: 16 subdirectories
+**Files**: 80+ papers, RFCs, and standards
 
 ## Overview
 
@@ -190,6 +190,71 @@ This collection brings together foundational papers and protocol specifications 
 **Why It Matters**: These three protocols represent different philosophies for key management and authentication. Photuris and SKIP competed with IKE for IPsec key management in the 1990s—IKE won, but Photuris's cookie mechanism lives on in IKEv2, DTLS, and QUIC. Kerberos took a completely different approach: centralized, symmetric-key authentication that became the foundation of enterprise authentication (Microsoft Active Directory). Together they show the evolution and tradeoffs in key management: stateless vs stateful, centralized vs distributed, symmetric vs asymmetric cryptography.
 
 **See**: [key-management-protocols/photuris/INDEX.md](key-management-protocols/photuris/INDEX.md), [key-management-protocols/skip/INDEX.md](key-management-protocols/skip/INDEX.md), [key-management-protocols/kerberos/INDEX.md](key-management-protocols/kerberos/INDEX.md)
+
+### 13. Ralph Merkle (~13 MB, 5 papers)
+**Path**: `merkle/`
+
+**Hash Trees and Public-Key Cryptography Foundations**:
+- "Merkle's Puzzles" (1975 draft, published 1978) - Original public-key crypto work (predates Diffie-Hellman by 2 years!)
+- PhD Thesis: "Secrecy, Authentication, and Public Key Systems" (1979) - Comprehensive treatment
+- **"A Certified Digital Signature" (1979, published CRYPTO '89)** - THE MERKLE TREE PAPER - Foundation for Git, Bitcoin, IPFS
+- "Protocols for Public Key Cryptosystems" (1980) - Practical protocols
+- "One Way Hash Functions and DES" (1989) - Merkle-Damgård construction (basis for SHA-1, SHA-2, MD5)
+
+**Why It Matters**: Merkle independently invented public-key cryptography in 1974, predating Diffie-Hellman by 2 years (though DH published first in 1976). More importantly, his 1979 hash tree (Merkle tree) construction is fundamental to modern distributed systems: Git uses Merkle trees for content-addressed storage, Bitcoin for transaction verification, IPFS for distributed storage, and Certificate Transparency for auditable logs. **In the quantum era, Merkle's mathematics endures** - hash-based signatures remain secure against quantum computers while RSA/ECC fall to Shor's algorithm.
+
+**See**: [merkle/INDEX.md](merkle/INDEX.md)
+
+### 14. Post-Quantum Cryptography and Signatures (~10 MB, 9 papers and standards)
+**Path**: `post-quantum-signatures/`
+
+**Quantum-Resistant Cryptography**:
+- **NIST FIPS 203 (2024)** - ML-KEM (lattice-based key encapsulation, replaces Diffie-Hellman)
+- **NIST FIPS 204 (2024)** - ML-DSA (lattice-based signatures, replaces RSA/ECDSA)
+- **NIST FIPS 205 (2024)** - SLH-DSA (hash-based signatures from SPHINCS+, based on Merkle's work)
+- SPHINCS: Practical Stateless Hash-Based Signatures (2015, NIST workshop)
+- Hash-Based Signatures Overview (IACR 2023/411)
+- Stateless Hash-Based Signatures for Security Keys (IACR 2025/298 - latest research)
+- Oded Regev: "On Lattices, Learning with Errors" (2009) - **Foundation for lattice crypto** (basis for FIPS 203/204)
+- NTRU: "A Ring-Based Public Key Cryptosystem" (1998) - First practical lattice cryptosystem
+- Hash-Based Signatures: Outline for New Standard (NIST 2015)
+
+**Why It Matters**: Shor's algorithm (1997) shows that large-scale quantum computers will break RSA, Diffie-Hellman, and elliptic curve cryptography. NIST finalized three post-quantum standards in August 2024: two based on lattice problems (FIPS 203/204) and one based on hash functions (FIPS 205). **Merkle's hash-based signatures from 1979 become the quantum-resistant conservative choice** - FIPS 205 is literally an evolution of Merkle trees. The lattice-based standards build on Regev's 2005/2009 Learning With Errors (LWE) work. This collection shows the mathematical foundations and the path to standardization.
+
+**See**: [post-quantum-signatures/INDEX.md](post-quantum-signatures/INDEX.md)
+
+### 15. Quantum Algorithms (~374 KB, 2 papers)
+**Path**: `quantum-algorithms/`
+
+**The Quantum Threat to Cryptography**:
+- **Peter Shor: "Polynomial-Time Algorithms for Prime Factorization"** (1997, arXiv quant-ph/9508027)
+  - Breaks RSA (factoring in polynomial time)
+  - Breaks Diffie-Hellman (discrete log in polynomial time)
+  - Breaks elliptic curve crypto (ECDLP in polynomial time)
+  - Catalyzed post-quantum cryptography research
+- **Lov Grover: "A Fast Quantum Mechanical Algorithm for Database Search"** (1996, STOC '96)
+  - Quadratic speedup for unstructured search O(√N)
+  - Weakens symmetric crypto (AES-128 → 64-bit effective security)
+  - Weakens hash functions (SHA-256 collision resistance halved)
+  - Solution: Double key sizes (AES-256, SHA-512)
+
+**Why It Matters**: These two papers define why we need post-quantum cryptography. Shor's algorithm (1994/1997) completely breaks all number-theory-based public-key crypto. Grover's algorithm (1996) weakens but doesn't break symmetric crypto and hash functions. **Result**: Public-key crypto must move to quantum-resistant alternatives (lattice-based, hash-based, code-based), while symmetric crypto just needs larger keys (256-bit minimum). Merkle's hash-based signatures survive quantum attack while Diffie-Hellman falls.
+
+**See**: [quantum-algorithms/INDEX.md](quantum-algorithms/INDEX.md)
+
+### 16. NRL One-Time Passwords (~410 KB, 4 papers and RFCs)
+**Path**: `nrl-one-time-passwords/`
+
+**Hash-Based Authentication Without Public Keys**:
+- **Leslie Lamport: "Password Authentication with Insecure Communication" (1981)** - THE FOUNDATIONAL PAPER for one-time passwords
+- RFC 1938 - S/KEY One-Time Password System (Neil Haller, 1996)
+- RFC 2289 - Updated One-Time Password System (Haller & Metz, 1998)
+- **OPIE: "One-time Passwords In Everything" (NRL, USENIX 1995)** - Naval Research Laboratory enhancement to S/KEY
+- RFC 2444 - OTP SASL Mechanism (1998)
+
+**Why It Matters**: Lamport's 1981 paper showed how to authenticate securely using only hash functions, even when attackers can eavesdrop on all communications and read the server's password file. His hash chain construction (password = H^n(secret), authenticate with H^(n-1), H^(n-2), etc.) became the basis for S/KEY (Bellcore) and OPIE (Naval Research Laboratory). **Connection to Merkle**: Both use hash functions as the only cryptographic primitive - no need for public-key crypto. Modern descendants include TOTP (Google Authenticator), HOTP (hardware tokens), and FIDO2/WebAuthn. NRL's broader contributions include IPsec, IPv6 security, and network security tools.
+
+**See**: [nrl-one-time-passwords/INDEX.md](nrl-one-time-passwords/INDEX.md)
 
 ## Thematic Connections
 
