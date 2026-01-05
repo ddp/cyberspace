@@ -126,6 +126,36 @@ cd chacha20
 - Used by Signal, WhatsApp end-to-end encryption
 - ARX construction: constant-time, no cache-timing attacks
 
+### Poly1305 MAC (`poly1305/`)
+
+**From**: Daniel J. Bernstein (2005), "The Poly1305-AES message-authentication code"
+**RFC**: RFC 7539 (2015), "ChaCha20 and Poly1305 for IETF Protocols"
+**Paper Location**: `~/cyberspace/library/cryptographers/djb/poly1305-aes-2005.pdf`
+
+**What It Does**:
+- Fast message authentication code (MAC)
+- Polynomial evaluation in prime field (2^130 - 5)
+- 128-bit authentication tag
+- Single-use key (derived from ChaCha20 or AES)
+
+**Status**: ⚠️ Educational implementation (simplified, not production-ready)
+
+**Quick Start**:
+```bash
+cd poly1305
+./poly1305.scm demo-basic       # Basic MAC computation
+./poly1305.scm demo-properties  # MAC properties
+```
+
+**Research → Practice**:
+- Powers TLS 1.3 (with ChaCha20 as AEAD)
+- Powers WireGuard VPN (ChaCha20-Poly1305 AEAD)
+- Powers OpenSSH (chacha20-poly1305@openssh.com)
+- Used in Signal, WhatsApp (ChaCha20-Poly1305)
+- Polynomial MAC: provable security, 1-2 cycles/byte
+
+**Note**: Full implementation requires careful 130-bit constant-time arithmetic. This is an educational demonstration of concepts.
+
 ## Future Implementations
 
 ### Cryptographic File System (`cfs/`)
@@ -267,6 +297,7 @@ Each implementation should link back to research:
 | Merkle Tree | Merkle 1979 | `library/cryptographers/merkle/` | ✅ |
 | Capability Auth | Lampson 1971, DSSA 1992 | `library/cryptographers/lampson/` | ✅ |
 | ChaCha20 | Bernstein 2008, RFC 7539 | `library/cryptographers/djb/` | ✅ |
+| Poly1305 | Bernstein 2005, RFC 7539 | `library/cryptographers/djb/` | ⚠️ |
 | CFS | Blaze 1993 | `library/cryptographers/blaze/` | 📋 |
 | L4 IPC | Liedtke 1993 | `library/verified-systems/l4-microkernel/` | 📋 |
 
@@ -305,11 +336,16 @@ The cycle:
 - Capability-Based Authentication (unforgeable tokens, delegation, time-limited access)
 - ChaCha20 Stream Cipher (ARX construction, constant-time encryption)
 
+**⚠️ Educational (Simplified)**:
+- Poly1305 MAC (polynomial message authentication - concept demonstration)
+
 **🚧 In Progress**:
 - (None currently)
 
 **📋 Planned**:
-- ChaCha20-Poly1305 AEAD (authenticated encryption)
+- Lamport Signatures (hash-based digital signatures)
+- Lamport Clocks (logical time for distributed systems)
+- ChaCha20-Poly1305 AEAD (full authenticated encryption)
 - Cryptographic File System (transparent encryption)
 - L4-style IPC (microkernel messaging)
 
