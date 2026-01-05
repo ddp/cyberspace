@@ -38,18 +38,35 @@ cd lamport-otp
 - Illustrates practical security protocol design
 - Still relevant 40+ years later (blockchain, Git use hash chains)
 
-## Future Implementations
-
 ### Merkle Trees (`merkle-tree/`)
 
 **From**: Ralph Merkle (1979), "A Certified Digital Signature"
 **Paper Location**: `~/cyberspace/library/cryptographers/merkle/`
 
-**Planned Features**:
-- Content-addressable storage
-- Efficient authentication of large datasets
-- Git-like object storage
-- Blockchain-style verification
+**What It Does**:
+- Build Merkle trees for authenticated data structures
+- Generate and verify inclusion proofs (O(log n))
+- Content-addressable storage (Git-like)
+- Create commit snapshots
+
+**Status**: ✅ Working implementation in Chicken Scheme
+
+**Quick Start**:
+```bash
+cd merkle-tree
+./merkle.scm build "alice" "bob" "carol" "dave"
+./merkle.scm prove "bob" "alice" "bob" "carol" "dave"
+./merkle.scm commit "Initial commit" file1.txt file2.txt
+```
+
+**Research → Practice**:
+- Powers Git (content-addressable storage, commits, trees, blobs)
+- Powers Bitcoin (Merkle tree of transactions in each block)
+- Powers IPFS (Merkle DAG for distributed storage)
+- Powers Certificate Transparency (append-only logs)
+- Single root hash authenticates entire dataset
+
+## Future Implementations
 
 ### Capability System (`capability-auth/`)
 
@@ -190,13 +207,13 @@ To add a new implementation:
 
 Each implementation should link back to research:
 
-| Implementation | Papers | Library Location |
-|---------------|--------|------------------|
-| Lamport OTP | Lamport 1981, OPIE 1995 | `library/cryptographers/nrl-one-time-passwords/` |
-| Merkle Tree | Merkle 1979 | `library/cryptographers/merkle/` |
-| Capability Auth | Lampson 1971, DSSA 1992 | `library/cryptographers/lampson/` |
-| CFS | Blaze 1993 | `library/cryptographers/blaze/` |
-| L4 IPC | Liedtke 1993 | `library/verified-systems/l4-microkernel/` |
+| Implementation | Papers | Library Location | Status |
+|---------------|--------|------------------|--------|
+| Lamport OTP | Lamport 1981, OPIE 1995 | `library/cryptographers/nrl-one-time-passwords/` | ✅ |
+| Merkle Tree | Merkle 1979 | `library/cryptographers/merkle/` | ✅ |
+| Capability Auth | Lampson 1971, DSSA 1992 | `library/cryptographers/lampson/` | 📋 |
+| CFS | Blaze 1993 | `library/cryptographers/blaze/` | 📋 |
+| L4 IPC | Liedtke 1993 | `library/verified-systems/l4-microkernel/` | 📋 |
 
 ## Research → Practice Pipeline
 
@@ -228,13 +245,13 @@ The cycle:
 ## Status
 
 **✅ Implemented**:
-- Lamport One-Time Passwords
+- Lamport One-Time Passwords (hash-chain authentication)
+- Merkle Trees (authenticated data structures, content-addressable storage)
 
 **🚧 In Progress**:
 - (None currently)
 
 **📋 Planned**:
-- Merkle Trees (content-addressable storage)
 - Capability System (unforgeable tokens)
 - Cryptographic File System (transparent encryption)
 - L4-style IPC (microkernel messaging)
