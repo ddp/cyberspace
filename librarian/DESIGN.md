@@ -292,7 +292,11 @@ Librarian: "L4's minimality principle (Liedtke 1995) made seL4's
 
 **✅ Phase 1 Complete:** Index building works, 33 collections indexed
 
-**🚧 Phase 2 In Progress:** Next - add semantic search
+**✅ Phase 2 Working:** Query engine with keyword search fallback
+- embedder.scm: Embedding infrastructure (Ollama/OpenAI support)
+- query.scm: Natural language query interface
+- Keyword search working (semantic search ready when Ollama available)
+- Example: `./query.scm "hash-based crypto"` finds relevant papers
 
 **📋 Phase 3-5 Planned:** Temporal reasoning, connections, chat interface
 

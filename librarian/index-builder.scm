@@ -170,17 +170,19 @@
       ;; Return parsed entries
       entries)))
 
-;; Run if executed as script
-(when (not (zero? (length (command-line-arguments))))
-  (let ((library-root (car (command-line-arguments))))
-    (build-index library-root)))
-
 ;; Export for use as module
 (define library-root
   (make-pathname (get-environment-variable "HOME")
                  "cyberspace/library"))
 
-;; Example usage
-(when (equal? (program-name) "csi")
+;; Run if executed directly as script (not loaded as module)
+(when (and (not (zero? (length (command-line-arguments))))
+           (string-contains (car (argv)) "index-builder"))
+  (let ((library-root (car (command-line-arguments))))
+    (build-index library-root)))
+
+;; Example usage in REPL
+(when (and (equal? (program-name) "csi")
+           (zero? (length (command-line-arguments))))
   (print "Usage: ./index-builder.scm ~/cyberspace/library")
   (print "Or from REPL: (build-index \"~/cyberspace/library\")"))
