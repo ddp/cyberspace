@@ -437,13 +437,12 @@
     (let ((tarball (sprintf "~a.tar.gz" output)))
       (seal-archive-tarball version tarball)
 
-      ;; Sign the tarball hash
+      ;; Sign the tarball hash (signing-key is already a blob)
       (let ((signing-key (vault-config 'signing-key)))
         (when signing-key
           (let* ((tarball-bytes (read-file-bytes tarball))
                  (tarball-hash (sha512-hash tarball-bytes))
-                 (key (read-key-from-file signing-key))
-                 (signature (ed25519-sign key tarball-hash)))
+                 (signature (ed25519-sign signing-key tarball-hash)))
 
             ;; Create sealed archive manifest
             (with-output-to-file output
@@ -529,8 +528,11 @@
 
         (print "Publishing sealed release: " version)
 
-        ;; Create release and archive
-        (seal-release version message: message)
+        ;; Create release if tag doesn't exist
+        (unless (tag-exists? version)
+          (seal-release version message: message))
+
+        ;; Create archive
         (seal-archive version format: fmt output: archive-file)
 
         (print "Archive created: " archive-file)
@@ -695,6 +697,11 @@
             (print "✓ Synchronization complete"))))))
 
   ;;; Helper functions for replication
+
+  (define (tag-exists? tag-name)
+    "Check if git tag exists"
+    (let ((tags (with-input-from-pipe (sprintf "git tag -l ~a" tag-name) read-string)))
+      (not (string=? tags ""))))
 
   (define (git-remote? str)
     "Check if string looks like a git remote"
