@@ -38,6 +38,7 @@
         (signature-hash-alg . cert#signature-hash-alg)
         (signature-cert-hash . cert#signature-cert-hash)
         (signature-sig-bytes . cert#signature-sig-bytes)
+        (hash-alg->string . cert#hash-alg->string)
         (create-cert . cert#create-cert)
         (sign-cert . cert#sign-cert)
         (verify-signed-cert . cert#verify-signed-cert)

@@ -17,6 +17,7 @@
    ed25519-keypair
    ed25519-sign
    ed25519-verify
+   ed25519-secret-to-public
    sha256-hash
    sha512-hash
    crypto-sign-publickeybytes
@@ -28,7 +29,7 @@
           (chicken foreign)
           (chicken format)
           (chicken blob)
-          (chicken memory)
+          (chicken memory representation)
           srfi-4)
 
   ;; Include libsodium header
@@ -63,6 +64,19 @@
           (secret-key (make-blob crypto-sign-secretkeybytes)))
       (ed25519-keypair! public-key secret-key)
       (list public-key secret-key)))
+
+  ;; Extract public key from secret key
+  ;; In Ed25519, the 64-byte secret key contains the 32-byte public key at offset 32
+  ;; @param secret-key: 64-byte secret key (blob)
+  ;; @return: 32-byte public key (blob)
+  (define (ed25519-secret-to-public secret-key)
+    (let* ((public-key (make-blob crypto-sign-publickeybytes))
+           (sk-vec (blob->u8vector/shared secret-key))
+           (pk-vec (blob->u8vector/shared public-key)))
+      ;; Copy bytes 32-63 from secret key to public key
+      (do ((i 0 (+ i 1)))
+          ((= i crypto-sign-publickeybytes) public-key)
+        (u8vector-set! pk-vec i (u8vector-ref sk-vec (+ i 32))))))
 
   ;; Sign message with Ed25519
   ;; @param secret-key: 64-byte secret key (blob)

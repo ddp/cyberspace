@@ -35,6 +35,7 @@
    ;; Signature
    make-signature
    signature? signature-hash-alg signature-cert-hash signature-sig-bytes
+   hash-alg->string
 
    ;; Operations
    create-cert
