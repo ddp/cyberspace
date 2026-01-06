@@ -19,20 +19,33 @@
   - ChaCha20 (ARX stream cipher)
   - Poly1305 (polynomial MAC, educational)
   - Lamport Signatures (code done, README pending)
+- **SPKI TCB (OCaml):** ✨ NEW - Minimal crypto core
+  - Ed25519 signatures via libsodium FFI
+  - SHA-512 hashing
+  - ~200 lines of verified crypto
+  - All tests passing
+- **SPKI Scheme FFI:** ✨ NEW - Chicken Scheme crypto bindings
+  - Direct libsodium FFI working
+  - All crypto tests passing
+- **Coq Verification:** ✨ NEW - Formal proofs started
+  - Signature.v: Ed25519 security properties
+  - 6 axioms, 6 theorems (1 admitted)
+  - Build system configured
 - **SPKI (OCaml):** S-expression certs, chain verification, CLI tools
 - **API Server:** Framework, library search working
 - **Librarian:** Index builder (33 INDEX.md files parsed)
 - **CONTEXT.md:** Prime Directive documented
 
 ### 🚧 In Progress
+- SPKI Scheme implementation (s-expressions, certs, CLI)
 - API crypto endpoints (scaffolded, needs integration)
 - Lamport Signatures README
 
 ### 📋 Not Started
-- SPKI TCB extraction (separate verified core from policy)
 - Librarian semantic search
 - Distributed agent architecture
-- Formal verification (TLA+, Coq)
+- TLA+ protocol specification
+- Coq byte-level model & extraction
 - ChaCha20-Poly1305 AEAD
 - Lamport Logical Clocks
 - Federation protocols
