@@ -1,6 +1,6 @@
 # RFC-000: The Library of Cyberspace
 
-**A Manifesto for Digital Preservation**
+**A Friendly Guide to Digital Preservation**
 
 *For everyone, not just programmers*
 
@@ -8,210 +8,169 @@
 
 ## What Is This?
 
-Imagine a library that:
+Imagine a library where:
 
-- **Cannot burn down** - because copies exist everywhere
-- **Has no landlord** - no company owns it
-- **Cannot be censored** - no one can remove books
-- **Proves authenticity** - you know who wrote what
-- **Lives forever** - as long as friends keep copies
+- **Your work is safe** - because friends keep copies for each other
+- **Nothing gets lost** - even if one computer fails
+- **You know who made what** - like a signature on a painting
+- **It belongs to everyone** - like a community garden
 
 That's the Library of Cyberspace.
 
 ---
 
-## The Problem
+## Why Does This Matter?
 
-Today, your digital life depends on companies:
+We all have things worth keeping:
 
-- Your photos live on Google's servers
-- Your code lives on GitHub
-- Your documents live on Dropbox
-- Your messages live on Signal's servers
+- Family photos
+- Creative work
+- Research and writing
+- Code we've written
+- Things we want to pass on
 
-What happens when:
+Right now, most of this lives on company servers. That works great... until:
 
-- The company goes bankrupt?
-- They change their terms of service?
-- They decide your content violates policy?
-- A government demands they delete something?
-- They get hacked?
+- The company shuts down
+- Your account gets locked
+- The service changes
+- Something just disappears
 
-**You lose everything.**
-
----
-
-## The Solution
-
-What if you and your friends just... kept copies?
-
-```
-You ←────→ Your Friend ←────→ Their Friend
- │              │                   │
- └──────────────┴───────────────────┘
-                │
-        Everyone has a copy.
-        No one is in charge.
-        Math proves who wrote what.
-```
-
-That's it. That's the whole idea.
+**Friends don't disappear.** Friends keep copies.
 
 ---
 
-## How It Works (Simply)
+## The Simple Idea
 
-### 1. You Sign Things
+What if preserving things worked like borrowing books from friends?
 
-When you create something, you sign it with your personal key. Like a wax seal on a letter, but unforgeable.
+```
+    You ←────→ Friend ←────→ Friend
+     │           │             │
+     └───────────┴─────────────┘
+               │
+      Everyone helps everyone.
+      Like a neighborhood library,
+      but for anything digital.
+```
+
+That's really all this is.
+
+---
+
+## How It Works
+
+### 1. You Sign Your Work
+
+When you create something, you sign it digitally. Like initialing a document - but impossible to forge.
 
 ### 2. You Share With Friends
 
-You give copies to people you trust. They give copies to people they trust.
+You give copies to people you trust. They might share with people they trust too.
 
-### 3. Anyone Can Verify
+### 3. Anyone Can Check
 
-Anyone with a copy can check: "Yes, this was really signed by that person, and no one has changed it."
+If someone has a copy, they can verify: "Yes, this is really from that person, unchanged."
 
-### 4. No One Controls It
+### 4. Together, Nothing Is Lost
 
-There's no master server. No company. No single point of failure. Just people keeping copies for each other.
-
----
-
-## Why "Confederacy"?
-
-A **confederation** is a group of independent parties who cooperate voluntarily.
-
-- No one gives orders
-- No one asks permission
-- Everyone helps everyone
-- Trust is earned, not granted
-
-Think of it like neighbors with spare keys to each other's houses. You trust them because you know them, not because a company verified them.
+No single computer has to hold everything. Together, friends keep it all safe.
 
 ---
 
-## What Can You Store?
+## Why "A Circle of Friends"?
 
-Anything digital:
+This isn't a company or an organization. It's just people who:
 
-- Documents and writing
-- Source code and software
-- Research and data
-- Art and music
-- Records and archives
-- Anything worth preserving
+- Care about keeping things safe
+- Have some storage to spare
+- Want to help each other out
 
----
-
-## What Makes This Different?
-
-| Traditional Cloud | Library of Cyberspace |
-|-------------------|----------------------|
-| Company owns servers | Friends own copies |
-| Terms of service | Mathematical proof |
-| Can be shut down | Cannot be shut down |
-| Trust the company | Trust the math |
-| Subscription fees | Just storage costs |
-| They can read it | Only you can read it |
-| Single point of failure | No single point |
+Think of it like a book club, but instead of reading together, you're preserving together.
 
 ---
 
-## The Philosophy
+## What Can You Keep?
 
-### "A Loose Confederacy of Friends"
+Anything digital that matters to you:
 
-We don't need:
-- Venture capital
-- Data centers
-- Terms of service
-- Permission from anyone
+- Writing and documents
+- Photos and artwork
+- Music and recordings
+- Software and code
+- Research and notes
+- Family history
 
-We just need:
-- Friends who care about preservation
-- Computers with storage
-- A way to talk to each other
-- Mathematics that works
-
-### "E Pluribus Unum"
-
-*Out of many, one.*
-
-Each person keeps their own library. Together, we keep everything. No single person has to store it all. No single person can destroy it all.
+If it's worth keeping, it belongs in the library.
 
 ---
 
-## Is This Legal?
+## How Is This Different?
 
-Yes. You're just:
-- Keeping copies of things you have rights to
-- Sharing with friends who want copies
-- Using cryptography (which is legal)
-- Running software on your own computers
+| Cloud Storage | Library of Cyberspace |
+|---------------|----------------------|
+| Company holds your files | Friends hold copies |
+| You rent space | You share space |
+| One place, one copy | Many places, many copies |
+| Could disappear | Friends don't disappear |
 
-You're not:
-- Pirating copyrighted content
-- Breaking into systems
-- Hiding from law enforcement
-- Doing anything you wouldn't do with physical books
+---
+
+## The Heart of It
+
+### Friends Helping Friends
+
+That's really what this is. Not a product. Not a startup. Just people who think some things are worth preserving, helping each other do it.
+
+### Many Hands Make Light Work
+
+No one person keeps everything. But together? Together we can keep it all.
 
 ---
 
 ## Who Is This For?
 
-- **Writers** who want their work to survive
-- **Researchers** who want data preserved
-- **Developers** who want code to outlive companies
-- **Archivists** who care about digital preservation
-- **Anyone** who's ever lost files when a service shut down
+- **Writers** who want their work to last
+- **Families** who want to preserve memories
+- **Researchers** who care about their data
+- **Artists** who want their work to survive
+- **Anyone** who has ever lost files they cared about
 - **Friends** who want to help each other
 
 ---
 
-## How Do I Join?
+## How Do I Start?
 
-You don't "join" - there's no membership.
-
-You:
-1. Set up storage on your computer
-2. Connect with friends who do the same
+1. Set aside some storage on your computer
+2. Find friends who want to do the same
 3. Share what you want to preserve
-4. Keep copies of what others share
-5. That's it
+4. Keep copies of what friends share with you
+5. That's it - you're part of the library
 
 ---
 
-## The Promise
+## Our Promise to Each Other
 
-We mutually pledge to each other:
-
-- **To keep copies** - so nothing is lost
-- **To verify signatures** - so nothing is forged
-- **To share freely** - so knowledge spreads
-- **To ask no permission** - because none is needed
-- **To trust the math** - because it doesn't lie
+- **We keep copies** - so nothing is lost
+- **We verify authenticity** - so nothing is changed
+- **We share generously** - because that's what friends do
+- **We help each other** - because together we're stronger
 
 ---
 
 ## One Last Thing
 
-This isn't about technology. It's about **trust**.
+The Library of Alexandria was the greatest library of the ancient world. It burned, and we lost so much.
 
-Technology just makes it possible. The actual library is made of people who care enough to keep copies, verify authenticity, and pass things on.
+We can do better now. Not with a building, but with friendship. Not with guards, but with mathematics. Not with one place, but with many.
 
-The Library of Alexandria burned. We can do better.
-
----
-
-*"The Internet treats censorship as damage and routes around it."*
-— John Gilmore
-
-*"A loose confederacy of friends, preserving what matters, asking no one's permission."*
-— Library of Cyberspace
+**The Library of Cyberspace is just friends, keeping copies, for each other.**
 
 ---
 
-**RFC-000** | January 2026 | Status: Living Document
+*"Many hands make light work."*
+
+---
+
+**RFC-000** | January 2026 | A Living Document
 
