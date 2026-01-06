@@ -22,7 +22,19 @@
    sha512-hash
    crypto-sign-publickeybytes
    crypto-sign-secretkeybytes
-   crypto-sign-bytes)
+   crypto-sign-bytes
+   ;; Shamir secret sharing
+   shamir-split
+   shamir-reconstruct
+   shamir-share?
+   share-id
+   share-threshold
+   share-x
+   share-y
+   ;; GF(256) arithmetic (for testing)
+   gf256-add
+   gf256-mul
+   gf256-div)
 
   (import scheme
           (chicken base)
@@ -30,6 +42,9 @@
           (chicken format)
           (chicken blob)
           (chicken memory representation)
+          (chicken bitwise)
+          (chicken random)
+          srfi-1   ; list utilities (take)
           srfi-4)
 
   ;; Include libsodium header
@@ -164,6 +179,192 @@
             (apply string-append (reverse acc))
             (loop (+ i 1)
                   (cons (sprintf "~x" (u8vector-ref vec i)) acc))))))
+
+  ;;; ============================================================================
+  ;;; Shamir Secret Sharing (GF(256))
+  ;;; ============================================================================
+
+  ;; GF(256) arithmetic tables (precomputed for efficiency)
+  ;; Using polynomial x^8 + x^4 + x^3 + x + 1 (0x11b)
+
+  (define gf256-exp (make-u8vector 512))
+  (define gf256-log (make-u8vector 256))
+
+  (define (init-gf256-tables!)
+    "Initialize GF(256) logarithm and exponential tables using generator 3"
+    (let ((x 1))
+      ;; GF(256) multiplicative group has 255 elements
+      ;; Using generator 3 (not 2!) with polynomial 0x11b
+      ;; 3^255 = 1, so we stop at i=254 to avoid overwriting log[1]
+      (do ((i 0 (+ i 1)))
+          ((= i 255))
+        (u8vector-set! gf256-exp i x)
+        (u8vector-set! gf256-log x i)
+        ;; x = x * 3 in GF(256)
+        (when (< i 254)
+          ;; Multiply by 3 = multiply by 2, then XOR with original
+          (let* ((x2 (arithmetic-shift x 1))
+                 (x2-reduced (if (>= x2 256)
+                                 (bitwise-xor x2 #x11b)
+                                 x2)))
+            (set! x (bitwise-xor x2-reduced x))))))
+    ;; Duplicate exp table for convenience
+    (do ((i 255 (+ i 1)))
+        ((= i 510))
+      (u8vector-set! gf256-exp i (u8vector-ref gf256-exp (- i 255)))))
+
+  ;; Initialize tables on module load
+  (init-gf256-tables!)
+
+  (define (gf256-add a b)
+    "Add two elements in GF(256)"
+    (bitwise-xor a b))
+
+  (define (gf256-mul a b)
+    "Multiply two elements in GF(256)"
+    (if (or (= a 0) (= b 0))
+        0
+        (u8vector-ref gf256-exp
+                     (modulo (+ (u8vector-ref gf256-log a)
+                               (u8vector-ref gf256-log b))
+                            255))))
+
+  (define (gf256-div a b)
+    "Divide a by b in GF(256)"
+    (if (= a 0)
+        0
+        (u8vector-ref gf256-exp
+                     (modulo (- (+ (u8vector-ref gf256-log a) 255)
+                               (u8vector-ref gf256-log b))
+                            255))))
+
+  (define (gf256-poly-eval coeffs x)
+    "Evaluate polynomial at x using Horner's method in GF(256)"
+    (let loop ((i (- (length coeffs) 1))
+               (result 0))
+      (if (< i 0)
+          result
+          (loop (- i 1)
+                (gf256-add (list-ref coeffs i)
+                          (gf256-mul result x))))))
+
+  ;; Share record type
+  (define-record-type <shamir-share>
+    (make-shamir-share-internal id threshold x y)
+    shamir-share?
+    (id share-id)
+    (threshold share-threshold)
+    (x share-x)
+    (y share-y))
+
+  (define (shamir-split secret #!key (threshold 3) (total 5))
+    "Split secret into N shares, requiring K to reconstruct
+
+     secret: blob (e.g., Ed25519 private key)
+     threshold: minimum shares needed (K)
+     total: total shares to create (N)
+
+     Returns: list of N shares"
+
+    (unless (<= threshold total)
+      (error "Threshold must be <= total shares"))
+
+    (unless (> threshold 1)
+      (error "Threshold must be > 1"))
+
+    (let* ((secret-bytes (blob->u8vector secret))
+           (secret-len (u8vector-length secret-bytes))
+           (shares (make-vector total)))
+
+      ;; Initialize all share y-value vectors
+      (do ((i 0 (+ i 1)))
+          ((= i total))
+        (vector-set! shares i (make-u8vector secret-len)))
+
+      ;; For each byte of the secret
+      (do ((byte-idx 0 (+ byte-idx 1)))
+          ((= byte-idx secret-len))
+
+        ;; Generate ONE random polynomial for this byte
+        ;; a[0] = secret byte, a[1..k-1] = random
+        (let ((coeffs (make-vector threshold)))
+          (vector-set! coeffs 0 (u8vector-ref secret-bytes byte-idx))
+
+          (do ((i 1 (+ i 1)))
+              ((= i threshold))
+            (vector-set! coeffs i (pseudo-random-integer 256)))
+
+          ;; Evaluate this polynomial at each share's x-value
+          (do ((share-num 1 (+ share-num 1)))
+              ((> share-num total))
+            (u8vector-set! (vector-ref shares (- share-num 1))
+                          byte-idx
+                          (gf256-poly-eval (vector->list coeffs) share-num)))))
+
+      ;; Convert u8vectors to share records
+      (do ((i 0 (+ i 1)))
+          ((= i total))
+        (vector-set! shares i
+                    (make-shamir-share-internal
+                      (string->symbol (string-append "share-" (number->string (+ i 1))))
+                      threshold
+                      (+ i 1)
+                      (u8vector->blob (vector-ref shares i)))))
+
+      (vector->list shares)))
+
+  (define (shamir-reconstruct shares)
+    "Reconstruct secret from K or more shares
+
+     shares: list of share records
+
+     Returns: reconstructed secret (blob)"
+
+    (when (null? shares)
+      (error "Need at least one share"))
+
+    (let* ((threshold (share-threshold (car shares)))
+           (num-shares (length shares)))
+
+      (unless (>= num-shares threshold)
+        (error (sprintf "Need at least ~a shares, got ~a" threshold num-shares)))
+
+      ;; Take exactly K shares
+      (let* ((k-shares (take shares threshold))
+             (share-len (blob-size (share-y (car k-shares))))
+             (secret (make-u8vector share-len)))
+
+        ;; For each byte position
+        (do ((byte-idx 0 (+ byte-idx 1)))
+            ((= byte-idx share-len))
+
+          ;; Lagrange interpolation at x=0
+          (let ((result 0))
+            (do ((i 0 (+ i 1)))
+                ((= i threshold))
+
+              (let ((xi (share-x (list-ref k-shares i)))
+                    (yi (u8vector-ref (blob->u8vector (share-y (list-ref k-shares i)))
+                                     byte-idx)))
+
+                ;; Compute Lagrange basis polynomial at x=0
+                (let ((basis 1))
+                  (do ((j 0 (+ j 1)))
+                      ((= j threshold))
+                    (when (not (= i j))
+                      (let ((xj (share-x (list-ref k-shares j))))
+                        ;; basis *= (0 - xj) / (xi - xj)
+                        ;; In GF(256): basis *= xj / (xi ^ xj)
+                        (set! basis (gf256-mul basis
+                                              (gf256-div xj
+                                                        (gf256-add xi xj)))))))
+
+                  ;; result += yi * basis
+                  (set! result (gf256-add result (gf256-mul yi basis))))))
+
+            (u8vector-set! secret byte-idx result)))
+
+        (u8vector->blob secret))))
 
   ) ;; end module
 
