@@ -277,22 +277,66 @@
       (environment ,@(entry-environment entry))
       ,(seal->sexp (entry-seal entry))))
 
+  (define (sexp->actor sexp)
+    "Convert S-expression to actor"
+    (if (and (pair? sexp) (eq? 'actor (car sexp)))
+        (let ((principal (cadr (assq 'principal (cdr sexp))))
+              (auth-chain-sexp (assq 'authorization-chain (cdr sexp))))
+          (make-audit-actor
+           principal
+           (if auth-chain-sexp (cdr auth-chain-sexp) '())))
+        (make-audit-actor #f '())))
+
+  (define (sexp->action sexp)
+    "Convert S-expression to action"
+    (if (and (pair? sexp) (eq? 'action (car sexp)))
+        (let ((verb (cadr (assq 'verb (cdr sexp))))
+              (object (let ((o (assq 'object (cdr sexp))))
+                       (if o (cadr o) #f)))
+              (params (let ((p (assq 'parameters (cdr sexp))))
+                       (if p (cdr p) '()))))
+          (make-audit-action verb object params))
+        (make-audit-action 'unknown #f '())))
+
+  (define (sexp->context sexp)
+    "Convert S-expression to context"
+    (if (and (pair? sexp) (eq? 'context (car sexp)))
+        (let ((motivation (let ((m (assq 'motivation (cdr sexp))))
+                           (if m (cadr m) #f)))
+              (relates-to (let ((r (assq 'relates-to (cdr sexp))))
+                           (if r (cadr r) #f)))
+              (language (cadr (assq 'language (cdr sexp)))))
+          (make-audit-context motivation relates-to language))
+        (make-audit-context #f #f "en")))
+
+  (define (sexp->seal sexp)
+    "Convert S-expression to seal"
+    (if (and (pair? sexp) (eq? 'seal (car sexp)))
+        (let ((algorithm (cadr (assq 'algorithm (cdr sexp))))
+              (value (let ((v (assq 'value (cdr sexp))))
+                      (if v (cadr v) #f)))
+              (chain (let ((c (assq 'chain (cdr sexp))))
+                      (if c (cadr c) #f))))
+          (make-audit-seal algorithm value chain))
+        (make-audit-seal "ed25519-sha512" #f #f)))
+
   (define (sexp->entry sexp)
     "Convert S-expression to audit entry"
-    ;; Simplified - full implementation would parse all fields
     (if (and (pair? sexp) (eq? 'audit-entry (car sexp)))
-        (let ((id (cadr (assq 'id (cdr sexp))))
-              (timestamp (cadr (assq 'timestamp (cdr sexp))))
-              (sequence (cadr (assq 'sequence (cdr sexp))))
-              (parent-id (let ((p (assq 'parent-id (cdr sexp))))
-                          (if p (cadr p) #f))))
-          ;; Return simplified entry - full parser would reconstruct all fields
+        (let* ((fields (cdr sexp))
+               (id (cadr (assq 'id fields)))
+               (timestamp (cadr (assq 'timestamp fields)))
+               (sequence (cadr (assq 'sequence fields)))
+               (parent-id (let ((p (assq 'parent-id fields)))
+                           (if p (cadr p) #f)))
+               (actor (sexp->actor (assq 'actor fields)))
+               (action (sexp->action (assq 'action fields)))
+               (context (sexp->context (assq 'context fields)))
+               (evidence (let ((e (assq 'evidence fields)))
+                          (if e (cdr e) '())))
+               (seal (sexp->seal (assq 'seal fields))))
           (make-audit-entry-internal id timestamp sequence parent-id
-                                    (make-audit-actor #f '())
-                                    (make-audit-action 'unknown #f '())
-                                    (make-audit-context #f #f "en")
-                                    '()
-                                    (make-audit-seal "ed25519-sha512" #f #f)))
+                                    actor action context evidence seal))
         #f))
 
   ;;; ============================================================================
