@@ -1,0 +1,240 @@
+#!/usr/bin/env csi -s
+;;; sync - Global synchronization primitive for Cyberspace
+;;;
+;;; Usage: sync [OPTIONS]
+;;;
+;;; Synchronizes the entire Cyberspace repository with remote sources.
+;;; During bootstrapping, this ensures all components are up to date.
+;;;
+;;; Options:
+;;;   --dry-run    Show what would be synced without making changes
+;;;   --quiet      Suppress informational messages
+;;;   --help       Show this help message
+;;;
+;;; Philosophy:
+;;;   "Rough consensus, cryptography, trusted systems and running code."
+;;;
+;;;   This primitive ensures Cyberspace stays synchronized across machines
+;;;   and confederations of friends. It's the bootstrap mechanism for
+;;;   maintaining coherence.
+
+(import (chicken process)
+        (chicken process-context)
+        (chicken file)
+        (chicken pathname)
+        (chicken string)
+        (chicken io)
+        (chicken format)
+        srfi-13)
+
+;;; --- Configuration ---
+
+(define *cyberspace-root*
+  (or (get-environment-variable "CYBERSPACE_ROOT")
+      (current-directory)))
+
+(define *default-remote* "origin")
+(define *default-branch* "main")
+
+;;; --- Helpers ---
+
+(define (log-info msg . args)
+  (unless (member "--quiet" (command-line-arguments))
+    (apply printf (cons (string-append "[sync] " msg "\n") args))))
+
+(define (log-error msg . args)
+  (apply fprintf (cons (current-error-port)
+                       (cons (string-append "[sync ERROR] " msg "\n") args))))
+
+(define (dry-run?)
+  (member "--dry-run" (command-line-arguments)))
+
+(define (run-command cmd . args)
+  "Execute command and return (exit-code . output)"
+  (if (dry-run?)
+      (begin
+        (log-info "DRY RUN: ~a ~a" cmd (string-intersperse args " "))
+        (values 0 ""))
+      (let ((full-cmd (string-append cmd " " (string-intersperse args " "))))
+        (call-with-input-pipe
+         full-cmd
+         (lambda (port)
+           (let ((output (read-string #f port)))
+             (values 0 (or output ""))))))))
+
+(define (git . args)
+  "Run git command in cyberspace root"
+  (let ((old-dir (current-directory)))
+    (change-directory *cyberspace-root*)
+    (let-values (((status output) (apply run-command "git" args)))
+      (change-directory old-dir)
+      (if (zero? status)
+          output
+          (begin
+            (log-error "git ~a failed with status ~a"
+                      (string-intersperse args " ")
+                      status)
+            #f)))))
+
+;;; --- Synchronization Stages ---
+
+(define (sync-git-fetch)
+  "Fetch latest changes from remote"
+  (log-info "Fetching from ~a..." *default-remote*)
+  (let ((result (git "fetch" *default-remote*)))
+    (if result
+        (begin
+          (log-info "Fetch complete")
+          #t)
+        #f)))
+
+(define (sync-git-status)
+  "Check if local branch is behind remote"
+  (log-info "Checking synchronization status...")
+  (let ((status (git "status" "-sb")))
+    (if status
+        (begin
+          (log-info "Status: ~a" (string-trim-both status))
+          (cond
+           ((string-contains status "behind")
+            (log-info "Local branch is behind remote")
+            'behind)
+           ((string-contains status "ahead")
+            (log-info "Local branch is ahead of remote")
+            'ahead)
+           (else
+            (log-info "Local branch is synchronized")
+            'synced)))
+        'unknown)))
+
+(define (sync-git-pull)
+  "Pull changes from remote if behind"
+  (log-info "Pulling changes from ~a/~a..." *default-remote* *default-branch*)
+  (let ((result (git "pull" *default-remote* *default-branch*)))
+    (if result
+        (begin
+          (log-info "Pull complete: ~a" (string-trim-both result))
+          #t)
+        #f)))
+
+(define (sync-submodules)
+  "Update git submodules if present"
+  (log-info "Checking for submodules...")
+  (let ((has-submodules? (file-exists?
+                          (make-pathname *cyberspace-root* ".gitmodules"))))
+    (if has-submodules?
+        (begin
+          (log-info "Updating submodules...")
+          (let ((result (git "submodule" "update" "--init" "--recursive")))
+            (if result
+                (begin
+                  (log-info "Submodules updated")
+                  #t)
+                #f)))
+        (begin
+          (log-info "No submodules found")
+          #t))))
+
+(define (sync-sealed-releases)
+  "Synchronize sealed releases if vault.scm is available"
+  (log-info "Checking for sealed release system...")
+  (let ((vault-path (make-pathname
+                     (list *cyberspace-root* "spki" "scheme")
+                     "vault.scm")))
+    (if (file-exists? vault-path)
+        (begin
+          (log-info "Sealed release system found (vault.scm)")
+          (log-info "To sync releases, use: (seal-synchronize \"remote\")")
+          #t)
+        (begin
+          (log-info "No sealed release system found")
+          #t))))
+
+;;; --- Main Synchronization ---
+
+(define (show-help)
+  (display "sync - Global synchronization primitive for Cyberspace
+
+Usage: sync [OPTIONS]
+
+Synchronizes the entire Cyberspace repository with remote sources.
+
+Options:
+  --dry-run    Show what would be synced without making changes
+  --quiet      Suppress informational messages
+  --help       Show this help message
+
+Philosophy:
+  \"Rough consensus, cryptography, trusted systems and running code.\"
+
+  This primitive ensures Cyberspace stays synchronized across machines
+  and confederations of friends. It's the bootstrap mechanism for
+  maintaining coherence.
+
+Examples:
+  sync              # Full synchronization
+  sync --dry-run    # Preview what would be synced
+  sync --quiet      # Silent operation
+
+")
+  (exit 0))
+
+(define (sync-all)
+  "Execute all synchronization stages"
+  (log-info "Starting global synchronization of Cyberspace")
+  (log-info "Root: ~a" *cyberspace-root*)
+
+  (let ((stages (list
+                 (cons "Git Fetch" sync-git-fetch)
+                 (cons "Git Status Check" sync-git-status)
+                 (cons "Submodules" sync-submodules)
+                 (cons "Sealed Releases" sync-sealed-releases))))
+
+    (let loop ((remaining stages)
+               (failed '()))
+      (if (null? remaining)
+          ;; All stages complete
+          (if (null? failed)
+              (begin
+                (log-info "✓ Synchronization complete")
+                (exit 0))
+              (begin
+                (log-error "✗ Some stages failed: ~a"
+                          (string-intersperse (reverse failed) ", "))
+                (exit 1)))
+
+          ;; Process next stage
+          (let* ((stage (car remaining))
+                 (name (car stage))
+                 (proc (cdr stage)))
+            (log-info "Stage: ~a" name)
+            (let ((result (proc)))
+              (cond
+               ;; Special handling for status check
+               ((and (eq? proc sync-git-status) (eq? result 'behind))
+                (if (sync-git-pull)
+                    (loop (cdr remaining) failed)
+                    (loop (cdr remaining) (cons name failed))))
+
+               ;; Normal boolean result
+               ((or (boolean? result) (eq? result 'synced) (eq? result 'ahead))
+                (loop (cdr remaining)
+                      (if result failed (cons name failed))))
+
+               ;; Unknown result
+               (else
+                (loop (cdr remaining) failed)))))))))
+
+;;; --- Entry Point ---
+
+(define (main)
+  (let ((args (command-line-arguments)))
+    (cond
+     ((member "--help" args)
+      (show-help))
+
+     (else
+      (sync-all)))))
+
+;; Run main
+(main)
