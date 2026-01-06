@@ -268,3 +268,8 @@ export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
+# Intern ~/cyberspace and sync with GitHub on startup
+if [[ "$PWD" == "$HOME/cyberspace" && -d .git ]]; then
+    git pull --quiet 2>/dev/null || true
+fi
+
