@@ -16,6 +16,10 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [RFC-008](RFC-008-shamir-sharing.md) | Shamir Secret Sharing | Implemented | 2026-01-06 |
 | [RFC-009](RFC-009-library-directory.md) | Library Directory System | Implemented | 2026-01-06 |
 | [RFC-010](RFC-010-federation.md) | Federation Protocol | Proposed | 2026-01-06 |
+| [RFC-011](RFC-011-byzantine-consensus.md) | Byzantine Consensus | Proposed | 2026-01-06 |
+| [RFC-012](RFC-012-lamport-clocks.md) | Lamport Logical Clocks | Proposed | 2026-01-06 |
+| [RFC-013](RFC-013-tla-specification.md) | TLA+ Formal Specification | Proposed | 2026-01-06 |
+| [RFC-014](RFC-014-coq-extraction.md) | Coq Extraction for TCB | Proposed | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -39,7 +43,7 @@ Each RFC should include:
 
 ## Upcoming RFCs
 
-- RFC-011: Byzantine Consensus
-- RFC-012: Lamport Logical Clocks
-- RFC-013: TLA+ Formal Specification
-- RFC-014: Coq Extraction for TCB
+- RFC-015: Content-Addressed Storage
+- RFC-016: Capability Delegation Patterns
+- RFC-017: Offline-First Synchronization
+- RFC-018: Key Ceremony Protocol
