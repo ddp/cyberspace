@@ -1,9 +1,9 @@
 # Library of Cyberspace - Current State
 
-**Last Updated:** 2026-01-05 22:30 UTC
+**Last Updated:** 2026-01-05 23:00 UTC
 **Location:** /Users/ddp/cyberspace/spki/scheme
 **Branch:** main
-**Commit:** c98965b "Add Shamir secret sharing to crypto-ffi TCB"
+**Commit:** 324161a "Add cyberspace script interpreter (porcelain layer)"
 
 ---
 
@@ -30,6 +30,8 @@
 ✓ Tools: spki-keygen, spki-cert, spki-verify, spki-show
 ✓ Ed25519 keys and certificates
 ✓ Shamir (K,N)-threshold secret sharing (GF(256))
+✓ Threshold multi-signature (script.scm)
+✓ Cyberspace script interpreter (porcelain layer)
 ✓ All working and tested
 
 ### Documentation
@@ -42,12 +44,27 @@
 
 ## Recent Work (This Session)
 
-1. Implemented Shamir secret sharing in crypto-ffi.scm
+### Core Governance Infrastructure Complete
+
+1. **Shamir Secret Sharing** (crypto-ffi.scm)
    - GF(256) arithmetic with generator 3 (polynomial 0x11b)
    - (K,N)-threshold secret splitting
    - Lagrange interpolation reconstruction
    - Full test suite validates Ed25519 key splitting
-   - Enables threshold governance for cyberspace
+
+2. **Threshold Multi-Signature** (script.scm)
+   - Script signature records (signer, signature, timestamp)
+   - Single and threshold signature verification
+   - Tiered signing: dev (1-of-1), staging (2-of-2), prod (K-of-N)
+   - Test: 5-person council with 3-of-5 threshold
+
+3. **Cyberspace Script Interpreter** (cyberspace.scm)
+   - CLI: verify and run commands
+   - S-expression signature file format
+   - Threshold verification before execution
+   - Demo: 3-person council, 2-of-3 threshold
+
+**Result:** "Loose confederacy of friends" governance model fully operational
 
 ---
 
