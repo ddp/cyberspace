@@ -46,16 +46,31 @@
           (chicken time posix)
           (chicken condition)
           (chicken blob)
+          (chicken memory)
           (chicken irregex)
           srfi-1   ; list utilities
           srfi-4   ; u8vectors
           srfi-13  ; string utilities
           cert
-          crypto-ffi)
+          crypto-ffi
+          audit)
 
   ;;; ============================================================================
   ;;; Helper Functions
   ;;; ============================================================================
+
+  (define (get-vault-principal signing-key)
+    "Extract public key from Ed25519 signing key (64 bytes)"
+    (if (and (blob? signing-key) (= (blob-size signing-key) 64))
+        ;; Public key is second half of signing key
+        (blob-copy signing-key 32 32)
+        #f))
+
+  (define (blob-copy src start len)
+    "Copy portion of blob"
+    (let ((result (make-blob len)))
+      (move-memory! src result len start 0)
+      result))
 
   (define (run-command . args)
     "Run a system command with arguments"
@@ -213,16 +228,27 @@
     ;; Create commit (simple by default)
     (run-command "git" "commit" "-m" message)
 
-    ;; Add optional metadata after commit
-    (when (or catalog subjects keywords description preserve)
-      (let ((commit-hash (with-input-from-pipe "git rev-parse HEAD" read-line)))
+    ;; Get commit hash
+    (let ((commit-hash (with-input-from-pipe "git rev-parse HEAD" read-line)))
+
+      ;; Add optional metadata after commit
+      (when (or catalog subjects keywords description preserve)
         (save-commit-metadata commit-hash
                              message: message
                              catalog: catalog
                              subjects: subjects
                              keywords: keywords
                              description: description
-                             preserve: preserve))))
+                             preserve: preserve))
+
+      ;; Record in audit trail
+      (let ((signing-key (vault-config 'signing-key)))
+        (when signing-key
+          (audit-append
+           actor: (get-vault-principal signing-key)
+           action: 'seal-commit
+           action-object: commit-hash
+           motivation: message)))))
 
   (define (seal-update #!key branch)
     "Update vault from origin
