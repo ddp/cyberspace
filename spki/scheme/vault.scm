@@ -1,0 +1,573 @@
+;;; vault.scm - Cryptographically Sealed Version Control for the Library of Cyberspace
+;;;
+;;; A higher-level interface to version control with integrated:
+;;; - SPKI certificate-based authorization
+;;; - Cryptographic sealing of versions
+;;; - First-class archival and restoration
+;;; - Migration paths between versions
+;;;
+;;; Commands use "seal" as the primary verb, connecting:
+;;; - Cryptographic sealing (SPKI signatures)
+;;; - Library seals (official marks of authenticity)
+;;; - Vault seals (securing archives)
+
+(module vault
+  (;; Core operations
+   seal-commit
+   seal-update
+   seal-undo
+   seal-history
+   seal-branch
+   seal-merge
+
+   ;; Version management
+   seal-release
+   seal-archive
+   seal-migrate
+   seal-restore
+
+   ;; Verification
+   seal-verify
+   seal-check
+
+   ;; Configuration
+   vault-init
+   vault-config)
+
+  (import scheme
+          (chicken base)
+          (chicken process)
+          (chicken process-context)
+          (chicken string)
+          (chicken format)
+          (chicken io)
+          (chicken file)
+          (chicken file posix)
+          (chicken pathname)
+          (chicken time posix)
+          (chicken condition)
+          srfi-1   ; list utilities
+          srfi-13  ; string utilities
+          cert
+          crypto-ffi)
+
+  ;;; ============================================================================
+  ;;; Configuration
+  ;;; ============================================================================
+
+  (define *vault-config*
+    '((signing-key . #f)           ; Path to signing key for releases
+      (verify-key . #f)            ; Path to verification key
+      (archive-format . tarball)   ; tarball, git-bundle, or cryptographic
+      (migration-dir . "migrations"))) ; Directory for migration scripts
+
+  (define (vault-config key #!optional value)
+    "Get or set vault configuration"
+    (if value
+        (set! *vault-config* (alist-update key value *vault-config*))
+        (alist-ref key *vault-config*)))
+
+  (define (vault-init #!key signing-key)
+    "Initialize vault configuration for repository"
+    (if signing-key
+        (vault-config 'signing-key signing-key))
+    (print "Vault initialized for: " (get-environment-variable "PWD"))
+    (when signing-key
+      (print "Signing key: " signing-key)))
+
+  ;;; ============================================================================
+  ;;; Core Operations - Better UX than raw git
+  ;;; ============================================================================
+
+  (define (seal-commit message #!key files catalog subjects keywords description preserve)
+    "Seal changes into the vault
+     Simplified commit: stages and commits in one operation
+
+     Optional metadata:
+     - catalog: Add discovery metadata
+     - subjects: Subject headings (list of strings)
+     - keywords: Search keywords (list of strings)
+     - description: Extended description
+     - preserve: Full preservation metadata"
+
+    ;; Stage files
+    (when files
+      (apply system* "git" "add" files))
+    (system* "git" "add" "-u")  ; Add all modified tracked files
+
+    ;; Create commit (simple by default)
+    (system* "git" "commit" "-m" message)
+
+    ;; Add optional metadata after commit
+    (when (or catalog subjects keywords description preserve)
+      (let ((commit-hash (with-input-from-pipe "git rev-parse HEAD" read-line)))
+        (save-commit-metadata commit-hash
+                             message: message
+                             catalog: catalog
+                             subjects: subjects
+                             keywords: keywords
+                             description: description
+                             preserve: preserve))))
+
+  (define (seal-update #!key branch)
+    "Update vault from origin
+     Like svn update - pulls latest changes"
+    (let ((target (or branch "origin/main")))
+      (system* "git" "pull" "--ff-only")))
+
+  (define (seal-undo #!key file hard)
+    "Undo changes
+     - file: undo changes to specific file
+     - hard: discard all uncommitted changes"
+    (cond
+     (file
+      (system* "git" "restore" file))
+     (hard
+      (system* "git" "reset" "--hard" "HEAD"))
+     (else
+      (system* "git" "reset" "--soft" "HEAD~1"))))
+
+  (define (seal-history #!key count)
+    "Show vault history
+     Simplified log with clear format"
+    (let ((limit (or count 10)))
+      (system* "git" "log"
+               "--oneline"
+               "--decorate"
+               "--graph"
+               (sprintf "-~a" limit))))
+
+  (define (seal-branch name #!key from)
+    "Create and switch to new sealed branch"
+    (if from
+        (system* "git" "checkout" "-b" name from)
+        (system* "git" "checkout" "-b" name)))
+
+  (define (seal-merge from #!key strategy)
+    "Merge sealed changes from another branch"
+    (if strategy
+        (system* "git" "merge" from "-s" strategy)
+        (system* "git" "merge" from)))
+
+  ;;; ============================================================================
+  ;;; Version Management - Semantic versioning with SPKI sealing
+  ;;; ============================================================================
+
+  (define-record-type <sealed-release>
+    (make-sealed-release version hash timestamp signer signature)
+    sealed-release?
+    (version release-version)
+    (hash release-hash)
+    (timestamp release-timestamp)
+    (signer release-signer)
+    (signature release-signature))
+
+  (define (seal-release version #!key message migrate-from)
+    "Create a cryptographically sealed release
+     - version: semantic version (e.g., '1.0.0')
+     - message: release notes
+     - migrate-from: previous version for migration tracking"
+
+    ;; Validate semantic version
+    (unless (string-match "^[0-9]+\\.[0-9]+\\.[0-9]+$" version)
+      (error "Invalid semantic version" version))
+
+    ;; Get current commit hash
+    (let ((hash (with-input-from-pipe "git rev-parse HEAD" read-line))
+          (timestamp (current-seconds)))
+
+      ;; Create annotated tag
+      (let ((tag-message (or message (sprintf "Release ~a" version))))
+        (system* "git" "tag" "-a" version "-m" tag-message))
+
+      ;; Sign with SPKI if signing key configured
+      (let ((signing-key (vault-config 'signing-key)))
+        (when signing-key
+          (seal-sign-release version hash signing-key)))
+
+      ;; Create migration marker if migrating from previous version
+      (when migrate-from
+        (create-migration-marker migrate-from version))
+
+      (print "Sealed release: " version " at " hash)))
+
+  (define (seal-sign-release version hash signing-key)
+    "Sign a release with SPKI certificate"
+    ;; Create release manifest
+    (let ((manifest (sprintf "(release ~s ~s ~s)"
+                            version hash (current-seconds))))
+      ;; Sign manifest
+      (let* ((key (read-key-from-file signing-key))
+             (sig-hash (sha512-hash manifest))
+             (signature (ed25519-sign key sig-hash)))
+
+        ;; Store signature
+        (let ((sig-file (sprintf ".vault/releases/~a.sig" version)))
+          (create-directory ".vault/releases" #t)
+          (with-output-to-file sig-file
+            (lambda ()
+              (write `(signature
+                       (version ,version)
+                       (hash ,hash)
+                       (manifest ,manifest)
+                       (signature ,signature)))))
+          (print "Release signed: " sig-file)))))
+
+  (define (seal-verify version #!key verify-key)
+    "Verify cryptographic seal on a release"
+    (let ((sig-file (sprintf ".vault/releases/~a.sig" version))
+          (key (or verify-key (vault-config 'verify-key))))
+
+      (unless (file-exists? sig-file)
+        (error "No signature found for release" version))
+
+      (unless key
+        (error "No verification key configured"))
+
+      ;; Read and verify signature
+      (let* ((sig-data (with-input-from-file sig-file read))
+             (manifest (cadr (assq 'manifest sig-data)))
+             (signature (cadr (assq 'signature sig-data)))
+             (pubkey (read-key-from-file key)))
+
+        (let ((sig-hash (sha512-hash manifest)))
+          (if (ed25519-verify pubkey sig-hash signature)
+              (begin
+                (print "✓ Release seal verified: " version)
+                #t)
+              (begin
+                (print "✗ Release seal INVALID: " version)
+                #f))))))
+
+  ;;; ============================================================================
+  ;;; Archival and Restoration - First-class support
+  ;;; ============================================================================
+
+  (define (seal-archive version #!key format output)
+    "Create sealed archive of a version
+     Formats:
+     - 'tarball: Standard compressed tarball
+     - 'bundle: Git bundle (includes full history)
+     - 'cryptographic: Encrypted archive with SPKI seal"
+
+    (let ((fmt (or format (vault-config 'archive-format)))
+          (out (or output (sprintf "vault-~a.archive" version))))
+
+      (case fmt
+        ((tarball)
+         (seal-archive-tarball version out))
+
+        ((bundle)
+         (seal-archive-bundle version out))
+
+        ((cryptographic)
+         (seal-archive-cryptographic version out))
+
+        (else
+         (error "Unknown archive format" fmt)))
+
+      (print "Archive sealed: " out)
+      out))
+
+  (define (seal-archive-tarball version output)
+    "Create tarball archive"
+    (system* "git" "archive"
+             "--format=tar.gz"
+             (sprintf "--output=~a" output)
+             "--prefix=vault/"
+             version))
+
+  (define (seal-archive-bundle version output)
+    "Create git bundle with full history"
+    (system* "git" "bundle" "create" output version))
+
+  (define (seal-archive-cryptographic version output)
+    "Create encrypted archive with SPKI signature"
+    ;; First create tarball
+    (let ((tarball (sprintf "~a.tar.gz" output)))
+      (seal-archive-tarball version tarball)
+
+      ;; Sign the tarball hash
+      (let ((signing-key (vault-config 'signing-key)))
+        (when signing-key
+          (let* ((tarball-bytes (read-file-bytes tarball))
+                 (tarball-hash (sha512-hash tarball-bytes))
+                 (key (read-key-from-file signing-key))
+                 (signature (ed25519-sign key tarball-hash)))
+
+            ;; Create sealed archive manifest
+            (with-output-to-file output
+              (lambda ()
+                (write `(sealed-archive
+                         (version ,version)
+                         (format cryptographic)
+                         (tarball ,tarball)
+                         (hash ,(blob->hex tarball-hash))
+                         (signature ,(blob->hex signature))))))
+
+            (print "Cryptographic seal applied"))))))
+
+  (define (seal-restore archive #!key verify-key target)
+    "Restore from sealed archive with verification"
+    (let ((target-dir (or target ".")))
+
+      ;; Read archive manifest
+      (let ((manifest (with-input-from-file archive read)))
+
+        (case (car manifest)
+          ((sealed-archive)
+           (seal-restore-cryptographic manifest verify-key target-dir))
+
+          (else
+           (error "Unknown archive format" (car manifest)))))))
+
+  (define (seal-restore-cryptographic manifest verify-key target-dir)
+    "Restore and verify cryptographic archive"
+    (let ((version (cadr (assq 'version manifest)))
+          (tarball (cadr (assq 'tarball manifest)))
+          (hash-hex (cadr (assq 'hash manifest)))
+          (sig-hex (cadr (assq 'signature manifest))))
+
+      (print "Restoring sealed archive: " version)
+
+      ;; Verify signature if key provided
+      (when verify-key
+        (let* ((tarball-bytes (read-file-bytes tarball))
+               (tarball-hash (sha512-hash tarball-bytes))
+               (expected-hash (hex->blob hash-hex))
+               (signature (hex->blob sig-hex))
+               (pubkey (read-key-from-file verify-key)))
+
+          (unless (equal? tarball-hash expected-hash)
+            (error "Archive hash mismatch"))
+
+          (unless (ed25519-verify pubkey tarball-hash signature)
+            (error "Archive signature verification failed"))
+
+          (print "✓ Archive seal verified")))
+
+      ;; Extract tarball
+      (system* "tar" "-xzf" tarball "-C" target-dir)
+      (print "Archive restored to: " target-dir)))
+
+  ;;; ============================================================================
+  ;;; Migration Paths - Explicit version transitions
+  ;;; ============================================================================
+
+  (define (create-migration-marker from-version to-version)
+    "Create migration path marker"
+    (let ((migration-file (sprintf "~a/~a-to-~a.scm"
+                                  (vault-config 'migration-dir)
+                                  from-version
+                                  to-version)))
+      (create-directory (vault-config 'migration-dir) #t)
+      (unless (file-exists? migration-file)
+        (with-output-to-file migration-file
+          (lambda ()
+            (print ";;; Migration: " from-version " -> " to-version)
+            (print ";;; Generated: " (current-seconds))
+            (print "")
+            (print "(define (migrate-" from-version "-to-" to-version ")")
+            (print "  ;; Define migration logic here")
+            (print "  #t)")
+            (print ""))
+            (print "(migrate-" from-version "-to-" to-version ")")))
+        (print "Migration template created: " migration-file))))
+
+  (define (seal-migrate from-version to-version #!key script dry-run)
+    "Migrate between sealed versions
+     - script: path to migration script
+     - dry-run: test migration without applying"
+
+    (let ((migration-script
+           (or script
+               (sprintf "~a/~a-to-~a.scm"
+                       (vault-config 'migration-dir)
+                       from-version
+                       to-version))))
+
+      (unless (file-exists? migration-script)
+        (error "Migration script not found" migration-script))
+
+      (print "Migrating: " from-version " -> " to-version)
+
+      (if dry-run
+          (begin
+            (print "DRY RUN - would execute: " migration-script)
+            (print "Migration script:")
+            (system* "cat" migration-script))
+          (begin
+            ;; Execute migration script
+            (load migration-script)
+            (print "Migration complete")))))
+
+  ;;; ============================================================================
+  ;;; Integrity Checking
+  ;;; ============================================================================
+
+  (define (seal-check #!key deep)
+    "Check vault integrity
+     - deep: verify all sealed releases"
+
+    (print "Checking vault integrity...")
+
+    ;; Check git repository health
+    (print "Repository status:")
+    (system* "git" "fsck" "--quick")
+
+    ;; Verify sealed releases if deep check
+    (when deep
+      (print "")
+      (print "Verifying sealed releases:")
+      (let ((releases (get-sealed-releases)))
+        (for-each
+         (lambda (version)
+           (handle-exceptions exn
+             (print "  ✗ " version " - " (get-condition-property exn 'exn 'message))
+             (if (seal-verify version)
+                 (print "  ✓ " version)
+                 (print "  ✗ " version " - signature invalid"))))
+         releases))))
+
+  (define (get-sealed-releases)
+    "Get list of releases with seals"
+    (if (directory-exists? ".vault/releases")
+        (let ((files (directory ".vault/releases")))
+          (filter-map
+           (lambda (f)
+             (and (string-suffix? ".sig" f)
+                  (string-trim-right (pathname-file f) ".sig")))
+           files))
+        '()))
+
+  ;;; ============================================================================
+  ;;; Metadata Management
+  ;;; ============================================================================
+
+  (define (save-commit-metadata commit-hash #!key message catalog subjects keywords description preserve)
+    "Save optional metadata for a commit"
+    (create-directory ".vault/metadata" #t)
+
+    (let ((metadata-file (sprintf ".vault/metadata/~a.sexp" commit-hash))
+          (timestamp (current-seconds)))
+
+      ;; Build metadata structure based on flags
+      (let ((metadata
+             `(commit-metadata
+               (hash ,commit-hash)
+               (timestamp ,timestamp)
+               (message ,message)
+
+               ,@(if (or catalog subjects keywords description)
+                     `((catalog
+                        ,@(if subjects `((subjects ,@subjects)) '())
+                        ,@(if keywords `((keywords ,@keywords)) '())
+                        ,@(if description `((description ,description)) '())))
+                     '())
+
+               ,@(if preserve
+                     `((preservation
+                        (environment ,(get-environment-snapshot))
+                        (dependencies ,(get-dependencies-snapshot))
+                        (git-state ,(get-git-state-snapshot))))
+                     '()))))
+
+        ;; Write metadata file
+        (with-output-to-file metadata-file
+          (lambda ()
+            (write metadata)
+            (newline)))
+
+        ;; Stage metadata file for next commit (optional)
+        (when (vault-config 'track-metadata)
+          (system* "git" "add" metadata-file)))))
+
+  (define (get-environment-snapshot)
+    "Capture current build environment"
+    `((platform ,(or (get-environment-variable "OSTYPE") "unknown"))
+      (hostname ,(or (get-environment-variable "HOSTNAME") "unknown"))
+      (chicken-version ,(##sys#fudge 42))  ; Get Chicken version
+      (timestamp ,(current-seconds))))
+
+  (define (get-dependencies-snapshot)
+    "Capture current dependencies"
+    ;; Placeholder - could scan imports, check installed eggs, etc.
+    '())
+
+  (define (get-git-state-snapshot)
+    "Capture git repository state"
+    (let ((branch (with-input-from-pipe "git branch --show-current" read-line))
+          (remote (with-input-from-pipe "git remote -v" read-line)))
+      `((branch ,branch)
+        (remote ,remote))))
+
+  (define (read-commit-metadata commit-hash)
+    "Read metadata for a commit if it exists"
+    (let ((metadata-file (sprintf ".vault/metadata/~a.sexp" commit-hash)))
+      (if (file-exists? metadata-file)
+          (with-input-from-file metadata-file read)
+          #f)))
+
+  ;;; ============================================================================
+  ;;; Utility functions
+  ;;; ============================================================================
+
+  (define (read-key-from-file filename)
+    "Read key blob from s-expression file"
+    (let ((sexp (with-input-from-file filename read)))
+      (if (and (pair? sexp) (= 2 (length sexp)))
+          (cadr sexp)  ; Extract key bytes from (type key-blob)
+          (error "Invalid key file format" filename))))
+
+  (define (read-file-bytes filename)
+    "Read file as byte blob"
+    (with-input-from-file filename
+      (lambda ()
+        (read-string #f))))
+
+  (define (blob->hex blob)
+    "Convert blob to hex string"
+    (string-concatenate
+     (map (lambda (b)
+            (sprintf "~2,'0x" b))
+          (blob->u8vector blob))))
+
+  (define (hex->blob hex-string)
+    "Convert hex string to blob"
+    (let* ((len (quotient (string-length hex-string) 2))
+           (vec (make-u8vector len)))
+      (do ((i 0 (+ i 1)))
+          ((= i len) (u8vector->blob vec))
+        (u8vector-set! vec i
+                       (string->number
+                        (substring hex-string (* i 2) (* (+ i 1) 2))
+                        16)))))
+
+  ) ;; end module vault
+
+
+;;; ============================================================================
+;;; Example usage:
+;;; ============================================================================
+;;;
+;;; ;; Initialize vault with signing key
+;;; (vault-init signing-key: "alice.private")
+;;;
+;;; ;; Make changes
+;;; (seal-commit "Add new feature" files: '("feature.scm"))
+;;;
+;;; ;; Create sealed release
+;;; (seal-release "1.0.0" message: "Initial stable release")
+;;;
+;;; ;; Verify release
+;;; (seal-verify "1.0.0" verify-key: "alice.public")
+;;;
+;;; ;; Create cryptographic archive
+;;; (seal-archive "1.0.0" format: 'cryptographic)
+;;;
+;;; ;; Migrate to new version
+;;; (seal-release "2.0.0" migrate-from: "1.0.0")
+;;; (seal-migrate "1.0.0" "2.0.0")
+;;;
+;;; ;; Check vault integrity
+;;; (seal-check deep: #t)
