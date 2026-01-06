@@ -1,9 +1,9 @@
 # Library of Cyberspace - Current State
 
-**Last Updated:** 2026-01-05 21:45 UTC
+**Last Updated:** 2026-01-05 22:30 UTC
 **Location:** /Users/ddp/cyberspace/spki/scheme
 **Branch:** main
-**Commit:** c9cb1e2 "Add comprehensive documentation in multiple formats"
+**Commit:** c98965b "Add Shamir secret sharing to crypto-ffi TCB"
 
 ---
 
@@ -25,11 +25,12 @@
 ✓ 3 entries recorded in `.vault/audit/`
 ⚠ Parser incomplete (shows "unknown" action in human export, but S-exp data is correct)
 
-### SPKI Infrastructure
+### SPKI Infrastructure & Crypto
 ✓ Tagged: spki-cli-v1.0
 ✓ Tools: spki-keygen, spki-cert, spki-verify, spki-show
 ✓ Ed25519 keys and certificates
-✓ All working
+✓ Shamir (K,N)-threshold secret sharing (GF(256))
+✓ All working and tested
 
 ### Documentation
 ✓ Man pages: seal.1, audit.1
@@ -41,21 +42,12 @@
 
 ## Recent Work (This Session)
 
-1. Fixed vault.scm compilation errors
-   - blob->hex u8vector conversion
-   - system* → run-command helper
-   - Parenthesis balancing
-   - with-output-to-file closure
-
-2. Created cryptographic audit trail
-   - 3 entries in `.vault/audit/*.sexp`
-   - Content-addressed IDs
-   - Ed25519 sealed
-
-3. Generated comprehensive documentation
-   - Multiple formats (man/md/html)
-   - Beautiful typography
-   - Indexed and cross-linked
+1. Implemented Shamir secret sharing in crypto-ffi.scm
+   - GF(256) arithmetic with generator 3 (polynomial 0x11b)
+   - (K,N)-threshold secret splitting
+   - Lagrange interpolation reconstruction
+   - Full test suite validates Ed25519 key splitting
+   - Enables threshold governance for cyberspace
 
 ---
 
@@ -74,12 +66,13 @@
 
 ## Next Steps
 
-1. Test vault system with simple operations
-2. Fix audit trail parser (complete sexp->entry)
-3. Integrate vault operations with audit trail
-4. Create first sealed release and verify
-5. Test archive/restore cycle
-6. Implement cross-node replication (seal-push/seal-pull)
+1. Add script signing and verification to vault module
+2. Create cyberspace script interpreter (porcelain layer)
+3. Implement threshold signature example (K-of-N signing)
+4. Test vault system with sealed commits
+5. Fix audit parser (complete sexp->entry reconstruction)
+6. Integrate vault operations with audit trail
+7. Build replication layer (seal-push/seal-pull)
 
 ---
 
