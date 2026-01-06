@@ -26,6 +26,9 @@
           (chicken base)
           (chicken string)
           (chicken format)
+          (chicken condition)
+          (chicken blob)
+          (chicken memory representation)
           srfi-1   ; list utilities
           srfi-4   ; u8vectors
           srfi-13  ; string utilities
@@ -58,25 +61,35 @@
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 
   (define (base64-encode bytes)
-    ;; Simple base64 encoder for u8vectors
+    ;; Simple base64 encoder for blobs
     ;; TODO: Replace with proper library (base64 egg)
     ;; For now, use hex encoding as a placeholder
-    (if (u8vector? bytes)
-        (let loop ((i 0) (acc ""))
-          (if (>= i (u8vector-length bytes))
-              acc
-              (let ((byte (u8vector-ref bytes i)))
-                (loop (+ i 1)
-                      (string-append acc
-                                     (if (< byte 16)
-                                         (string-append "0" (number->string byte 16))
-                                         (number->string byte 16)))))))
+    (if (blob? bytes)
+        (let* ((vec (blob->u8vector/shared bytes))
+               (len (u8vector-length vec)))
+          (let loop ((i 0) (acc ""))
+            (if (>= i len)
+                acc
+                (let ((byte (u8vector-ref vec i)))
+                  (loop (+ i 1)
+                        (string-append acc
+                                       (if (< byte 16)
+                                           (string-append "0" (number->string byte 16))
+                                           (number->string byte 16))))))))
         ""))
 
   (define (base64-decode str)
-    ;; Simple base64 decoder
+    ;; Simple base64 decoder (currently decodes hex)
     ;; TODO: Replace with proper library (base64 egg)
-    (make-u8vector 0))
+    (let* ((len (string-length str))
+           (blob (make-blob (quotient len 2)))
+           (vec (blob->u8vector/shared blob)))
+      (let loop ((i 0))
+        (if (>= i (quotient len 2))
+            blob
+            (let ((hex-str (substring str (* i 2) (+ (* i 2) 2))))
+              (u8vector-set! vec i (string->number hex-str 16))
+              (loop (+ i 1)))))))
 
   ;;; Tokenizer
 

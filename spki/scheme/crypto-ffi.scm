@@ -13,16 +13,22 @@
 
 (module crypto-ffi
   (sodium-init
+   ed25519-keypair!
    ed25519-keypair
    ed25519-sign
    ed25519-verify
    sha256-hash
-   sha512-hash)
+   sha512-hash
+   crypto-sign-publickeybytes
+   crypto-sign-secretkeybytes
+   crypto-sign-bytes)
 
   (import scheme
           (chicken base)
           (chicken foreign)
           (chicken format)
+          (chicken blob)
+          (chicken memory)
           srfi-4)
 
   ;; Include libsodium header
@@ -40,84 +46,92 @@
   (define sodium-init
     (foreign-lambda int "sodium_init"))
 
-  ;; Generate Ed25519 keypair
-  ;; Returns: (public-key secret-key) as list of bytevectors
+  ;; Generate Ed25519 keypair (mutating version)
+  ;; Takes pre-allocated scheme-objects and fills them with keypair
+  ;; @param public-key: 32-byte blob (will be filled)
+  ;; @param secret-key: 64-byte blob (will be filled)
+  ;; @return: 0 on success, -1 on failure
+  (define ed25519-keypair!
+    (foreign-lambda int "crypto_sign_keypair"
+                    scheme-pointer scheme-pointer))
+
+  ;; Generate Ed25519 keypair (allocating version)
+  ;; Creates and returns new keypair as blobs
+  ;; @return: list of (public-key secret-key) as blobs
   (define (ed25519-keypair)
-    (let ((pk (make-u8vector crypto-sign-publickeybytes))
-          (sk (make-u8vector crypto-sign-secretkeybytes)))
-      ((foreign-lambda int "crypto_sign_keypair"
-                      scheme-pointer scheme-pointer)
-       pk sk)
-      (list pk sk)))
+    (let ((public-key (make-blob crypto-sign-publickeybytes))
+          (secret-key (make-blob crypto-sign-secretkeybytes)))
+      (ed25519-keypair! public-key secret-key)
+      (list public-key secret-key)))
 
   ;; Sign message with Ed25519
-  ;; @param secret-key: 64-byte secret key (bytevector)
-  ;; @param message: message to sign (bytevector or string)
-  ;; @return signature: 64-byte signature (bytevector)
+  ;; @param secret-key: 64-byte secret key (blob)
+  ;; @param message: message to sign (blob or string)
+  ;; @return signature: 64-byte signature (blob)
   (define (ed25519-sign secret-key message)
     (let* ((msg-bytes (if (string? message)
-                          (string->u8vector message)
+                          (string->blob message)
                           message))
-           (signature (make-u8vector crypto-sign-bytes))
-           (sig-len-ptr (make-u8vector 8)))  ; unsigned long long
+           (signature (make-blob crypto-sign-bytes))
+           (sig-len-ptr (make-blob 8)))  ; unsigned long long
       ((foreign-lambda int "crypto_sign_detached"
                       scheme-pointer     ; signature
                       scheme-pointer     ; signature length (out)
                       scheme-pointer     ; message
                       unsigned-integer   ; message length
                       scheme-pointer)    ; secret key
-       signature sig-len-ptr msg-bytes (u8vector-length msg-bytes) secret-key)
+       signature sig-len-ptr msg-bytes (blob-size msg-bytes) secret-key)
       signature))
 
   ;; Verify Ed25519 signature
-  ;; @param public-key: 32-byte public key (bytevector)
-  ;; @param message: message that was signed (bytevector or string)
-  ;; @param signature: 64-byte signature (bytevector)
+  ;; @param public-key: 32-byte public key (blob)
+  ;; @param message: message that was signed (blob or string)
+  ;; @param signature: 64-byte signature (blob)
   ;; @return #t if valid, #f otherwise
   ;;;
   ;;; TCB CRITICAL: This is the core security guarantee.
   ;;; If this returns #t, the signature was created by holder of the private key.
   (define (ed25519-verify public-key message signature)
     (let* ((msg-bytes (if (string? message)
-                          (string->u8vector message)
+                          (string->blob message)
                           message))
            (result ((foreign-lambda int "crypto_sign_verify_detached"
                                    scheme-pointer     ; signature
                                    scheme-pointer     ; message
                                    unsigned-integer   ; message length
                                    scheme-pointer)    ; public key
-                    signature msg-bytes (u8vector-length msg-bytes) public-key)))
+                    signature msg-bytes (blob-size msg-bytes) public-key)))
       ;; crypto_sign_verify_detached returns 0 on success, -1 on failure
       (= result 0)))
 
   ;; Compute SHA-256 hash
-  ;; @param data: data to hash (bytevector or string)
-  ;; @return hash: 32-byte hash (bytevector)
+  ;; @param data: data to hash (blob or string)
+  ;; @return hash: 32-byte hash (blob)
   (define (sha256-hash data)
     (let* ((data-bytes (if (string? data)
-                           (string->u8vector data)
+                           (string->blob data)
                            data))
-           (hash (make-u8vector crypto-hash-sha256-bytes)))
+           (hash (make-blob crypto-hash-sha256-bytes)))
       ((foreign-lambda int "crypto_hash_sha256"
                       scheme-pointer     ; hash output
                       scheme-pointer     ; data
                       unsigned-integer)  ; data length
-       hash data-bytes (u8vector-length data-bytes))
+       hash data-bytes (blob-size data-bytes))
       hash))
 
   ;; Compute SHA-512 hash
-  ;; @param data: data to hash (bytevector or string)
-  ;; @return hash: 64-byte hash (bytevector)
+  ;; @param data: data to hash (blob or string)
+  ;; @return hash: 64-byte hash (blob)
   (define (sha512-hash data)
     (let* ((data-bytes (if (string? data)
-                           (string->u8vector data)
+                           (string->blob data)
                            data))
-           (hash (make-u8vector crypto-hash-sha512-bytes)))
+           (hash (make-blob crypto-hash-sha512-bytes)))
       ((foreign-lambda int "crypto_hash_sha512"
                       scheme-pointer     ; hash output
                       scheme-pointer     ; data
                       unsigned-integer)  ; data length
-       hash data-bytes (u8vector-length data-bytes))
+       hash data-bytes (blob-size data-bytes))
       hash))
 
   ;; Helper: convert string to u8vector
