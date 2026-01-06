@@ -251,8 +251,7 @@
         (when signing-key
           (audit-append
            actor: (get-vault-principal signing-key)
-           action: 'seal-commit
-           action-object: commit-hash
+           action: (list 'seal-commit commit-hash)
            motivation: message)))))
 
   (define (seal-update #!key branch)
