@@ -103,7 +103,12 @@
         (vault-config 'signing-key signing-key))
     (print "Vault initialized for: " (get-environment-variable "PWD"))
     (when signing-key
-      (print "Signing key: " signing-key)))
+      (print "Signing key: " signing-key)
+      ;; Also initialize audit trail
+      (let ((principal (get-vault-principal signing-key)))
+        (when principal
+          (audit-init signing-key: signing-key
+                     motivation: "Vault initialized with cryptographic audit trail")))))
 
   ;;; ============================================================================
   ;;; Utility Functions (must be defined before use)
