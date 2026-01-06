@@ -23,12 +23,10 @@
    ;; Version management
    seal-release
    seal-archive
-   seal-migrate
    seal-restore
 
    ;; Verification
    seal-verify
-   seal-check
 
    ;; Configuration
    vault-init
@@ -44,12 +42,24 @@
           (chicken file)
           (chicken file posix)
           (chicken pathname)
+          (chicken time)
           (chicken time posix)
           (chicken condition)
+          (chicken blob)
+          (chicken irregex)
           srfi-1   ; list utilities
+          srfi-4   ; u8vectors
           srfi-13  ; string utilities
           cert
           crypto-ffi)
+
+  ;;; ============================================================================
+  ;;; Helper Functions
+  ;;; ============================================================================
+
+  (define (run-command . args)
+    "Run a system command with arguments"
+    (system (string-intersperse args " ")))
 
   ;;; ============================================================================
   ;;; Configuration
@@ -76,6 +86,106 @@
       (print "Signing key: " signing-key)))
 
   ;;; ============================================================================
+  ;;; Utility Functions (must be defined before use)
+  ;;; ============================================================================
+
+  (define (read-key-from-file filename)
+    "Read key blob from s-expression file"
+    (let ((sexp (with-input-from-file filename read)))
+      (if (and (pair? sexp) (= 2 (length sexp)))
+          (cadr sexp)  ; Extract key bytes from (type key-blob)
+          (error "Invalid key file format" filename))))
+
+  (define (read-file-bytes filename)
+    "Read file as byte blob"
+    (with-input-from-file filename
+      (lambda ()
+        (read-string #f))))
+
+  (define (blob->hex blob)
+    "Convert blob to hex string"
+    (string-concatenate
+     (map (lambda (b)
+            (let ((hex (number->string b 16)))
+              (if (= 1 (string-length hex))
+                  (string-append "0" hex)
+                  hex)))
+          (u8vector->list (blob->u8vector blob)))))
+
+  (define (hex->blob hex-string)
+    "Convert hex string to blob"
+    (let* ((len (quotient (string-length hex-string) 2))
+           (vec (make-u8vector len)))
+      (do ((i 0 (+ i 1)))
+          ((= i len) (u8vector->blob vec))
+        (u8vector-set! vec i
+                       (string->number
+                        (substring hex-string (* i 2) (* (+ i 1) 2))
+                        16)))))
+
+  (define (get-environment-snapshot)
+    "Capture current build environment"
+    `((platform ,(or (get-environment-variable "OSTYPE") "unknown"))
+      (hostname ,(or (get-environment-variable "HOSTNAME") "unknown"))
+      (chicken-version ,(##sys#fudge 42))  ; Get Chicken version
+      (timestamp ,(current-seconds))))
+
+  (define (get-dependencies-snapshot)
+    "Capture current dependencies"
+    ;; Placeholder - could scan imports, check installed eggs, etc.
+    '())
+
+  (define (get-git-state-snapshot)
+    "Capture git repository state"
+    (let ((branch (with-input-from-pipe "git branch --show-current" read-line))
+          (remote (with-input-from-pipe "git remote -v" read-line)))
+      `((branch ,branch)
+        (remote ,remote))))
+
+  (define (save-commit-metadata commit-hash #!key message catalog subjects keywords description preserve)
+    "Save optional metadata for a commit"
+    (create-directory ".vault/metadata" #t)
+
+    (let ((metadata-file (sprintf ".vault/metadata/~a.sexp" commit-hash))
+          (timestamp (current-seconds)))
+
+      ;; Build metadata structure procedurally
+      (let ((metadata (list 'commit-metadata
+                           (list 'hash commit-hash)
+                           (list 'timestamp timestamp)
+                           (list 'message message))))
+
+        ;; Add catalog if requested
+        (when (or catalog subjects keywords description)
+          (let ((catalog-entry (list 'catalog)))
+            (when subjects
+              (set! catalog-entry (append catalog-entry (list (cons 'subjects subjects)))))
+            (when keywords
+              (set! catalog-entry (append catalog-entry (list (cons 'keywords keywords)))))
+            (when description
+              (set! catalog-entry (append catalog-entry (list (list 'description description)))))
+            (set! metadata (append metadata (list catalog-entry)))))
+
+        ;; Add preservation if requested
+        (when preserve
+          (set! metadata
+            (append metadata
+                   (list (list 'preservation
+                              (list 'environment (get-environment-snapshot))
+                              (list 'dependencies (get-dependencies-snapshot))
+                              (list 'git-state (get-git-state-snapshot)))))))
+
+        ;; Write metadata file
+        (with-output-to-file metadata-file
+          (lambda ()
+            (write metadata)
+            (newline)))
+
+        ;; Stage metadata file for next commit (optional)
+        (when (vault-config 'track-metadata)
+          (system (sprintf "git add ~a" metadata-file))))))
+
+  ;;; ============================================================================
   ;;; Core Operations - Better UX than raw git
   ;;; ============================================================================
 
@@ -92,11 +202,11 @@
 
     ;; Stage files
     (when files
-      (apply system* "git" "add" files))
-    (system* "git" "add" "-u")  ; Add all modified tracked files
+      (apply run-command "git" "add" files))
+    (run-command "git" "add" "-u")  ; Add all modified tracked files
 
     ;; Create commit (simple by default)
-    (system* "git" "commit" "-m" message)
+    (run-command "git" "commit" "-m" message)
 
     ;; Add optional metadata after commit
     (when (or catalog subjects keywords description preserve)
@@ -113,7 +223,7 @@
     "Update vault from origin
      Like svn update - pulls latest changes"
     (let ((target (or branch "origin/main")))
-      (system* "git" "pull" "--ff-only")))
+      (run-command "git" "pull" "--ff-only")))
 
   (define (seal-undo #!key file hard)
     "Undo changes
@@ -121,17 +231,17 @@
      - hard: discard all uncommitted changes"
     (cond
      (file
-      (system* "git" "restore" file))
+      (run-command "git" "restore" file))
      (hard
-      (system* "git" "reset" "--hard" "HEAD"))
+      (run-command "git" "reset" "--hard" "HEAD"))
      (else
-      (system* "git" "reset" "--soft" "HEAD~1"))))
+      (run-command "git" "reset" "--soft" "HEAD~1"))))
 
   (define (seal-history #!key count)
     "Show vault history
      Simplified log with clear format"
     (let ((limit (or count 10)))
-      (system* "git" "log"
+      (run-command "git" "log"
                "--oneline"
                "--decorate"
                "--graph"
@@ -140,14 +250,14 @@
   (define (seal-branch name #!key from)
     "Create and switch to new sealed branch"
     (if from
-        (system* "git" "checkout" "-b" name from)
-        (system* "git" "checkout" "-b" name)))
+        (run-command "git" "checkout" "-b" name from)
+        (run-command "git" "checkout" "-b" name)))
 
   (define (seal-merge from #!key strategy)
     "Merge sealed changes from another branch"
     (if strategy
-        (system* "git" "merge" from "-s" strategy)
-        (system* "git" "merge" from)))
+        (run-command "git" "merge" from "-s" strategy)
+        (run-command "git" "merge" from)))
 
   ;;; ============================================================================
   ;;; Version Management - Semantic versioning with SPKI sealing
@@ -168,9 +278,10 @@
      - message: release notes
      - migrate-from: previous version for migration tracking"
 
-    ;; Validate semantic version
-    (unless (string-match "^[0-9]+\\.[0-9]+\\.[0-9]+$" version)
-      (error "Invalid semantic version" version))
+    ;; Validate semantic version (basic check: contains two dots)
+    (unless (and (irregex-match '(: (+ digit) "." (+ digit) "." (+ digit)) version)
+                 (= 2 (length (string-split version "."))))
+      (error "Invalid semantic version (expected X.Y.Z)" version))
 
     ;; Get current commit hash
     (let ((hash (with-input-from-pipe "git rev-parse HEAD" read-line))
@@ -178,7 +289,7 @@
 
       ;; Create annotated tag
       (let ((tag-message (or message (sprintf "Release ~a" version))))
-        (system* "git" "tag" "-a" version "-m" tag-message))
+        (run-command "git" "tag" "-a" version "-m" tag-message))
 
       ;; Sign with SPKI if signing key configured
       (let ((signing-key (vault-config 'signing-key)))
@@ -271,7 +382,7 @@
 
   (define (seal-archive-tarball version output)
     "Create tarball archive"
-    (system* "git" "archive"
+    (run-command "git" "archive"
              "--format=tar.gz"
              (sprintf "--output=~a" output)
              "--prefix=vault/"
@@ -279,7 +390,7 @@
 
   (define (seal-archive-bundle version output)
     "Create git bundle with full history"
-    (system* "git" "bundle" "create" output version))
+    (run-command "git" "bundle" "create" output version))
 
   (define (seal-archive-cryptographic version output)
     "Create encrypted archive with SPKI signature"
@@ -347,7 +458,7 @@
           (print "✓ Archive seal verified")))
 
       ;; Extract tarball
-      (system* "tar" "-xzf" tarball "-C" target-dir)
+      (run-command "tar" "-xzf" tarball "-C" target-dir)
       (print "Archive restored to: " target-dir)))
 
   ;;; ============================================================================
@@ -370,7 +481,7 @@
             (print "(define (migrate-" from-version "-to-" to-version ")")
             (print "  ;; Define migration logic here")
             (print "  #t)")
-            (print ""))
+            (print "")
             (print "(migrate-" from-version "-to-" to-version ")")))
         (print "Migration template created: " migration-file))))
 
@@ -395,7 +506,7 @@
           (begin
             (print "DRY RUN - would execute: " migration-script)
             (print "Migration script:")
-            (system* "cat" migration-script))
+            (run-command "cat" migration-script))
           (begin
             ;; Execute migration script
             (load migration-script)
@@ -413,7 +524,7 @@
 
     ;; Check git repository health
     (print "Repository status:")
-    (system* "git" "fsck" "--quick")
+    (run-command "git" "fsck" "--quick")
 
     ;; Verify sealed releases if deep check
     (when deep
@@ -436,112 +547,11 @@
           (filter-map
            (lambda (f)
              (and (string-suffix? ".sig" f)
-                  (string-trim-right (pathname-file f) ".sig")))
+                  (let ((name (pathname-file f)))
+                    (substring name 0 (- (string-length name) 4)))))
            files))
         '()))
 
-  ;;; ============================================================================
-  ;;; Metadata Management
-  ;;; ============================================================================
-
-  (define (save-commit-metadata commit-hash #!key message catalog subjects keywords description preserve)
-    "Save optional metadata for a commit"
-    (create-directory ".vault/metadata" #t)
-
-    (let ((metadata-file (sprintf ".vault/metadata/~a.sexp" commit-hash))
-          (timestamp (current-seconds)))
-
-      ;; Build metadata structure based on flags
-      (let ((metadata
-             `(commit-metadata
-               (hash ,commit-hash)
-               (timestamp ,timestamp)
-               (message ,message)
-
-               ,@(if (or catalog subjects keywords description)
-                     `((catalog
-                        ,@(if subjects `((subjects ,@subjects)) '())
-                        ,@(if keywords `((keywords ,@keywords)) '())
-                        ,@(if description `((description ,description)) '())))
-                     '())
-
-               ,@(if preserve
-                     `((preservation
-                        (environment ,(get-environment-snapshot))
-                        (dependencies ,(get-dependencies-snapshot))
-                        (git-state ,(get-git-state-snapshot))))
-                     '()))))
-
-        ;; Write metadata file
-        (with-output-to-file metadata-file
-          (lambda ()
-            (write metadata)
-            (newline)))
-
-        ;; Stage metadata file for next commit (optional)
-        (when (vault-config 'track-metadata)
-          (system* "git" "add" metadata-file)))))
-
-  (define (get-environment-snapshot)
-    "Capture current build environment"
-    `((platform ,(or (get-environment-variable "OSTYPE") "unknown"))
-      (hostname ,(or (get-environment-variable "HOSTNAME") "unknown"))
-      (chicken-version ,(##sys#fudge 42))  ; Get Chicken version
-      (timestamp ,(current-seconds))))
-
-  (define (get-dependencies-snapshot)
-    "Capture current dependencies"
-    ;; Placeholder - could scan imports, check installed eggs, etc.
-    '())
-
-  (define (get-git-state-snapshot)
-    "Capture git repository state"
-    (let ((branch (with-input-from-pipe "git branch --show-current" read-line))
-          (remote (with-input-from-pipe "git remote -v" read-line)))
-      `((branch ,branch)
-        (remote ,remote))))
-
-  (define (read-commit-metadata commit-hash)
-    "Read metadata for a commit if it exists"
-    (let ((metadata-file (sprintf ".vault/metadata/~a.sexp" commit-hash)))
-      (if (file-exists? metadata-file)
-          (with-input-from-file metadata-file read)
-          #f)))
-
-  ;;; ============================================================================
-  ;;; Utility functions
-  ;;; ============================================================================
-
-  (define (read-key-from-file filename)
-    "Read key blob from s-expression file"
-    (let ((sexp (with-input-from-file filename read)))
-      (if (and (pair? sexp) (= 2 (length sexp)))
-          (cadr sexp)  ; Extract key bytes from (type key-blob)
-          (error "Invalid key file format" filename))))
-
-  (define (read-file-bytes filename)
-    "Read file as byte blob"
-    (with-input-from-file filename
-      (lambda ()
-        (read-string #f))))
-
-  (define (blob->hex blob)
-    "Convert blob to hex string"
-    (string-concatenate
-     (map (lambda (b)
-            (sprintf "~2,'0x" b))
-          (blob->u8vector blob))))
-
-  (define (hex->blob hex-string)
-    "Convert hex string to blob"
-    (let* ((len (quotient (string-length hex-string) 2))
-           (vec (make-u8vector len)))
-      (do ((i 0 (+ i 1)))
-          ((= i len) (u8vector->blob vec))
-        (u8vector-set! vec i
-                       (string->number
-                        (substring hex-string (* i 2) (* (+ i 1) 2))
-                        16)))))
 
   ) ;; end module vault
 
