@@ -20,6 +20,8 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [RFC-012](RFC-012-lamport-clocks.md) | Lamport Logical Clocks | Proposed | 2026-01-06 |
 | [RFC-013](RFC-013-tla-specification.md) | TLA+ Formal Specification | Proposed | 2026-01-06 |
 | [RFC-014](RFC-014-coq-extraction.md) | Coq Extraction for TCB | Proposed | 2026-01-06 |
+| [RFC-015](RFC-015-versioning-rollback.md) | Versioning and Rollback | Proposed | 2026-01-06 |
+| [RFC-016](RFC-016-lazy-clustering.md) | Lazy Clustering | Proposed | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -43,7 +45,7 @@ Each RFC should include:
 
 ## Upcoming RFCs
 
-- RFC-015: Content-Addressed Storage
-- RFC-016: Capability Delegation Patterns
-- RFC-017: Offline-First Synchronization
-- RFC-018: Key Ceremony Protocol
+- RFC-017: Content-Addressed Storage
+- RFC-018: Capability Delegation Patterns
+- RFC-019: Key Ceremony Protocol
+- RFC-020: Agent Spawning and Sandboxing
