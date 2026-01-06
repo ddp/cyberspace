@@ -7,6 +7,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | RFC | Title | Status | Date |
 |-----|-------|--------|------|
 | [RFC-001](RFC-001-replication-layer.md) | Replication Layer | Implemented | 2026-01-05 |
+| [RFC-002](RFC-002-architecture.md) | Cyberspace Architecture | Informational | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -30,7 +31,7 @@ Each RFC should include:
 
 ## Upcoming RFCs
 
-- RFC-002: Cryptographic Audit Trail
-- RFC-003: SPKI Authorization Integration
-- RFC-004: Progressive Metadata Levels
-- RFC-005: Vault System Architecture
+- RFC-003: Cryptographic Audit Trail
+- RFC-004: SPKI Authorization Integration
+- RFC-005: Progressive Metadata Levels
+- RFC-006: Vault System Architecture
