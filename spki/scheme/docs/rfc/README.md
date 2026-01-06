@@ -12,6 +12,10 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [RFC-004](RFC-004-spki-authorization.md) | SPKI Authorization | Implemented | 2026-01-06 |
 | [RFC-005](RFC-005-metadata-levels.md) | Progressive Metadata Levels | Implemented | 2026-01-06 |
 | [RFC-006](RFC-006-vault-architecture.md) | Vault System Architecture | Implemented | 2026-01-06 |
+| [RFC-007](RFC-007-threshold-governance.md) | Threshold Signature Governance | Implemented | 2026-01-06 |
+| [RFC-008](RFC-008-shamir-sharing.md) | Shamir Secret Sharing | Implemented | 2026-01-06 |
+| [RFC-009](RFC-009-library-directory.md) | Library Directory System | Implemented | 2026-01-06 |
+| [RFC-010](RFC-010-federation.md) | Federation Protocol | Proposed | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -35,7 +39,7 @@ Each RFC should include:
 
 ## Upcoming RFCs
 
-- RFC-007: Threshold Signature Governance
-- RFC-008: Shamir Secret Sharing
-- RFC-009: Library Directory System
-- RFC-010: Federation Protocol
+- RFC-011: Byzantine Consensus
+- RFC-012: Lamport Logical Clocks
+- RFC-013: TLA+ Formal Specification
+- RFC-014: Coq Extraction for TCB
