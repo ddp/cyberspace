@@ -22,6 +22,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [RFC-014](RFC-014-coq-extraction.md) | Coq Extraction for TCB | Proposed | 2026-01-06 |
 | [RFC-015](RFC-015-versioning-rollback.md) | Versioning and Rollback | Proposed | 2026-01-06 |
 | [RFC-016](RFC-016-lazy-clustering.md) | Lazy Clustering | Proposed | 2026-01-06 |
+| [RFC-017](RFC-017-security-considerations.md) | Security Considerations | Active | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -45,7 +46,7 @@ Each RFC should include:
 
 ## Upcoming RFCs
 
-- RFC-017: Content-Addressed Storage
-- RFC-018: Capability Delegation Patterns
-- RFC-019: Key Ceremony Protocol
-- RFC-020: Agent Spawning and Sandboxing
+- RFC-018: Content-Addressed Storage
+- RFC-019: Capability Delegation Patterns
+- RFC-020: Key Ceremony Protocol
+- RFC-021: Agent Spawning and Sandboxing

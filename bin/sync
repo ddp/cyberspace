@@ -25,6 +25,9 @@
         (chicken string)
         (chicken io)
         (chicken format)
+        (chicken time)
+        (chicken time posix)
+        srfi-1
         srfi-13)
 
 ;;; --- Configuration ---
@@ -65,13 +68,17 @@
 
 ;;; --- Helpers ---
 
+(define (timestamp)
+  "Return current timestamp in ISO-8601 format"
+  (time->string (seconds->local-time (current-seconds)) "%Y-%m-%d %H:%M:%S"))
+
 (define (log-info msg . args)
   (unless (member "--quiet" (command-line-arguments))
-    (apply printf (cons (string-append "[sync] " msg "\n") args))))
+    (apply printf (cons (string-append "[" (timestamp) "] " msg "\n") args))))
 
 (define (log-error msg . args)
   (apply fprintf (cons (current-error-port)
-                       (cons (string-append "[sync ERROR] " msg "\n") args))))
+                       (cons (string-append "[" (timestamp) " ERROR] " msg "\n") args))))
 
 (define (dry-run?)
   (member "--dry-run" (command-line-arguments)))
@@ -102,6 +109,111 @@
                       (string-intersperse args " ")
                       status)
             #f)))))
+
+;;; --- Blob Metadata ---
+
+(define (get-commit-info)
+  "Get current commit metadata"
+  (let ((hash (git "rev-parse" "--short" "HEAD"))
+        (subject (git "log" "-1" "--format=%s"))
+        (author (git "log" "-1" "--format=%an"))
+        (date (git "log" "-1" "--format=%ci")))
+    (if (and hash subject)
+        `((hash . ,(string-trim-both (or hash "")))
+          (subject . ,(string-trim-both (or subject "")))
+          (author . ,(string-trim-both (or author "")))
+          (date . ,(string-trim-both (or date ""))))
+        #f)))
+
+(define (get-repo-stats)
+  "Get repository statistics"
+  (let ((object-count (git "rev-list" "--all" "--count"))
+        (branch-count (git "branch" "--list" "--format=%(refname)"))
+        (tag-count (git "tag" "--list")))
+    `((commits . ,(string-trim-both (or object-count "0")))
+      (branches . ,(length (filter (lambda (s) (> (string-length s) 0))
+                                   (string-split (or branch-count "") "\n"))))
+      (tags . ,(length (filter (lambda (s) (> (string-length s) 0))
+                               (string-split (or tag-count "") "\n")))))))
+
+(define (get-vault-metadata)
+  "Get vault metadata if available"
+  (let ((vault-dir (make-pathname *cyberspace-root* ".vault")))
+    (if (directory-exists? vault-dir)
+        (let ((releases-dir (make-pathname vault-dir "releases"))
+              (audit-dir (make-pathname vault-dir "audit"))
+              (metadata-dir (make-pathname vault-dir "metadata")))
+          `((releases . ,(if (directory-exists? releases-dir)
+                             (length (directory releases-dir))
+                             0))
+            (audit-entries . ,(if (directory-exists? audit-dir)
+                                  (length (directory audit-dir))
+                                  0))
+            (metadata-files . ,(if (directory-exists? metadata-dir)
+                                   (length (directory metadata-dir))
+                                   0))))
+        #f)))
+
+(define (display-blob-metadata)
+  "Display blob and repository metadata"
+  (log-info "--- Blob Metadata ---")
+
+  ;; Commit info
+  (let ((commit (get-commit-info)))
+    (when commit
+      (log-info "HEAD: ~a ~a"
+                (cdr (assq 'hash commit))
+                (cdr (assq 'subject commit)))
+      (log-info "Author: ~a @ ~a"
+                (cdr (assq 'author commit))
+                (cdr (assq 'date commit)))))
+
+  ;; Repo stats
+  (let ((stats (get-repo-stats)))
+    (log-info "Objects: ~a commits, ~a branches, ~a tags"
+              (cdr (assq 'commits stats))
+              (cdr (assq 'branches stats))
+              (cdr (assq 'tags stats))))
+
+  ;; Vault metadata
+  (let ((vault (get-vault-metadata)))
+    (when vault
+      (log-info "Vault: ~a releases, ~a audit entries, ~a metadata files"
+                (cdr (assq 'releases vault))
+                (cdr (assq 'audit-entries vault))
+                (cdr (assq 'metadata-files vault)))))
+
+  (log-info "---------------------"))
+
+;;; --- Audit Trail ---
+
+(define (write-sync-audit-entry status details)
+  "Write an audit entry for sync operation"
+  (let ((audit-dir (make-pathname *cyberspace-root* ".vault/audit")))
+    ;; Create audit directory if needed
+    (unless (directory-exists? audit-dir)
+      (create-directory audit-dir #t))
+
+    ;; Generate audit entry
+    (let* ((ts (current-seconds))
+           (entry-file (make-pathname audit-dir
+                                      (sprintf "sync-~a.sexp" ts))))
+      (call-with-output-file entry-file
+        (lambda (port)
+          (write
+           `(audit-entry
+             (type sync)
+             (timestamp ,(timestamp))
+             (epoch ,ts)
+             (status ,status)
+             (master ,*master-node*)
+             (root ,*cyberspace-root*)
+             (details ,@details)
+             (commit ,(let ((c (get-commit-info)))
+                       (if c (cdr (assq 'hash c)) "unknown"))))
+           port)
+          (newline port)))
+      (log-info "Audit: sync recorded → ~a" entry-file))))
 
 ;;; --- Synchronization Stages ---
 
@@ -208,27 +320,44 @@ Examples:
 
 (define (sync-all)
   "Execute all synchronization stages"
+  (log-info "========================================")
   (log-info "Starting global synchronization of Cyberspace")
   (log-info "Root: ~a" *cyberspace-root*)
+  (log-info "Master: ~a" *master-node*)
+  (log-info "========================================")
+
+  ;; Display blob metadata before sync
+  (display-blob-metadata)
 
   (let ((stages (list
                  (cons "Git Fetch" sync-git-fetch)
                  (cons "Git Status Check" sync-git-status)
                  (cons "Submodules" sync-submodules)
-                 (cons "Sealed Releases" sync-sealed-releases))))
+                 (cons "Sealed Releases" sync-sealed-releases)))
+        (sync-details '()))
 
     (let loop ((remaining stages)
-               (failed '()))
+               (failed '())
+               (details '()))
       (if (null? remaining)
           ;; All stages complete
-          (if (null? failed)
-              (begin
-                (log-info "✓ Synchronization complete")
-                (exit 0))
-              (begin
-                (log-error "✗ Some stages failed: ~a"
-                          (string-intersperse (reverse failed) ", "))
-                (exit 1)))
+          (begin
+            ;; Display final blob metadata
+            (log-info "")
+            (display-blob-metadata)
+
+            ;; Write audit entry
+            (let ((status (if (null? failed) 'success 'partial-failure)))
+              (write-sync-audit-entry status (reverse details)))
+
+            (if (null? failed)
+                (begin
+                  (log-info "✓ Synchronization complete")
+                  (exit 0))
+                (begin
+                  (log-error "✗ Some stages failed: ~a"
+                            (string-intersperse (reverse failed) ", "))
+                  (exit 1))))
 
           ;; Process next stage
           (let* ((stage (car remaining))
@@ -240,17 +369,21 @@ Examples:
                ;; Special handling for status check
                ((and (eq? proc sync-git-status) (eq? result 'behind))
                 (if (sync-git-pull)
-                    (loop (cdr remaining) failed)
-                    (loop (cdr remaining) (cons name failed))))
+                    (loop (cdr remaining) failed
+                          (cons `(,name pulled) details))
+                    (loop (cdr remaining) (cons name failed)
+                          (cons `(,name pull-failed) details))))
 
                ;; Normal boolean result
                ((or (boolean? result) (eq? result 'synced) (eq? result 'ahead))
                 (loop (cdr remaining)
-                      (if result failed (cons name failed))))
+                      (if result failed (cons name failed))
+                      (cons `(,name ,(if result 'ok 'failed)) details)))
 
                ;; Unknown result
                (else
-                (loop (cdr remaining) failed)))))))))
+                (loop (cdr remaining) failed
+                      (cons `(,name ,result) details))))))))))
 
 ;;; --- Entry Point ---
 
