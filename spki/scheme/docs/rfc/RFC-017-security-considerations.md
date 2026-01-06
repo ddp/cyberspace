@@ -101,16 +101,16 @@ All security-relevant operations must be recorded in the audit trail.
 | `threshold-sign` | HIGH | Script hash, signer, threshold progress |
 | `threshold-verify` | HIGH | Script hash, threshold, signers, result |
 
-### Category: Cluster Operations
+### Category: Clustering
 
 | Event | Severity | Data Recorded |
 |-------|----------|---------------|
-| `peer-register` | MEDIUM | Peer URI, public key, trust level |
-| `peer-remove` | MEDIUM | Peer URI, reason |
-| `lazy-push` | LOW | Peer, versions pushed |
-| `lazy-pull` | LOW | Peer, versions received |
-| `conflict-detect` | HIGH | Version, local hash, remote hash |
-| `conflict-resolve` | HIGH | Version, resolution method, authorizer |
+| `cluster-join` | MEDIUM | Peer URI, public key, trust level |
+| `cluster-leave` | MEDIUM | Peer URI, reason |
+| `cluster-push` | LOW | Peer, versions pushed |
+| `cluster-pull` | LOW | Peer, versions received |
+| `cluster-diverge` | HIGH | Version, local hash, remote hash |
+| `cluster-converge` | HIGH | Version, resolution method, authorizer |
 
 ### Category: Administrative
 
