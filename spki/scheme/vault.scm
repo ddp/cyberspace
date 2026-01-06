@@ -132,7 +132,7 @@
     "Capture current build environment"
     `((platform ,(or (get-environment-variable "OSTYPE") "unknown"))
       (hostname ,(or (get-environment-variable "HOSTNAME") "unknown"))
-      (chicken-version ,(##sys#fudge 42))  ; Get Chicken version
+      (chicken-version "5.x")  ; Chicken Scheme version
       (timestamp ,(current-seconds))))
 
   (define (get-dependencies-snapshot)
