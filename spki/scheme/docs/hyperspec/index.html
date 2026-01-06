@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library of Cyberspace HyperSpec</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Library of Cyberspace</h1>
+        <p class="subtitle">Preservation Architecture HyperSpec</p>
+        <p class="version">Version 1.0 • January 2026</p>
+        <p class="version">Welcome to the Library of Cyberspace HyperSpec. I hope it serves your preservation needs.</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="#introduction">Introduction</a>
+        <a href="symbols.html">Symbol Index</a>
+        <a href="permuted.html">Permuted Index</a>
+        <a href="functions.html">Function Reference</a>
+        <a href="concepts.html">Conceptual Index</a>
+    </nav>
+
+    <main>
+        <section id="introduction">
+            <h2>Introduction</h2>
+            <p>The <strong>Library of Cyberspace</strong> is a preservation architecture for software artifacts, combining cryptographic sealing, content-addressed storage, SPKI authorization, and future-proof encoding.</p>
+
+            <div class="highlight-box">
+                <h3>Core Principles</h3>
+                <dl>
+                    <dt>Authenticity</dt>
+                    <dd>Cryptographic signatures verify origin and prevent forgery</dd>
+
+                    <dt>Integrity</dt>
+                    <dd>Content-addressing detects any tampering or corruption</dd>
+
+                    <dt>Preservation</dt>
+                    <dd>Progressive metadata enables future restoration</dd>
+
+                    <dt>Discoverability</dt>
+                    <dd>Catalog metadata supports search and indexing</dd>
+
+                    <dt>Offline-first</dt>
+                    <dd>No network dependencies for verification</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <h2>Architecture Overview</h2>
+
+            <div class="architecture-diagram">
+                <div class="component">
+                    <h3><a href="vault-module.html">Vault Module</a></h3>
+                    <p><code>vault.scm</code></p>
+                    <ul>
+                        <li>Cryptographic sealing with Ed25519</li>
+                        <li>Progressive metadata (minimal/catalog/preserve)</li>
+                        <li>Semantic versioning and migration paths</li>
+                        <li>Archive formats (tarball/bundle/cryptographic)</li>
+                    </ul>
+                </div>
+
+                <div class="component">
+                    <h3><a href="audit-module.html">Audit Module</a></h3>
+                    <p><code>audit.scm</code></p>
+                    <ul>
+                        <li>Content-addressed entries (SHA-512)</li>
+                        <li>Chained structure (append-only)</li>
+                        <li>SPKI authorization tracking</li>
+                        <li>Dual context (human + machine)</li>
+                    </ul>
+                </div>
+
+                <div class="component">
+                    <h3><a href="spki-module.html">SPKI Module</a></h3>
+                    <p><code>cert.scm</code>, <code>crypto-ffi.scm</code></p>
+                    <ul>
+                        <li>Ed25519 key generation</li>
+                        <li>Certificate creation and verification</li>
+                        <li>S-expression encoding</li>
+                        <li>Decentralized authorization</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="getting-started">
+            <h2>Getting Started</h2>
+
+            <h3>Installation</h3>
+            <pre><code># Compile modules
+csc -s -J cert.scm
+csc -s -J crypto-ffi.scm
+csc -s -J audit.scm
+csc -s -J vault.scm
+
+# Test installation
+csi -e '(import vault audit) (print "Success!")'</code></pre>
+
+            <h3>Quick Example</h3>
+            <pre><code>#!/usr/bin/env csi -s
+(import vault audit crypto-ffi)
+
+;; Generate keypair
+(define keys (ed25519-keypair))
+(save-keypair (car keys) (cadr keys) "alice")
+
+;; Initialize vault
+(vault-init signing-key: (cadr keys))
+
+;; Make a sealed commit
+(<a href="seal-commit.html">seal-commit</a> "Initial commit"
+  catalog: #t
+  subjects: '("library" "preservation")
+  keywords: '("cyberspace" "archival")
+  description: "Initialize Library of Cyberspace")</code></pre>
+        </section>
+
+        <section id="modules">
+            <h2>Module Reference</h2>
+
+            <h3>Vault Operations</h3>
+            <div class="function-group">
+                <h4>Core Commands</h4>
+                <ul>
+                    <li><a href="seal-commit.html"><code>seal-commit</code></a> — Create sealed version</li>
+                    <li><a href="seal-update.html"><code>seal-update</code></a> — Pull latest changes</li>
+                    <li><a href="seal-undo.html"><code>seal-undo</code></a> — Revert changes</li>
+                    <li><a href="seal-history.html"><code>seal-history</code></a> — View commit log</li>
+                    <li><a href="seal-branch.html"><code>seal-branch</code></a> — Create branch</li>
+                    <li><a href="seal-merge.html"><code>seal-merge</code></a> — Merge branches</li>
+                </ul>
+
+                <h4>Version Management</h4>
+                <ul>
+                    <li><a href="seal-release.html"><code>seal-release</code></a> — Create semantic version</li>
+                    <li><a href="seal-verify.html"><code>seal-verify</code></a> — Verify cryptographic seal</li>
+                    <li><a href="seal-archive.html"><code>seal-archive</code></a> — Create archive</li>
+                    <li><a href="seal-restore.html"><code>seal-restore</code></a> — Restore from archive</li>
+                    <li><a href="seal-migrate.html"><code>seal-migrate</code></a> — Execute migration</li>
+                    <li><a href="seal-check.html"><code>seal-check</code></a> — Verify integrity</li>
+                </ul>
+            </div>
+
+            <h3>Audit Operations</h3>
+            <div class="function-group">
+                <ul>
+                    <li><a href="audit-init.html"><code>audit-init</code></a> — Initialize audit trail</li>
+                    <li><a href="audit-append.html"><code>audit-append</code></a> — Append entry</li>
+                    <li><a href="audit-verify.html"><code>audit-verify</code></a> — Verify entry seal</li>
+                    <li><a href="audit-chain.html"><code>audit-chain</code></a> — Verify entire chain</li>
+                    <li><a href="audit-read.html"><code>audit-read</code></a> — Read specific entry</li>
+                    <li><a href="audit-export-sexp.html"><code>audit-export-sexp</code></a> — Export as S-expressions</li>
+                    <li><a href="audit-export-human.html"><code>audit-export-human</code></a> — Export human-readable</li>
+                </ul>
+            </div>
+
+            <h3>Cryptographic Primitives</h3>
+            <div class="function-group">
+                <ul>
+                    <li><a href="ed25519-keypair.html"><code>ed25519-keypair</code></a> — Generate Ed25519 keypair</li>
+                    <li><a href="ed25519-sign.html"><code>ed25519-sign</code></a> — Create signature</li>
+                    <li><a href="ed25519-verify.html"><code>ed25519-verify</code></a> — Verify signature</li>
+                    <li><a href="sha512-hash.html"><code>sha512-hash</code></a> — Compute SHA-512 hash</li>
+                    <li><a href="make-spki-cert.html"><code>make-spki-cert</code></a> — Create SPKI certificate</li>
+                    <li><a href="verify-spki-cert.html"><code>verify-spki-cert</code></a> — Verify certificate</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="concepts">
+            <h2>Conceptual Guide</h2>
+
+            <h3>Progressive Metadata</h3>
+            <p>The vault supports three levels of metadata richness:</p>
+            <ol>
+                <li><strong>Minimal</strong> (default) — Just commit messages</li>
+                <li><strong>Catalog</strong> (<code>--catalog</code>) — Subject headings, keywords, descriptions</li>
+                <li><strong>Preserve</strong> (<code>--preserve</code>) — Full environment snapshot</li>
+            </ol>
+            <p><a href="progressive-metadata.html">Learn more about progressive metadata →</a></p>
+
+            <h3>Content-Addressed Audit</h3>
+            <p>Every audit entry is content-addressed with SHA-512, making the trail:</p>
+            <ul>
+                <li><strong>Tamper-evident</strong> — Changes break the hash chain</li>
+                <li><strong>Self-validating</strong> — No external data needed</li>
+                <li><strong>Append-only</strong> — Previous entries cannot be altered</li>
+            </ul>
+            <p><a href="audit-structure.html">Learn more about audit structure →</a></p>
+
+            <h3>SPKI Authorization</h3>
+            <p>Simple Public Key Infrastructure provides decentralized permissions:</p>
+            <ul>
+                <li>Public keys are principals (no PKI needed)</li>
+                <li>Certificates express delegatable permissions</li>
+                <li>Authorization chains prove permission flow</li>
+            </ul>
+            <p><a href="spki-guide.html">Learn more about SPKI →</a></p>
+        </section>
+
+        <section id="examples">
+            <h2>Extended Examples</h2>
+
+            <h3>Creating a Sealed Release</h3>
+            <pre><code>;; Initialize vault with key
+(vault-init signing-key: private-key)
+
+;; Create commits with different metadata levels
+(<a href="seal-commit.html">seal-commit</a> "Add parser") ; minimal
+
+(<a href="seal-commit.html">seal-commit</a> "Add search"
+  catalog: #t
+  subjects: '("search" "indexing")
+  keywords: '("full-text" "boolean"))
+
+(<a href="seal-commit.html">seal-commit</a> "Archive v1.0"
+  preserve: #t
+  description: "Long-term preservation snapshot")
+
+;; Create sealed release
+(<a href="seal-release.html">seal-release</a> "1.0.0"
+  message: "First stable release")
+
+;; Verify the seal
+(<a href="seal-verify.html">seal-verify</a> "1.0.0")</code></pre>
+
+            <h3>Audit Trail Workflow</h3>
+            <pre><code>;; Initialize audit
+(<a href="audit-init.html">audit-init</a> signing-key: private-key)
+
+;; Record actions
+(<a href="audit-append.html">audit-append</a>
+  actor: public-key
+  action: '(seal-release "1.0.0")
+  motivation: "First stable release"
+  relates-to: "milestone-v1"
+  signing-key: private-key)
+
+;; Verify chain integrity
+(<a href="audit-chain.html">audit-chain</a> verify-key: public-key)
+
+;; Export trail
+(<a href="audit-export-human.html">audit-export-human</a> output: "trail.txt")</code></pre>
+        </section>
+    </main>
+
+    <footer>
+        <p>Library of Cyberspace Preservation Architecture</p>
+        <p class="seal-mark">✦ Sealed and Cataloged ✦</p>
+        <p>Version 1.0 • January 2026</p>
+    </footer>
+</body>
+</html>

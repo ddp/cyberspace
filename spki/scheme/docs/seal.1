@@ -1,0 +1,325 @@
+.TH SEAL 1 "January 2026" "Library of Cyberspace" "User Commands"
+.SH NAME
+seal \- cryptographically sealed version control for the Library of Cyberspace
+.SH SYNOPSIS
+.B seal commit
+.RI [ OPTIONS ]
+.I MESSAGE
+.br
+.B seal release
+.I VERSION
+.RI [ OPTIONS ]
+.br
+.B seal verify
+.I VERSION
+.RI [ OPTIONS ]
+.br
+.B seal archive
+.I VERSION
+.RI [ OPTIONS ]
+.br
+.B seal restore
+.I ARCHIVE
+.RI [ OPTIONS ]
+.br
+.B seal
+.RI { update | undo | history | branch | merge | check }
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B seal
+provides cryptographically sealed version control with integrated SPKI
+certificate-based authorization, first-class archival and restoration,
+and migration paths between versions.
+
+The name "seal" connects three concepts:
+.IP \(bu 3
+Cryptographic sealing (SPKI signatures)
+.IP \(bu 3
+Library seals (official marks of authenticity)
+.IP \(bu 3
+Vault seals (securing archives)
+
+.B seal
+wraps Git with a higher-level interface focused on preservation,
+authenticity, and future-proof archival for the Library of Cyberspace.
+
+.SH COMMANDS
+.SS Core Operations
+.TP
+.BR "seal commit" " " \fIMESSAGE\fR
+Create a sealed version with the given commit message.
+
+.B Options:
+.RS
+.TP
+.BI \-\-files " FILE..."
+Stage specific files before committing
+.TP
+.B \-\-catalog
+Include catalog metadata (subjects, keywords, description)
+.TP
+.BI \-\-subjects " SUBJECT..."
+Subject headings for cataloging
+.TP
+.BI \-\-keywords " KEYWORD..."
+Search keywords
+.TP
+.BI \-\-description " TEXT"
+Extended description
+.TP
+.B \-\-preserve
+Include full preservation metadata (environment, dependencies, git state)
+.RE
+
+.TP
+.BR "seal update" " [" \-\-branch " " \fIBRANCH\fR ]
+Update vault from origin (like svn update). Pulls latest changes with
+fast-forward only to prevent merge commits.
+
+.TP
+.BR "seal undo" " [" OPTIONS ]
+Undo changes.
+
+.B Options:
+.RS
+.TP
+.BI \-\-file " FILE"
+Undo changes to specific file
+.TP
+.B \-\-hard
+Discard all uncommitted changes (dangerous!)
+.TP
+(default)
+Undo last commit (soft reset)
+.RE
+
+.TP
+.BR "seal history" " [" \-\-count " " \fIN\fR ]
+Show vault history with simplified log format. Default shows last 10 commits.
+
+.TP
+.BR "seal branch" " " \fINAME\fR " [" \-\-from " " \fISTART\fR ]
+Create and switch to new sealed branch.
+
+.TP
+.BR "seal merge" " " \fIFROM\fR " [" \-\-strategy " " \fISTRATEGY\fR ]
+Merge sealed changes from another branch.
+
+.SS Version Management
+.TP
+.BR "seal release" " " \fIVERSION\fR " [" OPTIONS ]
+Create a cryptographically sealed release with semantic versioning (X.Y.Z).
+
+.B Options:
+.RS
+.TP
+.BI \-\-message " TEXT"
+Release message (defaults to "Release VERSION")
+.TP
+.BI \-\-migrate\-from " VERSION"
+Create migration path from previous version
+.RE
+
+.B Note:
+If a signing key is configured, the release will be cryptographically
+signed with Ed25519.
+
+.TP
+.BR "seal verify" " " \fIVERSION\fR " [" \-\-verify\-key " " \fIKEY\fR ]
+Verify cryptographic seal on a release.
+
+.TP
+.BR "seal archive" " " \fIVERSION\fR " [" OPTIONS ]
+Create archive of sealed version.
+
+.B Options:
+.RS
+.TP
+.BI \-\-format " FORMAT"
+Archive format: tarball, bundle, or cryptographic (default: tarball)
+.TP
+.BI \-\-output " FILE"
+Output filename
+.RE
+
+.B Formats:
+.RS
+.TP
+.B tarball
+Standard tar.gz archive (git archive)
+.TP
+.B bundle
+Git bundle with full history
+.TP
+.B cryptographic
+Encrypted archive with SPKI signature
+.RE
+
+.TP
+.BR "seal restore" " " \fIARCHIVE\fR " [" OPTIONS ]
+Restore from archived version.
+
+.B Options:
+.RS
+.TP
+.BI \-\-target " DIR"
+Target directory for restoration
+.TP
+.BI \-\-verify\-key " KEY"
+Public key for verifying cryptographic archives
+.RE
+
+.SS Migration
+.TP
+.BR "seal migrate" " " \fIFROM\fR " " \fITO\fR " [" OPTIONS ]
+Migrate between sealed versions using explicit migration path.
+
+.B Options:
+.RS
+.TP
+.BI \-\-script " FILE"
+Path to migration script
+.TP
+.B \-\-dry\-run
+Test migration without applying
+.RE
+
+.SS Integrity
+.TP
+.BR "seal check" " [" \-\-deep ]
+Check vault integrity.
+
+.B Options:
+.RS
+.TP
+.B \-\-deep
+Verify all sealed releases (cryptographic verification)
+.RE
+
+.SH CONFIGURATION
+Configuration is stored in a Scheme association list.
+Use
+.B vault-init
+and
+.B vault-config
+from the vault module.
+
+.TP
+.B signing-key
+Path to Ed25519 private key for signing releases
+.TP
+.B verify-key
+Path to Ed25519 public key for verification
+.TP
+.B migration-dir
+Directory for migration scripts (default: .vault/migrations)
+.TP
+.B track-metadata
+Whether to track metadata files in git (default: #f)
+
+.SH PROGRESSIVE METADATA
+.B seal
+supports three levels of metadata richness:
+
+.SS Minimal (default)
+Just commit messages. Lightweight and simple.
+
+.SS Catalog (--catalog)
+Add discovery metadata:
+.IP \(bu 3
+Subject headings
+.IP \(bu 3
+Keywords
+.IP \(bu 3
+Extended descriptions
+
+Stored in .vault/metadata/ for future cataloging systems.
+
+.SS Preserve (--preserve)
+Full preservation metadata:
+.IP \(bu 3
+Environment snapshot (OS, platform, tools)
+.IP \(bu 3
+Dependencies (with versions)
+.IP \(bu 3
+Git state (for exact reproduction)
+
+For long-term archival and future restoration.
+
+.SH FILES
+.TP
+.I .vault/
+Vault metadata directory
+.TP
+.I .vault/metadata/
+Optional commit metadata (catalog and preservation data)
+.TP
+.I .vault/releases/
+Cryptographic signatures for sealed releases
+.TP
+.I .vault/migrations/
+Migration scripts between versions
+.TP
+.I .vault/audit/
+Cryptographic audit trail (see
+.BR audit (1))
+
+.SH EXAMPLES
+.SS Basic Usage
+.EX
+# Initialize vault with signing key
+seal init --signing-key alice.private
+
+# Make changes and commit
+seal commit "Add new feature" --files feature.scm
+
+# Create sealed release
+seal release 1.0.0 --message "Initial stable release"
+
+# Verify release
+seal verify 1.0.0 --verify-key alice.public
+.EE
+
+.SS Progressive Metadata
+.EX
+# Minimal commit (default)
+seal commit "Fix bug in parser"
+
+# Cataloged commit
+seal commit "Add search functionality" \\
+  --catalog \\
+  --subjects "search" "indexing" \\
+  --keywords "full-text" "boolean" \\
+  --description "Implements full-text search with boolean operators"
+
+# Preservation commit
+seal commit "Archive stable version" \\
+  --preserve \\
+  --description "Snapshot for long-term preservation"
+.EE
+
+.SS Archival and Migration
+.EX
+# Create cryptographic archive
+seal archive 1.0.0 --format cryptographic
+
+# Migrate to new version
+seal release 2.0.0 --migrate-from 1.0.0
+seal migrate 1.0.0 2.0.0
+
+# Verify integrity
+seal check --deep
+.EE
+
+.SH SEE ALSO
+.BR audit (1),
+.BR git (1),
+.BR spki-keygen (1),
+.BR spki-cert (1),
+.BR spki-verify (1)
+
+.SH AUTHOR
+Library of Cyberspace Preservation Architecture
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions.

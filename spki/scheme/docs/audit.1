@@ -1,0 +1,312 @@
+.TH AUDIT 1 "January 2026" "Library of Cyberspace" "User Commands"
+.SH NAME
+audit \- cryptographic audit trail for the Library of Cyberspace
+.SH SYNOPSIS
+.B audit init
+.RI [ OPTIONS ]
+.br
+.B audit append
+.RI [ OPTIONS ]
+.I ACTION
+.br
+.B audit verify
+.I ENTRY
+.RI [ OPTIONS ]
+.br
+.B audit chain
+.RI [ OPTIONS ]
+.br
+.B audit
+.RI { read | export }
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B audit
+provides a future-proof cryptographic audit trail with content-addressed
+entries, chained structure, SPKI authorization tracking, and cryptographic
+seals.
+
+Each audit entry records:
+.IP \(bu 3
+.B Actor
+\- Who performed the action (SPKI principal)
+.IP \(bu 3
+.B Action
+\- What was done (verb + object + parameters)
+.IP \(bu 3
+.B Context
+\- Why it was done (human motivation + machine metadata)
+.IP \(bu 3
+.B Environment
+\- When and where (timestamp + platform)
+.IP \(bu 3
+.B Seal
+\- Cryptographic signature (Ed25519) for tamper-evidence
+
+Entries are:
+.IP \(bu 3
+.B Content-addressed
+\- IDs derived from SHA-512 hashes
+.IP \(bu 3
+.B Chained
+\- Each entry links to parent (append-only log)
+.IP \(bu 3
+.B Sealed
+\- Ed25519 signatures prevent tampering
+.IP \(bu 3
+.B Self-describing
+\- S-expressions with dual context (human + machine)
+
+.SH COMMANDS
+.TP
+.BR "audit init" " [" \-\-signing\-key " " \fIKEY\fR "] [" \-\-audit\-dir " " \fIDIR\fR ]
+Initialize audit trail.
+
+.B Options:
+.RS
+.TP
+.BI \-\-signing\-key " KEY"
+Ed25519 private key (blob) for signing entries
+.TP
+.BI \-\-audit\-dir " DIR"
+Audit directory (default: .vault/audit)
+.RE
+
+.TP
+.BR "audit append" " " \fIACTION\fR " [" OPTIONS ]
+Append entry to audit trail.
+
+.B Arguments:
+.RS
+.TP
+.I ACTION
+S-expression: (verb object . parameters)
+.br
+Example: (seal-commit "file.scm" catalog: #t)
+.RE
+
+.B Options:
+.RS
+.TP
+.BI \-\-actor " KEY"
+SPKI principal (public key blob)
+.TP
+.BI \-\-motivation " TEXT"
+Human-readable explanation
+.TP
+.BI \-\-relates\-to " REFERENCE"
+Related entries or concepts
+.TP
+.BI \-\-signing\-key " KEY"
+Private key for signing (blob)
+.RE
+
+.TP
+.BR "audit verify" " " \fIENTRY\fR " [" \-\-public\-key " " \fIKEY\fR ]
+Verify cryptographic seal on audit entry.
+
+.TP
+.BR "audit chain" " [" \-\-verify\-key " " \fIKEY\fR ]
+Verify entire audit chain from genesis to current entry.
+
+.TP
+.BR "audit read" " [" OPTIONS ]
+Read specific audit entry.
+
+.B Options:
+.RS
+.TP
+.BI \-\-sequence " N"
+Read entry by sequence number
+.TP
+.BI \-\-id " ID"
+Read entry by content-addressed ID
+.RE
+
+.TP
+.BR "audit export" " [" OPTIONS ]
+Export audit trail.
+
+.B Options:
+.RS
+.TP
+.BI \-\-format " FORMAT"
+Export format: sexp or human (default: human)
+.TP
+.BI \-\-output " FILE"
+Output filename
+.RE
+
+.SH AUDIT ENTRY STRUCTURE
+Each entry is stored as an S-expression with this structure:
+
+.EX
+(audit-entry
+  (id "sha512:HASH")
+  (timestamp "Mon Jan  5 21:15:46 2026")
+  (sequence 1)
+  (parent-id "sha512:PARENT_HASH")  ; omitted for genesis
+
+  (actor
+    (principal #${PUBLIC_KEY})
+    (authorization-chain))           ; SPKI certificates
+
+  (action
+    (verb seal-commit)
+    (object "vault.scm")
+    (parameters catalog: #t))
+
+  (context
+    (motivation "Add vault system")
+    (relates-to "preservation-architecture")
+    (language "en"))
+
+  (environment
+    (platform "darwin")
+    (timestamp 1767676546))
+
+  (seal
+    (algorithm "ed25519-sha512")
+    (content-hash "HASH")
+    (signature "SIGNATURE")))
+.EE
+
+.SH VERIFICATION
+Audit entries can be verified at multiple levels:
+
+.SS Entry Verification
+.IP 1. 3
+Reconstruct unsealed entry
+.IP 2. 3
+Compute SHA-512 hash
+.IP 3. 3
+Compare with stored content-hash
+.IP 4. 3
+Verify Ed25519 signature
+
+.SS Chain Verification
+.IP 1. 3
+Verify genesis entry (no parent)
+.IP 2. 3
+Verify each subsequent entry
+.IP 3. 3
+Verify parent-id chain is unbroken
+.IP 4. 3
+Confirm append-only property
+
+.SH FILES
+.TP
+.I .vault/audit/
+Audit trail directory
+.TP
+.I .vault/audit/N.sexp
+Entry number N (S-expression format)
+
+.SH EXAMPLES
+.SS Initialization
+.EX
+# Generate keypair
+(define keys (ed25519-keypair))
+(define public-key (car keys))
+(define private-key (cadr keys))
+
+# Initialize audit trail
+(audit-init signing-key: private-key)
+.EE
+
+.SS Appending Entries
+.EX
+# Record vault initialization
+(audit-append
+  actor: public-key
+  action: '(audit-init ".vault/audit")
+  motivation: "Establishing audit trail for Library"
+  relates-to: "preservation-architecture"
+  signing-key: private-key)
+
+# Record sealed commit
+(audit-append
+  actor: public-key
+  action: '(seal-commit "vault.scm" catalog: #t)
+  motivation: "Add cryptographic version control"
+  relates-to: "vault-v1.0"
+  signing-key: private-key)
+.EE
+
+.SS Verification
+.EX
+# Verify entire chain
+(audit-chain verify-key: public-key)
+
+# Export human-readable trail
+(audit-export-human output: "audit-trail.txt")
+.EE
+
+.SH QUERY INTERFACE
+The audit module provides query functions:
+
+.TP
+.BR audit-by-actor " " \fIPRINCIPAL\fR
+Find all entries by specific actor
+.TP
+.BR audit-by-action " " \fIVERB\fR
+Find all entries for specific action verb
+.TP
+.BR audit-by-timerange " " \fISTART\fR " " \fIEND\fR
+Find all entries in time range
+
+.SH FUTURE-PROOF ENCODING
+The audit trail is designed for long-term preservation:
+
+.SS Content-Addressing
+Entry IDs are derived from content, making them:
+.IP \(bu 3
+Tamper-evident (changes break hash)
+.IP \(bu 3
+Self-validating (can verify without external data)
+.IP \(bu 3
+Location-independent (ID travels with content)
+
+.SS S-Expression Format
+.IP \(bu 3
+Human-readable text format
+.IP \(bu 3
+Self-describing structure
+.IP \(bu 3
+Parseable by simple recursive descent
+.IP \(bu 3
+Used by Scheme for decades (proven longevity)
+
+.SS Dual Context
+Each entry has:
+.IP \(bu 3
+.B Human context
+(motivation, relates-to) \- explains "why"
+.IP \(bu 3
+.B Machine context
+(environment, timestamp) \- enables future reconstruction
+
+This enables future systems to understand both the technical details
+and the human intent.
+
+.SH CRYPTOGRAPHIC DETAILS
+.TP
+.B Hashing
+SHA-512 (512-bit output, collision-resistant)
+.TP
+.B Signing
+Ed25519 (Curve25519, 64-byte signatures)
+.TP
+.B Algorithm ID
+"ed25519-sha512" (for future algorithm agility)
+
+.SH SEE ALSO
+.BR seal (1),
+.BR spki-keygen (1),
+.BR spki-cert (1),
+.BR spki-verify (1)
+
+.SH AUTHOR
+Library of Cyberspace Preservation Architecture
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions.
