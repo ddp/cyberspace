@@ -1,0 +1,25 @@
+;; SPKI TCB - OCaml build configuration
+;;
+;; Builds the minimal trusted computing base:
+;; - signature.ml (OCaml interface to libsodium)
+;; - signature_stubs.c (C FFI to libsodium)
+;;
+;; This is the ONLY crypto code in the TCB.
+;; Everything else (policy, tools, SDSI) is in Chicken Scheme.
+
+(library
+ (name spki_tcb)
+ (public_name spki.tcb)
+ (modules signature export)
+ (foreign_stubs
+  (language c)
+  (names signature_stubs)
+  (flags -I/opt/homebrew/include))
+ (c_library_flags (-L/opt/homebrew/lib -lsodium))
+ (flags (:standard -w -27)))  ;; Suppress unused variable warnings for stubs
+
+;; Test executable for TCB
+(executable
+ (name test_signature)
+ (modules test_signature)
+ (libraries spki_tcb))

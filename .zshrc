@@ -133,9 +133,15 @@ if [[ -o interactive ]]; then
     }
 
     updateapalooza() {
-        brew update && brew upgrade &&
-        sudo port selfupdate &&
-        opam update && opam upgrade &&
+        brew update
+        opam update
+        npm update
+    }
+
+    upgradepalooza() {
+        brew update && brew upgrade
+        opam update && opam upgrade
+        sudo port selfupdate
         npm update && npm upgrade
     }
 
