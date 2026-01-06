@@ -43,16 +43,91 @@ Lazy Clustering provides:
      │ (lazy)  │
      └────┬────┘
           │
-          │ sync when ready
+          │ sync when ready @ 10Gb/s
           │
      ┌────▼────┐         ┌─────────┐
      │   Bob   │◄───────►│  Carol  │
-     │ (lazy)  │  async  │ (lazy)  │
+     │ (lazy)  │ 10Gb/s  │ (lazy)  │
      └─────────┘         └─────────┘
 
 No heartbeats. No leader election. No quorum.
 Just friends sharing when they're ready.
+At line speed when they do.
 ```
+
+### Performance Model
+
+**Lazy semantics, line speed execution.**
+
+```
+Line speed (10 Gb/s):
+  Typical release: 10 MB archive
+  Transfer time:   8 ms
+  Effective rate:  ~1000 releases/second
+
+Starlink (100-200 Mb/s, 20-40ms latency):
+  Typical release: 10 MB archive
+  Transfer time:   400-800 ms
+  Effective rate:  ~1-2 releases/second
+  Optimized for:   Bursty, high-latency satellite links
+
+Minimum bandwidth (TBD):
+  Target:          Dial-up equivalent (~56 Kb/s)
+  Typical release: 10 MB archive
+  Transfer time:   ~24 minutes
+  Strategy:        Delta sync, compressed archives
+```
+
+**Crypto overhead (constant):**
+```
+Signature verify: ~10 μs (Ed25519)
+Hash verify:      ~1 ms (SHA-512, 10MB)
+Total overhead:   ~1 ms (negligible vs transfer)
+```
+
+"Lazy" means *when*, not *how fast*. When you sync, it saturates the pipe.
+
+**Design priorities:**
+1. Optimized for Starlink and satellite links
+2. Tolerant of high latency (no chatty protocols)
+3. Graceful degradation to minimum bandwidth
+4. Bursty transfer patterns (sync then idle)
+
+### Heartbeat and Timekeeping
+
+**No mandatory heartbeat.** That's the design.
+
+```
+Traditional cluster:  ping → pong → ping → pong → ...
+Lazy cluster:         ... silence ... (sync) ... silence ...
+```
+
+**Timekeeping:** Lamport clocks (RFC-012), not wall clocks.
+- Causality without synchronization
+- No NTP dependency
+- No GPS required
+- Works across time zones, planets
+
+**When you need consensus:** Byzantine consensus (RFC-011) + Lamport clocks.
+- Lazy clustering for everyday sync
+- Byzantine consensus for critical decisions
+- Same Lamport clock across both modes
+
+**Optional presence beacon:**
+```scheme
+(cluster-beacon
+  (peer "alice")
+  (lamport-time 4271)
+  (last-release "2.1.0")
+  (status available)
+  (next-expected "when ready"))
+```
+
+Beacons are:
+- Pull-based (query, don't push)
+- Cached (no flood)
+- Stale-tolerant (hours/days old is fine)
+- Unsigned (advisory only)
 
 ### Sync Modes
 

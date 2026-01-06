@@ -336,6 +336,43 @@ On suspected compromise:
 
 ---
 
+## Network Requirements
+
+### Design Target: Starlink
+
+Cyberspace is expressly designed and optimized for satellite links:
+
+```
+Primary target:   Starlink (100-200 Mb/s, 20-40ms latency)
+Line speed:       10 Gb/s (datacenter, local)
+Minimum (TBD):    56 Kb/s (graceful degradation)
+```
+
+### Protocol Characteristics
+
+| Property | Value | Rationale |
+|----------|-------|-----------|
+| Chattiness | Low | Single round-trip sync |
+| Latency tolerance | High | No real-time requirements |
+| Bandwidth utilization | Bursty | Sync then idle |
+| Connection persistence | None | Stateless operations |
+| Retry strategy | Exponential backoff | Satellite weather |
+
+### Security Implications
+
+**Satellite-specific threats:**
+- Higher interception risk (broadcast medium)
+- Variable latency (timing attacks harder, but also detection)
+- Intermittent connectivity (state must be resumable)
+
+**Mitigations:**
+- All transfers encrypted/signed (interception irrelevant)
+- No timing-sensitive operations
+- Idempotent operations (safe to retry)
+- Checkpoint/resume for large transfers
+
+---
+
 ## Cryptographic Agility
 
 Current algorithms:
