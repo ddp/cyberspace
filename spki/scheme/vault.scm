@@ -318,9 +318,9 @@
      - message: release notes
      - migrate-from: previous version for migration tracking"
 
-    ;; Validate semantic version (basic check: contains two dots)
+    ;; Validate semantic version (basic check: X.Y.Z format)
     (unless (and (irregex-match '(: (+ digit) "." (+ digit) "." (+ digit)) version)
-                 (= 2 (length (string-split version "."))))
+                 (= 3 (length (string-split version "."))))
       (error "Invalid semantic version (expected X.Y.Z)" version))
 
     ;; Get current commit hash

@@ -1,1 +1,0 @@
-(commit-metadata (hash "bdfc220dd7e99ec11e4914047fbed6b231fcf55f") (timestamp 1767682705) (message "Test: preserve metadata") (preservation (environment ((platform "unknown") (hostname "unknown") (chicken-version "5.x") (timestamp 1767682705))) (dependencies ()) (git-state ((branch "main") (remote "origin\tgit@github.com:ddp/cyberspace.git (fetch)")))))
