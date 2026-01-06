@@ -347,10 +347,9 @@
     ;; Create release manifest
     (let ((manifest (sprintf "(release ~s ~s ~s)"
                             version hash (current-seconds))))
-      ;; Sign manifest
-      (let* ((key (read-key-from-file signing-key))
-             (sig-hash (sha512-hash manifest))
-             (signature (ed25519-sign key sig-hash)))
+      ;; Sign manifest (signing-key is already a blob)
+      (let* ((sig-hash (sha512-hash manifest))
+             (signature (ed25519-sign signing-key sig-hash)))
 
         ;; Store signature
         (let ((sig-file (sprintf ".vault/releases/~a.sig" version)))
