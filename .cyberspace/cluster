@@ -1,0 +1,80 @@
+;;; Cyberspace Cluster - Confederation of Friends
+;;;
+;;; Succinct notation for every node in the confederation.
+;;; During bootstrapping, fluffy.eludom.net is master.
+;;; Master can be a lambda for dynamic resolution.
+;;;
+;;; Philosophy: Joint management, domains within reason,
+;;; "rough consensus and running code."
+
+(cluster
+  ;;; --- ddp's infrastructure (eludom.net, electric-loft.org) ---
+
+  ;; Master (during bootstrap)
+  (fluffy
+   (git "git@fluffy.eludom.net:cyberspace.git")
+   (ssh "ddp@fluffy.eludom.net")
+   (desc "Primary server, fluffy.eludom.net"))
+
+  ;; Desktop workstations
+  (om
+   (git "origin")
+   (desc "Desktop om (local development)"))
+
+  (lambda
+   (git "origin")
+   (desc "Laptop lambda (mobile development)"))
+
+  ;;; --- adelman.com infrastructure (trampolined via servfail) ---
+
+  ;; DNS bastion
+  (servfail
+   (ssh "ddp@servfail.adelman.com")
+   (desc "DNS bastion, ssh trampoline"))
+
+  ;; Nameservers (reachable via servfail trampoline)
+  (ns1
+   (ssh "/ssh:servfail.adelman.com|ssh:ns1.adelman.com:")
+   (desc "Authoritative nameserver (via servfail)"))
+
+  (ns2
+   (ssh "/ssh:servfail.adelman.com|ssh:ns2.adelman.com:")
+   (desc "Authoritative nameserver (via servfail)"))
+
+  (ns3
+   (ssh "/ssh:servfail.adelman.com|ssh:ns3.adelman.com:")
+   (desc "Authoritative nameserver (via servfail)"))
+
+  ;; Web infrastructure
+  (yoyodyne
+   (ssh "ddp@www.yoyodyne.com")
+   (desc "Web server www.yoyodyne.com"))
+
+  ;;; --- Devices ---
+
+  (norns
+   (ssh "we@192.168.0.161")
+   (desc "Monome norns (192.168.0.161, Lua scripting)"))
+
+  ;;; --- Future confederation nodes (examples) ---
+  ;;;
+  ;;; Friends can add their nodes to the confederation:
+  ;;;
+  ;;; (alice-server
+  ;;;  (git "git@alice.example.com:cyberspace.git")
+  ;;;  (ssh "alice@alice.example.com")
+  ;;;  (desc "Alice's server in the confederation"))
+  ;;;
+  ;;; (bob-workstation
+  ;;;  (git "git@bob.example.org:cyberspace.git")
+  ;;;  (desc "Bob's development machine"))
+  )
+
+;;; Master resolution - can be:
+;;;   - Symbol: fluffy
+;;;   - Lambda: (lambda () (if (weekend?) 'fluffy 'om))
+;;;   - List: (fluffy om)  ; try in order
+(master fluffy)
+
+;;; Bootstrap nodes - sync with these during bootstrap
+(bootstrap (fluffy))

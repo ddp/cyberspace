@@ -33,8 +33,35 @@
   (or (get-environment-variable "CYBERSPACE_ROOT")
       (current-directory)))
 
-(define *default-remote* "origin")
 (define *default-branch* "main")
+
+;;; Master node abstraction - can be:
+;;;   1. Environment variable: CYBERSPACE_MASTER
+;;;   2. Config file: ~/.cyberspace/master
+;;;   3. Lambda in config file (for dynamic resolution)
+;;;   4. Default: "origin" (git remote)
+;;;
+;;; During bootstrapping, fluffy.eludom.net is the master
+(define (resolve-master)
+  "Resolve the master node for synchronization"
+  (or
+   ;; 1. Environment variable (highest priority)
+   (get-environment-variable "CYBERSPACE_MASTER")
+
+   ;; 2. Config file ~/.cyberspace/master
+   (and (file-exists? (make-pathname (list (get-environment-variable "HOME") ".cyberspace") "master"))
+        (call-with-input-file
+            (make-pathname (list (get-environment-variable "HOME") ".cyberspace") "master")
+          (lambda (port)
+            (let ((line (read-line port)))
+              (if (eof-object? line)
+                  #f
+                  (string-trim-both line))))))
+
+   ;; 3. Default to origin git remote
+   "origin"))
+
+(define *master-node* (resolve-master))
 
 ;;; --- Helpers ---
 
@@ -80,8 +107,8 @@
 
 (define (sync-git-fetch)
   "Fetch latest changes from remote"
-  (log-info "Fetching from ~a..." *default-remote*)
-  (let ((result (git "fetch" *default-remote*)))
+  (log-info "Fetching from master node: ~a..." *master-node*)
+  (let ((result (git "fetch" *master-node*)))
     (if result
         (begin
           (log-info "Fetch complete")
@@ -109,8 +136,8 @@
 
 (define (sync-git-pull)
   "Pull changes from remote if behind"
-  (log-info "Pulling changes from ~a/~a..." *default-remote* *default-branch*)
-  (let ((result (git "pull" *default-remote* *default-branch*)))
+  (log-info "Pulling changes from ~a/~a..." *master-node* *default-branch*)
+  (let ((result (git "pull" *master-node* *default-branch*)))
     (if result
         (begin
           (log-info "Pull complete: ~a" (string-trim-both result))
