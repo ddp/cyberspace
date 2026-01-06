@@ -61,11 +61,14 @@
     "Run a system command with arguments"
     (let-values (((in out pid err) (process* (car args) (cdr args))))
       (close-output-port in)
-      (close-input-port out)
-      (close-input-port err)
-      (receive (pid2 normal exit-code) (process-wait pid)
-        (unless (zero? exit-code)
-          (error "Command failed" (car args) exit-code)))))
+      (let ((stderr-text (read-string #f err)))
+        (close-input-port out)
+        (close-input-port err)
+        (receive (pid2 normal exit-code) (process-wait pid)
+          (unless (zero? exit-code)
+            (when (and stderr-text (> (string-length stderr-text) 0))
+              (print "Error output: " stderr-text))
+            (error "Command failed" (car args) exit-code))))))
 
   ;;; ============================================================================
   ;;; Configuration
