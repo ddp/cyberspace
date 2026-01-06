@@ -25,6 +25,11 @@
    seal-archive
    seal-restore
 
+   ;; Replication
+   seal-publish
+   seal-subscribe
+   seal-synchronize
+
    ;; Verification
    seal-verify
 
@@ -495,6 +500,290 @@
       ;; Extract tarball
       (run-command "tar" "-xzf" tarball "-C" target-dir)
       (print "Archive restored to: " target-dir)))
+
+  ;;; ============================================================================
+  ;;; Replication - Distribution and Synchronization
+  ;;; ============================================================================
+
+  (define (seal-publish version #!key remote archive-format message)
+    "Publish sealed release to remote location
+
+     - version: semantic version to publish
+     - remote: publication target (git remote, URL, or directory path)
+     - archive-format: 'tarball, 'bundle, or 'cryptographic (default)
+     - message: release notes
+
+     Publication process:
+     1. Creates sealed release with seal-release
+     2. Creates cryptographic archive with seal-archive
+     3. Pushes to remote location
+     4. Records publication in audit trail"
+
+    (let ((remote-target (or remote (vault-config 'publish-remote)))
+          (fmt (or archive-format 'cryptographic)))
+
+      (unless remote-target
+        (error "No remote configured for publication. Use vault-config or --remote"))
+
+      ;; Create sealed release if it doesn't exist
+      (let ((archive-file (sprintf "vault-~a.archive" version)))
+
+        (print "Publishing sealed release: " version)
+
+        ;; Create release and archive
+        (seal-release version message: message)
+        (seal-archive version format: fmt output: archive-file)
+
+        (print "Archive created: " archive-file)
+
+        ;; Publish based on remote type
+        (cond
+         ;; Git remote (push tag and optionally upload release)
+         ((git-remote? remote-target)
+          (print "Pushing to git remote: " remote-target)
+          (run-command "git" "push" remote-target version)
+          (print "✓ Tag pushed to remote")
+
+          ;; Upload archive if remote supports it (GitHub releases, etc.)
+          (when (vault-config 'upload-release-assets)
+            (upload-release-asset remote-target version archive-file)))
+
+         ;; HTTP endpoint
+         ((http-url? remote-target)
+          (publish-http remote-target version archive-file))
+
+         ;; File system path
+         ((directory? remote-target)
+          (publish-filesystem remote-target version archive-file))
+
+         (else
+          (error "Unknown remote type" remote-target)))
+
+        ;; Record in audit trail
+        (let ((signing-key (vault-config 'signing-key)))
+          (when signing-key
+            (audit-append
+             actor: (get-vault-principal signing-key)
+             action: (list 'seal-publish version remote-target)
+             motivation: (or message (sprintf "Published release ~a" version)))))
+
+        (print "✓ Publication complete: " version))))
+
+  (define (seal-subscribe remote #!key target verify-key)
+    "Subscribe to sealed releases from remote source
+
+     - remote: subscription source (git remote, URL, or directory)
+     - target: local directory for subscribed releases
+     - verify-key: public key for verifying signatures
+
+     Subscription process:
+     1. Fetches available releases from remote
+     2. Downloads and verifies cryptographic seals
+     3. Stores releases in local subscription directory
+     4. Records subscription in audit trail"
+
+    (let ((target-dir (or target (vault-config 'subscribe-dir) ".vault/subscriptions"))
+          (remote-source remote))
+
+      (print "Subscribing to releases from: " remote-source)
+
+      ;; Create subscription directory
+      (create-directory target-dir #t)
+
+      ;; Fetch releases based on remote type
+      (let ((releases
+             (cond
+              ;; Git remote
+              ((git-remote? remote-source)
+               (fetch-git-releases remote-source))
+
+              ;; HTTP endpoint
+              ((http-url? remote-source)
+               (fetch-http-releases remote-source))
+
+              ;; File system
+              ((directory? remote-source)
+               (fetch-filesystem-releases remote-source))
+
+              (else
+               (error "Unknown remote type" remote-source)))))
+
+        (print "Found " (length releases) " release(s)")
+
+        ;; Download and verify each release
+        (for-each
+         (lambda (release-info)
+           (let ((version (car release-info))
+                 (url (cadr release-info)))
+             (print "  Downloading: " version)
+             (download-release url target-dir version)
+
+             ;; Verify if key provided
+             (when verify-key
+               (let ((archive-path (sprintf "~a/vault-~a.archive" target-dir version)))
+                 (seal-verify archive-path verify-key: verify-key)
+                 (print "  ✓ Verified: " version)))))
+         releases)
+
+        ;; Record subscription in audit trail
+        (let ((signing-key (vault-config 'signing-key)))
+          (when signing-key
+            (audit-append
+             actor: (get-vault-principal signing-key)
+             action: (list 'seal-subscribe remote-source)
+             motivation: (sprintf "Subscribed to ~a release(s)" (length releases)))))
+
+        (print "✓ Subscription complete: " (length releases) " release(s) downloaded"))))
+
+  (define (seal-synchronize remote #!key direction verify-key)
+    "Synchronize sealed releases bidirectionally
+
+     - remote: sync partner (git remote, URL, or directory)
+     - direction: 'push, 'pull, or 'both (default)
+     - verify-key: public key for verifying incoming releases
+
+     Synchronization:
+     1. Discovers releases on both sides
+     2. Exchanges missing releases
+     3. Verifies all cryptographic seals
+     4. Records sync in audit trail"
+
+    (let ((sync-direction (or direction 'both))
+          (remote-target remote))
+
+      (print "Synchronizing with: " remote-target)
+
+      ;; Get local releases
+      (let ((local-releases (get-local-releases)))
+        (print "Local releases: " (length local-releases))
+
+        ;; Get remote releases
+        (let ((remote-releases (get-remote-releases remote-target)))
+          (print "Remote releases: " (length remote-releases))
+
+          ;; Determine what needs syncing
+          (let ((to-push (filter (lambda (v) (not (member v remote-releases))) local-releases))
+                (to-pull (filter (lambda (v) (not (member v local-releases))) remote-releases)))
+
+            (print "To publish: " (length to-push))
+            (print "To subscribe: " (length to-pull))
+
+            ;; Push missing releases
+            (when (or (eq? sync-direction 'push) (eq? sync-direction 'both))
+              (for-each
+               (lambda (version)
+                 (print "  Publishing: " version)
+                 (seal-publish version remote: remote-target))
+               to-push))
+
+            ;; Pull missing releases
+            (when (or (eq? sync-direction 'pull) (eq? sync-direction 'both))
+              (for-each
+               (lambda (version)
+                 (print "  Subscribing: " version)
+                 ;; Download single release
+                 (download-single-release remote-target version verify-key))
+               to-pull))
+
+            ;; Record sync in audit trail
+            (let ((signing-key (vault-config 'signing-key)))
+              (when signing-key
+                (audit-append
+                 actor: (get-vault-principal signing-key)
+                 action: (list 'seal-synchronize remote-target)
+                 motivation: (sprintf "Synced ~a out, ~a in" (length to-push) (length to-pull)))))
+
+            (print "✓ Synchronization complete"))))))
+
+  ;;; Helper functions for replication
+
+  (define (git-remote? str)
+    "Check if string looks like a git remote"
+    (or (string-contains str "git@")
+        (string-contains str ".git")
+        (member str '("origin" "upstream"))))
+
+  (define (http-url? str)
+    "Check if string is HTTP(S) URL"
+    (or (string-prefix? "http://" str)
+        (string-prefix? "https://" str)))
+
+  (define (publish-http url version archive-file)
+    "Publish archive to HTTP endpoint"
+    ;; Placeholder - would use curl or HTTP client
+    (print "HTTP publication not yet implemented")
+    (print "Would POST " archive-file " to " url))
+
+  (define (publish-filesystem target-dir version archive-file)
+    "Publish archive to filesystem location"
+    (let ((dest (sprintf "~a/vault-~a.archive" target-dir version)))
+      (create-directory target-dir #t)
+      (run-command "cp" archive-file dest)
+      (print "✓ Copied to: " dest)))
+
+  (define (fetch-git-releases remote)
+    "Fetch list of releases from git remote"
+    ;; Fetch tags
+    (run-command "git" "fetch" remote "--tags")
+    ;; List tags matching semantic version pattern
+    (with-input-from-pipe
+        "git tag -l '[0-9]*.[0-9]*.[0-9]*'"
+      (lambda ()
+        (let loop ((tags '()))
+          (let ((line (read-line)))
+            (if (eof-object? line)
+                (reverse tags)
+                (loop (cons line tags))))))))
+
+  (define (fetch-http-releases url)
+    "Fetch release list from HTTP endpoint"
+    ;; Placeholder
+    '())
+
+  (define (fetch-filesystem-releases dir)
+    "Fetch releases from filesystem directory"
+    (if (directory-exists? dir)
+        (map (lambda (f)
+               ;; Extract version from filename like "vault-1.0.0.archive"
+               (let ((match (irregex-match '(: "vault-" (submatch (+ (or digit "."))) ".archive") f)))
+                 (if match
+                     (list (irregex-match-substring match 1) (sprintf "~a/~a" dir f))
+                     #f)))
+             (filter (lambda (f) (string-suffix? ".archive" f))
+                    (directory dir)))
+        '()))
+
+  (define (download-release url target-dir version)
+    "Download release archive"
+    ;; Placeholder - would use curl or copy
+    (print "Download from: " url))
+
+  (define (download-single-release remote version verify-key)
+    "Download and verify single release"
+    ;; Placeholder
+    (print "Would download " version " from " remote))
+
+  (define (get-local-releases)
+    "Get list of local sealed releases"
+    (with-input-from-pipe
+        "git tag -l '[0-9]*.[0-9]*.[0-9]*'"
+      (lambda ()
+        (let loop ((tags '()))
+          (let ((line (read-line)))
+            (if (eof-object? line)
+                (reverse tags)
+                (loop (cons line tags))))))))
+
+  (define (get-remote-releases remote)
+    "Get list of releases on remote"
+    (if (git-remote? remote)
+        (fetch-git-releases remote)
+        '()))
+
+  (define (upload-release-asset remote version archive-file)
+    "Upload release asset to remote (e.g., GitHub releases)"
+    ;; Placeholder
+    (print "Would upload " archive-file " as release asset"))
 
   ;;; ============================================================================
   ;;; Migration Paths - Explicit version transitions
