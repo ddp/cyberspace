@@ -60,11 +60,18 @@
   (define (base64-encode bytes)
     ;; Simple base64 encoder for u8vectors
     ;; TODO: Replace with proper library (base64 egg)
-    (let* ((len (u8vector-length bytes))
-           (out '()))
-      ;; For now, just return a placeholder
-      ;; Real implementation would use base64 library
-      "BASE64PLACEHOLDER"))
+    ;; For now, use hex encoding as a placeholder
+    (if (u8vector? bytes)
+        (let loop ((i 0) (acc ""))
+          (if (>= i (u8vector-length bytes))
+              acc
+              (let ((byte (u8vector-ref bytes i)))
+                (loop (+ i 1)
+                      (string-append acc
+                                     (if (< byte 16)
+                                         (string-append "0" (number->string byte 16))
+                                         (number->string byte 16)))))))
+        ""))
 
   (define (base64-decode str)
     ;; Simple base64 decoder

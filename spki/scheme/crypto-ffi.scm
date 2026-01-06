@@ -16,7 +16,8 @@
    ed25519-keypair
    ed25519-sign
    ed25519-verify
-   sha256-hash)
+   sha256-hash
+   sha512-hash)
 
   (import scheme
           (chicken base)
@@ -32,6 +33,7 @@
   (define crypto-sign-secretkeybytes 64)
   (define crypto-sign-bytes 64)
   (define crypto-hash-sha256-bytes 32)
+  (define crypto-hash-sha512-bytes 64)
 
   ;; Initialize libsodium
   ;; Returns: 0 on success, -1 on error, 1 if already initialized
@@ -39,14 +41,14 @@
     (foreign-lambda int "sodium_init"))
 
   ;; Generate Ed25519 keypair
-  ;; Returns: (public-key . secret-key) as bytevectors
+  ;; Returns: (public-key secret-key) as list of bytevectors
   (define (ed25519-keypair)
     (let ((pk (make-u8vector crypto-sign-publickeybytes))
           (sk (make-u8vector crypto-sign-secretkeybytes)))
       ((foreign-lambda int "crypto_sign_keypair"
                       scheme-pointer scheme-pointer)
        pk sk)
-      (cons pk sk)))
+      (list pk sk)))
 
   ;; Sign message with Ed25519
   ;; @param secret-key: 64-byte secret key (bytevector)
@@ -97,6 +99,21 @@
                            data))
            (hash (make-u8vector crypto-hash-sha256-bytes)))
       ((foreign-lambda int "crypto_hash_sha256"
+                      scheme-pointer     ; hash output
+                      scheme-pointer     ; data
+                      unsigned-integer)  ; data length
+       hash data-bytes (u8vector-length data-bytes))
+      hash))
+
+  ;; Compute SHA-512 hash
+  ;; @param data: data to hash (bytevector or string)
+  ;; @return hash: 64-byte hash (bytevector)
+  (define (sha512-hash data)
+    (let* ((data-bytes (if (string? data)
+                           (string->u8vector data)
+                           data))
+           (hash (make-u8vector crypto-hash-sha512-bytes)))
+      ((foreign-lambda int "crypto_hash_sha512"
                       scheme-pointer     ; hash output
                       scheme-pointer     ; data
                       unsigned-integer)  ; data length
