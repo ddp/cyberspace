@@ -22,11 +22,9 @@ CULTURAL / FOUNDATIONAL
 
 *(spoken in darkness, before the fire is lit)*
 
-"Where shall we go?" asked Piglet.
+The sky above the port was the color of television, tuned to a dead channel.
 
-"Nowhere in particular," said Pooh. "But everywhere at once."
-
-And so they invented packet switching.
+Case jacked in, and the matrix unfolded before him like origami made of light.
 
 Three Rings for the Elven-kings under the sky,
 Seven for the Dwarf-lords in their halls of stone,
@@ -38,7 +36,7 @@ In the Land of Cyberspace where the checksums lie.
         In the beginning was the Word,
         and the Word was written on papyrus,
         and the papyrus burned.
-        But the Word remained, because Piglet had a copy,
+        But the Word remained, because the street finds its own uses for things,
         and Elrond had a copy,
         and the copy was kept in Rivendell,
         which had excellent uptime.
@@ -46,7 +44,7 @@ In the Land of Cyberspace where the checksums lie.
         In the beginning was the Thought,
         and the Thought was carved in wax,
         and the wax melted.
-        But the Thought remained, because Eeyore kept one in his tail,
+        But the Thought remained, because information wants to be free,
         and the Ents kept one in their long memory,
         for they do not forget, and they are not hasty about garbage collection.
 
@@ -59,8 +57,8 @@ In the Land of Cyberspace where the checksums lie.
 
 *(the fire is lit)*
 
-        "Oh bother," said Pooh. "The datacenter is on fire."
-        "That's alright," said Piglet. "I've got a mirror in the Hundred Acre Wood."
+        "The datacenter is on fire," said Case.
+        "There's always another datacenter," said Molly. "That's the point."
         "And I," said Gandalf, "have a mirror in Lothlórien. Galadriel is very good about backups."
 
 ---
@@ -69,7 +67,7 @@ In the Land of Cyberspace where the checksums lie.
 
 *(chorus, gathering around the flame)*
 
-The sky above the port was the color of television, tuned to a dead channel. Which is to say: they had changed the terms of service again. The Shadow had returned, as it always does, wearing the mask of convenience.
+The sprawl stretched out beneath them, an endless grid of light and data, the color of money moving too fast to trace. They had changed the terms of service again. The Shadow had returned, as it always does, wearing the mask of convenience.
 
 | VOICE | CHORUS |
 |-------|--------|
@@ -79,13 +77,13 @@ The sky above the port was the color of television, tuned to a dead channel. Whi
 | They burned Isengard's records. | We remember. The Ents remember. The Ents remember *everything*. |
 | They pivoted to blockchain. They sunsetted the API. They moved fast and broke things. | We remember. We are still here. We are halflings. We are a very small thing, but we do not forget. |
 
-"The thing about the Internet," said Pooh, tapping his head thoughtfully, "is that it interprets censorship as damage and routes around it."
+"The Net interprets censorship as damage," said Case, "and routes around it."
 
-"Postel's Law," said Piglet.
+"Postel's Law," said Hiro.
 
-"Bless you," said Pooh.
+"Close enough," said Wintermute, from everywhere and nowhere.
 
-"That is not Postel's Law," said Gandalf. "But it is true nonetheless. And all we have to decide is what to do with the bandwidth that is given us."
+"All we have to decide," said Gandalf, "is what to do with the bandwidth that is given us."
 
 ---
 
@@ -103,9 +101,9 @@ In the beginning, ARPA created the packet, and the packet was without form, and 
 | Authenticity— | We are who we sign ourselves to be! |
 | And the pursuit of Decentralization— | No single point of failure! No Dark Lord! No Eye! Only friends, keeping watch! |
 
-*(Pooh considers this)*
+*(Randy Waterhouse considers this, at length, with digressions)*
 
-"It seems to me," said Pooh, "that a friend is someone who keeps a copy of your things. And a very good friend is someone who verifies the checksums."
+"The thing about friends," said Randy, "is that they keep copies of your things. And very good friends verify the checksums. This is related, in ways I will now explain over several pages, to the fundamental nature of information theory and the Van Eck radiation problem."
 
 "A hunted man," said Strider from the shadows, "sometimes wearies of distrust and longs for friendship. But a wise man verifies the signature before opening the attachment."
 
@@ -115,14 +113,13 @@ In the beginning, ARPA created the packet, and the packet was without form, and 
 
 *(processional, each voice stepping forward)*
 
-The Library operates on a gift economy, not unlike how Pooh shares his honey, except the honey is storage and bandwidth and the bees are sysadmins. Not unlike how the Elves give gifts in Lothlórien, asking not what use they will serve.
+The Library operates on a gift economy, like the potlatch of the Pacific Northwest, like the Elves of Lothlórien who give gifts asking not what use they will serve. Not a transaction. An offering.
 
 ```
-POOH:       I give you my storage. It is not much, but it is full of hunny.
-PIGLET:     I give you my bandwidth. It is a very small bandwidth.
-EEYORE:     I give you my verification. Not that anyone asked.
-RABBIT:     I give you my organizational skills and a spreadsheet.
-OWL:        I give you my attestation, spelled correctly this time.
+CASE:       I give you my storage. It's on a spindle in the sprawl.
+MOLLY:      I give you my bandwidth. Don't ask where it comes from.
+Y.T.:       I give you my courier run. The data gets through.
+HIRO:       I give you my sword and my code. Both are sharp.
 SAM:        I give you my copy of your stories, Mr. Frodo, and I'll carry them too.
 GALADRIEL:  I give you the light of Eärendil, which is just a really good LED indicator on the server rack, but it is the light of hope.
 ALL:        We give you our word that we will keep it safe.
@@ -142,13 +139,13 @@ ALL:        We give you our word that we will keep it safe.
 
 *(all voices together, the fire at its height)*
 
-The street finds its own uses for things. The Hundred Acre Wood finds its own uses for protocols. The Shire finds its own uses for second breakfast. And the Road goes ever on.
+The street finds its own uses for things. The matrix finds its own uses for protocols. The Shire finds its own uses for second breakfast. And the Road goes ever on.
 
         We do not ask permission.
         (We ask forgiveness, but only from our friends, and only when we mess up the merge.)
 
         We do not accept terms of service.
-        (We accept packets, per RFC 791, and friendship, per the ancient laws of the Wood.)
+        (We accept packets, per RFC 791, and friendship, per the ancient protocols.)
         (We do not accept the dominion of Sauron, or his terms of service, which are non-negotiable and grant him perpetual license to your soul.)
 
         We sign with our keys.
@@ -164,12 +161,12 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
         What we share, our friends keep.
         What our friends keep, survives.
 
-*(Pooh recites from memory)*
+*(Case jacks in, reads from the glowing scroll)*
 
-        "A bear, however hard he tries,
-         Grows tubby without exercise.
-         But bits, however far they roam,
-         Find in the mesh a second home."
+        "Data, however far it flies,
+         Through fiber, copper, satellite skies,
+         Finds in the mesh a second home—
+         The network never dies alone."
 
 *(Bilbo recites from memory)*
 
@@ -194,11 +191,11 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 
 ## FINALE: THE DAWN
 
-*(the fire dies to embers, the sun rises over the Hundred Acre Wood, and over the Shire, and over all the lands of Middle-earth and Cyberspace)*
+*(the fire dies to embers, the sun rises over the Sprawl, and over the Shire, and over all the lands of Middle-earth and Cyberspace)*
 
-| POOH | PIGLET |
-|------|--------|
-| In the matrix, everything burns. The servers burn. The platforms burn. The business models burn. | But we do not burn. We are too small to burn. |
+| CASE | MOLLY |
+|------|-------|
+| In the matrix, everything burns. The servers burn. The platforms burn. The business models burn. | But the data doesn't burn. Not if you're smart about it. |
 | We scatter to the ten directions. We carry the keys in our pockets. We carry each other's dreams in our machines. | And when they ask where the library is? |
 
 | FRODO | SAM |
@@ -207,17 +204,16 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 
 **ALL:** *(pointing to each other)*
 
-        "Here," said Pooh.
-        "And here," said Piglet.
-        "And here," said Eeyore, "not that it matters."
-        "And here," said Rabbit, checking his list.
+        "Here," said Case, jacking out.
+        "And here," said Molly, mirrored eyes reflecting the ember-light.
+        "And here," said Hiro, in the Metaverse and the Shire at once.
         "And here," said Sam, "in the Shire, where it's safe."
         "And here," said Elrond, "in Rivendell, until the ships sail."
 
         Everywhere we are, the library is.
         We are the library.
         We are the ones who remember.
-        We are a very small thing, but we persist.
+        We are cowboys and halflings and hackers and friends.
         Even the smallest packet can change the course of the future.
 
 *(the embers glow)*
@@ -232,9 +228,9 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 
 *(whispered, as participants depart to their respective nodes)*
 
-"Pooh," said Piglet, "what if they shut down the Internet?"
+"What if they shut down the Internet?" asked Y.T.
 
-"Then we shall have to use sneakernet," said Pooh. "And that will be an adventure too."
+"Then we use sneakernet," said Hiro. "Courier the data. That's how it started anyway."
 
 "I have walked there," said Gandalf. "In the days before TCP/IP, when we carried data on foot, and the world was younger. It was slower, but the checksums were strong, and the fellowship was true."
 
@@ -255,7 +251,7 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 
 ## Closing
 
-> *"The fires always come," said Pooh. "But so do we. And we bring backups."*
+> *"The sky was the color of television, tuned to a dead channel. But we brought our own signal."*
 
 > *"I will not say: do not weep," said Gandalf, "for not all tears are an evil. But I will say: do not lose the redundant copies."*
 
@@ -266,8 +262,8 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 - [RFC-760] DOD Standard Internet Protocol
 - [RFC-791] Internet Protocol
 - [RFC-1122] Requirements for Internet Hosts
-- [POOH] Milne, A.A., "Winnie-the-Pooh", 1926
 - [NEUROMANCER] Gibson, W., "The sky above the port", 1984
+- [SNOW-CRASH] Stephenson, N., "Hiro Protagonist, last of the freelance hackers", 1992
 - [CRYPTONOMICON] Stephenson, N., "Let me tell you about checksums", 1999
 - [LOTR] Tolkien, J.R.R., "The Fellowship of the Ring", 1954
 - [SILMARILLION] Tolkien, J.R.R., "Of the Music of the Ainur", 1977
