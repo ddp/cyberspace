@@ -71,10 +71,11 @@ Starlink (100-200 Mb/s, 20-40ms latency):
   Effective rate:  ~1-2 releases/second
   Optimized for:   Bursty, high-latency satellite links
 
-Minimum bandwidth (TBD):
-  Target:          Dial-up equivalent (~56 Kb/s)
+Minimum bandwidth:
+  Floor:           128 Kb/s (dual-ISDN)
+  Target:          1 Mb/s (T1)
   Typical release: 10 MB archive
-  Transfer time:   ~24 minutes
+  Transfer time:   ~80 sec (T1), ~10 min (dual-ISDN)
   Strategy:        Delta sync, compressed archives
 ```
 
@@ -500,6 +501,7 @@ Malicious peer creates conflicting release.
 
 ## Changelog
 
+- **2026-01-06** - Set minimum bandwidth: 128 Kb/s floor (dual-ISDN), 1 Mb/s target (T1)
 - **2026-01-06** - Initial specification
 
 ---

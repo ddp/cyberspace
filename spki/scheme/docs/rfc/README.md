@@ -22,7 +22,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [RFC-014](RFC-014-coq-extraction.md) | Coq Extraction for TCB | Proposed | 2026-01-06 |
 | [RFC-015](RFC-015-versioning-rollback.md) | Versioning and Rollback | Proposed | 2026-01-06 |
 | [RFC-016](RFC-016-lazy-clustering.md) | Lazy Clustering | Proposed | 2026-01-06 |
-| [RFC-017](RFC-017-security-considerations.md) | Security Considerations | Active | 2026-01-06 |
+| [RFC-017](RFC-017-opera.md) | The Burning of Alexandria (Opera) | Cultural | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -43,6 +43,19 @@ Each RFC should include:
 - **Security Considerations** - Threat analysis
 - **Implementation Notes** - Practical details
 - **References** - Related work
+
+## Document Formats
+
+RFCs are published in the following canonical formats:
+
+| Format | Extension | Purpose |
+|--------|-----------|---------|
+| Markdown | `.md` | Source, editing, version control |
+| HTML | `.html` | Web viewing, rich rendering |
+| PDF | `.pdf` | Archival, printing, distribution |
+| Plain Text | `.txt` | Universal compatibility, IETF tradition |
+
+All formats are considered canonical and are preserved in the Vault.
 
 ## Upcoming RFCs
 
