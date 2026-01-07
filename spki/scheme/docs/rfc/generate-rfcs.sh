@@ -68,8 +68,8 @@ generate_from_md() {
   # HTML (standalone)
   pandoc "${rfc}.md" -o "${rfc}.html" --standalone --metadata title="" 2>/dev/null
 
-  # PDF (xelatex with Menlo font)
-  pandoc "${rfc}.md" -o "${rfc}.pdf" --pdf-engine=xelatex -V mainfont="Menlo" 2>/dev/null
+  # PDF (xelatex, IBM Plex Mono for code)
+  pandoc "${rfc}.md" -o "${rfc}.pdf" --pdf-engine=xelatex -V monofont="IBM Plex Mono" 2>/dev/null
 
   # Plain text (78 columns, IETF style)
   pandoc "${rfc}.md" -o "${rfc}.txt" --to=plain --wrap=auto --columns=78 2>/dev/null

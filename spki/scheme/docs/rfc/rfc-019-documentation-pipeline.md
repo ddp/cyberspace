@@ -96,8 +96,8 @@ index.html                # Hypertext catalog
 # HTML (standalone, no external dependencies)
 pandoc ${doc}.md -o ${doc}.html --standalone --metadata title=""
 
-# PDF (XeLaTeX with monospace font for code)
-pandoc ${doc}.md -o ${doc}.pdf --pdf-engine=xelatex -V mainfont="Menlo"
+# PDF (XeLaTeX, IBM Plex Mono for code)
+pandoc ${doc}.md -o ${doc}.pdf --pdf-engine=xelatex -V monofont="IBM Plex Mono"
 
 # Plain text (IETF-style, 78 columns)
 pandoc ${doc}.md -o ${doc}.txt --to=plain --wrap=auto --columns=78
@@ -216,7 +216,7 @@ RFCS=(rfc-000-declaration rfc-001-replication-layer ...)
 
 for rfc in "${RFCS[@]}"; do
   pandoc "${rfc}.md" -o "${rfc}.html" --standalone
-  pandoc "${rfc}.md" -o "${rfc}.pdf" --pdf-engine=xelatex -V mainfont="Menlo"
+  pandoc "${rfc}.md" -o "${rfc}.pdf" --pdf-engine=xelatex -V monofont="IBM Plex Mono"
   pandoc "${rfc}.md" -o "${rfc}.txt" --to=plain --columns=78
 done
 
@@ -234,7 +234,9 @@ generate_index
 | latexmlc | LaTeXML | LaTeX → HTML (optional) |
 | rsync | 3.x+ | Publication |
 
-Note: latexmlc is optional. If not installed, LaTeX sources produce PDF only.
+Notes:
+- latexmlc is optional. If not installed, LaTeX sources produce PDF only.
+- IBM Plex Mono used for code blocks in PDFs.
 
 ---
 
