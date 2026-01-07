@@ -42,13 +42,13 @@ Computer science is math. Use the right tool for the job.
 
 | Format | Extension | Purpose | From MD | From TeX |
 |--------|-----------|---------|---------|----------|
+| Plain Text | `.txt` | IETF tradition, universal | pandoc | — |
 | HTML | `.html` | Web viewing | pandoc | latexmlc |
 | PDF | `.pdf` | Archival, printing | xelatex | pdflatex |
-| Plain Text | `.txt` | IETF tradition | pandoc | — |
 
 Plain text is not generated from LaTeX sources—math doesn't render in plaintext.
 
-All output formats are first-class citizens. None is derived or secondary.
+**Philosophy:** Text, HTML, and PDF are easy to generate and cover all use cases. Fewer formats means less wasted conversion—these three are canonical, don't add more.
 
 ---
 
