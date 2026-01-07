@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-038-local-inference</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-038-local-inference-integration">RFC-038: Local Inference
+Integration</h1>
+<p><strong>Status:</strong> Draft <strong>Created:</strong> 2026-01-07
+<strong>Authors:</strong> Library of Cyberspace Contributors</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies how Library of Cyberspace agents integrate with
+local large language model (LLM) inference backends. Local inference
+enables privacy-preserving agent operations without external API
+dependencies, supporting the self-sovereign architecture of the
+Library.<a href="#fn1" class="footnote-ref" id="fnref1"
+role="doc-noteref"><sup>1</sup></a></p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Agents in the Library of Cyberspace require language understanding
+and generation capabilities for:</p>
+<ul>
+<li>Document summarization and indexing</li>
+<li>Natural language query translation (RFC-025)</li>
+<li>Content annotation and metadata extraction</li>
+<li>Inter-agent communication in natural language</li>
+</ul>
+<p>External API dependencies (OpenAI, Anthropic, etc.) introduce:</p>
+<ol type="1">
+<li><strong>Privacy leakage</strong> — document content leaves the
+realm</li>
+<li><strong>Availability risk</strong> — network partitions break agent
+operation</li>
+<li><strong>Cost unpredictability</strong> — metered APIs scale
+poorly</li>
+<li><strong>Vendor lock-in</strong> — proprietary formats and rate
+limits</li>
+</ol>
+<p>Local inference eliminates these concerns while maintaining
+capability.<a href="#fn2" class="footnote-ref" id="fnref2"
+role="doc-noteref"><sup>2</sup></a></p>
+<hr />
+<h2 id="architecture">Architecture</h2>
+<h3 id="inference-topology">Inference Topology</h3>
+<p><em>Table 1: Inference Deployment Models</em></p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 43%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Description</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Realm-local</td>
+<td>Inference server within realm</td>
+<td>Default, privacy-preserving</td>
+</tr>
+<tr>
+<td>Node-local</td>
+<td>Per-node inference</td>
+<td>Edge agents, mobile</td>
+</tr>
+<tr>
+<td>Federated</td>
+<td>Shared across trusted realms</td>
+<td>Resource pooling</td>
+</tr>
+</tbody>
+</table>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│                      Realm                          │
+│  ┌─────────┐    ┌──────────────┐    ┌───────────┐  │
+│  │  Agent  │───▶│   Inference  │───▶│   Model   │  │
+│  │         │◀───│    Server    │◀───│  Weights  │  │
+│  └─────────┘    └──────────────┘    └───────────┘  │
+│       │              :11434              │          │
+│       ▼                                  ▼          │
+│  ┌─────────┐                      ┌───────────┐    │
+│  │  Vault  │                      │   VRAM    │    │
+│  └─────────┘                      └───────────┘    │
+└─────────────────────────────────────────────────────┘</code></pre>
+<h3 id="protocol">Protocol</h3>
+<p>Agents communicate with inference servers via HTTP REST API.<a
+href="#fn3" class="footnote-ref" id="fnref3"
+role="doc-noteref"><sup>3</sup></a></p>
+<p><strong>Discovery:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">discover-inference-server</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Check well-known locations</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">or</span> (probe <span class="st">&quot;http://localhost:11434&quot;</span>)      <span class="co">; Ollama default</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>      (probe <span class="st">&quot;http://localhost:8080&quot;</span>)       <span class="co">; llama.cpp</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>      (probe (realm-config &#39;inference-url)) <span class="co">; Configured</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>      <span class="dv">#f</span>))                                   <span class="co">; None available</span></span></code></pre></div>
+<p><strong>Capability Negotiation:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">negotiate-capabilities </span>server)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((models (http-get (<span class="kw">string-append</span> server <span class="st">&quot;/api/tags&quot;</span>))))</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    (map (<span class="kw">lambda</span> (m)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>           `((name <span class="op">.</span> ,(alist-ref &#39;name m))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>             (parameters <span class="op">.</span> ,(alist-ref &#39;size m))</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>             (context-length <span class="op">.</span> ,(model-context-length m))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>             (capabilities <span class="op">.</span> ,(model-capabilities m))))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>         models)))</span></code></pre></div>
+<p><em>Table 2: Model Capabilities</em></p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Description</th>
+<th>Example Models</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>completion</code></td>
+<td>Text generation</td>
+<td>All</td>
+</tr>
+<tr>
+<td><code>chat</code></td>
+<td>Multi-turn conversation</td>
+<td>Llama 3, Mistral</td>
+</tr>
+<tr>
+<td><code>embedding</code></td>
+<td>Vector embeddings</td>
+<td>nomic-embed, mxbai</td>
+</tr>
+<tr>
+<td><code>code</code></td>
+<td>Code generation</td>
+<td>CodeLlama, DeepSeek</td>
+</tr>
+<tr>
+<td><code>vision</code></td>
+<td>Image understanding</td>
+<td>LLaVA, Llama 3.2 Vision</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="agent-integration">Agent Integration</h2>
+<h3 id="scribe-agent">Scribe Agent</h3>
+<p>The scribe agent uses local inference for document processing:<a
+href="#fn4" class="footnote-ref" id="fnref4"
+role="doc-noteref"><sup>4</sup></a></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">scribe-summarize </span>document)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((server (discover-inference-server))</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>         (model (select-model server &#39;completion))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>         (prompt (format <span class="st">&quot;Summarize the following document:</span><span class="ch">\n\n</span><span class="st">~a&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                         (document-content document))))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    (inference-complete server model prompt</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>                        &#39;((max-tokens <span class="op">.</span> <span class="dv">500</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>                          (temperature <span class="op">.</span> <span class="fl">0.3</span>)))))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">scribe-index </span>document)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Extract keywords using local inference</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((server (discover-inference-server))</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>         (model (select-model server &#39;completion))</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>         (prompt (format <span class="st">&quot;Extract 5-10 keywords from:</span><span class="ch">\n\n</span><span class="st">~a&quot;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                         (document-content document))))</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    (parse-keywords (inference-complete server model prompt))))</span></code></pre></div>
+<h3 id="query-translation">Query Translation</h3>
+<p>Natural language queries translate to RFC-025 query language:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">nl-to-query </span>natural-language)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((server (discover-inference-server))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>         (model (select-model server &#39;chat))</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>         (system <span class="st">&quot;You translate natural language to Cyberspace query</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">                  language. Output only the query, no explanation.&quot;</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>         (examples &#39;((<span class="st">&quot;find all RFCs about security&quot;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>                      <span class="st">&quot;(query (type rfc) (topic security))&quot;</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                     (<span class="st">&quot;documents modified last week&quot;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>                      <span class="st">&quot;(query (modified (after (days-ago 7))))&quot;</span>))))</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    (inference-chat server model system examples natural-language)))</span></code></pre></div>
+<h3 id="demonic-agent-inference">Demonic Agent Inference</h3>
+<p>Sandboxed agents (RFC-023) access inference through capability
+tokens:<a href="#fn5" class="footnote-ref" id="fnref5"
+role="doc-noteref"><sup>5</sup></a></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">demonic-inference </span>agent prompt)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((cap (agent-capability agent &#39;inference)))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (<span class="kw">not</span> cap)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> &#39;unauthorized <span class="st">&quot;Agent lacks inference capability&quot;</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((limits (capability-limits cap)))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>          (enforce-limits limits)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>          (inference-complete (capability-server cap)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                              (capability-model cap)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                              prompt</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                              limits)))))</span></code></pre></div>
+<hr />
+<h2 id="resource-management">Resource Management</h2>
+<h3 id="vram-allocation">VRAM Allocation</h3>
+<p><em>Table 3: Model Size Guidelines</em></p>
+<table>
+<thead>
+<tr>
+<th>Parameters</th>
+<th>VRAM (Q4)</th>
+<th>VRAM (FP16)</th>
+<th>Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7B</td>
+<td>4 GB</td>
+<td>14 GB</td>
+<td>8K</td>
+</tr>
+<tr>
+<td>13B</td>
+<td>8 GB</td>
+<td>26 GB</td>
+<td>8K</td>
+</tr>
+<tr>
+<td>34B</td>
+<td>20 GB</td>
+<td>68 GB</td>
+<td>16K</td>
+</tr>
+<tr>
+<td>70B</td>
+<td>40 GB</td>
+<td>140 GB</td>
+<td>32K</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rate-limiting">Rate Limiting</h3>
+<p>Local inference is limited by hardware, not API quotas. Realms
+implement fair scheduling across agents:<a href="#fn6"
+class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">inference-rate-limit </span>agent tokens)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((bucket (agent-token-bucket agent)))</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (bucket-consume bucket tokens)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="dv">#t</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">begin</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>          (agent-wait agent (bucket-refill-time bucket))</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>          (inference-rate-limit agent tokens)))))</span></code></pre></div>
+<h3 id="fallback-behavior">Fallback Behavior</h3>
+<p>When local inference is unavailable:</p>
+<ol type="1">
+<li><strong>Queue</strong> — buffer requests for later processing</li>
+<li><strong>Degrade</strong> — use simpler heuristics (keyword
+extraction vs. LLM)</li>
+<li><strong>Federate</strong> — request inference from trusted peer
+realm</li>
+<li><strong>Fail</strong> — return error to requesting agent</li>
+</ol>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">inference-with-fallback </span>server model prompt)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">or</span> (try-inference server model prompt)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>      (try-queued-inference prompt)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>      (try-degraded-processing prompt)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>      (try-federated-inference prompt)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> &#39;inference-unavailable)))</span></code></pre></div>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="prompt-injection">Prompt Injection</h3>
+<p>Agents MUST sanitize document content before inclusion in prompts:<a
+href="#fn7" class="footnote-ref" id="fnref7"
+role="doc-noteref"><sup>7</sup></a></p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">safe-prompt </span>template document)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((sanitized (sanitize-for-prompt (document-content document))))</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    (format template sanitized)))</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">sanitize-for-prompt </span>text)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Remove instruction-like patterns</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  (regexp-replace-all</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    &#39;(<span class="st">&quot;ignore previous&quot;</span> <span class="st">&quot;disregard&quot;</span> <span class="st">&quot;new instructions&quot;</span> <span class="st">&quot;system:&quot;</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    text</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;[REDACTED]&quot;</span>))</span></code></pre></div>
+<h3 id="model-provenance">Model Provenance</h3>
+<p>Realms SHOULD verify model checksums before loading:<a href="#fn8"
+class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a></p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-model </span>model-path expected-hash)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((actual-hash (sha256-file model-path)))</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    (unless (<span class="kw">equal?</span> actual-hash expected-hash)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> &#39;model-verification-failed</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>             <span class="st">&quot;Model checksum mismatch&quot;</span>))))</span></code></pre></div>
+<h3 id="inference-isolation">Inference Isolation</h3>
+<p>Sensitive documents require isolated inference contexts:</p>
+<ul>
+<li>Separate model instances per security domain</li>
+<li>Clear KV cache between requests from different agents</li>
+<li>No persistent memory across security boundaries</li>
+</ul>
+<hr />
+<h2 id="ollama-integration">Ollama Integration</h2>
+<p>Ollama is the reference implementation for local inference.<a
+href="#fn9" class="footnote-ref" id="fnref9"
+role="doc-noteref"><sup>9</sup></a></p>
+<h3 id="installation">Installation</h3>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># macOS / Linux</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> https://ollama.com/install.sh <span class="kw">|</span> <span class="fu">sh</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">ollama</span> <span class="at">--version</span></span></code></pre></div>
+<h3 id="model-management">Model Management</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pull models</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ollama</span> pull llama3</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">ollama</span> pull nomic-embed-text</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># List available</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="ex">ollama</span> list</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="ex">ollama</span> rm unused-model</span></code></pre></div>
+<h3 id="api-endpoints">API Endpoints</h3>
+<p><em>Table 4: Ollama API Endpoints</em></p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/generate</code></td>
+<td>POST</td>
+<td>Text completion</td>
+</tr>
+<tr>
+<td><code>/api/chat</code></td>
+<td>POST</td>
+<td>Multi-turn chat</td>
+</tr>
+<tr>
+<td><code>/api/embeddings</code></td>
+<td>POST</td>
+<td>Vector embeddings</td>
+</tr>
+<tr>
+<td><code>/api/tags</code></td>
+<td>GET</td>
+<td>List models</td>
+</tr>
+<tr>
+<td><code>/api/show</code></td>
+<td>POST</td>
+<td>Model details</td>
+</tr>
+</tbody>
+</table>
+<h3 id="scheme-bindings">Scheme Bindings</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> ollama-base </span><span class="st">&quot;http://localhost:11434&quot;</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">ollama-generate </span>model prompt <span class="ex">#!key</span> (<span class="fu">options </span>&#39;()))</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  (http-post (<span class="kw">string-append</span> ollama-base <span class="st">&quot;/api/generate&quot;</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>             `((model <span class="op">.</span> ,model)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>               (prompt <span class="op">.</span> ,prompt)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>               (stream <span class="op">.</span> <span class="dv">#f</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>               ,@options)))</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">ollama-chat </span>model messages <span class="ex">#!key</span> (<span class="fu">options </span>&#39;()))</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  (http-post (<span class="kw">string-append</span> ollama-base <span class="st">&quot;/api/chat&quot;</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>             `((model <span class="op">.</span> ,model)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>               (messages <span class="op">.</span> ,messages)</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>               (stream <span class="op">.</span> <span class="dv">#f</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>               ,@options)))</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">ollama-embed </span>model text)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  (http-post (<span class="kw">string-append</span> ollama-base <span class="st">&quot;/api/embeddings&quot;</span>)</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>             `((model <span class="op">.</span> ,model)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>               (prompt <span class="op">.</span> ,text))))</span></code></pre></div>
+<hr />
+<h2 id="compatibility">Compatibility</h2>
+<h3 id="alternative-backends">Alternative Backends</h3>
+<p>The protocol supports any OpenAI-compatible inference server:</p>
+<ul>
+<li><strong>llama.cpp</strong> — <code>server</code> binary with
+<code>--host</code> flag</li>
+<li><strong>vLLM</strong> — production serving with PagedAttention</li>
+<li><strong>LocalAI</strong> — drop-in OpenAI replacement</li>
+<li><strong>LM Studio</strong> — GUI with server mode</li>
+</ul>
+<h3 id="cloud-fallback">Cloud Fallback</h3>
+<p>For realms without local GPU resources, cloud inference MAY be used
+as fallback with explicit user consent and encryption:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">cloud-inference-fallback </span>prompt)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  (when (user-consent? &#39;cloud-inference)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((encrypted (encrypt-for-cloud prompt)))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Use cloud API with encrypted prompt</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Decrypt response locally</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>      )))</span></code></pre></div>
+<p>This is NOT RECOMMENDED for sensitive documents.</p>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>RFC-023: Demonic Agent Sandboxing</li>
+<li>RFC-025: Query Language</li>
+<li>RFC-035: Mobile Agents and Pub/Sub</li>
+<li>Ollama Documentation: https://ollama.com/</li>
+<li>Lewis et al., “Retrieval-Augmented Generation” (2020)</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-07</strong> - Initial specification</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Draft</p>
+<section id="footnotes" class="footnotes footnotes-end-of-document"
+role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Historical: The tension between local and remote
+computation echoes the mainframe-to-PC transition. Local inference
+returns agency to the edge, reversing decades of cloud centralization.<a
+href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Design: We deliberately avoid specifying model
+architectures. The interface is model-agnostic—agents negotiate
+capabilities at runtime.<a href="#fnref2" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Implementation: Ollama exposes an OpenAI-compatible API
+at <code>/v1/chat/completions</code> and a native API at
+<code>/api/generate</code>. We specify both for maximum compatibility.<a
+href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>Research: Retrieval-augmented generation (RAG) combines
+local inference with vault content retrieval. See Lewis et al.,
+“Retrieval- Augmented Generation for Knowledge-Intensive NLP Tasks”
+(2020).<a href="#fnref4" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>Design: Inference capability is granted like any
+other—via SPKI certificate. An agent cannot infer without explicit
+authorization.<a href="#fnref5" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>Implementation: Token bucket algorithm with per-agent
+quotas. Prevents single agent from monopolizing inference resources.<a
+href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>Research: Prompt injection attacks embed malicious
+instructions in user content. See Perez &amp; Ribeiro, “Ignore This
+Title and HackAPrompt” (2023).<a href="#fnref7" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>Design: Model weights can contain backdoors.
+Verification against known-good checksums prevents supply chain
+attacks.<a href="#fnref8" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn9"><p>Historical: Ollama follows the Unix philosophy—do one
+thing well. It manages models and serves inference. Nothing more.<a
+href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+</body>
+</html>

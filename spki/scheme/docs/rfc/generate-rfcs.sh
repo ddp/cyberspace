@@ -55,6 +55,7 @@ RFCS=(
   rfc-035-mobile-agents
   rfc-036-quorum-voting
   rfc-037-node-roles
+  rfc-038-local-inference
 )
 
 # Extract title from markdown file
