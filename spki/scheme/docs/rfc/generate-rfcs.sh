@@ -44,6 +44,12 @@ RFCS=(
   rfc-025-query-language
   rfc-026-garbage-collection
   rfc-027-vault-migration
+  rfc-028-error-handling
+  rfc-029-compression
+  rfc-030-encryption-at-rest
+  rfc-031-monitoring
+  rfc-032-rate-limiting
+  rfc-033-schema-evolution
 )
 
 # Extract title from markdown file
