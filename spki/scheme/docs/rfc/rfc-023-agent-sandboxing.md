@@ -1,4 +1,4 @@
-# RFC-023: Agent Spawning and Sandboxing
+# RFC-023: Demonic Agents
 
 **Status:** Draft
 **Date:** January 2026
@@ -9,13 +9,21 @@
 
 ## Abstract
 
-This RFC specifies agent spawning and sandboxing for the Library of Cyberspace: how autonomous agents are created, constrained, monitored, and terminated. Agents operate with capability-based authority in isolated sandboxes, enabling safe delegation of tasks while maintaining security boundaries.
+This RFC specifies demonic agents for the Library of Cyberspace: how autonomous agents—daemons in the BSD tradition—are spawned, constrained, monitored, and terminated. Agents are helpful spirits that operate with capability-based authority in isolated sandboxes, enabling safe delegation of tasks while maintaining security boundaries. The vault daemons watch over all.
 
 ---
 
 ## Motivation
 
-The General Magic Telescript vision from 1994:
+### The BSD Daemon Tradition
+
+In Unix mythology, a daemon is a helpful spirit—a background process that tends to the system without being asked. The term comes from Maxwell's demon, the thought experiment about a creature that sorts molecules. BSD gave this concept a face: Beastie, the cheerful daemon with a pitchfork, watching over the system.
+
+The Library embraces this tradition. Our agents are daemons—helpful spirits that carry authority, travel between vaults, and do work while their principals sleep.
+
+### The General Magic Vision
+
+Telescript, from 1994:
 
 > "Programs that travel from machine to machine, carrying your authority, doing things while you sleep."
 
@@ -26,18 +34,24 @@ That vision failed because:
 - **No accountability** - No audit of agent actions
 - **No revocation** - Once launched, agents were uncontrollable
 
-The Library realizes this vision with:
+### The Demonic Solution
 
-- **Capability-based authority** - Agents have only granted permissions
+The Library realizes this vision with proper daemonology:
+
+- **Capability-based authority** - Daemons have only granted permissions
 - **Sandbox isolation** - Process, filesystem, network boundaries
-- **Full audit trail** - Every agent action is logged
-- **Remote termination** - Agents can be killed at any time
+- **Full audit trail** - The Audit Daemon witnesses every action
+- **Remote termination** - Daemons can be banished at any time
+
+Daemons don't rule—they serve. They don't watch *over*—they watch *with*.
 
 ---
 
-## Agent Model
+## Daemon Model
 
-### What is an Agent?
+### What is a Daemon?
+
+A daemon is a helpful spirit—an autonomous agent that serves its principal:
 
 ```scheme
 (agent
@@ -462,7 +476,9 @@ Agents can share state through CAS:
   (cleanup-agent agent))
 ```
 
-### Watchdog
+### Watchdog Daemon
+
+The watchdog daemon tends the flock of agents—a daemon watching daemons:
 
 ```scheme
 (define (agent-watchdog)
@@ -710,3 +726,7 @@ Agents can share state through CAS:
 **Implementation Status:** Draft
 **Dependencies:** sandbox (OS-specific), capabilities, audit
 **Integration:** Vault operations, distributed processing, automation
+
+---
+
+*The Library is a distributed conspiracy—con spirare, to breathe together—of helpful daemons tending a federation of enclaves. Not a cult, just people who want the same things: privacy, preservation, persistence.*
