@@ -282,6 +282,6 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 
 *(the ceremony ends)*
 
-> *"Frames, the most beautiful frames. Inspiring moments. And I empower you to take down the history of the ritual."*
+> *"Flames, the most beautiful flames. Inspiring moments. And I empower you to take down the history of the ritual."*
 >
 > — Burning Man Opera, soundtrack to *The Temple of Rudra* (1998), an Opera by Pepe Ozan
