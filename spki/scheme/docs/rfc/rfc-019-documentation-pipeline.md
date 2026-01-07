@@ -163,7 +163,7 @@ Integration with Vault subscription system (RFC-006).
 #!/bin/bash
 # RFC Documentation Pipeline
 
-RFCS=(rfc-000-manifesto rfc-001-replication-layer ...)
+RFCS=(rfc-000-declaration rfc-001-replication-layer ...)
 
 for rfc in "${RFCS[@]}"; do
   pandoc "${rfc}.md" -o "${rfc}.html" --standalone

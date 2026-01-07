@@ -6,7 +6,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 
 | RFC | Title | Status | Date |
 |-----|-------|--------|------|
-| [rfc-000](rfc-000-manifesto.md) | The Manifesto | Informational | 2026-01-06 |
+| [rfc-000](rfc-000-declaration.md) | The Declaration | Informational | 2026-01-06 |
 | [rfc-001](rfc-001-replication-layer.md) | Replication Layer | Implemented | 2026-01-05 |
 | [rfc-002](rfc-002-architecture.md) | Cyberspace Architecture | Informational | 2026-01-06 |
 | [rfc-003](rfc-003-audit-trail.md) | Cryptographic Audit Trail | Implemented | 2026-01-06 |
