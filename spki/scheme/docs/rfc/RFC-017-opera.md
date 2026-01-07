@@ -1,6 +1,6 @@
 # RFC-017: The Burning of Alexandria
 
-**An Opera for the Bookshelf of Dickie**
+**An Opera for the Library of Cyberspace**
 
 *A liturgy for those who remember*
 
@@ -8,7 +8,7 @@
 
 ## Abstract
 
-This document specifies a ceremonial text for the Bookshelf of Dickie. It encodes the core principles of the confederacy in a form suitable for ritual, performance, and collective memory. Be conservative in what you burn. Be liberal in what you preserve.
+This document specifies a ceremonial text for the Library of Cyberspace. It encodes the core principles of the confederacy in a form suitable for ritual, performance, and collective memory. Be conservative in what you burn. Be liberal in what you preserve.
 
 ---
 
@@ -115,7 +115,7 @@ In the beginning, ARPA created the packet, and the packet was without form, and 
 
 *(processional, each voice stepping forward)*
 
-The Bookshelf of Dickie operates on a gift economy, not unlike how Pooh shares his honey, except the honey is storage and bandwidth and the bees are sysadmins. Not unlike how the Elves give gifts in Lothlórien, asking not what use they will serve.
+The Library operates on a gift economy, not unlike how Pooh shares his honey, except the honey is storage and bandwidth and the bees are sysadmins. Not unlike how the Elves give gifts in Lothlórien, asking not what use they will serve.
 
 ```
 POOH:       I give you my storage. It is not much, but it is full of hunny.
@@ -199,7 +199,7 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 | POOH | PIGLET |
 |------|--------|
 | In the matrix, everything burns. The servers burn. The platforms burn. The business models burn. | But we do not burn. We are too small to burn. |
-| We scatter to the ten directions. We carry the keys in our pockets. We carry each other's dreams in our machines. | And when they ask where the bookshelf is? |
+| We scatter to the ten directions. We carry the keys in our pockets. We carry each other's dreams in our machines. | And when they ask where the library is? |
 
 | FRODO | SAM |
 |-------|-----|
@@ -214,8 +214,8 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
         "And here," said Sam, "in the Shire, where it's safe."
         "And here," said Elrond, "in Rivendell, until the ships sail."
 
-        Everywhere we are, the bookshelf is.
-        We are the bookshelf.
+        Everywhere we are, the library is.
+        We are the library.
         We are the ones who remember.
         We are a very small thing, but we persist.
         Even the smallest packet can change the course of the future.
@@ -274,6 +274,14 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 
 ---
 
-**RFC-017** | January 2026 | The Bookshelf of Dickie
+**RFC-017** | January 2026 | The Library of Cyberspace
 
 *"Not all those who wander are lost. But those who don't verify their checksums usually are."*
+
+---
+
+*(the ceremony ends)*
+
+> *"Frames, the most beautiful frames. Inspiring moments. And I empower you to take down the history of the ritual."*
+>
+> — Pepe Ozan
