@@ -191,8 +191,8 @@ HEADER
     local formats=""
 
     if [[ -f "${rfc}.md" ]]; then
-      # Markdown source: html, ps, txt, md
-      formats='<a href="'"${rfc}"'.html">html</a> <a href="'"${rfc}"'.ps">ps</a> <a href="'"${rfc}"'.txt">txt</a> <a href="'"${rfc}"'.md">md</a>'
+      # Markdown source: html, ps, txt
+      formats='<a href="'"${rfc}"'.html">html</a> <a href="'"${rfc}"'.ps">ps</a> <a href="'"${rfc}"'.txt">txt</a>'
     elif [[ -f "${rfc}.tex" ]]; then
       # LaTeX source: html, ps, tex (no txt - math doesn't work in plaintext)
       formats='<a href="'"${rfc}"'.html">html</a> <a href="'"${rfc}"'.ps">ps</a> <a href="'"${rfc}"'.tex">tex</a>'

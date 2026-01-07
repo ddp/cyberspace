@@ -9,7 +9,7 @@
 
 ## Abstract
 
-This RFC specifies the documentation pipeline for the Library of Cyberspace: automated generation of canonical document formats from both Markdown and LaTeX sources, index catalogs, and future syndication feeds.
+This RFC specifies the documentation pipeline for the Library of Cyberspace: automated generation of canonical document formats and index catalogs. Output formats are HTML, PostScript, and plain text—open formats that will outlast corporations.
 
 ---
 
@@ -17,70 +17,45 @@ This RFC specifies the documentation pipeline for the Library of Cyberspace: aut
 
 Documentation must be:
 
-1. **Preserved** - Multiple formats for long-term archival
+1. **Preserved** - Open formats for long-term archival
 2. **Accessible** - Viewable in any environment
-3. **Discoverable** - Indexed for navigation
-4. **Syndicated** - Subscribable for updates (future)
+3. **Readable** - Human-readable output
+4. **Discoverable** - Indexed for navigation
 
-The pipeline automates generation of all canonical formats using the right tool for each source:
+### Why PostScript, Not PDF
 
-- **Markdown** → pandoc → prose documentation, RFCs
-- **LaTeX** → pdflatex/latexmlc → mathematics, proofs, research papers
+PDF is Adobe's proprietary format dressed in ISO clothing. PostScript is:
 
-Computer science is math. Use the right tool for the job.
+- **Open** - Published specification since 1984
+- **Stable** - Level 3 unchanged since 1997
+- **Readable** - Plain text you can grep, diff, edit
+- **Honest** - Describes rendering, doesn't control viewing
+
+NeXT got it right. The source is the document.
 
 ---
 
-## Source Formats
-
-| Format | Extension | Use Case | Pipeline |
-|--------|-----------|----------|----------|
-| Markdown | `.md` | Prose, docs, RFCs | pandoc |
-| LaTeX | `.tex` | Math, proofs, papers | pdflatex + latexmlc |
-
 ## Output Formats
 
-| Format | Extension | Purpose | From MD | From TeX |
-|--------|-----------|---------|---------|----------|
-| Plain Text | `.txt` | IETF tradition, universal | pandoc | — |
-| HTML | `.html` | Web viewing | pandoc | latexmlc |
-| PDF | `.pdf` | Archival, printing | xelatex | pdflatex |
+| Format | Extension | Purpose |
+|--------|-----------|---------|
+| Plain Text | `.txt` | IETF tradition, universal, immortal |
+| HTML | `.html` | Web viewing |
+| PostScript | `.ps` | Archival, printing |
 
-Plain text is not generated from LaTeX sources—math doesn't render in plaintext.
-
-**Philosophy:** Text, HTML, and PDF are easy to generate and cover all use cases. Fewer formats means less wasted conversion—these three are canonical, don't add more.
+**Philosophy:** Text, HTML, and PostScript cover all use cases with open formats. No proprietary gatekeepers. These three are canonical—don't add more.
 
 ---
 
 ## Pipeline Specification
 
-### Input
-
-Source files following the naming convention:
-```
-rfc-NNN-short-name.md     # Markdown source
-rfc-NNN-short-name.tex    # LaTeX source
-```
-
-Where:
-- `NNN` - Zero-padded RFC number (000-999)
-- `short-name` - Lowercase, hyphenated descriptive name
-
-The pipeline auto-detects source format by extension.
-
 ### Output
 
-For Markdown sources:
+For each RFC:
 ```
-rfc-NNN-short-name.html   # Standalone HTML (pandoc)
-rfc-NNN-short-name.pdf    # PDF (xelatex)
+rfc-NNN-short-name.html   # Standalone HTML
+rfc-NNN-short-name.ps     # PostScript
 rfc-NNN-short-name.txt    # Plain text, 78 columns
-```
-
-For LaTeX sources:
-```
-rfc-NNN-short-name.html   # HTML (latexmlc)
-rfc-NNN-short-name.pdf    # PDF (pdflatex)
 ```
 
 Plus a navigational index:
@@ -88,38 +63,20 @@ Plus a navigational index:
 index.html                # Hypertext catalog
 ```
 
-### Generation Commands
-
-#### Markdown Pipeline (pandoc)
+### Generation
 
 ```bash
-# HTML (standalone, no external dependencies)
-pandoc ${doc}.md -o ${doc}.html --standalone --metadata title=""
-
-# PDF (XeLaTeX, IBM Plex Mono for code)
-pandoc ${doc}.md -o ${doc}.pdf --pdf-engine=xelatex -V monofont="IBM Plex Mono"
-
-# Plain text (IETF-style, 78 columns)
-pandoc ${doc}.md -o ${doc}.txt --to=plain --wrap=auto --columns=78
+./generate-rfcs.sh
 ```
 
-#### LaTeX Pipeline (pdflatex + latexmlc)
-
-```bash
-# PDF (native LaTeX - what it was made for)
-pdflatex -interaction=nonstopmode ${doc}.tex
-pdflatex -interaction=nonstopmode ${doc}.tex  # twice for refs
-
-# HTML (LaTeXML - proper math rendering, used by arXiv)
-latexmlc --dest=${doc}.html ${doc}.tex
-```
+The script handles all format generation automatically.
 
 ### Index Generation
 
 The index.html catalog provides:
 
 - RFC number and title
-- Links to all four formats
+- Links to all output formats (html, ps, txt)
 - Clean, accessible HTML
 
 Structure:
@@ -128,7 +85,7 @@ Structure:
   <tr>
     <td>RFC Number</td>
     <td>Title</td>
-    <td>html | pdf | txt | md</td>
+    <td>html | ps | txt</td>
   </tr>
 </table>
 ```
@@ -144,31 +101,23 @@ Structure:
 ./generate-rfcs.sh
 
 # Commit to vault
-seal-commit "Regenerate RFC documentation"
+git add -A && git commit -m "Regenerate RFC documentation"
 ```
 
 ### Remote Publication
 
-Web export includes only rendered outputs—no source files:
-
 ```bash
-# Publish to web server (HTML + PDF only)
+# Publish to web server
 rsync -avz --chmod=D755,F644 \
-  --include='*.html' --include='*.pdf' \
-  --exclude='*.md' --exclude='*.tex' --exclude='*.txt' --exclude='*.sh' \
+  --include='*.html' --include='*.ps' --include='*.txt' \
   docs/rfc/ user@server:~/path/to/web/
 ```
 
-**Web export:**
+**Published:**
 - `*.html` - Web viewing
-- `*.pdf` - Download/print
+- `*.ps` - PostScript (archival, printing)
+- `*.txt` - Plain text
 - `index.html` - Catalog
-
-**Stays in repo:**
-- `*.md` - Markdown source
-- `*.tex` - LaTeX source
-- `*.txt` - Plain text (IETF tradition, always generated)
-- `generate-rfcs.sh` - Build script
 
 Permission model:
 - Directories: 755 (world-readable, owner-writable)
@@ -176,67 +125,16 @@ Permission model:
 
 ---
 
-## Future: Syndication
-
-### RSS/Atom Feeds
-
-Future versions will generate:
-
-```
-rfc-feed.xml    # Atom feed of RFC updates
-```
-
-Feed entries will include:
-- RFC number and title
-- Publication/update date
-- Abstract
-- Links to all formats
-
-### Subscription Model
-
-```scheme
-;; Subscribe to RFC feed
-(seal-subscribe "https://example.com/cyberspace/rfc-feed.xml"
-  verify-key: publisher-public)
-```
-
-Integration with Vault subscription system (RFC-006).
-
----
-
-## Implementation
-
-### generate-rfcs.sh
-
-```bash
-#!/bin/bash
-# RFC Documentation Pipeline
-
-RFCS=(rfc-000-declaration rfc-001-replication-layer ...)
-
-for rfc in "${RFCS[@]}"; do
-  pandoc "${rfc}.md" -o "${rfc}.html" --standalone
-  pandoc "${rfc}.md" -o "${rfc}.pdf" --pdf-engine=xelatex -V monofont="IBM Plex Mono"
-  pandoc "${rfc}.md" -o "${rfc}.txt" --to=plain --columns=78
-done
-
-# Generate index.html
-generate_index
-```
-
-### Dependencies
+## Dependencies
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| pandoc | 2.x+ | Markdown → HTML/PDF/TXT |
-| pdflatex | TeX Live | LaTeX → PDF |
-| xelatex | TeX Live | Markdown → PDF (via pandoc) |
-| latexmlc | LaTeXML | LaTeX → HTML (optional) |
+| pandoc | 2.x+ | Document conversion |
+| latex | TeX Live | DVI generation |
+| dvips | TeX Live | DVI → PostScript |
 | rsync | 3.x+ | Publication |
 
-Notes:
-- latexmlc is optional. If not installed, LaTeX sources produce PDF only.
-- IBM Plex Mono used for code blocks in PDFs.
+PostScript viewers: TeXShop, Preview, Ghostscript, or read the source directly.
 
 ---
 
@@ -245,7 +143,7 @@ Notes:
 ### Integrity
 
 Generated documents inherit integrity from:
-- Git version control (source)
+- Git version control
 - Vault signatures (releases)
 
 ### Publication
@@ -260,20 +158,18 @@ Remote publication uses:
 ## References
 
 1. [Pandoc User's Guide](https://pandoc.org/MANUAL.html)
-2. [LaTeXML](https://math.nist.gov/~BMiller/LaTeXML/) - LaTeX to XML/HTML converter
+2. [PostScript Language Reference](https://www.adobe.com/jp/print/postscript/pdfs/PLRM.pdf) - Adobe, but open
 3. [RFC-006](rfc-006-vault-architecture.md) - Vault System Architecture
-4. [Atom Syndication Format](https://tools.ietf.org/html/rfc4287) - RFC 4287
 
 ---
 
 ## Changelog
 
-- **2026-01-07** - Added LaTeX pipeline for math/proofs papers
+- **2026-01-07** - Replace PDF with PostScript (open format)
 - **2026-01-06** - Initial specification
 
 ---
 
 **Implementation Status:** Complete
 **Script:** generate-rfcs.sh
-**Source Formats:** Markdown (.md), LaTeX (.tex)
-**Output Formats:** HTML, PDF, Plain Text (MD only)
+**Output Formats:** HTML, PostScript, Plain Text
