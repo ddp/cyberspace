@@ -52,6 +52,7 @@ RFCS=(
   rfc-032-rate-limiting
   rfc-033-schema-evolution
   rfc-034-audit-protection
+  rfc-035-mobile-agents
 )
 
 # Extract title from markdown file
