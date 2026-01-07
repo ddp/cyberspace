@@ -443,12 +443,26 @@
   (define (box-divider width)
     (string-append "├" (repeat-string "─" (- width 1)) "┤"))
 
+  (define (utf8-display-adjustment str)
+    "Calculate adjustment for UTF-8 symbols: string-length counts bytes,
+     but we need display columns. Each 3-byte symbol displays as ~2 cols,
+     so adjustment = -(bytes - display_cols) = -(3 - 2) = -1 per symbol"
+    (let ((check-mark (if (string-contains str "✓") 2 0))   ; 3 bytes, 1 col: -2
+          (x-mark (if (string-contains str "✗") 2 0))       ; 3 bytes, 1 col: -2
+          (warning (if (string-contains str "⚠") 1 0)))     ; 3 bytes, 2 cols: -1
+      (+ check-mark x-mark warning)))
+
+  (define (display-width str)
+    "Calculate display width: byte-length minus UTF-8 overhead"
+    (- (string-length str) (utf8-display-adjustment str)))
+
   (define (box-line content width)
-    (let* ((padded (if (> (string-length content) (- width 2))
+    (let* ((content-width (display-width content))
+           (padded (if (> content-width (- width 2))
                        (substring content 0 (- width 2))
                        content))
-           (padding (- width 2 (string-length padded))))
-      (string-append "│ " padded (make-string padding #\space) "│")))
+           (padding (- width 2 (display-width padded))))
+      (string-append "│ " padded (make-string (max 0 padding) #\space) "│")))
 
   (define (box-line-pair label value width)
     (let* ((formatted (sprintf "~a:~a~a"
