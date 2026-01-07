@@ -397,11 +397,20 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Commit to vault</span></span>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">seal-commit</span> <span class="st">&quot;Regenerate RFC documentation&quot;</span></span></code></pre></div>
 <h3 id="remote-publication">Remote Publication</h3>
+<p>Web export includes only rendered outputs—no source files:</p>
 <div class="sourceCode" id="cb9"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Publish to web server</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> <span class="at">--chmod</span><span class="op">=</span>D755,F644 <span class="at">-e</span> ssh <span class="dt">\</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="pp">*</span>.md <span class="pp">*</span>.html <span class="pp">*</span>.pdf <span class="pp">*</span>.txt index.html <span class="dt">\</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  user@server:~/path/to/docs/</span></code></pre></div>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Publish to web server (HTML + PDF only)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> <span class="at">--chmod</span><span class="op">=</span>D755,F644 <span class="dt">\</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--include</span><span class="op">=</span><span class="st">&#39;*.html&#39;</span> <span class="at">--include</span><span class="op">=</span><span class="st">&#39;*.pdf&#39;</span> <span class="dt">\</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--exclude</span><span class="op">=</span><span class="st">&#39;*.md&#39;</span> <span class="at">--exclude</span><span class="op">=</span><span class="st">&#39;*.tex&#39;</span> <span class="at">--exclude</span><span class="op">=</span><span class="st">&#39;*.txt&#39;</span> <span class="at">--exclude</span><span class="op">=</span><span class="st">&#39;*.sh&#39;</span> <span class="dt">\</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  docs/rfc/ user@server:~/path/to/web/</span></code></pre></div>
+<p><strong>Web export:</strong> - <code>*.html</code> - Web viewing -
+<code>*.pdf</code> - Download/print - <code>index.html</code> -
+Catalog</p>
+<p><strong>Stays in repo:</strong> - <code>*.md</code> - Markdown source
+- <code>*.tex</code> - LaTeX source - <code>*.txt</code> - Plain text
+(IETF tradition, always generated) - <code>generate-rfcs.sh</code> -
+Build script</p>
 <p>Permission model: - Directories: 755 (world-readable, owner-writable)
 - Files: 644 (world-readable, owner-writable)</p>
 <hr />

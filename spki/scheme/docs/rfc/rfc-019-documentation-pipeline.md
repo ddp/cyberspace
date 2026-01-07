@@ -149,12 +149,26 @@ seal-commit "Regenerate RFC documentation"
 
 ### Remote Publication
 
+Web export includes only rendered outputs—no source files:
+
 ```bash
-# Publish to web server
-rsync -avz --chmod=D755,F644 -e ssh \
-  *.md *.html *.pdf *.txt index.html \
-  user@server:~/path/to/docs/
+# Publish to web server (HTML + PDF only)
+rsync -avz --chmod=D755,F644 \
+  --include='*.html' --include='*.pdf' \
+  --exclude='*.md' --exclude='*.tex' --exclude='*.txt' --exclude='*.sh' \
+  docs/rfc/ user@server:~/path/to/web/
 ```
+
+**Web export:**
+- `*.html` - Web viewing
+- `*.pdf` - Download/print
+- `index.html` - Catalog
+
+**Stays in repo:**
+- `*.md` - Markdown source
+- `*.tex` - LaTeX source
+- `*.txt` - Plain text (IETF tradition, always generated)
+- `generate-rfcs.sh` - Build script
 
 Permission model:
 - Directories: 755 (world-readable, owner-writable)
