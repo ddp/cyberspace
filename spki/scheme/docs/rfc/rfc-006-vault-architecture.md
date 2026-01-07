@@ -199,7 +199,7 @@ Create sealed archive of a version.
 - Can clone directly
 - Medium size
 
-#### Cryptographic
+#### Cryptographic (legacy)
 ```scheme
 (seal-archive "1.0.0" format: 'cryptographic)
 ```
@@ -207,13 +207,29 @@ Create sealed archive of a version.
 - Tamper-evident
 - Manifest for verification
 
+#### Zstd+Age (preferred)
+```scheme
+(seal-archive "1.0.0" format: 'zstd-age)
+```
+- Zstd compression (faster, better ratio than gzip)
+- Age encryption (X25519/Ed25519 compatible)
+- SHA-512 hash + Ed25519 signature
+- Encrypted at rest
+- See RFC-018 for full specification
+
 **Cryptographic Archive Structure:**
 ```
 vault-1.0.0.archive        # Manifest
-vault-1.0.0.archive.tar.gz # Tarball
+vault-1.0.0.archive.tar.gz # Tarball (cryptographic)
 ```
 
-**Manifest:**
+**Zstd+Age Archive Structure:**
+```
+vault-1.0.0.archive            # Manifest
+vault-1.0.0.archive.tar.zst.age # Encrypted archive
+```
+
+**Manifest (cryptographic):**
 ```scheme
 (sealed-archive
   (version "1.0.0")
@@ -223,19 +239,38 @@ vault-1.0.0.archive.tar.gz # Tarball
   (signature "ed25519:..."))
 ```
 
+**Manifest (zstd-age):**
+```scheme
+(sealed-archive
+  (version "1.0.0")
+  (format zstd-age)
+  (archive "vault-1.0.0.archive.tar.zst.age")
+  (compression zstd)
+  (encryption age)
+  (recipients ("age1..."))
+  (hash "sha512:...")
+  (signature "ed25519:..."))
+```
+
 ### seal-restore
 
 Restore from sealed archive.
 
 ```scheme
-(seal-restore archive #!key verify-key target)
+(seal-restore archive #!key verify-key target identity)
 ```
+
+**Parameters:**
+- `verify-key` - SPKI public key for signature verification
+- `target` - Extraction directory
+- `identity` - Age identity file for decryption (zstd-age format)
 
 **Process:**
 1. Read manifest
-2. Verify hash (tarball integrity)
+2. Verify hash (archive integrity)
 3. Verify signature (if key provided)
-4. Extract to target directory
+4. Decrypt (zstd-age only, requires identity)
+5. Extract to target directory
 
 ---
 
@@ -306,7 +341,9 @@ Get/set configuration.
 |-----|------|-------------|
 | `signing-key` | blob | Ed25519 private key for signing |
 | `verify-key` | string | Path to verification public key |
-| `archive-format` | symbol | Default: tarball, bundle, or cryptographic |
+| `archive-format` | symbol | Default: tarball, bundle, cryptographic, or zstd-age |
+| `age-recipients` | list | Age public keys for encryption (zstd-age format) |
+| `age-identity` | string | Path to age identity file for decryption |
 | `migration-dir` | string | Directory for migration scripts |
 | `track-metadata` | boolean | Auto-stage metadata files |
 | `publish-remote` | string | Default publication target |

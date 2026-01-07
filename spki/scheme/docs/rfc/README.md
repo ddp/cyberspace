@@ -23,6 +23,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-015](rfc-015-versioning-rollback.md) | Versioning and Rollback | Proposed | 2026-01-06 |
 | [rfc-016](rfc-016-lazy-clustering.md) | Lazy Clustering | Proposed | 2026-01-06 |
 | [rfc-017](rfc-017-opera.md) | The Burning of Alexandria (Opera) | Cultural | 2026-01-06 |
+| [rfc-018](rfc-018-zstd-age-archives.md) | Zstd+Age Archive Format | Implemented | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -59,7 +60,7 @@ All formats are considered canonical and are preserved in the Vault.
 
 ## Upcoming RFCs
 
-- rfc-018: Content-Addressed Storage
-- rfc-019: Capability Delegation Patterns
-- rfc-020: Key Ceremony Protocol
-- rfc-021: Agent Spawning and Sandboxing
+- rfc-019: Content-Addressed Storage
+- rfc-020: Capability Delegation Patterns
+- rfc-021: Key Ceremony Protocol
+- rfc-022: Agent Spawning and Sandboxing

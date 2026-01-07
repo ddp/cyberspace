@@ -93,7 +93,9 @@
   (define *vault-config*
     '((signing-key . #f)           ; Path to signing key for releases
       (verify-key . #f)            ; Path to verification key
-      (archive-format . tarball)   ; tarball, git-bundle, or cryptographic
+      (archive-format . tarball)   ; tarball, bundle, cryptographic, or zstd-age
+      (age-recipients . ())        ; List of age recipients (public keys or identities)
+      (age-identity . #f)          ; Path to age identity file for decryption
       (migration-dir . "migrations"))) ; Directory for migration scripts
 
   (define (vault-config key #!optional value)
@@ -396,9 +398,10 @@
   (define (seal-archive version #!key format output)
     "Create sealed archive of a version
      Formats:
-     - 'tarball: Standard compressed tarball
+     - 'tarball: Standard gzip compressed tarball
      - 'bundle: Git bundle (includes full history)
-     - 'cryptographic: Encrypted archive with SPKI seal"
+     - 'cryptographic: Tarball with SPKI signature (legacy)
+     - 'zstd-age: Zstd compressed, age encrypted with SPKI signature (preferred)"
 
     (let ((fmt (or format (vault-config 'archive-format)))
           (out (or output (sprintf "vault-~a.archive" version))))
@@ -412,6 +415,9 @@
 
         ((cryptographic)
          (seal-archive-cryptographic version out))
+
+        ((zstd-age)
+         (seal-archive-zstd-age version out))
 
         (else
          (error "Unknown archive format" fmt)))
@@ -432,7 +438,7 @@
     (run-command "git" "bundle" "create" output version))
 
   (define (seal-archive-cryptographic version output)
-    "Create encrypted archive with SPKI signature"
+    "Create encrypted archive with SPKI signature (legacy gzip format)"
     ;; First create tarball
     (let ((tarball (sprintf "~a.tar.gz" output)))
       (seal-archive-tarball version tarball)
@@ -456,26 +462,94 @@
 
             (print "Cryptographic seal applied"))))))
 
-  (define (seal-restore archive #!key verify-key target)
-    "Restore from sealed archive with verification"
+  (define (seal-archive-zstd-age version output)
+    "Create zstd-compressed, age-encrypted archive with SPKI signature (preferred format)
+
+     Pipeline: tar --zstd | age -r <recipients> > archive.tar.zst.age
+     Benefits:
+     - Faster compression than gzip (zstd)
+     - Encryption at rest (age)
+     - Ed25519/X25519 compatible (aligns with SPKI)
+     - Parallel compression support (zstd -T0)"
+
+    (let ((recipients (vault-config 'age-recipients))
+          (signing-key (vault-config 'signing-key))
+          (encrypted-file (sprintf "~a.tar.zst.age" output)))
+
+      (unless (pair? recipients)
+        (error "No age recipients configured. Use (vault-config 'age-recipients '(\"age1...\"))"))
+
+      ;; Build age recipient arguments
+      (let ((recipient-args (string-join
+                             (map (lambda (r) (sprintf "-r ~a" r)) recipients)
+                             " ")))
+
+        ;; Create zstd-compressed, age-encrypted archive
+        ;; Pipeline: git archive | tar --zstd | age -r ... > output
+        (let ((cmd (sprintf "git archive --prefix=vault/ ~a | tar --zstd -cf - --files-from=- 2>/dev/null || git archive --prefix=vault/ ~a | zstd -T0 | age ~a > ~a"
+                           version version recipient-args encrypted-file)))
+          ;; Simpler approach: create tarball first, then compress and encrypt
+          (let ((temp-tar (sprintf "/tmp/vault-~a-~a.tar" version (current-seconds))))
+            (run-command "git" "archive" "--prefix=vault/" (sprintf "--output=~a" temp-tar) version)
+
+            ;; Compress with zstd and encrypt with age
+            (system (sprintf "zstd -T0 -c ~a | age ~a > ~a"
+                            temp-tar recipient-args encrypted-file))
+
+            ;; Clean up temp file
+            (delete-file temp-tar)))
+
+        ;; Sign the encrypted archive hash
+        (when signing-key
+          (let* ((archive-bytes (read-file-bytes encrypted-file))
+                 (archive-hash (sha512-hash archive-bytes))
+                 (signature (ed25519-sign signing-key archive-hash)))
+
+            ;; Create sealed archive manifest
+            (with-output-to-file output
+              (lambda ()
+                (write `(sealed-archive
+                         (version ,version)
+                         (format zstd-age)
+                         (archive ,encrypted-file)
+                         (compression zstd)
+                         (encryption age)
+                         (recipients ,recipients)
+                         (hash ,(blob->hex archive-hash))
+                         (signature ,(blob->hex signature))))))
+
+            (print "Zstd+age archive sealed with SPKI signature"))))))
+
+  (define (seal-restore archive #!key verify-key target identity)
+    "Restore from sealed archive with verification
+     - verify-key: SPKI public key for signature verification
+     - target: extraction directory
+     - identity: age identity file for decryption (zstd-age format)"
     (let ((target-dir (or target ".")))
 
       ;; Read archive manifest
       (let ((manifest (with-input-from-file archive read)))
 
-        (case (car manifest)
-          ((sealed-archive)
-           (seal-restore-cryptographic manifest verify-key target-dir))
+        (unless (eq? (car manifest) 'sealed-archive)
+          (error "Unknown archive format" (car manifest)))
 
-          (else
-           (error "Unknown archive format" (car manifest)))))))
+        (let ((fmt (cadr (assq 'format (cdr manifest)))))
+          (case fmt
+            ((cryptographic)
+             (seal-restore-cryptographic manifest verify-key target-dir))
+
+            ((zstd-age)
+             (seal-restore-zstd-age manifest verify-key target-dir identity))
+
+            (else
+             (error "Unknown sealed archive format" fmt)))))))
 
   (define (seal-restore-cryptographic manifest verify-key target-dir)
-    "Restore and verify cryptographic archive"
-    (let ((version (cadr (assq 'version manifest)))
-          (tarball (cadr (assq 'tarball manifest)))
-          (hash-hex (cadr (assq 'hash manifest)))
-          (sig-hex (cadr (assq 'signature manifest))))
+    "Restore and verify cryptographic archive (legacy gzip format)"
+    (let ((version (cadr (assq 'version (cdr manifest))))
+          (tarball (cadr (assq 'tarball (cdr manifest))))
+          (hash-hex (cadr (assq 'hash (cdr manifest))))
+          (sig-hex (cadr (assq 'signature (cdr manifest)))))
 
       (print "Restoring sealed archive: " version)
 
@@ -498,6 +572,46 @@
       ;; Extract tarball
       (run-command "tar" "-xzf" tarball "-C" target-dir)
       (print "Archive restored to: " target-dir)))
+
+  (define (seal-restore-zstd-age manifest verify-key target-dir identity)
+    "Restore and verify zstd+age encrypted archive
+
+     Pipeline: age -d -i <identity> < archive | zstd -d | tar -x"
+    (let ((version (cadr (assq 'version (cdr manifest))))
+          (archive-file (cadr (assq 'archive (cdr manifest))))
+          (hash-hex (cadr (assq 'hash (cdr manifest))))
+          (sig-hex (cadr (assq 'signature (cdr manifest))))
+          (id-file (or identity (vault-config 'age-identity))))
+
+      (print "Restoring zstd+age sealed archive: " version)
+
+      (unless id-file
+        (error "No age identity configured. Use identity: parameter or (vault-config 'age-identity \"path\")"))
+
+      ;; Verify signature if key provided
+      (when verify-key
+        (let* ((archive-bytes (read-file-bytes archive-file))
+               (archive-hash (sha512-hash archive-bytes))
+               (expected-hash (hex->blob hash-hex))
+               (signature (hex->blob sig-hex))
+               (pubkey (read-key-from-file verify-key)))
+
+          (unless (equal? archive-hash expected-hash)
+            (error "Archive hash mismatch - possible tampering"))
+
+          (unless (ed25519-verify pubkey archive-hash signature)
+            (error "Archive signature verification failed"))
+
+          (print "✓ SPKI signature verified")))
+
+      ;; Decrypt and extract: age -d | zstd -d | tar -x
+      (let ((cmd (sprintf "age -d -i ~a < ~a | zstd -d | tar -xf - -C ~a"
+                         id-file archive-file target-dir)))
+        (let ((result (system cmd)))
+          (unless (zero? result)
+            (error "Failed to decrypt/extract archive"))))
+
+      (print "✓ Archive decrypted and restored to: " target-dir)))
 
   ;;; ============================================================================
   ;;; Replication - Distribution and Synchronization
