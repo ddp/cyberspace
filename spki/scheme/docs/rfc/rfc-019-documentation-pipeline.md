@@ -157,9 +157,9 @@ Remote publication uses:
 
 ## References
 
-1. [Pandoc User's Guide](https://pandoc.org/MANUAL.html)
-2. [PostScript Language Reference](https://www.adobe.com/jp/print/postscript/pdfs/PLRM.pdf) - Adobe, but open
-3. [RFC-006](rfc-006-vault-architecture.md) - Vault System Architecture
+1. Pandoc User's Guide *(preserved)*
+2. PostScript Language Reference Manual - Adobe *(preserved)*
+3. RFC-006: Vault System Architecture
 
 ---
 

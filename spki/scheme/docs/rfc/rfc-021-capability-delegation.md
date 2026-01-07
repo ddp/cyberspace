@@ -665,12 +665,12 @@ For critical delegations:
 
 ## References
 
-1. [SPKI/SDSI 2.0](https://tools.ietf.org/html/rfc2693) - RFC 2693
-2. [A Logic of Authentication](https://www.cs.utexas.edu/~shmat/courses/cs380s_fall09/ban.pdf) - Burrows, Abadi, Needham
-3. [Capability Myths Demolished](https://srl.cs.jhu.edu/pubs/SRL2003-02.pdf) - Miller, Yee, Shapiro
-4. [RFC-004: SPKI Authorization](rfc-004-spki-authorization.md)
-5. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.md)
-6. [RFC-007: Threshold Signature Governance](rfc-007-threshold-governance.md)
+1. SPKI/SDSI 2.0 - RFC 2693 *(preserved)*
+2. A Logic of Authentication - Burrows, Abadi, Needham *(preserved)*
+3. Capability Myths Demolished - Miller, Yee, Shapiro *(preserved)*
+4. RFC-004: SPKI Authorization
+5. RFC-020: Content-Addressed Storage
+6. RFC-007: Threshold Signature Governance
 
 ---
 
