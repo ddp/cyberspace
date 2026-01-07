@@ -76,7 +76,7 @@ Key Types
 
     (define (derive-key parent purpose)
       "Derive child key from parent"
-      (hkdf-sha256 parent
+      (hkdf-sha512 parent
                    salt: (purpose->salt purpose)
                    info: (string->utf8 (symbol->string purpose))
                    length: 32))
@@ -99,14 +99,14 @@ Key Derivation
 
     (define (derive-content-key vault-key object-hash)
       "Derive unique key for each object"
-      (hkdf-sha256 vault-key
+      (hkdf-sha512 vault-key
                    salt: (string->utf8 object-hash)
                    info: #u8(99 111 110 116 101 110 116)  ; "content"
                    length: 32))
 
     (define (derive-chunk-key content-key chunk-index)
       "Derive key for each chunk within object"
-      (hkdf-sha256 content-key
+      (hkdf-sha512 content-key
                    salt: (integer->bytevector chunk-index)
                    info: #u8(99 104 117 110 107)  ; "chunk"
                    length: 32))
@@ -215,7 +215,7 @@ Encrypted Indexes
     ;; Deterministic encryption enables equality search
     (define (deterministic-encrypt data key)
       "Deterministic encryption for searchable indexes"
-      (let ((derived-key (hkdf-sha256 key salt: data length: 32)))
+      (let ((derived-key (hkdf-sha512 key salt: data length: 32)))
         (siv-encrypt data derived-key)))
 
 ------------------------------------------------------------------------------

@@ -47,7 +47,7 @@ Hash as Address
 
     ;; Content determines address
     (define (content-address data)
-      (sha256 data))
+      (sha512 data))
 
     ;; Store by hash
     (define (cas-store data)
@@ -82,11 +82,11 @@ The hash function MUST be:
 3.  Deterministic - Same content always produces same hash
 4.  Fast - Practical for large objects
 
-Specified hash: SHA-256 (32 bytes, 64 hex characters)
+Specified hash: SHA-512 (64 bytes, 128 hex characters)
 
-    ;; Example content address
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    ;; This is the SHA-256 of the empty string
+    ;; Example content address (SHA-512 = 128 hex chars)
+    "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+    ;; This is the SHA-512 of the empty string
 
 ------------------------------------------------------------------------------
 
@@ -94,41 +94,46 @@ Storage Architecture
 
 Object Store
 
-    .cas/
+    .vault/
     ├── objects/
-    │   ├── e3/
-    │   │   └── b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-    │   ├── a7/
-    │   │   └── ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a
+    │   ├── sha512-cf/
+    │   │   └── cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce...
+    │   ├── sha512-a7/
+    │   │   └── a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a...
     │   └── ...
-    ├── refs/
-    │   ├── HEAD
-    │   └── tags/
-    └── index
+    ├── index/
+    │   ├── catalog.db      # SQLite: hash → metadata
+    │   └── bloom.bin       # Bloom filter for existence
+    ├── chunks/
+    │   └── sha512-xxxx/    # Chunked large objects
+    └── refs/
+        ├── HEAD
+        └── tags/
 
-Sharding: First two hex characters of hash form directory name (256 buckets).
+Sharding: "sha512-" prefix + first two hex characters (4096 buckets).
+Index: SQLite catalog + Bloom filter per RFC-039.
 
 Object Types
 
     ;; Blob - raw data
     (cas-blob
-      (hash "sha256:...")
+      (hash "sha512:...")
       (size 1024)
       (data #${...}))
 
     ;; Tree - directory structure
     (cas-tree
-      (hash "sha256:...")
+      (hash "sha512:...")
       (entries
-        (("README.md" blob "sha256:abc...")
-         ("src" tree "sha256:def...")
-         ("lib" tree "sha256:ghi..."))))
+        (("README.md" blob "sha512:abc...")
+         ("src" tree "sha512:def...")
+         ("lib" tree "sha512:ghi..."))))
 
     ;; Commit - snapshot with metadata
     (cas-commit
-      (hash "sha256:...")
-      (tree "sha256:...")
-      (parent "sha256:..." | #f)
+      (hash "sha512:...")
+      (tree "sha512:...")
+      (parent "sha512:..." | #f)
       (author "ddp@eludom.net")
       (timestamp 1767700000)
       (message "Initial commit"))
@@ -137,12 +142,12 @@ Merkle Trees
 
 Directories are trees of hashes. The root hash commits to all content:
 
-                        root: sha256:abc...
+                        root: sha512:abc...
                              /          \
-                  src: sha256:def     lib: sha256:ghi
+                  src: sha512:def     lib: sha512:ghi
                    /        \              |
             main.scm     test.scm      util.scm
-            sha256:111   sha256:222    sha256:333
+            sha512:111   sha512:222    sha512:333
 
 Changing ANY file changes ALL parent hashes up to root.
 
@@ -154,7 +159,7 @@ Store
 
     (define (cas-put content)
       "Store content, return hash"
-      (let* ((hash (sha256 content))
+      (let* ((hash (sha512 content))
              (path (hash->path hash)))
         (unless (file-exists? path)
           (write-blob path content))
@@ -168,7 +173,7 @@ Retrieve
       "Retrieve content by hash, verify integrity"
       (let* ((path (hash->path hash))
              (content (read-blob path)))
-        (unless (equal? hash (sha256 content))
+        (unless (equal? hash (sha512 content))
           (error "Content integrity failure" hash))
         content))
 
@@ -209,8 +214,8 @@ References
       (read-file (ref-path name)))
 
     ;; Example
-    (ref-set "HEAD" "sha256:abc123...")
-    (ref-get "HEAD") ; => "sha256:abc123..."
+    (ref-set "HEAD" "sha512:abc123...")
+    (ref-get "HEAD") ; => "sha512:abc123..."
 
 Tags
 
@@ -228,9 +233,9 @@ Directory Entries
 
     ;; Human name -> content hash
     (define library-index
-      '(("RFC-000" . "sha256:e3b0c44...")
-        ("RFC-001" . "sha256:a7ffc6f...")
-        ("RFC-002" . "sha256:b94d27b...")))
+      '(("RFC-000" . "sha512:e3b0c44...")
+        ("RFC-001" . "sha512:a7ffc6f...")
+        ("RFC-002" . "sha512:b94d27b...")))
 
 ------------------------------------------------------------------------------
 
@@ -269,7 +274,7 @@ Every object carries crypto metadata - the ciphers, hashes, and keys involved:
       (name "1.0.0")
       (type archive)
       (size "1.2MB")
-      (crypto (zstd sha256 "fe378a78...")))
+      (crypto (zstd sha512 "fe378a78...")))
 
     ;; Key object
     (soup-object
@@ -277,7 +282,7 @@ Every object carries crypto metadata - the ciphers, hashes, and keys involved:
       (type key)
       (size "64B")
       (crypto (ed25519/256 public sign
-               "sha256:a1b2c3d4..."    ; fingerprint
+               "sha512:a1b2c3d4..."    ; fingerprint
                "id:ddp@eludom.net"     ; identity
                "2026-01-07")))         ; creation date
 
@@ -307,9 +312,9 @@ Display Format
 The soup displays as a compact, human-readable listing:
 
     $ seal-soup
-    vault-signing, 64B, ed25519/256, public, sign, sha256:a1b2c3d4...
+    vault-signing, 64B, ed25519/256, public, sign, sha512:a1b2c3d4...
     0.1.0, 313B, signed, ed25519, sha512
-    1.0.0, 1.2MB, zstd, sha256, fe378a78...
+    1.0.0, 1.2MB, zstd, sha512, fe378a78...
     audit/1, sealed, 2026-01-07T10:30:00Z
 
 Soup as Index
@@ -340,7 +345,7 @@ The Vault (RFC-006) uses content addressing internally via Git:
     (define (git-hash-object content)
       (sha1 (string-append "blob " (number->string (blob-length content)) "\x00" content)))
 
-CAS extends this with SHA-256 and Library-specific semantics.
+CAS extends this with SHA-512 and Library-specific semantics.
 
 Archive Storage
 
@@ -371,7 +376,7 @@ Content hashes can be authorization subjects (RFC-004):
     ;; Grant permission to specific content
     (spki-cert
       (issuer publisher-key)
-      (subject (hash sha256 "abc123..."))
+      (subject (hash sha512 "abc123..."))
       (permission read)
       (validity (not-after "2027-01-01")))
 
@@ -411,12 +416,12 @@ Content-Defined Chunking (Rabin fingerprinting)
 Chunk Tree
 
     (cas-chunked
-      (hash "sha256:...")      ; Root hash
+      (hash "sha512:...")      ; Root hash
       (size 10485760)          ; 10MB original
       (chunks
-        ("sha256:aaa..." 65536)
-        ("sha256:bbb..." 65536)
-        ("sha256:ccc..." 32768)
+        ("sha512:aaa..." 65536)
+        ("sha512:bbb..." 65536)
+        ("sha512:ccc..." 32768)
         ...))
 
 ------------------------------------------------------------------------------
@@ -448,7 +453,7 @@ Objects that describe objects:
       (name "schema/soup-object")
       (type schema)
       (size "412B")
-      (crypto (sha256 "def456..."))
+      (crypto (sha512 "def456..."))
       (describes soup-object))
 
     ;; The soup can enumerate itself
@@ -462,7 +467,7 @@ The soup answers questions about itself:
     (soup-types)  ; => (archive release key audit commit schema ...)
 
     ;; What crypto algorithms are in use?
-    (soup-algorithms)  ; => (sha256 ed25519 zstd age ...)
+    (soup-algorithms)  ; => (sha512 ed25519 zstd age ...)
 
     ;; What is the total size of the vault?
     (soup-total-size)  ; => 47.3MB
@@ -478,11 +483,11 @@ Every object knows its origin:
       (name "rfc-020.ps")
       (type blob)
       (size "89KB")
-      (crypto (sha256 "abc123..."))
+      (crypto (sha512 "abc123..."))
       (provenance
         (created-by "ddp@eludom.net")
         (created-at 1767700000)
-        (derived-from "sha256:fff888...")
+        (derived-from "sha512:fff888...")
         (tool "dvips")))
 
 Provenance chains are themselves content-addressed:
@@ -514,12 +519,12 @@ The system can describe how to build itself:
 
     ;; Bootstrap manifest - everything needed to reconstruct
     (bootstrap-manifest
-      (hash "sha256:bootstrap...")
+      (hash "sha512:bootstrap...")
       (contents
-        (("src/" tree "sha256:src...")
-         ("rfcs/" tree "sha256:rfcs...")
-         ("keys/" tree "sha256:keys...")
-         ("schema/" tree "sha256:schema...")))
+        (("src/" tree "sha512:src...")
+         ("rfcs/" tree "sha512:rfcs...")
+         ("keys/" tree "sha512:keys...")
+         ("schema/" tree "sha512:schema...")))
       (build-instructions
         "Load src/boot.scm, call (bootstrap)"))
 
@@ -566,11 +571,11 @@ Soft Deletion
 Tombstone Properties
 
     (soup-object
-      (name "sha256:deadbeef...")
+      (name "sha512:deadbeef...")
       (type tombstone)
       (size "0B")  ; Logical size is zero
       (status deleted)
-      (reason "Superseded by sha256:newversion...")
+      (reason "Superseded by sha512:newversion...")
       (recoverable #t))
 
 Recovery
@@ -702,7 +707,7 @@ Soup Integration
       (name "bloom/2026-01-07")
       (type bloom-filter)
       (size "12KB")
-      (crypto (sha256 "bloom-hash..."))
+      (crypto (sha512 "bloom-hash..."))
       (capacity 10000)
       (error-rate 0.01)
       (population 4723))
@@ -731,7 +736,7 @@ Typed Storage
 
     (define (cas-put/typed content type #!key schema)
       "Store with type metadata"
-      (let* ((hash (sha256 content))
+      (let* ((hash (sha512 content))
              (meta `(typed-object
                      (hash ,hash)
                      (type ,type)
@@ -756,7 +761,7 @@ Schema Validation
       (name "schema/soup-object")
       (type schema)
       (validates soup-object)
-      (crypto (sha256 "schema-hash...")))
+      (crypto (sha512 "schema-hash...")))
 
 MIME Detection
 
@@ -796,14 +801,14 @@ Capability Attenuation
     (spki-cert
       (issuer vault-key)
       (subject reader-key)
-      (permission (read (hash sha256 "specific-content...")))
+      (permission (read (hash sha512 "specific-content...")))
       (validity (not-after "2027-01-01")))
 
     ;; Grant access to a subtree
     (spki-cert
       (issuer vault-key)
       (subject reader-key)
-      (permission (read (tree sha256 "subtree-root...")))
+      (permission (read (tree sha512 "subtree-root...")))
       (propagate #t))  ; Access to all referenced objects
 
 Sealed Capabilities
@@ -830,7 +835,7 @@ Capability Revocation
     (spki-crl
       (issuer vault-key)
       (revoked
-        ((hash sha256 "revoked-content...")
+        ((hash sha512 "revoked-content...")
          (reason "Superseded")
          (revoked-at 1767700000))))
 
@@ -845,7 +850,7 @@ Multihash
     ;; Self-describing hash format
     (define (multihash algo data)
       (let ((hash (case algo
-                    ((sha256) (sha256 data))
+                    ((sha512) (sha512 data))
                     ((sha384) (sha384 data))
                     ((sha512) (sha512 data))
                     ((blake3) (blake3 data)))))
@@ -875,15 +880,15 @@ Dual-Hash Period
 Migration Manifest
 
     (migration-manifest
-      (from-algorithm sha256)
+      (from-algorithm sha512)
       (to-algorithm sha384)
       (started-at 1767700000)
       (status in-progress)
       (migrated 4723)
       (remaining 1892)
       (mappings
-        (("sha256:abc..." . "sha384:def...")
-         ("sha256:123..." . "sha384:456...")
+        (("sha512:abc..." . "sha384:def...")
+         ("sha512:123..." . "sha384:456...")
          ...)))
 
 Verification During Migration
@@ -891,7 +896,7 @@ Verification During Migration
     (define (verify-migration hash)
       "Verify object under both old and new hash"
       (let* ((content (cas-get hash))
-             (old-hash (sha256 content))
+             (old-hash (sha512 content))
              (new-hash (sha384 content)))
         (and (or (equal? hash old-hash)
                  (equal? hash new-hash))
@@ -907,7 +912,12 @@ Comparison with Related Systems
   Git           SHA-1               Pack files     refs/branches
   IPFS          SHA-256/multihash   Rabin          IPNS, DNSLink
   Perkeep       SHA-224             Rolling hash   Permanodes
-  Library CAS   SHA-256             Configurable   Vault refs
+  Library CAS   SHA-512             Rabin 64KB     Vault refs
+
+Note: Library CAS uses SHA-512 per RFC-039 rationale:
+  - Not SHA-256: We have the bits, use them
+  - Not SHA-1: Broken
+  - 50 years of cryptanalysis, FIPS certified, hardware accelerated
 
 ------------------------------------------------------------------------------
 
@@ -915,23 +925,23 @@ Security Considerations
 
 Hash Collision Attacks
 
-SHA-256 provides 128-bit collision resistance. No practical attacks known.
+SHA-512 provides 256-bit collision resistance. No practical attacks known.
 
-If SHA-256 is ever broken:
+If SHA-512 is ever broken:
 
     ;; Multihash for algorithm agility
     (define (multihash algo data)
       (case algo
-        ((sha256) (cons 'sha256 (sha256 data)))
+        ((sha512) (cons 'sha512 (sha512 data)))
         ((sha384) (cons 'sha384 (sha384 data)))
         ((blake3) (cons 'blake3 (blake3 data)))))
 
 Length Extension Attacks
 
-SHA-256 is vulnerable to length extension. For authentication, use HMAC:
+SHA-512 is vulnerable to length extension. For authentication, use HMAC:
 
     (define (cas-mac key hash)
-      (hmac-sha256 key hash))
+      (hmac-sha512 key hash))
 
 Timing Attacks
 
@@ -968,7 +978,7 @@ SSD Optimization
 Random access pattern. Use write-ahead log for durability:
 
     (define (cas-put/durable content)
-      (let ((hash (sha256 content)))
+      (let ((hash (sha512 content)))
         (wal-append hash content)
         (write-blob (hash->path hash) content)
         (wal-commit hash)
@@ -982,7 +992,7 @@ Dependencies
 
   Component   Library
   ----------- ----------------------
-  SHA-256     message-digest, sha2
+  SHA-512     message-digest, sha2
   Blob I/O    CHICKEN I/O
   Chunking    Custom
 
