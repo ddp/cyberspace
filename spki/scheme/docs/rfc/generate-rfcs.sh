@@ -53,6 +53,7 @@ RFCS=(
   rfc-033-schema-evolution
   rfc-034-audit-protection
   rfc-035-mobile-agents
+  rfc-036-quorum-voting
 )
 
 # Extract title from markdown file
