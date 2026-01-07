@@ -1,4 +1,4 @@
-# RFC-018: Zstd+Age Archive Format
+# RFC-018: Sealed Archive Format
 
 **Status:** Implemented
 **Date:** January 2026

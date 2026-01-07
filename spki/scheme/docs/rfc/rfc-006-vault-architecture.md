@@ -215,7 +215,7 @@ Create sealed archive of a version.
 - Age encryption (X25519/Ed25519 compatible)
 - SHA-512 hash + Ed25519 signature
 - Encrypted at rest
-- See RFC-018 for full specification
+- See RFC-018: Sealed Archive Format for full specification
 
 **Cryptographic Archive Structure:**
 ```
@@ -540,7 +540,8 @@ All formats are first-class citizens in the Vault. RFCs and declarations SHOULD 
 3. RFC-003: Cryptographic Audit Trail
 4. RFC-004: SPKI Authorization
 5. RFC-005: Progressive Metadata Levels
-6. Semantic Versioning 2.0.0
+6. RFC-018: Sealed Archive Format
+7. Semantic Versioning 2.0.0
 
 ---
 
