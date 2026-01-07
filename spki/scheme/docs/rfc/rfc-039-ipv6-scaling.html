@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-039-ipv6-scaling</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-039-scaling-architecture-for-ipv6">RFC-039: Scaling
+Architecture for IPv6</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a> <strong>Requires:</strong> RFC-010
+(Federation), RFC-016 (Lazy Clustering), RFC-037 (Node Roles)</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC defines the architectural changes required to scale
+Cyberspace from a git-backed prototype to a native distributed system
+capable of operating at IPv6 scale (billions of nodes, exabytes of
+content). Git becomes an export format; the vault becomes the source of
+truth.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Git served as an excellent prototype substrate: - Content-addressed
+objects (proof of concept) - Merkle tree integrity (validates the model)
+- Ubiquitous tooling (bootstrap adoption)</p>
+<p>Git cannot scale to IPv6: - Full history on every clone - Repository
+as replication unit (too coarse) - SHA-1 (cryptographically broken) - No
+native federation or discovery - Merge semantics are wrong model</p>
+<p>The internet has 2^128 addresses. Cyberspace should use them.</p>
+<hr />
+<h2 id="design-principles">Design Principles</h2>
+<pre><code>1. Objects, not repositories
+2. Pull, not push
+3. Lazy, not eager
+4. Local-first, federate-second
+5. Trust math, not infrastructure</code></pre>
+<hr />
+<h2 id="content-addressed-object-store">Content-Addressed Object
+Store</h2>
+<h3 id="storage-model">Storage Model</h3>
+<pre><code>.vault/
+  objects/
+    sha512-a1b2c3.../    # First 8 chars as directory
+      a1b2c3d4e5f6...    # Full hash as filename
+  index/
+    catalog.db           # SQLite: hash → metadata
+    bloom.bin            # Bloom filter for existence
+  chunks/
+    sha512-xxxx/         # Chunked large objects
+  audit/
+    chain.db             # Indexed audit trail</code></pre>
+<h3 id="object-format">Object Format</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(cyberspace-object</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="dv">1</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (type blob|tree|manifest|cert|audit)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  (size <span class="dv">1048576</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (compression zstd|none)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;sha512:a1b2c3...&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  (chunks (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span> <span class="op">...</span>))  <span class="co">; If chunked</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>))</span></code></pre></div>
+<h3 id="chunking-strategy">Chunking Strategy</h3>
+<p>Large objects split at content-defined boundaries (Rabin
+fingerprinting):</p>
+<pre><code>Target chunk: 64 KB (Starlink-optimized)
+Min chunk:    16 KB
+Max chunk:   256 KB
+
+Benefits:
+  - Deduplication across objects
+  - Partial sync (fetch only missing chunks)
+  - Resumable transfers
+  - Efficient diff</code></pre>
+<h3 id="hash-function">Hash Function</h3>
+<pre><code>SHA-512 everywhere.
+
+Not SHA-256: We have the bits, use them.
+Not SHA-1: Broken.
+Not BLAKE3: Less analyzed, marginal speed gain irrelevant at network latency.
+
+SHA-512 is:
+  - FIPS certified (GovCloud path)
+  - 50 years of cryptanalysis
+  - Hardware accelerated
+  - Already in use (audit trail, signatures)</code></pre>
+<hr />
+<h2 id="index-and-query">Index and Query</h2>
+<h3 id="catalog-index-sqlite">Catalog Index (SQLite)</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> objects (</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">hash</span>        TEXT <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">type</span>        TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">size</span>        <span class="dt">INTEGER</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">timestamp</span>   <span class="dt">INTEGER</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    signer      TEXT,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">parent</span>      TEXT,              <span class="co">-- For trees/manifests</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    compressed  <span class="dt">INTEGER</span> <span class="kw">DEFAULT</span> <span class="dv">0</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>);</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_type <span class="kw">ON</span> objects(<span class="kw">type</span>);</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_signer <span class="kw">ON</span> objects(signer);</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_timestamp <span class="kw">ON</span> objects(<span class="dt">timestamp</span>);</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> chunks (</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    object_hash TEXT,</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    chunk_hash  TEXT,</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">sequence</span>    <span class="dt">INTEGER</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">PRIMARY</span> <span class="kw">KEY</span> (object_hash, <span class="kw">sequence</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>);</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> tags (</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">hash</span>    TEXT,</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    tag     TEXT,</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">PRIMARY</span> <span class="kw">KEY</span> (<span class="kw">hash</span>, tag)</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>);</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_tag <span class="kw">ON</span> tags(tag);</span></code></pre></div>
+<h3 id="bloom-filter">Bloom Filter</h3>
+<p>Fast existence check before network round-trip:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *bloom-filter*</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  (make-bloom-filter</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    capacity: <span class="dv">10000000</span>      <span class="co">; 10M objects</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    false-positive: <span class="fl">0.001</span>)) <span class="co">; 0.1% FP rate</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>(bloom-add! *bloom-filter* hash)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>(bloom-contains? *bloom-filter* hash)  <span class="co">; Maybe or definitely-not</span></span></code></pre></div>
+<h3 id="audit-trail-index">Audit Trail Index</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> <span class="kw">audit</span> (</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span>          TEXT <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">sequence</span>    <span class="dt">INTEGER</span> <span class="kw">UNIQUE</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">timestamp</span>   <span class="dt">INTEGER</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    actor       TEXT,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    action      TEXT,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    parent_id   TEXT,</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">hash</span>        TEXT</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>);</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_audit_actor <span class="kw">ON</span> <span class="kw">audit</span>(actor);</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_audit_action <span class="kw">ON</span> <span class="kw">audit</span>(action);</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_audit_time <span class="kw">ON</span> <span class="kw">audit</span>(<span class="dt">timestamp</span>);</span></code></pre></div>
+<hr />
+<h2 id="discovery-and-routing">Discovery and Routing</h2>
+<h3 id="node-identity">Node Identity</h3>
+<p>Each node has a principal (Ed25519 public key). This IS its
+identity:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(node-identity</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (principal <span class="st">&quot;ed25519:a1b2c3...&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (addresses                          <span class="co">; Where to reach this principal</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    (ipv6 <span class="st">&quot;2001:db8::1&quot;</span> port: <span class="dv">7777</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    (ipv4 <span class="st">&quot;192.0.2.1&quot;</span> port: <span class="dv">7777</span>)     <span class="co">; Legacy</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    (onion <span class="st">&quot;xxxx.onion&quot;</span> port: <span class="dv">7777</span>))  <span class="co">; Tor</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  (role witness)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  (capabilities (storage-gb <span class="dv">1000</span>) (bandwidth-mbps <span class="dv">100</span>))</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))</span></code></pre></div>
+<h3 id="peer-discovery">Peer Discovery</h3>
+<p><strong>Bootstrap:</strong></p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(bootstrap-peers</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  (<span class="st">&quot;ed25519:official1...&quot;</span> <span class="st">&quot;bootstrap.cyberspace.org&quot;</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="st">&quot;ed25519:official2...&quot;</span> <span class="st">&quot;bootstrap2.cyberspace.org&quot;</span>))</span></code></pre></div>
+<p><strong>Gossip Protocol:</strong></p>
+<pre><code>1. Node joins, contacts bootstrap peer
+2. Receives partial peer list (random subset)
+3. Contacts those peers, exchanges lists
+4. Epidemic spread: O(log n) rounds to reach all nodes
+5. Periodic refresh (every 5 min on Starlink-friendly schedule)</code></pre>
+<p><strong>Distributed Hash Table (Future):</strong></p>
+<pre><code>Kademlia-style routing:
+  - XOR distance metric on principal hashes
+  - O(log n) lookups
+  - Nodes responsible for nearby hash ranges
+  - Natural load balancing</code></pre>
+<h3 id="content-discovery">Content Discovery</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; &quot;Who has this hash?&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>(content-locate <span class="st">&quot;sha512:a1b2c3...&quot;</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Returns list of peers claiming to have it:</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>((<span class="st">&quot;ed25519:peer1...&quot;</span> (latency-ms <span class="dv">50</span>) (role full))</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a> (<span class="st">&quot;ed25519:peer2...&quot;</span> (latency-ms <span class="dv">200</span>) (role witness))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a> (<span class="st">&quot;ed25519:peer3...&quot;</span> (latency-ms <span class="dv">600</span>) (role archiver)))</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Fetch from best candidate</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>(content-fetch <span class="st">&quot;sha512:a1b2c3...&quot;</span> from: <span class="st">&quot;ed25519:peer1...&quot;</span>)</span></code></pre></div>
+<hr />
+<h2 id="transport-protocol">Transport Protocol</h2>
+<h3 id="wire-format">Wire Format</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(cyberspace-message</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="dv">1</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  (type request|response|announce|gossip)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  (from <span class="st">&quot;ed25519:sender...&quot;</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  (to <span class="st">&quot;ed25519:recipient...&quot;</span>)        <span class="co">; Or broadcast</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  (nonce <span class="dv">12345678</span>)                   <span class="co">; Replay protection</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  (payload <span class="op">...</span>)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))</span></code></pre></div>
+<h3 id="request-types">Request Types</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Existence check</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>(have? (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span> <span class="op">...</span>))</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (have (&quot;sha512:...&quot; &quot;sha512:...&quot;) missing (&quot;sha512:...&quot;))</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Fetch object</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>(fetch <span class="st">&quot;sha512:...&quot;</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (object ...)</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Fetch chunk range</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>(fetch-chunks <span class="st">&quot;sha512:...&quot;</span> start: <span class="dv">5</span> count: <span class="dv">10</span>)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (chunks ...)</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="co">;; Peer list exchange</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>(peers? limit: <span class="dv">50</span>)</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (peers ...)</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a><span class="co">;; Announce new content</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>(announce (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span>))</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (ack)</span></span></code></pre></div>
+<h3 id="transport-bindings">Transport Bindings</h3>
+<pre><code>Native:     UDP/IPv6, port 7777 (primary)
+Fallback:   TCP/IPv6, port 7777 (firewalls)
+Legacy:     TCP/IPv4, port 7777 (transition)
+Stealth:    Tor onion service (censorship resistance)
+Offline:    USB drive, file copy (sneakernet)
+Export:     Git bundle (GitHub compatibility)</code></pre>
+<h3 id="starlink-optimization">Starlink Optimization</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(transport-config</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  (mode satellite)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  (batch-window-ms <span class="dv">500</span>)        <span class="co">; Aggregate small messages</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  (chunk-size-kb <span class="dv">64</span>)           <span class="co">; Match MTU</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  (retry-strategy exponential)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  (max-in-flight <span class="dv">10</span>)           <span class="co">; Parallelism</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  (keepalive-sec <span class="dv">300</span>))         <span class="co">; 5 min, not 30 sec</span></span></code></pre></div>
+<hr />
+<h2 id="synchronization-protocol">Synchronization Protocol</h2>
+<h3 id="lazy-sync-default">Lazy Sync (Default)</h3>
+<pre><code>Node A                              Node B
+   |                                   |
+   |----(have? [h1, h2, h3])----------&gt;|
+   |&lt;---(have [h1, h3] missing [h2])---|
+   |----(fetch h2)--------------------&gt;|
+   |&lt;---(object h2 ...)----------------|
+   |                                   |
+
+No coordination. No locks. No leader.</code></pre>
+<h3 id="crdt-style-convergence">Crdt-Style Convergence</h3>
+<p>Objects are immutable and content-addressed. No conflicts possible at
+object level.</p>
+<p>Manifests (collections of objects) use: - Lamport timestamps for
+ordering - Last-writer-wins with principal tiebreaker - Or: union
+(add-only sets)</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>(manifest</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  (name <span class="st">&quot;library&quot;</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  (version (lamport <span class="dv">42</span>) (principal <span class="st">&quot;ed25519:...&quot;</span>))</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  (entries</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&quot;rfc-001&quot;</span> <span class="st">&quot;sha512:...&quot;</span>)</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&quot;rfc-002&quot;</span> <span class="st">&quot;sha512:...&quot;</span>)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>))</span></code></pre></div>
+<h3 id="merkle-sync">Merkle Sync</h3>
+<p>Efficient diff for large manifests:</p>
+<pre><code>         root
+        /    \
+      h1      h2
+     /  \    /  \
+    a    b  c    d
+
+Exchange root hash.
+If different, recurse on children.
+O(log n) round trips to find diff.</code></pre>
+<hr />
+<h2 id="federation-at-scale">Federation at Scale</h2>
+<h3 id="cluster-topology">Cluster Topology</h3>
+<pre><code>                    ┌─────────────────────────────────────┐
+                    │         COORDINATOR CLUSTER         │
+                    │  (3-7 nodes, Byzantine consensus)   │
+                    └────────────────┬────────────────────┘
+                                     │
+          ┌──────────────────────────┼──────────────────────────┐
+          │                          │                          │
+    ┌─────▼─────┐             ┌──────▼─────┐             ┌──────▼─────┐
+    │   FULL    │             │   FULL     │             │    FULL    │
+    │  NODES    │             │   NODES    │             │   NODES    │
+    └─────┬─────┘             └─────┬──────┘             └─────┬──────┘
+          │                         │                          │
+    ┌─────▼─────┐             ┌─────▼──────┐             ┌─────▼──────┐
+    │ WITNESSES │             │ WITNESSES  │             │ WITNESSES  │
+    │ ARCHIVERS │             │ ARCHIVERS  │             │ ARCHIVERS  │
+    │   EDGES   │             │   EDGES    │             │   EDGES    │
+    └───────────┘             └────────────┘             └────────────┘
+
+Coordinators: Rare, high-capability, run consensus
+Full nodes: Common, replicate everything, serve content
+Witnesses: Abundant, verify and store, passive sync
+Archivers: Cold storage, batch sync
+Edges: Read-only, intermittent, mobile</code></pre>
+<h3 id="partition-tolerance">Partition Tolerance</h3>
+<pre><code>Network splits → clusters diverge → clusters converge on reconnect
+
+No data loss (content-addressed)
+No conflicts (immutable objects)
+Audit trails merge (union of entries, Lamport ordering)
+Manifests resolve (LWW or union based on type)</code></pre>
+<hr />
+<h2 id="git-as-export-format">Git as Export Format</h2>
+<h3 id="the-transition">The Transition</h3>
+<pre><code>Phase 1 (Now):      Git is source of truth, vault is cache
+Phase 2 (Next):     Vault is source of truth, git is export
+Phase 3 (Future):   Git optional, purely for GitHub presence</code></pre>
+<h3 id="export-process">Export Process</h3>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>(git-export</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  from: <span class="st">&quot;.vault&quot;</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  to: <span class="st">&quot;/tmp/cyberspace-export&quot;</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  format: &#39;git-repo)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Creates standard git repo from vault contents</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; For publishing to GitHub, GitLab, etc.</span></span></code></pre></div>
+<h3 id="import-process">Import Process</h3>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>(git-import</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  from: <span class="st">&quot;https://github.com/ddp/cyberspace.git&quot;</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  to: <span class="st">&quot;.vault&quot;</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Extracts objects from git, stores in vault</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Discards git history, keeps content</span></span></code></pre></div>
+<hr />
+<h2 id="security-at-scale">Security at Scale</h2>
+<h3 id="sybil-resistance">Sybil Resistance</h3>
+<p>Problem: Attacker creates many fake nodes to dominate network.</p>
+<p>Mitigations: 1. <strong>Stake-weighted voting</strong> (not
+proof-of-work, just reputation) 2. <strong>Web of trust</strong> - new
+nodes introduced by existing trusted nodes 3. <strong>Rate
+limiting</strong> - bound resources per principal 4. <strong>Coordinator
+consensus</strong> - Byzantine-resistant core</p>
+<h3 id="eclipse-attack-resistance">Eclipse Attack Resistance</h3>
+<p>Problem: Attacker isolates a node by controlling all its peers.</p>
+<p>Mitigations: 1. <strong>Diverse bootstrap</strong> - multiple
+independent entry points 2. <strong>Random peer selection</strong> -
+can’t predict who you’ll connect to 3. <strong>Peer rotation</strong> -
+periodically reconnect to new peers 4. <strong>Out-of-band
+verification</strong> - publish peer lists via DNS, blockchain, etc.</p>
+<h3 id="denial-of-service">Denial of Service</h3>
+<p>Problem: Attacker floods network with junk.</p>
+<p>Mitigations: 1. <strong>Proof of work on announcements</strong>
+(small, CPU cost) 2. <strong>Rate limiting per principal</strong> 3.
+<strong>Reputation scoring</strong> - misbehaving peers deprioritized 4.
+<strong>Content validation</strong> - reject malformed objects
+immediately</p>
+<hr />
+<h2 id="implementation-phases">Implementation Phases</h2>
+<h3 id="phase-1-native-object-store">Phase 1: Native Object Store</h3>
+<ul>
+<li>Implement <code>.vault/objects/</code> storage</li>
+<li>SQLite catalog index</li>
+<li>Keep git for development workflow</li>
+</ul>
+<h3 id="phase-2-local-first-sync">Phase 2: Local-First Sync</h3>
+<ul>
+<li>Direct node-to-node protocol</li>
+<li><code>have?</code>/<code>fetch</code> message types</li>
+<li>UDP transport with TCP fallback</li>
+</ul>
+<h3 id="phase-3-discovery">Phase 3: Discovery</h3>
+<ul>
+<li>Gossip peer exchange</li>
+<li>Bootstrap nodes</li>
+<li>Bloom filters for content location</li>
+</ul>
+<h3 id="phase-4-scale-testing">Phase 4: Scale Testing</h3>
+<ul>
+<li>100 nodes</li>
+<li>1000 nodes</li>
+<li>10000 nodes</li>
+<li>Measure: latency, convergence time, bandwidth</li>
+</ul>
+<h3 id="phase-5-git-deprecation">Phase 5: Git Deprecation</h3>
+<ul>
+<li>Vault as source of truth</li>
+<li>Git export for compatibility</li>
+<li>Remove git dependency from core operations</li>
+</ul>
+<hr />
+<h2 id="metrics-and-monitoring">Metrics and Monitoring</h2>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>(node-metrics)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Returns:</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>((objects-stored <span class="dv">150000</span>)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a> (objects-size-gb <span class="dv">50</span>)</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a> (peers-known <span class="dv">500</span>)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a> (peers-connected <span class="dv">20</span>)</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a> (sync-lag-seconds <span class="dv">30</span>)</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a> (bandwidth-in-mbps <span class="dv">10</span>)</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a> (bandwidth-out-mbps <span class="dv">5</span>)</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a> (requests-per-second <span class="dv">100</span>)</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a> (errors-per-second <span class="fl">0.1</span>))</span></code></pre></div>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>RFC-010: Federation Protocol</li>
+<li>RFC-016: Lazy Clustering</li>
+<li>RFC-037: Node Roles and Capabilities</li>
+<li>Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information
+System</li>
+<li>Rabin, M. (1981). Fingerprinting by Random Polynomials</li>
+<li>IPFS Whitepaper (2014)</li>
+<li>Shapiro, M. (2011). Conflict-Free Replicated Data Types</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li>2026-01-07 - Initial draft</li>
+</ul>
+</body>
+</html>

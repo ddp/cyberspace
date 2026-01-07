@@ -56,6 +56,7 @@ RFCS=(
   rfc-036-quorum-voting
   rfc-037-node-roles
   rfc-038-local-inference
+  rfc-039-ipv6-scaling
 )
 
 # Extract title from markdown file
