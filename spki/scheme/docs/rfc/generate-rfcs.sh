@@ -37,6 +37,10 @@ RFCS=(
   rfc-018-sealed-archive
   rfc-019-documentation-pipeline
   rfc-020-content-addressed-storage
+  rfc-021-capability-delegation
+  rfc-022-key-ceremony
+  rfc-023-agent-sandboxing
+  rfc-024-network-protocol
 )
 
 # Extract title from markdown file

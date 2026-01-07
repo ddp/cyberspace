@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-022-key-ceremony</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-022-key-ceremony-protocol">RFC-022: Key Ceremony
+Protocol</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
+Proposed</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies key ceremony protocols for the Library of
+Cyberspace: the ritualized generation, distribution, and activation of
+cryptographic keys with witnessed verification. Key ceremonies establish
+roots of trust through transparent, auditable, multi-party
+processes.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Keys are the foundation of all cryptographic trust:</p>
+<ul>
+<li><strong>Generate wrong</strong> - Everything built on them
+fails</li>
+<li><strong>Store wrong</strong> - Compromise propagates everywhere</li>
+<li><strong>Distribute wrong</strong> - Man-in-the-middle forever</li>
+<li><strong>No witnesses</strong> - No one believes you did it
+right</li>
+</ul>
+<p>Key ceremonies solve this through:</p>
+<ul>
+<li><strong>Witnessed generation</strong> - Multiple parties verify
+randomness</li>
+<li><strong>Split custody</strong> - No single point of compromise</li>
+<li><strong>Documented process</strong> - Reproducible and
+auditable</li>
+<li><strong>Air-gapped execution</strong> - Network isolation during
+critical operations</li>
+</ul>
+<p>The Library requires key ceremonies for:</p>
+<ul>
+<li>Vault master keys</li>
+<li>Threshold signing keys</li>
+<li>Root certificates</li>
+<li>Recovery keys</li>
+</ul>
+<hr />
+<h2 id="ceremony-types">Ceremony Types</h2>
+<h3 id="type-1-single-key-generation">Type 1: Single Key Generation</h3>
+<p>For individual vault keys:</p>
+<pre><code>┌─────────────────────────────────────────┐
+│          SINGLE KEY CEREMONY            │
+├─────────────────────────────────────────┤
+│ Participants: 1 generator, 2+ witnesses │
+│ Duration: ~30 minutes                   │
+│ Output: 1 keypair                       │
+└─────────────────────────────────────────┘</code></pre>
+<h3 id="type-2-threshold-key-generation">Type 2: Threshold Key
+Generation</h3>
+<p>For M-of-N shared keys (RFC-007, RFC-008):</p>
+<pre><code>┌─────────────────────────────────────────┐
+│        THRESHOLD KEY CEREMONY           │
+├─────────────────────────────────────────┤
+│ Participants: N shareholders, 2+ witnesses │
+│ Duration: ~2 hours                      │
+│ Output: N shares, 1 public key          │
+└─────────────────────────────────────────┘</code></pre>
+<h3 id="type-3-root-certificate-ceremony">Type 3: Root Certificate
+Ceremony</h3>
+<p>For establishing certificate authority:</p>
+<pre><code>┌─────────────────────────────────────────┐
+│       ROOT CERTIFICATE CEREMONY         │
+├─────────────────────────────────────────┤
+│ Participants: 3-5 officers, auditor     │
+│ Duration: ~4 hours                      │
+│ Output: Root cert, subordinate certs    │
+└─────────────────────────────────────────┘</code></pre>
+<h3 id="type-4-recovery-key-ceremony">Type 4: Recovery Key Ceremony</h3>
+<p>For generating disaster recovery keys:</p>
+<pre><code>┌─────────────────────────────────────────┐
+│        RECOVERY KEY CEREMONY            │
+├─────────────────────────────────────────┤
+│ Participants: Board members, escrow     │
+│ Duration: ~3 hours                      │
+│ Output: Recovery shares in escrow       │
+└─────────────────────────────────────────┘</code></pre>
+<hr />
+<h2 id="ceremony-environment">Ceremony Environment</h2>
+<h3 id="physical-requirements">Physical Requirements</h3>
+<pre><code>SECURE ROOM CHECKLIST:
+[ ] No network connectivity
+[ ] No wireless devices
+[ ] Faraday shielding (ideal)
+[ ] Physical access control
+[ ] Video recording (optional)
+[ ] Tamper-evident bags for media
+[ ] Multiple witnesses present</code></pre>
+<h3 id="equipment">Equipment</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(ceremony-equipment</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (primary</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    (air-gapped-computer <span class="st">&quot;dedicated ceremony machine&quot;</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    (hardware-rng <span class="st">&quot;dice, hardware token, or both&quot;</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    (secure-storage <span class="st">&quot;HSM or encrypted USB drives&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    (printer <span class="st">&quot;for paper backup&quot;</span>))</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  (verification</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    (independent-computer <span class="st">&quot;verify signatures&quot;</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    (hash-calculator <span class="st">&quot;verify digests&quot;</span>))</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  (documentation</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    (camera <span class="st">&quot;photograph key steps&quot;</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    (ceremony-log <span class="st">&quot;paper record&quot;</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    (witness-signatures <span class="st">&quot;attestation forms&quot;</span>)))</span></code></pre></div>
+<h3 id="software">Software</h3>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(ceremony-software</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  (os <span class="st">&quot;minimal Linux, verified hash&quot;</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (key-generator <span class="st">&quot;library keygen or gpg&quot;</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  (shamir-split <span class="st">&quot;ssss or library implementation&quot;</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (hash-tool <span class="st">&quot;sha256sum&quot;</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  (encryption <span class="st">&quot;age for share protection&quot;</span>))</span></code></pre></div>
+<hr />
+<h2 id="single-key-ceremony">Single Key Ceremony</h2>
+<h3 id="pre-ceremony">Pre-Ceremony</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">pre-ceremony-checklist </span>ceremony-id)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  &#39;((verify-room <span class="st">&quot;Secure room confirmed&quot;</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    (verify-equipment <span class="st">&quot;All equipment present and functional&quot;</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    (verify-participants <span class="st">&quot;All participants identified&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    (verify-software <span class="st">&quot;Software hashes match expected&quot;</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    (document-start <span class="st">&quot;Record ceremony start time&quot;</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    (collect-devices <span class="st">&quot;All phones/devices collected&quot;</span>)))</span></code></pre></div>
+<h3 id="entropy-generation">Entropy Generation</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generate-entropy </span>witnesses)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate verifiable randomness&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> (<span class="co">;; Hardware RNG contribution</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>         (hw-entropy (read-hardware-rng <span class="dv">32</span>))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Dice rolls - each witness rolls</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>         (dice-entropy</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>          (apply bytes-append</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>                 (map (<span class="kw">lambda</span> (w)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>                        (<span class="kw">let</span> ((rolls (witness-dice-rolls w <span class="dv">20</span>)))</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>                          (sha256 (rolls-&gt;bytes rolls))))</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>                      witnesses)))</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Timestamp contribution</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>         (time-entropy (sha256 (timestamp-&gt;bytes (current-time))))</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Combine all sources</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>         (combined (bytes-append hw-entropy dice-entropy time-entropy)))</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Final mixing</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    (sha256 combined)))</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">witness-dice-rolls </span>witness count)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Witness rolls dice, records each result&quot;</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> loop ((i <span class="dv">0</span>) (rolls &#39;()))</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (<span class="op">=</span> i count)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">reverse</span> rolls)</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((roll (read-dice-roll witness)))</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>          (announce (format <span class="st">&quot;Witness ~a roll ~a: ~a&quot;</span> witness i roll))</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>          (loop (<span class="op">+</span> i <span class="dv">1</span>) (<span class="kw">cons</span> roll rolls))))))</span></code></pre></div>
+<h3 id="key-generation">Key Generation</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generate-ceremony-key </span>entropy purpose)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate key from ceremony entropy&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> (<span class="co">;; Derive key material</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>         (key-material (hkdf entropy</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                             salt: (string-&gt;bytes purpose)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>                             info: <span class="st">&quot;ceremony-key&quot;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>                             length: <span class="dv">32</span>))</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Generate Ed25519 keypair</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>         (keypair (ed25519-keypair-from-seed key-material))</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>         (public-key (keypair-public keypair))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>         (secret-key (keypair-secret keypair)))</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Announce public key</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    (announce <span class="st">&quot;Public key generated:&quot;</span>)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    (announce (bytes-&gt;hex public-key))</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Return both (secret handled carefully)</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    keypair))</span></code></pre></div>
+<h3 id="verification">Verification</h3>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-key-generation </span>keypair witnesses)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Witnesses verify key was generated correctly&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Sign test message</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((test-message <span class="st">&quot;ceremony verification test&quot;</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>         (signature (ed25519-sign (keypair-secret keypair) test-message)))</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Each witness verifies on independent machine</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">lambda</span> (witness)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((verified (witness-verify witness</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>                                        (keypair-public keypair)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>                                        test-message</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>                                        signature)))</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>          (announce (format <span class="st">&quot;Witness ~a verification: ~a&quot;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>                           witness</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>                           (<span class="kw">if</span> verified <span class="st">&quot;PASS&quot;</span> <span class="st">&quot;FAIL&quot;</span>)))</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>          (unless verified</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">error</span> <span class="st">&quot;Verification failed - abort ceremony&quot;</span>))))</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>      witnesses)))</span></code></pre></div>
+<h3 id="key-storage">Key Storage</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">store-ceremony-key </span>keypair ceremony-id storage-method)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Securely store generated key&quot;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">case</span> storage-method</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    ((hsm)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Store in hardware security module</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>     (hsm-store ceremony-id (keypair-secret keypair)))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    ((encrypted-usb)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Encrypt to USB drive</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">let</span> ((passphrase (generate-passphrase <span class="dv">6</span>)))</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>       (announce <span class="st">&quot;Passphrase for USB backup:&quot;</span>)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>       (announce passphrase)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>       (write-encrypted-usb ceremony-id</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>                           (keypair-secret keypair)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>                           passphrase)))</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    ((paper)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Print paper backup</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>     (print-paper-backup ceremony-id</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>                        (keypair-secret keypair)</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>                        (keypair-public keypair)))</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    ((shamir)</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Split into shares (see threshold ceremony)</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>     (shamir-split-key keypair ceremony-id))))</span></code></pre></div>
+<h3 id="ceremony-record">Ceremony Record</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">create-ceremony-record </span>ceremony-id keypair witnesses)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create signed ceremony record&quot;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((record</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>         `(key-ceremony</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>           (id ,ceremony-id)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>           (type single-key)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>           (timestamp ,(current-time))</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>           (public-key ,(bytes-&gt;hex (keypair-public keypair)))</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>           (algorithm ed25519)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>           (witnesses</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>            ,(map (<span class="kw">lambda</span> (w)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>                    `(witness</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>                      (name ,(witness-name w))</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>                      (public-key ,(witness-pubkey w))</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>                      (attestation <span class="st">&quot;I witnessed this key ceremony&quot;</span>)))</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>                  witnesses))</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>           (entropy-sources (hardware-rng dice timestamps))</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>           (storage-method ,(storage-method)))))</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Sign by ceremony officer</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((signed (sign-ceremony-record record)))</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Counter-sign by witnesses</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">for-each</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">lambda</span> (w)</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>          (witness-countersign signed w))</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>        witnesses)</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Store in audit trail</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>      (audit-append</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>        action: `(key-ceremony ,ceremony-id)</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>        motivation: <span class="st">&quot;Key generation ceremony completed&quot;</span>)</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>      signed)))</span></code></pre></div>
+<hr />
+<h2 id="threshold-key-ceremony">Threshold Key Ceremony</h2>
+<h3 id="share-distribution">Share Distribution</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">threshold-ceremony </span>n k ceremony-id)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate threshold key with N shares, K required&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Generate master entropy (same as single key)</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((entropy (generate-entropy witnesses))</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>         (keypair (generate-ceremony-key entropy ceremony-id))</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Split secret into shares</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>         (shares (shamir-split (keypair-secret keypair) n k)))</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Distribute shares to shareholders</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">lambda</span> (i share shareholder)</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>        (announce (format <span class="st">&quot;Distributing share ~a to ~a&quot;</span> i shareholder))</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>        (distribute-share share shareholder ceremony-id))</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>      (iota n)</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>      shares</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>      shareholders)</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Verify reconstruction (with K volunteers)</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    (verify-threshold-reconstruction shares k keypair)</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Create ceremony record</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    (create-threshold-ceremony-record ceremony-id</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>                                      keypair</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>                                      n k</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>                                      shareholders</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>                                      witnesses)))</span></code></pre></div>
+<h3 id="share-protection">Share Protection</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">distribute-share </span>share shareholder ceremony-id)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Encrypt share for specific shareholder&quot;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> (<span class="co">;; Encrypt share to shareholder&#39;s key</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>         (encrypted (age-encrypt share (shareholder-pubkey shareholder)))</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Create share package</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>         (package</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>          `(share-package</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>            (ceremony-id ,ceremony-id)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>            (shareholder ,(shareholder-id shareholder))</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>            (share-number ,(share-index share))</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>            (encrypted-share ,(bytes-&gt;base64 encrypted))</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>            (verification-hash ,(sha256 share)))))</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Print or store</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    (deliver-share-package package shareholder)))</span></code></pre></div>
+<h3 id="reconstruction-test">Reconstruction Test</h3>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-threshold-reconstruction </span>shares k expected-keypair)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Verify shares reconstruct correctly&quot;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Select K volunteers</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((volunteers (take (shuffle shareholders) k))</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>         (volunteer-shares (map get-share-from-volunteer volunteers))</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Reconstruct secret</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>         (reconstructed (shamir-reconstruct volunteer-shares))</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Verify matches</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>         (matches (<span class="kw">equal?</span> reconstructed (keypair-secret expected-keypair))))</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    (announce (format <span class="st">&quot;Reconstruction test with ~a shareholders: ~a&quot;</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>                     k</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>                     (<span class="kw">if</span> matches <span class="st">&quot;PASS&quot;</span> <span class="st">&quot;FAIL&quot;</span>)))</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    (unless matches</span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> <span class="st">&quot;Reconstruction failed - shares may be corrupted&quot;</span>))</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Securely clear reconstructed secret from memory</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>    (secure-clear reconstructed)))</span></code></pre></div>
+<hr />
+<h2 id="root-certificate-ceremony">Root Certificate Ceremony</h2>
+<h3 id="certificate-generation">Certificate Generation</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">root-certificate-ceremony </span>ceremony-id validity-years)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate root certificate authority&quot;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> (<span class="co">;; Generate root keypair</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>         (root-keypair (ceremony-generate-key <span class="st">&quot;root-ca&quot;</span>))</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Create self-signed root certificate</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>         (root-cert</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>          `(spki-cert</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>            (issuer ,(keypair-public root-keypair))</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>            (subject ,(keypair-public root-keypair))</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>            (capability (action sign-certificates))</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>            (validity</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>              (not-before ,(current-time))</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>              (not-after ,(<span class="op">+</span> (current-time)</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>                            (<span class="op">*</span> validity-years <span class="dv">365</span> <span class="dv">24</span> <span class="dv">3600</span>))))</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>            (extensions</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>              (basic-constraints (ca <span class="dv">#t</span>) (path-length <span class="dv">2</span>))</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>              (key-usage (cert-sign crl-sign)))))</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Sign root certificate</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>         (signed-root (sign-cert root-keypair root-cert)))</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Witnesses verify root certificate</span></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>    (verify-root-certificate signed-root witnesses)</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Generate subordinate CA certificates</span></span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((subordinates (generate-subordinate-certs root-keypair)))</span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Create ceremony record</span></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>      (create-root-ceremony-record ceremony-id</span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>                                  signed-root</span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>                                  subordinates</span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>                                  witnesses))))</span></code></pre></div>
+<h3 id="trust-anchor-publication">Trust Anchor Publication</h3>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">publish-trust-anchor </span>root-cert ceremony-record)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Publish root certificate as trust anchor&quot;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Multiple publication channels</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  (publish-to-vault root-cert ceremony-record)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  (publish-to-website root-cert ceremony-record)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  (publish-to-transparency-log root-cert ceremony-record)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Generate human-readable fingerprint</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((fingerprint (cert-fingerprint root-cert)))</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    (announce <span class="st">&quot;Root certificate fingerprint:&quot;</span>)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    (announce (fingerprint-&gt;words fingerprint))</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    (announce (fingerprint-&gt;hex fingerprint))))</span></code></pre></div>
+<hr />
+<h2 id="recovery-key-ceremony">Recovery Key Ceremony</h2>
+<h3 id="escrow-protocol">Escrow Protocol</h3>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">recovery-key-ceremony </span>n k escrow-agents)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate recovery keys with escrow&quot;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> (<span class="co">;; Generate recovery keypair</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>         (recovery-keypair (ceremony-generate-key <span class="st">&quot;recovery&quot;</span>))</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Split into shares</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>         (shares (shamir-split (keypair-secret recovery-keypair) n k))</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Encrypt each share to escrow agent</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>         (escrowed-shares</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>          (map (<span class="kw">lambda</span> (share agent)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>                 (escrow-share share agent))</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>               shares</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>               escrow-agents)))</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Store escrow metadata (not shares)</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    (create-escrow-record recovery-keypair escrowed-shares)</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Test recovery (with k agents)</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>    (test-recovery-process escrowed-shares k recovery-keypair)))</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">escrow-share </span>share agent)</span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Encrypt share for escrow agent&quot;</span></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>  `(escrowed-share</span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>    (agent ,(agent-id agent))</span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>    (encrypted ,(age-encrypt share (agent-pubkey agent)))</span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>    (verification ,(sha256 share))</span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>    (escrow-date ,(current-time))))</span></code></pre></div>
+<h3 id="recovery-execution">Recovery Execution</h3>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">execute-recovery </span>escrowed-shares agents)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Execute recovery using escrowed shares&quot;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Verify quorum present</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  (unless (<span class="op">&gt;=</span> (<span class="kw">length</span> agents) recovery-threshold)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Insufficient agents for recovery&quot;</span>))</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Each agent decrypts their share</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((decrypted-shares</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>          (map (<span class="kw">lambda</span> (agent escrowed)</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>                 (agent-decrypt-share agent escrowed))</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>               agents</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>               (filter-by-agent escrowed-shares agents)))</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Verify share hashes</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>         (<span class="op">_</span> (verify-share-hashes decrypted-shares escrowed-shares))</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Reconstruct</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>         (recovered-secret (shamir-reconstruct decrypted-shares)))</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Audit recovery event</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>    (audit-append</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>      action: &#39;(recovery-executed)</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>      motivation: <span class="st">&quot;Disaster recovery initiated&quot;</span></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>      priority: &#39;critical)</span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>    recovered-secret))</span></code></pre></div>
+<hr />
+<h2 id="ceremony-audit-trail">Ceremony Audit Trail</h2>
+<h3 id="ceremony-log-format">Ceremony Log Format</h3>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(ceremony-log</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  (ceremony-id <span class="st">&quot;KC-2026-001&quot;</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  (type root-certificate)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  (date <span class="st">&quot;2026-01-07&quot;</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  (location <span class="st">&quot;Secure facility, Building A, Room 101&quot;</span>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  (participants</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    (officer <span class="st">&quot;Alice Smith&quot;</span> (role ceremony-officer))</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    (officer <span class="st">&quot;Bob Jones&quot;</span> (role key-custodian))</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    (witness <span class="st">&quot;Carol White&quot;</span> (role witness))</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    (witness <span class="st">&quot;David Brown&quot;</span> (role witness))</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    (auditor <span class="st">&quot;Eve Green&quot;</span> (role auditor)))</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  (timeline</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;09:00&quot;</span> <span class="st">&quot;Room secured, equipment verified&quot;</span>)</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;09:15&quot;</span> <span class="st">&quot;Participants identified, devices collected&quot;</span>)</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;09:30&quot;</span> <span class="st">&quot;Software verification complete&quot;</span>)</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;09:45&quot;</span> <span class="st">&quot;Entropy generation started&quot;</span>)</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;10:00&quot;</span> <span class="st">&quot;Dice rolls complete, 100 rolls recorded&quot;</span>)</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;10:15&quot;</span> <span class="st">&quot;Key generation complete&quot;</span>)</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;10:30&quot;</span> <span class="st">&quot;Share distribution complete&quot;</span>)</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;10:45&quot;</span> <span class="st">&quot;Reconstruction test PASSED&quot;</span>)</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>    (event <span class="st">&quot;11:00&quot;</span> <span class="st">&quot;Ceremony concluded&quot;</span>))</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>  (artifacts</span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>    (public-key <span class="st">&quot;sha256:abc123...&quot;</span>)</span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>    (ceremony-record <span class="st">&quot;sha256:def456...&quot;</span>)</span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>    (video-hash <span class="st">&quot;sha256:789xyz...&quot;</span>))</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>  (attestations</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>    (signed-by <span class="st">&quot;Alice Smith&quot;</span> <span class="st">&quot;sha256:sig1...&quot;</span>)</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>    (signed-by <span class="st">&quot;Bob Jones&quot;</span> <span class="st">&quot;sha256:sig2...&quot;</span>)</span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>    (signed-by <span class="st">&quot;Carol White&quot;</span> <span class="st">&quot;sha256:sig3...&quot;</span>)</span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>    (signed-by <span class="st">&quot;David Brown&quot;</span> <span class="st">&quot;sha256:sig4...&quot;</span>)</span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>    (signed-by <span class="st">&quot;Eve Green&quot;</span> <span class="st">&quot;sha256:sig5...&quot;</span>)))</span></code></pre></div>
+<h3 id="soup-integration">Soup Integration</h3>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>(soup-object</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  (name <span class="st">&quot;ceremony/KC-2026-001&quot;</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  (type key-ceremony)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  (size <span class="st">&quot;4.2KB&quot;</span>)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  (crypto (ed25519 sha256 <span class="st">&quot;ceremony-hash...&quot;</span>))</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  (ceremony-type root-certificate)</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  (participants <span class="dv">5</span>)</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  (date <span class="st">&quot;2026-01-07&quot;</span>)</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  (status completed)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  (public-key <span class="st">&quot;sha256:abc123...&quot;</span>))</span></code></pre></div>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="entropy-quality">Entropy Quality</h3>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Multiple entropy sources required</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-entropy-quality </span>entropy-sources)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  (unless (<span class="op">&gt;=</span> (<span class="kw">length</span> entropy-sources) <span class="dv">3</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Insufficient entropy sources&quot;</span>))</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  (unless (<span class="kw">member</span> &#39;hardware-rng entropy-sources)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    (warn <span class="st">&quot;No hardware RNG - ceremony quality reduced&quot;</span>))</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  (unless (<span class="kw">member</span> &#39;dice entropy-sources)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    (warn <span class="st">&quot;No dice rolls - verifiability reduced&quot;</span>)))</span></code></pre></div>
+<h3 id="side-channel-protection">Side Channel Protection</h3>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Constant-time operations during key generation</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">secure-key-operations</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  &#39;((constant-time-comparison <span class="st">&quot;for all secret comparisons&quot;</span>)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    (memory-clearing <span class="st">&quot;zero secrets after use&quot;</span>)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    (no-branching-on-secrets <span class="st">&quot;avoid timing leaks&quot;</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    (power-analysis-resistance <span class="st">&quot;for HSM operations&quot;</span>)))</span></code></pre></div>
+<h3 id="witness-collusion">Witness Collusion</h3>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Mitigations for witness collusion</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> witness-requirements</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  &#39;((minimum-witnesses <span class="dv">2</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    (independent-verification <span class="st">&quot;each witness verifies independently&quot;</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    (no-communication <span class="st">&quot;witnesses cannot confer during ceremony&quot;</span>)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    (video-recording <span class="st">&quot;optional but recommended&quot;</span>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    (external-auditor <span class="st">&quot;for high-value ceremonies&quot;</span>)))</span></code></pre></div>
+<h3 id="ceremony-compromise-recovery">Ceremony Compromise Recovery</h3>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">ceremony-compromise-response </span>ceremony-id)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Response if ceremony is compromised&quot;</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((cert (get-ceremony-certificate ceremony-id)))</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Immediate revocation</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    (emergency-revoke cert <span class="st">&quot;Ceremony compromise suspected&quot;</span>)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Notify all relying parties</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    (broadcast-revocation cert)</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Schedule new ceremony</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>    (schedule-replacement-ceremony ceremony-id)</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Forensic preservation</span></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>    (preserve-ceremony-artifacts ceremony-id)))</span></code></pre></div>
+<hr />
+<h2 id="implementation">Implementation</h2>
+<h3 id="ceremony-script">Ceremony Script</h3>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">run-ceremony </span>type)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Main ceremony execution script&quot;</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((ceremony-id (generate-ceremony-id)))</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    (display-banner ceremony-id type)</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Pre-ceremony</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>    (run-checklist (pre-ceremony-checklist ceremony-id))</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Main ceremony</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">case</span> type</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>      ((single-key)</span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>       (single-key-ceremony ceremony-id))</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>      ((threshold)</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>       (threshold-ceremony (prompt <span class="st">&quot;N?&quot;</span>) (prompt <span class="st">&quot;K?&quot;</span>) ceremony-id))</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>      ((root-cert)</span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>       (root-certificate-ceremony ceremony-id (prompt <span class="st">&quot;Validity years?&quot;</span>)))</span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>      ((recovery)</span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>       (recovery-key-ceremony (prompt <span class="st">&quot;N?&quot;</span>) (prompt <span class="st">&quot;K?&quot;</span>)</span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>                              (collect-escrow-agents))))</span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Post-ceremony</span></span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>    (run-checklist (post-ceremony-checklist ceremony-id))</span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>    (announce <span class="st">&quot;Ceremony complete.&quot;</span>)</span>
+<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>    ceremony-id))</span></code></pre></div>
+<h3 id="offline-tool">Offline Tool</h3>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ceremony tool - runs air-gapped</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> seal-ceremony <span class="at">--type</span> threshold <span class="at">--shares</span> 5 <span class="at">--threshold</span> 3</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Library</span> of Cyberspace <span class="at">-</span> Key Ceremony Tool</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="ex">=========================================</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="ex">Ceremony</span> ID: KC-2026-001</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="ex">Type:</span> Threshold <span class="er">(</span><span class="ex">5-of-3</span><span class="kw">)</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a><span class="ex">Pre-ceremony</span> checklist:</span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a><span class="ex">[x]</span> Network disabled</span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a><span class="ex">[x]</span> Wireless disabled</span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a><span class="ex">[x]</span> Software verified</span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a><span class="ex">[x]</span> Witnesses present <span class="er">(</span><span class="ex">3</span><span class="kw">)</span></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a><span class="ex">Generating</span> entropy...</span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a>  <span class="ex">Hardware</span> RNG: 32 bytes collected</span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a>  <span class="ex">Dice</span> rolls: Witness 1, roll 1: _</span></code></pre></div>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li><a href="https://www.iana.org/dnssec/ceremonies">DNSSEC Root Key
+Ceremony</a></li>
+<li><a href="https://tools.ietf.org/html/rfc2693">RFC 2693 - SPKI
+Certificate Theory</a></li>
+<li><a href="rfc-007-threshold-governance.md">RFC-007: Threshold
+Signature Governance</a></li>
+<li><a href="rfc-008-shamir-sharing.md">RFC-008: Shamir Secret
+Sharing</a></li>
+<li><a href="rfc-021-capability-delegation.md">RFC-021: Capability
+Delegation</a></li>
+<li><a
+href="https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final">Key
+Ceremony Best Practices - NIST SP 800-57</a></li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-07</strong> - Initial draft</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Draft
+<strong>Dependencies:</strong> shamir, spki, age, audit
+<strong>Integration:</strong> Vault initialization, threshold
+governance, disaster recovery</p>
+</body>
+</html>
