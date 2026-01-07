@@ -781,7 +781,7 @@ Object Types:
          (lambda (f)
            (when (string-suffix? ".archive" f)
              (let ((stat (file-stat f)))
-               (set! objects (cons (list 'archives f (vector-ref stat 5) (get-archive-format f)) objects)))))
+               (set! objects (cons (list 'archives f (vector-ref stat 5) (get-archive-crypto f)) objects)))))
          (directory ".")))
 
       ;; Releases (.vault/releases/*.sig)
@@ -791,7 +791,7 @@ Object Types:
            (when (string-suffix? ".sig" f)
              (let* ((version (pathname-strip-extension f))
                     (stat (file-stat (sprintf ".vault/releases/~a" f))))
-               (set! objects (cons (list 'releases version (vector-ref stat 5) "signed") objects)))))
+               (set! objects (cons (list 'releases version (vector-ref stat 5) (get-release-crypto version)) objects)))))
          (directory ".vault/releases")))
 
       ;; Unsigned releases (git tags without .sig)
@@ -799,7 +799,7 @@ Object Types:
         (for-each
          (lambda (tag)
            (unless (file-exists? (sprintf ".vault/releases/~a.sig" tag))
-             (set! objects (cons (list 'releases tag 0 "unsigned") objects))))
+             (set! objects (cons (list 'releases tag 0 '("unsigned")) objects))))
          tags))
 
       ;; Audit entries (.vault/audit/*.sexp)
@@ -808,7 +808,7 @@ Object Types:
          (lambda (f)
            (when (string-suffix? ".sexp" f)
              (let ((stat (file-stat (sprintf ".vault/audit/~a" f))))
-               (set! objects (cons (list 'audit f (vector-ref stat 5) "entry") objects)))))
+               (set! objects (cons (list 'audit f (vector-ref stat 5) (get-audit-crypto (sprintf ".vault/audit/~a" f))) objects)))))
          (directory ".vault/audit")))
 
       ;; Keys (*.pub, *.key, *.age files)
@@ -819,7 +819,7 @@ Object Types:
                      (string-suffix? ".key" f)
                      (string-suffix? ".age" f))
              (let ((stat (file-stat f)))
-               (set! objects (cons (list 'keys f (vector-ref stat 5) (get-key-type f)) objects)))))
+               (set! objects (cons (list 'keys f (vector-ref stat 5) (get-key-crypto f)) objects)))))
          (directory ".")))
 
       ;; Metadata (.vault/metadata/*.sexp)
@@ -828,28 +828,121 @@ Object Types:
          (lambda (f)
            (when (string-suffix? ".sexp" f)
              (let ((stat (file-stat (sprintf ".vault/metadata/~a" f))))
-               (set! objects (cons (list 'metadata f (vector-ref stat 5) "commit") objects)))))
+               (set! objects (cons (list 'metadata f (vector-ref stat 5) '("sexp")) objects)))))
          (directory ".vault/metadata")))
 
       (reverse objects)))
 
-  (define (get-archive-format path)
-    "Detect archive format from manifest"
+  (define (get-archive-crypto path)
+    "Extract crypto attributes from archive manifest"
     (handle-exceptions exn
-      "unknown"
+      '("unknown")
       (let ((manifest (with-input-from-file path read)))
         (if (and (pair? manifest) (eq? 'sealed-archive (car manifest)))
-            (let ((fmt (assq 'format (cdr manifest))))
-              (if fmt (symbol->string (cadr fmt)) "unknown"))
-            "unknown"))))
+            (let* ((fields (cdr manifest))
+                   (fmt (assq 'format fields))
+                   (hash (assq 'hash fields))
+                   (ts (assq 'timestamp fields))
+                   (format-sym (if fmt (cadr fmt) 'unknown))
+                   (attrs (case format-sym
+                            ((zstd-age) '("age" "zstd" "sha256"))
+                            ((cryptographic) '("gzip" "sha256"))
+                            ((tarball) '("tar" "gzip"))
+                            ((bundle) '("git-bundle"))
+                            (else '("unknown")))))
+              (append attrs
+                      (if hash (list (sprintf "~a.." (substring (cadr hash) 0 8))) '())
+                      (if ts (list (format-timestamp (cadr ts))) '())))
+            '("unknown")))))
 
-  (define (get-key-type path)
-    "Detect key type from file"
-    (cond
-     ((string-suffix? ".pub" path) "public")
-     ((string-suffix? ".key" path) "private")
-     ((string-suffix? ".age" path) "age")
-     (else "unknown")))
+  (define (get-release-crypto version)
+    "Extract crypto attributes from signed release"
+    (let ((sig-file (sprintf ".vault/releases/~a.sig" version)))
+      (if (file-exists? sig-file)
+          (handle-exceptions exn
+            '("ed25519" "sha512")
+            (let* ((sig-data (with-input-from-file sig-file read))
+                   (hash (assq 'hash (cdr sig-data))))
+              (append '("ed25519" "sha512")
+                      (if hash (list (sprintf "~a.." (substring (cadr hash) 0 8))) '()))))
+          '("unsigned"))))
+
+  (define (byte->hex b)
+    "Convert byte to 2-char hex string"
+    (let ((hex "0123456789abcdef"))
+      (string (string-ref hex (quotient b 16))
+              (string-ref hex (remainder b 16)))))
+
+  (define (bytes->hex bytes n)
+    "Convert first n bytes to hex string"
+    (apply string-append
+           (map (lambda (i)
+                  (byte->hex (char->integer (string-ref bytes i))))
+                (iota (min n (string-length bytes))))))
+
+  (define (extract-identity path)
+    "Extract identity from key filename (e.g., alice.pub -> alice)"
+    (pathname-strip-extension (pathname-file path)))
+
+  (define (get-key-crypto path)
+    "Extract crypto attributes from key file"
+    (handle-exceptions exn
+      '("unknown")
+      (let* ((stat (file-stat path))
+             (mtime (vector-ref stat 8))
+             (size (vector-ref stat 5))
+             (date (format-timestamp mtime))
+             (identity (extract-identity path))
+             (content (with-input-from-file path read-string))
+             (key-bytes (string-length content))
+             ;; Compute sha256 fingerprint of full key
+             (key-hash-blob (sha256-hash content))
+             (key-hash-bytes (blob->string key-hash-blob))
+             (fp-hex (bytes->hex key-hash-bytes 8)))
+        (cond
+         ((string-suffix? ".pub" path)
+          (list "ed25519/256" "public" "sign"
+                (sprintf "sha256:~a.." fp-hex)
+                (sprintf "id:~a" identity)
+                date))
+         ((string-suffix? ".key" path)
+          (list "ed25519/256" "private" "sign"
+                (sprintf "sha256:~a.." fp-hex)
+                (sprintf "id:~a" identity)
+                date))
+         ((string-suffix? ".age" path)
+          (list "x25519/256" "age" "encrypt"
+                (sprintf "sha256:~a.." fp-hex)
+                (sprintf "id:~a" identity)
+                date))
+         (else '("unknown"))))))
+
+  (define (get-audit-crypto path)
+    "Extract crypto attributes from audit entry"
+    (handle-exceptions exn
+      '("entry")
+      (let ((entry (with-input-from-file path read)))
+        (if (and (pair? entry) (pair? (cdr entry)))
+            (let* ((fields (cdr entry))
+                   (seal (assq 'seal fields))
+                   (ts (assq 'timestamp fields))
+                   (id (assq 'id fields)))
+              (append
+               (if seal '("ed25519" "sha512" "sealed") '("entry"))
+               (if (and id (> (string-length (cadr id)) 8))
+                   (list (sprintf "~a.." (substring (cadr id) 0 8)))
+                   '())
+               (if ts (list (format-timestamp (cadr ts))) '())))
+            '("entry")))))
+
+  (define (format-timestamp ts)
+    "Format timestamp for display"
+    (handle-exceptions exn
+      ""
+      (let ((t (if (number? ts) ts (string->number ts))))
+        (if t
+            (time->string (seconds->local-time t) "%Y-%m-%d")
+            ""))))
 
   (define (get-git-tags)
     "Get list of git tags"
@@ -932,17 +1025,30 @@ Object Types:
                      (unless (null? objs)
                        (print "")
                        (printf " ~a/~%" type)
-                       (for-each
-                        (lambda (obj)
-                          (let ((name (cadr obj))
-                                (size (caddr obj))
-                                (info (cadddr obj)))
-                            (printf "   ~a~a~a  ~a~%"
-                                    name
-                                    (make-string (max 1 (- 32 (string-length name))) #\space)
-                                    (format-size size)
-                                    info)))
-                        objs))))
+                       ;; Only columnify if 4+ items
+                       (let* ((use-cols (>= (length objs) 4))
+                              (max-name (if use-cols
+                                            (apply max (map (lambda (o) (string-length (cadr o))) objs))
+                                            0)))
+                         (for-each
+                          (lambda (obj)
+                            (let ((name (cadr obj))
+                                  (size (caddr obj))
+                                  (info (cadddr obj)))
+                              (let ((attrs (if (list? info)
+                                                (string-intersperse info " ")
+                                                info)))
+                                (if use-cols
+                                    (printf "   ~a,~a ~a, ~a~%"
+                                            name
+                                            (make-string (- max-name (string-length name)) #\space)
+                                            (format-size size)
+                                            attrs)
+                                    (printf "   ~a, ~a, ~a~%"
+                                            name
+                                            (format-size size)
+                                            attrs)))))
+                          objs)))))
                  *soup-types*))
 
             (print "")
