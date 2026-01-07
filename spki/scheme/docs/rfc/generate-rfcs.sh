@@ -13,7 +13,7 @@
 set -e
 
 RFCS=(
-  rfc-000-manifesto
+  rfc-000-declaration
   rfc-001-replication-layer
   rfc-002-architecture
   rfc-003-audit-trail
