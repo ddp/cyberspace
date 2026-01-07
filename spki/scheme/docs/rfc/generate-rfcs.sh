@@ -50,6 +50,7 @@ RFCS=(
   rfc-031-monitoring
   rfc-032-rate-limiting
   rfc-033-schema-evolution
+  rfc-034-audit-protection
 )
 
 # Extract title from markdown file
