@@ -6,6 +6,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 
 | RFC | Title | Status | Date |
 |-----|-------|--------|------|
+| [rfc-000](rfc-000-manifesto.md) | The Manifesto | Informational | 2026-01-06 |
 | [rfc-001](rfc-001-replication-layer.md) | Replication Layer | Implemented | 2026-01-05 |
 | [rfc-002](rfc-002-architecture.md) | Cyberspace Architecture | Informational | 2026-01-06 |
 | [rfc-003](rfc-003-audit-trail.md) | Cryptographic Audit Trail | Implemented | 2026-01-06 |
@@ -24,6 +25,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-016](rfc-016-lazy-clustering.md) | Lazy Clustering | Proposed | 2026-01-06 |
 | [rfc-017](rfc-017-opera.md) | The Burning of Alexandria (Opera) | Cultural | 2026-01-06 |
 | [rfc-018](rfc-018-sealed-archive.md) | Sealed Archive Format | Implemented | 2026-01-06 |
+| [rfc-019](rfc-019-documentation-pipeline.md) | Documentation Pipeline | Implemented | 2026-01-06 |
 
 ## RFC Purpose
 
@@ -60,7 +62,7 @@ All formats are considered canonical and are preserved in the Vault.
 
 ## Upcoming RFCs
 
-- rfc-019: Content-Addressed Storage
-- rfc-020: Capability Delegation Patterns
-- rfc-021: Key Ceremony Protocol
-- rfc-022: Agent Spawning and Sandboxing
+- rfc-020: Content-Addressed Storage
+- rfc-021: Capability Delegation Patterns
+- rfc-022: Key Ceremony Protocol
+- rfc-023: Agent Spawning and Sandboxing

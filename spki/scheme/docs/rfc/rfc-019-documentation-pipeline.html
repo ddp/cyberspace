@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-019-documentation-pipeline</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-019-documentation-pipeline">RFC-019: Documentation
+Pipeline</h1>
+<p><strong>Status:</strong> Implemented <strong>Date:</strong> January
+2026 <strong>Author:</strong> Derrell Piper <a
+href="mailto:ddp@eludom.net" class="email">ddp@eludom.net</a>
+<strong>Implementation:</strong> generate-rfcs.sh</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies the documentation pipeline for the Library of
+Cyberspace: automated generation of canonical document formats, index
+catalogs, and future syndication feeds.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Documentation must be:</p>
+<ol type="1">
+<li><strong>Preserved</strong> - Multiple formats for long-term
+archival</li>
+<li><strong>Accessible</strong> - Viewable in any environment</li>
+<li><strong>Discoverable</strong> - Indexed for navigation</li>
+<li><strong>Syndicated</strong> - Subscribable for updates (future)</li>
+</ol>
+<p>The pipeline automates generation of all canonical formats from
+Markdown source.</p>
+<hr />
+<h2 id="canonical-formats">Canonical Formats</h2>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 32%" />
+<col style="width: 26%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr>
+<th>Format</th>
+<th>Extension</th>
+<th>Purpose</th>
+<th>Tool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Markdown</td>
+<td><code>.md</code></td>
+<td>Source, editing, version control</td>
+<td>-</td>
+</tr>
+<tr>
+<td>HTML</td>
+<td><code>.html</code></td>
+<td>Web viewing, rich rendering</td>
+<td>pandoc –standalone</td>
+</tr>
+<tr>
+<td>PDF</td>
+<td><code>.pdf</code></td>
+<td>Archival, printing, distribution</td>
+<td>pandoc + xelatex</td>
+</tr>
+<tr>
+<td>Plain Text</td>
+<td><code>.txt</code></td>
+<td>Universal compatibility, IETF tradition</td>
+<td>pandoc –to=plain</td>
+</tr>
+</tbody>
+</table>
+<p>All formats are first-class citizens. None is derived or
+secondary.</p>
+<hr />
+<h2 id="pipeline-specification">Pipeline Specification</h2>
+<h3 id="input">Input</h3>
+<p>Markdown source files following the naming convention:</p>
+<pre><code>rfc-NNN-short-name.md</code></pre>
+<p>Where: - <code>NNN</code> - Zero-padded RFC number (000-999) -
+<code>short-name</code> - Lowercase, hyphenated descriptive name</p>
+<h3 id="output">Output</h3>
+<p>For each input file, generate:</p>
+<pre><code>rfc-NNN-short-name.html   # Standalone HTML
+rfc-NNN-short-name.pdf    # PDF via XeLaTeX
+rfc-NNN-short-name.txt    # Plain text, 78 columns</code></pre>
+<p>Plus a navigational index:</p>
+<pre><code>index.html                # Hypertext catalog</code></pre>
+<h3 id="generation-commands">Generation Commands</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># HTML (standalone, no external dependencies)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${rfc}</span>.md <span class="at">-o</span> <span class="va">${rfc}</span>.html <span class="at">--standalone</span> <span class="at">--metadata</span> title=<span class="st">&quot;&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># PDF (XeLaTeX with monospace font for code)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${rfc}</span>.md <span class="at">-o</span> <span class="va">${rfc}</span>.pdf <span class="at">--pdf-engine</span><span class="op">=</span>xelatex <span class="at">-V</span> mainfont=<span class="st">&quot;Menlo&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Plain text (IETF-style, 78 columns)</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${rfc}</span>.md <span class="at">-o</span> <span class="va">${rfc}</span>.txt <span class="at">--to</span><span class="op">=</span>plain <span class="at">--wrap</span><span class="op">=</span>auto <span class="at">--columns</span><span class="op">=</span>78</span></code></pre></div>
+<h3 id="index-generation">Index Generation</h3>
+<p>The index.html catalog provides:</p>
+<ul>
+<li>RFC number and title</li>
+<li>Links to all four formats</li>
+<li>Clean, accessible HTML</li>
+</ul>
+<p>Structure:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">table</span><span class="dt">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">tr</span><span class="dt">&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>RFC Number<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>Title<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>html | pdf | txt | md<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;/</span><span class="kw">tr</span><span class="dt">&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">table</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="publication">Publication</h2>
+<h3 id="local-workflow">Local Workflow</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate all formats</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./generate-rfcs.sh</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Commit to vault</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">seal-commit</span> <span class="st">&quot;Regenerate RFC documentation&quot;</span></span></code></pre></div>
+<h3 id="remote-publication">Remote Publication</h3>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Publish to web server</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> <span class="at">--chmod</span><span class="op">=</span>D755,F644 <span class="at">-e</span> ssh <span class="dt">\</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="pp">*</span>.md <span class="pp">*</span>.html <span class="pp">*</span>.pdf <span class="pp">*</span>.txt index.html <span class="dt">\</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  user@server:~/path/to/docs/</span></code></pre></div>
+<p>Permission model: - Directories: 755 (world-readable, owner-writable)
+- Files: 644 (world-readable, owner-writable)</p>
+<hr />
+<h2 id="future-syndication">Future: Syndication</h2>
+<h3 id="rssatom-feeds">RSS/Atom Feeds</h3>
+<p>Future versions will generate:</p>
+<pre><code>rfc-feed.xml    # Atom feed of RFC updates</code></pre>
+<p>Feed entries will include: - RFC number and title -
+Publication/update date - Abstract - Links to all formats</p>
+<h3 id="subscription-model">Subscription Model</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Subscribe to RFC feed</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(seal-subscribe <span class="st">&quot;https://example.com/cyberspace/rfc-feed.xml&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  verify-key: publisher-public)</span></code></pre></div>
+<p>Integration with Vault subscription system (RFC-006).</p>
+<hr />
+<h2 id="implementation">Implementation</h2>
+<h3 id="generate-rfcs.sh">generate-rfcs.sh</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># RFC Documentation Pipeline</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="va">RFCS</span><span class="op">=</span><span class="va">(</span>rfc-000-manifesto rfc-001-replication-layer ...<span class="va">)</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> rfc <span class="kw">in</span> <span class="st">&quot;</span><span class="va">${RFCS</span><span class="op">[@]</span><span class="va">}</span><span class="st">&quot;</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.html&quot;</span> <span class="at">--standalone</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.pdf&quot;</span> <span class="at">--pdf-engine</span><span class="op">=</span>xelatex <span class="at">-V</span> mainfont=<span class="st">&quot;Menlo&quot;</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.txt&quot;</span> <span class="at">--to</span><span class="op">=</span>plain <span class="at">--columns</span><span class="op">=</span>78</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate index.html</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="ex">generate_index</span></span></code></pre></div>
+<h3 id="dependencies">Dependencies</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Version</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pandoc</td>
+<td>2.x+</td>
+<td>Document conversion</td>
+</tr>
+<tr>
+<td>xelatex</td>
+<td>TeX Live</td>
+<td>PDF generation</td>
+</tr>
+<tr>
+<td>rsync</td>
+<td>3.x+</td>
+<td>Publication</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="integrity">Integrity</h3>
+<p>Generated documents inherit integrity from: - Git version control
+(source) - Vault signatures (releases)</p>
+<h3 id="publication-1">Publication</h3>
+<p>Remote publication uses: - SSH key authentication - No sensitive data
+in documents - World-readable permissions only</p>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li><a href="https://pandoc.org/MANUAL.html">Pandoc User’s
+Guide</a></li>
+<li><a href="rfc-006-vault-architecture.md">RFC-006</a> - Vault System
+Architecture</li>
+<li><a href="https://tools.ietf.org/html/rfc4287">Atom Syndication
+Format</a> - RFC 4287</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-06</strong> - Initial specification</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Complete
+<strong>Script:</strong> generate-rfcs.sh <strong>Formats:</strong>
+Markdown, HTML, PDF, Plain Text</p>
+</body>
+</html>
