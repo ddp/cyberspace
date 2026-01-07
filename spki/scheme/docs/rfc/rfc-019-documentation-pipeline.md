@@ -39,11 +39,11 @@ NeXT got it right. The source is the document.
 
 | Format | Extension | Purpose |
 |--------|-----------|---------|
-| Plain Text | `.txt` | IETF tradition, universal, immortal |
-| HTML | `.html` | Web viewing |
+| Text | `.txt` | IETF tradition, universal, immortal |
 | PostScript | `.ps` | Archival, printing |
+| Hypertext Markup Language | `.html` | Web viewing |
 
-**Philosophy:** Text, HTML, and PostScript cover all use cases with open formats. No proprietary gatekeepers. These three are canonical—don't add more.
+**Philosophy:** Text, PostScript, and Hypertext Markup Language cover all use cases with open formats. No proprietary gatekeepers. These three are canonical—don't add more.
 
 ---
 
