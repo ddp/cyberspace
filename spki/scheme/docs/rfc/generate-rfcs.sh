@@ -321,3 +321,60 @@ echo "  TXT:  $(ls *.txt 2>/dev/null | wc -l | tr -d ' ')"
 echo "  Sources:"
 echo "    MD:  $(ls rfc-*.md 2>/dev/null | wc -l | tr -d ' ')"
 echo "    TeX: $(ls rfc-*.tex 2>/dev/null | wc -l | tr -d ' ')"
+
+# RFC Implementation Coverage Check
+echo ""
+echo "=== RFC Implementation Coverage ==="
+
+REPL_FILE="../../cyberspace-repl"
+if [[ -f "$REPL_FILE" ]]; then
+  # RFC keyword mappings (rfc-num:keyword)
+  RFC_MAP="
+003:audit-append
+004:create-cert
+006:seal-commit
+010:federate
+011:consensus
+012:lamport
+018:seal-archive
+020:content-address
+021:delegate
+023:sandbox
+025:query
+035:tunnel
+036:quorum
+037:node-role
+038:inference
+"
+
+  implemented=0
+  pending=0
+  pending_list=""
+
+  for rfc in "${RFCS[@]}"; do
+    # Extract RFC number (e.g., rfc-003-foo -> 003)
+    num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/')
+    # Find keyword for this RFC
+    keyword=$(echo "$RFC_MAP" | grep "^${num}:" | cut -d: -f2)
+
+    if [[ -n "$keyword" ]]; then
+      if grep -q "$keyword" "$REPL_FILE" 2>/dev/null; then
+        ((implemented++))
+      else
+        ((pending++))
+        pending_list="${pending_list}    - ${rfc} (${keyword})\n"
+      fi
+    fi
+  done
+
+  echo "  Implemented: $implemented"
+  echo "  Pending:     $pending"
+
+  if [[ $pending -gt 0 ]]; then
+    echo ""
+    echo "  Missing in REPL:"
+    echo -e "$pending_list"
+  fi
+else
+  echo "  [skip] REPL not found at $REPL_FILE"
+fi
