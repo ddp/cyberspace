@@ -1,0 +1,115 @@
+#!/usr/bin/env csi -q
+;;; cyberspace-repl - Interactive REPL for the Library of Cyberspace
+;;;
+;;; Usage: ./cyberspace-repl
+;;;
+;;; Preloads all Cyberspace modules for interactive exploration:
+;;;   - vault: seal-commit, seal-release, seal-archive, etc.
+;;;   - crypto-ffi: ed25519-keypair, sha512-hash, etc.
+;;;   - audit: audit-append, audit-read, etc.
+;;;   - cert: SPKI certificates
+;;;   - sexp: S-expression handling
+
+(import scheme
+        (chicken base)
+        (chicken format)
+        (chicken repl)
+        (chicken file)
+        (chicken process-context)
+        (chicken blob)
+        srfi-4)
+
+;; Load cyberspace modules
+(import crypto-ffi)
+(import vault)
+(import audit)
+(import cert)
+(import sexp)
+
+;; Initialize libsodium
+(sodium-init)
+
+;; Helper utilities
+(define (blob->hex b)
+  "Convert blob to hex string"
+  (define (byte->hex n)
+    (let ((s (number->string n 16)))
+      (if (= (string-length s) 1)
+          (string-append "0" s)
+          s)))
+  (let ((vec (blob->u8vector b)))
+    (let loop ((i 0) (acc '()))
+      (if (= i (u8vector-length vec))
+          (apply string-append (reverse acc))
+          (loop (+ i 1)
+                (cons (byte->hex (u8vector-ref vec i)) acc))))))
+
+(define (hex->blob hex-str)
+  "Convert hex string to blob"
+  (let* ((len (quotient (string-length hex-str) 2))
+         (vec (make-u8vector len)))
+    (do ((i 0 (+ i 1)))
+        ((= i len) (u8vector->blob vec))
+      (let* ((hex-byte (substring hex-str (* i 2) (+ (* i 2) 2)))
+             (byte-val (string->number hex-byte 16)))
+        (u8vector-set! vec i byte-val)))))
+
+(define (help)
+  "Show available commands"
+  (print "
+Cyberspace REPL - Available Commands:
+
+  Vault Operations:
+    (seal-commit \"message\")         Commit staged changes
+    (seal-release \"1.0.0\")          Create a release
+    (seal-archive \"1.0.0\")          Archive a release
+    (seal-archive \"1.0.0\" format: 'zstd-age)
+    (seal-restore \"file.archive\")   Restore from archive
+    (seal-history)                   Show commit history
+    (seal-update)                    Pull latest changes
+    (vault-config 'key)              Get config value
+    (vault-config 'key value)        Set config value
+    (vault-init signing-key: key)    Initialize vault
+
+  Cryptography:
+    (ed25519-keypair)                Generate keypair (pub priv)
+    (sha512-hash blob)               Hash data
+    (ed25519-sign key msg)           Sign message
+    (ed25519-verify pub msg sig)     Verify signature
+
+  Audit Trail:
+    (audit-append actor: k action: a) Add audit entry
+    (audit-read)                      Read audit trail
+
+  Certificates:
+    (create-cert issuer subject tag) Create SPKI cert
+    (sign-cert cert key)             Sign certificate
+    (verify-signed-cert cert key)    Verify certificate
+
+  Utilities:
+    (blob->hex blob)                 Convert blob to hex
+    (hex->blob \"deadbeef\")           Convert hex to blob
+    (help)                           Show this help
+
+  Config Keys:
+    'signing-key      Ed25519 private key (64 bytes)
+    'archive-format   'tarball | 'bundle | 'cryptographic | 'zstd-age
+    'age-recipients   List of age public keys
+    'age-identity     Path to age identity file
+"))
+
+;; Banner
+(print "
+╔═══════════════════════════════════════════════════════════════╗
+║           LIBRARY OF CYBERSPACE - Interactive REPL            ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Modules: vault, crypto-ffi, audit, cert, sexp                ║
+║  Type (help) for available commands                           ║
+╚═══════════════════════════════════════════════════════════════╝
+")
+
+;; Show current directory context
+(print "Working directory: " (current-directory))
+(when (directory-exists? ".vault")
+  (print "Vault detected: .vault/"))
+(print "")
