@@ -26,6 +26,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-017](rfc-017-opera.md) | The Burning of Alexandria (Opera) | Cultural | 2026-01-06 |
 | [rfc-018](rfc-018-sealed-archive.md) | Sealed Archive Format | Implemented | 2026-01-06 |
 | [rfc-019](rfc-019-documentation-pipeline.md) | Documentation Pipeline | Implemented | 2026-01-06 |
+| [rfc-020](rfc-020-content-addressed-storage.md) | Content-Addressed Storage | Draft | 2026-01-07 |
 
 ## RFC Purpose
 
@@ -62,7 +63,7 @@ All formats are considered canonical and are preserved in the Vault.
 
 ## Upcoming RFCs
 
-- rfc-020: Content-Addressed Storage
 - rfc-021: Capability Delegation Patterns
 - rfc-022: Key Ceremony Protocol
 - rfc-023: Agent Spawning and Sandboxing
+- rfc-024: Network Protocol

@@ -36,6 +36,7 @@ RFCS=(
   rfc-017-opera
   rfc-018-sealed-archive
   rfc-019-documentation-pipeline
+  rfc-020-content-addressed-storage
 )
 
 # Extract title from markdown file
