@@ -55,13 +55,12 @@ Transport Layer
 Supported Transports
 
     (define transports
-      '((udp/ipv6 "Native UDP/IPv6, port 7777 (primary per RFC-039)")
-        (tcp/ipv6 "TCP/IPv6, port 7777 (firewall fallback)")
-        (quic "UDP-based, multiplexed, encrypted")
-        (tcp/ipv4 "Legacy TCP/IPv4, port 7777 (transition)")
+      '((tcp "Traditional TCP/IP")
+        (quic "UDP-based, multiplexed")
         (unix "Local Unix domain socket")
-        (tor "Onion-routed TCP (censorship resistance)")
+        (tor "Onion-routed TCP")
         (i2p "Garlic-routed")
+        (bluetooth "Local mesh")
         (sneakernet "Physical media exchange")))
 
 Connection Establishment
@@ -284,17 +283,17 @@ Get Object
 
     ;; Request
     (get-object
-      (hash "sha512:abc123..."))
+      (hash "sha256:abc123..."))
 
     ;; Response (small object)
     (object-data
-      (hash "sha512:abc123...")
+      (hash "sha256:abc123...")
       (size 1024)
       (data #${...}))
 
     ;; Response (large object - streaming)
     (object-stream
-      (hash "sha512:abc123...")
+      (hash "sha256:abc123...")
       (size 10485760)
       (stream-id 42))
 
@@ -302,12 +301,12 @@ Put Object
 
     ;; Request
     (put-object
-      (hash "sha512:abc123...")
+      (hash "sha256:abc123...")
       (data #${...}))
 
     ;; Response
     (put-result
-      (hash "sha512:abc123...")
+      (hash "sha256:abc123...")
       (status stored|duplicate|rejected)
       (reason #f|"quota exceeded"))
 
@@ -315,14 +314,14 @@ Batch Operations
 
     ;; Request multiple objects
     (get-objects
-      (hashes ("sha512:aaa..." "sha512:bbb..." "sha512:ccc...")))
+      (hashes ("sha256:aaa..." "sha256:bbb..." "sha256:ccc...")))
 
     ;; Response
     (objects-batch
       (objects
-        ((hash "sha512:aaa..." data #${...})
-         (hash "sha512:bbb..." data #${...})
-         (hash "sha512:ccc..." status: missing))))
+        ((hash "sha256:aaa..." data #${...})
+         (hash "sha256:bbb..." data #${...})
+         (hash "sha256:ccc..." status: missing))))
 
 Tree Transfer
 
@@ -330,17 +329,17 @@ Efficient Merkle tree sync:
 
     ;; Request tree
     (get-tree
-      (root "sha512:root...")
+      (root "sha256:root...")
       (depth 3)  ; How deep to fetch
-      (exclude ("sha512:already-have...")))
+      (exclude ("sha256:already-have...")))
 
     ;; Response
     (tree-data
-      (root "sha512:root...")
+      (root "sha256:root...")
       (objects
-        ((hash "sha512:root..." data #${...})
-         (hash "sha512:child1..." data #${...})
-         (hash "sha512:child2..." data #${...}))))
+        ((hash "sha256:root..." data #${...})
+         (hash "sha256:child1..." data #${...})
+         (hash "sha256:child2..." data #${...}))))
 
 ------------------------------------------------------------------------------
 
@@ -525,7 +524,7 @@ Error Response
       (body
         (error-response
           (code not-found)
-          (message "Object sha512:abc... not found")
+          (message "Object sha256:abc... not found")
           (retry-after #f))))
 
 Retry Logic

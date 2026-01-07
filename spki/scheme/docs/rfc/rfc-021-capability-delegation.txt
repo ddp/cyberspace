@@ -51,7 +51,7 @@ A principal is anything that can hold authority:
     ;; Hash principal - content-addressed object
     (make-principal
       (type hash)
-      (algorithm sha512)
+      (algorithm sha256)
       (digest #${...32 bytes...}))
 
     ;; Threshold principal - M-of-N group
@@ -72,11 +72,11 @@ A capability is a transferable right to perform an action:
 
     (capability
       (action read)
-      (object (hash sha512 "content-hash...")))
+      (object (hash sha256 "content-hash...")))
 
     (capability
       (action write)
-      (object (tree sha512 "subtree-root...")))
+      (object (tree sha256 "subtree-root...")))
 
     (capability
       (action sign)
@@ -95,7 +95,7 @@ SPKI certificates bind capabilities to principals:
       (subject alice-key)
       (capability
         (action read)
-        (object (tree sha512 "docs-root...")))
+        (object (tree sha256 "docs-root...")))
       (validity
         (not-before "2026-01-01")
         (not-after "2027-01-01"))
@@ -287,7 +287,7 @@ Hash as Capability
 Knowledge of a content hash is itself a capability (RFC-020):
 
     ;; Possessing this hash grants read access
-    (define secret-doc-hash "sha512:7f83b1657ff1fc...")
+    (define secret-doc-hash "sha256:7f83b1657ff1fc...")
 
     ;; The hash is unguessable (256 bits of entropy)
     ;; Sharing the hash = sharing the capability
@@ -303,7 +303,7 @@ Formalize hash-based access:
       (subject reader-key)
       (capability
         (action read)
-        (object (hash sha512 "specific-doc...")))
+        (object (hash sha256 "specific-doc...")))
       (validity (not-after "2027-01-01")))
 
 Tree Capabilities
@@ -315,7 +315,7 @@ Grant access to Merkle subtree:
       (subject team-key)
       (capability
         (action read)
-        (object (tree sha512 "project-root..."))
+        (object (tree sha256 "project-root..."))
         (propagate #t))  ; Includes all referenced objects
       (delegation #t))
 
@@ -345,10 +345,10 @@ Revocation Lists
     (spki-crl
       (issuer vault-admin)
       (revoked
-        ((cert-hash "sha512:revoked1...")
+        ((cert-hash "sha256:revoked1...")
          (reason key-compromise)
          (revoked-at 1767700000))
-        ((cert-hash "sha512:revoked2...")
+        ((cert-hash "sha256:revoked2...")
          (reason superseded)
          (revoked-at 1767700100))))
 
@@ -356,7 +356,7 @@ Online Revocation Check
 
     (define (check-revocation cert)
       "Check if certificate is revoked"
-      (let* ((cert-hash (sha512 (serialize cert)))
+      (let* ((cert-hash (sha256 (serialize cert)))
              (issuer (cert-issuer cert))
              (crl (fetch-crl issuer)))
         (not (member cert-hash (crl-revoked-hashes crl)))))
@@ -397,7 +397,7 @@ All certificates are soup objects:
       (name "cert/alice-read-docs")
       (type certificate)
       (size "412B")
-      (crypto (ed25519 sha512 "cert-hash..."))
+      (crypto (ed25519 sha256 "cert-hash..."))
       (issuer "vault-admin")
       (subject "alice")
       (capability "read docs/*")

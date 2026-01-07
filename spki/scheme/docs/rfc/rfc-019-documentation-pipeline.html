@@ -405,20 +405,55 @@ number.<a href="#fn8" class="footnote-ref" id="fnref8"
 role="doc-noteref"><sup>8</sup></a></p>
 <hr />
 <h2 id="publication">Publication</h2>
-<h3 id="local-workflow">Local Workflow</h3>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate all formats</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./generate-rfcs.sh</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Commit to vault</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add <span class="at">-A</span> <span class="kw">&amp;&amp;</span> <span class="fu">git</span> commit <span class="at">-m</span> <span class="st">&quot;Regenerate RFC documentation&quot;</span></span></code></pre></div>
-<h3 id="remote-publication">Remote Publication</h3>
+<h3 id="pipeline-vocabulary">Pipeline Vocabulary</h3>
+<pre><code>commit  →  sync  →  publish
+  │         │         │
+  git     github   yoyodyne
+ local    remote      www</code></pre>
+<p><em>Table 3: Publication Commands</em></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Action</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>commit</code></td>
+<td><code>git commit</code></td>
+<td>Local repository</td>
+</tr>
+<tr>
+<td><code>sync</code></td>
+<td><code>git pull &amp;&amp; git push</code></td>
+<td>GitHub (cyberspace)</td>
+</tr>
+<tr>
+<td><code>publish</code></td>
+<td><code>rsync</code></td>
+<td>Yoyodyne (www)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="commit-local">Commit (Local)</h3>
 <div class="sourceCode" id="cb7"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Publish to yoyodyne</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> <span class="at">--chmod</span><span class="op">=</span>D755,F644 <span class="dt">\</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--include</span><span class="op">=</span><span class="st">&#39;*.html&#39;</span> <span class="at">--include</span><span class="op">=</span><span class="st">&#39;*.ps&#39;</span> <span class="at">--include</span><span class="op">=</span><span class="st">&#39;*.txt&#39;</span> <span class="dt">\</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--exclude</span><span class="op">=</span><span class="st">&#39;*&#39;</span> <span class="dt">\</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  docs/rfc/ ddp@www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/</span></code></pre></div>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate all formats</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./generate-rfcs.sh</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Commit to vault</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add <span class="at">-A</span> <span class="kw">&amp;&amp;</span> <span class="fu">git</span> commit <span class="at">-m</span> <span class="st">&quot;Regenerate RFC documentation&quot;</span></span></code></pre></div>
+<h3 id="sync-github">Sync (GitHub)</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sync with remote</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> pull <span class="kw">&amp;&amp;</span> <span class="fu">git</span> push</span></code></pre></div>
+<h3 id="publish-yoyodyne">Publish (Yoyodyne)</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Publish to yoyodyne</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> <span class="at">--chmod</span><span class="op">=</span>D755,F644 <span class="dt">\</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="pp">*</span>.html <span class="pp">*</span>.ps <span class="pp">*</span>.txt <span class="dt">\</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  ddp@www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/</span></code></pre></div>
 <p><strong>Published URL:</strong>
 https://www.yoyodyne.com/ddp/cyberspace/</p>
 <p><strong>Published:</strong> - <code>*.html</code> - Web viewing -

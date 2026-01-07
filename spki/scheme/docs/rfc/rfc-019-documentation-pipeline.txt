@@ -135,7 +135,22 @@ The permuted index enables discovery by concept rather than by RFC number.[8]
 
 Publication
 
-Local Workflow
+Pipeline Vocabulary
+
+    commit  →  sync  →  publish
+      │         │         │
+      git     github   yoyodyne
+     local    remote      www
+
+Table 3: Publication Commands
+
+  Command   Action                 Target
+  --------- ---------------------- ---------------------
+  commit    git commit             Local repository
+  sync      git pull && git push   GitHub (cyberspace)
+  publish   rsync                  Yoyodyne (www)
+
+Commit (Local)
 
     # Generate all formats
     ./generate-rfcs.sh
@@ -143,13 +158,17 @@ Local Workflow
     # Commit to vault
     git add -A && git commit -m "Regenerate RFC documentation"
 
-Remote Publication
+Sync (GitHub)
+
+    # Sync with remote
+    git pull && git push
+
+Publish (Yoyodyne)
 
     # Publish to yoyodyne
     rsync -avz --chmod=D755,F644 \
-      --include='*.html' --include='*.ps' --include='*.txt' \
-      --exclude='*' \
-      docs/rfc/ ddp@www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/
+      *.html *.ps *.txt \
+      ddp@www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/
 
 Published URL: https://www.yoyodyne.com/ddp/cyberspace/
 

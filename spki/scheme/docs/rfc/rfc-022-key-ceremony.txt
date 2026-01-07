@@ -126,7 +126,7 @@ Software
       (os "minimal Linux, verified hash")
       (key-generator "library keygen or gpg")
       (shamir-split "ssss or library implementation")
-      (hash-tool "sha512sum")
+      (hash-tool "sha256sum")
       (encryption "age for share protection"))
 
 ------------------------------------------------------------------------------
@@ -155,17 +155,17 @@ Entropy Generation
               (apply bytes-append
                      (map (lambda (w)
                             (let ((rolls (witness-dice-rolls w 20)))
-                              (sha512 (rolls->bytes rolls))))
+                              (sha256 (rolls->bytes rolls))))
                           witnesses)))
 
              ;; Timestamp contribution
-             (time-entropy (sha512 (timestamp->bytes (current-time))))
+             (time-entropy (sha256 (timestamp->bytes (current-time))))
 
              ;; Combine all sources
              (combined (bytes-append hw-entropy dice-entropy time-entropy)))
 
         ;; Final mixing
-        (sha512 combined)))
+        (sha256 combined)))
 
     (define (witness-dice-rolls witness count)
       "Witness rolls dice, records each result"
@@ -334,7 +334,7 @@ Share Protection
                 (shareholder ,(shareholder-id shareholder))
                 (share-number ,(share-index share))
                 (encrypted-share ,(bytes->base64 encrypted))
-                (verification-hash ,(sha512 share)))))
+                (verification-hash ,(sha256 share)))))
 
         ;; Print or store
         (deliver-share-package package shareholder)))
@@ -454,7 +454,7 @@ Escrow Protocol
       `(escrowed-share
         (agent ,(agent-id agent))
         (encrypted ,(age-encrypt share (agent-pubkey agent)))
-        (verification ,(sha512 share))
+        (verification ,(sha256 share))
         (escrow-date ,(current-time))))
 
 Recovery Execution
@@ -518,16 +518,16 @@ Ceremony Log Format
         (event "11:00" "Ceremony concluded"))
 
       (artifacts
-        (public-key "sha512:abc123...")
-        (ceremony-record "sha512:def456...")
-        (video-hash "sha512:789xyz..."))
+        (public-key "sha256:abc123...")
+        (ceremony-record "sha256:def456...")
+        (video-hash "sha256:789xyz..."))
 
       (attestations
-        (signed-by "Alice Smith" "sha512:sig1...")
-        (signed-by "Bob Jones" "sha512:sig2...")
-        (signed-by "Carol White" "sha512:sig3...")
-        (signed-by "David Brown" "sha512:sig4...")
-        (signed-by "Eve Green" "sha512:sig5...")))
+        (signed-by "Alice Smith" "sha256:sig1...")
+        (signed-by "Bob Jones" "sha256:sig2...")
+        (signed-by "Carol White" "sha256:sig3...")
+        (signed-by "David Brown" "sha256:sig4...")
+        (signed-by "Eve Green" "sha256:sig5...")))
 
 Soup Integration
 
@@ -535,12 +535,12 @@ Soup Integration
       (name "ceremony/KC-2026-001")
       (type key-ceremony)
       (size "4.2KB")
-      (crypto (ed25519 sha512 "ceremony-hash..."))
+      (crypto (ed25519 sha256 "ceremony-hash..."))
       (ceremony-type root-certificate)
       (participants 5)
       (date "2026-01-07")
       (status completed)
-      (public-key "sha512:abc123..."))
+      (public-key "sha256:abc123..."))
 
 ------------------------------------------------------------------------------
 
