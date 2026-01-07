@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-014-coq-extraction</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-014-coq-extraction-for-tcb">RFC-014: Coq Extraction for
+TCB</h1>
+<p><strong>Status:</strong> Proposed <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a></p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies the use of Coq proof assistant for verified
+implementation of the Trusted Computing Base, with extraction to OCaml
+for production use. Prove once, trust forever.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>The Prime Directive (RFC-002):</p>
+<blockquote>
+<p><em>If it’s in the TCB, it’s in OCaml. Otherwise it’s in Chicken
+Scheme.</em></p>
+</blockquote>
+<p>But even OCaml can have bugs. The TCB handles: - Ed25519 signatures -
+SHA-512 hashing - Signature chain verification</p>
+<p>A single bug breaks everything.</p>
+<p>Coq provides:</p>
+<ol type="1">
+<li><strong>Machine-checked proofs</strong>: Theorems verified by
+computer</li>
+<li><strong>Extraction</strong>: Generate OCaml from proofs</li>
+<li><strong>Correctness by construction</strong>: Implementation matches
+specification</li>
+<li><strong>Eternal validity</strong>: Proofs don’t expire</li>
+</ol>
+<p>From the Coq motto:</p>
+<blockquote>
+<p><em>The proof is in the code.</em></p>
+</blockquote>
+<hr />
+<h2 id="specification">Specification</h2>
+<h3 id="trusted-computing-base">Trusted Computing Base</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    CYBERSPACE TCB                           │
+│                                                             │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│   │   Ed25519   │  │   SHA-512   │  │   Verify    │        │
+│   │   Proven    │  │   Proven    │  │   Proven    │        │
+│   └──────┬──────┘  └──────┬──────┘  └──────┬──────┘        │
+│          │                │                │                │
+│          └────────────────┼────────────────┘                │
+│                           │                                 │
+│                    Coq Extraction                           │
+│                           │                                 │
+│                    ┌──────▼──────┐                          │
+│                    │    OCaml    │                          │
+│                    │   ~1000 LOC │                          │
+│                    └─────────────┘                          │
+│                                                             │
+│   Proven in Coq. Extracted to OCaml. Called from Scheme.   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<hr />
+<h2 id="coq-specifications">Coq Specifications</h2>
+<h3 id="types">Types</h3>
+<pre class="coq"><code>(* Byte arrays *)
+Definition bytes := list byte.
+
+(* Keys *)
+Record ed25519_public_key := {
+  pk_bytes : bytes;
+  pk_length : length pk_bytes = 32
+}.
+
+Record ed25519_private_key := {
+  sk_bytes : bytes;
+  sk_length : length sk_bytes = 64
+}.
+
+(* Signatures *)
+Record ed25519_signature := {
+  sig_bytes : bytes;
+  sig_length : length sig_bytes = 64
+}.
+
+(* Hashes *)
+Record sha512_hash := {
+  hash_bytes : bytes;
+  hash_length : length hash_bytes = 64
+}.</code></pre>
+<h3 id="signature-specification">Signature Specification</h3>
+<pre class="coq"><code>(* Abstract signature scheme *)
+Module Type ED25519_SPEC.
+  Parameter sign : ed25519_private_key -&gt; bytes -&gt; ed25519_signature.
+  Parameter verify : ed25519_public_key -&gt; bytes -&gt; ed25519_signature -&gt; bool.
+
+  (* Correctness: valid signatures verify *)
+  Axiom sign_verify_correct :
+    forall sk pk msg,
+      pk = derive_public sk -&gt;
+      verify pk msg (sign sk msg) = true.
+
+  (* Security: cannot forge without private key *)
+  Axiom unforgeability :
+    forall pk msg sig,
+      verify pk msg sig = true -&gt;
+      exists sk, pk = derive_public sk /\ sig = sign sk msg.
+End ED25519_SPEC.</code></pre>
+<h3 id="hash-specification">Hash Specification</h3>
+<pre class="coq"><code>Module Type SHA512_SPEC.
+  Parameter hash : bytes -&gt; sha512_hash.
+
+  (* Determinism *)
+  Axiom hash_deterministic :
+    forall x, hash x = hash x.
+
+  (* Collision resistance (assumed) *)
+  Axiom collision_resistant :
+    forall x y, hash x = hash y -&gt; x = y. (* Idealized *)
+End SHA512_SPEC.</code></pre>
+<h3 id="chain-verification">Chain Verification</h3>
+<pre class="coq"><code>(* Certificate chain verification *)
+Fixpoint verify_chain
+  (root : ed25519_public_key)
+  (certs : list signed_cert)
+  (target_tag : tag) : bool :=
+  match certs with
+  | nil =&gt; false
+  | cert :: rest =&gt;
+      let issuer_key := cert_issuer cert in
+      let subject_key := cert_subject cert in
+      let cert_tag := cert_tag cert in
+      (* Check issuer matches current key *)
+      andb (key_eq root issuer_key)
+      (* Check signature valid *)
+      (andb (verify issuer_key (cert_content cert) (cert_signature cert))
+      (* Check tag grants permission *)
+      (andb (tag_implies cert_tag target_tag)
+      (* Continue chain *)
+      (match rest with
+       | nil =&gt; true
+       | _ =&gt; verify_chain subject_key rest target_tag
+       end)))
+  end.
+
+(* Theorem: Valid chain implies authorization *)
+Theorem chain_authorization :
+  forall root certs tag,
+    verify_chain root certs tag = true -&gt;
+    authorized root tag.
+Proof.
+  (* Proof by induction on chain length *)
+  ...
+Qed.</code></pre>
+<hr />
+<h2 id="extraction-to-ocaml">Extraction to OCaml</h2>
+<h3 id="extraction-directives">Extraction Directives</h3>
+<pre class="coq"><code>Require Import ExtrOcamlBasic.
+Require Import ExtrOcamlString.
+
+(* Extract to OCaml types *)
+Extract Inductive bool =&gt; &quot;bool&quot; [&quot;true&quot; &quot;false&quot;].
+Extract Inductive list =&gt; &quot;list&quot; [&quot;[]&quot; &quot;(::)&quot;].
+
+(* Link to libsodium *)
+Extract Constant ed25519_sign =&gt; &quot;Sodium.Ed25519.sign&quot;.
+Extract Constant ed25519_verify =&gt; &quot;Sodium.Ed25519.verify&quot;.
+Extract Constant sha512_hash =&gt; &quot;Sodium.SHA512.hash&quot;.
+
+(* Generate OCaml *)
+Extraction &quot;tcb.ml&quot; verify_chain sign verify hash.</code></pre>
+<h3 id="generated-ocaml">Generated OCaml</h3>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode ocaml"><code class="sourceCode ocaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">(* tcb.ml - Extracted from Coq *)</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> <span class="kw">rec</span> verify_chain root certs target_tag =</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">match</span> certs <span class="kw">with</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  | [] -&gt; <span class="kw">false</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  | cert :: rest -&gt;</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      <span class="kw">let</span> issuer_key = cert_issuer cert <span class="kw">in</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="kw">let</span> subject_key = cert_subject cert <span class="kw">in</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      key_eq root issuer_key &amp;&amp;</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>      Sodium.Ed25519.verify issuer_key (cert_content cert) (cert_signature cert) &amp;&amp;</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      tag_implies (cert_tag cert) target_tag &amp;&amp;</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">match</span> rest <span class="kw">with</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>       | [] -&gt; <span class="kw">true</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>       | _ -&gt; verify_chain subject_key rest target_tag)</span></code></pre></div>
+<hr />
+<h2 id="integration-with-scheme">Integration with Scheme</h2>
+<h3 id="ffi-layer">FFI Layer</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode ocaml"><code class="sourceCode ocaml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">(* tcb_ffi.ml - FFI bindings for Chicken Scheme *)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> () = <span class="dt">Callback</span>.register <span class="st">&quot;tcb_verify_chain&quot;</span> verify_chain</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> () = <span class="dt">Callback</span>.register <span class="st">&quot;tcb_sign&quot;</span> sign</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> () = <span class="dt">Callback</span>.register <span class="st">&quot;tcb_verify&quot;</span> verify</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> () = <span class="dt">Callback</span>.register <span class="st">&quot;tcb_hash&quot;</span> hash</span></code></pre></div>
+<h3 id="scheme-bindings">Scheme Bindings</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; crypto-ffi.scm</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(module crypto-ffi</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (ed25519-sign ed25519-verify sha512-hash verify-chain)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (import (chicken foreign))</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Call into verified OCaml</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  (<span class="ex">define</span><span class="fu"> ed25519-sign</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    (foreign-lambda* blob ((blob key) (blob msg))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;return tcb_sign(key, msg);&quot;</span>))</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  (<span class="ex">define</span><span class="fu"> verify-chain</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    (foreign-lambda* bool ((blob root) (pointer certs) (pointer tag))</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;return tcb_verify_chain(root, certs, tag);&quot;</span>))</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
+<hr />
+<h2 id="proof-obligations">Proof Obligations</h2>
+<h3 id="what-we-prove">What We Prove</h3>
+<ol type="1">
+<li><strong>Signature correctness</strong>: Valid signatures verify</li>
+<li><strong>Chain soundness</strong>: Valid chain implies
+authorization</li>
+<li><strong>Hash properties</strong>: Determinism, length
+preservation</li>
+<li><strong>Type safety</strong>: No buffer overflows, no null
+pointers</li>
+</ol>
+<h3 id="what-we-assume">What We Assume</h3>
+<ol type="1">
+<li><strong>Cryptographic hardness</strong>: Ed25519 unforgeability</li>
+<li><strong>libsodium correctness</strong>: Implementation matches
+spec</li>
+<li><strong>OCaml runtime</strong>: Extraction target is correct</li>
+<li><strong>Hardware</strong>: CPU executes instructions correctly</li>
+</ol>
+<h3 id="trust-chain">Trust Chain</h3>
+<pre><code>Mathematical proof (Coq)
+    ↓
+Extraction (verified by Coq)
+    ↓
+OCaml code (typed, memory-safe)
+    ↓
+libsodium (audited, widely deployed)
+    ↓
+CPU instructions (trust hardware)</code></pre>
+<hr />
+<h2 id="development-workflow">Development Workflow</h2>
+<h3 id="specify-in-coq">1. Specify in Coq</h3>
+<pre class="coq"><code>(* Define types and operations *)
+(* State properties and theorems *)</code></pre>
+<h3 id="prove-correctness">2. Prove Correctness</h3>
+<pre class="coq"><code>(* Prove theorems *)
+(* Coq checks proofs mechanically *)</code></pre>
+<h3 id="extract-to-ocaml">3. Extract to OCaml</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> coqc <span class="at">-R</span> . Cyberspace tcb.v</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> coqc <span class="at">-R</span> . Cyberspace extract.v</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> ls <span class="pp">*</span>.ml</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="ex">tcb.ml</span> tcb_types.ml</span></code></pre></div>
+<h3 id="compile-and-link">4. Compile and Link</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> ocamlfind ocamlopt <span class="at">-package</span> sodium <span class="at">-linkpkg</span> <span class="dt">\</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    tcb.ml tcb_ffi.ml <span class="at">-o</span> tcb.cmxa</span></code></pre></div>
+<h3 id="call-from-scheme">5. Call from Scheme</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(import crypto-ffi)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>(ed25519-sign key message)  <span class="co">; Calls verified code</span></span></code></pre></div>
+<hr />
+<h2 id="existing-verified-libraries">Existing Verified Libraries</h2>
+<h3 id="fiat-crypto">Fiat-Crypto</h3>
+<ul>
+<li>Verified elliptic curve implementations</li>
+<li>Used by BoringSSL, Chrome</li>
+<li>Extraction to C, Java, Go</li>
+</ul>
+<h3 id="hacl">HACL*</h3>
+<ul>
+<li>Verified cryptographic library</li>
+<li>Written in F* (similar to Coq)</li>
+<li>Used by Firefox, Wireguard</li>
+</ul>
+<h3 id="potential-use">Potential Use</h3>
+<pre class="coq"><code>Require Import Fiat.Crypto.Ed25519.
+(* Use pre-verified Ed25519 implementation *)</code></pre>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="verified-components">Verified Components</h3>
+<ul>
+<li>Signature operations</li>
+<li>Hash operations</li>
+<li>Chain verification logic</li>
+</ul>
+<h3 id="unverified-trusted">Unverified (Trusted)</h3>
+<ul>
+<li>FFI layer (small, auditable)</li>
+<li>libsodium bindings</li>
+<li>Scheme runtime</li>
+</ul>
+<h3 id="audit-surface">Audit Surface</h3>
+<pre><code>Total TCB:     ~1000 lines OCaml
+Verified:      ~800 lines (extracted from ~2000 lines Coq)
+Trusted:       ~200 lines (FFI, bindings)</code></pre>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>Coq Development Team. The Coq Proof Assistant Reference Manual.</li>
+<li>Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic
+Arithmetic.</li>
+<li>Protzenko, J., et al. (2017). Verified Low-Level Programming
+Embedded in F*.</li>
+<li>Chlipala, A. (2013). Certified Programming with Dependent
+Types.</li>
+<li>RFC-002: Cyberspace Architecture</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-06</strong> - Initial specification</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Proposed <strong>Proof
+Assistant:</strong> Coq <strong>Extraction Target:</strong> OCaml
+<strong>TCB Size:</strong> ~1000 lines</p>
+</body>
+</html>

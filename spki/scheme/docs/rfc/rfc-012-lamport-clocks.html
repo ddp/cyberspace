@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-012-lamport-clocks</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-012-lamport-logical-clocks">RFC-012: Lamport Logical
+Clocks</h1>
+<p><strong>Status:</strong> Proposed <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a></p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies Lamport logical clocks for Cyberspace distributed
+ordering, providing a happened-before relation across federated vaults
+without synchronized physical clocks.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Physical clocks lie:</p>
+<ul>
+<li><strong>Clock skew</strong>: Machines disagree on time</li>
+<li><strong>Clock drift</strong>: Skew grows over time</li>
+<li><strong>NTP failures</strong>: Synchronization breaks</li>
+<li><strong>Relativity</strong>: No global “now” anyway</li>
+</ul>
+<p>Lamport clocks provide:</p>
+<ol type="1">
+<li><strong>Logical ordering</strong>: a → b means a happened before
+b</li>
+<li><strong>No synchronization</strong>: No NTP, no GPS, no trusted
+time</li>
+<li><strong>Causality tracking</strong>: If a caused b, then C(a) &lt;
+C(b)</li>
+<li><strong>Consistency</strong>: All nodes agree on partial order</li>
+</ol>
+<p>From Lamport (1978):</p>
+<blockquote>
+<p><em>Time, Clocks, and the Ordering of Events in a Distributed
+System</em></p>
+</blockquote>
+<hr />
+<h2 id="specification">Specification</h2>
+<h3 id="the-happened-before-relation">The Happened-Before Relation</h3>
+<p><strong>Definition</strong>: a → b (a happened before b) if:</p>
+<ol type="1">
+<li>a and b are in same process and a comes before b, or</li>
+<li>a is sending a message and b is receiving it, or</li>
+<li>∃c such that a → c and c → b (transitivity)</li>
+</ol>
+<h3 id="lamport-clock-rules">Lamport Clock Rules</h3>
+<p>Each process P maintains counter C(P):</p>
+<pre><code>Rule 1: Before each event, increment C(P)
+         C(P) := C(P) + 1
+
+Rule 2: When sending message m, attach C(P)
+         send(m, C(P))
+
+Rule 3: When receiving message (m, T), update clock
+         C(P) := max(C(P), T) + 1</code></pre>
+<h3 id="clock-condition">Clock Condition</h3>
+<p>If a → b then C(a) &lt; C(b).</p>
+<p>Note: Converse is not guaranteed. C(a) &lt; C(b) does not imply a →
+b.</p>
+<hr />
+<h2 id="data-structures">Data Structures</h2>
+<h3 id="logical-timestamp">Logical Timestamp</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;lamport-clock&gt;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  (make-lamport-clock counter node-id)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  lamport-clock?</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  (counter clock-counter)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  (node-id clock-node-id))</span></code></pre></div>
+<h3 id="timestamped-event">Timestamped Event</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;timestamped-event&gt;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (make-timestamped-event clock event)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  timestamped-event?</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  (clock event-clock)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (event event-data))</span></code></pre></div>
+<hr />
+<h2 id="operations">Operations</h2>
+<h3 id="increment-local-event">Increment (Local Event)</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">clock-tick! </span>clock)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Increment clock for local event&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">set!</span> (clock-counter clock)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        (<span class="op">+</span> <span class="dv">1</span> (clock-counter clock)))</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  clock)</span></code></pre></div>
+<h3 id="send-message-departure">Send (Message Departure)</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">clock-send </span>clock message)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Attach timestamp to outgoing message&quot;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (clock-tick! clock)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (make-timestamped-message</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    (clock-counter clock)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    (clock-node-id clock)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    message))</span></code></pre></div>
+<h3 id="receive-message-arrival">Receive (Message Arrival)</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">clock-receive! </span>clock timestamped-message)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Update clock on message receipt&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((remote-time (message-timestamp timestamped-message)))</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">set!</span> (clock-counter clock)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>          (<span class="op">+</span> <span class="dv">1</span> (<span class="kw">max</span> (clock-counter clock) remote-time)))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    (message-payload timestamped-message)))</span></code></pre></div>
+<hr />
+<h2 id="total-ordering">Total Ordering</h2>
+<p>Lamport clocks give partial order. For total order, break ties with
+node ID:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">lamport-compare </span>a b)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Total order: compare by timestamp, then by node-id&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((ta (clock-counter (event-clock a)))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        (tb (clock-counter (event-clock b)))</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        (na (clock-node-id (event-clock a)))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        (nb (clock-node-id (event-clock b))))</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">cond</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> ta tb) -<span class="dv">1</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&gt;</span> ta tb) <span class="dv">1</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>      ((<span class="kw">string&lt;?</span> na nb) -<span class="dv">1</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      ((<span class="kw">string&gt;?</span> na nb) <span class="dv">1</span>)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">else</span> <span class="dv">0</span>))))</span></code></pre></div>
+<hr />
+<h2 id="application-to-cyberspace">Application to Cyberspace</h2>
+<h3 id="audit-trail-ordering">Audit Trail Ordering</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  (lamport-clock <span class="dv">1042</span> <span class="st">&quot;alice-vault&quot;</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="st">&quot;2026-01-06T15:30:00Z&quot;</span>)  <span class="co">; Physical (advisory)</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  (action (seal-commit <span class="st">&quot;abc123&quot;</span>))</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
+<p>Logical clock provides causal ordering even if physical clocks
+differ.</p>
+<h3 id="federation-message-ordering">Federation Message Ordering</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(federation-message</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (logical-time <span class="dv">573</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (from <span class="st">&quot;bob-vault&quot;</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (type announcement)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (payload <span class="op">...</span>))</span></code></pre></div>
+<p>Receivers update their clocks, ensuring consistent view of
+causality.</p>
+<h3 id="conflict-detection">Conflict Detection</h3>
+<p>If events are concurrent (neither a → b nor b → a):</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">concurrent? </span>a b)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;True if neither event happened before the other&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((ta (clock-counter (event-clock a)))</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        (tb (clock-counter (event-clock b))))</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; If timestamps equal and different nodes, concurrent</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; More sophisticated: use vector clocks for accurate detection</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> (<span class="op">=</span> ta tb)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>         (<span class="kw">not</span> (<span class="kw">equal?</span> (clock-node-id (event-clock a))</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>                      (clock-node-id (event-clock b)))))))</span></code></pre></div>
+<hr />
+<h2 id="vector-clocks-extension">Vector Clocks (Extension)</h2>
+<p>For precise concurrency detection, use vector clocks:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;vector-clock&gt;</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  (make-vector-clock entries)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  vector-clock?</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  (entries vc-entries))  <span class="co">; Hash: node-id → counter</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; a → b iff VC(a) &lt; VC(b) (component-wise)</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; a || b (concurrent) iff neither VC(a) &lt; VC(b) nor VC(b) &lt; VC(a)</span></span></code></pre></div>
+<p>Trade-off: O(N) space vs O(1) for Lamport clocks.</p>
+<hr />
+<h2 id="integration-points">Integration Points</h2>
+<h3 id="with-audit-trail-rfc-003">With Audit Trail (RFC-003)</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">42</span>)           <span class="co">; Local sequence</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  (lamport-clock <span class="dv">1042</span>)    <span class="co">; Logical timestamp</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  (physical-time <span class="st">&quot;...&quot;</span>)   <span class="co">; Advisory only</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
+<h3 id="with-consensus-rfc-011">With Consensus (RFC-011)</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(consensus-message</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">573</span>)          <span class="co">; Consensus sequence</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (lamport-clock <span class="dv">2891</span>)    <span class="co">; Causal context</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
+<h3 id="with-replication-rfc-001">With Replication (RFC-001)</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(seal-publish <span class="st">&quot;2.0.0&quot;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  (logical-time <span class="dv">892</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="clock-manipulation">Clock Manipulation</h3>
+<p>A Byzantine node could: - Report artificially high clock values -
+Attempt to order events incorrectly</p>
+<p>Mitigations: - Clock values bounded by received values + margin -
+Signatures prevent retroactive tampering - Audit trails detect
+anomalies</p>
+<h3 id="denial-of-service">Denial of Service</h3>
+<p>Flooding with high-timestamped messages forces clock advancement.</p>
+<p>Mitigation: Rate limiting, reputation systems.</p>
+<hr />
+<h2 id="implementation-notes">Implementation Notes</h2>
+<h3 id="thread-safety">Thread Safety</h3>
+<p>Clock updates must be atomic:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">atomic-tick! </span>clock)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  (mutex-lock! clock-mutex)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (clock-tick! clock)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  (mutex-unlock! clock-mutex))</span></code></pre></div>
+<h3 id="persistence">Persistence</h3>
+<p>Clock state survives restarts:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">save-clock </span>clock path)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">with-output-to-file</span> path</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> ()</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">write</span> `(lamport-clock</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>                (counter ,(clock-counter clock))</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>                (node-id ,(clock-node-id clock)))))))</span></code></pre></div>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>Lamport, L. (1978). Time, Clocks, and the Ordering of Events in a
+Distributed System.</li>
+<li>Fidge, C. J. (1988). Timestamps in Message-Passing Systems.</li>
+<li>Mattern, F. (1989). Virtual Time and Global States of Distributed
+Systems.</li>
+<li>RFC-003: Cryptographic Audit Trail</li>
+<li>RFC-010: Federation Protocol</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-06</strong> - Initial specification</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Proposed <strong>Clock
+Type:</strong> Lamport scalar, vector clock extension
+<strong>Ordering:</strong> Partial (causal), total with tie-breaking</p>
+</body>
+</html>

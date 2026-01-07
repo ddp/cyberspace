@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-001-replication-layer</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-001-replication-layer-for-library-of-cyberspace">RFC-001:
+Replication Layer for Library of Cyberspace</h1>
+<p><strong>Status:</strong> Implemented <strong>Date:</strong> January
+2026 <strong>Author:</strong> Derrell Piper <a
+href="mailto:ddp@eludom.net" class="email">ddp@eludom.net</a>
+<strong>Implementation:</strong> vault.scm (lines 507-713)</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies a replication layer for the Library of Cyberspace
+preservation architecture, enabling cryptographically sealed releases to
+be published, subscribed to, and synchronized across distributed
+locations while maintaining tamper-evident audit trails.</p>
+<h2 id="motivation">Motivation</h2>
+<p>The Library of Cyberspace requires a distribution mechanism that:</p>
+<ol type="1">
+<li><strong>Preserves cryptographic authenticity</strong> - Signatures
+travel with artifacts</li>
+<li><strong>Enables offline verification</strong> - No centralized
+authority required</li>
+<li><strong>Records provenance</strong> - All publication events are
+audited</li>
+<li><strong>Supports multiple transports</strong> - Git, HTTP,
+filesystem</li>
+<li><strong>Maintains loose coupling</strong> - Works for confederations
+of friends</li>
+</ol>
+<p>Traditional package managers and distribution systems assume
+centralized registries and online verification. This replication layer
+is designed for decentralized, long-term preservation where trust is
+established through SPKI certificates and cryptographic seals.</p>
+<h2 id="design-principles">Design Principles</h2>
+<ol type="1">
+<li><strong>Sealed Releases</strong> - Only cryptographically signed
+releases can be published</li>
+<li><strong>Transport Agnostic</strong> - Same API works for git, HTTP,
+filesystem</li>
+<li><strong>Audit Everything</strong> - All replication events are
+recorded in tamper-evident log</li>
+<li><strong>Verify Before Trust</strong> - Subscribers must verify
+cryptographic seals</li>
+<li><strong>Explicit Authorization</strong> - SPKI certificates
+determine who can publish</li>
+</ol>
+<h2 id="specification">Specification</h2>
+<h3 id="three-core-operations">Three Core Operations</h3>
+<h4 id="seal-publish">1. seal-publish</h4>
+<p>Publish a sealed release to a remote location.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(seal-publish version</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>              remote: target</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>              archive-format: format</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>              message: notes)</span></code></pre></div>
+<p><strong>Parameters:</strong> - <code>version</code> - Semantic
+version string (e.g., “1.0.0”) - <code>remote</code> - Publication
+target (git remote, URL, or directory path) -
+<code>archive-format</code> - ’tarball, ’bundle, or ’cryptographic
+(default) - <code>message</code> - Release notes (optional)</p>
+<p><strong>Behavior:</strong> 1. Verify release exists (creates if
+needed via seal-release) 2. Create cryptographic archive with: - Tarball
+of repository at version tag - SHA-512 hash of tarball - Ed25519
+signature of hash - Manifest with version, hash, signature 3. Publish to
+remote based on type: - <strong>Git remote</strong>: Push tag,
+optionally upload archive - <strong>HTTP URL</strong>: POST archive to
+endpoint - <strong>Filesystem</strong>: Copy archive to directory 4.
+Record publication in audit trail with: - Actor (public key from signing
+key) - Action (seal-publish version remote) - Motivation (release notes)
+- Cryptographic seal (signature)</p>
+<p><strong>Audit Entry Format:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  (id <span class="st">&quot;sha512:...&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="st">&quot;Mon Jan 5 23:38:20 2026&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">1</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  (actor</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    (principal #<span class="op">${</span>public-key-blob<span class="op">}</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    (authorization-chain))</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  (action</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    (verb seal-publish)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    (object <span class="st">&quot;1.0.0&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    (parameters <span class="st">&quot;/path/to/remote&quot;</span>))</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  (context</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    (motivation <span class="st">&quot;Published to filesystem&quot;</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    (language <span class="st">&quot;en&quot;</span>))</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  (environment</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    (platform <span class="st">&quot;unknown&quot;</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    (timestamp <span class="dv">1767685100</span>))</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  (seal</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    (algorithm <span class="st">&quot;ed25519-sha512&quot;</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    (content-hash <span class="st">&quot;...&quot;</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    (signature <span class="st">&quot;...&quot;</span>)))</span></code></pre></div>
+<h4 id="seal-subscribe">2. seal-subscribe</h4>
+<p>Subscribe to sealed releases from a remote source.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(seal-subscribe remote</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                target: local-path</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                verify-key: public-key)</span></code></pre></div>
+<p><strong>Parameters:</strong> - <code>remote</code> - Source location
+(git remote, URL, or directory) - <code>target</code> - Local path for
+downloaded archives (optional) - <code>verify-key</code> - Public key
+for signature verification (optional)</p>
+<p><strong>Behavior:</strong> 1. Discover available releases from
+remote: - <strong>Git remote</strong>: List tags - <strong>HTTP
+URL</strong>: GET /releases endpoint - <strong>Filesystem</strong>: List
+.archive files 2. Download cryptographic archives 3. Verify each
+archive: - Check manifest structure - Verify SHA-512 hash of tarball -
+Verify Ed25519 signature (if verify-key provided) 4. Extract verified
+archives to target directory 5. Record subscription in audit trail: -
+Count of releases downloaded - Source location - Verification status</p>
+<p><strong>Security Consideration:</strong> Without verify-key,
+subscription downloads archives but cannot verify authenticity. SPKI
+certificate chains should be used to establish trust.</p>
+<h4 id="seal-synchronize">3. seal-synchronize</h4>
+<p>Bidirectional synchronization of sealed releases.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(seal-synchronize remote</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                  direction: &#39;both</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                  verify-key: public-key)</span></code></pre></div>
+<p><strong>Parameters:</strong> - <code>remote</code> - Sync target (git
+remote, URL, or directory) - <code>direction</code> - ’both (default),
+’push-only, or ’pull-only - <code>verify-key</code> - Public key for
+signature verification (optional)</p>
+<p><strong>Behavior:</strong> 1. Discover local and remote releases 2.
+Compare versions to determine: - Releases to push (local but not remote)
+- Releases to pull (remote but not local) 3. Execute publication for new
+local releases 4. Execute subscription for new remote releases 5. Record
+synchronization in audit trail: - Count pushed and pulled - Remote
+location - Direction</p>
+<p><strong>Use Case:</strong> Periodic sync between trusted peers in a
+confederation.</p>
+<h2 id="archive-format">Archive Format</h2>
+<h3 id="cryptographic-archive-structure">Cryptographic Archive
+Structure</h3>
+<pre><code>vault-1.0.0.archive          # Manifest file
+vault-1.0.0.archive.tar.gz   # Actual tarball</code></pre>
+<p><strong>Manifest S-expression:</strong></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(sealed-archive</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="st">&quot;1.0.0&quot;</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (format cryptographic)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  (tarball <span class="st">&quot;vault-1.0.0.archive.tar.gz&quot;</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;sha512:...&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1767685100</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  (sealer #<span class="op">${</span>public-key-blob<span class="op">}</span>))</span></code></pre></div>
+<p><strong>Verification Steps:</strong> 1. Read manifest 2. Hash tarball
+with SHA-512 3. Verify hash matches manifest 4. Verify Ed25519 signature
+on hash 5. Check SPKI authorization (optional)</p>
+<h2 id="transport-implementations">Transport Implementations</h2>
+<h3 id="git-remote">Git Remote</h3>
+<ul>
+<li>Uses <code>git push</code> to share tags</li>
+<li>Optionally uploads archives as release assets (GitHub, GitLab)</li>
+<li>Fetch uses <code>git fetch</code> + <code>git tag -l</code></li>
+</ul>
+<h3 id="http-endpoint">HTTP Endpoint</h3>
+<ul>
+<li>POST to /releases/<version> for publication</li>
+<li>GET /releases for discovery</li>
+<li>Content-Type: application/x-sealed-archive</li>
+</ul>
+<h3 id="filesystem">Filesystem</h3>
+<ul>
+<li>Copy archives to shared directory</li>
+<li>Directory structure:
+<code>&lt;remote&gt;/&lt;archive-name&gt;</code></li>
+<li>No network required, works with NFS, USB drives, etc.</li>
+</ul>
+<h2 id="audit-integration">Audit Integration</h2>
+<p>Every replication operation creates an audit entry with:</p>
+<ol type="1">
+<li><strong>Content-addressed ID</strong> - SHA-512 hash of entry</li>
+<li><strong>Chained structure</strong> - References parent entry</li>
+<li><strong>SPKI principal</strong> - Public key of actor</li>
+<li><strong>Dual context</strong> - Human motivation + machine
+environment</li>
+<li><strong>Cryptographic seal</strong> - Ed25519 signature</li>
+</ol>
+<p>This provides: - <strong>Non-repudiation</strong> - Cannot deny
+publication - <strong>Tamper evidence</strong> - Changes are detectable
+- <strong>Causality</strong> - Chain shows temporal order -
+<strong>Accountability</strong> - Know who published what when</p>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="threat-model">Threat Model</h3>
+<p><strong>Trusted:</strong> - Local filesystem and vault - SPKI private
+keys - Cryptographic primitives (libsodium)</p>
+<p><strong>Untrusted:</strong> - Remote repositories - Network transport
+- Downloaded archives - Remote publishers (until SPKI verified)</p>
+<h3 id="attack-scenarios">Attack Scenarios</h3>
+<ol type="1">
+<li><strong>Malicious Archive Substitution</strong>
+<ul>
+<li>Attacker replaces archive on remote</li>
+<li><strong>Mitigation:</strong> Signature verification fails</li>
+</ul></li>
+<li><strong>Version Rollback Attack</strong>
+<ul>
+<li>Attacker removes newer releases</li>
+<li><strong>Mitigation:</strong> Audit trail shows previous
+versions</li>
+</ul></li>
+<li><strong>Unauthorized Publication</strong>
+<ul>
+<li>Attacker publishes fake release</li>
+<li><strong>Mitigation:</strong> SPKI authorization chain required</li>
+</ul></li>
+<li><strong>Transport Tampering</strong>
+<ul>
+<li>Network attacker modifies download</li>
+<li><strong>Mitigation:</strong> Hash and signature verification</li>
+</ul></li>
+</ol>
+<h3 id="best-practices">Best Practices</h3>
+<ol type="1">
+<li><strong>Always verify signatures</strong> - Use verify-key
+parameter</li>
+<li><strong>Check SPKI certificates</strong> - Verify authorization
+chain</li>
+<li><strong>Maintain audit trail</strong> - Detect suspicious
+patterns</li>
+<li><strong>Use HTTPS for HTTP transport</strong> - Prevent network
+attacks</li>
+<li><strong>Backup signing keys</strong> - Use Shamir secret
+sharing</li>
+</ol>
+<h2 id="implementation-notes">Implementation Notes</h2>
+<h3 id="helper-functions">Helper Functions</h3>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(tag-exists? tag-name)        <span class="co">; Check if git tag exists</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(git-remote? str)             <span class="co">; Detect git remote format</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>(http-url? str)               <span class="co">; Detect HTTP/HTTPS URL</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>(publish-filesystem remote version archive)  <span class="co">; Copy to directory</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>(publish-http url version archive)           <span class="co">; POST to endpoint</span></span></code></pre></div>
+<h3 id="dependencies">Dependencies</h3>
+<ul>
+<li><strong>Git</strong> - For version control and tag management</li>
+<li><strong>libsodium</strong> - Ed25519 signatures, SHA-512
+hashing</li>
+<li><strong>Chicken Scheme modules:</strong>
+<ul>
+<li><code>(chicken process)</code> - Run git commands</li>
+<li><code>(chicken file)</code> - Filesystem operations</li>
+<li><code>(chicken irregex)</code> - URL/remote detection</li>
+</ul></li>
+</ul>
+<h2 id="compatibility">Compatibility</h2>
+<p>This specification is compatible with:</p>
+<ul>
+<li><strong>Git tags</strong> - Standard git operations</li>
+<li><strong>Git bundles</strong> - Portable repository format</li>
+<li><strong>Tarball archives</strong> - Universal archive format</li>
+<li><strong>S-expressions</strong> - LISP/Scheme readable format</li>
+<li><strong>SPKI/SDSI</strong> - Authorization certificates</li>
+</ul>
+<p>Future extensions may add: - <strong>IPFS transport</strong> -
+Content-addressed distribution - <strong>Tor hidden services</strong> -
+Anonymous publication - <strong>Encrypted archives</strong> -
+Confidential distribution - <strong>Multi-signature releases</strong> -
+Threshold authorization</p>
+<h2 id="test-coverage">Test Coverage</h2>
+<p>See <code>test-replication.scm</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Test seal-publish to filesystem</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>(seal-publish <span class="st">&quot;1.0.0&quot;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>              remote: <span class="st">&quot;/tmp/cyberspace-publish-test&quot;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>              message: <span class="st">&quot;Published to filesystem&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Verify archive exists</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>(<span class="kw">file-exists?</span> <span class="st">&quot;/tmp/cyberspace-publish-test/vault-1.0.0.archive&quot;</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Verify audit entry created</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>(audit-read sequence: <span class="dv">1</span>)</span></code></pre></div>
+<h2 id="references">References</h2>
+<ol type="1">
+<li><strong>SPKI/SDSI</strong> - RFC 2693, RFC 2692</li>
+<li><strong>Content-Addressed Storage</strong> - Git internals,
+IPFS</li>
+<li><strong>Semantic Versioning</strong> - semver.org</li>
+<li><strong>Ed25519</strong> - Bernstein et al.</li>
+<li><strong>Audit Trails</strong> - RFC-002 (Cryptographic Audit
+Trail)</li>
+</ol>
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-05</strong> - Initial implementation and
+specification
+<ul>
+<li>seal-publish with git/HTTP/filesystem support</li>
+<li>seal-subscribe with signature verification</li>
+<li>seal-synchronize with bidirectional sync</li>
+<li>Full audit trail integration</li>
+<li>Cryptographic archive format</li>
+</ul></li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> ✓ Complete <strong>Test
+Status:</strong> ✓ Passing <strong>Audit Integration:</strong> ✓
+Complete</p>
+</body>
+</html>

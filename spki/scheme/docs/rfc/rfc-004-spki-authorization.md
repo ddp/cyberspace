@@ -403,7 +403,7 @@ Verification:
 3. Rivest, R., & Lampson, B. (1996). SDSI - A Simple Distributed Security Infrastructure.
 4. Lampson, B. (1971). Protection.
 5. [RFC-006](rfc-006-vault-architecture.md) - Vault System Architecture
-6. [RFC-018](rfc-018-zstd-age-archives.md) - Sealed Archive Format (X25519/Ed25519 key compatibility)
+6. [RFC-018](rfc-018-sealed-archive.md) - Sealed Archive Format (X25519/Ed25519 key compatibility)
 
 ---
 

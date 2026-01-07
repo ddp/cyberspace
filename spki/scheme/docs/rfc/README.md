@@ -23,7 +23,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-015](rfc-015-versioning-rollback.md) | Versioning and Rollback | Proposed | 2026-01-06 |
 | [rfc-016](rfc-016-lazy-clustering.md) | Lazy Clustering | Proposed | 2026-01-06 |
 | [rfc-017](rfc-017-opera.md) | The Burning of Alexandria (Opera) | Cultural | 2026-01-06 |
-| [rfc-018](rfc-018-zstd-age-archives.md) | Sealed Archive Format | Implemented | 2026-01-06 |
+| [rfc-018](rfc-018-sealed-archive.md) | Sealed Archive Format | Implemented | 2026-01-06 |
 
 ## RFC Purpose
 
