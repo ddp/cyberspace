@@ -41,6 +41,9 @@ RFCS=(
   rfc-022-key-ceremony
   rfc-023-agent-sandboxing
   rfc-024-network-protocol
+  rfc-025-query-language
+  rfc-026-garbage-collection
+  rfc-027-vault-migration
 )
 
 # Extract title from markdown file
