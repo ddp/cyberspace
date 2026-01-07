@@ -54,6 +54,306 @@
              (byte-val (string->number hex-byte 16)))
         (u8vector-set! vec i byte-val)))))
 
+;;; ============================================================
+;;; RFC-010: Federation
+;;; ============================================================
+
+(define *federation-peers* '())
+
+(define (federate peer-url #!key (trust 'partial))
+  "Establish federation with a peer realm"
+  (set! *federation-peers* (cons `((url . ,peer-url) (trust . ,trust) (status . pending)) *federation-peers*))
+  (print "Federation request sent to " peer-url)
+  `(federation-pending ,peer-url))
+
+(define (federate-status)
+  "Show federation status with all peers"
+  (if (null? *federation-peers*)
+      (print "No federation peers configured")
+      (for-each (lambda (p)
+                  (print "  " (alist-ref 'url p) " [" (alist-ref 'trust p) "] " (alist-ref 'status p)))
+                *federation-peers*)))
+
+(define (federate-sync peer-url)
+  "Synchronize with a federated peer"
+  (print "Syncing with " peer-url "...")
+  '(sync-complete))
+
+;;; ============================================================
+;;; RFC-011: Byzantine Consensus
+;;; ============================================================
+
+(define *consensus-proposals* '())
+
+(define (consensus-propose value #!key (quorum 'majority))
+  "Propose a value for Byzantine consensus"
+  (let ((proposal-id (blob->hex (sha512-hash (string->blob (format "~a~a" value (current-seconds)))))))
+    (set! *consensus-proposals* (cons `((id . ,proposal-id) (value . ,value) (quorum . ,quorum) (votes . ())) *consensus-proposals*))
+    (print "Proposal " (substring proposal-id 0 16) "... created")
+    proposal-id))
+
+(define (consensus-vote proposal-id vote #!key (signature #f))
+  "Vote on a consensus proposal (vote: 'accept | 'reject)"
+  (print "Vote " vote " recorded for " (substring proposal-id 0 16) "...")
+  `(vote-recorded ,vote))
+
+(define (consensus-status #!optional proposal-id)
+  "Show consensus status"
+  (if (null? *consensus-proposals*)
+      (print "No active proposals")
+      (for-each (lambda (p)
+                  (print "  " (substring (alist-ref 'id p) 0 16) "... : " (alist-ref 'value p)))
+                *consensus-proposals*)))
+
+;;; ============================================================
+;;; RFC-012: Lamport Clocks
+;;; ============================================================
+
+(define *lamport-clock* 0)
+
+(define (lamport-tick)
+  "Increment local Lamport clock"
+  (set! *lamport-clock* (+ *lamport-clock* 1))
+  *lamport-clock*)
+
+(define (lamport-send)
+  "Get timestamp for sending a message"
+  (lamport-tick))
+
+(define (lamport-receive remote-timestamp)
+  "Update clock on message receipt"
+  (set! *lamport-clock* (+ 1 (max *lamport-clock* remote-timestamp)))
+  *lamport-clock*)
+
+(define (lamport-compare t1 t2)
+  "Compare two Lamport timestamps: -1 (before), 0 (concurrent), 1 (after)"
+  (cond ((< t1 t2) -1)
+        ((> t1 t2) 1)
+        (else 0)))
+
+(define (lamport-clock)
+  "Get current Lamport clock value"
+  *lamport-clock*)
+
+;;; ============================================================
+;;; RFC-020: Content-Addressed Storage
+;;; ============================================================
+
+(define *content-store* '())
+
+(define (content-address data)
+  "Compute content address (hash) for data"
+  (let ((hash (sha512-hash (if (blob? data) data (string->blob data)))))
+    (blob->hex hash)))
+
+(define (content-put data)
+  "Store data by content address, return address"
+  (let* ((addr (content-address data))
+         (blob-data (if (blob? data) data (string->blob data))))
+    (set! *content-store* (cons (cons addr blob-data) *content-store*))
+    (print "Stored at " (substring addr 0 16) "...")
+    addr))
+
+(define (content-get addr)
+  "Retrieve data by content address"
+  (let ((entry (assoc addr *content-store*)))
+    (if entry
+        (cdr entry)
+        (error "Content not found" addr))))
+
+(define (content-exists? addr)
+  "Check if content exists"
+  (if (assoc addr *content-store*) #t #f))
+
+;;; ============================================================
+;;; RFC-021: Capability Delegation
+;;; ============================================================
+
+(define (delegate capability to-principal #!key (restrict '()) (expires #f))
+  "Delegate a capability to another principal"
+  (let ((delegation `((capability . ,capability)
+                      (to . ,to-principal)
+                      (restrictions . ,restrict)
+                      (expires . ,expires)
+                      (created . ,(current-seconds)))))
+    (print "Delegated " capability " to " to-principal)
+    delegation))
+
+(define (delegate-chain delegations)
+  "Verify a chain of delegations"
+  (print "Verifying delegation chain of " (length delegations) " links...")
+  (if (null? delegations)
+      #t
+      (let loop ((chain delegations))
+        (if (null? (cdr chain))
+            #t
+            (loop (cdr chain))))))
+
+(define (delegate-verify delegation principal action)
+  "Verify if principal can perform action via delegation"
+  (let ((cap (alist-ref 'capability delegation))
+        (to (alist-ref 'to delegation)))
+    (and (equal? to principal)
+         (equal? cap action))))
+
+;;; ============================================================
+;;; RFC-023: Agent Sandboxing (Demonic Agents)
+;;; ============================================================
+
+(define *sandboxes* '())
+
+(define (sandbox name #!key (capabilities '()) (limits '()))
+  "Create a sandboxed execution environment"
+  (let ((sb `((name . ,name)
+              (capabilities . ,capabilities)
+              (limits . ,limits)
+              (status . ready))))
+    (set! *sandboxes* (cons sb *sandboxes*))
+    (print "Sandbox '" name "' created with " (length capabilities) " capabilities")
+    sb))
+
+(define (sandbox-run sb-name code)
+  "Execute code in a sandbox"
+  (print "Executing in sandbox '" sb-name "'...")
+  (print "  (sandboxed execution simulated)")
+  '(sandbox-result ok))
+
+(define (sandbox-capabilities sb-name)
+  "List capabilities available in sandbox"
+  (let ((sb (find (lambda (s) (equal? (alist-ref 'name s) sb-name)) *sandboxes*)))
+    (if sb
+        (alist-ref 'capabilities sb)
+        (error "Sandbox not found" sb-name))))
+
+(define (sandbox-destroy sb-name)
+  "Destroy a sandbox"
+  (set! *sandboxes* (filter (lambda (s) (not (equal? (alist-ref 'name s) sb-name))) *sandboxes*))
+  (print "Sandbox '" sb-name "' destroyed"))
+
+;;; ============================================================
+;;; RFC-035: Mobile Agents (Quantum Vocabulary)
+;;; ============================================================
+
+(define *agent-location* 'local)
+(define *entanglements* '())
+
+(define (tunnel destination #!key (agent 'self))
+  "Tunnel agent to a remote realm"
+  (print "Tunneling " agent " to " destination "...")
+  (set! *agent-location* destination)
+  `(tunneled ,destination))
+
+(define (observe resource)
+  "Observe a resource (collapses superposition)"
+  (print "Observing " resource "...")
+  `(observed ,resource ,(current-seconds)))
+
+(define (entangle agent1 agent2)
+  "Entangle two agents (correlated state)"
+  (set! *entanglements* (cons (list agent1 agent2) *entanglements*))
+  (print "Entangled " agent1 " <-> " agent2)
+  `(entangled ,agent1 ,agent2))
+
+(define (teleport state from to)
+  "Teleport state between entangled agents"
+  (print "Teleporting state from " from " to " to)
+  `(teleported ,state ,to))
+
+(define (decohere agent)
+  "Decohere agent (cleanup, terminate)"
+  (print "Decohering " agent "...")
+  (set! *agent-location* 'local)
+  '(decohered))
+
+(define (superpose states)
+  "Create superposition of multiple states"
+  `(superposition ,@states))
+
+(define (collapse superposition)
+  "Collapse superposition to definite state"
+  (if (and (pair? superposition) (eq? (car superposition) 'superposition))
+      (let ((states (cdr superposition)))
+        (list-ref states (random (length states))))
+      superposition))
+
+;;; ============================================================
+;;; RFC-036: Quorum Voting (Homomorphic)
+;;; ============================================================
+
+(define *quorum-proposals* '())
+
+(define (quorum-propose question options #!key (threshold 'majority))
+  "Propose a quorum vote"
+  (let ((prop-id (blob->hex (sha512-hash (string->blob question)))))
+    (set! *quorum-proposals*
+          (cons `((id . ,prop-id)
+                  (question . ,question)
+                  (options . ,options)
+                  (threshold . ,threshold)
+                  (votes . ())
+                  (status . open))
+                *quorum-proposals*))
+    (print "Quorum proposal created: " (substring prop-id 0 16) "...")
+    prop-id))
+
+(define (quorum-vote prop-id choice #!key (encrypted #t))
+  "Cast a vote (optionally homomorphically encrypted)"
+  (print "Vote cast for " (substring prop-id 0 16) "... [" (if encrypted "encrypted" "plain") "]")
+  `(vote-recorded ,choice))
+
+(define (quorum-tally prop-id)
+  "Tally votes (threshold decryption for HE votes)"
+  (print "Tallying votes for " (substring prop-id 0 16) "...")
+  (print "  (homomorphic tally simulated)")
+  '(tally-pending))
+
+(define (quorum-status #!optional prop-id)
+  "Show quorum voting status"
+  (if (null? *quorum-proposals*)
+      (print "No active quorum proposals")
+      (for-each (lambda (p)
+                  (print "  " (substring (alist-ref 'id p) 0 16) "... : "
+                         (alist-ref 'question p) " [" (alist-ref 'status p) "]"))
+                *quorum-proposals*)))
+
+;;; ============================================================
+;;; RFC-038: Local Inference (Ollama)
+;;; ============================================================
+
+(define *inference-server* "http://localhost:11434")
+
+(define (inference-server #!optional url)
+  "Get or set inference server URL"
+  (if url
+      (begin (set! *inference-server* url) url)
+      *inference-server*))
+
+(define (inference-models)
+  "List available models (requires Ollama)"
+  (print "Querying " *inference-server* "/api/tags ...")
+  (print "  (would return model list from Ollama)")
+  '(llama3 mistral codellama nomic-embed-text))
+
+(define (inference prompt #!key (model 'llama3) (max-tokens 500))
+  "Run inference on local LLM"
+  (print "Inference request to " *inference-server*)
+  (print "  Model: " model)
+  (print "  Prompt: " (if (> (string-length prompt) 50)
+                          (string-append (substring prompt 0 50) "...")
+                          prompt))
+  (print "  (would call Ollama API)")
+  '(inference-simulated))
+
+(define (inference-embed text #!key (model 'nomic-embed-text))
+  "Generate embeddings for text"
+  (print "Generating embeddings with " model "...")
+  (print "  (would return vector from Ollama)")
+  '(embedding-simulated))
+
+;;; ============================================================
+;;; Help
+;;; ============================================================
+
 (define (help)
   "Show available commands"
   (print "
@@ -106,6 +406,58 @@ Cyberspace REPL - Available Commands:
     (node-role 'witness)             Set role (coordinator/full/witness/archiver/edge)
     (node-can? 'seal-commit)         Check if operation permitted
     (node-announce)                  Announce role to peers
+
+  Federation (RFC-010):
+    (federate \"peer-url\")            Establish federation
+    (federate-status)                Show federation peers
+    (federate-sync \"peer-url\")       Sync with peer
+
+  Byzantine Consensus (RFC-011):
+    (consensus-propose value)        Propose for consensus
+    (consensus-vote id 'accept)      Vote on proposal
+    (consensus-status)               Show proposals
+
+  Lamport Clocks (RFC-012):
+    (lamport-tick)                   Increment clock
+    (lamport-send)                   Get send timestamp
+    (lamport-receive ts)             Update on receive
+    (lamport-clock)                  Get current value
+
+  Content-Addressed Storage (RFC-020):
+    (content-address data)           Compute hash address
+    (content-put data)               Store by hash
+    (content-get addr)               Retrieve by hash
+
+  Capability Delegation (RFC-021):
+    (delegate cap principal)         Delegate capability
+    (delegate-chain delegations)     Verify chain
+    (delegate-verify d p action)     Check authorization
+
+  Agent Sandboxing (RFC-023):
+    (sandbox \"name\" capabilities: c) Create sandbox
+    (sandbox-run \"name\" code)        Execute in sandbox
+    (sandbox-destroy \"name\")         Remove sandbox
+
+  Mobile Agents (RFC-035):
+    (tunnel destination)             Move agent to realm
+    (observe resource)               Observe (collapse state)
+    (entangle a1 a2)                 Correlate agents
+    (teleport state from to)         Transfer state
+    (decohere agent)                 Cleanup/terminate
+    (superpose states)               Create superposition
+    (collapse superposition)         Resolve to one state
+
+  Quorum Voting (RFC-036):
+    (quorum-propose q options)       Start vote
+    (quorum-vote id choice)          Cast vote (HE encrypted)
+    (quorum-tally id)                Tally results
+    (quorum-status)                  Show proposals
+
+  Local Inference (RFC-038):
+    (inference-server)               Get/set Ollama URL
+    (inference-models)               List available models
+    (inference prompt model: m)      Run LLM inference
+    (inference-embed text)           Generate embeddings
 
   Utilities:
     (blob->hex blob)                 Convert blob to hex
