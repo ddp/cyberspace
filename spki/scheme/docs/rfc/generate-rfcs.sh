@@ -54,7 +54,7 @@ RFCS=(
   rfc-034-audit-protection
   rfc-035-mobile-agents
   rfc-036-quorum-voting
-  rfc-037-implementation-requirements
+  rfc-037-node-roles
 )
 
 # Extract title from markdown file

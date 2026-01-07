@@ -41,6 +41,14 @@
    soup?
    complete
 
+   ;; Node Roles (RFC-037)
+   node-probe
+   node-role
+   node-can?
+   node-announce
+   *node-roles*
+   *node-operations*
+
    ;; Configuration
    vault-init
    vault-config)
@@ -52,6 +60,7 @@
           (chicken string)
           (chicken format)
           (chicken io)
+          (chicken port)
           (chicken file)
           (chicken file posix)
           (chicken pathname)
@@ -1087,6 +1096,347 @@ Object Types:
                               (cdr strings))))
               (substring (car strings) 0 i)
               (loop (+ i 1))))))
+
+  ;;; ============================================================================
+  ;;; Node Roles - RFC-037 Implementation
+  ;;; ============================================================================
+
+  ;; Role definitions with capability requirements
+  (define *node-roles*
+    '((coordinator . ((description . "Byzantine consensus, threshold signing")
+                      (compute . ((min-cores . 4) (min-ram-gb . 8)))
+                      (storage . ((min-gb . 100)))
+                      (network . ((max-latency-ms . 50) (min-uptime . 0.99)))))
+
+      (full . ((description . "All vault operations, replication origin")
+               (compute . ((min-cores . 2) (min-ram-gb . 4)))
+               (storage . ((min-gb . 500)))
+               (network . ((max-latency-ms . 200) (min-uptime . 0.95)))))
+
+      (witness . ((description . "Passive storage, hash verification, audit")
+                  (compute . ((min-cores . 1) (min-ram-gb . 1)))
+                  (storage . ((min-gb . 100)))
+                  (network . ((max-latency-ms . 1000) (min-uptime . 0.50)))))
+
+      (archiver . ((description . "Cold storage, offline preservation")
+                   (compute . ((min-cores . 1) (min-ram-gb . 0.5)))
+                   (storage . ((min-gb . 1000)))
+                   (network . ((max-latency-ms . 5000) (min-uptime . 0.10)))))
+
+      (edge . ((description . "Read-only sync, mobile access")
+               (compute . ((min-cores . 1) (min-ram-gb . 0.25)))
+               (storage . ((min-gb . 1)))
+               (network . ((max-latency-ms . 10000) (min-uptime . 0.01)))))))
+
+  ;; Role hierarchy (higher = more capable)
+  (define *role-hierarchy* '(coordinator full witness archiver edge))
+
+  ;; Operations and required minimum role
+  (define *node-operations*
+    '((seal-commit . full)
+      (seal-release . full)
+      (seal-archive . full)
+      (seal-restore . witness)
+      (seal-publish . full)
+      (seal-subscribe . witness)
+      (seal-synchronize . witness)
+      (seal-verify . edge)
+      (threshold-sign . coordinator)
+      (byzantine-vote . coordinator)
+      (key-ceremony . coordinator)
+      (audit-append . witness)
+      (audit-verify . edge)))
+
+  ;; Current node state
+  (define *current-node-role* #f)
+  (define *node-capabilities* #f)
+
+  (define (node-probe)
+    "Probe local system capabilities and display results"
+    (let ((caps (probe-system-capabilities)))
+      (set! *node-capabilities* caps)
+
+      (print "")
+      (print "NODE CAPABILITY PROBE")
+      (print (repeat-string "─" 50))
+
+      ;; Compute
+      (let ((compute (cdr (assq 'compute caps))))
+        (print "")
+        (print " COMPUTE")
+        (printf "   Cores:     ~a~%" (cdr (assq 'cores compute)))
+        (printf "   RAM:       ~a GB~%" (cdr (assq 'ram-gb compute)))
+        (printf "   Load:      ~a~%" (cdr (assq 'load-avg compute))))
+
+      ;; Storage
+      (let ((storage (cdr (assq 'storage caps))))
+        (print "")
+        (print " STORAGE")
+        (printf "   Available: ~a GB~%" (cdr (assq 'available-gb storage)))
+        (printf "   Type:      ~a~%" (cdr (assq 'type storage))))
+
+      ;; Network
+      (let ((network (cdr (assq 'network caps))))
+        (print "")
+        (print " NETWORK")
+        (printf "   Type:      ~a~%" (cdr (assq 'type network)))
+        (printf "   Latency:   ~a ms (estimated)~%" (cdr (assq 'latency-ms network))))
+
+      ;; Security
+      (let ((security (cdr (assq 'security caps))))
+        (print "")
+        (print " SECURITY")
+        (printf "   Signing key:  ~a~%" (if (cdr (assq 'signing-key security)) "present" "absent"))
+        (printf "   Verify key:   ~a~%" (if (cdr (assq 'verify-key security)) "present" "absent")))
+
+      ;; Recommended role
+      (let ((recommended (recommend-role caps)))
+        (print "")
+        (print (repeat-string "─" 50))
+        (printf " RECOMMENDED ROLE: ~a~%" recommended)
+        (let ((desc (cdr (assq 'description (cdr (assq recommended *node-roles*))))))
+          (printf "   ~a~%" desc)))
+
+      (print "")
+      caps))
+
+  (define (probe-system-capabilities)
+    "Probe actual system capabilities"
+    (let ((cores (get-cpu-cores))
+          (ram (get-ram-gb))
+          (load (get-load-average))
+          (storage (get-available-storage-gb))
+          (storage-type (detect-storage-type))
+          (network-type (detect-network-type))
+          (latency (estimate-network-latency)))
+      `((compute . ((cores . ,cores)
+                    (ram-gb . ,ram)
+                    (load-avg . ,load)))
+        (storage . ((available-gb . ,storage)
+                    (type . ,storage-type)))
+        (network . ((type . ,network-type)
+                    (latency-ms . ,latency)))
+        (security . ((signing-key . ,(and (vault-config 'signing-key) #t))
+                     (verify-key . ,(and (vault-config 'verify-key) #t)))))))
+
+  (define (get-cpu-cores)
+    "Get number of CPU cores"
+    (handle-exceptions exn 1
+      (let ((result (with-input-from-pipe "sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 1" read-line)))
+        (if (eof-object? result) 1 (string->number result)))))
+
+  (define (get-ram-gb)
+    "Get RAM in GB"
+    (handle-exceptions exn 1
+      (let ((result (with-input-from-pipe
+                        "sysctl -n hw.memsize 2>/dev/null | awk '{print int($1/1073741824)}' || free -g 2>/dev/null | awk '/^Mem:/{print $2}' || echo 1"
+                      read-line)))
+        (if (eof-object? result) 1 (or (string->number result) 1)))))
+
+  (define (get-load-average)
+    "Get 1-minute load average"
+    (handle-exceptions exn 0.0
+      (let ((result (with-input-from-pipe "uptime | awk -F'load averages?: ' '{print $2}' | awk -F'[, ]' '{print $1}'" read-line)))
+        (if (eof-object? result) 0.0 (or (string->number result) 0.0)))))
+
+  (define (get-available-storage-gb)
+    "Get available storage in GB"
+    (handle-exceptions exn 10
+      (let ((result (with-input-from-pipe "df -g . 2>/dev/null | tail -1 | awk '{print $4}' || df -BG . 2>/dev/null | tail -1 | awk '{gsub(/G/,\"\",$4); print $4}' || echo 10" read-line)))
+        (if (eof-object? result) 10 (or (string->number result) 10)))))
+
+  (define (detect-storage-type)
+    "Detect storage type (ssd/hdd/network/unknown)"
+    (handle-exceptions exn 'unknown
+      ;; macOS: check if on SSD
+      (let ((result (with-input-from-pipe
+                        "diskutil info / 2>/dev/null | grep 'Solid State' | grep -c Yes || echo 0"
+                      read-line)))
+        (if (and (not (eof-object? result))
+                 (equal? result "1"))
+            'ssd
+            'hdd))))
+
+  (define (detect-network-type)
+    "Detect network connection type"
+    (handle-exceptions exn 'unknown
+      ;; Check active network interface
+      (let ((result (with-input-from-pipe
+                        "networksetup -listnetworkserviceorder 2>/dev/null | grep -E '^\\(1\\)' | head -1 || echo unknown"
+                      read-line)))
+        (cond
+         ((eof-object? result) 'unknown)
+         ((string-contains result "Ethernet") 'ethernet)
+         ((string-contains result "Wi-Fi") 'wifi)
+         ((string-contains result "Thunderbolt") 'ethernet)
+         ((string-contains result "USB") 'ethernet)
+         (else 'unknown)))))
+
+  (define (estimate-network-latency)
+    "Estimate network latency in ms (heuristic based on type)"
+    (let ((net-type (detect-network-type)))
+      (case net-type
+        ((ethernet) 10)
+        ((wifi) 30)
+        ((satellite) 600)
+        ((cellular) 100)
+        (else 50))))
+
+  (define (recommend-role capabilities)
+    "Recommend role based on capabilities"
+    (let* ((compute (cdr (assq 'compute capabilities)))
+           (storage (cdr (assq 'storage capabilities)))
+           (network (cdr (assq 'network capabilities)))
+           (cores (cdr (assq 'cores compute)))
+           (ram (cdr (assq 'ram-gb compute)))
+           (storage-gb (cdr (assq 'available-gb storage)))
+           (latency (cdr (assq 'latency-ms network))))
+      (cond
+       ;; Coordinator: high compute, low latency
+       ((and (>= cores 4) (>= ram 8) (<= latency 50))
+        'coordinator)
+       ;; Full: medium compute, high storage
+       ((and (>= cores 2) (>= ram 4) (>= storage-gb 500))
+        'full)
+       ;; Archiver: massive storage, any network
+       ((>= storage-gb 1000)
+        'archiver)
+       ;; Witness: decent storage
+       ((>= storage-gb 100)
+        'witness)
+       ;; Edge: everything else
+       (else 'edge))))
+
+  (define (node-role . args)
+    "Get or set current node role"
+    (cond
+     ;; No args: display current role
+     ((null? args)
+      (let ((role (or *current-node-role*
+                      (load-node-role)
+                      (recommend-role (or *node-capabilities*
+                                         (probe-system-capabilities))))))
+        (set! *current-node-role* role)
+        (print "")
+        (printf "Current role: ~a~%" role)
+        (let ((def (assq role *node-roles*)))
+          (when def
+            (printf "  ~a~%" (cdr (assq 'description (cdr def))))))
+        (print "")
+        role))
+
+     ;; Set role
+     (else
+      (let ((new-role (car args)))
+        (unless (assq new-role *node-roles*)
+          (error "Unknown role. Valid roles:" (map car *node-roles*)))
+        (let ((old-role *current-node-role*))
+          (set! *current-node-role* new-role)
+          (save-node-role new-role)
+
+          ;; Audit the change
+          (let ((signing-key (vault-config 'signing-key)))
+            (when (and signing-key old-role)
+              (audit-append
+               actor: (get-vault-principal signing-key)
+               action: `(node-role-change ,old-role ,new-role)
+               motivation: "Node role changed")))
+
+          (printf "Role set: ~a → ~a~%" (or old-role 'none) new-role)
+          new-role)))))
+
+  (define (load-node-role)
+    "Load persisted node role"
+    (let ((role-file (node-role-file)))
+      (if (file-exists? role-file)
+          (handle-exceptions exn #f
+            (let ((data (with-input-from-file role-file read)))
+              (if (and (pair? data) (eq? 'node-config (car data)))
+                  (let ((role-entry (assq 'role (cdr data))))
+                    (if role-entry (cadr role-entry) #f))
+                  #f)))
+          #f)))
+
+  (define (save-node-role role)
+    "Persist node role"
+    (let ((role-file (node-role-file)))
+      (create-directory (pathname-directory role-file) #t)
+      (with-output-to-file role-file
+        (lambda ()
+          (write `(node-config
+                   (role ,role)
+                   (updated ,(current-seconds))))
+          (newline)))))
+
+  (define (node-role-file)
+    "Get path to node role config file"
+    (let ((home (get-environment-variable "HOME")))
+      (make-pathname (list home ".cyberspace") "node-role")))
+
+  (define (role-level role)
+    "Get numeric level of role in hierarchy"
+    (let loop ((roles *role-hierarchy*) (level 0))
+      (cond
+       ((null? roles) 999)
+       ((eq? (car roles) role) level)
+       (else (loop (cdr roles) (+ level 1))))))
+
+  (define (node-can? operation)
+    "Check if current role permits operation"
+    (let* ((current (or *current-node-role* (node-role)))
+           (required-entry (assq operation *node-operations*))
+           (required (if required-entry (cdr required-entry) 'edge)))
+      (let ((can (<= (role-level current) (role-level required))))
+        (if can
+            (begin
+              (printf "✓ ~a: permitted for ~a (requires ~a)~%" operation current required)
+              #t)
+            (begin
+              (printf "✗ ~a: denied for ~a (requires ~a)~%" operation current required)
+              #f)))))
+
+  (define (node-announce)
+    "Announce role to federation peers"
+    (let ((role (or *current-node-role* (node-role)))
+          (caps (or *node-capabilities* (probe-system-capabilities)))
+          (key (vault-config 'signing-key)))
+
+      (print "")
+      (print "NODE ROLE ANNOUNCEMENT")
+      (print (repeat-string "─" 50))
+
+      (if key
+          (let* ((principal (get-vault-principal key))
+                 (announcement
+                  `(node-role-announcement
+                    (principal ,(blob->hex principal))
+                    (role ,role)
+                    (capabilities ,caps)
+                    (timestamp ,(current-seconds)))))
+
+            ;; Sign announcement
+            (let* ((ann-bytes (with-output-to-string (lambda () (write announcement))))
+                   (ann-hash (sha512-hash ann-bytes))
+                   (signature (ed25519-sign key ann-hash)))
+
+              (printf " Principal:  ~a...~%" (substring (blob->hex principal) 0 16))
+              (printf " Role:       ~a~%" role)
+              (printf " Timestamp:  ~a~%" (current-seconds))
+              (printf " Signature:  ~a...~%" (substring (blob->hex signature) 0 16))
+              (print "")
+              (print " Status: Ready to broadcast (federation not yet implemented)")
+              (print "")
+
+              ;; Return signed announcement
+              `(signed-announcement
+                ,announcement
+                (signature ,(blob->hex signature)))))
+
+          (begin
+            (print " No signing key configured")
+            (print " Run: (vault-init signing-key: <key>)")
+            (print "")
+            #f))))
 
   ;;; ============================================================================
   ;;; Archival and Restoration - First-class support

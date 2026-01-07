@@ -27,6 +27,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-018](rfc-018-sealed-archive.md) | Sealed Archive Format | Implemented | 2026-01-06 |
 | [rfc-019](rfc-019-documentation-pipeline.md) | Documentation Pipeline | Implemented | 2026-01-06 |
 | [rfc-020](rfc-020-content-addressed-storage.md) | Content-Addressed Storage | Draft | 2026-01-07 |
+| [rfc-037](rfc-037-node-roles.md) | Node Roles and Capabilities | Draft | 2026-01-07 |
 
 ## RFC Purpose
 
