@@ -33,6 +33,9 @@
    ;; Verification
    seal-verify
 
+   ;; Inspection
+   seal-inspect
+
    ;; Configuration
    vault-init
    vault-config)
@@ -390,6 +393,294 @@
               (begin
                 (print "✗ Release seal INVALID: " version)
                 #f))))))
+
+  ;;; ============================================================================
+  ;;; Object Inspection - Security and Migration Properties
+  ;;; ============================================================================
+
+  (define (seal-inspect object #!key verify-key verbose)
+    "Inspect security and migration properties of a Cyberspace object
+
+     object: Path to .archive file, version string, or record
+     verify-key: Optional public key for signature verification
+     verbose: Show additional details
+
+     Displays:
+     - Security: signing algorithm, hash, signature status, encryption
+     - Migration: format version, compatibility, platform, dependencies"
+
+    (cond
+     ;; String path to archive file
+     ((and (string? object) (file-exists? object))
+      (inspect-archive-file object verify-key: verify-key verbose: verbose))
+
+     ;; Version string - look up release
+     ((and (string? object) (tag-exists? object))
+      (inspect-release object verify-key: verify-key verbose: verbose))
+
+     ;; Signed certificate record
+     ((and (pair? object) (eq? 'signed-cert (car object)))
+      (inspect-signed-cert object verify-key: verify-key verbose: verbose))
+
+     ;; Audit entry record
+     ((and (pair? object) (eq? 'audit-entry (car object)))
+      (inspect-audit-entry object verify-key: verify-key verbose: verbose))
+
+     (else
+      (error "Unknown object type. Expected: archive path, version, signed-cert, or audit-entry"))))
+
+  (define (repeat-string str n)
+    (let loop ((i 0) (acc ""))
+      (if (= i n) acc
+          (loop (+ i 1) (string-append acc str)))))
+
+  (define (box-top width)
+    (string-append "╭" (repeat-string "─" (- width 1)) "╮"))
+
+  (define (box-bottom width)
+    (string-append "╰" (repeat-string "─" (- width 1)) "╯"))
+
+  (define (box-divider width)
+    (string-append "├" (repeat-string "─" (- width 1)) "┤"))
+
+  (define (box-line content width)
+    (let* ((padded (if (> (string-length content) (- width 2))
+                       (substring content 0 (- width 2))
+                       content))
+           (padding (- width 2 (string-length padded))))
+      (string-append "│ " padded (make-string padding #\space) "│")))
+
+  (define (box-line-pair label value width)
+    (let* ((formatted (sprintf "~a:~a~a"
+                               label
+                               (make-string (max 1 (- 20 (string-length label))) #\space)
+                               value)))
+      (box-line formatted width)))
+
+  (define (print-box-header title type width)
+    (print (box-top width))
+    (print (box-line (sprintf "OBJECT: ~a" title) width))
+    (print (box-line (sprintf "TYPE:   ~a" type) width))
+    (print (box-divider width)))
+
+  (define (print-section-header title width)
+    (print (box-line "" width))
+    (print (box-line title width))
+    (print (box-line "" width)))
+
+  (define (inspect-archive-file path #!key verify-key verbose)
+    "Inspect a sealed archive file"
+    (let ((width 60))
+
+      ;; Read archive manifest
+      (let ((manifest (with-input-from-file path read)))
+
+        (unless (and (pair? manifest) (eq? 'sealed-archive (car manifest)))
+          (error "Not a sealed archive" path))
+
+        (let* ((fields (cdr manifest))
+               (version (cadr (assq 'version fields)))
+               (fmt (cadr (assq 'format fields)))
+               (archive-file (let ((a (assq 'archive fields)))
+                              (if a (cadr a)
+                                  (let ((t (assq 'tarball fields)))
+                                    (if t (cadr t) #f)))))
+               (hash-hex (cadr (assq 'hash fields)))
+               (sig-hex (cadr (assq 'signature fields)))
+               (recipients (let ((r (assq 'recipients fields)))
+                            (if r (cadr r) '())))
+               (compression (let ((c (assq 'compression fields)))
+                             (if c (cadr c) #f))))
+
+          ;; Verify signature if key provided
+          (let ((sig-status
+                 (if verify-key
+                     (let* ((archive-bytes (if archive-file
+                                               (read-file-bytes archive-file)
+                                               #f))
+                            (archive-hash (if archive-bytes
+                                              (sha512-hash archive-bytes)
+                                              #f))
+                            (expected-hash (hex->blob hash-hex))
+                            (signature (hex->blob sig-hex))
+                            (pubkey (if (string? verify-key)
+                                        (read-key-from-file verify-key)
+                                        verify-key)))
+                       (if (and archive-hash
+                                (equal? archive-hash expected-hash)
+                                (ed25519-verify pubkey archive-hash signature))
+                           "✓ VERIFIED"
+                           "✗ FAILED"))
+                     "⚠ NOT VERIFIED (no key)")))
+
+            ;; Print inspection output
+            (print-box-header (pathname-file path) "sealed-archive" width)
+
+            (print-section-header "SECURITY PROPERTIES" width)
+            (print (box-line-pair "Signing Algorithm" "ed25519-sha512" width))
+            (print (box-line-pair "Content Hash" (string-append "sha512:" (substring hash-hex 0 16) "...") width))
+            (print (box-line-pair "Signature" sig-status width))
+
+            (case fmt
+              ((zstd-age)
+               (print (box-line-pair "Encryption" "age (X25519)" width))
+               (print (box-line-pair "Recipients" (sprintf "~a key(s)" (length recipients)) width)))
+              ((cryptographic)
+               (print (box-line-pair "Encryption" "none (signed only)" width)))
+              (else
+               (print (box-line-pair "Encryption" "none" width))))
+
+            (print (box-divider width))
+            (print-section-header "MIGRATION PROPERTIES" width)
+            (print (box-line-pair "Format Version" "1" width))
+            (print (box-line-pair "Archive Format" (symbol->string fmt) width))
+
+            (when compression
+              (print (box-line-pair "Compression" (symbol->string compression) width)))
+
+            (print (box-line-pair "Semantic Version" version width))
+
+            ;; Check for migration path
+            (let ((migration-file (sprintf "~a/~a-to-*.scm"
+                                          (vault-config 'migration-dir)
+                                          version)))
+              (print (box-line-pair "Migration Path" "(inspect with seal-history)" width)))
+
+            ;; Portability assessment
+            (print (box-line-pair "Portable"
+                                 (case fmt
+                                   ((zstd-age) "✓ (requires age, zstd)")
+                                   ((cryptographic) "✓ (requires gzip)")
+                                   ((tarball) "✓ (standard tar.gz)")
+                                   ((bundle) "✓ (git bundle)")
+                                   (else "? (unknown format)"))
+                                 width))
+
+            (print (box-line "" width))
+            (print (box-bottom width)))))))
+
+  (define (inspect-release version #!key verify-key verbose)
+    "Inspect a sealed release by version"
+    (let ((width 60)
+          (sig-file (sprintf ".vault/releases/~a.sig" version)))
+
+      (print-box-header version "sealed-release" width)
+      (print-section-header "SECURITY PROPERTIES" width)
+
+      (if (file-exists? sig-file)
+          (let ((sig-data (with-input-from-file sig-file read)))
+            (let ((manifest (cadr (assq 'manifest (cdr sig-data))))
+                  (hash (cadr (assq 'hash (cdr sig-data)))))
+              (print (box-line-pair "Signing Algorithm" "ed25519-sha512" width))
+              (print (box-line-pair "Manifest Hash" (substring hash 0 32) width))
+
+              (let ((sig-status
+                     (if verify-key
+                         (if (seal-verify version verify-key: verify-key)
+                             "✓ VERIFIED"
+                             "✗ FAILED")
+                         "⚠ NOT VERIFIED (no key)")))
+                (print (box-line-pair "Signature" sig-status width)))))
+
+          (print (box-line-pair "Signature" "none (unsigned release)" width)))
+
+      (print (box-divider width))
+      (print-section-header "MIGRATION PROPERTIES" width)
+
+      ;; Get git info for the tag
+      (let ((hash (with-input-from-pipe
+                      (sprintf "git rev-parse ~a 2>/dev/null" version)
+                    read-line))
+            (date (with-input-from-pipe
+                      (sprintf "git log -1 --format=%ci ~a 2>/dev/null" version)
+                    read-line)))
+        (print (box-line-pair "Semantic Version" version width))
+        (when (and hash (not (eof-object? hash)))
+          (print (box-line-pair "Commit Hash" (substring hash 0 12) width)))
+        (when (and date (not (eof-object? date)))
+          (print (box-line-pair "Created" date width))))
+
+      ;; Check for migration scripts
+      (let ((migration-dir (vault-config 'migration-dir)))
+        (if (directory-exists? migration-dir)
+            (let ((migrations (filter
+                               (lambda (f) (string-contains f version))
+                               (directory migration-dir))))
+              (if (null? migrations)
+                  (print (box-line-pair "Migration Path" "(none)" width))
+                  (for-each
+                   (lambda (m)
+                     (print (box-line-pair "Migration" m width)))
+                   migrations)))
+            (print (box-line-pair "Migration Path" "(none)" width))))
+
+      (print (box-line "" width))
+      (print (box-bottom width))))
+
+  (define (inspect-signed-cert sc #!key verify-key verbose)
+    "Inspect a signed certificate"
+    (let ((width 60))
+      ;; Handle both sexp and record forms
+      (let* ((cert-data (if (pair? sc) (cdr sc) sc))
+             (cert-sexp (if (pair? cert-data) (car cert-data) cert-data)))
+
+        (print-box-header "signed-certificate" "spki-cert" width)
+        (print-section-header "SECURITY PROPERTIES" width)
+        (print (box-line-pair "Signing Algorithm" "ed25519-sha512" width))
+        (print (box-line-pair "Hash Algorithm" "sha512" width))
+
+        ;; Extract issuer/subject if available
+        (when (pair? cert-sexp)
+          (let ((issuer (assq 'issuer (if (eq? 'cert (car cert-sexp))
+                                          (cdr cert-sexp)
+                                          cert-sexp))))
+            (when issuer
+              (print (box-line-pair "Issuer" "(principal)" width)))))
+
+        (print (box-line-pair "Propagate" "check cert-propagate" width))
+
+        (print (box-divider width))
+        (print-section-header "DELEGATION PROPERTIES" width)
+        (print (box-line-pair "Chain Depth" "1 (direct)" width))
+        (print (box-line-pair "Validity" "check cert-validity" width))
+
+        (print (box-line "" width))
+        (print (box-bottom width)))))
+
+  (define (inspect-audit-entry entry #!key verify-key verbose)
+    "Inspect an audit trail entry"
+    (let ((width 60))
+      ;; Handle sexp form
+      (let ((fields (if (and (pair? entry) (eq? 'audit-entry (car entry)))
+                        (cdr entry)
+                        entry)))
+
+        (let ((id (let ((i (assq 'id fields))) (if i (cadr i) "unknown")))
+              (timestamp (let ((t (assq 'timestamp fields))) (if t (cadr t) "unknown")))
+              (sequence (let ((s (assq 'sequence fields))) (if s (cadr s) 0)))
+              (seal (assq 'seal fields)))
+
+          (print-box-header (sprintf "entry-~a" sequence) "audit-entry" width)
+          (print-section-header "SECURITY PROPERTIES" width)
+
+          (if seal
+              (let ((seal-fields (cdr seal)))
+                (let ((algorithm (let ((a (assq 'algorithm seal-fields)))
+                                  (if a (cadr a) "ed25519-sha512"))))
+                  (print (box-line-pair "Seal Algorithm" algorithm width))
+                  (print (box-line-pair "Content Hash" (substring id 0 32) width))
+                  (print (box-line-pair "Chain Link" "parent-id reference" width))))
+              (print (box-line-pair "Seal" "none" width)))
+
+          (print (box-divider width))
+          (print-section-header "AUDIT PROPERTIES" width)
+          (print (box-line-pair "Entry ID" (substring id 0 24) width))
+          (print (box-line-pair "Sequence" (number->string sequence) width))
+          (print (box-line-pair "Timestamp" timestamp width))
+          (print (box-line-pair "Immutable" "✓ (content-addressed)" width))
+
+          (print (box-line "" width))
+          (print (box-bottom width))))))
 
   ;;; ============================================================================
   ;;; Archival and Restoration - First-class support

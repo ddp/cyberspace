@@ -19,6 +19,7 @@
         (seal-subscribe . vault#seal-subscribe)
         (seal-synchronize . vault#seal-synchronize)
         (seal-verify . vault#seal-verify)
+        (seal-inspect . vault#seal-inspect)
         (vault-init . vault#vault-init)
         (vault-config . vault#vault-config))
       (scheme#list)
