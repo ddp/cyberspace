@@ -36,6 +36,11 @@
    ;; Inspection
    seal-inspect
 
+   ;; Directory / Object Soup (NewtonOS-style)
+   soup
+   soup?
+   complete
+
    ;; Configuration
    vault-init
    vault-config)
@@ -59,6 +64,7 @@
           srfi-1   ; list utilities
           srfi-4   ; u8vectors
           srfi-13  ; string utilities
+          srfi-69  ; hash tables
           cert
           crypto-ffi
           audit)
@@ -695,6 +701,286 @@
 
           (print (box-line "" width))
           (print (box-bottom width))))))
+
+  ;;; ============================================================================
+  ;;; Directory / Object Soup - NewtonOS-style persistent object store
+  ;;; ============================================================================
+
+  ;; Object types in the soup
+  (define *soup-types*
+    '((archives  . "Sealed archive packages")
+      (releases  . "Tagged version releases")
+      (certs     . "SPKI certificates")
+      (audit     . "Audit trail entries")
+      (keys      . "Cryptographic keys")
+      (metadata  . "Commit metadata")))
+
+  (define (soup? . args)
+    "Show soup help and available object types (JSYS ? command)"
+    (print "
+SOUP - Object Store Query Syntax
+─────────────────────────────────────────────────────────────
+
+  (soup)                     List all objects in soup
+  (soup 'archives)           Filter by type
+  (soup 'releases)
+  (soup 'certs)
+  (soup 'audit)
+  (soup 'keys)
+  (soup 'metadata)
+
+  (soup \"pattern\")           Glob pattern (* = any, ? = single char)
+  (soup \"genesis*\")          All objects starting with 'genesis'
+  (soup \"*.archive\")         All archive files
+  (soup \"v?.0.0\")            Matches v1.0.0, v2.0.0, etc.
+
+  (soup 'type \"pattern\")     Combine type filter with pattern
+  (soup 'releases \"1.*\")     Releases matching 1.*
+
+  (soup #/regex/)            Regular expression (PCRE)
+  (soup #/^v[0-9]+/)         Releases starting with v + digits
+  (soup 'audit #/seal-/)     Audit entries containing seal-
+
+  (complete \"gen\")           Complete partial object name
+
+Object Types:
+")
+    (for-each
+     (lambda (type-pair)
+       (printf "  ~a~a~a~%"
+               (car type-pair)
+               (make-string (max 1 (- 12 (string-length (symbol->string (car type-pair))))) #\space)
+               (cdr type-pair)))
+     *soup-types*))
+
+  (define (glob->sre-pattern pattern)
+    "Convert glob pattern to irregex using built-in glob->sre"
+    ;; glob->sre converts shell-style globs to SRE
+    ;; Wrap with bos/eos for full match
+    `(: bos ,(glob->sre pattern) eos))
+
+  (define (match-pattern? name pattern)
+    "Match name against glob or regex pattern"
+    (cond
+     ;; Regex (irregex object)
+     ((irregex? pattern)
+      (irregex-search pattern name))
+     ;; Glob pattern string - use built-in glob->sre
+     ((string? pattern)
+      (irregex-match (irregex (glob->sre-pattern pattern)) name))
+     ;; No pattern - match all
+     (else #t)))
+
+  (define (soup-collect-objects)
+    "Collect all objects from the soup"
+    (let ((objects '()))
+
+      ;; Archives (*.archive files in current dir)
+      (when (directory-exists? ".")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".archive" f)
+             (let ((stat (file-stat f)))
+               (set! objects (cons (list 'archives f (vector-ref stat 5) (get-archive-format f)) objects)))))
+         (directory ".")))
+
+      ;; Releases (.vault/releases/*.sig)
+      (when (directory-exists? ".vault/releases")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sig" f)
+             (let* ((version (pathname-strip-extension f))
+                    (stat (file-stat (sprintf ".vault/releases/~a" f))))
+               (set! objects (cons (list 'releases version (vector-ref stat 5) "signed") objects)))))
+         (directory ".vault/releases")))
+
+      ;; Unsigned releases (git tags without .sig)
+      (let ((tags (get-git-tags)))
+        (for-each
+         (lambda (tag)
+           (unless (file-exists? (sprintf ".vault/releases/~a.sig" tag))
+             (set! objects (cons (list 'releases tag 0 "unsigned") objects))))
+         tags))
+
+      ;; Audit entries (.vault/audit/*.sexp)
+      (when (directory-exists? ".vault/audit")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let ((stat (file-stat (sprintf ".vault/audit/~a" f))))
+               (set! objects (cons (list 'audit f (vector-ref stat 5) "entry") objects)))))
+         (directory ".vault/audit")))
+
+      ;; Keys (*.pub, *.key, *.age files)
+      (when (directory-exists? ".")
+        (for-each
+         (lambda (f)
+           (when (or (string-suffix? ".pub" f)
+                     (string-suffix? ".key" f)
+                     (string-suffix? ".age" f))
+             (let ((stat (file-stat f)))
+               (set! objects (cons (list 'keys f (vector-ref stat 5) (get-key-type f)) objects)))))
+         (directory ".")))
+
+      ;; Metadata (.vault/metadata/*.sexp)
+      (when (directory-exists? ".vault/metadata")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let ((stat (file-stat (sprintf ".vault/metadata/~a" f))))
+               (set! objects (cons (list 'metadata f (vector-ref stat 5) "commit") objects)))))
+         (directory ".vault/metadata")))
+
+      (reverse objects)))
+
+  (define (get-archive-format path)
+    "Detect archive format from manifest"
+    (handle-exceptions exn
+      "unknown"
+      (let ((manifest (with-input-from-file path read)))
+        (if (and (pair? manifest) (eq? 'sealed-archive (car manifest)))
+            (let ((fmt (assq 'format (cdr manifest))))
+              (if fmt (symbol->string (cadr fmt)) "unknown"))
+            "unknown"))))
+
+  (define (get-key-type path)
+    "Detect key type from file"
+    (cond
+     ((string-suffix? ".pub" path) "public")
+     ((string-suffix? ".key" path) "private")
+     ((string-suffix? ".age" path) "age")
+     (else "unknown")))
+
+  (define (get-git-tags)
+    "Get list of git tags"
+    (handle-exceptions exn
+      '()
+      (with-input-from-pipe "git tag -l 2>/dev/null"
+        (lambda ()
+          (let loop ((tags '()))
+            (let ((line (read-line)))
+              (if (eof-object? line)
+                  (reverse tags)
+                  (loop (cons line tags)))))))))
+
+  (define (format-size bytes)
+    "Format byte size human-readable"
+    (cond
+     ((< bytes 1024) (sprintf "~aB" bytes))
+     ((< bytes (* 1024 1024)) (sprintf "~aK" (quotient bytes 1024)))
+     ((< bytes (* 1024 1024 1024)) (sprintf "~aM" (quotient bytes (* 1024 1024))))
+     (else (sprintf "~aG" (quotient bytes (* 1024 1024 1024))))))
+
+  (define (soup . args)
+    "List objects in the soup with optional type filter and pattern
+
+     (soup)                   - all objects
+     (soup 'archives)         - filter by type
+     (soup \"pattern\")         - glob pattern (* ?)
+     (soup 'type \"pat\")       - type + pattern
+     (soup #/regex/)          - regex match"
+
+    (let ((type-filter #f)
+          (pattern #f))
+
+      ;; Parse arguments
+      (for-each
+       (lambda (arg)
+         (cond
+          ((symbol? arg) (set! type-filter arg))
+          ((string? arg) (set! pattern arg))
+          ((irregex? arg) (set! pattern arg))))
+       args)
+
+      ;; Collect and filter objects
+      (let* ((all-objects (soup-collect-objects))
+             (filtered
+              (filter
+               (lambda (obj)
+                 (let ((obj-type (car obj))
+                       (obj-name (cadr obj)))
+                   (and (or (not type-filter) (eq? type-filter obj-type))
+                        (or (not pattern) (match-pattern? obj-name pattern)))))
+               all-objects)))
+
+        ;; Group by type
+        (let ((grouped (make-hash-table)))
+          (for-each
+           (lambda (obj)
+             (let ((type (car obj)))
+               (hash-table-set! grouped type
+                                (cons obj (hash-table-ref/default grouped type '())))))
+           filtered)
+
+          ;; Print header
+          (let ((width 60)
+                (count (length filtered)))
+            (print "")
+            (print (repeat-string "─" width))
+            (printf " SOUP DIRECTORY  ~a object~a~%"
+                    count (if (= count 1) "" "s"))
+            (print (repeat-string "─" width))
+
+            (if (zero? count)
+                (print " (empty)")
+
+                ;; Print each type group
+                (for-each
+                 (lambda (type-pair)
+                   (let* ((type (car type-pair))
+                          (objs (reverse (hash-table-ref/default grouped type '()))))
+                     (unless (null? objs)
+                       (print "")
+                       (printf " ~a/~%" type)
+                       (for-each
+                        (lambda (obj)
+                          (let ((name (cadr obj))
+                                (size (caddr obj))
+                                (info (cadddr obj)))
+                            (printf "   ~a~a~a  ~a~%"
+                                    name
+                                    (make-string (max 1 (- 32 (string-length name))) #\space)
+                                    (format-size size)
+                                    info)))
+                        objs))))
+                 *soup-types*))
+
+            (print "")
+            (print (repeat-string "─" width)))))))
+
+  (define (complete prefix)
+    "Complete partial object name (JSYS ESC command)"
+    (let* ((all-objects (soup-collect-objects))
+           (names (map cadr all-objects))
+           (matches (filter (lambda (n) (string-prefix? prefix n)) names)))
+      (cond
+       ((null? matches)
+        (print "No matches for: " prefix))
+       ((= 1 (length matches))
+        (print "Completion: " (car matches))
+        (car matches))
+       (else
+        (print "Matches:")
+        (for-each (lambda (m) (print "  " m)) matches)
+        ;; Return common prefix
+        (let ((common (find-common-prefix matches)))
+          (when (> (string-length common) (string-length prefix))
+            (print "Common prefix: " common))
+          common)))))
+
+  (define (find-common-prefix strings)
+    "Find longest common prefix of strings"
+    (if (null? strings)
+        ""
+        (let loop ((i 0))
+          (if (or (>= i (string-length (car strings)))
+                  (not (every (lambda (s)
+                                (and (> (string-length s) i)
+                                     (char=? (string-ref (car strings) i)
+                                             (string-ref s i))))
+                              (cdr strings))))
+              (substring (car strings) 0 i)
+              (loop (+ i 1))))))
 
   ;;; ============================================================================
   ;;; Archival and Restoration - First-class support
