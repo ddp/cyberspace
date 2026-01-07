@@ -2,13 +2,16 @@
 # RFC Documentation Pipeline
 # Generates all RFC formats and index catalog
 #
-# Formats:
-#   .md   - Markdown source (version control, editing)
+# Source formats:
+#   .md   - Markdown (prose, docs, RFCs) → pandoc
+#   .tex  - LaTeX (math, proofs, papers) → pdflatex + latexmlc
+#
+# Output formats:
 #   .html - Web viewing (standalone)
 #   .pdf  - Archival, printing
-#   .txt  - Plain text (IETF tradition, universal)
+#   .txt  - Plain text (IETF tradition, prose only)
 #
-# Future: RSS/Atom feed generation
+# Computer science is math. Use the right tool for each.
 
 set -e
 
@@ -36,20 +39,31 @@ RFCS=(
 )
 
 # Extract title from markdown file
-get_title() {
+get_title_md() {
   head -1 "$1" | sed 's/^# //'
 }
 
-# Generate individual RFC formats
-generate_formats() {
-  local rfc="$1"
+# Extract title from LaTeX file
+get_title_tex() {
+  grep -m1 '\\title{' "$1" 2>/dev/null | sed 's/.*\\title{\([^}]*\)}.*/\1/' || basename "$1" .tex
+}
 
-  if [[ ! -f "${rfc}.md" ]]; then
-    echo "  [skip] ${rfc}.md not found"
-    return
+# Get title from any source
+get_title() {
+  local base="$1"
+  if [[ -f "${base}.md" ]]; then
+    get_title_md "${base}.md"
+  elif [[ -f "${base}.tex" ]]; then
+    get_title_tex "${base}.tex"
+  else
+    echo "$base"
   fi
+}
 
-  echo "Processing ${rfc}..."
+# Generate from Markdown source (prose, docs, RFCs)
+generate_from_md() {
+  local rfc="$1"
+  echo "Processing ${rfc} (markdown)..."
 
   # HTML (standalone)
   pandoc "${rfc}.md" -o "${rfc}.html" --standalone --metadata title="" 2>/dev/null
@@ -61,6 +75,40 @@ generate_formats() {
   pandoc "${rfc}.md" -o "${rfc}.txt" --to=plain --wrap=auto --columns=78 2>/dev/null
 
   echo "  -> .html .pdf .txt"
+}
+
+# Generate from LaTeX source (math, proofs, papers)
+generate_from_tex() {
+  local paper="$1"
+  echo "Processing ${paper} (latex)..."
+
+  # PDF (native LaTeX - what it was made for)
+  pdflatex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1
+  pdflatex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1  # twice for refs
+
+  # HTML (LaTeXML - proper math rendering)
+  if command -v latexmlc &>/dev/null; then
+    latexmlc --dest="${paper}.html" "${paper}.tex" 2>/dev/null || true
+    echo "  -> .pdf .html"
+  else
+    echo "  -> .pdf (latexmlc not installed, skipping HTML)"
+  fi
+
+  # Clean aux files
+  rm -f "${paper}.aux" "${paper}.log" "${paper}.out" 2>/dev/null
+}
+
+# Generate individual document formats (auto-detect source)
+generate_formats() {
+  local doc="$1"
+
+  if [[ -f "${doc}.md" ]]; then
+    generate_from_md "$doc"
+  elif [[ -f "${doc}.tex" ]]; then
+    generate_from_tex "$doc"
+  else
+    echo "  [skip] ${doc} - no .md or .tex source"
+  fi
 }
 
 # Generate index.html catalog
@@ -108,23 +156,27 @@ generate_index() {
 HEADER
 
   for rfc in "${RFCS[@]}"; do
-    if [[ -f "${rfc}.md" ]]; then
-      local title=$(get_title "${rfc}.md")
-      local num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
+    local title=$(get_title "$rfc")
+    local num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
+    local formats=""
 
-      cat >> index.html << EOF
+    if [[ -f "${rfc}.md" ]]; then
+      # Markdown source: html, pdf, txt, md
+      formats='<a href="'"${rfc}"'.html">html</a> <a href="'"${rfc}"'.pdf">pdf</a> <a href="'"${rfc}"'.txt">txt</a> <a href="'"${rfc}"'.md">md</a>'
+    elif [[ -f "${rfc}.tex" ]]; then
+      # LaTeX source: html, pdf, tex (no txt - math doesn't work in plaintext)
+      formats='<a href="'"${rfc}"'.html">html</a> <a href="'"${rfc}"'.pdf">pdf</a> <a href="'"${rfc}"'.tex">tex</a>'
+    else
+      continue
+    fi
+
+    cat >> index.html << EOF
       <tr>
         <td>${num}</td>
         <td>${title}</td>
-        <td class="formats">
-          <a href="${rfc}.html">html</a>
-          <a href="${rfc}.pdf">pdf</a>
-          <a href="${rfc}.txt">txt</a>
-          <a href="${rfc}.md">md</a>
-        </td>
+        <td class="formats">${formats}</td>
       </tr>
 EOF
-    fi
   done
 
   cat >> index.html << 'FOOTER'
@@ -157,4 +209,6 @@ echo "Done."
 echo "  HTML: $(ls *.html 2>/dev/null | wc -l | tr -d ' ')"
 echo "  PDF:  $(ls *.pdf 2>/dev/null | wc -l | tr -d ' ')"
 echo "  TXT:  $(ls *.txt 2>/dev/null | wc -l | tr -d ' ')"
-echo "  MD:   $(ls rfc-*.md 2>/dev/null | wc -l | tr -d ' ')"
+echo "  Sources:"
+echo "    MD:  $(ls rfc-*.md 2>/dev/null | wc -l | tr -d ' ')"
+echo "    TeX: $(ls rfc-*.tex 2>/dev/null | wc -l | tr -d ' ')"

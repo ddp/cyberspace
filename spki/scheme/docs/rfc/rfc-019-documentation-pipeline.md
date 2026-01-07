@@ -9,7 +9,7 @@
 
 ## Abstract
 
-This RFC specifies the documentation pipeline for the Library of Cyberspace: automated generation of canonical document formats, index catalogs, and future syndication feeds.
+This RFC specifies the documentation pipeline for the Library of Cyberspace: automated generation of canonical document formats from both Markdown and LaTeX sources, index catalogs, and future syndication feeds.
 
 ---
 
@@ -22,20 +22,33 @@ Documentation must be:
 3. **Discoverable** - Indexed for navigation
 4. **Syndicated** - Subscribable for updates (future)
 
-The pipeline automates generation of all canonical formats from Markdown source.
+The pipeline automates generation of all canonical formats using the right tool for each source:
+
+- **Markdown** → pandoc → prose documentation, RFCs
+- **LaTeX** → pdflatex/latexmlc → mathematics, proofs, research papers
+
+Computer science is math. Use the right tool for the job.
 
 ---
 
-## Canonical Formats
+## Source Formats
 
-| Format | Extension | Purpose | Tool |
-|--------|-----------|---------|------|
-| Markdown | `.md` | Source, editing, version control | - |
-| HTML | `.html` | Web viewing, rich rendering | pandoc --standalone |
-| PDF | `.pdf` | Archival, printing, distribution | pandoc + xelatex |
-| Plain Text | `.txt` | Universal compatibility, IETF tradition | pandoc --to=plain |
+| Format | Extension | Use Case | Pipeline |
+|--------|-----------|----------|----------|
+| Markdown | `.md` | Prose, docs, RFCs | pandoc |
+| LaTeX | `.tex` | Math, proofs, papers | pdflatex + latexmlc |
 
-All formats are first-class citizens. None is derived or secondary.
+## Output Formats
+
+| Format | Extension | Purpose | From MD | From TeX |
+|--------|-----------|---------|---------|----------|
+| HTML | `.html` | Web viewing | pandoc | latexmlc |
+| PDF | `.pdf` | Archival, printing | xelatex | pdflatex |
+| Plain Text | `.txt` | IETF tradition | pandoc | — |
+
+Plain text is not generated from LaTeX sources—math doesn't render in plaintext.
+
+All output formats are first-class citizens. None is derived or secondary.
 
 ---
 
@@ -43,22 +56,31 @@ All formats are first-class citizens. None is derived or secondary.
 
 ### Input
 
-Markdown source files following the naming convention:
+Source files following the naming convention:
 ```
-rfc-NNN-short-name.md
+rfc-NNN-short-name.md     # Markdown source
+rfc-NNN-short-name.tex    # LaTeX source
 ```
 
 Where:
 - `NNN` - Zero-padded RFC number (000-999)
 - `short-name` - Lowercase, hyphenated descriptive name
 
+The pipeline auto-detects source format by extension.
+
 ### Output
 
-For each input file, generate:
+For Markdown sources:
 ```
-rfc-NNN-short-name.html   # Standalone HTML
-rfc-NNN-short-name.pdf    # PDF via XeLaTeX
+rfc-NNN-short-name.html   # Standalone HTML (pandoc)
+rfc-NNN-short-name.pdf    # PDF (xelatex)
 rfc-NNN-short-name.txt    # Plain text, 78 columns
+```
+
+For LaTeX sources:
+```
+rfc-NNN-short-name.html   # HTML (latexmlc)
+rfc-NNN-short-name.pdf    # PDF (pdflatex)
 ```
 
 Plus a navigational index:
@@ -68,15 +90,28 @@ index.html                # Hypertext catalog
 
 ### Generation Commands
 
+#### Markdown Pipeline (pandoc)
+
 ```bash
 # HTML (standalone, no external dependencies)
-pandoc ${rfc}.md -o ${rfc}.html --standalone --metadata title=""
+pandoc ${doc}.md -o ${doc}.html --standalone --metadata title=""
 
 # PDF (XeLaTeX with monospace font for code)
-pandoc ${rfc}.md -o ${rfc}.pdf --pdf-engine=xelatex -V mainfont="Menlo"
+pandoc ${doc}.md -o ${doc}.pdf --pdf-engine=xelatex -V mainfont="Menlo"
 
 # Plain text (IETF-style, 78 columns)
-pandoc ${rfc}.md -o ${rfc}.txt --to=plain --wrap=auto --columns=78
+pandoc ${doc}.md -o ${doc}.txt --to=plain --wrap=auto --columns=78
+```
+
+#### LaTeX Pipeline (pdflatex + latexmlc)
+
+```bash
+# PDF (native LaTeX - what it was made for)
+pdflatex -interaction=nonstopmode ${doc}.tex
+pdflatex -interaction=nonstopmode ${doc}.tex  # twice for refs
+
+# HTML (LaTeXML - proper math rendering, used by arXiv)
+latexmlc --dest=${doc}.html ${doc}.tex
 ```
 
 ### Index Generation
@@ -179,9 +214,13 @@ generate_index
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| pandoc | 2.x+ | Document conversion |
-| xelatex | TeX Live | PDF generation |
+| pandoc | 2.x+ | Markdown → HTML/PDF/TXT |
+| pdflatex | TeX Live | LaTeX → PDF |
+| xelatex | TeX Live | Markdown → PDF (via pandoc) |
+| latexmlc | LaTeXML | LaTeX → HTML (optional) |
 | rsync | 3.x+ | Publication |
+
+Note: latexmlc is optional. If not installed, LaTeX sources produce PDF only.
 
 ---
 
@@ -205,17 +244,20 @@ Remote publication uses:
 ## References
 
 1. [Pandoc User's Guide](https://pandoc.org/MANUAL.html)
-2. [RFC-006](rfc-006-vault-architecture.md) - Vault System Architecture
-3. [Atom Syndication Format](https://tools.ietf.org/html/rfc4287) - RFC 4287
+2. [LaTeXML](https://math.nist.gov/~BMiller/LaTeXML/) - LaTeX to XML/HTML converter
+3. [RFC-006](rfc-006-vault-architecture.md) - Vault System Architecture
+4. [Atom Syndication Format](https://tools.ietf.org/html/rfc4287) - RFC 4287
 
 ---
 
 ## Changelog
 
+- **2026-01-07** - Added LaTeX pipeline for math/proofs papers
 - **2026-01-06** - Initial specification
 
 ---
 
 **Implementation Status:** Complete
 **Script:** generate-rfcs.sh
-**Formats:** Markdown, HTML, PDF, Plain Text
+**Source Formats:** Markdown (.md), LaTeX (.tex)
+**Output Formats:** HTML, PDF, Plain Text (MD only)

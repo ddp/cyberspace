@@ -246,8 +246,9 @@ href="mailto:ddp@eludom.net" class="email">ddp@eludom.net</a>
 <hr />
 <h2 id="abstract">Abstract</h2>
 <p>This RFC specifies the documentation pipeline for the Library of
-Cyberspace: automated generation of canonical document formats, index
-catalogs, and future syndication feeds.</p>
+Cyberspace: automated generation of canonical document formats from both
+Markdown and LaTeX sources, index catalogs, and future syndication
+feeds.</p>
 <hr />
 <h2 id="motivation">Motivation</h2>
 <p>Documentation must be:</p>
@@ -258,78 +259,118 @@ archival</li>
 <li><strong>Discoverable</strong> - Indexed for navigation</li>
 <li><strong>Syndicated</strong> - Subscribable for updates (future)</li>
 </ol>
-<p>The pipeline automates generation of all canonical formats from
-Markdown source.</p>
+<p>The pipeline automates generation of all canonical formats using the
+right tool for each source:</p>
+<ul>
+<li><strong>Markdown</strong> → pandoc → prose documentation, RFCs</li>
+<li><strong>LaTeX</strong> → pdflatex/latexmlc → mathematics, proofs,
+research papers</li>
+</ul>
+<p>Computer science is math. Use the right tool for the job.</p>
 <hr />
-<h2 id="canonical-formats">Canonical Formats</h2>
+<h2 id="source-formats">Source Formats</h2>
 <table>
-<colgroup>
-<col style="width: 23%" />
-<col style="width: 32%" />
-<col style="width: 26%" />
-<col style="width: 17%" />
-</colgroup>
 <thead>
 <tr>
 <th>Format</th>
 <th>Extension</th>
-<th>Purpose</th>
-<th>Tool</th>
+<th>Use Case</th>
+<th>Pipeline</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Markdown</td>
 <td><code>.md</code></td>
-<td>Source, editing, version control</td>
-<td>-</td>
+<td>Prose, docs, RFCs</td>
+<td>pandoc</td>
 </tr>
+<tr>
+<td>LaTeX</td>
+<td><code>.tex</code></td>
+<td>Math, proofs, papers</td>
+<td>pdflatex + latexmlc</td>
+</tr>
+</tbody>
+</table>
+<h2 id="output-formats">Output Formats</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Extension</th>
+<th>Purpose</th>
+<th>From MD</th>
+<th>From TeX</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td>HTML</td>
 <td><code>.html</code></td>
-<td>Web viewing, rich rendering</td>
-<td>pandoc –standalone</td>
+<td>Web viewing</td>
+<td>pandoc</td>
+<td>latexmlc</td>
 </tr>
 <tr>
 <td>PDF</td>
 <td><code>.pdf</code></td>
-<td>Archival, printing, distribution</td>
-<td>pandoc + xelatex</td>
+<td>Archival, printing</td>
+<td>xelatex</td>
+<td>pdflatex</td>
 </tr>
 <tr>
 <td>Plain Text</td>
 <td><code>.txt</code></td>
-<td>Universal compatibility, IETF tradition</td>
-<td>pandoc –to=plain</td>
+<td>IETF tradition</td>
+<td>pandoc</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<p>All formats are first-class citizens. None is derived or
+<p>Plain text is not generated from LaTeX sources—math doesn’t render in
+plaintext.</p>
+<p>All output formats are first-class citizens. None is derived or
 secondary.</p>
 <hr />
 <h2 id="pipeline-specification">Pipeline Specification</h2>
 <h3 id="input">Input</h3>
-<p>Markdown source files following the naming convention:</p>
-<pre><code>rfc-NNN-short-name.md</code></pre>
+<p>Source files following the naming convention:</p>
+<pre><code>rfc-NNN-short-name.md     # Markdown source
+rfc-NNN-short-name.tex    # LaTeX source</code></pre>
 <p>Where: - <code>NNN</code> - Zero-padded RFC number (000-999) -
 <code>short-name</code> - Lowercase, hyphenated descriptive name</p>
+<p>The pipeline auto-detects source format by extension.</p>
 <h3 id="output">Output</h3>
-<p>For each input file, generate:</p>
-<pre><code>rfc-NNN-short-name.html   # Standalone HTML
-rfc-NNN-short-name.pdf    # PDF via XeLaTeX
+<p>For Markdown sources:</p>
+<pre><code>rfc-NNN-short-name.html   # Standalone HTML (pandoc)
+rfc-NNN-short-name.pdf    # PDF (xelatex)
 rfc-NNN-short-name.txt    # Plain text, 78 columns</code></pre>
+<p>For LaTeX sources:</p>
+<pre><code>rfc-NNN-short-name.html   # HTML (latexmlc)
+rfc-NNN-short-name.pdf    # PDF (pdflatex)</code></pre>
 <p>Plus a navigational index:</p>
 <pre><code>index.html                # Hypertext catalog</code></pre>
 <h3 id="generation-commands">Generation Commands</h3>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># HTML (standalone, no external dependencies)</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${rfc}</span>.md <span class="at">-o</span> <span class="va">${rfc}</span>.html <span class="at">--standalone</span> <span class="at">--metadata</span> title=<span class="st">&quot;&quot;</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># PDF (XeLaTeX with monospace font for code)</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${rfc}</span>.md <span class="at">-o</span> <span class="va">${rfc}</span>.pdf <span class="at">--pdf-engine</span><span class="op">=</span>xelatex <span class="at">-V</span> mainfont=<span class="st">&quot;Menlo&quot;</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Plain text (IETF-style, 78 columns)</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${rfc}</span>.md <span class="at">-o</span> <span class="va">${rfc}</span>.txt <span class="at">--to</span><span class="op">=</span>plain <span class="at">--wrap</span><span class="op">=</span>auto <span class="at">--columns</span><span class="op">=</span>78</span></code></pre></div>
+<h4 id="markdown-pipeline-pandoc">Markdown Pipeline (pandoc)</h4>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># HTML (standalone, no external dependencies)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${doc}</span>.md <span class="at">-o</span> <span class="va">${doc}</span>.html <span class="at">--standalone</span> <span class="at">--metadata</span> title=<span class="st">&quot;&quot;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># PDF (XeLaTeX with monospace font for code)</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${doc}</span>.md <span class="at">-o</span> <span class="va">${doc}</span>.pdf <span class="at">--pdf-engine</span><span class="op">=</span>xelatex <span class="at">-V</span> mainfont=<span class="st">&quot;Menlo&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Plain text (IETF-style, 78 columns)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> <span class="va">${doc}</span>.md <span class="at">-o</span> <span class="va">${doc}</span>.txt <span class="at">--to</span><span class="op">=</span>plain <span class="at">--wrap</span><span class="op">=</span>auto <span class="at">--columns</span><span class="op">=</span>78</span></code></pre></div>
+<h4 id="latex-pipeline-pdflatex-latexmlc">LaTeX Pipeline (pdflatex +
+latexmlc)</h4>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># PDF (native LaTeX - what it was made for)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pdflatex</span> <span class="at">-interaction</span><span class="op">=</span>nonstopmode <span class="va">${doc}</span>.tex</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pdflatex</span> <span class="at">-interaction</span><span class="op">=</span>nonstopmode <span class="va">${doc}</span>.tex  <span class="co"># twice for refs</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># HTML (LaTeXML - proper math rendering, used by arXiv)</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">latexmlc</span> <span class="at">--dest</span><span class="op">=</span><span class="va">${doc}</span>.html <span class="va">${doc}</span>.tex</span></code></pre></div>
 <h3 id="index-generation">Index Generation</h3>
 <p>The index.html catalog provides:</p>
 <ul>
@@ -338,29 +379,29 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="
 <li>Clean, accessible HTML</li>
 </ul>
 <p>Structure:</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">table</span><span class="dt">&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">tr</span><span class="dt">&gt;</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>RFC Number<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>Title<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>html | pdf | txt | md<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;/</span><span class="kw">tr</span><span class="dt">&gt;</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">table</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">table</span><span class="dt">&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">tr</span><span class="dt">&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>RFC Number<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>Title<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">td</span><span class="dt">&gt;</span>html | pdf | txt | md<span class="dt">&lt;/</span><span class="kw">td</span><span class="dt">&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;/</span><span class="kw">tr</span><span class="dt">&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">table</span><span class="dt">&gt;</span></span></code></pre></div>
 <hr />
 <h2 id="publication">Publication</h2>
 <h3 id="local-workflow">Local Workflow</h3>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate all formats</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./generate-rfcs.sh</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Commit to vault</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">seal-commit</span> <span class="st">&quot;Regenerate RFC documentation&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate all formats</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./generate-rfcs.sh</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Commit to vault</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">seal-commit</span> <span class="st">&quot;Regenerate RFC documentation&quot;</span></span></code></pre></div>
 <h3 id="remote-publication">Remote Publication</h3>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Publish to web server</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> <span class="at">--chmod</span><span class="op">=</span>D755,F644 <span class="at">-e</span> ssh <span class="dt">\</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="pp">*</span>.md <span class="pp">*</span>.html <span class="pp">*</span>.pdf <span class="pp">*</span>.txt index.html <span class="dt">\</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  user@server:~/path/to/docs/</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Publish to web server</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> <span class="at">--chmod</span><span class="op">=</span>D755,F644 <span class="at">-e</span> ssh <span class="dt">\</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="pp">*</span>.md <span class="pp">*</span>.html <span class="pp">*</span>.pdf <span class="pp">*</span>.txt index.html <span class="dt">\</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  user@server:~/path/to/docs/</span></code></pre></div>
 <p>Permission model: - Directories: 755 (world-readable, owner-writable)
 - Files: 644 (world-readable, owner-writable)</p>
 <hr />
@@ -371,28 +412,28 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="
 <p>Feed entries will include: - RFC number and title -
 Publication/update date - Abstract - Links to all formats</p>
 <h3 id="subscription-model">Subscription Model</h3>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Subscribe to RFC feed</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(seal-subscribe <span class="st">&quot;https://example.com/cyberspace/rfc-feed.xml&quot;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  verify-key: publisher-public)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Subscribe to RFC feed</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>(seal-subscribe <span class="st">&quot;https://example.com/cyberspace/rfc-feed.xml&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  verify-key: publisher-public)</span></code></pre></div>
 <p>Integration with Vault subscription system (RFC-006).</p>
 <hr />
 <h2 id="implementation">Implementation</h2>
 <h3 id="generate-rfcs.sh">generate-rfcs.sh</h3>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># RFC Documentation Pipeline</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="va">RFCS</span><span class="op">=</span><span class="va">(</span>rfc-000-declaration rfc-001-replication-layer ...<span class="va">)</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> rfc <span class="kw">in</span> <span class="st">&quot;</span><span class="va">${RFCS</span><span class="op">[@]</span><span class="va">}</span><span class="st">&quot;</span><span class="kw">;</span> <span class="cf">do</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.html&quot;</span> <span class="at">--standalone</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.pdf&quot;</span> <span class="at">--pdf-engine</span><span class="op">=</span>xelatex <span class="at">-V</span> mainfont=<span class="st">&quot;Menlo&quot;</span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.txt&quot;</span> <span class="at">--to</span><span class="op">=</span>plain <span class="at">--columns</span><span class="op">=</span>78</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate index.html</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="ex">generate_index</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># RFC Documentation Pipeline</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="va">RFCS</span><span class="op">=</span><span class="va">(</span>rfc-000-declaration rfc-001-replication-layer ...<span class="va">)</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> rfc <span class="kw">in</span> <span class="st">&quot;</span><span class="va">${RFCS</span><span class="op">[@]</span><span class="va">}</span><span class="st">&quot;</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.html&quot;</span> <span class="at">--standalone</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.pdf&quot;</span> <span class="at">--pdf-engine</span><span class="op">=</span>xelatex <span class="at">-V</span> mainfont=<span class="st">&quot;Menlo&quot;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pandoc</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.md&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${rfc}</span><span class="st">.txt&quot;</span> <span class="at">--to</span><span class="op">=</span>plain <span class="at">--columns</span><span class="op">=</span>78</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate index.html</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="ex">generate_index</span></span></code></pre></div>
 <h3 id="dependencies">Dependencies</h3>
 <table>
 <thead>
@@ -406,12 +447,22 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href=
 <tr>
 <td>pandoc</td>
 <td>2.x+</td>
-<td>Document conversion</td>
+<td>Markdown → HTML/PDF/TXT</td>
+</tr>
+<tr>
+<td>pdflatex</td>
+<td>TeX Live</td>
+<td>LaTeX → PDF</td>
 </tr>
 <tr>
 <td>xelatex</td>
 <td>TeX Live</td>
-<td>PDF generation</td>
+<td>Markdown → PDF (via pandoc)</td>
+</tr>
+<tr>
+<td>latexmlc</td>
+<td>LaTeXML</td>
+<td>LaTeX → HTML (optional)</td>
 </tr>
 <tr>
 <td>rsync</td>
@@ -420,6 +471,8 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href=
 </tr>
 </tbody>
 </table>
+<p>Note: latexmlc is optional. If not installed, LaTeX sources produce
+PDF only.</p>
 <hr />
 <h2 id="security-considerations">Security Considerations</h2>
 <h3 id="integrity">Integrity</h3>
@@ -433,6 +486,8 @@ in documents - World-readable permissions only</p>
 <ol type="1">
 <li><a href="https://pandoc.org/MANUAL.html">Pandoc User’s
 Guide</a></li>
+<li><a href="https://math.nist.gov/~BMiller/LaTeXML/">LaTeXML</a> -
+LaTeX to XML/HTML converter</li>
 <li><a href="rfc-006-vault-architecture.md">RFC-006</a> - Vault System
 Architecture</li>
 <li><a href="https://tools.ietf.org/html/rfc4287">Atom Syndication
@@ -441,11 +496,14 @@ Format</a> - RFC 4287</li>
 <hr />
 <h2 id="changelog">Changelog</h2>
 <ul>
+<li><strong>2026-01-07</strong> - Added LaTeX pipeline for math/proofs
+papers</li>
 <li><strong>2026-01-06</strong> - Initial specification</li>
 </ul>
 <hr />
 <p><strong>Implementation Status:</strong> Complete
-<strong>Script:</strong> generate-rfcs.sh <strong>Formats:</strong>
-Markdown, HTML, PDF, Plain Text</p>
+<strong>Script:</strong> generate-rfcs.sh <strong>Source
+Formats:</strong> Markdown (.md), LaTeX (.tex) <strong>Output
+Formats:</strong> HTML, PDF, Plain Text (MD only)</p>
 </body>
 </html>
