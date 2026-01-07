@@ -284,4 +284,4 @@ The street finds its own uses for things. The Hundred Acre Wood finds its own us
 
 > *"Frames, the most beautiful frames. Inspiring moments. And I empower you to take down the history of the ritual."*
 >
-> — Pepe Ozan
+> — Burning Man Opera, soundtrack to *The Temple of Rudra* (1998), an Opera by Pepe Ozan
