@@ -54,6 +54,7 @@ RFCS=(
   rfc-034-audit-protection
   rfc-035-mobile-agents
   rfc-036-quorum-voting
+  rfc-037-implementation-requirements
 )
 
 # Extract title from markdown file
@@ -143,6 +144,49 @@ generate_formats() {
   fi
 }
 
+# Stop words for KWIC index
+STOP_WORDS="a an and for in of on or the to with"
+
+is_stop_word() {
+  local word=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+  for stop in $STOP_WORDS; do
+    [[ "$word" == "$stop" ]] && return 0
+  done
+  return 1
+}
+
+# Generate KWIC permuted index entries
+# Output: "keyword|left-context|right-context|rfc-name"
+generate_kwic_entries() {
+  for rfc in "${RFCS[@]}"; do
+    local title=$(get_title "$rfc")
+    # Strip "RFC-NNN: " prefix for rotation
+    local bare_title=$(echo "$title" | sed 's/^RFC-[0-9]*: //')
+    local words=($bare_title)
+    local num_words=${#words[@]}
+
+    for ((i=0; i<num_words; i++)); do
+      local word="${words[$i]}"
+      # Skip stop words
+      is_stop_word "$word" && continue
+
+      # Build left context (words before keyword)
+      local left=""
+      for ((j=0; j<i; j++)); do
+        left="$left${words[$j]} "
+      done
+
+      # Build right context (words after keyword)
+      local right=""
+      for ((j=i+1; j<num_words; j++)); do
+        right="$right ${words[$j]}"
+      done
+
+      echo "${word}|${left}|${right}|${rfc}"
+    done
+  done
+}
+
 # Generate index.html catalog
 generate_index() {
   echo "Generating index.html..."
@@ -170,6 +214,12 @@ generate_index() {
     .formats a { margin-right: 0.5rem; font-size: 0.9rem; }
     .formats a:hover { text-decoration: underline; }
     footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.9rem; color: #666; }
+    .kwic { font-family: monospace; font-size: 0.85rem; }
+    .kwic td { padding: 0.25rem 0.5rem; white-space: nowrap; }
+    .kwic .left { text-align: right; color: #666; }
+    .kwic .keyword { font-weight: bold; }
+    .kwic .right { text-align: left; color: #666; }
+    .kwic .rfc { text-align: left; }
   </style>
 </head>
 <body>
@@ -207,6 +257,29 @@ HEADER
         <td>${num}</td>
         <td>${title}</td>
         <td class="formats">${formats}</td>
+      </tr>
+EOF
+  done
+
+  cat >> index.html << 'MIDDLE'
+    </tbody>
+  </table>
+
+  <h2>Permuted Index (KWIC)</h2>
+  <p>Key Word In Context index for discovery by concept.</p>
+  <table class="kwic">
+    <tbody>
+MIDDLE
+
+  # Generate and sort KWIC entries alphabetically by keyword
+  generate_kwic_entries | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc; do
+    local num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
+    cat >> index.html << EOF
+      <tr>
+        <td class="left">${left}</td>
+        <td class="keyword">${keyword}</td>
+        <td class="right">${right}</td>
+        <td class="rfc"><a href="${rfc}.html">${num}</a></td>
       </tr>
 EOF
   done
