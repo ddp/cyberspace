@@ -383,7 +383,7 @@ File paths validated:
 ### Extensibility
 
 Future enhancements:
-- Full-text PDF search (OCR)
+- Full-text search (PostScript/Text extraction)
 - Citation graph visualization
 - BibTeX export
 - Web API server
