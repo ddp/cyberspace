@@ -46,6 +46,7 @@
    soup-find
    soup-query
    soup-inspect
+   hex-abbrev
    complete
 
    ;; Node Roles (RFC-037)
@@ -1193,7 +1194,34 @@ Object Types:
                (set! objects (cons (list 'metadata f (vector-ref stat 5) '("sexp")) objects)))))
          (directory ".vault/metadata")))
 
+      ;; Node identity (.vault/node.sexp) - local, not replicated
+      (when (file-exists? ".vault/node.sexp")
+        (let ((stat (file-stat ".vault/node.sexp")))
+          (set! objects (cons (list 'identity "node" (vector-ref stat 5) (get-node-info)) objects))))
+
       (reverse objects)))
+
+  (define (get-node-info)
+    "Extract node identity attributes for soup listing"
+    (handle-exceptions exn
+      '("unknown")
+      (let ((data (with-input-from-file ".vault/node.sexp" read)))
+        (if (and (pair? data) (eq? 'node-identity (car data)))
+            (let* ((fields (cdr data))
+                   (name (assq 'name fields))
+                   (role (assq 'role fields)))
+              (list (if name (cadr name) "unknown")
+                    (if role (symbol->string (cadr role)) "unknown")))
+            '("invalid")))))
+
+  (define (get-node-identity)
+    "Get full node identity for inspection"
+    (handle-exceptions exn
+      #f
+      (let ((data (with-input-from-file ".vault/node.sexp" read)))
+        (if (and (pair? data) (eq? 'node-identity (car data)))
+            (cdr data)
+            #f))))
 
   (define (get-archive-crypto path)
     "Extract crypto attributes from archive manifest"
@@ -1529,7 +1557,21 @@ Object Types:
                      (when action
                        (printf "│ Action:     ~a~a│~%" (cadr action) (make-string (- 43 (string-length (sprintf "~a" (cadr action)))) #\space)))
                      (when ts
-                       (printf "│ Timestamp:  ~a~a│~%" (format-timestamp (cadr ts)) (make-string 33 #\space))))))))
+                       (printf "│ Timestamp:  ~a~a│~%" (format-timestamp (cadr ts)) (make-string 33 #\space)))))))
+
+              ((identity)
+               (let* ((node-data (get-node-identity))
+                      (name-f (and node-data (assq 'name node-data)))
+                      (role (and node-data (assq 'role node-data)))
+                      (hw (and node-data (assq 'hardware node-data))))
+                 (when name-f
+                   (printf "│ Node:       ~a~a│~%" (cadr name-f) (make-string (- 43 (string-length (cadr name-f))) #\space)))
+                 (when role
+                   (printf "│ Role:       ~a~a│~%" (cadr role) (make-string (- 43 (string-length (symbol->string (cadr role)))) #\space)))
+                 (when (and hw (assq 'cpu hw))
+                   (printf "│ CPU:        ~a~a│~%" (cadr (assq 'cpu hw)) (make-string (- 43 (string-length (cadr (assq 'cpu hw)))) #\space)))
+                 (when (and hw (assq 'memory-gb hw))
+                   (printf "│ Memory:     ~aGB~a│~%" (cadr (assq 'memory-gb hw)) (make-string 38 #\space)))))) ;; close identity case
 
             (print "╰────────────────────────────────────────────────────────╯")
             (print "")))))
@@ -1551,6 +1593,19 @@ Object Types:
                        (string (string-ref "0123456789abcdef" (quotient byte 16)))
                        (string (string-ref "0123456789abcdef" (remainder byte 16))))))
                   (iota (u8vector-length vec))))))
+
+  (define (hex-abbrev hex #!optional (prefix-bytes 4) (suffix-bytes 4))
+    "Abbreviate long hex string: 0xAAAA...0xBBBB (network byte order preserved)
+     For human display of long binary blobs. Always 8 hex chars per side."
+    (let ((prefix-chars (* prefix-bytes 2))
+          (suffix-chars (* suffix-bytes 2))
+          (len (string-length hex)))
+      (if (<= len (+ prefix-chars suffix-chars 4))
+          hex  ; Short enough, no abbreviation needed
+          (string-append
+           "0x" (substring hex 0 prefix-chars)
+           "..."
+           "0x" (substring hex (- len suffix-chars) len)))))
 
   (define (get-tag-commit tag)
     "Get commit hash for a git tag"
@@ -1676,7 +1731,7 @@ Object Types:
                      (format-size size)
                      (make-string (- 10 (string-length (format-size size))) #\space)
                      (sprintf "~a" type)))))
-       '(archives releases keys audit metadata))
+       '(archives releases keys audit metadata identity))
 
       (print "├────────────────────────────────────────┤")
       (printf "│ ~a~aTOTAL                    │~%"
@@ -1935,7 +1990,8 @@ Object Types:
                  (if (file-exists? path)
                      (let ((hash (soup-hash-file path)))
                        (print "")
-                       (printf "sha512:~a~%" hash)
+                       (printf "sha512:~a~%" (hex-abbrev hash))
+                       (printf "       ~a~%" hash)
                        (print "")
                        hash)
                      (print "No file at path: " path)))
@@ -3063,7 +3119,6 @@ Object Types:
                     (substring name 0 (- (string-length name) 4)))))
            files))
         '()))
-
 
   ) ;; end module vault
 
