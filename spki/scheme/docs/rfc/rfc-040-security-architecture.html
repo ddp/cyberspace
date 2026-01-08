@@ -254,6 +254,308 @@ ACLs, no ambient authority. You hold a capability or you don’t.</p>
 channel analysis - but cyberspace is its own thing. This is our security
 architecture, in our language.</p>
 <hr />
+<h2 id="security-object-types">Security Object Types</h2>
+<p>Every first-class object in cyberspace. Names as defined.</p>
+<p><em>Table 0: Security Object Registry</em></p>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th>Defining RFC</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Identity</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>principal</code></td>
+<td>RFC-004</td>
+<td>Cryptographic identity (ed25519 key or hash)</td>
+</tr>
+<tr>
+<td><code>key</code></td>
+<td>RFC-022</td>
+<td>Keypair with ceremony provenance</td>
+</tr>
+<tr>
+<td><code>attestation</code></td>
+<td>RFC-041</td>
+<td>Signed claim about identity or state</td>
+</tr>
+<tr>
+<td><strong>Authorization</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>certificate</code></td>
+<td>RFC-004</td>
+<td>SPKI capability grant</td>
+</tr>
+<tr>
+<td><code>tag</code></td>
+<td>RFC-004</td>
+<td>Authorization scope (read, write, etc.)</td>
+</tr>
+<tr>
+<td><code>signature</code></td>
+<td>RFC-004</td>
+<td>Ed25519 attestation</td>
+</tr>
+<tr>
+<td><code>share</code></td>
+<td>RFC-008</td>
+<td>Shamir secret fragment</td>
+</tr>
+<tr>
+<td><code>quorum</code></td>
+<td>RFC-036</td>
+<td>Voting threshold specification</td>
+</tr>
+<tr>
+<td><strong>Storage</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>vault</code></td>
+<td>RFC-006</td>
+<td>Sovereign storage realm</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td>RFC-020</td>
+<td>Content-addressed immutable data</td>
+</tr>
+<tr>
+<td><code>archive</code></td>
+<td>RFC-018</td>
+<td>Sealed, encrypted content package</td>
+</tr>
+<tr>
+<td><code>schema</code></td>
+<td>RFC-033</td>
+<td>Structure definition</td>
+</tr>
+<tr>
+<td><strong>Boundaries</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>realm</code></td>
+<td>RFC-040</td>
+<td>Trust and sovereignty boundary</td>
+</tr>
+<tr>
+<td><code>wormhole</code></td>
+<td>RFC-041</td>
+<td>FUSE mount portal to filesystem</td>
+</tr>
+<tr>
+<td><code>federation</code></td>
+<td>RFC-010</td>
+<td>Peer network of realms</td>
+</tr>
+<tr>
+<td><code>node</code></td>
+<td>RFC-037</td>
+<td>Network participant with role</td>
+</tr>
+<tr>
+<td><strong>Execution</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>RFC-023</td>
+<td>Sandboxed daemon</td>
+</tr>
+<tr>
+<td><code>topic</code></td>
+<td>RFC-035</td>
+<td>Pub/sub channel</td>
+</tr>
+<tr>
+<td><code>tunnel</code></td>
+<td>RFC-035</td>
+<td>Agent communication path</td>
+</tr>
+<tr>
+<td><code>lock</code></td>
+<td>RFC-035</td>
+<td>Distributed mutex</td>
+</tr>
+<tr>
+<td><strong>Observability</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>audit-entry</code></td>
+<td>RFC-003</td>
+<td>Immutable log record</td>
+</tr>
+<tr>
+<td><code>lamport-clock</code></td>
+<td>RFC-012</td>
+<td>Causal ordering timestamp</td>
+</tr>
+<tr>
+<td><code>query</code></td>
+<td>RFC-025</td>
+<td>Search expression</td>
+</tr>
+<tr>
+<td><strong>Documentation</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>memo</code></td>
+<td>RFC-043</td>
+<td>Scoped documentation unit</td>
+</tr>
+<tr>
+<td><code>soup</code></td>
+<td>RFC-040</td>
+<td>The auditable collection of all things</td>
+</tr>
+</tbody>
+</table>
+<h3 id="object-properties">Object Properties</h3>
+<p>All security objects share:</p>
+<pre><code>1. Content-addressed identity (SHA-512 hash)
+2. Cryptographic signature (Ed25519)
+3. Audit trail integration (RFC-003)
+4. Capability-gated access (RFC-004)
+5. State: chaotic | quiescent</code></pre>
+<h3 id="object-state">Object State</h3>
+<p>All things in cyberspace exist in two states:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+<th>Properties</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>chaotic</strong></td>
+<td>In flux, being modified</td>
+<td>Mutable, uncommitted, local</td>
+</tr>
+<tr>
+<td><strong>quiescent</strong></td>
+<td>At rest, stable</td>
+<td>Immutable, signed, replicable</td>
+</tr>
+</tbody>
+</table>
+<p>Transitions:</p>
+<pre><code>chaotic ──commit──▶ quiescent
+    ▲                   │
+    │                   │
+    └───── fork ────────┘</code></pre>
+<p>Only quiescent objects: - Have stable content hashes - Can be signed
+- Can be replicated - Can be delegated</p>
+<p>Chaotic things: - Exist only in the realm’s store - Have provisional
+identity - Cannot be shared - Must settle before federation - Cannot be
+cached</p>
+<h3 id="caching-implications">Caching Implications</h3>
+<p>State controls caching:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Cacheable</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>quiescent</strong></td>
+<td>Forever</td>
+<td>Hash is identity; immutable</td>
+</tr>
+<tr>
+<td><strong>chaotic</strong></td>
+<td>Never</td>
+<td>Content may change; no stable hash</td>
+</tr>
+</tbody>
+</table>
+<p>Quiescent things cache by content hash. Cache hit = identical
+content, guaranteed. Chaotic things bypass cache entirely. Every access
+reads current state.</p>
+<h3 id="persistence">Persistence</h3>
+<p>Persistence is the guarantee of migration to the vault.</p>
+<table>
+<thead>
+<tr>
+<th>Durability</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>persistent</strong></td>
+<td>Guaranteed to migrate to vault</td>
+</tr>
+<tr>
+<td><strong>ephemeral</strong></td>
+<td>May vanish; no durability promise</td>
+</tr>
+</tbody>
+</table>
+<p>State and durability are orthogonal:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Ephemeral</th>
+<th>Persistent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Chaotic</strong></td>
+<td>Scratch work</td>
+<td>Draft being saved</td>
+</tr>
+<tr>
+<td><strong>Quiescent</strong></td>
+<td>Cached result</td>
+<td>Archived thing</td>
+</tr>
+</tbody>
+</table>
+<p>Persistent things survive restart. Ephemeral things don’t.</p>
+<p>Vault takes cataloging and effort. Not all things need persistence.
+Ephemeral is not failure—it’s deliberate economy. Cache results, scratch
+work, intermediate computations: let them vanish.</p>
+<p>Marking a thing persistent schedules vault migration.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(persist thing)    <span class="co">; guarantee vault migration</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>(ephemeral thing)  <span class="co">; no durability promise</span></span></code></pre></div>
+<h3 id="object-relationships">Object Relationships</h3>
+<pre><code>principal ──creates──▶ certificate ──grants──▶ tag
+    │                      │
+    │                      ▼
+    │                   object ◀──stores── vault
+    │                      │
+    ▼                      ▼
+  agent ──operates──▶ wormhole ──bridges──▶ realm
+    │                                         │
+    │                                         ▼
+    └──────────────────────────────────▶ federation</code></pre>
+<hr />
 <h2 id="the-axioms">The Axioms</h2>
 <pre><code>A1. No Ambient Authority
     You have nothing until someone gives you something.
@@ -295,14 +597,14 @@ realm remains yours.</p>
 <hr />
 <h2 id="capabilities">Capabilities</h2>
 <h3 id="the-certificate">The Certificate</h3>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:alice...&quot;</span>)        <span class="co">; Who grants</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:bob...&quot;</span>)         <span class="co">; Who receives</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))       <span class="co">; What: read this object</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="dv">1736400000</span>))     <span class="co">; When: expires in 24h</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#f</span>)                     <span class="co">; Bob cannot delegate</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))         <span class="co">; Alice&#39;s signature</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:alice...&quot;</span>)        <span class="co">; Who grants</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:bob...&quot;</span>)         <span class="co">; Who receives</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))       <span class="co">; What: read this object</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="dv">1736400000</span>))     <span class="co">; When: expires in 24h</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#f</span>)                     <span class="co">; Bob cannot delegate</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))         <span class="co">; Alice&#39;s signature</span></span></code></pre></div>
 <h3 id="access-check">Access Check</h3>
 <pre><code>Can Bob read sha512:doc?
 
@@ -316,20 +618,20 @@ All yes? Access granted.
 Any no?  Access denied.</code></pre>
 <h3 id="delegation">Delegation</h3>
 <p>Alice can give Bob read access:</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:alice...&quot;</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:bob...&quot;</span>)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#t</span>))                    <span class="co">; Bob CAN delegate</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:alice...&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:bob...&quot;</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#t</span>))                    <span class="co">; Bob CAN delegate</span></span></code></pre></div>
 <p>Bob can give Carol read access (because Alice allowed
 propagation):</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:bob...&quot;</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:carol...&quot;</span>)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#f</span>))                    <span class="co">; Carol cannot delegate further</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:bob...&quot;</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:carol...&quot;</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#f</span>))                    <span class="co">; Carol cannot delegate further</span></span></code></pre></div>
 <p>Carol cannot give anyone else access. The chain stops.</p>
 <hr />
 <h2 id="classification-without-labels">Classification Without
@@ -337,19 +639,19 @@ Labels</h2>
 <p>Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP
 SECRET.</p>
 <p>In cyberspace, classification is a capability you hold:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Security officer grants SECRET clearance</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:security-officer...&quot;</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:analyst...&quot;</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (tag (clearance secret))</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="dv">1767225600</span>)))    <span class="co">; Annual renewal</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Program manager grants compartment access</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:program-manager...&quot;</span>)</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:engineer...&quot;</span>)</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  (tag (compartment <span class="st">&quot;project-atlas&quot;</span>)))</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Security officer grants SECRET clearance</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:security-officer...&quot;</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:analyst...&quot;</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  (tag (clearance secret))</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="dv">1767225600</span>)))    <span class="co">; Annual renewal</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Program manager grants compartment access</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:program-manager...&quot;</span>)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:engineer...&quot;</span>)</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  (tag (compartment <span class="st">&quot;project-atlas&quot;</span>)))</span></code></pre></div>
 <p>Access to a classified object requires: 1. Capability to read the
 object itself 2. Appropriate clearance capability 3. All required
 compartment capabilities</p>
@@ -533,17 +835,17 @@ signals. Acceptable residual risk for our threat model.</p>
 <hr />
 <h2 id="audit">Audit</h2>
 <p>Everything important gets logged.</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">12345</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (lamport <span class="dv">67890</span>)</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (type capability-exercise)</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  (actor <span class="st">&quot;ed25519:subject...&quot;</span>)</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  (action (<span class="kw">read</span> <span class="st">&quot;sha512:object...&quot;</span>))</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  (capability <span class="st">&quot;sha512:cert...&quot;</span>)</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  (previous <span class="st">&quot;sha512:prev-entry...&quot;</span>)</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:auditor...&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">12345</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  (lamport <span class="dv">67890</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  (type capability-exercise)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  (actor <span class="st">&quot;ed25519:subject...&quot;</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  (action (<span class="kw">read</span> <span class="st">&quot;sha512:object...&quot;</span>))</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  (capability <span class="st">&quot;sha512:cert...&quot;</span>)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  (previous <span class="st">&quot;sha512:prev-entry...&quot;</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:auditor...&quot;</span>))</span></code></pre></div>
 <p><strong>Properties:</strong> - Hash-chained: tamper-evident - Signed:
 non-repudiable - Monotonic: gaps detected - Distributed: witnesses
 replicate</p>

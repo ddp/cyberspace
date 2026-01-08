@@ -19,6 +19,134 @@ in our language.
 
 ------------------------------------------------------------------------------
 
+Security Object Types
+
+Every first-class object in cyberspace. Names as defined.
+
+Table 0: Security Object Registry
+
+  Object          Defining RFC   Description
+  --------------- -------------- ----------------------------------------------
+  Identity                       
+  principal       RFC-004        Cryptographic identity (ed25519 key or hash)
+  key             RFC-022        Keypair with ceremony provenance
+  attestation     RFC-041        Signed claim about identity or state
+  Authorization                  
+  certificate     RFC-004        SPKI capability grant
+  tag             RFC-004        Authorization scope (read, write, etc.)
+  signature       RFC-004        Ed25519 attestation
+  share           RFC-008        Shamir secret fragment
+  quorum          RFC-036        Voting threshold specification
+  Storage                        
+  vault           RFC-006        Sovereign storage realm
+  object          RFC-020        Content-addressed immutable data
+  archive         RFC-018        Sealed, encrypted content package
+  schema          RFC-033        Structure definition
+  Boundaries                     
+  realm           RFC-040        Trust and sovereignty boundary
+  wormhole        RFC-041        FUSE mount portal to filesystem
+  federation      RFC-010        Peer network of realms
+  node            RFC-037        Network participant with role
+  Execution                      
+  agent           RFC-023        Sandboxed daemon
+  topic           RFC-035        Pub/sub channel
+  tunnel          RFC-035        Agent communication path
+  lock            RFC-035        Distributed mutex
+  Observability                  
+  audit-entry     RFC-003        Immutable log record
+  lamport-clock   RFC-012        Causal ordering timestamp
+  query           RFC-025        Search expression
+  Documentation                  
+  memo            RFC-043        Scoped documentation unit
+  soup            RFC-040        The auditable collection of all things
+
+Object Properties
+
+All security objects share:
+
+    1. Content-addressed identity (SHA-512 hash)
+    2. Cryptographic signature (Ed25519)
+    3. Audit trail integration (RFC-003)
+    4. Capability-gated access (RFC-004)
+    5. State: chaotic | quiescent
+
+Object State
+
+All things in cyberspace exist in two states:
+
+  State       Meaning                   Properties
+  ----------- ------------------------- -------------------------------
+  chaotic     In flux, being modified   Mutable, uncommitted, local
+  quiescent   At rest, stable           Immutable, signed, replicable
+
+Transitions:
+
+    chaotic ──commit──▶ quiescent
+        ▲                   │
+        │                   │
+        └───── fork ────────┘
+
+Only quiescent objects: - Have stable content hashes - Can be signed - Can be
+replicated - Can be delegated
+
+Chaotic things: - Exist only in the realm’s store - Have provisional
+identity - Cannot be shared - Must settle before federation - Cannot be cached
+
+Caching Implications
+
+State controls caching:
+
+  State       Cacheable   Reason
+  ----------- ----------- ------------------------------------
+  quiescent   Forever     Hash is identity; immutable
+  chaotic     Never       Content may change; no stable hash
+
+Quiescent things cache by content hash. Cache hit = identical content,
+guaranteed. Chaotic things bypass cache entirely. Every access reads current
+state.
+
+Persistence
+
+Persistence is the guarantee of migration to the vault.
+
+  Durability   Meaning
+  ------------ -----------------------------------
+  persistent   Guaranteed to migrate to vault
+  ephemeral    May vanish; no durability promise
+
+State and durability are orthogonal:
+
+              Ephemeral       Persistent
+  ----------- --------------- -------------------
+  Chaotic     Scratch work    Draft being saved
+  Quiescent   Cached result   Archived thing
+
+Persistent things survive restart. Ephemeral things don’t.
+
+Vault takes cataloging and effort. Not all things need persistence. Ephemeral
+is not failure—it’s deliberate economy. Cache results, scratch work,
+intermediate computations: let them vanish.
+
+Marking a thing persistent schedules vault migration.
+
+    (persist thing)    ; guarantee vault migration
+    (ephemeral thing)  ; no durability promise
+
+Object Relationships
+
+    principal ──creates──▶ certificate ──grants──▶ tag
+        │                      │
+        │                      ▼
+        │                   object ◀──stores── vault
+        │                      │
+        ▼                      ▼
+      agent ──operates──▶ wormhole ──bridges──▶ realm
+        │                                         │
+        │                                         ▼
+        └──────────────────────────────────▶ federation
+
+------------------------------------------------------------------------------
+
 The Axioms
 
     A1. No Ambient Authority

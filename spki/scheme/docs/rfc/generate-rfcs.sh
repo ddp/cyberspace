@@ -61,6 +61,7 @@ RFCS=(
   rfc-040-security-architecture
   rfc-041-fuse-filesystem
   rfc-042-ietf-normative
+  rfc-043-memo-conventions
 )
 
 # Extract title from markdown file
