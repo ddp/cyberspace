@@ -305,18 +305,65 @@ Kademlia-style routing:
 
 ## Transport Protocol
 
-### Wire Format
+### End-to-End Encryption
+
+All network traffic is encrypted. The OS and network are not trusted.
 
 ```scheme
 (cyberspace-message
   (version 1)
-  (type request|response|announce|gossip)
   (from "ed25519:sender...")
-  (to "ed25519:recipient...")        ; Or broadcast
+  (to "ed25519:recipient...")        ; Or broadcast key
+  (ephemeral "x25519:...")           ; One-time key (PFS)
+  (nonce #${24-bytes})               ; Random nonce
+  (ciphertext #${...})               ; NaCl box: X25519 + XSalsa20-Poly1305
+  (signature "ed25519:..."))         ; Sign the ciphertext
+```
+
+**Encryption scheme:** NaCl crypto_box (libsodium)
+- Key agreement: X25519 (Curve25519 ECDH)
+- Cipher: XSalsa20-Poly1305
+- Perfect forward secrecy: ephemeral keys per message
+
+**Decrypted payload:**
+
+```scheme
+(plaintext-payload
+  (type request|response|announce|gossip)
   (nonce 12345678)                   ; Replay protection
   (timestamp 1736300000)
-  (payload ...)
-  (signature "ed25519:..."))
+  (body ...))
+```
+
+**Broadcast messages** use a shared group key or are signed-only (announcements of public objects).
+
+### Wire Format (Encrypted)
+
+```scheme
+;; Sender encrypts
+(define (seal-message payload recipient-pubkey sender-keypair)
+  (let* ((ephemeral (x25519-keypair))
+         (shared (x25519-shared (ephemeral-secret ephemeral) recipient-pubkey))
+         (nonce (random-bytes 24))
+         (ciphertext (crypto-box payload nonce shared)))
+    `(cyberspace-message
+      (version 1)
+      (from ,(keypair-public sender-keypair))
+      (to ,recipient-pubkey)
+      (ephemeral ,(ephemeral-public ephemeral))
+      (nonce ,nonce)
+      (ciphertext ,ciphertext)
+      (signature ,(sign-message ciphertext sender-keypair)))))
+
+;; Recipient decrypts
+(define (open-message msg recipient-keypair)
+  (let* ((shared (x25519-shared (keypair-secret recipient-keypair)
+                                (message-ephemeral msg)))
+         (plaintext (crypto-box-open (message-ciphertext msg)
+                                     (message-nonce msg)
+                                     shared)))
+    (and (verify-signature msg (message-from msg))
+         plaintext)))
 ```
 
 ### Request Types
