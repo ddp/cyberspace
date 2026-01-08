@@ -44,6 +44,7 @@
    soup-releases
    soup-du
    soup-find
+   soup-inspect
    complete
 
    ;; Node Roles (RFC-037)
@@ -1394,6 +1395,265 @@ Object Types:
          results)
         (print "")
         results)))
+
+  (define (gzip-file? path)
+    "Check if file has gzip magic bytes (1f 8b)"
+    (handle-exceptions exn #f
+      (call-with-input-file path
+        (lambda (port)
+          (let ((b1 (read-byte port))
+                (b2 (read-byte port)))
+            (and (= b1 #x1f) (= b2 #x8b)))))))
+
+  (define (soup-inspect name)
+    "Interactive object inspector - returns a procedure for subcommands
+     Usage:
+       (define i (soup-inspect \"2.0.0\"))
+       (i 'help)     - show available commands
+       (i 'stat)     - detailed status
+       (i 'view)     - view content
+       (i 'hash)     - show SHA-512 hash
+       (i 'verify)   - verify integrity/signature
+       (i 'export)   - export to file
+       (i 'history)  - show related audit entries"
+    (let* ((all-objects (soup-collect-objects))
+           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
+      (if (not obj)
+          (begin
+            (print "Object not found: " name)
+            #f)
+          (let* ((type (car obj))
+                 (size (caddr obj))
+                 (info (cadddr obj))
+                 (path (case type
+                         ((archives keys) name)
+                         ((releases) (or (find-archive-for-release name)
+                                        (sprintf ".vault/releases/~a.sig" name)))
+                         ((audit) (sprintf ".vault/audit/~a" name))
+                         ((metadata) name)
+                         (else name))))
+
+            ;; Show entry banner
+            (print "")
+            (print "╭───────────────────────────────────────────────────────────╮")
+            (printf "│ INSPECTOR: ~a~a│~%"
+                    name (make-string (max 0 (- 47 (string-length name))) #\space))
+            (printf "│ Type: ~a   Size: ~a~a│~%"
+                    type
+                    (format-size size)
+                    (make-string (max 0 (- 37 (string-length (symbol->string type))
+                                         (string-length (format-size size)))) #\space))
+            (print "├───────────────────────────────────────────────────────────┤")
+            (print "│ Commands: 'help 'stat 'view 'hash 'verify 'export 'history│")
+            (print "╰───────────────────────────────────────────────────────────╯")
+            (print "")
+
+            ;; Return inspector closure
+            (lambda (cmd . args)
+              (case cmd
+                ((help ?)
+                 (print "")
+                 (print "Inspector commands:")
+                 (print "  'stat     - detailed object status")
+                 (print "  'view     - view content (first 50 lines)")
+                 (print "  'view-all - view entire content")
+                 (print "  'hash     - compute SHA-512 hash")
+                 (print "  'verify   - verify integrity/signature")
+                 (print "  'export   - export to file")
+                 (print "  'history  - related audit entries")
+                 (print "  'path     - show filesystem path")
+                 (print "  'raw      - return raw S-expression data")
+                 (print ""))
+
+                ((stat)
+                 (soup-stat name))
+
+                ((hash)
+                 (if (file-exists? path)
+                     (let ((hash (soup-hash-file path)))
+                       (print "")
+                       (printf "sha512:~a~%" hash)
+                       (print "")
+                       hash)
+                     (print "No file at path: " path)))
+
+                ((view)
+                 (if (file-exists? path)
+                     (let ((is-binary (or (string-suffix? ".tar.gz" path)
+                                         (string-suffix? ".tar.zst" path)
+                                         (string-suffix? ".age" path)
+                                         (string-suffix? ".key" path)
+                                         (string-suffix? ".pub" path)
+                                         ;; Check for gzip magic in .archive files
+                                         (and (string-suffix? ".archive" path)
+                                              (gzip-file? path)))))
+                       (if is-binary
+                           (begin
+                             (print "")
+                             (print "Binary file - use 'raw or 'hash instead")
+                             (print ""))
+                           (begin
+                             (print "")
+                             (print "─── Content (first 50 lines) ───")
+                             (handle-exceptions exn
+                               (print "(error reading file - may be binary)")
+                               (with-input-from-file path
+                                 (lambda ()
+                                   (let loop ((n 0))
+                                     (let ((line (read-line)))
+                                       (unless (or (eof-object? line) (>= n 50))
+                                         (let ((safe-line (string-map
+                                                           (lambda (c)
+                                                             (if (or (char<? c #\space)
+                                                                     (char>? c #\~))
+                                                                 #\.
+                                                                 c))
+                                                           line)))
+                                           (printf "~4d│ ~a~%" (+ n 1) safe-line)
+                                           (loop (+ n 1)))))))))
+                             (print "─────────────────────────────────")
+                             (print ""))))
+                     (print "No file at path: " path)))
+
+                ((view-all)
+                 (if (file-exists? path)
+                     (let ((is-binary (or (string-suffix? ".tar.gz" path)
+                                         (string-suffix? ".tar.zst" path)
+                                         (string-suffix? ".age" path)
+                                         (string-suffix? ".key" path)
+                                         (string-suffix? ".pub" path)
+                                         (and (string-suffix? ".archive" path)
+                                              (gzip-file? path)))))
+                       (if is-binary
+                           (begin
+                             (print "")
+                             (print "Binary file - use 'raw or 'hash instead")
+                             (print ""))
+                           (begin
+                             (print "")
+                             (print "─── Full Content ───")
+                             (handle-exceptions exn
+                               (print "(error reading file - may be binary)")
+                               (with-input-from-file path
+                                 (lambda ()
+                                   (let loop ((n 0))
+                                     (let ((line (read-line)))
+                                       (unless (eof-object? line)
+                                         (let ((safe-line (string-map
+                                                           (lambda (c)
+                                                             (if (or (char<? c #\space)
+                                                                     (char>? c #\~))
+                                                                 #\.
+                                                                 c))
+                                                           line)))
+                                           (printf "~4d│ ~a~%" (+ n 1) safe-line)
+                                           (loop (+ n 1)))))))))
+                             (print "────────────────────")
+                             (print ""))))
+                     (print "No file at path: " path)))
+
+                ((verify)
+                 (case type
+                   ((releases)
+                    (let ((version name))
+                      (print "")
+                      (print "Verifying release " version "...")
+                      (let* ((tag-commit (get-tag-commit version))
+                             (sig-file (sprintf ".vault/releases/~a.sig" version))
+                             (has-sig (file-exists? sig-file))
+                             (archive (find-archive-for-release version))
+                             (has-archive (and archive (file-exists? archive))))
+                        (printf "  Git tag:     ~a~%" (if tag-commit "✓" "✗"))
+                        (printf "  Signature:   ~a~%" (if has-sig "✓" "✗"))
+                        (printf "  Archive:     ~a~%" (if has-archive "✓" "✗"))
+                        (when has-archive
+                          (let ((manifest (get-archive-manifest archive)))
+                            (when manifest
+                              (let ((stored-hash (assq 'hash manifest)))
+                                (when stored-hash
+                                  (print "  Verifying archive hash...")
+                                  (let* ((tarball (assq 'tarball manifest))
+                                         (tarball-path (if tarball (cadr tarball) #f)))
+                                    (if (and tarball-path (file-exists? tarball-path))
+                                        (let ((computed (soup-hash-file tarball-path)))
+                                          (if (string-contains computed (cadr stored-hash))
+                                              (print "  Archive integrity: ✓")
+                                              (print "  Archive integrity: ✗ MISMATCH")))
+                                        (print "  Tarball not found"))))))))
+                        (print ""))))
+
+                   ((archives)
+                    (print "")
+                    (print "Verifying archive " name "...")
+                    (let ((manifest (get-archive-manifest name)))
+                      (if manifest
+                          (begin
+                            (print "  Manifest: ✓")
+                            (let ((hash-entry (assq 'hash manifest)))
+                              (when hash-entry
+                                (printf "  Stored hash: ~a...~%"
+                                        (substring (cadr hash-entry) 0 32)))))
+                          (print "  Not a sealed archive (no manifest)")))
+                    (print ""))
+
+                   (else
+                    (print "Verification not applicable for type: " type))))
+
+                ((export)
+                 (let ((dest (if (null? args)
+                                 (sprintf "/tmp/soup-export-~a" name)
+                                 (car args))))
+                   (if (file-exists? path)
+                       (begin
+                         (system (sprintf "cp ~s ~s" path dest))
+                         (printf "Exported to: ~a~%" dest))
+                       (print "No file to export"))))
+
+                ((history)
+                 (print "")
+                 (print "Related audit entries:")
+                 (let ((audit-dir ".vault/audit"))
+                   (when (directory-exists? audit-dir)
+                     (let ((entries (directory audit-dir)))
+                       (for-each
+                        (lambda (entry-file)
+                          (let ((entry-path (string-append audit-dir "/" entry-file)))
+                            (handle-exceptions exn #f
+                              (let ((data (with-input-from-file entry-path read)))
+                                (when (and (pair? data)
+                                           (eq? 'audit-entry (car data)))
+                                  (let* ((entry (cdr data))
+                                         (action (assq 'action entry)))
+                                    (when (and action
+                                               (string-contains
+                                                (sprintf "~a" action)
+                                                name))
+                                      (printf "  ~a: ~a~%"
+                                              entry-file
+                                              (cadr action)))))))))
+                        entries))))
+                 (print ""))
+
+                ((path)
+                 (print "")
+                 (printf "Path: ~a~%" path)
+                 (printf "Exists: ~a~%" (if (file-exists? path) "yes" "no"))
+                 (print "")
+                 path)
+
+                ((raw)
+                 (if (file-exists? path)
+                     (handle-exceptions exn
+                       (begin
+                         (print "Not valid S-expression")
+                         #f)
+                       (with-input-from-file path read))
+                     (begin
+                       (print "File not found")
+                       #f)))
+
+                (else
+                 (printf "Unknown command: ~a (try 'help)~%" cmd))))))))
 
   ;;; ============================================================================
   ;;; Node Roles - RFC-037 Implementation
