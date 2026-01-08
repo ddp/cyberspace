@@ -22,7 +22,8 @@
         (chicken blob)
         (chicken file posix)
         srfi-1
-        srfi-4)
+        srfi-4
+        srfi-13)
 
 ;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
@@ -765,9 +766,132 @@
 
 (define *agent-location* 'local)
 (define *entanglements* '())
+(define *teleport-grants* '())  ; authorized destinations
+(define *teleport-history* '()) ; audit trail
+
+;;; Teleportation Address Syntax:
+;;;   local:path          - within current realm
+;;;   realm:path          - to named realm
+;;;   principal@realm:path - to realm, as principal
+;;;   wormhole://host:port/path - via wormhole
+
+(define (parse-teleport-address addr)
+  "Parse teleportation address into components"
+  (cond
+   ((string-contains addr "://")
+    ;; wormhole://host:port/path
+    (let* ((proto-end (string-contains addr "://"))
+           (proto (substring addr 0 proto-end))
+           (rest (substring addr (+ proto-end 3) (string-length addr)))
+           (slash-pos (string-contains rest "/"))
+           (host (if slash-pos (substring rest 0 slash-pos) rest))
+           (path (if slash-pos (substring rest slash-pos (string-length rest)) "/")))
+      `((protocol . ,proto) (host . ,host) (path . ,path))))
+   ((string-contains addr "@")
+    ;; principal@realm:path
+    (let* ((at-pos (string-contains addr "@"))
+           (principal (substring addr 0 at-pos))
+           (rest (substring addr (+ at-pos 1) (string-length addr)))
+           (colon-pos (string-contains rest ":"))
+           (realm (if colon-pos (substring rest 0 colon-pos) rest))
+           (path (if colon-pos (substring rest (+ colon-pos 1) (string-length rest)) "/")))
+      `((principal . ,principal) (realm . ,realm) (path . ,path))))
+   ((string-contains addr ":")
+    ;; realm:path
+    (let* ((colon-pos (string-contains addr ":"))
+           (realm (substring addr 0 colon-pos))
+           (path (substring addr (+ colon-pos 1) (string-length addr))))
+      `((realm . ,realm) (path . ,path))))
+   (else
+    ;; local path
+    `((realm . local) (path . ,addr)))))
+
+(define (teleport-grant destination #!key (capabilities '(read)) (expires #f) (delegate #f))
+  "Grant authorization to teleport to destination"
+  (unless (attested?)
+    (error "Attestation required to grant teleport authorization"))
+  (let ((grant `((destination . ,destination)
+                 (capabilities . ,capabilities)
+                 (expires . ,expires)
+                 (delegatable . ,(and delegate #t))
+                 (grantor . ,*node-attestation*)
+                 (created . ,(current-seconds)))))
+    (set! *teleport-grants* (cons grant *teleport-grants*))
+    (print "Granted teleport to: " destination)
+    (print "  Capabilities: " capabilities)
+    (when expires (print "  Expires: " expires))
+    (when delegate (print "  Delegatable: yes"))
+    grant))
+
+(define (teleport-check destination capabilities)
+  "Check if teleportation is authorized"
+  (let ((now (current-seconds)))
+    (find (lambda (g)
+            (and (equal? (alist-ref 'destination g) destination)
+                 (or (not (alist-ref 'expires g))
+                     (> (alist-ref 'expires g) now))
+                 (every (lambda (c) (member c (alist-ref 'capabilities g)))
+                        capabilities)))
+          *teleport-grants*)))
+
+(define (teleport destination #!key (state '()) (as #f) (capabilities '(read)))
+  "Teleport to destination with authorization check"
+  (unless (attested?)
+    (error "Attestation required for teleportation"))
+
+  (let ((addr (parse-teleport-address destination)))
+    (print "")
+    (print "TELEPORT")
+    (print "  From: " *agent-location*)
+    (print "  To:   " destination)
+    (when as (print "  As:   " as))
+    (print "  Caps: " capabilities)
+    (print "")
+
+    ;; Check authorization
+    (let ((grant (teleport-check destination capabilities)))
+      (cond
+       ((not grant)
+        (print "  [DENIED] No authorization for destination")
+        (print "  Use (teleport-grant \"" destination "\") to authorize")
+        #f)
+       (else
+        ;; Authorized - execute teleport
+        (let ((old-location *agent-location*)
+              (record `((from . ,*agent-location*)
+                        (to . ,destination)
+                        (principal . ,*node-attestation*)
+                        (as . ,as)
+                        (capabilities . ,capabilities)
+                        (state-size . ,(length state))
+                        (timestamp . ,(current-seconds)))))
+          ;; Audit (critical operation)
+          (set! *teleport-history* (cons record *teleport-history*))
+          (audit-append actor: *node-attestation*
+                        action: 'teleport
+                        target: destination
+                        detail: record)
+          ;; Update location
+          (set! *agent-location* destination)
+          (print "  [OK] Teleported")
+          (print "  State transferred: " (length state) " items")
+          (print "")
+          `((status . ok)
+            (from . ,old-location)
+            (to . ,destination)
+            (address . ,addr))))))))
+
+(define (teleport-history)
+  "Show teleportation audit trail"
+  (if (null? *teleport-history*)
+      (print "No teleportation history")
+      (for-each (lambda (h)
+                  (print "  " (alist-ref 'timestamp h) ": "
+                         (alist-ref 'from h) " -> " (alist-ref 'to h)))
+                *teleport-history*)))
 
 (define (tunnel destination #!key (agent 'self))
-  "Tunnel agent to a remote realm"
+  "Tunnel agent to a remote realm (legacy, use teleport)"
   (print "Tunneling " agent " to " destination "...")
   (set! *agent-location* destination)
   `(tunneled ,destination))
@@ -783,10 +907,19 @@
   (print "Entangled " agent1 " <-> " agent2)
   `(entangled ,agent1 ,agent2))
 
-(define (teleport state from to)
-  "Teleport state between entangled agents"
-  (print "Teleporting state from " from " to " to)
-  `(teleported ,state ,to))
+(define (quantum-teleport state from to)
+  "Teleport state between entangled agents (quantum channel)"
+  (let ((pair (find (lambda (e)
+                      (or (and (equal? (car e) from) (equal? (cadr e) to))
+                          (and (equal? (car e) to) (equal? (cadr e) from))))
+                    *entanglements*)))
+    (if pair
+        (begin
+          (print "Quantum teleporting via entanglement: " from " <-> " to)
+          `(teleported ,state ,to))
+        (begin
+          (print "No entanglement between " from " and " to)
+          #f))))
 
 (define (decohere agent)
   "Decohere agent (cleanup, terminate)"
