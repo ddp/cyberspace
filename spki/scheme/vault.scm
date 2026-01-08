@@ -44,6 +44,7 @@
    soup-releases
    soup-du
    soup-find
+   soup-query
    soup-inspect
    complete
 
@@ -1739,6 +1740,123 @@ Object Types:
          results)
         (print "")
         results)))
+
+  ;;; ============================================================================
+  ;;; soup-query - S-expression pattern matching (Newton-style)
+  ;;; ============================================================================
+  ;;;
+  ;;; Query syntax:
+  ;;;   (soup-query '(type archives))           - by type
+  ;;;   (soup-query '(name "*.tar.gz"))         - glob pattern
+  ;;;   (soup-query '(name #/regex/))           - regex pattern
+  ;;;   (soup-query '(size > 1000000))          - size comparison
+  ;;;   (soup-query '(signed))                  - signed objects
+  ;;;   (soup-query '(not (signed)))            - unsigned objects
+  ;;;   (soup-query '(and (type releases)       - compound query
+  ;;;                     (size > 1000)))
+  ;;;   (soup-query '(or (name "*.archive")
+  ;;;                    (name "*.tar.gz")))
+  ;;;   (soup-query '(has-field principal))     - objects with field
+  ;;;
+  ;;; Returns list of matching objects.
+
+  (define (soup-query query #!optional (silent #f))
+    "Query soup using S-expression patterns (Newton-style)
+
+     Patterns:
+       (type TYPE)              - match object type
+       (name PATTERN)           - glob or regex on name
+       (size OP VALUE)          - size comparison (> < = >= <=)
+       (signed)                 - has signature
+       (has-field FIELD)        - object has field in info
+       (and PATTERN ...)        - all patterns must match
+       (or PATTERN ...)         - any pattern must match
+       (not PATTERN)            - pattern must not match
+
+     Examples:
+       (soup-query '(type archives))
+       (soup-query '(and (type releases) (signed)))
+       (soup-query '(or (name \"*.archive\") (name \"*.tar.gz\")))
+       (soup-query '(size > 1000000))"
+
+    (define (eval-query pattern obj)
+      "Evaluate query pattern against object"
+      (let ((type (car obj))
+            (name (cadr obj))
+            (size (caddr obj))
+            (info (cadddr obj)))
+        (cond
+         ;; Type match
+         ((and (pair? pattern) (eq? (car pattern) 'type))
+          (eq? type (cadr pattern)))
+
+         ;; Name pattern (glob or regex)
+         ((and (pair? pattern) (eq? (car pattern) 'name))
+          (match-pattern? name (cadr pattern)))
+
+         ;; Size comparison
+         ((and (pair? pattern) (eq? (car pattern) 'size))
+          (let ((op (cadr pattern))
+                (val (caddr pattern)))
+            (case op
+              ((>) (> size val))
+              ((<) (< size val))
+              ((=) (= size val))
+              ((>=) (>= size val))
+              ((<=) (<= size val))
+              (else #f))))
+
+         ;; Signed check
+         ((and (pair? pattern) (eq? (car pattern) 'signed))
+          (not (member "unsigned" info)))
+
+         ;; Unsigned check (sugar)
+         ((and (pair? pattern) (eq? (car pattern) 'unsigned))
+          (member "unsigned" info))
+
+         ;; Has field check
+         ((and (pair? pattern) (eq? (car pattern) 'has-field))
+          (member (symbol->string (cadr pattern)) info))
+
+         ;; AND - all must match
+         ((and (pair? pattern) (eq? (car pattern) 'and))
+          (every (lambda (p) (eval-query p obj)) (cdr pattern)))
+
+         ;; OR - any must match
+         ((and (pair? pattern) (eq? (car pattern) 'or))
+          (any (lambda (p) (eval-query p obj)) (cdr pattern)))
+
+         ;; NOT - must not match
+         ((and (pair? pattern) (eq? (car pattern) 'not))
+          (not (eval-query (cadr pattern) obj)))
+
+         ;; Type shorthand - bare symbol matches type
+         ((symbol? pattern)
+          (eq? type pattern))
+
+         ;; String shorthand - matches name
+         ((string? pattern)
+          (match-pattern? name pattern))
+
+         ;; Unknown pattern
+         (else
+          (print "Warning: unknown query pattern: " pattern)
+          #f))))
+
+    (let* ((all-objects (soup-collect-objects))
+           (results (filter (lambda (obj) (eval-query query obj)) all-objects)))
+
+      (unless silent
+        (print "")
+        (printf "Query: ~s~%" query)
+        (printf "Found ~a object~a:~%" (length results) (if (= 1 (length results)) "" "s"))
+        (for-each
+         (lambda (obj)
+           (printf "  ~a/~a (~a)~%" (car obj) (cadr obj) (format-size (caddr obj))))
+         results)
+        (print ""))
+
+      results))
 
   (define (gzip-file? path)
     "Check if file has gzip magic bytes (1f 8b)"
