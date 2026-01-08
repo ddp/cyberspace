@@ -21,6 +21,7 @@
         (chicken process)
         (chicken blob)
         (chicken file posix)
+        srfi-1
         srfi-4)
 
 ;;; ============================================================
@@ -184,6 +185,245 @@
         (u8vector-set! vec i byte-val)))))
 
 ;;; ============================================================
+;;; RFC-040: Object State (chaotic/quiescent) and Persistence
+;;; ============================================================
+
+;; All things have state and durability
+;; State: chaotic (in flux) | quiescent (stable)
+;; Durability: ephemeral (no promise) | persistent (vault-bound)
+
+(define *thing-states* '())      ; thing-id -> state
+(define *thing-durability* '())  ; thing-id -> durability
+(define *chaotic-store* '())     ; things in flux
+(define *persistence-queue* '()) ; scheduled for vault migration
+
+(define (thing-id thing)
+  "Get or compute thing identity"
+  (cond
+   ;; Already has an id field (alist)
+   ((and (list? thing)
+         (pair? (car thing))
+         (assoc 'id thing))
+    => (lambda (pair) (cdr pair)))
+   ;; String - use as-is or hash if long
+   ((string? thing)
+    (if (< (string-length thing) 64)
+        thing
+        (content-address thing)))
+   ;; Everything else - hash it
+   (else
+    (content-address (format "~a" thing)))))
+
+(define (chaotic? thing)
+  "Is thing in chaotic state (mutable, uncommitted)?"
+  (let ((state (alist-ref (thing-id thing) *thing-states* equal?)))
+    (or (not state) (eq? state 'chaotic))))
+
+(define (quiescent? thing)
+  "Is thing in quiescent state (immutable, stable)?"
+  (let ((state (alist-ref (thing-id thing) *thing-states* equal?)))
+    (eq? state 'quiescent)))
+
+(define (ephemeral? thing)
+  "Is thing ephemeral (no durability promise)?"
+  (let ((dur (alist-ref (thing-id thing) *thing-durability* equal?)))
+    (or (not dur) (eq? dur 'ephemeral))))
+
+(define (persistent? thing)
+  "Is thing persistent (guaranteed vault migration)?"
+  (let ((dur (alist-ref (thing-id thing) *thing-durability* equal?)))
+    (eq? dur 'persistent)))
+
+(define (thing-state thing)
+  "Get thing's current state"
+  (or (alist-ref (thing-id thing) *thing-states* equal?) 'chaotic))
+
+(define (thing-durability thing)
+  "Get thing's durability"
+  (or (alist-ref (thing-id thing) *thing-durability* equal?) 'ephemeral))
+
+(define (short-id id)
+  "Truncate id for display (max 16 chars)"
+  (if (> (string-length id) 16)
+      (string-append (short-id id))
+      id))
+
+(define (chaotic thing)
+  "Create or mark thing as chaotic"
+  (let ((id (thing-id thing)))
+    (set! *thing-states* (cons (cons id 'chaotic) *thing-states*))
+    (set! *chaotic-store* (cons (cons id thing) *chaotic-store*))
+    (print "Thing " (short-id id) " is chaotic")
+    thing))
+
+(define (commit-thing thing)
+  "Transition thing from chaotic to quiescent"
+  (let ((id (thing-id thing)))
+    (unless (chaotic? thing)
+      (print "Thing already quiescent"))
+    (set! *thing-states* (cons (cons id 'quiescent) *thing-states*))
+    ;; Remove from chaotic store
+    (set! *chaotic-store* (filter (lambda (e) (not (equal? (car e) id))) *chaotic-store*))
+    (print "Thing " (short-id id) " committed (quiescent)")
+    ;; If persistent, queue for vault
+    (when (persistent? thing)
+      (set! *persistence-queue* (cons thing *persistence-queue*))
+      (print "  Queued for vault migration"))
+    thing))
+
+(define (persist thing)
+  "Mark thing as persistent (guaranteed vault migration)"
+  (let ((id (thing-id thing)))
+    (set! *thing-durability* (cons (cons id 'persistent) *thing-durability*))
+    (print "Thing " (short-id id) " marked persistent")
+    ;; If already quiescent, queue immediately
+    (when (quiescent? thing)
+      (set! *persistence-queue* (cons thing *persistence-queue*))
+      (print "  Queued for vault migration"))
+    thing))
+
+(define (ephemeral thing)
+  "Mark thing as ephemeral (no durability promise)"
+  (let ((id (thing-id thing)))
+    (set! *thing-durability* (cons (cons id 'ephemeral) *thing-durability*))
+    ;; Remove from persistence queue if present
+    (set! *persistence-queue* (filter (lambda (t) (not (equal? (thing-id t) id))) *persistence-queue*))
+    (print "Thing " (short-id id) " marked ephemeral")
+    thing))
+
+(define (flush-persistence!)
+  "Migrate all queued persistent things to vault"
+  (if (null? *persistence-queue*)
+      (print "Persistence queue empty")
+      (begin
+        (print "Migrating " (length *persistence-queue*) " things to vault...")
+        (for-each
+         (lambda (thing)
+           (let ((id (thing-id thing)))
+             (content-put (format "~a" thing))
+             (print "  " (short-id id) " -> vault")))
+         *persistence-queue*)
+        (set! *persistence-queue* '())
+        (print "Done."))))
+
+(define (thing-status thing)
+  "Show thing's state and durability"
+  (let ((id (thing-id thing)))
+    (print "Thing: " (short-id id))
+    (print "  State: " (thing-state thing))
+    (print "  Durability: " (thing-durability thing))
+    (print "  Cacheable: " (if (quiescent? thing) "yes (forever)" "no"))
+    `((id . ,id)
+      (state . ,(thing-state thing))
+      (durability . ,(thing-durability thing)))))
+
+;;; ============================================================
+;;; RFC-043: Memo Conventions
+;;; ============================================================
+
+(define *memos* '())
+(define *memo-counter* 0)
+
+(define (pad-number n width)
+  "Pad number with leading zeros"
+  (let ((s (number->string n)))
+    (string-append (make-string (max 0 (- width (string-length s))) #\0) s)))
+
+(define (memo-create title #!key (scope 'local) (category 'informational)
+                                  (author "anonymous") (content ""))
+  "Create a new memo"
+  (set! *memo-counter* (+ *memo-counter* 1))
+  (let* ((num (pad-number *memo-counter* 3))
+         (id (case scope
+               ((local) (string-append "local:memo-" num))
+               ((federation) (string-append (current-directory) ":memo-" num))
+               ((core) (string-append "RFC-" num))
+               (else (error "Invalid scope" scope))))
+         (memo `((id . ,id)
+                 (title . ,title)
+                 (scope . ,scope)
+                 (category . ,category)
+                 (author . ,author)
+                 (content . ,content)
+                 (created . ,(current-seconds))
+                 (status . draft))))
+    ;; Memos start chaotic
+    (chaotic memo)
+    (set! *memos* (cons memo *memos*))
+    (print "Created " id ": " title)
+    (print "  Scope: " scope)
+    (print "  Category: " category)
+    (print "  State: chaotic (pen to commit)")
+    memo))
+
+(define (memo-commit memo-id)
+  "Commit a memo (chaotic → quiescent)"
+  (let ((memo (find (lambda (m) (equal? (alist-ref 'id m) memo-id)) *memos*)))
+    (if memo
+        (begin
+          (commit-thing memo)
+          (print "Memo committed: " memo-id)
+          memo)
+        (error "Memo not found" memo-id))))
+
+(define (memo-promote memo-id new-scope)
+  "Promote memo to higher scope (local → federation → core)"
+  (let ((memo (find (lambda (m) (equal? (alist-ref 'id m) memo-id)) *memos*)))
+    (unless memo (error "Memo not found" memo-id))
+    (let ((current-scope (alist-ref 'scope memo)))
+      (unless (quiescent? memo)
+        (error "Cannot promote chaotic memo - commit first"))
+      (case new-scope
+        ((federation)
+         (unless (eq? current-scope 'local)
+           (error "Can only promote local to federation"))
+         (print "Promoting " memo-id " to federation scope")
+         (print "  Requires federation review"))
+        ((core)
+         (unless (member current-scope '(local federation))
+           (error "Already at core scope"))
+         (print "Promoting " memo-id " to core (RFC)")
+         (print "  Requires rough consensus"))
+        (else (error "Invalid scope" new-scope)))
+      `(promoted ,memo-id ,new-scope))))
+
+(define (memo-persist memo-id)
+  "Mark memo as persistent"
+  (let ((memo (find (lambda (m) (equal? (alist-ref 'id m) memo-id)) *memos*)))
+    (if memo
+        (persist memo)
+        (error "Memo not found" memo-id))))
+
+(define (memo-list #!optional scope)
+  "List memos, optionally filtered by scope"
+  (let ((filtered (if scope
+                      (filter (lambda (m) (eq? (alist-ref 'scope m) scope)) *memos*)
+                      *memos*)))
+    (if (null? filtered)
+        (print "No memos" (if scope (format " at scope ~a" scope) ""))
+        (for-each
+         (lambda (m)
+           (print "  " (alist-ref 'id m) ": " (alist-ref 'title m)
+                  " [" (thing-state m) "/" (thing-durability m) "]"))
+         filtered))))
+
+(define (memo-show memo-id)
+  "Show memo details"
+  (let ((memo (find (lambda (m) (equal? (alist-ref 'id m) memo-id)) *memos*)))
+    (if memo
+        (begin
+          (print "Memo: " (alist-ref 'id memo))
+          (print "  Title: " (alist-ref 'title memo))
+          (print "  Scope: " (alist-ref 'scope memo))
+          (print "  Category: " (alist-ref 'category memo))
+          (print "  Author: " (alist-ref 'author memo))
+          (print "  State: " (thing-state memo))
+          (print "  Durability: " (thing-durability memo))
+          (print "  Created: " (alist-ref 'created memo))
+          memo)
+        (error "Memo not found" memo-id))))
+
+;;; ============================================================
 ;;; RFC-016: Lazy Clustering
 ;;; ============================================================
 
@@ -287,12 +527,12 @@
   "Propose a value for Byzantine consensus"
   (let ((proposal-id (blob->hex (sha512-hash (string->blob (format "~a~a" value (current-seconds)))))))
     (set! *consensus-proposals* (cons `((id . ,proposal-id) (value . ,value) (quorum . ,quorum) (votes . ())) *consensus-proposals*))
-    (print "Proposal " (substring proposal-id 0 16) "... created")
+    (print "Proposal " (short-id proposal-id) " created")
     proposal-id))
 
 (define (consensus-vote proposal-id vote #!key (signature #f))
   "Vote on a consensus proposal (vote: 'accept | 'reject)"
-  (print "Vote " vote " recorded for " (substring proposal-id 0 16) "...")
+  (print "Vote " vote " recorded for " (short-id proposal-id))
   `(vote-recorded ,vote))
 
 (define (consensus-status #!optional proposal-id)
@@ -300,7 +540,7 @@
   (if (null? *consensus-proposals*)
       (print "No active proposals")
       (for-each (lambda (p)
-                  (print "  " (substring (alist-ref 'id p) 0 16) "... : " (alist-ref 'value p)))
+                  (print "  " (short-id (alist-ref 'id p)) " : " (alist-ref 'value p)))
                 *consensus-proposals*)))
 
 ;;; ============================================================
@@ -349,7 +589,7 @@
   (let* ((addr (content-address data))
          (blob-data (if (blob? data) data (string->blob data))))
     (set! *content-store* (cons (cons addr blob-data) *content-store*))
-    (print "Stored at " (substring addr 0 16) "...")
+    (print "Stored at " (short-id addr))
     addr))
 
 (define (content-get addr)
@@ -491,17 +731,17 @@
                   (votes . ())
                   (status . open))
                 *quorum-proposals*))
-    (print "Quorum proposal created: " (substring prop-id 0 16) "...")
+    (print "Quorum proposal created: " (short-id prop-id))
     prop-id))
 
 (define (quorum-vote prop-id choice #!key (encrypted #t))
   "Cast a vote (optionally homomorphically encrypted)"
-  (print "Vote cast for " (substring prop-id 0 16) "... [" (if encrypted "encrypted" "plain") "]")
+  (print "Vote cast for " (short-id prop-id) " [" (if encrypted "encrypted" "plain") "]")
   `(vote-recorded ,choice))
 
 (define (quorum-tally prop-id)
   "Tally votes (threshold decryption for HE votes)"
-  (print "Tallying votes for " (substring prop-id 0 16) "...")
+  (print "Tallying votes for " (short-id prop-id))
   (print "  (homomorphic tally simulated)")
   '(tally-pending))
 
@@ -510,7 +750,7 @@
   (if (null? *quorum-proposals*)
       (print "No active quorum proposals")
       (for-each (lambda (p)
-                  (print "  " (substring (alist-ref 'id p) 0 16) "... : "
+                  (print "  " (short-id (alist-ref 'id p)) " : "
                          (alist-ref 'question p) " [" (alist-ref 'status p) "]"))
                 *quorum-proposals*)))
 
@@ -725,12 +965,12 @@
                   (hash . ,hash)
                   (metadata . ,meta))
                 *vault-manifest*))
-    (print "  Stored as: " (substring hash 0 16) "...")
+    (print "  Stored as: " (short-id hash))
     `(imported ,path ,hash)))
 
 (define (fs-export hash path)
   "Export vault object to macOS, restoring full metadata"
-  (print "Exporting " (substring hash 0 16) "... to " path)
+  (print "Exporting " (short-id hash) " to " path)
   (print "  Restoring: POSIX attrs, xattrs, Finder tags, ACLs")
   (print "  (export simulated)")
   `(exported ,hash ,path))
@@ -748,7 +988,7 @@
       (print "Manifest empty")
       (for-each (lambda (e)
                   (print "  " (alist-ref 'path e) " -> "
-                         (substring (alist-ref 'hash e) 0 16) "..."))
+                         (short-id (alist-ref 'hash e))))
                 *vault-manifest*)))
 
 ;;; ============================================================
@@ -759,6 +999,33 @@
   "Show available commands"
   (print "
 Cyberspace REPL - Available Commands:
+
+  Object State (RFC-040):
+    (chaotic thing)              Mark thing as chaotic (in flux)
+    (commit-thing thing)         Commit: chaotic → quiescent
+    (chaotic? thing)             Is thing chaotic?
+    (quiescent? thing)           Is thing quiescent?
+    (thing-state thing)          Get state (chaotic|quiescent)
+    (thing-status thing)         Full status display
+
+  Persistence (RFC-040):
+    (persist thing)              Mark thing persistent (vault-bound)
+    (ephemeral thing)            Mark thing ephemeral (no promise)
+    (persistent? thing)          Is thing persistent?
+    (ephemeral? thing)           Is thing ephemeral?
+    (thing-durability thing)     Get durability
+    (flush-persistence!)         Migrate queued things to vault
+
+  Memos (RFC-043):
+    (memo-create title)          Create local memo
+    (memo-create t scope: 'federation)  Federation scope
+    (memo-create t category: 'experimental)
+    (memo-commit memo-id)        Commit memo (chaotic → quiescent)
+    (memo-persist memo-id)       Mark memo persistent
+    (memo-promote id 'federation) Promote scope
+    (memo-list)                  List all memos
+    (memo-list 'local)           Filter by scope
+    (memo-show memo-id)          Show memo details
 
   Vault Operations:
     (seal-commit \"message\")         Commit staged changes
