@@ -136,6 +136,65 @@
       (tags . ,(length (filter (lambda (s) (> (string-length s) 0))
                                (string-split (or tag-count "") "\n")))))))
 
+;;; --- Code Metrics ---
+
+(define (count-lines-symbols path pattern)
+  "Count lines and symbols for files matching pattern in path"
+  (let ((cmd (sprintf "find ~a/~a -name '~a' -exec cat {} + 2>/dev/null | wc -lw"
+                      *cyberspace-root* path pattern)))
+    (call-with-input-pipe cmd
+      (lambda (port)
+        (let ((line (read-line port)))
+          (if (eof-object? line)
+              (cons 0 0)
+              (let ((parts (string-split (string-trim-both line))))
+                (if (>= (length parts) 2)
+                    (cons (string->number (car parts))
+                          (string->number (cadr parts)))
+                    (cons 0 0)))))))))
+
+(define (count-assets)
+  "Count total assets in cyberspace"
+  (let ((cmd (sprintf "find ~a -type f -not -path '*/.git/*' | wc -l"
+                      *cyberspace-root*)))
+    (call-with-input-pipe cmd
+      (lambda (port)
+        (let ((line (read-line port)))
+          (if (eof-object? line)
+              0
+              (string->number (string-trim-both line))))))))
+
+(define (display-code-metrics)
+  "Display code metrics for cyberspace"
+  (let* ((rfc-stats (count-lines-symbols "spki/scheme/docs/rfc" "*.txt"))
+         (rfc-lines (car rfc-stats))
+         (rfc-words (cdr rfc-stats))
+         (ocaml-stats (let ((ml (count-lines-symbols "spki" "*.ml"))
+                           (mli (count-lines-symbols "spki" "*.mli")))
+                       (cons (+ (car ml) (car mli))
+                             (+ (cdr ml) (cdr mli)))))
+         (ocaml-lines (car ocaml-stats))
+         (ocaml-symbols (cdr ocaml-stats))
+         (scheme-stats (count-lines-symbols "spki/scheme" "*.scm"))
+         (scheme-lines (car scheme-stats))
+         (scheme-symbols (cdr scheme-stats))
+         (assets (count-assets))
+         (ratio-lines (if (> ocaml-lines 0)
+                         (/ (exact->inexact scheme-lines) ocaml-lines)
+                         0))
+         (ratio-symbols (if (> ocaml-symbols 0)
+                           (/ (exact->inexact scheme-symbols) ocaml-symbols)
+                           0)))
+    (log-info "--- Code Metrics ---")
+    (log-info "RFCs: ~a lines, ~a words" rfc-lines rfc-words)
+    (log-info "OCaml (TCB): ~a lines, ~a symbols" ocaml-lines ocaml-symbols)
+    (log-info "Scheme: ~a lines, ~a symbols" scheme-lines scheme-symbols)
+    (log-info "TCB is ~ax smaller by lines, ~ax smaller by symbols"
+              (/ (round (* 10 ratio-lines)) 10)
+              (/ (round (* 10 ratio-symbols)) 10))
+    (log-info "~a assets comprise cyberspace" assets)
+    (log-info "--------------------")))
+
 (define (get-vault-metadata)
   "Get vault metadata if available"
   (let ((vault-dir (make-pathname *cyberspace-root* ".vault")))
@@ -342,9 +401,10 @@ Examples:
       (if (null? remaining)
           ;; All stages complete
           (begin
-            ;; Display final blob metadata
+            ;; Display final blob metadata and code metrics
             (log-info "")
             (display-blob-metadata)
+            (display-code-metrics)
 
             ;; Write audit entry
             (let ((status (if (null? failed) 'success 'partial-failure)))
