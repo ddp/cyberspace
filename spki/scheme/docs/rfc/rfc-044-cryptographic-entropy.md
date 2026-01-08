@@ -208,7 +208,7 @@ Randomness is the foundation of all cryptography. This section explores the phys
 
 ### Cyberspace as Entropy Provider
 
-**We will provide all the randomness that our users need.**
+**We will provide all the randomness that our users need - on demand, for whatever their cryptographic desires.**
 
 Cyberspace realms can serve as entropy sources for their users:
 
