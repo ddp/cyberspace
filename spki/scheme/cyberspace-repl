@@ -245,7 +245,7 @@
 (define (short-id id)
   "Truncate id for display (max 16 chars)"
   (if (> (string-length id) 16)
-      (string-append (short-id id))
+      (string-append (substring id 0 16) "...")
       id))
 
 (define (chaotic thing)
@@ -316,6 +316,97 @@
     `((id . ,id)
       (state . ,(thing-state thing))
       (durability . ,(thing-durability thing)))))
+
+;;; ============================================================
+;;; Node Identity and Attestation
+;;; ============================================================
+
+(define *node-attestation* #f)  ; current attestation state
+
+(define (principal->string p)
+  "Convert principal blob to hex string"
+  (if (blob? p) (blob->hex p) (format "~a" p)))
+
+(define (attest #!optional principal)
+  "Attest identity to access node details"
+  (let ((key (vault-config 'signing-key)))
+    (cond
+     ((not key)
+      (print "No signing key configured. Generate with (ed25519-keypair)")
+      #f)
+     (principal
+      ;; Verify against provided principal
+      (let ((our-principal (principal->string key)))
+        (if (equal? principal our-principal)
+            (begin
+              (set! *node-attestation* our-principal)
+              (print "Attested as: " (short-id our-principal))
+              our-principal)
+            (begin
+              (print "Attestation failed: principal mismatch")
+              #f))))
+     (else
+      ;; Self-attestation - principal is the public key (signing-key stored)
+      (let ((our-principal (principal->string key)))
+        (set! *node-attestation* our-principal)
+        (print "Attested as: " (short-id our-principal))
+        our-principal)))))
+
+(define (attested?)
+  "Check if currently attested"
+  (and *node-attestation* #t))
+
+(define (!)
+  "Display detailed node information (requires attestation)"
+  (unless (attested?)
+    (print "Attestation required. Use (attest) first.")
+    (print "")
+    (attest))
+  (when (attested?)
+    (let* ((caps (probe-system-capabilities))
+           (role (recommend-role caps)))
+      (print "")
+      (print "╔═══════════════════════════════════════════════════════════════╗")
+      (print "║                     NODE INFORMATION                          ║")
+      (print "╠═══════════════════════════════════════════════════════════════╣")
+      (print "")
+      (print "  Principal:   " (short-id *node-attestation*))
+      (print "  Platform:    " (platform-stamp))
+      (print "  Role:        " role)
+      (print "  Vault:       " (if (directory-exists? ".vault") ".vault/" "(none)"))
+      (print "")
+      (print "  COMPUTE")
+      (let ((compute (cdr (assq 'compute caps))))
+        (print "    Cores:     " (cdr (assq 'cores compute)))
+        (print "    RAM:       " (cdr (assq 'ram-gb compute)) " GB")
+        (print "    Load:      " (cdr (assq 'load-avg compute))))
+      (print "")
+      (print "  STORAGE")
+      (let ((storage (cdr (assq 'storage caps))))
+        (print "    Available: " (cdr (assq 'available-gb storage)) " GB")
+        (print "    Type:      " (cdr (assq 'type storage))))
+      (print "")
+      (print "  NETWORK")
+      (let ((network (cdr (assq 'network caps))))
+        (print "    Type:      " (cdr (assq 'type network)))
+        (print "    Latency:   " (cdr (assq 'latency-ms network)) " ms"))
+      (print "")
+      (print "  SECURITY")
+      (let ((security (cdr (assq 'security caps))))
+        (print "    Signing:   " (if (cdr (assq 'signing-key security)) "configured" "absent"))
+        (print "    Verify:    " (if (cdr (assq 'verify-key security)) "configured" "absent")))
+      (print "")
+      (print "  STATE")
+      (print "    Memos:     " (length *memos*))
+      (print "    Chaotic:   " (length *chaotic-store*))
+      (print "    Pending:   " (length *persistence-queue*))
+      (print "")
+      (print "╚═══════════════════════════════════════════════════════════════╝")
+      (print "")
+      `((principal . ,*node-attestation*)
+        (platform . ,(platform-stamp))
+        (role . ,role)
+        (capabilities . ,caps)))))
 
 ;;; ============================================================
 ;;; RFC-043: Memo Conventions

@@ -80,7 +80,8 @@
 
    ;; Configuration
    vault-init
-   vault-config)
+   vault-config
+   get-vault-principal)
 
   (import scheme
           (chicken base)
