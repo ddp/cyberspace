@@ -67,6 +67,16 @@
    keystore-path
    keystore-exists?
 
+   ;; Address parsing (RFC-041)
+   parse-address
+   address?
+   address-principal
+   address-role
+   address-capabilities
+   address-path
+   address->string
+   make-address
+
    ;; Configuration
    vault-init
    vault-config)
@@ -920,6 +930,137 @@
 
           (print (box-line "" width))
           (print (box-bottom width))))))
+
+  ;;; ============================================================================
+  ;;; Address Parsing (RFC-041)
+  ;;; ============================================================================
+  ;;;
+  ;;; Cyberspace object addresses:
+  ;;;   @principal:/path                    - basic addressing
+  ;;;   @principal+role:/path               - with role context
+  ;;;   @principal+{cap1,cap2}:/path        - with explicit capabilities
+  ;;;   @principal+role{cap1,cap2}:/path    - role refined to specific caps
+  ;;;
+  ;;; Grammar:
+  ;;;   address     = "@" principal [ "+" context ] ":" path
+  ;;;   principal   = "ed25519:" hexstring | hexstring
+  ;;;   context     = role [ "{" capabilities "}" ] | "{" capabilities "}"
+  ;;;   role        = identifier
+  ;;;   capabilities = capability { "," capability }
+  ;;;   capability  = identifier [ "(" arguments ")" ]
+  ;;;   path        = "/" segment { "/" segment }
+
+  ;; Address record type
+  (define (make-address principal role capabilities path)
+    "Create an address record"
+    (list 'address principal role capabilities path))
+
+  (define (address? obj)
+    "Check if object is an address"
+    (and (pair? obj) (eq? (car obj) 'address)))
+
+  (define (address-principal addr)
+    "Get principal from address"
+    (if (address? addr) (list-ref addr 1) #f))
+
+  (define (address-role addr)
+    "Get role from address (may be #f)"
+    (if (address? addr) (list-ref addr 2) #f))
+
+  (define (address-capabilities addr)
+    "Get capabilities list from address (may be empty)"
+    (if (address? addr) (list-ref addr 3) '()))
+
+  (define (address-path addr)
+    "Get path from address"
+    (if (address? addr) (list-ref addr 4) #f))
+
+  (define (address->string addr)
+    "Convert address back to string form"
+    (if (not (address? addr))
+        (error "Not an address" addr)
+        (let ((principal (address-principal addr))
+              (role (address-role addr))
+              (caps (address-capabilities addr))
+              (path (address-path addr)))
+          (string-append
+           "@" principal
+           (cond
+            ;; Role with caps: +role{caps}
+            ((and role (not (null? caps)))
+             (string-append "+" role "{" (string-intersperse caps ",") "}"))
+            ;; Role only: +role
+            (role
+             (string-append "+" role))
+            ;; Caps only: +{caps}
+            ((not (null? caps))
+             (string-append "+{" (string-intersperse caps ",") "}"))
+            ;; Neither
+            (else ""))
+           ":" path))))
+
+  (define (parse-capabilities str)
+    "Parse capability list from string like 'read,write,delegate(read)'"
+    (if (or (not str) (string=? str ""))
+        '()
+        ;; Simple split on comma - handles most cases
+        ;; TODO: proper parsing for nested parens in delegate(...)
+        (map string-trim-both (string-split str ","))))
+
+  (define (parse-address str)
+    "Parse a cyberspace address string into components
+     Returns: (address principal role capabilities path) or #f on failure
+
+     Examples:
+       @ed25519:7f3a...:/releases/1.0.3
+       @7f3a...+curator:/collections
+       @7f3a...+{read,write}:/objects
+       @7f3a...+curator{read}:/collections"
+    (if (not (string-prefix? "@" str))
+        #f
+        (let* ((without-at (substring str 1))
+               ;; Find the colon that separates principal+context from path
+               ;; Must find last colon after any {} group
+               (colon-pos (let loop ((i 0) (depth 0) (last-colon #f))
+                            (if (>= i (string-length without-at))
+                                last-colon
+                                (let ((c (string-ref without-at i)))
+                                  (cond
+                                   ((char=? c #\{) (loop (+ i 1) (+ depth 1) last-colon))
+                                   ((char=? c #\}) (loop (+ i 1) (- depth 1) last-colon))
+                                   ((and (char=? c #\:) (= depth 0))
+                                    (loop (+ i 1) depth i))
+                                   (else (loop (+ i 1) depth last-colon))))))))
+          (if (not colon-pos)
+              #f
+              (let* ((before-colon (substring without-at 0 colon-pos))
+                     (path (substring without-at (+ colon-pos 1)))
+                     ;; Check for + separator
+                     (plus-pos (string-index before-colon #\+)))
+                (if (not plus-pos)
+                    ;; Simple case: @principal:/path
+                    (make-address before-colon #f '() path)
+                    ;; Has context: @principal+context:/path
+                    (let* ((principal (substring before-colon 0 plus-pos))
+                           (context (substring before-colon (+ plus-pos 1)))
+                           ;; Check for {caps}
+                           (brace-pos (string-index context #\{)))
+                      (if (not brace-pos)
+                          ;; Role only: +role
+                          (make-address principal context '() path)
+                          ;; Has braces
+                          (let* ((role-part (if (= brace-pos 0)
+                                               #f  ; +{caps} with no role
+                                               (substring context 0 brace-pos)))
+                                 ;; Extract contents between { and }
+                                 (caps-str (let ((end (string-index context #\})))
+                                            (if end
+                                                (substring context (+ brace-pos 1) end)
+                                                "")))
+                                 (caps (parse-capabilities caps-str)))
+                            (make-address principal role-part caps path))))))))))
+
+  ;; Note: string-index from srfi-13 used for char lookup
 
   ;;; ============================================================================
   ;;; Directory / Object Soup - NewtonOS-style persistent object store
