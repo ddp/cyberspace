@@ -174,6 +174,31 @@ Objects have no access control - they're just content, identified by hash. The r
 
 The soup is shared. Islands may be near or far. Federation is building bridges between islands - agreeing to share objects, honor capabilities, witness each other's audit chains.
 
+### Addressing Objects
+
+Objects in cyberspace have coordinates:
+
+```scheme
+;; Local (this realm)
+"releases/1.0.3"                    ; By path
+"sha512:abc123..."                  ; By hash
+
+;; Remote (another realm) - @ syntax
+"@ed25519:7f3a2b.../releases/1.0.3"     ; Named object at realm
+"@ed25519:7f3a2b.../sha512:abc123..."   ; Hash-addressed at realm
+
+;; Inspect remote sealed object
+(soup-inspect "@ed25519:7f3a2b.../releases/1.0.3")
+
+;; Fetch requires capability
+(soup-fetch "@ed25519:7f3a2b.../sha512:abc123..."
+  capability: my-read-cert)
+```
+
+The `@principal:/path` syntax reads: "at this realm, this object." The principal is your teleport destination. The path or hash is what you're looking for.
+
+Without a capability granting access, you can see the object exists (if the realm publishes its bloom filter) but cannot fetch its contents. The wilderness of mirrors shows reflections - but you need the right key to step through.
+
 ---
 
 ## Architecture

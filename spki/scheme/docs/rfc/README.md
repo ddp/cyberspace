@@ -109,6 +109,7 @@ Cyberspace is their synthesis: local-first realms, federated via capabilities, w
 | **Delegate** | Send an agent - autonomous action on your behalf (asynchronous). |
 | **Merkle Tree** | Quantum-resistant hash tree. Each object a tree, each node SHAKE256 or BLAKE3. The forest that survives the quantum winter. |
 | **Wilderness of Mirrors** | The soup. Objects referencing objects, hashes pointing to hashes. Navigate by capability chain or be lost. (Angleton) |
+| **@principal:/path** | Object coordinates. "At this realm, this object." Teleport destination + what you seek. |
 
 ## Upcoming RFCs
 
