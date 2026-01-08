@@ -63,14 +63,18 @@ The internet has 2^128 addresses. Cyberspace should use them.
 .vault/
   objects/
     sha512-a1b2c3.../    # First 8 chars as directory
-      a1b2c3d4e5f6...    # Full hash as filename
+      a1b2c3d4e5f6...    # Full hash as filename (S-expression)
   catalog/
-    catalog.db           # SQLite: hash → metadata
-    bloom.bin            # Bloom filter for existence
+    manifest.sexp        # Vault catalog object
+    bloom.sexp           # Bloom filter object
+    indices/             # Secondary index objects
+      by-signer.sexp
+      by-type.sexp
   chunks/
     sha512-xxxx/         # Chunked large objects
   audit/
-    chain.db             # Indexed audit trail
+    head.sexp            # Current audit chain head
+    chain/               # Audit entries (hash-addressed)
 ```
 
 ### Object Format
@@ -123,36 +127,52 @@ SHA-512 is:
 
 ## Catalog and Query
 
-### Object Catalog (SQLite)
+The soup IS the catalog. No SQL. Objects are S-expressions, queries are pattern matching.
 
-```sql
-CREATE TABLE objects (
-    hash        TEXT PRIMARY KEY,
-    type        TEXT NOT NULL,
-    size        INTEGER,
-    timestamp   INTEGER,
-    signer      TEXT,
-    parent      TEXT,              -- For trees/manifests
-    compressed  INTEGER DEFAULT 0
-);
+### The Soup Query Model
 
-CREATE INDEX idx_type ON objects(type);
-CREATE INDEX idx_signer ON objects(signer);
-CREATE INDEX idx_timestamp ON objects(timestamp);
+```scheme
+;; Find objects by pattern
+(soup-query
+  '(cyberspace-object
+    (type blob)
+    (signer "ed25519:alice...")
+    ?rest))                        ; Match any object signed by Alice
 
-CREATE TABLE chunks (
-    object_hash TEXT,
-    chunk_hash  TEXT,
-    sequence    INTEGER,
-    PRIMARY KEY (object_hash, sequence)
-);
+;; Find by hash (direct lookup)
+(soup-fetch "sha512:a1b2c3...")    ; O(1) content-addressed
 
-CREATE TABLE tags (
-    hash    TEXT,
-    tag     TEXT,
-    PRIMARY KEY (hash, tag)
-);
-CREATE INDEX idx_tag ON tags(tag);
+;; Find by type
+(soup-query '(cyberspace-object (type cert) ?rest))
+
+;; Find by time range
+(soup-query-range
+  type: 'audit
+  from: 1736000000
+  to:   1736100000)
+
+;; Cursor-based iteration for large result sets
+(soup-cursor
+  '(cyberspace-object (type ?) ?rest)
+  batch: 100)
+```
+
+### Object Catalog
+
+The catalog is itself an object in the soup - a manifest of what the vault contains:
+
+```scheme
+(vault-catalog
+  (version 1)
+  (realm "ed25519:principal...")
+  (object-count 150000)
+  (types
+    (blob 100000)
+    (tree 30000)
+    (cert 15000)
+    (audit 5000))
+  (bloom-filter #${...})           ; Fast existence check
+  (updated 1736400000))
 ```
 
 ### Bloom Filter
@@ -160,32 +180,64 @@ CREATE INDEX idx_tag ON tags(tag);
 Fast existence check before network round-trip:
 
 ```scheme
-(define *bloom-filter*
-  (make-bloom-filter
-    capacity: 10000000      ; 10M objects
-    false-positive: 0.001)) ; 0.1% FP rate
+(define (soup-maybe-contains? hash)
+  "Check bloom filter - false means definitely not, true means maybe"
+  (let ((catalog (soup-fetch-catalog)))
+    (bloom-test (catalog-bloom catalog) hash)))
 
-(bloom-add! *bloom-filter* hash)
-(bloom-contains? *bloom-filter* hash)  ; Maybe or definitely-not
+;; Bloom parameters
+(bloom-filter
+  (capacity 10000000)              ; 10M objects
+  (false-positive 0.001)           ; 0.1% FP rate
+  (bits #${...}))
 ```
 
-### Audit Trail Catalog
+### Audit Trail
 
-```sql
-CREATE TABLE audit (
-    id          TEXT PRIMARY KEY,
-    sequence    INTEGER UNIQUE,
-    timestamp   INTEGER,
-    actor       TEXT,
-    action      TEXT,
-    parent_id   TEXT,
-    hash        TEXT
-);
+The audit trail is a hash-chain of objects in the soup:
 
-CREATE INDEX idx_audit_actor ON audit(actor);
-CREATE INDEX idx_audit_action ON audit(action);
-CREATE INDEX idx_audit_time ON audit(timestamp);
+```scheme
+(audit-entry
+  (sequence 12345)
+  (timestamp 1736300000)
+  (lamport 67890)
+  (actor "ed25519:subject...")
+  (action (read "sha512:object..."))
+  (previous "sha512:prev-entry...")  ; Chain link
+  (signature "ed25519:auditor..."))
+
+;; Query audit by walking the chain
+(define (audit-query actor from-seq)
+  "Walk audit chain, filter by actor"
+  (soup-chain-walk
+    start: (audit-head)
+    filter: (lambda (entry)
+              (equal? (entry-actor entry) actor))
+    from: from-seq))
 ```
+
+### Secondary Indices
+
+For queries that can't use content-addressing, the soup maintains lightweight indices as objects:
+
+```scheme
+(soup-index
+  (name "by-signer")
+  (key-type principal)
+  (entries
+    (("ed25519:alice..." ("sha512:obj1" "sha512:obj2" ...))
+     ("ed25519:bob..." ("sha512:obj3" "sha512:obj4" ...)))))
+
+(soup-index
+  (name "by-type")
+  (key-type symbol)
+  (entries
+    ((blob ("sha512:..." "sha512:..." ...))
+     (cert ("sha512:..." "sha512:..." ...))
+     (audit ("sha512:..." "sha512:..." ...)))))
+```
+
+Indices are rebuilt on demand, not authoritative - the soup is truth.
 
 ---
 
@@ -485,7 +537,7 @@ Mitigations:
 
 ### Phase 1: Native Object Store
 - Implement `.vault/objects/` storage
-- SQLite catalog
+- Soup catalog and query
 - Keep git for development workflow
 
 ### Phase 2: Local-First Sync
