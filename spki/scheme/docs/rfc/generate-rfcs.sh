@@ -59,6 +59,7 @@ RFCS=(
   rfc-039-ipv6-scaling
   rfc-040-security-architecture
   rfc-041-fuse-filesystem
+  rfc-042-ietf-normative
 )
 
 # Extract title from markdown file
