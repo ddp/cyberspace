@@ -247,9 +247,24 @@ class="email">ddp@eludom.net</a> <strong>Requires:</strong> RFC-010
 <h2 id="abstract">Abstract</h2>
 <p>This RFC defines the architectural changes required to scale
 Cyberspace from a git-backed prototype to a native distributed system
-capable of operating at IPv6 scale (billions of nodes, exabytes of
+capable of operating at IPv6 scale (billions of realms, exabytes of
 content). Git becomes an export format; the vault becomes the source of
 truth.</p>
+<hr />
+<h2 id="terminology">Terminology</h2>
+<p><strong>Realm</strong>: A node’s place in cyberspace - its vault,
+principal, capabilities, and objects. Each realm is sovereign:
+local-first, controlled by its operator. Realms federate by choice,
+sharing objects according to trust relationships.</p>
+<p><strong>Vault</strong>: The local content-addressed object store
+(<code>.vault/</code>). The vault IS the realm’s storage - all objects,
+indexes, audit trails, and configuration live here.</p>
+<p><strong>Principal</strong>: A node’s cryptographic identity (Ed25519
+public key). The principal identifies the realm to peers and signs its
+objects.</p>
+<p>At IPv6 scale, cyberspace consists of billions of realms, each
+occupying its own address space, each sovereign, each choosing what to
+share and with whom.</p>
 <hr />
 <h2 id="motivation">Motivation</h2>
 <p>Git served as an excellent prototype substrate: - Content-addressed
@@ -374,13 +389,13 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb8-1"><a href="#c
 <span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_audit_time <span class="kw">ON</span> <span class="kw">audit</span>(<span class="dt">timestamp</span>);</span></code></pre></div>
 <hr />
 <h2 id="discovery-and-routing">Discovery and Routing</h2>
-<h3 id="node-identity">Node Identity</h3>
-<p>Each node has a principal (Ed25519 public key). This IS its
+<h3 id="realm-identity">Realm Identity</h3>
+<p>Each realm has a principal (Ed25519 public key). This IS its
 identity:</p>
 <div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(node-identity</span>
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(realm-identity</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (principal <span class="st">&quot;ed25519:a1b2c3...&quot;</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (addresses                          <span class="co">; Where to reach this principal</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (addresses                          <span class="co">; Where to reach this realm</span></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    (ipv6 <span class="st">&quot;2001:db8::1&quot;</span> port: <span class="dv">7777</span>)</span>
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    (ipv4 <span class="st">&quot;192.0.2.1&quot;</span> port: <span class="dv">7777</span>)     <span class="co">; Legacy</span></span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    (onion <span class="st">&quot;xxxx.onion&quot;</span> port: <span class="dv">7777</span>))  <span class="co">; Tor</span></span>
@@ -394,16 +409,16 @@ class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a h
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  (<span class="st">&quot;ed25519:official1...&quot;</span> <span class="st">&quot;bootstrap.cyberspace.org&quot;</span>)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="st">&quot;ed25519:official2...&quot;</span> <span class="st">&quot;bootstrap2.cyberspace.org&quot;</span>))</span></code></pre></div>
 <p><strong>Gossip Protocol:</strong></p>
-<pre><code>1. Node joins, contacts bootstrap peer
+<pre><code>1. Realm joins, contacts bootstrap peer
 2. Receives partial peer list (random subset)
 3. Contacts those peers, exchanges lists
-4. Epidemic spread: O(log n) rounds to reach all nodes
+4. Epidemic spread: O(log n) rounds to reach all realms
 5. Periodic refresh (every 5 min on Starlink-friendly schedule)</code></pre>
 <p><strong>Distributed Hash Table (Future):</strong></p>
 <pre><code>Kademlia-style routing:
   - XOR distance metric on principal hashes
   - O(log n) lookups
-  - Nodes responsible for nearby hash ranges
+  - Realms responsible for nearby hash ranges
   - Natural load balancing</code></pre>
 <h3 id="content-discovery">Content Discovery</h3>
 <div class="sourceCode" id="cb13"><pre
@@ -525,11 +540,11 @@ O(log n) round trips to find diff.</code></pre>
     │   EDGES   │             │   EDGES    │             │   EDGES    │
     └───────────┘             └────────────┘             └────────────┘
 
-Coordinators: Rare, high-capability, run consensus
-Full nodes: Common, replicate everything, serve content
-Witnesses: Abundant, verify and store, passive sync
-Archivers: Cold storage, batch sync
-Edges: Read-only, intermittent, mobile</code></pre>
+Coordinators: Rare, high-capability realms, run consensus
+Full: Common realms, replicate everything, serve content
+Witnesses: Abundant realms, verify and store, passive sync
+Archivers: Cold storage realms, batch sync
+Edges: Read-only realms, intermittent, mobile</code></pre>
 <h3 id="partition-tolerance">Partition Tolerance</h3>
 <pre><code>Network splits → clusters diverge → clusters converge on reconnect
 

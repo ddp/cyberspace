@@ -13,6 +13,20 @@ This RFC defines functional roles for nodes in a Library of Cyberspace confedera
 
 ---
 
+## Terminology
+
+**Realm**: A node's place in cyberspace. A realm encompasses:
+- The node's **vault** (local content-addressed object store)
+- The node's **principal** (Ed25519 identity)
+- The node's **capabilities** (hardware, network, security)
+- The node's **objects** (what it stores and serves)
+
+A realm is local-first and sovereign. The node controls what to share, who to trust, what to replicate. When nodes federate, their realms overlap - objects flow between them according to trust relationships.
+
+The hardware manifest stored at `.vault/node-hardware` declares what kind of place this realm occupies in cyberspace.
+
+---
+
 ## Motivation
 
 RFC-010 (Federation Protocol) defines **trust relationships** between peers (publisher, subscriber, peer). However, it does not address **functional capabilities** - what operations each node can actually perform based on its hardware and network constraints.
@@ -289,11 +303,14 @@ Per RFC-016, the system is optimized for satellite links:
 
 ### Persistence
 
-Role configuration stored in:
+Role configuration stored in the realm:
 ```
-~/.cyberspace/node-role      ; User override
-.vault/node-role             ; Repository-specific
+~/.cyberspace/node-role      ; User override (global)
+.vault/node-role             ; Realm-specific role
+.vault/node-hardware         ; Hardware manifest (auto-refreshed)
 ```
+
+The hardware manifest is automatically updated on REPL startup, declaring the realm's capabilities to federated peers.
 
 ### Audit Trail
 

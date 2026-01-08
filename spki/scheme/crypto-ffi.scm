@@ -23,6 +23,19 @@
    crypto-sign-publickeybytes
    crypto-sign-secretkeybytes
    crypto-sign-bytes
+   ;; Keystore crypto (RFC-041)
+   random-bytes
+   argon2id-hash
+   secretbox-encrypt
+   secretbox-decrypt
+   secretbox-keybytes
+   secretbox-noncebytes
+   memzero!
+   ;; X25519 key exchange (RFC-039 network encryption)
+   x25519-keypair
+   x25519-scalarmult
+   x25519-publickeybytes
+   x25519-secretkeybytes
    ;; Shamir secret sharing
    shamir-split
    shamir-reconstruct
@@ -43,7 +56,7 @@
           (chicken blob)
           (chicken memory representation)
           (chicken bitwise)
-          (chicken random)
+          (prefix (chicken random) chicken:)
           srfi-1   ; list utilities (take)
           srfi-4)
 
@@ -162,6 +175,146 @@
                       unsigned-integer)  ; data length
        hash data-bytes (blob-size data-bytes))
       hash))
+
+  ;;; ============================================================================
+  ;;; Keystore Crypto (RFC-041)
+  ;;; ============================================================================
+
+  ;; Constants for secretbox (XSalsa20-Poly1305)
+  (define secretbox-keybytes 32)
+  (define secretbox-noncebytes 24)
+  (define secretbox-macbytes 16)
+
+  ;; Constants for X25519
+  (define x25519-publickeybytes 32)
+  (define x25519-secretkeybytes 32)
+
+  ;; Constants for Argon2id
+  (define argon2id-opslimit-moderate 3)
+  (define argon2id-memlimit-moderate 268435456)  ; 256 MB
+
+  ;; Generate random bytes
+  ;; @param n: number of bytes
+  ;; @return: blob of n random bytes
+  (define (random-bytes n)
+    (let ((buf (make-blob n)))
+      ((foreign-lambda void "randombytes_buf"
+                      scheme-pointer
+                      unsigned-integer)
+       buf n)
+      buf))
+
+  ;; Zero memory (for sensitive data)
+  ;; @param buf: blob to zero
+  (define (memzero! buf)
+    ((foreign-lambda void "sodium_memzero"
+                    scheme-pointer
+                    unsigned-integer)
+     buf (blob-size buf)))
+
+  ;; Argon2id password hash
+  ;; @param password: password string or blob
+  ;; @param salt: 16-byte salt blob
+  ;; @return: 32-byte derived key blob
+  (define (argon2id-hash password salt)
+    (let* ((pass-bytes (if (string? password)
+                           (string->blob password)
+                           password))
+           (key (make-blob secretbox-keybytes)))
+      (let ((result
+             ((foreign-lambda int "crypto_pwhash"
+                             scheme-pointer     ; out (key)
+                             unsigned-integer   ; outlen
+                             scheme-pointer     ; passwd
+                             unsigned-integer   ; passwdlen
+                             scheme-pointer     ; salt
+                             unsigned-integer   ; opslimit
+                             unsigned-integer   ; memlimit
+                             int)               ; alg
+              key secretbox-keybytes
+              pass-bytes (blob-size pass-bytes)
+              salt
+              argon2id-opslimit-moderate
+              argon2id-memlimit-moderate
+              2)))  ; crypto_pwhash_ALG_ARGON2ID13
+        (if (= result 0)
+            key
+            (error "argon2id-hash failed")))))
+
+  ;; Secretbox encrypt (XSalsa20-Poly1305)
+  ;; @param plaintext: data to encrypt (blob)
+  ;; @param nonce: 24-byte nonce (blob)
+  ;; @param key: 32-byte key (blob)
+  ;; @return: ciphertext blob (plaintext-len + 16 bytes MAC)
+  (define (secretbox-encrypt plaintext nonce key)
+    (let* ((plen (blob-size plaintext))
+           (ciphertext (make-blob (+ plen secretbox-macbytes))))
+      (let ((result
+             ((foreign-lambda int "crypto_secretbox_easy"
+                             scheme-pointer     ; ciphertext
+                             scheme-pointer     ; plaintext
+                             unsigned-integer   ; plaintext length
+                             scheme-pointer     ; nonce
+                             scheme-pointer)    ; key
+              ciphertext plaintext plen nonce key)))
+        (if (= result 0)
+            ciphertext
+            (error "secretbox-encrypt failed")))))
+
+  ;; Secretbox decrypt (XSalsa20-Poly1305)
+  ;; @param ciphertext: encrypted data (blob)
+  ;; @param nonce: 24-byte nonce (blob)
+  ;; @param key: 32-byte key (blob)
+  ;; @return: plaintext blob or #f if authentication failed
+  (define (secretbox-decrypt ciphertext nonce key)
+    (let* ((clen (blob-size ciphertext))
+           (plaintext (make-blob (- clen secretbox-macbytes))))
+      (let ((result
+             ((foreign-lambda int "crypto_secretbox_open_easy"
+                             scheme-pointer     ; plaintext
+                             scheme-pointer     ; ciphertext
+                             unsigned-integer   ; ciphertext length
+                             scheme-pointer     ; nonce
+                             scheme-pointer)    ; key
+              plaintext ciphertext clen nonce key)))
+        (if (= result 0)
+            plaintext
+            #f))))  ; Authentication failed
+
+  ;;; ============================================================================
+  ;;; X25519 Key Exchange (RFC-039 Network Encryption)
+  ;;; ============================================================================
+
+  ;; Generate X25519 keypair
+  ;; @return: list of (public-key secret-key) as blobs
+  (define (x25519-keypair)
+    (let ((public-key (make-blob x25519-publickeybytes))
+          (secret-key (make-blob x25519-secretkeybytes)))
+      ((foreign-lambda int "crypto_box_keypair"
+                      scheme-pointer
+                      scheme-pointer)
+       public-key secret-key)
+      (list public-key secret-key)))
+
+  ;; X25519 scalar multiplication (compute shared secret)
+  ;; @param secret-key: our secret key (32 bytes)
+  ;; @param public-key: their public key (32 bytes)
+  ;; @return: 32-byte shared secret blob
+  (define (x25519-scalarmult secret-key public-key)
+    (let ((shared (make-blob 32)))
+      (let ((result
+             ((foreign-lambda int "crypto_scalarmult"
+                             scheme-pointer     ; shared secret
+                             scheme-pointer     ; secret key
+                             scheme-pointer)    ; public key
+              shared secret-key public-key)))
+        (if (= result 0)
+            shared
+            (error "x25519-scalarmult failed")))))
+
+  ;;; ============================================================================
+  ;;; Helper Functions
+  ;;; ============================================================================
 
   ;; Helper: convert string to u8vector
   (define (string->u8vector str)
@@ -292,7 +445,7 @@
 
           (do ((i 1 (+ i 1)))
               ((= i threshold))
-            (vector-set! coeffs i (pseudo-random-integer 256)))
+            (vector-set! coeffs i (chicken:pseudo-random-integer 256)))
 
           ;; Evaluate this polynomial at each share's x-value
           (do ((share-num 1 (+ share-num 1)))

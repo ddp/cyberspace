@@ -44,6 +44,7 @@
    soup-releases
    soup-du
    soup-find
+   soup-query
    soup-inspect
    complete
 
@@ -54,6 +55,28 @@
    node-announce
    *node-roles*
    *node-operations*
+   probe-system-capabilities
+   recommend-role
+
+   ;; Keystore (RFC-041)
+   keystore-create
+   keystore-unlock
+   keystore-lock
+   keystore-status
+   keystore-change-passphrase
+   keystore-export-public
+   keystore-path
+   keystore-exists?
+
+   ;; Address parsing (RFC-041)
+   parse-address
+   address?
+   address-principal
+   address-role
+   address-capabilities
+   address-path
+   address->string
+   make-address
 
    ;; Configuration
    vault-init
@@ -141,6 +164,189 @@
         (when principal
           (audit-init signing-key: signing-key
                      motivation: "Vault initialized with cryptographic audit trail")))))
+
+  ;;; ============================================================================
+  ;;; Keystore (RFC-041)
+  ;;; ============================================================================
+  ;;;
+  ;;; The keystore is the inner vault - where cryptographic identity lives.
+  ;;; Private keys are encrypted at rest with Argon2id + XSalsa20-Poly1305.
+
+  ;; Keystore state (unlocked key in memory, zeroed on lock)
+  (define *keystore-unlocked* #f)      ; Ed25519 secret key when unlocked
+  (define *keystore-public* #f)        ; Ed25519 public key (always available after create)
+
+  (define (keystore-path)
+    "Return path to keystore directory"
+    ".vault/keystore")
+
+  (define (keystore-key-path)
+    ".vault/keystore/realm.key")
+
+  (define (keystore-pub-path)
+    ".vault/keystore/realm.pub")
+
+  (define (keystore-exists?)
+    "Check if keystore has been created"
+    (file-exists? (keystore-key-path)))
+
+  (define (keystore-create passphrase)
+    "Create new realm identity with passphrase protection"
+    (when (keystore-exists?)
+      (error "Keystore already exists. Use keystore-change-passphrase to update."))
+
+    ;; Create keystore directory
+    (let ((ks-dir (keystore-path)))
+      (unless (directory-exists? ks-dir)
+        (create-directory ks-dir #t)))
+
+    ;; Generate Ed25519 keypair
+    (let* ((keypair (ed25519-keypair))
+           (public-key (car keypair))
+           (secret-key (cadr keypair))
+           ;; Generate salt for Argon2id
+           (salt (random-bytes 16))
+           ;; Derive encryption key from passphrase
+           (enc-key (argon2id-hash passphrase salt))
+           ;; Encrypt secret key
+           (nonce (random-bytes secretbox-noncebytes))
+           (ciphertext (secretbox-encrypt secret-key nonce enc-key)))
+
+      ;; Write encrypted private key
+      (with-output-to-file (keystore-key-path)
+        (lambda ()
+          (write `(realm-private-key
+                   (version 1)
+                   (algorithm "ed25519")
+                   (kdf "argon2id")
+                   (salt ,salt)
+                   (nonce ,nonce)
+                   (ciphertext ,ciphertext)))
+          (newline)))
+
+      ;; Write public key (plaintext)
+      (with-output-to-file (keystore-pub-path)
+        (lambda ()
+          (write `(realm-public-key
+                   (version 1)
+                   (algorithm "ed25519")
+                   (public-key ,public-key)
+                   (created ,(current-seconds))))
+          (newline)))
+
+      ;; Zero the encryption key
+      (memzero! enc-key)
+
+      ;; Store in memory (unlocked after creation)
+      (set! *keystore-public* public-key)
+      (set! *keystore-unlocked* secret-key)
+
+      ;; Update vault config
+      (vault-config 'signing-key secret-key)
+
+      ;; Return principal
+      (print "Realm created: ed25519:" (blob->hex public-key))
+      public-key))
+
+  (define (keystore-unlock passphrase)
+    "Unlock keystore with passphrase"
+    (unless (keystore-exists?)
+      (error "No keystore found. Use keystore-create first."))
+
+    (if *keystore-unlocked*
+        (begin
+          (print "Keystore already unlocked.")
+          *keystore-public*)
+        ;; Read encrypted key file
+        (let* ((key-data (with-input-from-file (keystore-key-path) read))
+               (salt (cadr (assq 'salt (cdr key-data))))
+               (nonce (cadr (assq 'nonce (cdr key-data))))
+               (ciphertext (cadr (assq 'ciphertext (cdr key-data))))
+               ;; Derive decryption key
+               (dec-key (argon2id-hash passphrase salt))
+               ;; Decrypt
+               (secret-key (secretbox-decrypt ciphertext nonce dec-key)))
+
+          ;; Zero the decryption key
+          (memzero! dec-key)
+
+          (if secret-key
+              (begin
+                ;; Load public key
+                (let* ((pub-data (with-input-from-file (keystore-pub-path) read))
+                       (public-key (cadr (assq 'public-key (cdr pub-data)))))
+                  (set! *keystore-public* public-key)
+                  (set! *keystore-unlocked* secret-key)
+                  (vault-config 'signing-key secret-key)
+                  (print "Keystore unlocked: ed25519:" (blob->hex public-key))
+                  public-key))
+              (begin
+                (print "ERROR: Wrong passphrase")
+                #f)))))
+
+  (define (keystore-lock)
+    "Lock keystore, zero secret key from memory"
+    (when *keystore-unlocked*
+      (memzero! *keystore-unlocked*)
+      (set! *keystore-unlocked* #f)
+      (vault-config 'signing-key #f)
+      (print "Keystore locked."))
+    #t)
+
+  (define (keystore-status)
+    "Return keystore status"
+    (cond
+     ((not (keystore-exists?))
+      '(keystore (status none)))
+     (*keystore-unlocked*
+      `(keystore
+        (status unlocked)
+        (principal ,(string-append "ed25519:" (blob->hex *keystore-public*)))))
+     (else
+      ;; Read public key from file
+      (let* ((pub-data (with-input-from-file (keystore-pub-path) read))
+             (public-key (cadr (assq 'public-key (cdr pub-data)))))
+        `(keystore
+          (status locked)
+          (principal ,(string-append "ed25519:" (blob->hex public-key))))))))
+
+  (define (keystore-change-passphrase old-passphrase new-passphrase)
+    "Change keystore passphrase"
+    ;; First unlock with old passphrase
+    (let ((secret-key (or *keystore-unlocked*
+                          (keystore-unlock old-passphrase))))
+      (unless secret-key
+        (error "Wrong passphrase"))
+
+      ;; Generate new salt and encrypt with new passphrase
+      (let* ((salt (random-bytes 16))
+             (enc-key (argon2id-hash new-passphrase salt))
+             (nonce (random-bytes secretbox-noncebytes))
+             (ciphertext (secretbox-encrypt secret-key nonce enc-key)))
+
+        ;; Write new encrypted key
+        (with-output-to-file (keystore-key-path)
+          (lambda ()
+            (write `(realm-private-key
+                     (version 1)
+                     (algorithm "ed25519")
+                     (kdf "argon2id")
+                     (salt ,salt)
+                     (nonce ,nonce)
+                     (ciphertext ,ciphertext)))
+            (newline)))
+
+        ;; Zero encryption key
+        (memzero! enc-key)
+
+        (print "Passphrase changed.")
+        #t)))
+
+  (define (keystore-export-public)
+    "Export public key (safe to share)"
+    (if (keystore-exists?)
+        (with-input-from-file (keystore-pub-path) read)
+        (error "No keystore found")))
 
   ;;; ============================================================================
   ;;; Utility Functions (must be defined before use)
@@ -339,9 +545,10 @@
     (signer release-signer)
     (signature release-signature))
 
-  (define (seal-release version #!key message migrate-from)
+  (define (seal-release version #!key name message migrate-from)
     "Create a cryptographically sealed release
      - version: semantic version (e.g., '1.0.0')
+     - name: release codename (e.g., 'genesis')
      - message: release notes
      - migrate-from: previous version for migration tracking"
 
@@ -354,26 +561,32 @@
     (let ((hash (with-input-from-pipe "git rev-parse HEAD" read-line))
           (timestamp (current-seconds)))
 
-      ;; Create annotated tag
-      (let ((tag-message (or message (sprintf "Release ~a" version))))
+      ;; Create annotated tag with name if provided
+      (let ((tag-message (or message
+                             (if name
+                                 (sprintf "Release ~a (~a)" version name)
+                                 (sprintf "Release ~a" version)))))
         (run-command "git" "tag" "-a" version "-m" tag-message))
 
       ;; Sign with SPKI if signing key configured
       (let ((signing-key (vault-config 'signing-key)))
         (when signing-key
-          (seal-sign-release version hash signing-key)))
+          (seal-sign-release version name hash signing-key)))
 
       ;; Create migration marker if migrating from previous version
       (when migrate-from
         (create-migration-marker migrate-from version))
 
-      (print "Sealed release: " version " at " hash)))
+      (if name
+          (print "Sealed release: " version " (" name ") at " hash)
+          (print "Sealed release: " version " at " hash))))
 
-  (define (seal-sign-release version hash signing-key)
+  (define (seal-sign-release version name hash signing-key)
     "Sign a release with SPKI certificate"
     ;; Create release manifest
-    (let ((manifest (sprintf "(release ~s ~s ~s)"
-                            version hash (current-seconds))))
+    (let ((manifest (if name
+                        (sprintf "(release ~s ~s ~s ~s)" version name hash (current-seconds))
+                        (sprintf "(release ~s ~s ~s)" version hash (current-seconds)))))
       ;; Sign manifest (signing-key is already a blob)
       (let* ((sig-hash (sha512-hash manifest))
              (signature (ed25519-sign signing-key sig-hash)))
@@ -385,6 +598,7 @@
             (lambda ()
               (write `(signature
                        (version ,version)
+                       ,@(if name `((name ,name)) '())
                        (hash ,hash)
                        (manifest ,manifest)
                        (signature ,signature)))))
@@ -717,6 +931,137 @@
 
           (print (box-line "" width))
           (print (box-bottom width))))))
+
+  ;;; ============================================================================
+  ;;; Address Parsing (RFC-041)
+  ;;; ============================================================================
+  ;;;
+  ;;; Cyberspace object addresses:
+  ;;;   @principal:/path                    - basic addressing
+  ;;;   @principal+role:/path               - with role context
+  ;;;   @principal+{cap1,cap2}:/path        - with explicit capabilities
+  ;;;   @principal+role{cap1,cap2}:/path    - role refined to specific caps
+  ;;;
+  ;;; Grammar:
+  ;;;   address     = "@" principal [ "+" context ] ":" path
+  ;;;   principal   = "ed25519:" hexstring | hexstring
+  ;;;   context     = role [ "{" capabilities "}" ] | "{" capabilities "}"
+  ;;;   role        = identifier
+  ;;;   capabilities = capability { "," capability }
+  ;;;   capability  = identifier [ "(" arguments ")" ]
+  ;;;   path        = "/" segment { "/" segment }
+
+  ;; Address record type
+  (define (make-address principal role capabilities path)
+    "Create an address record"
+    (list 'address principal role capabilities path))
+
+  (define (address? obj)
+    "Check if object is an address"
+    (and (pair? obj) (eq? (car obj) 'address)))
+
+  (define (address-principal addr)
+    "Get principal from address"
+    (if (address? addr) (list-ref addr 1) #f))
+
+  (define (address-role addr)
+    "Get role from address (may be #f)"
+    (if (address? addr) (list-ref addr 2) #f))
+
+  (define (address-capabilities addr)
+    "Get capabilities list from address (may be empty)"
+    (if (address? addr) (list-ref addr 3) '()))
+
+  (define (address-path addr)
+    "Get path from address"
+    (if (address? addr) (list-ref addr 4) #f))
+
+  (define (address->string addr)
+    "Convert address back to string form"
+    (if (not (address? addr))
+        (error "Not an address" addr)
+        (let ((principal (address-principal addr))
+              (role (address-role addr))
+              (caps (address-capabilities addr))
+              (path (address-path addr)))
+          (string-append
+           "@" principal
+           (cond
+            ;; Role with caps: +role{caps}
+            ((and role (not (null? caps)))
+             (string-append "+" role "{" (string-intersperse caps ",") "}"))
+            ;; Role only: +role
+            (role
+             (string-append "+" role))
+            ;; Caps only: +{caps}
+            ((not (null? caps))
+             (string-append "+{" (string-intersperse caps ",") "}"))
+            ;; Neither
+            (else ""))
+           ":" path))))
+
+  (define (parse-capabilities str)
+    "Parse capability list from string like 'read,write,delegate(read)'"
+    (if (or (not str) (string=? str ""))
+        '()
+        ;; Simple split on comma - handles most cases
+        ;; TODO: proper parsing for nested parens in delegate(...)
+        (map string-trim-both (string-split str ","))))
+
+  (define (parse-address str)
+    "Parse a cyberspace address string into components
+     Returns: (address principal role capabilities path) or #f on failure
+
+     Examples:
+       @ed25519:7f3a...:/releases/1.0.3
+       @7f3a...+curator:/collections
+       @7f3a...+{read,write}:/objects
+       @7f3a...+curator{read}:/collections"
+    (if (not (string-prefix? "@" str))
+        #f
+        (let* ((without-at (substring str 1))
+               ;; Find the colon that separates principal+context from path
+               ;; Must find last colon after any {} group
+               (colon-pos (let loop ((i 0) (depth 0) (last-colon #f))
+                            (if (>= i (string-length without-at))
+                                last-colon
+                                (let ((c (string-ref without-at i)))
+                                  (cond
+                                   ((char=? c #\{) (loop (+ i 1) (+ depth 1) last-colon))
+                                   ((char=? c #\}) (loop (+ i 1) (- depth 1) last-colon))
+                                   ((and (char=? c #\:) (= depth 0))
+                                    (loop (+ i 1) depth i))
+                                   (else (loop (+ i 1) depth last-colon))))))))
+          (if (not colon-pos)
+              #f
+              (let* ((before-colon (substring without-at 0 colon-pos))
+                     (path (substring without-at (+ colon-pos 1)))
+                     ;; Check for + separator
+                     (plus-pos (string-index before-colon #\+)))
+                (if (not plus-pos)
+                    ;; Simple case: @principal:/path
+                    (make-address before-colon #f '() path)
+                    ;; Has context: @principal+context:/path
+                    (let* ((principal (substring before-colon 0 plus-pos))
+                           (context (substring before-colon (+ plus-pos 1)))
+                           ;; Check for {caps}
+                           (brace-pos (string-index context #\{)))
+                      (if (not brace-pos)
+                          ;; Role only: +role
+                          (make-address principal context '() path)
+                          ;; Has braces
+                          (let* ((role-part (if (= brace-pos 0)
+                                               #f  ; +{caps} with no role
+                                               (substring context 0 brace-pos)))
+                                 ;; Extract contents between { and }
+                                 (caps-str (let ((end (string-index context #\})))
+                                            (if end
+                                                (substring context (+ brace-pos 1) end)
+                                                "")))
+                                 (caps (parse-capabilities caps-str)))
+                            (make-address principal role-part caps path))))))))))
+
+  ;; Note: string-index from srfi-13 used for char lookup
 
   ;;; ============================================================================
   ;;; Directory / Object Soup - NewtonOS-style persistent object store
@@ -1395,6 +1740,123 @@ Object Types:
          results)
         (print "")
         results)))
+
+  ;;; ============================================================================
+  ;;; soup-query - S-expression pattern matching (Newton-style)
+  ;;; ============================================================================
+  ;;;
+  ;;; Query syntax:
+  ;;;   (soup-query '(type archives))           - by type
+  ;;;   (soup-query '(name "*.tar.gz"))         - glob pattern
+  ;;;   (soup-query '(name #/regex/))           - regex pattern
+  ;;;   (soup-query '(size > 1000000))          - size comparison
+  ;;;   (soup-query '(signed))                  - signed objects
+  ;;;   (soup-query '(not (signed)))            - unsigned objects
+  ;;;   (soup-query '(and (type releases)       - compound query
+  ;;;                     (size > 1000)))
+  ;;;   (soup-query '(or (name "*.archive")
+  ;;;                    (name "*.tar.gz")))
+  ;;;   (soup-query '(has-field principal))     - objects with field
+  ;;;
+  ;;; Returns list of matching objects.
+
+  (define (soup-query query #!optional (silent #f))
+    "Query soup using S-expression patterns (Newton-style)
+
+     Patterns:
+       (type TYPE)              - match object type
+       (name PATTERN)           - glob or regex on name
+       (size OP VALUE)          - size comparison (> < = >= <=)
+       (signed)                 - has signature
+       (has-field FIELD)        - object has field in info
+       (and PATTERN ...)        - all patterns must match
+       (or PATTERN ...)         - any pattern must match
+       (not PATTERN)            - pattern must not match
+
+     Examples:
+       (soup-query '(type archives))
+       (soup-query '(and (type releases) (signed)))
+       (soup-query '(or (name \"*.archive\") (name \"*.tar.gz\")))
+       (soup-query '(size > 1000000))"
+
+    (define (eval-query pattern obj)
+      "Evaluate query pattern against object"
+      (let ((type (car obj))
+            (name (cadr obj))
+            (size (caddr obj))
+            (info (cadddr obj)))
+        (cond
+         ;; Type match
+         ((and (pair? pattern) (eq? (car pattern) 'type))
+          (eq? type (cadr pattern)))
+
+         ;; Name pattern (glob or regex)
+         ((and (pair? pattern) (eq? (car pattern) 'name))
+          (match-pattern? name (cadr pattern)))
+
+         ;; Size comparison
+         ((and (pair? pattern) (eq? (car pattern) 'size))
+          (let ((op (cadr pattern))
+                (val (caddr pattern)))
+            (case op
+              ((>) (> size val))
+              ((<) (< size val))
+              ((=) (= size val))
+              ((>=) (>= size val))
+              ((<=) (<= size val))
+              (else #f))))
+
+         ;; Signed check
+         ((and (pair? pattern) (eq? (car pattern) 'signed))
+          (not (member "unsigned" info)))
+
+         ;; Unsigned check (sugar)
+         ((and (pair? pattern) (eq? (car pattern) 'unsigned))
+          (member "unsigned" info))
+
+         ;; Has field check
+         ((and (pair? pattern) (eq? (car pattern) 'has-field))
+          (member (symbol->string (cadr pattern)) info))
+
+         ;; AND - all must match
+         ((and (pair? pattern) (eq? (car pattern) 'and))
+          (every (lambda (p) (eval-query p obj)) (cdr pattern)))
+
+         ;; OR - any must match
+         ((and (pair? pattern) (eq? (car pattern) 'or))
+          (any (lambda (p) (eval-query p obj)) (cdr pattern)))
+
+         ;; NOT - must not match
+         ((and (pair? pattern) (eq? (car pattern) 'not))
+          (not (eval-query (cadr pattern) obj)))
+
+         ;; Type shorthand - bare symbol matches type
+         ((symbol? pattern)
+          (eq? type pattern))
+
+         ;; String shorthand - matches name
+         ((string? pattern)
+          (match-pattern? name pattern))
+
+         ;; Unknown pattern
+         (else
+          (print "Warning: unknown query pattern: " pattern)
+          #f))))
+
+    (let* ((all-objects (soup-collect-objects))
+           (results (filter (lambda (obj) (eval-query query obj)) all-objects)))
+
+      (unless silent
+        (print "")
+        (printf "Query: ~s~%" query)
+        (printf "Found ~a object~a:~%" (length results) (if (= 1 (length results)) "" "s"))
+        (for-each
+         (lambda (obj)
+           (printf "  ~a/~a (~a)~%" (car obj) (cadr obj) (format-size (caddr obj))))
+         results)
+        (print ""))
+
+      results))
 
   (define (gzip-file? path)
     "Check if file has gzip magic bytes (1f 8b)"

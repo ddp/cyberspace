@@ -9,7 +9,19 @@
 
 ## Abstract
 
-This RFC defines the architectural changes required to scale Cyberspace from a git-backed prototype to a native distributed system capable of operating at IPv6 scale (billions of nodes, exabytes of content). Git becomes an export format; the vault becomes the source of truth.
+This RFC defines the architectural changes required to scale Cyberspace from a git-backed prototype to a native distributed system capable of operating at IPv6 scale (billions of realms, exabytes of content). Git becomes an export format; the vault becomes the source of truth.
+
+---
+
+## Terminology
+
+**Realm**: A node's place in cyberspace - its vault, principal, capabilities, and objects. Each realm is sovereign: local-first, controlled by its operator. Realms federate by choice, sharing objects according to trust relationships.
+
+**Vault**: The local content-addressed object store (`.vault/`). The vault IS the realm's storage - all objects, catalogs, audit trails, and configuration live here.
+
+**Principal**: A node's cryptographic identity (Ed25519 public key). The principal identifies the realm to peers and signs its objects.
+
+At IPv6 scale, cyberspace consists of billions of realms, each occupying its own address space, each sovereign, each choosing what to share and with whom.
 
 ---
 
@@ -51,14 +63,18 @@ The internet has 2^128 addresses. Cyberspace should use them.
 .vault/
   objects/
     sha512-a1b2c3.../    # First 8 chars as directory
-      a1b2c3d4e5f6...    # Full hash as filename
-  index/
-    catalog.db           # SQLite: hash → metadata
-    bloom.bin            # Bloom filter for existence
+      a1b2c3d4e5f6...    # Full hash as filename (S-expression)
+  catalog/
+    manifest.sexp        # Vault catalog object
+    bloom.sexp           # Bloom filter object
+    indices/             # Secondary index objects
+      by-signer.sexp
+      by-type.sexp
   chunks/
     sha512-xxxx/         # Chunked large objects
   audit/
-    chain.db             # Indexed audit trail
+    head.sexp            # Current audit chain head
+    chain/               # Audit entries (hash-addressed)
 ```
 
 ### Object Format
@@ -109,38 +125,54 @@ SHA-512 is:
 
 ---
 
-## Index and Query
+## Catalog and Query
 
-### Catalog Index (SQLite)
+The soup IS the catalog. No SQL. Objects are S-expressions, queries are pattern matching.
 
-```sql
-CREATE TABLE objects (
-    hash        TEXT PRIMARY KEY,
-    type        TEXT NOT NULL,
-    size        INTEGER,
-    timestamp   INTEGER,
-    signer      TEXT,
-    parent      TEXT,              -- For trees/manifests
-    compressed  INTEGER DEFAULT 0
-);
+### The Soup Query Model
 
-CREATE INDEX idx_type ON objects(type);
-CREATE INDEX idx_signer ON objects(signer);
-CREATE INDEX idx_timestamp ON objects(timestamp);
+```scheme
+;; Find objects by pattern
+(soup-query
+  '(cyberspace-object
+    (type blob)
+    (signer "ed25519:alice...")
+    ?rest))                        ; Match any object signed by Alice
 
-CREATE TABLE chunks (
-    object_hash TEXT,
-    chunk_hash  TEXT,
-    sequence    INTEGER,
-    PRIMARY KEY (object_hash, sequence)
-);
+;; Find by hash (direct lookup)
+(soup-fetch "sha512:a1b2c3...")    ; O(1) content-addressed
 
-CREATE TABLE tags (
-    hash    TEXT,
-    tag     TEXT,
-    PRIMARY KEY (hash, tag)
-);
-CREATE INDEX idx_tag ON tags(tag);
+;; Find by type
+(soup-query '(cyberspace-object (type cert) ?rest))
+
+;; Find by time range
+(soup-query-range
+  type: 'audit
+  from: 1736000000
+  to:   1736100000)
+
+;; Cursor-based iteration for large result sets
+(soup-cursor
+  '(cyberspace-object (type ?) ?rest)
+  batch: 100)
+```
+
+### Object Catalog
+
+The catalog is itself an object in the soup - a manifest of what the vault contains:
+
+```scheme
+(vault-catalog
+  (version 1)
+  (realm "ed25519:principal...")
+  (object-count 150000)
+  (types
+    (blob 100000)
+    (tree 30000)
+    (cert 15000)
+    (audit 5000))
+  (bloom-filter #${...})           ; Fast existence check
+  (updated 1736400000))
 ```
 
 ### Bloom Filter
@@ -148,45 +180,77 @@ CREATE INDEX idx_tag ON tags(tag);
 Fast existence check before network round-trip:
 
 ```scheme
-(define *bloom-filter*
-  (make-bloom-filter
-    capacity: 10000000      ; 10M objects
-    false-positive: 0.001)) ; 0.1% FP rate
+(define (soup-maybe-contains? hash)
+  "Check bloom filter - false means definitely not, true means maybe"
+  (let ((catalog (soup-fetch-catalog)))
+    (bloom-test (catalog-bloom catalog) hash)))
 
-(bloom-add! *bloom-filter* hash)
-(bloom-contains? *bloom-filter* hash)  ; Maybe or definitely-not
+;; Bloom parameters
+(bloom-filter
+  (capacity 10000000)              ; 10M objects
+  (false-positive 0.001)           ; 0.1% FP rate
+  (bits #${...}))
 ```
 
-### Audit Trail Index
+### Audit Trail
 
-```sql
-CREATE TABLE audit (
-    id          TEXT PRIMARY KEY,
-    sequence    INTEGER UNIQUE,
-    timestamp   INTEGER,
-    actor       TEXT,
-    action      TEXT,
-    parent_id   TEXT,
-    hash        TEXT
-);
+The audit trail is a hash-chain of objects in the soup:
 
-CREATE INDEX idx_audit_actor ON audit(actor);
-CREATE INDEX idx_audit_action ON audit(action);
-CREATE INDEX idx_audit_time ON audit(timestamp);
+```scheme
+(audit-entry
+  (sequence 12345)
+  (timestamp 1736300000)
+  (lamport 67890)
+  (actor "ed25519:subject...")
+  (action (read "sha512:object..."))
+  (previous "sha512:prev-entry...")  ; Chain link
+  (signature "ed25519:auditor..."))
+
+;; Query audit by walking the chain
+(define (audit-query actor from-seq)
+  "Walk audit chain, filter by actor"
+  (soup-chain-walk
+    start: (audit-head)
+    filter: (lambda (entry)
+              (equal? (entry-actor entry) actor))
+    from: from-seq))
 ```
+
+### Secondary Indices
+
+For queries that can't use content-addressing, the soup maintains lightweight indices as objects:
+
+```scheme
+(soup-index
+  (name "by-signer")
+  (key-type principal)
+  (entries
+    (("ed25519:alice..." ("sha512:obj1" "sha512:obj2" ...))
+     ("ed25519:bob..." ("sha512:obj3" "sha512:obj4" ...)))))
+
+(soup-index
+  (name "by-type")
+  (key-type symbol)
+  (entries
+    ((blob ("sha512:..." "sha512:..." ...))
+     (cert ("sha512:..." "sha512:..." ...))
+     (audit ("sha512:..." "sha512:..." ...)))))
+```
+
+Indices are rebuilt on demand, not authoritative - the soup is truth.
 
 ---
 
 ## Discovery and Routing
 
-### Node Identity
+### Realm Identity
 
-Each node has a principal (Ed25519 public key). This IS its identity:
+Each realm has a principal (Ed25519 public key). This IS its identity:
 
 ```scheme
-(node-identity
+(realm-identity
   (principal "ed25519:a1b2c3...")
-  (addresses                          ; Where to reach this principal
+  (addresses                          ; Where to reach this realm
     (ipv6 "2001:db8::1" port: 7777)
     (ipv4 "192.0.2.1" port: 7777)     ; Legacy
     (onion "xxxx.onion" port: 7777))  ; Tor
@@ -206,10 +270,10 @@ Each node has a principal (Ed25519 public key). This IS its identity:
 
 **Gossip Protocol:**
 ```
-1. Node joins, contacts bootstrap peer
+1. Realm joins, contacts bootstrap peer
 2. Receives partial peer list (random subset)
 3. Contacts those peers, exchanges lists
-4. Epidemic spread: O(log n) rounds to reach all nodes
+4. Epidemic spread: O(log n) rounds to reach all realms
 5. Periodic refresh (every 5 min on Starlink-friendly schedule)
 ```
 
@@ -218,7 +282,7 @@ Each node has a principal (Ed25519 public key). This IS its identity:
 Kademlia-style routing:
   - XOR distance metric on principal hashes
   - O(log n) lookups
-  - Nodes responsible for nearby hash ranges
+  - Realms responsible for nearby hash ranges
   - Natural load balancing
 ```
 
@@ -241,18 +305,65 @@ Kademlia-style routing:
 
 ## Transport Protocol
 
-### Wire Format
+### End-to-End Encryption
+
+All network traffic is encrypted. The OS and network are not trusted.
 
 ```scheme
 (cyberspace-message
   (version 1)
-  (type request|response|announce|gossip)
   (from "ed25519:sender...")
-  (to "ed25519:recipient...")        ; Or broadcast
+  (to "ed25519:recipient...")        ; Or broadcast key
+  (ephemeral "x25519:...")           ; One-time key (PFS)
+  (nonce #${24-bytes})               ; Random nonce
+  (ciphertext #${...})               ; NaCl box: X25519 + XSalsa20-Poly1305
+  (signature "ed25519:..."))         ; Sign the ciphertext
+```
+
+**Encryption scheme:** NaCl crypto_box (libsodium)
+- Key agreement: X25519 (Curve25519 ECDH)
+- Cipher: XSalsa20-Poly1305
+- Perfect forward secrecy: ephemeral keys per message
+
+**Decrypted payload:**
+
+```scheme
+(plaintext-payload
+  (type request|response|announce|gossip)
   (nonce 12345678)                   ; Replay protection
   (timestamp 1736300000)
-  (payload ...)
-  (signature "ed25519:..."))
+  (body ...))
+```
+
+**Broadcast messages** use a shared group key or are signed-only (announcements of public objects).
+
+### Wire Format (Encrypted)
+
+```scheme
+;; Sender encrypts
+(define (seal-message payload recipient-pubkey sender-keypair)
+  (let* ((ephemeral (x25519-keypair))
+         (shared (x25519-shared (ephemeral-secret ephemeral) recipient-pubkey))
+         (nonce (random-bytes 24))
+         (ciphertext (crypto-box payload nonce shared)))
+    `(cyberspace-message
+      (version 1)
+      (from ,(keypair-public sender-keypair))
+      (to ,recipient-pubkey)
+      (ephemeral ,(ephemeral-public ephemeral))
+      (nonce ,nonce)
+      (ciphertext ,ciphertext)
+      (signature ,(sign-message ciphertext sender-keypair)))))
+
+;; Recipient decrypts
+(define (open-message msg recipient-keypair)
+  (let* ((shared (x25519-shared (keypair-secret recipient-keypair)
+                                (message-ephemeral msg)))
+         (plaintext (crypto-box-open (message-ciphertext msg)
+                                     (message-nonce msg)
+                                     shared)))
+    (and (verify-signature msg (message-from msg))
+         plaintext)))
 ```
 
 ### Request Types
@@ -380,11 +491,11 @@ O(log n) round trips to find diff.
     │   EDGES   │             │   EDGES    │             │   EDGES    │
     └───────────┘             └────────────┘             └────────────┘
 
-Coordinators: Rare, high-capability, run consensus
-Full nodes: Common, replicate everything, serve content
-Witnesses: Abundant, verify and store, passive sync
-Archivers: Cold storage, batch sync
-Edges: Read-only, intermittent, mobile
+Coordinators: Rare, high-capability realms, run consensus
+Full: Common realms, replicate everything, serve content
+Witnesses: Abundant realms, verify and store, passive sync
+Archivers: Cold storage realms, batch sync
+Edges: Read-only realms, intermittent, mobile
 ```
 
 ### Partition Tolerance
@@ -473,7 +584,7 @@ Mitigations:
 
 ### Phase 1: Native Object Store
 - Implement `.vault/objects/` storage
-- SQLite catalog index
+- Soup catalog and query
 - Keep git for development workflow
 
 ### Phase 2: Local-First Sync

@@ -57,6 +57,7 @@ RFCS=(
   rfc-037-node-roles
   rfc-038-local-inference
   rfc-039-ipv6-scaling
+  rfc-040-security-architecture
 )
 
 # Extract title from markdown file
