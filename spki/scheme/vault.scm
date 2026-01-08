@@ -57,6 +57,16 @@
    probe-system-capabilities
    recommend-role
 
+   ;; Keystore (RFC-041)
+   keystore-create
+   keystore-unlock
+   keystore-lock
+   keystore-status
+   keystore-change-passphrase
+   keystore-export-public
+   keystore-path
+   keystore-exists?
+
    ;; Configuration
    vault-init
    vault-config)
@@ -143,6 +153,189 @@
         (when principal
           (audit-init signing-key: signing-key
                      motivation: "Vault initialized with cryptographic audit trail")))))
+
+  ;;; ============================================================================
+  ;;; Keystore (RFC-041)
+  ;;; ============================================================================
+  ;;;
+  ;;; The keystore is the inner vault - where cryptographic identity lives.
+  ;;; Private keys are encrypted at rest with Argon2id + XSalsa20-Poly1305.
+
+  ;; Keystore state (unlocked key in memory, zeroed on lock)
+  (define *keystore-unlocked* #f)      ; Ed25519 secret key when unlocked
+  (define *keystore-public* #f)        ; Ed25519 public key (always available after create)
+
+  (define (keystore-path)
+    "Return path to keystore directory"
+    ".vault/keystore")
+
+  (define (keystore-key-path)
+    ".vault/keystore/realm.key")
+
+  (define (keystore-pub-path)
+    ".vault/keystore/realm.pub")
+
+  (define (keystore-exists?)
+    "Check if keystore has been created"
+    (file-exists? (keystore-key-path)))
+
+  (define (keystore-create passphrase)
+    "Create new realm identity with passphrase protection"
+    (when (keystore-exists?)
+      (error "Keystore already exists. Use keystore-change-passphrase to update."))
+
+    ;; Create keystore directory
+    (let ((ks-dir (keystore-path)))
+      (unless (directory-exists? ks-dir)
+        (create-directory ks-dir #t)))
+
+    ;; Generate Ed25519 keypair
+    (let* ((keypair (ed25519-keypair))
+           (public-key (car keypair))
+           (secret-key (cadr keypair))
+           ;; Generate salt for Argon2id
+           (salt (random-bytes 16))
+           ;; Derive encryption key from passphrase
+           (enc-key (argon2id-hash passphrase salt))
+           ;; Encrypt secret key
+           (nonce (random-bytes secretbox-noncebytes))
+           (ciphertext (secretbox-encrypt secret-key nonce enc-key)))
+
+      ;; Write encrypted private key
+      (with-output-to-file (keystore-key-path)
+        (lambda ()
+          (write `(realm-private-key
+                   (version 1)
+                   (algorithm "ed25519")
+                   (kdf "argon2id")
+                   (salt ,salt)
+                   (nonce ,nonce)
+                   (ciphertext ,ciphertext)))
+          (newline)))
+
+      ;; Write public key (plaintext)
+      (with-output-to-file (keystore-pub-path)
+        (lambda ()
+          (write `(realm-public-key
+                   (version 1)
+                   (algorithm "ed25519")
+                   (public-key ,public-key)
+                   (created ,(current-seconds))))
+          (newline)))
+
+      ;; Zero the encryption key
+      (memzero! enc-key)
+
+      ;; Store in memory (unlocked after creation)
+      (set! *keystore-public* public-key)
+      (set! *keystore-unlocked* secret-key)
+
+      ;; Update vault config
+      (vault-config 'signing-key secret-key)
+
+      ;; Return principal
+      (print "Realm created: ed25519:" (blob->hex public-key))
+      public-key))
+
+  (define (keystore-unlock passphrase)
+    "Unlock keystore with passphrase"
+    (unless (keystore-exists?)
+      (error "No keystore found. Use keystore-create first."))
+
+    (if *keystore-unlocked*
+        (begin
+          (print "Keystore already unlocked.")
+          *keystore-public*)
+        ;; Read encrypted key file
+        (let* ((key-data (with-input-from-file (keystore-key-path) read))
+               (salt (cadr (assq 'salt (cdr key-data))))
+               (nonce (cadr (assq 'nonce (cdr key-data))))
+               (ciphertext (cadr (assq 'ciphertext (cdr key-data))))
+               ;; Derive decryption key
+               (dec-key (argon2id-hash passphrase salt))
+               ;; Decrypt
+               (secret-key (secretbox-decrypt ciphertext nonce dec-key)))
+
+          ;; Zero the decryption key
+          (memzero! dec-key)
+
+          (if secret-key
+              (begin
+                ;; Load public key
+                (let* ((pub-data (with-input-from-file (keystore-pub-path) read))
+                       (public-key (cadr (assq 'public-key (cdr pub-data)))))
+                  (set! *keystore-public* public-key)
+                  (set! *keystore-unlocked* secret-key)
+                  (vault-config 'signing-key secret-key)
+                  (print "Keystore unlocked: ed25519:" (blob->hex public-key))
+                  public-key))
+              (begin
+                (print "ERROR: Wrong passphrase")
+                #f)))))
+
+  (define (keystore-lock)
+    "Lock keystore, zero secret key from memory"
+    (when *keystore-unlocked*
+      (memzero! *keystore-unlocked*)
+      (set! *keystore-unlocked* #f)
+      (vault-config 'signing-key #f)
+      (print "Keystore locked."))
+    #t)
+
+  (define (keystore-status)
+    "Return keystore status"
+    (cond
+     ((not (keystore-exists?))
+      '(keystore (status none)))
+     (*keystore-unlocked*
+      `(keystore
+        (status unlocked)
+        (principal ,(string-append "ed25519:" (blob->hex *keystore-public*)))))
+     (else
+      ;; Read public key from file
+      (let* ((pub-data (with-input-from-file (keystore-pub-path) read))
+             (public-key (cadr (assq 'public-key (cdr pub-data)))))
+        `(keystore
+          (status locked)
+          (principal ,(string-append "ed25519:" (blob->hex public-key))))))))
+
+  (define (keystore-change-passphrase old-passphrase new-passphrase)
+    "Change keystore passphrase"
+    ;; First unlock with old passphrase
+    (let ((secret-key (or *keystore-unlocked*
+                          (keystore-unlock old-passphrase))))
+      (unless secret-key
+        (error "Wrong passphrase"))
+
+      ;; Generate new salt and encrypt with new passphrase
+      (let* ((salt (random-bytes 16))
+             (enc-key (argon2id-hash new-passphrase salt))
+             (nonce (random-bytes secretbox-noncebytes))
+             (ciphertext (secretbox-encrypt secret-key nonce enc-key)))
+
+        ;; Write new encrypted key
+        (with-output-to-file (keystore-key-path)
+          (lambda ()
+            (write `(realm-private-key
+                     (version 1)
+                     (algorithm "ed25519")
+                     (kdf "argon2id")
+                     (salt ,salt)
+                     (nonce ,nonce)
+                     (ciphertext ,ciphertext)))
+            (newline)))
+
+        ;; Zero encryption key
+        (memzero! enc-key)
+
+        (print "Passphrase changed.")
+        #t)))
+
+  (define (keystore-export-public)
+    "Export public key (safe to share)"
+    (if (keystore-exists?)
+        (with-input-from-file (keystore-pub-path) read)
+        (error "No keystore found")))
 
   ;;; ============================================================================
   ;;; Utility Functions (must be defined before use)
