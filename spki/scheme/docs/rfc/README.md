@@ -30,6 +30,9 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-037](rfc-037-node-roles.md) | Node Roles and Capabilities | Draft | 2026-01-07 |
 | [rfc-039](rfc-039-ipv6-scaling.md) | Scaling Architecture for IPv6 | Draft | 2026-01-07 |
 | [rfc-040](rfc-040-security-architecture.md) | Cyberspace Security Architecture | Draft | 2026-01-08 |
+| [rfc-041](rfc-041-keystore-and-attestation.md) | Keystore and Attestation | Draft | 2026-01-08 |
+| [rfc-042](rfc-042-quantum-resistant-merkle.md) | Quantum-Resistant Merkle Trees | Draft | 2026-01-08 |
+| [rfc-043](rfc-043-post-quantum-signatures.md) | Post-Quantum Signatures | Draft | 2026-01-08 |
 
 ## RFC Purpose
 
@@ -64,15 +67,48 @@ RFCs are published in the following canonical formats:
 
 All formats are considered canonical and are preserved in the Vault.
 
+## Lineage
+
+Cyberspace doesn't emerge from nothing. It stands on giants:
+
+| System | Era | What We Learned |
+|--------|-----|-----------------|
+| **VMS Clusters** | 1983 | SET HOST - be there, on that node. Distributed presence. |
+| **Newton** | 1993 | The soup - objects as medium, queries as navigation. Local-first. |
+| **General Magic** | 1994 | Telescript, Magic Cap - agents that travel, carry intent, return with results. |
+| **SPKI/SDSI** | 1996 | Capabilities, not identities. Authorization without central authority. |
+| **AS/400** | 1988 | Capability-based addressing. Objects know their own type. |
+| **Cambridge CAP** | 1970s | Hardware capabilities. The original capability machine. |
+
+**What they lacked, we add:**
+
+- VMS had clustering but ambient authority
+- Newton was local-first but couldn't federate
+- General Magic trusted the network too much
+- SPKI never got adopted (until now)
+
+Cyberspace is their synthesis: local-first realms, federated via capabilities, with agents swimming in the soup.
+
+---
+
 ## Glossary
 
 | Term | Definition |
 |------|------------|
-| **Realm** | A node's place in cyberspace - its vault, principal, capabilities, and objects. Local-first, sovereign. |
+| **Realm** | A node's place in cyberspace - its vault, principal, capabilities, and objects. Local-first, sovereign. A sealed closure. |
 | **Vault** | The local content-addressed object store (`.vault/`). The realm's storage. |
-| **Principal** | A node's cryptographic identity (Ed25519 public key). Identifies the realm to peers. |
-| **Soup** | The queryable object space within a vault (NewtonOS-inspired). |
+| **Principal** | A node's cryptographic identity (Ed25519 public key). Coordinates in cyberspace - a place you can teleport to. |
+| **Soup** | The queryable object space (Newton-inspired). A wilderness of mirrors - objects referencing objects, hashes pointing to hashes. The medium in which realms exist as islands and agents swim. |
 | **Seal** | Cryptographic binding - signing, archiving, committing. The primary verb. |
+| **Keystore** | The inner vault where cryptographic identity lives. Encrypted at rest. |
+| **Anchor** | Hardware root of trust (silicon). Provides unforgeable attestations. |
+| **Attestation** | Signed proof about the realm - hardware state, software measurements, identity claims. |
+| **Sigil** | A mark or attestation. Runes are measurements from the anchor. |
+| **Agent** | A delegated emissary - a sealed closure spawned from a realm, carrying attenuated authority. Magic Cap reborn in Newton's soup. |
+| **SET HOST** | Go yourself - direct presence in another realm (synchronous). |
+| **Delegate** | Send an agent - autonomous action on your behalf (asynchronous). |
+| **Merkle Tree** | Quantum-resistant hash tree. Each object a tree, each node SHAKE256 or BLAKE3. The forest that survives the quantum winter. |
+| **Wilderness of Mirrors** | The soup. Objects referencing objects, hashes pointing to hashes. Navigate by capability chain or be lost. (Angleton) |
 
 ## Upcoming RFCs
 
@@ -80,3 +116,5 @@ All formats are considered canonical and are preserved in the Vault.
 - rfc-022: Key Ceremony Protocol
 - rfc-023: Agent Spawning and Sandboxing
 - rfc-024: Network Protocol
+- rfc-044: Realm Migration and Portability
+- rfc-045: Agent Protocol (Magic Cap in the Soup)
