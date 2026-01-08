@@ -23,7 +23,8 @@
         (chicken file posix)
         srfi-1
         srfi-4
-        srfi-13)
+        srfi-13
+        (chicken tcp))
 
 ;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
@@ -1498,6 +1499,96 @@ Cyberspace REPL - Available Commands:
     (print "║  Type (help) for help                                          ║")
     (print "╚" bar "╝")
     (print "")))
+
+;;; ============================================================
+;;; Cluster Network Layer
+;;; ============================================================
+
+(define *node-listener* #f)       ; TCP listener
+(define *node-port* 4433)         ; default port
+(define *node-name* #f)           ; this node's name
+(define *node-connections* '())   ; active connections
+
+(define (node-listen #!optional (port *node-port*) (name #f))
+  "Start listening for cluster connections"
+  (if *node-listener*
+      (begin
+        (print "Already listening on port " *node-port*)
+        *node-name*)
+      (begin
+        (set! *node-port* port)
+        (set! *node-name* (or name (string-append "node-" (number->string port))))
+        (set! *node-listener* (tcp-listen port))
+        (print "Node '" *node-name* "' listening on port " port)
+        (set! *cluster-state* 'forming)
+        *node-name*)))
+
+(define (node-stop)
+  "Stop listening"
+  (when *node-listener*
+    (tcp-close *node-listener*)
+    (set! *node-listener* #f)
+    (print "Node stopped listening")))
+
+(define (node-connect host port)
+  "Connect to another node"
+  (print "Connecting to " host ":" port "...")
+  (let-values (((in out) (tcp-connect host port)))
+    (let ((conn `((host . ,host)
+                  (port . ,port)
+                  (in . ,in)
+                  (out . ,out)
+                  (connected . ,(current-seconds)))))
+      (set! *node-connections* (cons conn *node-connections*))
+      ;; Send hello
+      (display (string-append "HELLO " (or *node-name* "anonymous") "\n") out)
+      (flush-output out)
+      ;; Read response
+      (let ((response (read-line in)))
+        (print "  Connected: " response)
+        ;; Add to known nodes
+        (when (and (string? response) (string-prefix? "HELLO " response))
+          (let ((remote-name (substring response 6 (string-length response))))
+            (node-join remote-name uri: (string-append "tcp://" host ":" (number->string port)))))
+        conn))))
+
+(define (node-accept)
+  "Accept one incoming connection (blocking)"
+  (unless *node-listener*
+    (error "Not listening. Use (node-listen) first"))
+  (print "Waiting for connection...")
+  (let-values (((in out) (tcp-accept *node-listener*)))
+    ;; Read hello
+    (let ((msg (read-line in)))
+      (print "  Received: " msg)
+      (when (and (string? msg) (string-prefix? "HELLO " msg))
+        (let ((remote-name (substring msg 6 (string-length msg))))
+          ;; Send hello back
+          (display (string-append "HELLO " (or *node-name* "anonymous") "\n") out)
+          (flush-output out)
+          ;; Add to connections and nodes
+          (let ((conn `((name . ,remote-name)
+                        (in . ,in)
+                        (out . ,out)
+                        (accepted . ,(current-seconds)))))
+            (set! *node-connections* (cons conn *node-connections*))
+            (node-join remote-name)
+            (print "  Accepted connection from: " remote-name)
+            conn))))))
+
+(define (node-broadcast msg)
+  "Send message to all connected nodes"
+  (for-each
+   (lambda (conn)
+     (let ((out (alist-ref 'out conn)))
+       (display (string-append msg "\n") out)
+       (flush-output out)))
+   *node-connections*)
+  (print "Broadcast to " (length *node-connections*) " nodes: " msg))
+
+(define (node-ping)
+  "Ping all connected nodes"
+  (node-broadcast (string-append "PING " (number->string (current-seconds)))))
 
 (banner)
 
