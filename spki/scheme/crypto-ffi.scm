@@ -23,8 +23,13 @@
    crypto-sign-publickeybytes
    crypto-sign-secretkeybytes
    crypto-sign-bytes
-   ;; Keystore crypto (RFC-041)
+   ;; Entropy & randomness (cryptographically secure)
    random-bytes
+   random-u8
+   random-u32
+   random-uniform
+   entropy-status
+   ;; Keystore crypto (RFC-041)
    argon2id-hash
    secretbox-encrypt
    secretbox-decrypt
@@ -56,9 +61,9 @@
           (chicken blob)
           (chicken memory representation)
           (chicken bitwise)
-          (prefix (chicken random) chicken:)
           srfi-1   ; list utilities (take)
           srfi-4)
+          ;; NOTE: Do NOT import (chicken random) - use libsodium for all crypto randomness
 
   ;; Include libsodium header
   (foreign-declare "#include <sodium.h>")
@@ -193,6 +198,17 @@
   (define argon2id-opslimit-moderate 3)
   (define argon2id-memlimit-moderate 268435456)  ; 256 MB
 
+  ;; ============================================================
+  ;; Entropy & Cryptographic Randomness
+  ;; ============================================================
+  ;;
+  ;; All randomness from libsodium's randombytes API which:
+  ;;   - Uses /dev/urandom on Unix, CryptGenRandom on Windows
+  ;;   - Automatically reseeds from system entropy
+  ;;   - Safe for key generation, nonces, IVs
+  ;;
+  ;; NEVER use chicken:random or pseudo-random-integer for crypto!
+
   ;; Generate random bytes
   ;; @param n: number of bytes
   ;; @return: blob of n random bytes
@@ -203,6 +219,41 @@
                       unsigned-integer)
        buf n)
       buf))
+
+  ;; Generate single random byte [0, 255]
+  ;; @return: integer in range [0, 255]
+  (define (random-u8)
+    (let ((buf (make-blob 1)))
+      ((foreign-lambda void "randombytes_buf"
+                      scheme-pointer
+                      unsigned-integer)
+       buf 1)
+      (blob->u8vector/shared buf)
+      (u8vector-ref (blob->u8vector/shared buf) 0)))
+
+  ;; Generate random 32-bit unsigned integer
+  ;; @return: integer in range [0, 2^32-1]
+  (define (random-u32)
+    ((foreign-lambda unsigned-int32 "randombytes_random")))
+
+  ;; Generate uniform random integer in range [0, upper_bound)
+  ;; Uses rejection sampling to avoid modulo bias
+  ;; @param upper-bound: exclusive upper bound
+  ;; @return: integer in range [0, upper_bound)
+  (define (random-uniform upper-bound)
+    ((foreign-lambda unsigned-int32 "randombytes_uniform" unsigned-int32)
+     upper-bound))
+
+  ;; Get entropy source status
+  ;; @return: alist with entropy info
+  (define (entropy-status)
+    (let ((impl ((foreign-lambda c-string "randombytes_implementation_name"))))
+      `((implementation . ,impl)
+        (source . ,(cond
+                    ((string=? impl "sysrandom") "/dev/urandom")
+                    ((string=? impl "internal") "ChaCha20 (seeded)")
+                    (else "unknown")))
+        (status . ok))))
 
   ;; Zero memory (for sensitive data)
   ;; @param buf: blob to zero
@@ -443,9 +494,11 @@
         (let ((coeffs (make-vector threshold)))
           (vector-set! coeffs 0 (u8vector-ref secret-bytes byte-idx))
 
+          ;; CRITICAL: Use cryptographic randomness for polynomial coefficients
+          ;; pseudo-random-integer is NOT secure for secret sharing!
           (do ((i 1 (+ i 1)))
               ((= i threshold))
-            (vector-set! coeffs i (chicken:pseudo-random-integer 256)))
+            (vector-set! coeffs i (random-u8)))
 
           ;; Evaluate this polynomial at each share's x-value
           (do ((share-num 1 (+ share-num 1)))

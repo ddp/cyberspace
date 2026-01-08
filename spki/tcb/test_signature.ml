@@ -8,7 +8,7 @@
  * 5. Verify that tampering fails
  *)
 
-open Spki_tcb
+open Spki_signature
 
 let () =
   (* Initialize libsodium *)

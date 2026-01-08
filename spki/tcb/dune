@@ -1,25 +1,54 @@
-;; SPKI TCB - OCaml build configuration
+;; SPKI TCB - Trusted Computing Base Build Configuration
 ;;
-;; Builds the minimal trusted computing base:
-;; - signature.ml (OCaml interface to libsodium)
-;; - signature_stubs.c (C FFI to libsodium)
+;; Builds the minimal security-critical code:
+;; - spki_tcb.ml (unified TCB: principals, tags, certificates, authorization)
+;; - tcb_stubs.c (C FFI to libsodium)
 ;;
-;; This is the ONLY crypto code in the TCB.
-;; Everything else (policy, tools, SDSI) is in Chicken Scheme.
+;; TCB Properties:
+;; - Approximately 400 lines of OCaml, 200 lines of C
+;; - Single dependency: libsodium (audited cryptographic library)
+;; - Coq extractable (see coq/ directory for formal specifications)
+;; - All comparisons are constant-time (timing attack resistant)
 
 (library
  (name spki_tcb)
  (public_name spki.tcb)
- (modules signature export)
+ (modules spki_tcb)
+ (foreign_stubs
+  (language c)
+  (names tcb_stubs)
+  (flags -I/opt/homebrew/include))
+ (c_library_flags (-L/opt/homebrew/lib -lsodium))
+ (libraries unix)
+ (flags (:standard -w -27)))
+
+;; Legacy signature module (for backwards compatibility)
+(library
+ (name spki_signature)
+ (public_name spki.signature)
+ (modules signature)
  (foreign_stubs
   (language c)
   (names signature_stubs)
   (flags -I/opt/homebrew/include))
  (c_library_flags (-L/opt/homebrew/lib -lsodium))
- (flags (:standard -w -27)))  ;; Suppress unused variable warnings for stubs
+ (flags (:standard -w -27)))
 
-;; Test executable for TCB
+;; Test executable for unified TCB
+(executable
+ (name test_tcb)
+ (modules test_tcb)
+ (libraries spki_tcb))
+
+;; Test executable for legacy signature module
 (executable
  (name test_signature)
  (modules test_signature)
- (libraries spki_tcb))
+ (libraries spki_signature))
+
+(rule
+ (alias runtest)
+ (deps test_tcb.exe test_signature.exe)
+ (action (progn
+          (run ./test_tcb.exe)
+          (run ./test_signature.exe))))
