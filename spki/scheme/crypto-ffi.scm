@@ -1,7 +1,7 @@
-;;; SPKI Scheme - Crypto FFI to libsodium
+;;; SPKI Scheme - Cryptography FFI to libsodium
 ;;;
 ;;; Chicken Scheme bindings to libsodium for Ed25519 signatures.
-;;; This provides the same crypto operations as the OCaml TCB,
+;;; This provides the same cryptographic operations as the OCaml TCB,
 ;;; but from Scheme for the policy layer.
 ;;;
 ;;; Architecture:
@@ -9,7 +9,7 @@
 ;;;
 ;;; The OCaml TCB exists for Coq verification.
 ;;; The Scheme FFI exists for policy/tools/human-readable code.
-;;; Both use the same underlying crypto: libsodium Ed25519.
+;;; Both use the same underlying cryptography: libsodium Ed25519.
 
 (module crypto-ffi
   (sodium-init
@@ -20,7 +20,9 @@
    ed25519-secret-to-public
    sha256-hash
    sha512-hash
+   blake2b-hash
    crypto-sign-publickeybytes
+   crypto-generichash-bytes
    crypto-sign-secretkeybytes
    crypto-sign-bytes
    ;; Entropy & randomness (cryptographically secure)
@@ -29,7 +31,7 @@
    random-u32
    random-uniform
    entropy-status
-   ;; Keystore crypto (RFC-041)
+   ;; Vault cryptography (RFC-041)
    argon2id-hash
    secretbox-encrypt
    secretbox-decrypt
@@ -63,7 +65,7 @@
           (chicken bitwise)
           srfi-1   ; list utilities (take)
           srfi-4)
-          ;; NOTE: Do NOT import (chicken random) - use libsodium for all crypto randomness
+          ;; NOTE: Do NOT import (chicken random) - use libsodium for all cryptographic randomness
 
   ;; Include libsodium header
   (foreign-declare "#include <sodium.h>")
@@ -181,8 +183,36 @@
        hash data-bytes (blob-size data-bytes))
       hash))
 
+  ;; BLAKE2b constants
+  (define crypto-generichash-bytes 32)  ;; Default output size
+
+  ;; Compute BLAKE2b hash
+  ;; @param data: data to hash (blob or string)
+  ;; @return hash: 32-byte hash (blob)
+  ;;
+  ;; BLAKE2b is faster than SHA-256 and used for:
+  ;; - Content addressing
+  ;; - Key derivation
+  ;; - Audit trail hashing
+  (define (blake2b-hash data)
+    (let* ((data-bytes (if (string? data)
+                           (string->blob data)
+                           data))
+           (hash (make-blob crypto-generichash-bytes)))
+      ((foreign-lambda int "crypto_generichash"
+                      scheme-pointer     ; hash output
+                      unsigned-integer   ; hash length
+                      scheme-pointer     ; data
+                      unsigned-integer   ; data length
+                      scheme-pointer     ; key (NULL for unkeyed)
+                      unsigned-integer)  ; key length
+       hash crypto-generichash-bytes
+       data-bytes (blob-size data-bytes)
+       #f 0)  ;; No key
+      hash))
+
   ;;; ============================================================================
-  ;;; Keystore Crypto (RFC-041)
+  ;;; Vault Cryptography (RFC-041)
   ;;; ============================================================================
 
   ;; Constants for secretbox (XSalsa20-Poly1305)
