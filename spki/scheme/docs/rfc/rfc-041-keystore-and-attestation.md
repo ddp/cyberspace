@@ -187,15 +187,26 @@ Objects in cyberspace have coordinates:
 "@ed25519:7f3a2b.../releases/1.0.3"     ; Named object at realm
 "@ed25519:7f3a2b.../sha512:abc123..."   ; Hash-addressed at realm
 
+;; With role context - @principal+role:/path
+"@ed25519:7f3a2b...+curator:/collections/rare-books"
+"@ed25519:7f3a2b...+guardian:/vault/keys"
+"@ed25519:7f3a2b...+witness:/audit/signatures"
+
 ;; Inspect remote sealed object
 (soup-inspect "@ed25519:7f3a2b.../releases/1.0.3")
 
 ;; Fetch requires capability
 (soup-fetch "@ed25519:7f3a2b.../sha512:abc123..."
   capability: my-read-cert)
+
+;; Fetch with role context
+(soup-fetch "@ed25519:7f3a2b...+curator:/collections/rare-books"
+  capability: my-curator-cert)
 ```
 
 The `@principal:/path` syntax reads: "at this realm, this object." The principal is your teleport destination. The path or hash is what you're looking for.
+
+The `@principal+role:/path` syntax adds role context: "at this realm, acting as this role, this object." The `+role` specifies which capability hat the principal is wearing for this operation. Useful when a principal holds multiple roles and the operation needs to be scoped.
 
 Without a capability granting access, you can see the object exists (if the realm publishes its bloom filter) but cannot fetch its contents. The wilderness of mirrors shows reflections - but you need the right key to step through.
 
