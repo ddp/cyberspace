@@ -43,6 +43,28 @@ Steve Jobs understood that the document format *is* the document.
 
 ---
 
+## RFC Categories
+
+*Table 0: RFC Categories and Authorship*
+
+| Category | Description | Author |
+|----------|-------------|--------|
+| **Standards Track** | Core specifications defining the system | Core maintainers |
+| **Informational** | Guidelines, explanations, tutorials | Anyone in federation |
+| **Experimental** | New ideas being tested | Anyone in federation |
+| **Best Current Practice** | Recommended approaches | Core maintainers |
+| **Historic** | Deprecated specifications | Core maintainers |
+
+**Open Authorship:** Any member of the federation may author Informational or
+Experimental RFCs. Standards Track, Best Current Practice, and Historic
+designations require core maintainer approval.[^d4]
+
+[^d4]: Design: Following IETF tradition (RFC 2026). Informational RFCs lower
+the barrier to contribution while Standards Track maintains architectural
+coherence. The federation grows through documentation.
+
+---
+
 ## Footnote Categories
 
 RFCs use categorized footnotes to separate different types of annotations:[^d2]
