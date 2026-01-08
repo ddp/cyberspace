@@ -38,6 +38,13 @@
    secretbox-keybytes
    secretbox-noncebytes
    memzero!
+   ;; Symmetric encryption aliases (choose your vocabulary)
+   seal unseal                   ; General purpose
+   encipher decipher             ; Classical cryptography
+   shroud unshroud               ; Concealment
+   ward unward                   ; Protective barrier
+   veil unveil                   ; Hidden from view
+   entrust recover               ; Key relationship
    ;; X25519 key exchange (RFC-039 network encryption)
    x25519-keypair
    x25519-scalarmult
@@ -361,6 +368,38 @@
         (if (= result 0)
             plaintext
             #f))))  ; Authentication failed
+
+  ;;; ============================================================================
+  ;;; Symmetric Encryption Aliases
+  ;;; ============================================================================
+  ;;;
+  ;;; Multiple vocabularies for the same operation (XSalsa20-Poly1305).
+  ;;; Choose the terminology that fits your mental model.
+  ;;;
+
+  ;; General purpose
+  (define seal secretbox-encrypt)
+  (define unseal secretbox-decrypt)
+
+  ;; Classical cryptography
+  (define encipher secretbox-encrypt)
+  (define decipher secretbox-decrypt)
+
+  ;; Concealment
+  (define shroud secretbox-encrypt)
+  (define unshroud secretbox-decrypt)
+
+  ;; Protective barrier
+  (define ward secretbox-encrypt)
+  (define unward secretbox-decrypt)
+
+  ;; Hidden from view
+  (define veil secretbox-encrypt)
+  (define unveil secretbox-decrypt)
+
+  ;; Key relationship
+  (define entrust secretbox-encrypt)
+  (define recover secretbox-decrypt)
 
   ;;; ============================================================================
   ;;; X25519 Key Exchange (RFC-039 Network Encryption)
