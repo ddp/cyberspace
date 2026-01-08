@@ -89,23 +89,23 @@ Table 0: Wormhole Capabilities
 
 Capability Composition
 
-    ;; Common capability sets
-    (define cap:read-only
+    ;; Common capability sets (long form for readability)
+    (define capability:read-only
       '(read stat readdir xattr-read acl-read))
 
-    (define cap:read-write
+    (define capability:read-write
       '(read write create stat chmod readdir mkdir xattr-read xattr-write))
 
-    (define cap:full
+    (define capability:full
       '(read write create delete rename
         stat chmod chown
         xattr-read xattr-write acl-read acl-write
-        readdir mkdir rmdir))
+        readdir mkdir rmdir admin delegate audit-read rate-limit))
 
-    (define cap:backup
+    (define capability:backup
       '(read stat readdir xattr-read acl-read))
 
-    (define cap:sync
+    (define capability:synchronize
       '(read write create delete rename
         stat chmod readdir mkdir rmdir
         xattr-read xattr-write))
@@ -129,16 +129,42 @@ Capabilities can only be reduced, never amplified:[5]
 
 Opening a Wormhole
 
-    (define (wormhole-open fs-path #!key (vault-path "/") (cert #f))
+    (define (wormhole-open fs-path #!key (vault-path "/")
+                                         (capabilities capability:read-write)
+                                         (rate-limit 1000)
+                                         (locked #f)
+                                         (auth-required '())
+                                         (certificate #f))
       "Open wormhole - requires valid certificate"
-      (unless cert
+      (unless certificate
         (error 'unauthorized "Wormhole requires SPKI certificate"))
-      (unless (verify-wormhole-cert cert fs-path vault-path)
+      (unless (verify-wormhole-cert certificate fs-path vault-path)
         (error 'unauthorized "Invalid wormhole certificate"))
       ;; Audit the open
-      (wormhole-audit 'wormhole-open fs-path `(vault ,vault-path))
+      (wormhole-audit 'wormhole-open fs-path
+                      `((vault ,vault-path)
+                        (capabilities ,(length capabilities))))
       ;; Proceed with FUSE mount
       ...)
+
+Usage Examples
+
+    ;; Basic read-write wormhole
+    (wormhole-open "~/Cyberspace")
+
+    ;; Read-only wormhole for browsing
+    (wormhole-open "~/Archive" capabilities: capability:read-only)
+
+    ;; Sync wormhole with rate limiting
+    (wormhole-open "~/Sync"
+      capabilities: capability:synchronize
+      rate-limit: 500)
+
+    ;; Locked wormhole requiring unlock for sensitive operations
+    (wormhole-open "~/Secure"
+      capabilities: capability:full
+      locked: #t
+      auth-required: '(delete admin))
 
 ------------------------------------------------------------------------------
 

@@ -557,23 +557,23 @@
 (define *wormhole-rate-limits* '())
 (define *wormhole-ops-count* 0)
 
-;; Capability sets
-(define cap:read-only
+;; Capability sets (long form for readability)
+(define capability:read-only
   '(read stat readdir xattr-read acl-read))
 
-(define cap:read-write
+(define capability:read-write
   '(read write create stat chmod readdir mkdir xattr-read xattr-write))
 
-(define cap:full
+(define capability:full
   '(read write create delete rename
     stat chmod chown
     xattr-read xattr-write acl-read acl-write
     readdir mkdir rmdir admin delegate audit-read rate-limit))
 
-(define cap:backup
+(define capability:backup
   '(read stat readdir xattr-read acl-read))
 
-(define cap:sync
+(define capability:synchronize
   '(read write create delete rename
     stat chmod readdir mkdir rmdir
     xattr-read xattr-write))
@@ -619,14 +619,14 @@
         #t)))
 
 (define (wormhole-open fs-path #!key (vault-path "/") (rate-limit 1000)
-                                     (caps cap:read-write) (locked #f)
-                                     (auth-required '()))
+                                     (capabilities capability:read-write)
+                                     (locked #f) (auth-required '()))
   "Open wormhole between filesystem and vault"
   (let ((abs-path (if (char=? (string-ref fs-path 0) #\/)
                       fs-path
                       (string-append (current-directory) "/" fs-path))))
     (print "Opening wormhole: " abs-path " <-> vault:" vault-path)
-    (print "  Capabilities: " (length caps) " granted")
+    (print "  Capabilities: " (length capabilities) " granted")
     (print "  Rate limit: " rate-limit " ops/min")
     (print "  Locked: " (if locked "yes (requires unlock)" "no"))
     (when (not (null? auth-required))
@@ -637,13 +637,13 @@
     (set! *wormholes* (cons `((fs . ,abs-path)
                               (vault . ,vault-path)
                               (status . ,(if locked 'locked 'stable))
-                              (capabilities . ,caps)
+                              (capabilities . ,capabilities)
                               (rate-limit . ,rate-limit)
                               (auth-required . ,auth-required)
                               (opened . ,(current-seconds)))
                             *wormholes*))
     (set! *wormhole-rate-limits* (cons (cons abs-path rate-limit) *wormhole-rate-limits*))
-    (wormhole-audit 'wormhole-open abs-path `((vault ,vault-path) (caps ,(length caps))))
+    (wormhole-audit 'wormhole-open abs-path `((vault ,vault-path) (capabilities ,(length capabilities))))
     (print "  (wormhole simulated - full implementation requires libfuse)")
     `(wormhole ,abs-path ,vault-path)))
 
@@ -872,14 +872,14 @@ Cyberspace REPL - Available Commands:
 
   Wormholes (RFC-041):
     (wormhole-open \"~/Space\")        Open wormhole fs <-> vault
-    (wormhole-open p caps: cap:read-only)  With specific capabilities
+    (wormhole-open p capabilities: capability:read-only)
     (wormhole-open p locked: #t)     Open locked (requires unlock)
     (wormhole-open p auth-required: '(delete))  Step-up auth
     (wormhole-close path)            Close wormhole
     (wormhole-lock path)             Lock (pause operations)
     (wormhole-unlock path auth: tok) Unlock with authentication
     (wormhole-caps path)             Show capabilities
-    (wormhole-delegate p caps recip) Delegate capabilities
+    (wormhole-delegate path capabilities recipient)
     (wormholes)                      List active wormholes
     (fs-import path)                 Import with full metadata
     (fs-export hash path)            Export, restore metadata
@@ -887,11 +887,11 @@ Cyberspace REPL - Available Commands:
     (manifest-list)                  Show manifest entries
 
   Capability Sets:
-    cap:read-only                    Read, stat, readdir, xattr-read
-    cap:read-write                   Read, write, create, chmod, mkdir
-    cap:full                         All capabilities including admin
-    cap:backup                       Minimal for backup (read-only)
-    cap:sync                         For bidirectional sync
+    capability:read-only             Read, stat, readdir, xattr-read
+    capability:read-write            Read, write, create, chmod, mkdir
+    capability:full                  All capabilities including admin
+    capability:backup                Minimal for backup (read-only)
+    capability:synchronize           For bidirectional sync
 
   Requirements:
     brew install fuse-t              FUSE-T (recommended, no kext)
