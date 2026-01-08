@@ -1,5 +1,8 @@
-#!/bin/bash
+#!/bin/zsh
 # RFC Documentation Pipeline
+#
+# Note: Using zsh (macOS default). setopt for bash-like glob behavior.
+setopt null_glob  # Don't error on non-matching globs
 # Generates all RFC formats and index catalog
 #
 # Source formats:

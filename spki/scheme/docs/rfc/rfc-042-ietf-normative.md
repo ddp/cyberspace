@@ -101,6 +101,39 @@ Organizational home of the IETF, IAB, and IANA.
 ISOC provides legal and financial support for Internet standards
 development.
 
+### Security Area Directorate (SECDIR)
+
+Reviews IETF documents for security issues.
+
+- **Area:** Security (sec)
+- **Review:** Mandatory for Standards Track documents
+
+The Security Area ensures all specifications receive security review
+before publication. Security Considerations sections are required.
+
+### IETF Working Groups
+
+Technical work happens in working groups organized by area.
+
+- **List:** https://datatracker.ietf.org/wg/
+- **Process:** RFC 2418
+
+*Table 1a: IETF Areas*
+
+| Area | Focus |
+|------|-------|
+| Applications and Real-Time (art) | Application protocols |
+| General (gen) | Cross-area topics |
+| Internet (int) | IP and routing |
+| Operations and Management (ops) | Network operations |
+| Routing (rtg) | Routing protocols |
+| Security (sec) | Security protocols |
+| Transport (tsv) | Transport protocols |
+| Web and Internet Transport (wit) | HTTP, QUIC |
+
+Working groups are chartered, produce documents, and close when work
+is complete. Participation is open to all.
+
 ### RFC Editor
 
 Publishes and maintains the RFC series.
@@ -167,23 +200,30 @@ indicates strong recommendation with documented exceptions.
 
 ---
 
-## Divergences
+## Adoption
 
-The Library of Cyberspace diverges from IETF process in these areas:[^d1]
+The Library of Cyberspace adopts IETF processes in full within our
+federation.[^d1] Our process IS their process.
 
-[^d1]: Design: We optimize for a smaller community with faster iteration.
-IETF process overhead is justified at Internet scale; we adapt for
-our context while preserving core principles.
+[^d1]: Design: We do not diverge from IETF—we adopt it wholesale.
+The Internet standards process is battle-tested across 35 years
+and thousands of specifications. We inherit their wisdom.
 
-*Table 2: Process Divergences*
+*Table 2: Process Mapping*
 
-| IETF Practice | Library Practice | Rationale |
-|---------------|------------------|-----------|
-| Working Groups | Direct contribution | Smaller community |
-| Area Directors | Core maintainers | Flatter structure |
-| IESG Review | Maintainer review | Faster iteration |
-| RFC Editor | Automated pipeline | Self-publishing |
-| IANA Registry | Vault namespace | Decentralized |
+| IETF Structure | Federation Equivalent |
+|----------------|----------------------|
+| IETF | Library of Cyberspace Federation |
+| Working Groups | RFC Authors |
+| Area Directors | Core Maintainers |
+| IESG | Maintainer Consensus |
+| RFC Editor | Documentation Pipeline (RFC-019) |
+| IANA Registry | Vault Namespace |
+| Internet-Drafts | Draft RFCs |
+| Last Call | Federation Review |
+
+The mapping is structural, not divergent. We operate as a confederation
+following IETF process at our scale.
 
 ---
 
