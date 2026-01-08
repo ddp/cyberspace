@@ -692,6 +692,68 @@ Audit levels:
 Default is light - sufficient for forensics without storage bloat. Objects
 can escalate their own auditing; consensus can mandate minimum levels.
 
+Soup Auditing (VAX/VMS and TrustedBSD heritage)
+
+The soup's audit system draws from VAX/VMS Security Auditing and TrustedBSD's
+Basic Security Module (BSM), expressed in soup idiom:
+
+Event Classes (ripples in the soup):
+
+    (soup-ripples
+      (auth       "Principal enters the soup")
+      (touch      "Object touched (read)")
+      (stir       "Object modified")
+      (evaporate  "Object removed")
+      (pour       "Delegation flows between principals")
+      (season     "Administrative seasoning")
+      (recipe     "Policy changes")
+      (seal       "Cryptographic operations"))
+
+Principal Attention (what each principal notices):
+
+    (soup-object
+      (type principal)
+      (name "alice")
+      (attention
+        (on-success (auth touch season))   ; Notice these when they work
+        (on-failure (auth touch stir))))   ; Notice these when they fail
+
+Object Sensitivity (what the object broadcasts):
+
+    (soup-object
+      (name "crown-jewels")
+      (sensitivity
+        (on-success (touch stir evaporate))
+        (on-failure (touch stir evaporate))
+        (alarm-on (evaporate))))           ; Scream if deleted
+
+Alarm vs Ripple:
+- Ripple: Propagates through soup, recorded for later
+- Alarm: Immediate notification (bubbles to surface)
+
+    (soup-policy
+      (alarm-on (failure auth))            ; Bubble on bad auth
+      (alarm-on (success evaporate))       ; Bubble on any deletion
+      (ripple-on (success touch)))         ; Quiet ripple on reads
+
+Soup Entry Format (what gets recorded):
+
+    (soup-entry
+      (ripple touch)
+      (class touch)
+      (when "2026-01-08T15:00:00Z")
+      (outcome success)
+      (who
+        (principal "alice")
+        (agent "claude")
+        (node "fluffy"))
+      (what
+        (type archive)
+        (name "vault-2.0.0.archive")
+        (hash "sha512:abc..."))
+      (how read)
+      (result 0))
+
 Rollback Strategy by Type
 
 Objects declare their rollback contract (see RFC-015):
