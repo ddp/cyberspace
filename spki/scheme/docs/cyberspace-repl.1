@@ -1,0 +1,527 @@
+.TH CYBERSPACE-REPL 1 "January 2026" "Library of Cyberspace" "User Commands"
+.SH NAME
+cyberspace-repl \- interactive REPL for the Library of Cyberspace
+.SH SYNOPSIS
+.B cyberspace-repl
+.SH DESCRIPTION
+.B cyberspace-repl
+provides an interactive Scheme REPL with all Cyberspace modules preloaded
+for exploring the vault, managing cryptographic operations, querying the
+soup, and coordinating with federated realms.
+.PP
+The REPL automatically bootstraps compiled modules for the current platform
+architecture and initializes libsodium for cryptographic operations.
+.PP
+.B Preloaded modules:
+vault, crypto-ffi, audit, cert, sexp
+.
+.SH CONCEPTS
+.SS The Realm
+A realm is a node's place in cyberspace \- its vault, principal (Ed25519 identity),
+capabilities, and objects. A sealed closure accumulating history. An island of
+sovereignty in the soup.
+.SS The Soup
+The queryable object space (Newton-inspired). Objects float in it \- content-addressed,
+immutable, queryable. The realm swims through the soup, accumulating objects,
+granting capabilities, leaving audit trails.
+.SS The Wilderness of Mirrors
+The soup is a \fBwilderness of mirrors\fR (Angleton). Objects reference objects.
+Hashes point to hashes. Capabilities chain through delegation. Every object is
+its own mirror \- content-addressed identity means verification is reflection.
+.PP
+The mirrors reflect the \fBentirety of the confederation\fR. Federated realms
+replicate objects; what exists in one realm may be mirrored in another. Trust
+nothing in the wilderness. Verify everything. Hold your capability chain like
+Theseus held his thread, or be lost in infinite regress.
+.SS Wormholes and Teleportation
+\fBWormholes\fR connect distant realms. With the right capability, step through
+and you're there \- present in another realm. \fBTeleportation\fR moves state
+between entangled agents across the wilderness, intact and unobserved.
+.SS The Seal
+Cryptographic binding \- signing, archiving, committing. The primary verb.
+Everything sealed is tamper-evident and non-repudiable.
+.SS Addressing
+Objects have coordinates: \fB@principal:/path\fR or \fB@principal+role{caps}:/path\fR.
+The principal is your teleport destination; the path is what you seek.
+.
+.SH COMMANDS
+.SS Vault Operations
+.TP
+.BI (seal-commit " message" )
+Commit staged changes with cryptographic seal.
+.TP
+.BI (seal-release " version" " [name: codename]" )
+Create a signed release tag. Version should be semantic (X.Y.Z).
+.TP
+.BI (seal-archive " version" " [format: fmt]" )
+Archive a release. Formats: tarball, bundle, cryptographic, zstd-age.
+.TP
+.BI (seal-restore " archive" )
+Restore from archived release, verify signatures.
+.TP
+.B (seal-history)
+Show chronological audit trail of sealed operations.
+.TP
+.B (seal-update)
+Pull latest changes from remote, verify all signatures.
+.TP
+.BI (seal-verify " version" " [verify-key: key]" )
+Verify cryptographic seal on a release.
+.TP
+.BI (seal-inspect " object" )
+Deep inspection of any sealed object showing security properties.
+.TP
+.BI (vault-init " [signing-key: key]" )
+Initialize vault configuration.
+.TP
+.BI (vault-config " key [value]" )
+Get or set vault configuration value.
+.
+.SS Object Soup (Newton-style)
+.TP
+.B (soup)
+List all objects in the soup.
+.TP
+.BI (soup " 'type" )
+Filter by type: archives, releases, certs, audit, keys, metadata.
+.TP
+.BI (soup " pattern" )
+Glob pattern matching (* = any, ? = single char).
+.TP
+.BI (soup " #/regex/" )
+Regular expression matching (PCRE).
+.TP
+.BI (soup " 'type pattern" )
+Combine type filter with pattern.
+.TP
+.B (soup?)
+Show soup query syntax help.
+.TP
+.BI (soup-query " 'pattern" )
+S-expression pattern matching (Newton-style). Supports:
+.RS
+.IP \(bu 3
+\fB(type TYPE)\fR \- match object type
+.IP \(bu 3
+\fB(name PATTERN)\fR \- glob or regex on name
+.IP \(bu 3
+\fB(size OP VALUE)\fR \- size comparison (> < = >= <=)
+.IP \(bu 3
+\fB(signed)\fR \- objects with signatures
+.IP \(bu 3
+\fB(and PATTERN ...)\fR \- all must match
+.IP \(bu 3
+\fB(or PATTERN ...)\fR \- any must match
+.IP \(bu 3
+\fB(not PATTERN)\fR \- must not match
+.RE
+.TP
+.BI (soup-stat " name" )
+Detailed status of specific object.
+.TP
+.BI (soup-hash " name" )
+Compute SHA-512 hash of object.
+.TP
+.B (soup-releases)
+List all tagged releases with status.
+.TP
+.B (soup-du)
+Disk usage breakdown by category.
+.TP
+.BI (soup-find " [type: t] [size: s] [name: n]" )
+Keyword-based object search.
+.TP
+.BI (soup-inspect " name" )
+Interactive inspector returning closure for subcommands:
+\&'stat, 'view, 'hash, 'verify, 'export, 'history, 'path, 'raw.
+.TP
+.BI (complete " prefix" )
+Tab-completion for object names.
+.
+.SS Keystore (RFC-041)
+.TP
+.BI (keystore-create " passphrase" )
+Create new realm identity with passphrase protection.
+Generates Ed25519 keypair, encrypts with Argon2id + XChaCha20-Poly1305.
+.TP
+.BI (keystore-unlock " passphrase" )
+Decrypt and load private key into memory.
+.TP
+.B (keystore-lock)
+Zero private key from memory (secure wipe).
+.TP
+.B (keystore-status)
+Show keystore state (locked/unlocked, principal).
+.TP
+.B (keystore-change-passphrase)
+Re-encrypt keystore with new passphrase.
+.TP
+.B (keystore-export-public)
+Export public key (safe to share). This IS your principal.
+.TP
+.B (keystore-exists?)
+Check if keystore has been created.
+.
+.SS Address Parsing (RFC-041)
+.TP
+.BI (parse-address " string" )
+Parse cyberspace address into components. Formats:
+.RS
+.IP \(bu 3
+\fB@principal:/path\fR \- basic addressing
+.IP \(bu 3
+\fB@principal+role:/path\fR \- with role context
+.IP \(bu 3
+\fB@principal+{cap1,cap2}:/path\fR \- explicit capabilities
+.IP \(bu 3
+\fB@principal+role{cap}:/path\fR \- role refined to cap
+.RE
+.TP
+.BI (address-principal " addr" )
+Extract principal from parsed address.
+.TP
+.BI (address-role " addr" )
+Extract role (may be #f).
+.TP
+.BI (address-capabilities " addr" )
+Extract capabilities list.
+.TP
+.BI (address-path " addr" )
+Extract path component.
+.TP
+.BI (address->string " addr" )
+Convert address back to string form.
+.
+.SS Node Roles (RFC-037)
+.TP
+.B (node-probe)
+Probe system hardware capabilities (CPU, RAM, storage, network).
+.TP
+.BI (node-role " [role]" )
+Get current role, or set to: coordinator, full, witness, archiver, edge.
+.TP
+.BI (node-can? " 'operation" )
+Check if operation permitted for current role.
+.TP
+.B (node-announce)
+Broadcast role announcement to federation peers.
+.TP
+.B (recommend-role)
+Suggest optimal role based on hardware capabilities.
+.
+.SS Cryptography
+.TP
+.B (ed25519-keypair)
+Generate Ed25519 keypair. Returns (public-key private-key).
+.TP
+.BI (sha512-hash " blob" )
+Compute SHA-512 hash of data.
+.TP
+.BI (ed25519-sign " key message" )
+Sign message with private key.
+.TP
+.BI (ed25519-verify " pubkey message signature" )
+Verify signature against public key.
+.TP
+.BI (random-bytes " n" )
+Generate n cryptographically secure random bytes (libsodium).
+.
+.SS Audit Trail
+.TP
+.BI (audit-append " [actor: k] [action: a]" )
+Add entry to cryptographic audit trail.
+.TP
+.B (audit-read)
+Read and display audit trail.
+.
+.SS SPKI Certificates
+.TP
+.BI (create-cert " issuer subject tag" )
+Create SPKI capability certificate.
+.TP
+.BI (sign-cert " cert key" )
+Sign certificate with private key.
+.TP
+.BI (verify-signed-cert " cert pubkey" )
+Verify certificate signature.
+.
+.SS Federation (RFC-010)
+.TP
+.BI (federate " peer-url" " [trust: level]" )
+Establish federation with peer realm.
+.TP
+.B (federate-status)
+Show all federation peers and status.
+.TP
+.BI (federate-sync " peer-url" )
+Synchronize objects with federated peer.
+.TP
+.BI (seal-publish " version" " [remote: target]" )
+Publish sealed release to remote location.
+.TP
+.BI (seal-subscribe " remote" )
+Subscribe to releases from remote source.
+.TP
+.BI (seal-synchronize " remote" " [direction: dir]" )
+Bidirectional sync with remote. Direction: push, pull, or both.
+.
+.SS Byzantine Consensus (RFC-011)
+.TP
+.BI (consensus-propose " value" " [quorum: type]" )
+Propose value for Byzantine consensus.
+.TP
+.BI (consensus-vote " proposal-id" " vote" )
+Vote on proposal (vote: 'accept or 'reject).
+.TP
+.B (consensus-status)
+Show active consensus proposals.
+.
+.SS Lamport Clocks (RFC-012)
+.TP
+.B (lamport-tick)
+Increment local Lamport clock.
+.TP
+.B (lamport-send)
+Get timestamp for sending a message.
+.TP
+.BI (lamport-receive " remote-timestamp" )
+Update clock on message receipt.
+.TP
+.B (lamport-clock)
+Get current Lamport clock value.
+.
+.SS Content-Addressed Storage (RFC-020)
+.TP
+.BI (content-address " data" )
+Compute content address (SHA-512 hash).
+.TP
+.BI (content-put " data" )
+Store data by content address, return address.
+.TP
+.BI (content-get " address" )
+Retrieve data by content address.
+.TP
+.BI (content-exists? " address" )
+Check if content exists in store.
+.
+.SS Capability Delegation (RFC-021)
+.TP
+.BI (delegate " capability principal" " [restrict: r] [expires: t]" )
+Delegate capability to another principal.
+.TP
+.BI (delegate-chain " delegations" )
+Verify chain of delegations.
+.TP
+.BI (delegate-verify " delegation principal action" )
+Check if principal authorized for action via delegation.
+.
+.SS Agent Sandboxing (RFC-023)
+.TP
+.BI (sandbox " name" " [capabilities: c] [limits: l]" )
+Create sandboxed execution environment.
+.TP
+.BI (sandbox-run " name code" )
+Execute code in named sandbox.
+.TP
+.BI (sandbox-capabilities " name" )
+List capabilities available in sandbox.
+.TP
+.BI (sandbox-destroy " name" )
+Destroy sandbox and release resources.
+.
+.SS Mobile Agents (RFC-035)
+Agents are delegated emissaries \- sealed closures spawned from a realm,
+carrying attenuated authority. Magic Cap reborn in Newton's soup.
+.PP
+Agents swim through an untrusted \fBWilderness of Mirrors\fR \- the federated
+soup where every object is content-addressed, every hash a reflection.
+The mirrors reflect the entirety of the confederation. Trust nothing;
+verify everything. An agent navigating the wilderness holds its capability
+chain like Theseus held his thread.
+.PP
+\fBWormholes\fR connect distant realms. Step through with the right capability
+and you're there. \fBTeleportation\fR moves state between entangled agents
+across the wilderness.
+.TP
+.BI (tunnel " destination" " [agent: a]" )
+Open wormhole to remote realm. Agent swims through the soup to destination.
+.TP
+.BI (observe " resource" )
+Observe resource in the wilderness. Collapses possibilities to definite state.
+In the mirrors, observation is commitment.
+.TP
+.BI (entangle " agent1 agent2" )
+Entangle two agents \- correlated across the wilderness. What affects one
+reflects in the other, regardless of distance.
+.TP
+.BI (teleport " state from to" )
+Teleport state through wormhole between entangled agents. State arrives
+intact; the wilderness cannot intercept what it cannot observe.
+.TP
+.BI (decohere " agent" )
+Agent returns from the wilderness. Cleanup, terminate, merge audit trail
+back to realm. The thread is wound back.
+.TP
+.BI (superpose " states" )
+Create superposition \- multiple possible futures, uncommitted. The agent
+holds all paths until observation forces choice.
+.TP
+.BI (collapse " superposition" )
+Collapse to single state. Choose one path through the wilderness.
+The mirrors show only what was chosen.
+.
+.SS Quorum Voting (RFC-036)
+.TP
+.BI (quorum-propose " question options" " [threshold: t]" )
+Propose quorum vote with options.
+.TP
+.BI (quorum-vote " proposal-id choice" " [encrypted: #t]" )
+Cast vote (optionally homomorphically encrypted).
+.TP
+.BI (quorum-tally " proposal-id" )
+Tally votes (threshold decryption for HE votes).
+.TP
+.B (quorum-status)
+Show active quorum proposals.
+.
+.SS Local Inference (RFC-038)
+.TP
+.BI (inference-server " [url]" )
+Get or set Ollama inference server URL.
+.TP
+.B (inference-models)
+List available models on inference server.
+.TP
+.BI (inference " prompt" " [model: m] [max-tokens: n]" )
+Run inference on local LLM.
+.TP
+.BI (inference-embed " text" " [model: m]" )
+Generate embeddings for semantic search.
+.
+.SS Utilities
+.TP
+.BI (blob->hex " blob" )
+Convert blob to hexadecimal string.
+.TP
+.BI (hex->blob " string" )
+Convert hexadecimal string to blob.
+.TP
+.B (help)
+Show interactive help with all commands.
+.
+.SH EXAMPLES
+.SS Exploring the Soup
+.EX
+;; List all objects
+(soup)
+
+;; Find signed releases
+(soup-query '(and (type releases) (signed)))
+
+;; Find large archives
+(soup-query '(size > 1000000))
+
+;; Inspect a release
+(define i (soup-inspect "1.0.3"))
+(i 'stat)
+(i 'hash)
+(i 'verify)
+.EE
+.
+.SS Managing Realm Identity
+.EX
+;; Create realm identity (first time)
+(keystore-create "my-secure-passphrase")
+
+;; Check status
+(keystore-status)
+
+;; Export public key for sharing
+(keystore-export-public)
+;; => (realm-public-key (algorithm ed25519)
+;;      (public-key #${15d0213b...}))
+
+;; Lock when done
+(keystore-lock)
+.EE
+.
+.SS Addressing Remote Objects
+.EX
+;; Parse remote address
+(define addr (parse-address "@ed25519:7f3a2b...+curator:/collections"))
+(address-principal addr)  ;; => "ed25519:7f3a2b..."
+(address-role addr)       ;; => "curator"
+(address-path addr)       ;; => "/collections"
+.EE
+.
+.SS Creating Releases
+.EX
+;; Seal a new release
+(seal-release "1.0.4" name: "phoenix")
+
+;; Verify the release
+(seal-verify "1.0.4")
+
+;; Archive for distribution
+(seal-archive "1.0.4" format: 'zstd-age)
+.EE
+.
+.SS Federation
+.EX
+;; Establish federation
+(federate "https://peer.example.org")
+
+;; Publish release to peer
+(seal-publish "1.0.4" remote: "peer")
+
+;; Bidirectional sync
+(seal-synchronize "peer")
+.EE
+.
+.SH ENVIRONMENT
+.TP
+.B PWD
+Working directory, should contain .vault/ for vault operations.
+.
+.SH FILES
+.TP
+.I .vault/
+Vault metadata directory
+.TP
+.I .vault/keystore/
+Realm identity (encrypted private key, public key)
+.TP
+.I .vault/releases/
+Cryptographic signatures for sealed releases
+.TP
+.I .vault/audit/
+Cryptographic audit trail
+.TP
+.I .vault/node-hardware
+Hardware capability manifest
+.
+.SH LINEAGE
+Cyberspace doesn't emerge from nothing. It stands on giants:
+.IP \(bu 3
+\fBVMS Clusters\fR (1983) \- Distributed presence
+.IP \(bu 3
+\fBNewton\fR (1993) \- The soup, local-first
+.IP \(bu 3
+\fBGeneral Magic\fR (1994) \- Agents that travel
+.IP \(bu 3
+\fBSPKI/SDSI\fR (1996) \- Capabilities, not identities
+.IP \(bu 3
+\fBAS/400\fR (1988) \- Capability-based addressing
+.IP \(bu 3
+\fBCambridge CAP\fR (1970s) \- Hardware capabilities
+.
+.SH SEE ALSO
+.BR seal (1),
+.BR audit (1),
+.BR spki-keygen (1)
+.
+.SH AUTHOR
+Library of Cyberspace Preservation Architecture
+.
+.SH COPYRIGHT
+This is free software; see the source for copying conditions.
