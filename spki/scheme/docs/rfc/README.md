@@ -1,5 +1,11 @@
 # Library of Cyberspace - RFCs
 
+*The Soup. The Realm. The Seal.*
+
+*Sovereign islands in a wilderness of mirrors. Objects referencing objects, hashes pointing to hashes. Navigate by capability chain or be lost. Your realm is your place in cyberspace - a sealed closure, accumulating history, carrying your intent through the soup.*
+
+---
+
 Request for Comments documents for the Library of Cyberspace preservation architecture.
 
 ## Active RFCs
@@ -33,6 +39,7 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-041](rfc-041-keystore-and-attestation.md) | Keystore and Attestation | Draft | 2026-01-08 |
 | [rfc-042](rfc-042-quantum-resistant-merkle.md) | Quantum-Resistant Merkle Trees | Draft | 2026-01-08 |
 | [rfc-043](rfc-043-post-quantum-signatures.md) | Post-Quantum Signatures | Draft | 2026-01-08 |
+| [rfc-044](rfc-044-cryptographic-entropy.md) | Cryptographic Entropy Sources | Draft | 2026-01-08 |
 
 ## RFC Purpose
 
@@ -117,5 +124,5 @@ Cyberspace is their synthesis: local-first realms, federated via capabilities, w
 - rfc-022: Key Ceremony Protocol
 - rfc-023: Agent Spawning and Sandboxing
 - rfc-024: Network Protocol
-- rfc-044: Realm Migration and Portability
 - rfc-045: Agent Protocol (Magic Cap in the Soup)
+- rfc-046: Realm Migration and Portability
