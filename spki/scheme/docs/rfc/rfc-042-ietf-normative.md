@@ -200,30 +200,42 @@ indicates strong recommendation with documented exceptions.
 
 ---
 
-## Adoption
+## Our Process
 
-The Library of Cyberspace adopts IETF processes in full within our
-federation.[^d1] Our process IS their process.
+The IETF process is thorough but obscure. We do our own thing.[^d1]
 
-[^d1]: Design: We do not diverge from IETF—we adopt it wholesale.
-The Internet standards process is battle-tested across 35 years
-and thousands of specifications. We inherit their wisdom.
+[^d1]: Design: IETF processes evolved for Internet-scale coordination
+across thousands of participants. We're smaller, faster, more direct.
+We reference their norms, not their bureaucracy.
 
-*Table 2: Process Mapping*
+What we take from IETF:
 
-| IETF Structure | Federation Equivalent |
-|----------------|----------------------|
-| IETF | Library of Cyberspace Federation |
-| Working Groups | RFC Authors |
-| Area Directors | Core Maintainers |
-| IESG | Maintainer Consensus |
-| RFC Editor | Documentation Pipeline (RFC-019) |
-| IANA Registry | Vault Namespace |
-| Internet-Drafts | Draft RFCs |
-| Last Call | Federation Review |
+- **RFC format** — Document structure, numbering, required sections
+- **RFC 2119 keywords** — MUST, SHOULD, MAY precision
+- **Security Considerations** — Required in every specification
+- **Rough consensus** — General agreement over voting
+- **Running code** — Implementations validate specifications
 
-The mapping is structural, not divergent. We operate as a confederation
-following IETF process at our scale.
+What we skip:
+
+- Working group charters
+- Area director approval
+- IESG review cycles
+- Last call periods
+- IANA registry formalism
+
+*Table 2: Our Process*
+
+| Step | Action |
+|------|--------|
+| 1 | Author drafts RFC |
+| 2 | Submit to federation |
+| 3 | Maintainer review |
+| 4 | Rough consensus |
+| 5 | Implement |
+| 6 | Publish |
+
+Simple. Direct. We document, we build, we ship.
 
 ---
 
