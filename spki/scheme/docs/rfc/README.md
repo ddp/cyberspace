@@ -117,7 +117,8 @@ Cyberspace is their synthesis: local-first realms, federated via capabilities, w
 | **Merkle Tree** | Quantum-resistant hash tree. Each object a tree, each node SHAKE256 or BLAKE3. The forest that survives the quantum winter. |
 | **Wilderness of Mirrors** | The soup. Objects referencing objects, hashes pointing to hashes. Navigate by capability chain or be lost. (Angleton) |
 | **@principal:/path** | Object coordinates. "At this realm, this object." Teleport destination + what you seek. |
-| **@principal+role:/path** | Object coordinates with role context. "At this realm, acting as this role, this object." The `+role` specifies which capability hat the principal wears. |
+| **@principal+role:/path** | Object coordinates with role context. "At this realm, acting as this role, this object." |
+| **@principal+{caps}:/path** | Object coordinates with explicit capabilities. `+{read,write}` specifies exact caps. Roles are shorthand; capabilities are truth. |
 
 ## Upcoming RFCs
 

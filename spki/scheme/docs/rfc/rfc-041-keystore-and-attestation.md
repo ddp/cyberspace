@@ -192,6 +192,14 @@ Objects in cyberspace have coordinates:
 "@ed25519:7f3a2b...+guardian:/vault/keys"
 "@ed25519:7f3a2b...+witness:/audit/signatures"
 
+;; With explicit capabilities - @principal+{caps}:/path
+"@ed25519:7f3a2b...+{read}:/objects/sha512:abc..."
+"@ed25519:7f3a2b...+{read,write}:/collections/working"
+"@ed25519:7f3a2b...+{read,delegate(read)}:/shared/docs"
+
+;; Role with capability refinement
+"@ed25519:7f3a2b...+curator{read}:/collections/rare-books"  ; curator, read only
+
 ;; Inspect remote sealed object
 (soup-inspect "@ed25519:7f3a2b.../releases/1.0.3")
 
@@ -206,7 +214,11 @@ Objects in cyberspace have coordinates:
 
 The `@principal:/path` syntax reads: "at this realm, this object." The principal is your teleport destination. The path or hash is what you're looking for.
 
-The `@principal+role:/path` syntax adds role context: "at this realm, acting as this role, this object." The `+role` specifies which capability hat the principal is wearing for this operation. Useful when a principal holds multiple roles and the operation needs to be scoped.
+The `@principal+role:/path` syntax adds role context: "at this realm, acting as this role, this object."
+
+The `@principal+{caps}:/path` syntax specifies explicit capabilities: "at this realm, with these specific capabilities, this object." Roles are shorthand for capability bundles; the `+{caps}` form is the truth underneath.
+
+`+role{caps}` combines both: use this role, but only these capabilities from it. Principle of least authority - request only what you need.
 
 Without a capability granting access, you can see the object exists (if the realm publishes its bloom filter) but cannot fetch its contents. The wilderness of mirrors shows reflections - but you need the right key to step through.
 
