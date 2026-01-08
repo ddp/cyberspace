@@ -58,6 +58,7 @@ RFCS=(
   rfc-038-local-inference
   rfc-039-ipv6-scaling
   rfc-040-security-architecture
+  rfc-041-fuse-filesystem
 )
 
 # Extract title from markdown file
@@ -348,6 +349,7 @@ if [[ -f "$REPL_FILE" ]]; then
 036:quorum
 037:node-role
 038:inference
+041:vault-mount
 "
 
   implemented=0

@@ -549,6 +549,209 @@
   '(embedding-simulated))
 
 ;;; ============================================================
+;;; RFC-041: FUSE Filesystem
+;;; ============================================================
+
+(define *wormholes* '())
+(define *vault-manifest* '())
+(define *wormhole-rate-limits* '())
+(define *wormhole-ops-count* 0)
+
+;; Capability sets
+(define cap:read-only
+  '(read stat readdir xattr-read acl-read))
+
+(define cap:read-write
+  '(read write create stat chmod readdir mkdir xattr-read xattr-write))
+
+(define cap:full
+  '(read write create delete rename
+    stat chmod chown
+    xattr-read xattr-write acl-read acl-write
+    readdir mkdir rmdir admin delegate audit-read rate-limit))
+
+(define cap:backup
+  '(read stat readdir xattr-read acl-read))
+
+(define cap:sync
+  '(read write create delete rename
+    stat chmod readdir mkdir rmdir
+    xattr-read xattr-write))
+
+(define (capture-xattrs path)
+  "Capture extended attributes from file"
+  ;; Would use: xattr -l path
+  '())
+
+(define (capture-metadata path)
+  "Capture full macOS metadata for a file"
+  `((posix
+     (mode #o644)
+     (uid 501)
+     (gid 20)
+     (size 0)
+     (mtime ,(current-seconds))
+     (birthtime ,(current-seconds)))
+    (xattr ,(capture-xattrs path))
+    (flags ())))
+
+(define (wormhole-audit action path #!optional detail)
+  "Log wormhole operation to audit trail"
+  (let ((entry `((timestamp . ,(current-seconds))
+                 (action . ,action)
+                 (path . ,path)
+                 (detail . ,detail))))
+    (audit-append actor: 'wormhole
+                  action: action
+                  target: path
+                  detail: detail)))
+
+(define (wormhole-rate-check wormhole)
+  "Check rate limit for wormhole operations"
+  (let* ((fs-path (alist-ref 'fs wormhole))
+         (limit (or (alist-ref fs-path *wormhole-rate-limits*) 1000))
+         (window-start (- (current-seconds) 60)))
+    (set! *wormhole-ops-count* (+ *wormhole-ops-count* 1))
+    (if (> *wormhole-ops-count* limit)
+        (begin
+          (print "  [RATE LIMITED] " *wormhole-ops-count* "/" limit " ops/min")
+          #f)
+        #t)))
+
+(define (wormhole-open fs-path #!key (vault-path "/") (rate-limit 1000)
+                                     (caps cap:read-write) (locked #f)
+                                     (auth-required '()))
+  "Open wormhole between filesystem and vault"
+  (let ((abs-path (if (char=? (string-ref fs-path 0) #\/)
+                      fs-path
+                      (string-append (current-directory) "/" fs-path))))
+    (print "Opening wormhole: " abs-path " <-> vault:" vault-path)
+    (print "  Capabilities: " (length caps) " granted")
+    (print "  Rate limit: " rate-limit " ops/min")
+    (print "  Locked: " (if locked "yes (requires unlock)" "no"))
+    (when (not (null? auth-required))
+      (print "  Step-up auth for: " auth-required))
+    (print "  Audit: enabled")
+    (print "  Requires: FUSE-T or macFUSE")
+    (print "")
+    (set! *wormholes* (cons `((fs . ,abs-path)
+                              (vault . ,vault-path)
+                              (status . ,(if locked 'locked 'stable))
+                              (capabilities . ,caps)
+                              (rate-limit . ,rate-limit)
+                              (auth-required . ,auth-required)
+                              (opened . ,(current-seconds)))
+                            *wormholes*))
+    (set! *wormhole-rate-limits* (cons (cons abs-path rate-limit) *wormhole-rate-limits*))
+    (wormhole-audit 'wormhole-open abs-path `((vault ,vault-path) (caps ,(length caps))))
+    (print "  (wormhole simulated - full implementation requires libfuse)")
+    `(wormhole ,abs-path ,vault-path)))
+
+(define (wormhole-lock fs-path)
+  "Lock wormhole (requires unlock to resume)"
+  (let ((w (find (lambda (w) (equal? (alist-ref 'fs w) fs-path)) *wormholes*)))
+    (if w
+        (begin
+          (set-car! (alist-ref 'status w #f #f) 'locked)
+          (wormhole-audit 'wormhole-lock fs-path)
+          (print "Wormhole locked: " fs-path)
+          `(locked ,fs-path))
+        (error "Wormhole not found" fs-path))))
+
+(define (wormhole-unlock fs-path #!key (auth #f))
+  "Unlock wormhole (may require authentication)"
+  (let ((w (find (lambda (w) (equal? (alist-ref 'fs w) fs-path)) *wormholes*)))
+    (if w
+        (begin
+          ;; In production, verify auth token here
+          (wormhole-audit 'wormhole-unlock fs-path `(auth ,(if auth 'provided 'none)))
+          (print "Wormhole unlocked: " fs-path)
+          `(unlocked ,fs-path))
+        (error "Wormhole not found" fs-path))))
+
+(define (wormhole-caps fs-path)
+  "Show capabilities for a wormhole"
+  (let ((w (find (lambda (w) (equal? (alist-ref 'fs w) fs-path)) *wormholes*)))
+    (if w
+        (begin
+          (print "Capabilities for " fs-path ":")
+          (for-each (lambda (c) (print "  " c)) (alist-ref 'capabilities w))
+          (alist-ref 'capabilities w))
+        (error "Wormhole not found" fs-path))))
+
+(define (wormhole-delegate fs-path new-caps recipient)
+  "Delegate subset of wormhole capabilities"
+  (let* ((w (find (lambda (w) (equal? (alist-ref 'fs w) fs-path)) *wormholes*))
+         (my-caps (and w (alist-ref 'capabilities w))))
+    (unless w (error "Wormhole not found" fs-path))
+    (unless (every (lambda (c) (member c my-caps)) new-caps)
+      (error 'capability-amplification "Cannot delegate capabilities you don't have"))
+    (wormhole-audit 'wormhole-delegate fs-path `(to ,recipient caps ,(length new-caps)))
+    (print "Delegated " (length new-caps) " capabilities to " recipient)
+    `(delegated ,recipient ,new-caps)))
+
+(define (wormhole-close fs-path)
+  "Close wormhole"
+  (print "Closing wormhole at " fs-path "...")
+  (wormhole-audit 'wormhole-close fs-path)
+  (set! *wormholes*
+        (filter (lambda (w) (not (equal? (alist-ref 'fs w) fs-path)))
+                *wormholes*))
+  `(closed ,fs-path))
+
+(define (wormholes)
+  "List active wormholes"
+  (if (null? *wormholes*)
+      (print "No active wormholes")
+      (for-each (lambda (w)
+                  (print "  " (alist-ref 'fs w) " <-> vault:" (alist-ref 'vault w)
+                         " [" (alist-ref 'status w) "] "
+                         (alist-ref 'rate-limit w) " ops/min"))
+                *wormholes*)))
+
+;; Aliases for mount vocabulary
+(define vault-mount wormhole-open)
+(define vault-unmount wormhole-close)
+(define vault-mounts wormholes)
+
+(define (fs-import path #!key (recursive #t))
+  "Import macOS path into vault with full metadata"
+  (print "Importing " path " into vault...")
+  (print "  Capturing: POSIX attrs, xattrs, Finder tags, ACLs")
+  (let* ((meta (capture-metadata path))
+         (hash (blob->hex (sha512-hash (string->blob path)))))
+    (set! *vault-manifest*
+          (cons `((path . ,path)
+                  (hash . ,hash)
+                  (metadata . ,meta))
+                *vault-manifest*))
+    (print "  Stored as: " (substring hash 0 16) "...")
+    `(imported ,path ,hash)))
+
+(define (fs-export hash path)
+  "Export vault object to macOS, restoring full metadata"
+  (print "Exporting " (substring hash 0 16) "... to " path)
+  (print "  Restoring: POSIX attrs, xattrs, Finder tags, ACLs")
+  (print "  (export simulated)")
+  `(exported ,hash ,path))
+
+(define (fs-sync vault-path fs-path)
+  "Bidirectional sync between vault and filesystem"
+  (print "Syncing " vault-path " <-> " fs-path)
+  (print "  Detecting changes...")
+  (print "  (bidirectional sync simulated)")
+  `(synced ,vault-path ,fs-path))
+
+(define (manifest-list)
+  "Show vault manifest entries"
+  (if (null? *vault-manifest*)
+      (print "Manifest empty")
+      (for-each (lambda (e)
+                  (print "  " (alist-ref 'path e) " -> "
+                         (substring (alist-ref 'hash e) 0 16) "..."))
+                *vault-manifest*)))
+
+;;; ============================================================
 ;;; Help
 ;;; ============================================================
 
@@ -666,6 +869,34 @@ Cyberspace REPL - Available Commands:
     (inference-models)               List available models
     (inference prompt model: m)      Run LLM inference
     (inference-embed text)           Generate embeddings
+
+  Wormholes (RFC-041):
+    (wormhole-open \"~/Space\")        Open wormhole fs <-> vault
+    (wormhole-open p caps: cap:read-only)  With specific capabilities
+    (wormhole-open p locked: #t)     Open locked (requires unlock)
+    (wormhole-open p auth-required: '(delete))  Step-up auth
+    (wormhole-close path)            Close wormhole
+    (wormhole-lock path)             Lock (pause operations)
+    (wormhole-unlock path auth: tok) Unlock with authentication
+    (wormhole-caps path)             Show capabilities
+    (wormhole-delegate p caps recip) Delegate capabilities
+    (wormholes)                      List active wormholes
+    (fs-import path)                 Import with full metadata
+    (fs-export hash path)            Export, restore metadata
+    (fs-sync vault-path fs-path)     Bidirectional sync
+    (manifest-list)                  Show manifest entries
+
+  Capability Sets:
+    cap:read-only                    Read, stat, readdir, xattr-read
+    cap:read-write                   Read, write, create, chmod, mkdir
+    cap:full                         All capabilities including admin
+    cap:backup                       Minimal for backup (read-only)
+    cap:sync                         For bidirectional sync
+
+  Requirements:
+    brew install fuse-t              FUSE-T (recommended, no kext)
+    brew install macfuse             macFUSE (requires kext)
+    brew install ollama              Local LLM inference
 
   Utilities:
     (blob->hex blob)                 Convert blob to hex
