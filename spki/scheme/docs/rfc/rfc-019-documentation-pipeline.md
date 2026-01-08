@@ -45,6 +45,8 @@ Steve Jobs understood that the document format *is* the document.
 
 ## RFC Categories
 
+Following IETF tradition (RFC 2026, RFC 2223).[^d4]
+
 *Table 0: RFC Categories and Authorship*
 
 | Category | Description | Author |
@@ -57,11 +59,61 @@ Steve Jobs understood that the document format *is* the document.
 
 **Open Authorship:** Any member of the federation may author Informational or
 Experimental RFCs. Standards Track, Best Current Practice, and Historic
-designations require core maintainer approval.[^d4]
+designations require core maintainer approval.
 
 [^d4]: Design: Following IETF tradition (RFC 2026). Informational RFCs lower
 the barrier to contribution while Standards Track maintains architectural
 coherence. The federation grows through documentation.
+
+---
+
+## RFC Header Format
+
+Every RFC begins with a standardized header block:
+
+```markdown
+# RFC-NNN: Title
+
+**Status:** Draft | Proposed | Implemented | Historic
+**Category:** Standards Track | Informational | Experimental | BCP | Historic
+**Created:** YYYY-MM-DD
+**Updated:** YYYY-MM-DD
+**Author:** Name <email>
+**Updates:** RFC-NNN (if applicable)
+**Obsoletes:** RFC-NNN (if applicable)
+
+---
+
+## Abstract
+
+One paragraph summary of the RFC.
+
+---
+
+## Status of This Memo
+
+This document specifies a [Standards Track/Informational/Experimental]
+protocol for the Library of Cyberspace community.
+
+Distribution of this memo is unlimited.
+```
+
+### Status Values
+
+| Status | Meaning |
+|--------|---------|
+| `Draft` | Work in progress, not yet reviewed |
+| `Proposed` | Under review, seeking feedback |
+| `Implemented` | Specification complete, implementation exists |
+| `Historic` | Superseded or deprecated |
+
+### Required Sections
+
+1. **Abstract** — One paragraph summary
+2. **Motivation** — Why this RFC exists
+3. **Specification** — The technical details
+4. **Security Considerations** — Required, even if "None"
+5. **References** — Citations and dependencies
 
 ---
 
