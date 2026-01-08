@@ -1401,51 +1401,85 @@ Cyberspace REPL - Available Commands:
     'age-identity     Path to age identity file
 "))
 
-;; Banner with status
-(define *cluster-members* '())  ; list of member names
+;; Banner with status: nodes, cluster, replication
+(define *cluster-nodes* '())      ; known nodes
+(define *cluster-state* 'solo)    ; solo | forming | stable | degraded | split
+(define *replication-state* 'none) ; none | syncing | current | behind | ahead
 
-(define (cluster-join name)
-  "Add member to cluster"
-  (unless (member name *cluster-members*)
-    (set! *cluster-members* (cons name *cluster-members*)))
-  *cluster-members*)
+(define (node-join name #!key (uri #f))
+  "Add node to cluster"
+  (unless (assoc name *cluster-nodes*)
+    (set! *cluster-nodes* (cons (list name uri (current-seconds)) *cluster-nodes*)))
+  (when (and (eq? *cluster-state* 'solo) (> (length *cluster-nodes*) 0))
+    (set! *cluster-state* 'forming))
+  *cluster-nodes*)
 
-(define (cluster-leave name)
-  "Remove member from cluster"
-  (set! *cluster-members* (filter (lambda (m) (not (equal? m name))) *cluster-members*))
-  *cluster-members*)
+(define (node-leave name)
+  "Remove node from cluster"
+  (set! *cluster-nodes* (filter (lambda (n) (not (equal? (car n) name))) *cluster-nodes*))
+  (when (null? *cluster-nodes*)
+    (set! *cluster-state* 'solo))
+  *cluster-nodes*)
 
-(define (cluster-status)
-  "Show cluster members"
-  (if (null? *cluster-members*)
-      (print "No cluster members (local only)")
+(define (nodes)
+  "List cluster nodes"
+  (if (null? *cluster-nodes*)
+      (print "No cluster nodes (solo)")
       (begin
-        (print "Cluster members: " (length *cluster-members*))
-        (for-each (lambda (m) (print "  " m)) *cluster-members*))))
+        (print "Nodes: " (length *cluster-nodes*))
+        (for-each (lambda (n)
+                    (print "  " (car n) (if (cadr n) (string-append " @ " (cadr n)) "")))
+                  *cluster-nodes*))))
 
-(define (format-members members max-width)
-  "Format member list to fit within max-width"
+(define (cluster #!optional new-state)
+  "Get or set cluster state"
+  (if new-state
+      (begin
+        (set! *cluster-state* new-state)
+        (print "Cluster: " new-state))
+      (begin
+        (print "Cluster: " *cluster-state*)
+        (print "  Nodes: " (length *cluster-nodes*))
+        *cluster-state*)))
+
+(define (replication #!optional new-state)
+  "Get or set replication state"
+  (if new-state
+      (begin
+        (set! *replication-state* new-state)
+        (print "Replication: " new-state))
+      (begin
+        (print "Replication: " *replication-state*)
+        *replication-state*)))
+
+(define (format-nodes nodes max-width)
+  "Format node list to fit within max-width"
   (cond
-   ((null? members) "")
-   ((= (length members) 1)
-    (let ((name (car members)))
+   ((null? nodes) "")
+   ((= (length nodes) 1)
+    (let ((name (caar nodes)))
       (if (> (string-length name) max-width)
           (string-append (substring name 0 (- max-width 2)) "..")
           name)))
    (else
-    (let* ((count (length members))
-           (first (car members))
+    (let* ((count (length nodes))
+           (first (caar nodes))
            (suffix (string-append " +" (number->string (- count 1))))
            (avail (- max-width (string-length suffix))))
       (if (> (string-length first) avail)
           (string-append (substring first 0 (- avail 2)) ".." suffix)
           (string-append first suffix))))))
 
+(define (format-status)
+  "Format right status: cluster/replication"
+  (string-append (symbol->string *cluster-state*)
+                 "/"
+                 (symbol->string *replication-state*)))
+
 (define (banner)
-  (let* ((has-vault (directory-exists? ".vault"))
-         (left-max 18)
-         (left-status (format-members *cluster-members* left-max))
-         (right-status (if (attested?) "attested" "anonymous"))
+  (let* ((left-max 16)
+         (left-status (format-nodes *cluster-nodes* left-max))
+         (right-status (format-status))
          (title "Library of Cyberspace")
          (bar "═══════════════════════════════════════════════════════════════")
          (title-len (string-length title))
