@@ -1402,14 +1402,49 @@ Cyberspace REPL - Available Commands:
 "))
 
 ;; Banner with status
-(define *replication-members* 1)  ; current cluster size
+(define *cluster-members* '())  ; list of member names
+
+(define (cluster-join name)
+  "Add member to cluster"
+  (unless (member name *cluster-members*)
+    (set! *cluster-members* (cons name *cluster-members*)))
+  *cluster-members*)
+
+(define (cluster-leave name)
+  "Remove member from cluster"
+  (set! *cluster-members* (filter (lambda (m) (not (equal? m name))) *cluster-members*))
+  *cluster-members*)
+
+(define (cluster-status)
+  "Show cluster members"
+  (if (null? *cluster-members*)
+      (print "No cluster members (local only)")
+      (begin
+        (print "Cluster members: " (length *cluster-members*))
+        (for-each (lambda (m) (print "  " m)) *cluster-members*))))
+
+(define (format-members members max-width)
+  "Format member list to fit within max-width"
+  (cond
+   ((null? members) "local")
+   ((= (length members) 1)
+    (let ((name (car members)))
+      (if (> (string-length name) max-width)
+          (string-append (substring name 0 (- max-width 2)) "..")
+          name)))
+   (else
+    (let* ((count (length members))
+           (first (car members))
+           (suffix (string-append " +" (number->string (- count 1))))
+           (avail (- max-width (string-length suffix))))
+      (if (> (string-length first) avail)
+          (string-append (substring first 0 (- avail 2)) ".." suffix)
+          (string-append first suffix))))))
 
 (define (banner)
   (let* ((has-vault (directory-exists? ".vault"))
-         (replicated (and has-vault (> *replication-members* 0)))
-         (left-status (if replicated
-                         (string-append "%" (number->string *replication-members*) " replicated")
-                         "local"))
+         (left-max 18)
+         (left-status (format-members *cluster-members* left-max))
          (right-status (if (attested?) "attested" "anonymous"))
          (title "Library of Cyberspace")
          (bar "═══════════════════════════════════════════════════════════════")
