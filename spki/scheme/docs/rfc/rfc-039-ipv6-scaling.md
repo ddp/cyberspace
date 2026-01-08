@@ -9,7 +9,19 @@
 
 ## Abstract
 
-This RFC defines the architectural changes required to scale Cyberspace from a git-backed prototype to a native distributed system capable of operating at IPv6 scale (billions of nodes, exabytes of content). Git becomes an export format; the vault becomes the source of truth.
+This RFC defines the architectural changes required to scale Cyberspace from a git-backed prototype to a native distributed system capable of operating at IPv6 scale (billions of realms, exabytes of content). Git becomes an export format; the vault becomes the source of truth.
+
+---
+
+## Terminology
+
+**Realm**: A node's place in cyberspace - its vault, principal, capabilities, and objects. Each realm is sovereign: local-first, controlled by its operator. Realms federate by choice, sharing objects according to trust relationships.
+
+**Vault**: The local content-addressed object store (`.vault/`). The vault IS the realm's storage - all objects, indexes, audit trails, and configuration live here.
+
+**Principal**: A node's cryptographic identity (Ed25519 public key). The principal identifies the realm to peers and signs its objects.
+
+At IPv6 scale, cyberspace consists of billions of realms, each occupying its own address space, each sovereign, each choosing what to share and with whom.
 
 ---
 
@@ -179,14 +191,14 @@ CREATE INDEX idx_audit_time ON audit(timestamp);
 
 ## Discovery and Routing
 
-### Node Identity
+### Realm Identity
 
-Each node has a principal (Ed25519 public key). This IS its identity:
+Each realm has a principal (Ed25519 public key). This IS its identity:
 
 ```scheme
-(node-identity
+(realm-identity
   (principal "ed25519:a1b2c3...")
-  (addresses                          ; Where to reach this principal
+  (addresses                          ; Where to reach this realm
     (ipv6 "2001:db8::1" port: 7777)
     (ipv4 "192.0.2.1" port: 7777)     ; Legacy
     (onion "xxxx.onion" port: 7777))  ; Tor
@@ -206,10 +218,10 @@ Each node has a principal (Ed25519 public key). This IS its identity:
 
 **Gossip Protocol:**
 ```
-1. Node joins, contacts bootstrap peer
+1. Realm joins, contacts bootstrap peer
 2. Receives partial peer list (random subset)
 3. Contacts those peers, exchanges lists
-4. Epidemic spread: O(log n) rounds to reach all nodes
+4. Epidemic spread: O(log n) rounds to reach all realms
 5. Periodic refresh (every 5 min on Starlink-friendly schedule)
 ```
 
@@ -218,7 +230,7 @@ Each node has a principal (Ed25519 public key). This IS its identity:
 Kademlia-style routing:
   - XOR distance metric on principal hashes
   - O(log n) lookups
-  - Nodes responsible for nearby hash ranges
+  - Realms responsible for nearby hash ranges
   - Natural load balancing
 ```
 
@@ -380,11 +392,11 @@ O(log n) round trips to find diff.
     │   EDGES   │             │   EDGES    │             │   EDGES    │
     └───────────┘             └────────────┘             └────────────┘
 
-Coordinators: Rare, high-capability, run consensus
-Full nodes: Common, replicate everything, serve content
-Witnesses: Abundant, verify and store, passive sync
-Archivers: Cold storage, batch sync
-Edges: Read-only, intermittent, mobile
+Coordinators: Rare, high-capability realms, run consensus
+Full: Common realms, replicate everything, serve content
+Witnesses: Abundant realms, verify and store, passive sync
+Archivers: Cold storage realms, batch sync
+Edges: Read-only realms, intermittent, mobile
 ```
 
 ### Partition Tolerance

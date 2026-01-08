@@ -54,6 +54,8 @@
    node-announce
    *node-roles*
    *node-operations*
+   probe-system-capabilities
+   recommend-role
 
    ;; Configuration
    vault-init

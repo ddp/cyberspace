@@ -28,6 +28,8 @@ Request for Comments documents for the Library of Cyberspace preservation archit
 | [rfc-019](rfc-019-documentation-pipeline.md) | Documentation Pipeline | Implemented | 2026-01-06 |
 | [rfc-020](rfc-020-content-addressed-storage.md) | Content-Addressed Storage | Draft | 2026-01-07 |
 | [rfc-037](rfc-037-node-roles.md) | Node Roles and Capabilities | Draft | 2026-01-07 |
+| [rfc-039](rfc-039-ipv6-scaling.md) | Scaling Architecture for IPv6 | Draft | 2026-01-07 |
+| [rfc-040](rfc-040-security-architecture.md) | Cyberspace Security Architecture | Draft | 2026-01-08 |
 
 ## RFC Purpose
 
@@ -61,6 +63,16 @@ RFCs are published in the following canonical formats:
 | Plain Text | `.txt` | Universal compatibility, IETF tradition |
 
 All formats are considered canonical and are preserved in the Vault.
+
+## Glossary
+
+| Term | Definition |
+|------|------------|
+| **Realm** | A node's place in cyberspace - its vault, principal, capabilities, and objects. Local-first, sovereign. |
+| **Vault** | The local content-addressed object store (`.vault/`). The realm's storage. |
+| **Principal** | A node's cryptographic identity (Ed25519 public key). Identifies the realm to peers. |
+| **Soup** | The queryable object space within a vault (NewtonOS-inspired). |
+| **Seal** | Cryptographic binding - signing, archiving, committing. The primary verb. |
 
 ## Upcoming RFCs
 

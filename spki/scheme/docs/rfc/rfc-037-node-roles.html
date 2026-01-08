@@ -250,6 +250,20 @@ Cyberspace confederation based on compute, storage, network, and
 security capabilities. Roles determine what operations a node can
 perform and how it participates in the distributed system.</p>
 <hr />
+<h2 id="terminology">Terminology</h2>
+<p><strong>Realm</strong>: A node’s place in cyberspace. A realm
+encompasses: - The node’s <strong>vault</strong> (local
+content-addressed object store) - The node’s <strong>principal</strong>
+(Ed25519 identity) - The node’s <strong>capabilities</strong> (hardware,
+network, security) - The node’s <strong>objects</strong> (what it stores
+and serves)</p>
+<p>A realm is local-first and sovereign. The node controls what to
+share, who to trust, what to replicate. When nodes federate, their
+realms overlap - objects flow between them according to trust
+relationships.</p>
+<p>The hardware manifest stored at <code>.vault/node-hardware</code>
+declares what kind of place this realm occupies in cyberspace.</p>
+<hr />
 <h2 id="motivation">Motivation</h2>
 <p>RFC-010 (Federation Protocol) defines <strong>trust
 relationships</strong> between peers (publisher, subscriber, peer).
@@ -643,9 +657,12 @@ class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a hr
 <span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co">;; Announce role to peers</span></span>
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>(node-announce)</span></code></pre></div>
 <h3 id="persistence">Persistence</h3>
-<p>Role configuration stored in:</p>
-<pre><code>~/.cyberspace/node-role      ; User override
-.vault/node-role             ; Repository-specific</code></pre>
+<p>Role configuration stored in the realm:</p>
+<pre><code>~/.cyberspace/node-role      ; User override (global)
+.vault/node-role             ; Realm-specific role
+.vault/node-hardware         ; Hardware manifest (auto-refreshed)</code></pre>
+<p>The hardware manifest is automatically updated on REPL startup,
+declaring the realm’s capabilities to federated peers.</p>
 <h3 id="audit-trail">Audit Trail</h3>
 <p>Role changes are auditable events:</p>
 <div class="sourceCode" id="cb11"><pre

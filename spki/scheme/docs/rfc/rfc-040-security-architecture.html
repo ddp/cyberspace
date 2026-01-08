@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-040-security-architecture</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="rfc-040-cyberspace-security-architecture">RFC-040: Cyberspace
+Security Architecture</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a> <strong>Requires:</strong> RFC-004
+(SPKI Authorization), RFC-007 (Threshold Governance), RFC-037 (Node
+Roles)</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This document defines how cyberspace protects itself. The model is
+simple: <strong>capabilities all the way down</strong>. Objects are
+content. Authorization flows through signed certificates. No labels, no
+ACLs, no ambient authority. You hold a capability or you don’t.</p>
+<p>We use the rigor of TCSEC B2 as a lens - particularly for covert
+channel analysis - but cyberspace is its own thing. This is our security
+architecture, in our language.</p>
+<hr />
+<h2 id="the-axioms">The Axioms</h2>
+<pre><code>A1. No Ambient Authority
+    You have nothing until someone gives you something.
+    Every access requires presenting a capability.
+
+A2. Capabilities Are Unforgeable
+    Ed25519 signatures. No exceptions.
+    Create by origin or delegation. No other path.
+
+A3. Capabilities Only Attenuate
+    Delegation can reduce rights, never amplify.
+    What you give cannot exceed what you hold.
+
+A4. Objects Are Immutable Content
+    SHA-512 hash IS identity.
+    No metadata. No labels. No ACLs.
+    Objects don&#39;t know who can access them.</code></pre>
+<hr />
+<h2 id="the-realm">The Realm</h2>
+<p>A realm is your place in cyberspace. It is sovereign.</p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                        YOUR REALM                            │
+│                                                              │
+│   Principal: ed25519:a1b2c3...  (this is you)               │
+│                                                              │
+│   ┌──────────────────────────────────────────────────────┐  │
+│   │                      VAULT                            │  │
+│   │  Objects:     content-addressed, signed               │  │
+│   │  Capabilities: certificates you hold                  │  │
+│   │  Audit:       what happened here                      │  │
+│   └──────────────────────────────────────────────────────┘  │
+│                                                              │
+│   Trust boundary: your signing key                          │
+│   You decide: what to store, who to trust, what to share    │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<p>Your realm is local-first. Federation is optional. When you federate,
+realms overlap - objects flow according to capability chains. But your
+realm remains yours.</p>
+<hr />
+<h2 id="capabilities">Capabilities</h2>
+<h3 id="the-certificate">The Certificate</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:alice...&quot;</span>)        <span class="co">; Who grants</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:bob...&quot;</span>)         <span class="co">; Who receives</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))       <span class="co">; What: read this object</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="dv">1736400000</span>))     <span class="co">; When: expires in 24h</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#f</span>)                     <span class="co">; Bob cannot delegate</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))         <span class="co">; Alice&#39;s signature</span></span></code></pre></div>
+<h3 id="access-check">Access Check</h3>
+<pre><code>Can Bob read sha512:doc?
+
+1. Does Bob hold a cert granting (read &quot;sha512:doc&quot;)?
+2. Is the signature valid?
+3. Is it expired?
+4. Is it revoked?
+5. Does the chain trace to someone who could grant it?
+
+All yes? Access granted.
+Any no?  Access denied.</code></pre>
+<h3 id="delegation">Delegation</h3>
+<p>Alice can give Bob read access:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:alice...&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:bob...&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#t</span>))                    <span class="co">; Bob CAN delegate</span></span></code></pre></div>
+<p>Bob can give Carol read access (because Alice allowed
+propagation):</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:bob...&quot;</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:carol...&quot;</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  (tag (<span class="kw">read</span> <span class="st">&quot;sha512:doc...&quot;</span>))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  (propagate <span class="dv">#f</span>))                    <span class="co">; Carol cannot delegate further</span></span></code></pre></div>
+<p>Carol cannot give anyone else access. The chain stops.</p>
+<hr />
+<h2 id="classification-without-labels">Classification Without
+Labels</h2>
+<p>Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP
+SECRET.</p>
+<p>In cyberspace, classification is a capability you hold:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Security officer grants SECRET clearance</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:security-officer...&quot;</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:analyst...&quot;</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (tag (clearance secret))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="dv">1767225600</span>)))    <span class="co">; Annual renewal</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Program manager grants compartment access</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  (issuer <span class="st">&quot;ed25519:program-manager...&quot;</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  (subject <span class="st">&quot;ed25519:engineer...&quot;</span>)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  (tag (compartment <span class="st">&quot;project-atlas&quot;</span>)))</span></code></pre></div>
+<p>Access to a classified object requires: 1. Capability to read the
+object itself 2. Appropriate clearance capability 3. All required
+compartment capabilities</p>
+<p>The object has no labels. The policy lives in the certificates.</p>
+<hr />
+<h2 id="the-trusted-core">The Trusted Core</h2>
+<p>What must work correctly for security to hold:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>What It Does</th>
+<th>What We Trust</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ed25519</td>
+<td>Signatures</td>
+<td>libsodium, math</td>
+</tr>
+<tr>
+<td>SHA-512</td>
+<td>Object identity</td>
+<td>libsodium, math</td>
+</tr>
+<tr>
+<td>Capability verifier</td>
+<td>Chain validation</td>
+<td>Our code</td>
+</tr>
+<tr>
+<td>Vault storage</td>
+<td>Object integrity</td>
+<td>Local filesystem</td>
+</tr>
+<tr>
+<td>Audit chain</td>
+<td>What happened</td>
+<td>Hash chain, signatures</td>
+</tr>
+</tbody>
+</table>
+<p>The core is small. Objects are dumb content. Policy lives in
+certificates. Verification is stateless computation.</p>
+<hr />
+<h2 id="covert-channels">Covert Channels</h2>
+<p>This is where we get serious.</p>
+<p>A covert channel is information flow that violates policy - a way to
+leak data that bypasses the capability model. They exist in every
+system. We analyze ours.</p>
+<h3 id="storage-channels">Storage Channels</h3>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 28%" />
+<col style="width: 24%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Channel</th>
+<th>How It Works</th>
+<th>Bandwidth</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Object existence</td>
+<td>Create/don’t create object as 1/0</td>
+<td>~1 bit/op</td>
+<td>Bloom filter noise</td>
+</tr>
+<tr>
+<td>Object size</td>
+<td>Encode in padding</td>
+<td>~10 bits/obj</td>
+<td>Size quantization</td>
+</tr>
+<tr>
+<td>Object count</td>
+<td>Number of objects in namespace</td>
+<td>~4 bits/ns</td>
+<td>Rate limiting</td>
+</tr>
+</tbody>
+</table>
+<h3 id="timing-channels">Timing Channels</h3>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 28%" />
+<col style="width: 24%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Channel</th>
+<th>How It Works</th>
+<th>Bandwidth</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Verification time</td>
+<td>Slow/fast response as 1/0</td>
+<td>~1 bit/100ms</td>
+<td>Constant-time ops</td>
+</tr>
+<tr>
+<td>Network latency</td>
+<td>Delay patterns</td>
+<td>~10 bits/sec</td>
+<td>Batching, Tor</td>
+</tr>
+<tr>
+<td>Audit write time</td>
+<td>When entries appear</td>
+<td>~1 bit/sec</td>
+<td>Async, batched</td>
+</tr>
+</tbody>
+</table>
+<h3 id="federation-channels">Federation Channels</h3>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 28%" />
+<col style="width: 24%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Channel</th>
+<th>How It Works</th>
+<th>Bandwidth</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sync timing</td>
+<td>When objects replicate</td>
+<td>~1 bit/sync</td>
+<td>Random delays</td>
+</tr>
+<tr>
+<td>Peer selection</td>
+<td>Which realms to contact</td>
+<td>~4 bits/conn</td>
+<td>Randomized peers</td>
+</tr>
+<tr>
+<td>Gossip patterns</td>
+<td>Propagation paths</td>
+<td>~2 bits/round</td>
+<td>Epidemic flooding</td>
+</tr>
+</tbody>
+</table>
+<h3 id="analysis">Analysis</h3>
+<p><strong>Scenario:</strong> Alice has SECRET access. Bob has
+UNCLASSIFIED. Alice wants to leak to Bob.</p>
+<p><strong>Via storage:</strong> Alice creates/deletes objects Bob can
+see. Each operation signals one bit. Rate: maybe 1 bit/second with
+careful timing.</p>
+<p><strong>Via timing:</strong> Alice influences verification time of
+requests Bob makes. Bob measures. Rate: maybe 0.1 bit/second, noisy.</p>
+<p><strong>Via federation:</strong> Alice causes sync events Bob can
+observe. Rate: depends on federation config, maybe 0.01 bit/second.</p>
+<p><strong>Assessment:</strong> Total covert bandwidth: ~1-2 bits/second
+under ideal conditions. Not enough for bulk data. Enough for short
+signals. Acceptable residual risk for our threat model.</p>
+<h3 id="mitigation-principles">Mitigation Principles</h3>
+<pre><code>1. Add noise where practical (bloom filters, random delays)
+2. Quantize where observable (object sizes, batch windows)
+3. Rate limit where controllable (operations per time)
+4. Accept what remains (document it, move on)</code></pre>
+<hr />
+<h2 id="audit">Audit</h2>
+<p>Everything important gets logged.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">12345</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (lamport <span class="dv">67890</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (type capability-exercise)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  (actor <span class="st">&quot;ed25519:subject...&quot;</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  (action (<span class="kw">read</span> <span class="st">&quot;sha512:object...&quot;</span>))</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  (capability <span class="st">&quot;sha512:cert...&quot;</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  (previous <span class="st">&quot;sha512:prev-entry...&quot;</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:auditor...&quot;</span>))</span></code></pre></div>
+<p><strong>Properties:</strong> - Hash-chained: tamper-evident - Signed:
+non-repudiable - Monotonic: gaps detected - Distributed: witnesses
+replicate</p>
+<p><strong>What gets logged:</strong> - Capability creation - Capability
+exercise (access) - Capability revocation - Access denials - Object
+creation - Realm events (role changes, federation)</p>
+<hr />
+<h2 id="trusted-path">Trusted Path</h2>
+<p>When it matters, talk directly to the core.</p>
+<pre><code>┌──────────────────────────────────────┐
+│           HUMAN OPERATOR              │
+└─────────────────┬────────────────────┘
+                  │ Local terminal, no network
+┌─────────────────▼────────────────────┐
+│          CYBERSPACE REPL              │
+│    ╔═════════════════════════════╗   │
+│    ║  TRUSTED PATH ACTIVE        ║   │
+│    ╚═════════════════════════════╝   │
+└─────────────────┬────────────────────┘
+                  │
+┌─────────────────▼────────────────────┐
+│           TRUSTED CORE                │
+└──────────────────────────────────────┘</code></pre>
+<p>Operations requiring trusted path: - <code>(ed25519-keypair)</code> -
+key generation - <code>(node-role 'coordinator)</code> - role assignment
+- <code>(seal-release "1.0.0")</code> - signing releases - Key ceremony
+(RFC-022)</p>
+<hr />
+<h2 id="threats">Threats</h2>
+<h3 id="what-we-handle">What We Handle</h3>
+<table>
+<thead>
+<tr>
+<th>Threat</th>
+<th>Defense</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unauthorized access</td>
+<td>No capability = no access</td>
+</tr>
+<tr>
+<td>Capability forgery</td>
+<td>Ed25519 signatures</td>
+</tr>
+<tr>
+<td>Replay attacks</td>
+<td>Timestamps, nonces, Lamport clocks</td>
+</tr>
+<tr>
+<td>Stale capabilities</td>
+<td>Expiration, revocation</td>
+</tr>
+<tr>
+<td>Delegation abuse</td>
+<td>Attenuation, propagation flags</td>
+</tr>
+<tr>
+<td>Content tampering</td>
+<td>SHA-512 content addressing</td>
+</tr>
+<tr>
+<td>Origin spoofing</td>
+<td>Object signatures</td>
+</tr>
+<tr>
+<td>Audit tampering</td>
+<td>Hash chain, distribution</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-we-dont-handle">What We Don’t Handle</h3>
+<table>
+<colgroup>
+<col style="width: 61%" />
+<col style="width: 38%" />
+</colgroup>
+<thead>
+<tr>
+<th>Threat</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compromised signing key</td>
+<td>Fundamental limit. Mitigate: threshold, rotation.</td>
+</tr>
+<tr>
+<td>Endpoint compromise</td>
+<td>Your realm, your problem.</td>
+</tr>
+<tr>
+<td>Physical access</td>
+<td>Out of scope for software.</td>
+</tr>
+<tr>
+<td>Covert channels &gt; 1 bit/sec</td>
+<td>Residual risk, documented above.</td>
+</tr>
+<tr>
+<td>Availability attacks</td>
+<td>Focus on integrity/confidentiality.</td>
+</tr>
+<tr>
+<td>Quantum computing</td>
+<td>Ed25519 vulnerable. Migration path planned.</td>
+</tr>
+<tr>
+<td>Coercion</td>
+<td>Math doesn’t help if you’re forced to sign.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="the-invariants">The Invariants</h2>
+<p>These must always hold:</p>
+<pre><code>I1. No access without valid capability
+    access(s,o,r) → ∃c: valid_chain(s,o,r,c)
+
+I2. Delegation cannot amplify
+    delegated(c₂,c₁) → rights(c₂) ⊆ rights(c₁)
+
+I3. Object identity is content hash
+    id(o) = sha512(content(o))
+
+I4. Audit is ordered
+    sequence(e₁) &lt; sequence(e₂) → time(e₁) ≤ time(e₂)
+
+I5. Revocation is permanent
+    revoked(c,t) → ∀t&#39; &gt; t: ¬valid(c,t&#39;)
+
+I6. No ambient authority
+    ¬∃c: grants(c,*,*)</code></pre>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999</li>
+<li>Dennis, J. &amp; Van Horn, E., Programming Semantics for
+Multiprogrammed Computations, 1966</li>
+<li>Miller, M., Robust Composition, 2006</li>
+<li>Lampson, B., A Note on the Confinement Problem, 1973</li>
+<li>DoD 5200.28-STD (Orange Book), 1985 - for the covert channel
+lens</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li>2026-01-08 - Initial draft</li>
+</ul>
+</body>
+</html>

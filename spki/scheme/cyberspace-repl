@@ -15,11 +15,140 @@
         (chicken format)
         (chicken repl)
         (chicken file)
+        (chicken io)
+        (chicken time)
         (chicken process-context)
+        (chicken process)
         (chicken blob)
+        (chicken file posix)
         srfi-4)
 
-;; Load cyberspace modules
+;;; ============================================================
+;;; Bootstrap: Mixed-Architecture Defense
+;;; ============================================================
+;;; Ensures compiled modules match current architecture.
+;;; Rebuilds automatically if arch mismatch or source newer.
+
+(define (current-arch)
+  "Detect current CPU architecture"
+  (let ((result (with-input-from-pipe "uname -m" read-line)))
+    (if (eof-object? result) "unknown" result)))
+
+(define (current-os)
+  "Detect current operating system"
+  (let ((result (with-input-from-pipe "uname -s" read-line)))
+    (if (eof-object? result) "unknown" result)))
+
+(define (libsodium-paths arch)
+  "Return (include-path lib-path) for libsodium based on architecture and OS"
+  (let ((os (current-os)))
+    (cond
+     ;; macOS ARM (M1/M2/M3)
+     ((and (string=? os "Darwin") (string=? arch "arm64"))
+      '("/opt/homebrew/include" "/opt/homebrew/lib"))
+     ;; macOS Intel
+     ((string=? os "Darwin")
+      '("/usr/local/include" "/usr/local/lib"))
+     ;; Linux (Fedora, Ubuntu, etc.) - system packages
+     ((string=? os "Linux")
+      '("/usr/include" "/usr/lib64"))  ; Fedora uses lib64 for x86_64
+     ;; Fallback
+     (else
+      '("/usr/local/include" "/usr/local/lib")))))
+
+(define (arch-stamp-file module)
+  "Path to architecture stamp file for module"
+  (string-append "." module ".arch"))
+
+(define (read-arch-stamp module)
+  "Read stored architecture for a compiled module"
+  (let ((stamp-file (arch-stamp-file module)))
+    (if (file-exists? stamp-file)
+        (with-input-from-file stamp-file read-line)
+        #f)))
+
+(define (write-arch-stamp module arch)
+  "Write architecture stamp for compiled module"
+  (with-output-to-file (arch-stamp-file module)
+    (lambda () (print arch))))
+
+(define (file-mtime path)
+  "Get file modification time, or 0 if doesn't exist"
+  (if (file-exists? path)
+      (file-modification-time path)
+      0))
+
+(define (needs-rebuild? module arch)
+  "Check if module needs rebuilding: missing, arch mismatch, or source newer"
+  (let* ((src (string-append module ".scm"))
+         (so  (string-append module ".so"))
+         (import-scm (string-append module ".import.scm"))
+         (stored-arch (read-arch-stamp module)))
+    (or (not (file-exists? so))
+        (not (file-exists? import-scm))
+        (not stored-arch)
+        (not (string=? stored-arch arch))
+        (> (file-mtime src) (file-mtime so)))))
+
+(define (rebuild-module! module arch stamp)
+  "Rebuild a module for current platform"
+  (let* ((paths (libsodium-paths arch))
+         (inc-path (car paths))
+         (lib-path (cadr paths))
+         (src (string-append module ".scm")))
+    (print "")
+    (print "┌─ BOOTSTRAP: Rebuilding " module " for " stamp " ─┐")
+    (let ((cmd (if (string=? module "crypto-ffi")
+                   ;; crypto-ffi needs libsodium
+                   (string-append "csc -shared -J " src
+                                  " -I" inc-path
+                                  " -L" lib-path
+                                  " -L -lsodium 2>&1")
+                   ;; other modules (vault, etc)
+                   (string-append "csc -shared -J " src " 2>&1"))))
+      (print "  " cmd)
+      (let ((result (with-input-from-pipe cmd
+                      (lambda ()
+                        (let loop ((lines '()))
+                          (let ((line (read-line)))
+                            (if (eof-object? line)
+                                (reverse lines)
+                                (loop (cons line lines)))))))))
+        ;; Print any output (warnings/errors)
+        (for-each (lambda (line) (print "  " line)) result)
+        ;; Check if .so was created
+        (if (file-exists? (string-append module ".so"))
+            (begin
+              (write-arch-stamp module stamp)
+              (print "  ✓ Built successfully")
+              (print "└" (make-string 45 #\─) "┘")
+              (print "")
+              #t)
+            (begin
+              (print "  ✗ Build FAILED")
+              (print "└" (make-string 45 #\─) "┘")
+              (print "")
+              (exit 1)))))))
+
+(define (platform-stamp)
+  "Return OS+arch stamp (e.g., 'Darwin-arm64', 'Linux-x86_64')"
+  (string-append (current-os) "-" (current-arch)))
+
+(define (bootstrap-modules!)
+  "Ensure all required modules are built for current platform"
+  (let ((stamp (platform-stamp))
+        (arch (current-arch))
+        (modules '("crypto-ffi" "vault")))
+    (for-each
+     (lambda (module)
+       (when (needs-rebuild? module stamp)
+         (rebuild-module! module arch stamp)))
+     modules)))
+
+;; Run bootstrap before loading modules
+(bootstrap-modules!)
+
+;; Load cyberspace modules (now guaranteed to be correct arch)
 (import crypto-ffi)
 (import vault)
 (import audit)
@@ -481,8 +610,32 @@ Cyberspace REPL - Available Commands:
 ╚═══════════════════════════════════════════════════════════════╝
 ")
 
+;;; ============================================================
+;;; Hardware Refresh - always updates node manifest in vault
+;;; ============================================================
+
+(define (node-hardware-file)
+  "Path to node hardware manifest in vault"
+  ".vault/node-hardware")
+
+(define (node-hardware-refresh!)
+  "Probe hardware and store in vault"
+  (let* ((caps (probe-system-capabilities))
+         (hw-file (node-hardware-file))
+         (manifest `(node-hardware
+                     (platform ,(platform-stamp))
+                     (capabilities ,caps)
+                     (role ,(recommend-role caps))
+                     (timestamp ,(current-seconds)))))
+    (with-output-to-file hw-file
+      (lambda ()
+        (write manifest)
+        (newline)))))
+
 ;; Show current directory context
 (print "Working directory: " (current-directory))
 (when (directory-exists? ".vault")
-  (print "Vault detected: .vault/"))
+  (print "Vault detected: .vault/")
+  (node-hardware-refresh!)
+  (print "Hardware: " (platform-stamp)))
 (print "")
