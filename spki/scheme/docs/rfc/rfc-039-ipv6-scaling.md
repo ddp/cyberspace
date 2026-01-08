@@ -17,7 +17,7 @@ This RFC defines the architectural changes required to scale Cyberspace from a g
 
 **Realm**: A node's place in cyberspace - its vault, principal, capabilities, and objects. Each realm is sovereign: local-first, controlled by its operator. Realms federate by choice, sharing objects according to trust relationships.
 
-**Vault**: The local content-addressed object store (`.vault/`). The vault IS the realm's storage - all objects, indexes, audit trails, and configuration live here.
+**Vault**: The local content-addressed object store (`.vault/`). The vault IS the realm's storage - all objects, catalogs, audit trails, and configuration live here.
 
 **Principal**: A node's cryptographic identity (Ed25519 public key). The principal identifies the realm to peers and signs its objects.
 
@@ -64,7 +64,7 @@ The internet has 2^128 addresses. Cyberspace should use them.
   objects/
     sha512-a1b2c3.../    # First 8 chars as directory
       a1b2c3d4e5f6...    # Full hash as filename
-  index/
+  catalog/
     catalog.db           # SQLite: hash → metadata
     bloom.bin            # Bloom filter for existence
   chunks/
@@ -121,9 +121,9 @@ SHA-512 is:
 
 ---
 
-## Index and Query
+## Catalog and Query
 
-### Catalog Index (SQLite)
+### Object Catalog (SQLite)
 
 ```sql
 CREATE TABLE objects (
@@ -169,7 +169,7 @@ Fast existence check before network round-trip:
 (bloom-contains? *bloom-filter* hash)  ; Maybe or definitely-not
 ```
 
-### Audit Trail Index
+### Audit Trail Catalog
 
 ```sql
 CREATE TABLE audit (
@@ -485,7 +485,7 @@ Mitigations:
 
 ### Phase 1: Native Object Store
 - Implement `.vault/objects/` storage
-- SQLite catalog index
+- SQLite catalog
 - Keep git for development workflow
 
 ### Phase 2: Local-First Sync

@@ -198,7 +198,7 @@ The soup is shared. Islands may be near or far. Federation is building bridges b
 │   │   └── runtime-hash.att    # Runtime measurements
 │   ├── identity/               # Third-party vouches
 │   │   └── ca-cert.att         # External CA attestation
-│   └── attestations.meta       # Attestation index
+│   └── attestations.meta       # Attestation catalog
 ├── releases/
 ├── objects/
 ├── capabilities/
@@ -522,9 +522,9 @@ Attestations are signed claims about the realm. They answer: "What can you prove
   (response #${signed-challenge...}))
 ```
 
-### Attestation Index
+### Attestation Catalog
 
-The attestation store maintains an index for fast lookup:
+The attestation store maintains a catalog for fast lookup:
 
 ```scheme
 (attestations-meta
