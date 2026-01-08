@@ -1401,14 +1401,36 @@ Cyberspace REPL - Available Commands:
     'age-identity     Path to age identity file
 "))
 
-;; Banner
-(print "
-╔═══════════════════════════════════════════════════════════════╗
-║                   Library of Cyberspace                       ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Type (help) for help                                         ║
-╚═══════════════════════════════════════════════════════════════╝
-")
+;; Banner with status
+(define *replication-members* 1)  ; current cluster size
+
+(define (banner)
+  (let* ((has-vault (directory-exists? ".vault"))
+         (replicated (and has-vault (> *replication-members* 0)))
+         (left-status (if replicated
+                         (string-append "%" (number->string *replication-members*) " replicated")
+                         "local"))
+         (right-status (if (attested?) "attested" "anonymous"))
+         (title "Library of Cyberspace")
+         (bar "═══════════════════════════════════════════════════════════════")
+         (title-len (string-length title))
+         (left-len (string-length left-status))
+         (right-len (string-length right-status))
+         (total-content (+ 2 left-len 2 title-len 2 right-len 2))
+         (inner-width 63)
+         (remaining (- inner-width total-content))
+         (left-pad (quotient remaining 2))
+         (right-pad (- remaining left-pad)))
+    (print "")
+    (print "╔" bar "╗")
+    (print "║ " left-status (make-string left-pad #\space)
+           title (make-string right-pad #\space) right-status " ║")
+    (print "╠" bar "╣")
+    (print "║  Type (help) for help                                          ║")
+    (print "╚" bar "╝")
+    (print "")))
+
+(banner)
 
 ;;; ============================================================
 ;;; Hardware Refresh - always updates node manifest in vault
