@@ -341,9 +341,10 @@
     (signer release-signer)
     (signature release-signature))
 
-  (define (seal-release version #!key message migrate-from)
+  (define (seal-release version #!key name message migrate-from)
     "Create a cryptographically sealed release
      - version: semantic version (e.g., '1.0.0')
+     - name: release codename (e.g., 'genesis')
      - message: release notes
      - migrate-from: previous version for migration tracking"
 
@@ -356,26 +357,32 @@
     (let ((hash (with-input-from-pipe "git rev-parse HEAD" read-line))
           (timestamp (current-seconds)))
 
-      ;; Create annotated tag
-      (let ((tag-message (or message (sprintf "Release ~a" version))))
+      ;; Create annotated tag with name if provided
+      (let ((tag-message (or message
+                             (if name
+                                 (sprintf "Release ~a (~a)" version name)
+                                 (sprintf "Release ~a" version)))))
         (run-command "git" "tag" "-a" version "-m" tag-message))
 
       ;; Sign with SPKI if signing key configured
       (let ((signing-key (vault-config 'signing-key)))
         (when signing-key
-          (seal-sign-release version hash signing-key)))
+          (seal-sign-release version name hash signing-key)))
 
       ;; Create migration marker if migrating from previous version
       (when migrate-from
         (create-migration-marker migrate-from version))
 
-      (print "Sealed release: " version " at " hash)))
+      (if name
+          (print "Sealed release: " version " (" name ") at " hash)
+          (print "Sealed release: " version " at " hash))))
 
-  (define (seal-sign-release version hash signing-key)
+  (define (seal-sign-release version name hash signing-key)
     "Sign a release with SPKI certificate"
     ;; Create release manifest
-    (let ((manifest (sprintf "(release ~s ~s ~s)"
-                            version hash (current-seconds))))
+    (let ((manifest (if name
+                        (sprintf "(release ~s ~s ~s ~s)" version name hash (current-seconds))
+                        (sprintf "(release ~s ~s ~s)" version hash (current-seconds)))))
       ;; Sign manifest (signing-key is already a blob)
       (let* ((sig-hash (sha512-hash manifest))
              (signature (ed25519-sign signing-key sig-hash)))
@@ -387,6 +394,7 @@
             (lambda ()
               (write `(signature
                        (version ,version)
+                       ,@(if name `((name ,name)) '())
                        (hash ,hash)
                        (manifest ,manifest)
                        (signature ,signature)))))
