@@ -337,6 +337,7 @@ if [[ -f "$REPL_FILE" ]]; then
 010:federate
 011:consensus
 012:lamport
+016:lazy-join
 018:seal-archive
 020:content-address
 021:delegate

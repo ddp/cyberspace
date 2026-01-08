@@ -55,6 +55,75 @@
         (u8vector-set! vec i byte-val)))))
 
 ;;; ============================================================
+;;; RFC-016: Lazy Clustering
+;;; ============================================================
+
+(define *lazy-peers* '())
+(define *lazy-queue* '())
+(define *version-vectors* '())
+
+(define (lazy-join peer #!key (uri #f) (key #f))
+  "Register a peer for lazy sync"
+  (set! *lazy-peers* (cons `((peer . ,peer) (uri . ,uri) (key . ,key) (last-sync . never)) *lazy-peers*))
+  (print "Joined lazy cluster with " peer)
+  `(joined ,peer))
+
+(define (lazy-leave peer)
+  "Remove peer from lazy cluster"
+  (set! *lazy-peers* (filter (lambda (p) (not (equal? (alist-ref 'peer p) peer))) *lazy-peers*))
+  (print "Left lazy cluster: " peer)
+  `(left ,peer))
+
+(define (lazy-push peer)
+  "Push local releases to peer"
+  (print "Pushing to " peer "...")
+  (print "  (lazy push simulated)")
+  `(pushed ,peer))
+
+(define (lazy-pull peer)
+  "Pull releases from peer"
+  (print "Pulling from " peer "...")
+  (print "  (lazy pull simulated)")
+  `(pulled ,peer))
+
+(define (lazy-sync peer)
+  "Bidirectional sync with peer"
+  (print "Syncing with " peer "...")
+  (lazy-push peer)
+  (lazy-pull peer)
+  `(synced ,peer))
+
+(define (lazy-status)
+  "Show lazy cluster status"
+  (if (null? *lazy-peers*)
+      (print "No lazy cluster peers configured")
+      (begin
+        (print "Lazy cluster peers:")
+        (for-each (lambda (p)
+                    (print "  " (alist-ref 'peer p) " [" (alist-ref 'last-sync p) "]"))
+                  *lazy-peers*))))
+
+(define (lazy-queue)
+  "Show pending sync queue"
+  (if (null? *lazy-queue*)
+      (print "Sync queue empty")
+      (begin
+        (print "Pending sync:")
+        (for-each (lambda (item) (print "  " item)) *lazy-queue*))))
+
+(define (lazy-resolve version #!key (prefer 'local) (merged #f))
+  "Resolve a sync conflict"
+  (print "Resolving " version " -> " (or merged prefer))
+  `(resolved ,version ,(or merged prefer)))
+
+(define (lazy-beacon)
+  "Send optional presence beacon"
+  `(beacon
+    (peer ,(current-directory))
+    (lamport-time ,*lamport-clock*)
+    (status available)))
+
+;;; ============================================================
 ;;; RFC-010: Federation
 ;;; ============================================================
 
@@ -74,10 +143,10 @@
                   (print "  " (alist-ref 'url p) " [" (alist-ref 'trust p) "] " (alist-ref 'status p)))
                 *federation-peers*)))
 
-(define (federate-sync peer-url)
-  "Synchronize with a federated peer"
-  (print "Syncing with " peer-url "...")
-  '(sync-complete))
+(define (federate-replicate peer-url)
+  "Replicate with a federated peer"
+  (print "Replicating with " peer-url "...")
+  '(replicate-complete))
 
 ;;; ============================================================
 ;;; RFC-011: Byzantine Consensus
@@ -407,10 +476,20 @@ Cyberspace REPL - Available Commands:
     (node-can? 'seal-commit)         Check if operation permitted
     (node-announce)                  Announce role to peers
 
+  Lazy Clustering (RFC-016):
+    (lazy-join peer uri: u key: k) Join cluster
+    (lazy-leave peer)              Leave cluster
+    (lazy-push peer)               Push to peer
+    (lazy-pull peer)               Pull from peer
+    (lazy-sync peer)               Bidirectional sync
+    (lazy-status)                  Show cluster status
+    (lazy-queue)                   Show pending sync
+    (lazy-resolve ver prefer: p)   Resolve conflict
+
   Federation (RFC-010):
     (federate \"peer-url\")            Establish federation
     (federate-status)                Show federation peers
-    (federate-sync \"peer-url\")       Sync with peer
+    (federate-replicate \"url\")       Replicate with peer
 
   Byzantine Consensus (RFC-011):
     (consensus-propose value)        Propose for consensus
