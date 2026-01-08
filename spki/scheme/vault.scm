@@ -39,6 +39,11 @@
    ;; Directory / Object Soup (NewtonOS-style)
    soup
    soup?
+   soup-stat
+   soup-hash
+   soup-releases
+   soup-du
+   soup-find
    complete
 
    ;; Node Roles (RFC-037)
@@ -73,6 +78,7 @@
           srfi-1   ; list utilities
           srfi-4   ; u8vectors
           srfi-13  ; string utilities
+          (chicken sort)  ; sorting
           srfi-69  ; hash tables
           cert
           crypto-ffi
@@ -1096,6 +1102,298 @@ Object Types:
                               (cdr strings))))
               (substring (car strings) 0 i)
               (loop (+ i 1))))))
+
+  ;;; ============================================================================
+  ;;; Extended Soup Introspection
+  ;;; ============================================================================
+
+  (define (soup-stat name)
+    "Detailed status of a soup object (like stat(1))"
+    (let* ((all-objects (soup-collect-objects))
+           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
+      (if (not obj)
+          (print "Object not found: " name)
+          (let ((type (car obj))
+                (size (caddr obj))
+                (info (cadddr obj)))
+            (print "")
+            (print "╭────────────────────────────────────────────────────────╮")
+            (printf "│ ~a~a│~%" name (make-string (- 55 (string-length name)) #\space))
+            (print "├────────────────────────────────────────────────────────┤")
+            (printf "│ Type:       ~a~a│~%" type (make-string (- 43 (string-length (symbol->string type))) #\space))
+            (printf "│ Size:       ~a~a│~%" (format-size size) (make-string (- 43 (string-length (format-size size))) #\space))
+
+            ;; Type-specific details
+            (case type
+              ((releases)
+               (let* ((tag-commit (get-tag-commit name))
+                      (sig-file (sprintf ".vault/releases/~a.sig" name))
+                      (has-sig (file-exists? sig-file))
+                      (archive-file (find-archive-for-release name))
+                      (has-archive (and archive-file (file-exists? archive-file))))
+                 (printf "│ Git Tag:    ~a~a│~%" (if tag-commit "yes" "no") (make-string 40 #\space))
+                 (when tag-commit
+                   (printf "│ Commit:     ~a..~a│~%" (substring tag-commit 0 12) (make-string 31 #\space)))
+                 (printf "│ Signed:     ~a~a│~%" (if has-sig "yes" "no") (make-string 40 #\space))
+                 (when has-sig
+                   (printf "│ Sig File:   ~a~a│~%" sig-file (make-string (- 43 (string-length sig-file)) #\space)))
+                 (printf "│ Archived:   ~a~a│~%" (if has-archive "yes" "no") (make-string 40 #\space))
+                 (when has-archive
+                   (let ((arch-stat (file-stat archive-file)))
+                     (printf "│ Archive:    ~a (~a)~a│~%"
+                             archive-file
+                             (format-size (vector-ref arch-stat 5))
+                             (make-string (- 30 (string-length archive-file)) #\space))))))
+
+              ((archives)
+               (let* ((path name)
+                      (hash (soup-hash-file path)))
+                 (printf "│ Path:       ~a~a│~%" path (make-string (- 43 (string-length path)) #\space))
+                 (printf "│ SHA-512:    ~a..~a│~%" (substring hash 0 24) (make-string 15 #\space))
+                 (let ((manifest (get-archive-manifest path)))
+                   (when manifest
+                     (let ((fmt (assq 'format manifest))
+                           (ts (assq 'timestamp manifest)))
+                       (when fmt
+                         (printf "│ Format:     ~a~a│~%" (cadr fmt) (make-string (- 43 (string-length (symbol->string (cadr fmt)))) #\space)))
+                       (when ts
+                         (printf "│ Created:    ~a~a│~%" (format-timestamp (cadr ts)) (make-string 33 #\space))))))))
+
+              ((keys)
+               (let* ((hash (soup-hash-file name))
+                      (fp (substring hash 0 16)))
+                 (printf "│ Fingerprint: sha512:~a..~a│~%" fp (make-string 19 #\space))
+                 (printf "│ Algorithm:  ~a~a│~%"
+                         (cond ((string-suffix? ".pub" name) "Ed25519 public")
+                               ((string-suffix? ".key" name) "Ed25519 private")
+                               ((string-suffix? ".age" name) "X25519 age")
+                               (else "unknown"))
+                         (make-string 29 #\space))))
+
+              ((audit)
+               (let ((entry (get-audit-entry name)))
+                 (when entry
+                   (let ((id (assq 'id entry))
+                         (actor (assq 'actor entry))
+                         (action (assq 'action entry))
+                         (ts (assq 'timestamp entry)))
+                     (when id
+                       (printf "│ ID:         ~a~a│~%" (cadr id) (make-string (- 43 (string-length (cadr id))) #\space)))
+                     (when action
+                       (printf "│ Action:     ~a~a│~%" (cadr action) (make-string (- 43 (string-length (sprintf "~a" (cadr action)))) #\space)))
+                     (when ts
+                       (printf "│ Timestamp:  ~a~a│~%" (format-timestamp (cadr ts)) (make-string 33 #\space))))))))
+
+            (print "╰────────────────────────────────────────────────────────╯")
+            (print "")))))
+
+  (define (soup-hash-file path)
+    "Compute SHA-512 hash of file"
+    (handle-exceptions exn
+      "error"
+      (let ((content (with-input-from-file path (lambda () (read-string)))))
+        (blob->hex (sha512-hash (string->blob content))))))
+
+  (define (blob->hex b)
+    "Convert blob to hex string"
+    (let ((vec (blob->u8vector b)))
+      (apply string-append
+             (map (lambda (i)
+                    (let ((byte (u8vector-ref vec i)))
+                      (string-append
+                       (string (string-ref "0123456789abcdef" (quotient byte 16)))
+                       (string (string-ref "0123456789abcdef" (remainder byte 16))))))
+                  (iota (u8vector-length vec))))))
+
+  (define (get-tag-commit tag)
+    "Get commit hash for a git tag"
+    (handle-exceptions exn #f
+      (with-input-from-pipe (sprintf "git rev-list -n1 ~a 2>/dev/null" tag) read-line)))
+
+  (define (find-archive-for-release version)
+    "Find archive file for a release version"
+    (let ((patterns (list (sprintf "vault-~a.archive" version)
+                          (sprintf "~a.archive" version)
+                          (sprintf "genesis-~a.archive" version))))
+      (find file-exists? patterns)))
+
+  (define (get-archive-manifest path)
+    "Read archive manifest if it's a sealed archive"
+    (handle-exceptions exn #f
+      (let ((data (with-input-from-file path read)))
+        (if (and (pair? data) (eq? 'sealed-archive (car data)))
+            (cdr data)
+            #f))))
+
+  (define (get-audit-entry name)
+    "Read audit entry from file"
+    (handle-exceptions exn #f
+      (let ((path (if (string-prefix? ".vault/audit/" name)
+                      name
+                      (sprintf ".vault/audit/~a" name))))
+        (let ((data (with-input-from-file path read)))
+          (if (pair? data) (cdr data) #f)))))
+
+  (define (soup-hash name)
+    "Compute and display SHA-512 hash of an object"
+    (let* ((all-objects (soup-collect-objects))
+           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
+      (if (not obj)
+          (print "Object not found: " name)
+          (let ((type (car obj))
+                (path (case (car obj)
+                        ((archives keys) name)
+                        ((releases) (sprintf ".vault/releases/~a.sig" name))
+                        ((audit) (sprintf ".vault/audit/~a" name))
+                        (else name))))
+            (if (file-exists? path)
+                (let ((hash (soup-hash-file path)))
+                  (print "")
+                  (printf "sha512:~a~%" hash)
+                  (printf "  ~a (~a)~%" name (format-size (caddr obj)))
+                  (print "")
+                  hash)
+                (print "File not found: " path))))))
+
+  (define (soup-releases)
+    "Detailed view of all releases with status"
+    (let* ((tags (get-git-tags))
+           (max-tag-len (if (null? tags) 10 (apply max (map string-length tags))))
+           (col-width (max 20 (+ max-tag-len 3))))
+      (print "")
+      (print "╭────────────────────────────────────────────────────────────────────────────╮")
+      (print "│ RELEASES                                                                   │")
+      (print "├────────────────────────────────────────────────────────────────────────────┤")
+      (printf "│ ~a~aCommit       Signed  Archived  Date       │~%"
+              "Version"
+              (make-string (- col-width 7) #\space))
+      (print "├────────────────────────────────────────────────────────────────────────────┤")
+
+      (for-each
+       (lambda (tag)
+         (let* ((commit (get-tag-commit tag))
+                (commit-short (if commit (substring commit 0 8) "--------"))
+                (sig-file (sprintf ".vault/releases/~a.sig" tag))
+                (has-sig (file-exists? sig-file))
+                (archive (find-archive-for-release tag))
+                (has-archive (and archive (file-exists? archive)))
+                (date (or (get-tag-date tag) "          ")))
+           (printf "│ ~a~a~a    ~a       ~a         ~a │~%"
+                   tag
+                   (make-string (- col-width (string-length tag)) #\space)
+                   commit-short
+                   (if has-sig "✓" "✗")
+                   (if has-archive "✓" "✗")
+                   date)))
+       (sort tags string>?))
+
+      (print "╰────────────────────────────────────────────────────────────────────────────╯")
+      (print "")))
+
+  (define (get-tag-date tag)
+    "Get creation date of git tag"
+    (handle-exceptions exn #f
+      (let ((ts (with-input-from-pipe
+                 (sprintf "git log -1 --format=%ct ~a 2>/dev/null" tag)
+                 read-line)))
+        (if (and ts (not (eof-object? ts)))
+            (format-timestamp (string->number ts))
+            #f))))
+
+  (define (soup-du)
+    "Disk usage summary (like du(1))"
+    (let ((all-objects (soup-collect-objects))
+          (by-type (make-hash-table))
+          (total 0))
+
+      ;; Sum by type
+      (for-each
+       (lambda (obj)
+         (let ((type (car obj))
+               (size (caddr obj)))
+           (set! total (+ total size))
+           (hash-table-set! by-type type
+                            (+ size (hash-table-ref/default by-type type 0)))))
+       all-objects)
+
+      (print "")
+      (print "╭────────────────────────────────────────╮")
+      (print "│ SOUP DISK USAGE                        │")
+      (print "├────────────────────────────────────────┤")
+
+      (for-each
+       (lambda (type)
+         (let ((size (hash-table-ref/default by-type type 0)))
+           (when (> size 0)
+             (printf "│ ~a~a~a │~%"
+                     (format-size size)
+                     (make-string (- 10 (string-length (format-size size))) #\space)
+                     (sprintf "~a" type)))))
+       '(archives releases keys audit metadata))
+
+      (print "├────────────────────────────────────────┤")
+      (printf "│ ~a~aTOTAL                    │~%"
+              (format-size total)
+              (make-string (- 10 (string-length (format-size total))) #\space))
+      (print "╰────────────────────────────────────────╯")
+      (print "")))
+
+  (define (soup-find . criteria)
+    "Find objects matching criteria
+     (soup-find size: '> 1000000)      - larger than 1MB
+     (soup-find type: 'archives)       - by type
+     (soup-find name: \"*2.0*\")         - by name pattern
+     (soup-find signed: #t)            - signed releases only
+     (soup-find hash: \"abc123\")        - by hash prefix"
+    (let ((all-objects (soup-collect-objects))
+          (type-filter #f)
+          (size-filter #f)
+          (name-filter #f)
+          (signed-filter #f)
+          (hash-filter #f))
+
+      ;; Parse keyword args
+      (let loop ((args criteria))
+        (unless (null? args)
+          (case (car args)
+            ((type:) (set! type-filter (cadr args)) (loop (cddr args)))
+            ((size:) (set! size-filter (cadr args)) (loop (cddr args)))
+            ((name:) (set! name-filter (cadr args)) (loop (cddr args)))
+            ((signed:) (set! signed-filter (cadr args)) (loop (cddr args)))
+            ((hash:) (set! hash-filter (cadr args)) (loop (cddr args)))
+            (else (loop (cdr args))))))
+
+      ;; Filter
+      (let ((results
+             (filter
+              (lambda (obj)
+                (let ((type (car obj))
+                      (name (cadr obj))
+                      (size (caddr obj))
+                      (info (cadddr obj)))
+                  (and (or (not type-filter) (eq? type type-filter))
+                       (or (not size-filter)
+                           (case (car size-filter)
+                             ((>) (> size (cadr size-filter)))
+                             ((<) (< size (cadr size-filter)))
+                             ((=) (= size (cadr size-filter)))
+                             (else #t)))
+                       (or (not name-filter) (match-pattern? name name-filter))
+                       (or (not signed-filter)
+                           (if signed-filter
+                               (not (member "unsigned" info))
+                               (member "unsigned" info))))))
+              all-objects)))
+
+        ;; Display results
+        (print "")
+        (printf "Found ~a object~a:~%" (length results) (if (= 1 (length results)) "" "s"))
+        (for-each
+         (lambda (obj)
+           (printf "  ~a/~a (~a)~%" (car obj) (cadr obj) (format-size (caddr obj))))
+         results)
+        (print "")
+        results)))
 
   ;;; ============================================================================
   ;;; Node Roles - RFC-037 Implementation
