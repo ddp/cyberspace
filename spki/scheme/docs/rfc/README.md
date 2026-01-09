@@ -61,6 +61,30 @@ Each RFC should include:
 - **Implementation Notes** - Practical details
 - **References** - Related work
 
+## Build & Publish
+
+Generate all RFC formats and publish to the web:
+
+```bash
+cd spki/scheme/docs/rfc
+./generate-rfcs.sh
+```
+
+This script:
+1. Converts markdown to HTML, PostScript, and plain text
+2. Generates the KWIC (Key Word In Context) permuted index
+3. Publishes to `www.yoyodyne.com:~/cyberspace/spki/scheme/docs/rfc/`
+
+**Manual publish only:**
+```bash
+rsync -av --delete *.html *.ps *.txt ddp@www.yoyodyne.com:~/cyberspace/spki/scheme/docs/rfc/
+```
+
+**Requirements:**
+- `pandoc` - markdown conversion
+- `latex` + `dvips` - PostScript generation
+- SSH key in `~/.ssh` for yoyodyne access
+
 ## Document Formats
 
 RFCs are published in the following canonical formats:
