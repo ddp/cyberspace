@@ -2576,29 +2576,35 @@ Cyberspace REPL - Available Commands:
           (string-append (substring first 0 (- avail 2)) ".." suffix)
           (string-append first suffix))))))
 
-(define (format-status)
-  "Format right status"
-  (if (eq? *cluster-state* 'solo)
-      "standalone"
-      (string-append (number->string (+ 1 (length *cluster-nodes*))) " nodes")))
+(define (count-vault-items subdir)
+  "Count items in vault subdirectory"
+  (let ((path (string-append ".vault/" subdir)))
+    (if (directory-exists? path)
+        (length (filter (lambda (f) (not (string-prefix? "." f)))
+                        (directory path)))
+        0)))
 
 (define (banner)
   (let* ((title "Library of Cyberspace")
-         (status (format-status))
-         (vault-status (if (directory-exists? ".vault") "vault" "no vault"))
+         (objs (count-vault-items "objects"))
+         (rels (count-vault-items "releases"))
+         (keys (count-vault-items "keys"))
+         (peers (length *cluster-nodes*))
          (bar "──────────────────────────────────────────────────")
-         ;; Line 1: title + cluster status
-         (line1-left (string-append "  " title))
-         (line1-right (string-append status "  "))
-         (line1-pad (make-string (max 1 (- 50 (string-length line1-left) (string-length line1-right))) #\space))
-         ;; Line 2: vault + help hint
-         (line2-left (string-append "  " vault-status))
-         (line2-right "(help)  ")
-         (line2-pad (make-string (max 1 (- 50 (string-length line2-left) (string-length line2-right))) #\space)))
+         ;; Line 1: title
+         (line1 (string-append "  " title))
+         (line1-pad (make-string (- 50 (string-length line1)) #\space))
+         ;; Line 2: stats
+         (stats (string-append "  "
+                   (number->string objs) " objects  "
+                   (number->string rels) " releases  "
+                   (number->string keys) " keys  "
+                   (number->string peers) " peers"))
+         (line2-pad (make-string (max 0 (- 50 (string-length stats))) #\space)))
     (print "")
     (print "┌" bar "┐")
-    (print "│" line1-left line1-pad line1-right "│")
-    (print "│" line2-left line2-pad line2-right "│")
+    (print "│" line1 line1-pad "│")
+    (print "│" stats line2-pad "│")
     (print "└" bar "┘")
     (print "")))
 
