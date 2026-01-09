@@ -19,179 +19,310 @@ cat > "$OUTPUT_FILE" <<'HEADER'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Library of Cyberspace - Permuted Index</title>
+    <title>Library of Cyberspace — Permuted Index</title>
+
+    <!-- Fonts: Source Serif for body, JetBrains Mono for code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <style>
+        /*
+         * Typography System
+         * Base: 18px / 1.618 (golden ratio line-height)
+         * Scale: 1.25 (major third)
+         * Measure: ~66 characters
+         */
+
         :root {
-            --bg: #fafaf9;
-            --bg-alt: #f5f5f4;
-            --text: #1c1917;
-            --text-muted: #78716c;
-            --accent: #0369a1;
-            --accent-hover: #0284c7;
-            --keyword: #b91c1c;
-            --border: #e7e5e4;
-            --letter-bg: #0369a1;
-            --letter-text: #fff;
+            /* Light theme - warm paper tones */
+            --bg: #fffcf7;
+            --bg-nav: #f7f3ed;
+            --text: #2d2a26;
+            --text-secondary: #5c5650;
+            --text-tertiary: #8a847c;
+            --accent: #1a5f7a;
+            --accent-hover: #2980a8;
+            --keyword: #9e4a2f;
+            --rule: #e5dfd6;
+            --letter-bg: #2d2a26;
+            --letter-text: #fffcf7;
         }
+
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg: #1c1917;
-                --bg-alt: #292524;
-                --text: #fafaf9;
-                --text-muted: #a8a29e;
-                --accent: #38bdf8;
-                --accent-hover: #7dd3fc;
-                --keyword: #fbbf24;
-                --border: #44403c;
-                --letter-bg: #38bdf8;
-                --letter-text: #1c1917;
+                --bg: #1a1a18;
+                --bg-nav: #252422;
+                --text: #e8e4dc;
+                --text-secondary: #b5b0a6;
+                --text-tertiary: #7a756c;
+                --accent: #7cb8cf;
+                --accent-hover: #a3d0e4;
+                --keyword: #e8a87c;
+                --rule: #3d3a36;
+                --letter-bg: #e8e4dc;
+                --letter-text: #1a1a18;
             }
         }
-        * { box-sizing: border-box; }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 18px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         body {
-            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
-            background: var(--bg);
+            font-family: 'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 1rem;
+            line-height: 1.618;
             color: var(--text);
-            line-height: 1.6;
+            background: var(--bg);
+            max-width: 38rem; /* ~66ch at 18px */
+            margin: 0 auto;
+            padding: 3rem 1.5rem 6rem;
         }
+
+        /* Header */
         header {
-            margin-bottom: 2rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 2.618rem;
+            padding-bottom: 1.618rem;
+            border-bottom: 1px solid var(--rule);
         }
+
         h1 {
-            font-size: 1.75rem;
+            font-size: 1.953rem; /* 18 × 1.25³ */
             font-weight: 600;
-            margin: 0 0 0.5rem 0;
-            letter-spacing: -0.025em;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin: 0 0 0.25rem 0;
+            color: var(--text);
         }
+
         .subtitle {
-            color: var(--text-muted);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+            font-style: italic;
+            color: var(--text-secondary);
             margin: 0;
+            letter-spacing: 0.01em;
         }
-        .nav {
+
+        /* Navigation */
+        nav {
+            margin: 1.618rem 0;
+            padding: 1rem 1.25rem;
+            background: var(--bg-nav);
+            border-radius: 3px;
+        }
+
+        .nav-label {
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-tertiary);
+            margin: 0 0 0.5rem 0;
+        }
+
+        .nav-letters {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin: 1.5rem 0;
-            padding: 1rem;
-            background: var(--bg-alt);
-            border-radius: 6px;
+            gap: 0.125rem;
+            margin: 0;
+            padding: 0;
+            list-style: none;
         }
-        .nav a {
-            display: inline-block;
+
+        .nav-letters a {
+            display: block;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.833rem;
+            font-weight: 400;
             padding: 0.25rem 0.5rem;
-            font-family: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
-            font-size: 0.85rem;
-            font-weight: 500;
             color: var(--accent);
             text-decoration: none;
-            border-radius: 4px;
-            transition: background 0.15s;
+            border-radius: 2px;
+            transition: background-color 0.1s ease;
         }
-        .nav a:hover {
-            background: var(--border);
+
+        .nav-letters a:hover {
+            background: var(--rule);
         }
+
+        /* Stats line */
         .stats {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin: 1rem 0;
+            font-size: 0.833rem;
+            color: var(--text-secondary);
+            margin: 1rem 0 2rem;
         }
-        .stats strong { color: var(--text); }
+
+        .stats a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.1s;
+        }
+
+        .stats a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        /* Letter sections */
         .letter-section {
-            margin-top: 3rem;
+            margin-top: 3.236rem;
         }
+
         h2 {
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 1rem;
+            font-weight: 500;
             display: inline-block;
-            font-family: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
-            font-size: 1.25rem;
-            font-weight: 600;
             background: var(--letter-bg);
             color: var(--letter-text);
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
+            padding: 0.2rem 0.6rem;
             margin: 0 0 1rem 0;
+            letter-spacing: 0.05em;
         }
+
+        /* Keyword groups */
         .keyword-group {
             margin: 1.25rem 0;
-            padding-left: 0.5rem;
-            border-left: 2px solid var(--border);
+            padding-left: 1rem;
+            border-left: 2px solid var(--rule);
         }
+
         h3 {
-            font-family: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.833rem;
+            font-weight: 500;
             color: var(--keyword);
-            margin: 0 0 0.5rem 0;
-            text-transform: lowercase;
+            margin: 0 0 0.382rem 0;
+            letter-spacing: 0.02em;
         }
+
+        /* Index entries */
         .index-entry {
-            margin: 0.35rem 0;
-            padding: 0.25rem 0;
-            font-size: 0.9rem;
+            margin: 0.236rem 0;
+            line-height: 1.5;
         }
-        .context {
+
+        .index-entry a {
             color: var(--text);
+            text-decoration: none;
+            transition: color 0.1s;
         }
+
+        .index-entry a:hover {
+            color: var(--accent);
+        }
+
+        .index-entry a:hover .context {
+            color: var(--accent);
+        }
+
+        .context {
+            transition: color 0.1s;
+        }
+
         .keyword {
             color: var(--keyword);
             font-weight: 600;
         }
+
         .path {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.722rem;
+            color: var(--text-tertiary);
+            margin-left: 0.5em;
         }
-        .path::before { content: '['; }
-        .path::after { content: ']'; }
-        a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-        a:hover {
-            color: var(--accent-hover);
-            text-decoration: underline;
-        }
-        .entry-link {
-            margin-left: 0.5rem;
-            font-size: 0.8rem;
-        }
+
+        .path::before { content: '‹'; margin-right: 0.15em; }
+        .path::after { content: '›'; margin-left: 0.15em; }
+
+        /* Footer */
         footer {
-            margin-top: 4rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border);
-            font-size: 0.85rem;
-            color: var(--text-muted);
+            margin-top: 4.236rem;
+            padding-top: 1.618rem;
+            border-top: 1px solid var(--rule);
+            font-size: 0.833rem;
+            color: var(--text-tertiary);
         }
-        footer a { color: var(--accent); }
+
+        footer p {
+            margin: 0.5rem 0;
+        }
+
+        footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-bottom: 1px solid var(--rule);
+            transition: color 0.1s, border-color 0.1s;
+        }
+
+        footer a:hover {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                max-width: none;
+                padding: 0;
+                font-size: 10pt;
+            }
+            nav, footer { display: none; }
+            .letter-section { page-break-before: auto; }
+            h2 { background: none; color: black; border: 1px solid black; }
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>Library of Cyberspace</h1>
-        <p class="subtitle">Permuted Index &mdash; KeyWord In Context</p>
+        <p class="subtitle">Permuted Index — KeyWord in Context</p>
     </header>
 
-    <nav class="nav">
-        <a href="#letter-A">A</a><a href="#letter-B">B</a><a href="#letter-C">C</a>
-        <a href="#letter-D">D</a><a href="#letter-E">E</a><a href="#letter-F">F</a>
-        <a href="#letter-G">G</a><a href="#letter-H">H</a><a href="#letter-I">I</a>
-        <a href="#letter-J">J</a><a href="#letter-K">K</a><a href="#letter-L">L</a>
-        <a href="#letter-M">M</a><a href="#letter-N">N</a><a href="#letter-O">O</a>
-        <a href="#letter-P">P</a><a href="#letter-Q">Q</a><a href="#letter-R">R</a>
-        <a href="#letter-S">S</a><a href="#letter-T">T</a><a href="#letter-U">U</a>
-        <a href="#letter-V">V</a><a href="#letter-W">W</a><a href="#letter-X">X</a>
-        <a href="#letter-Y">Y</a><a href="#letter-Z">Z</a><a href="#letter-0">0-9</a>
+    <nav>
+        <p class="nav-label">Jump to letter</p>
+        <div class="nav-letters">
+            <a href="#letter-0">0–9</a>
+            <a href="#letter-A">A</a>
+            <a href="#letter-B">B</a>
+            <a href="#letter-C">C</a>
+            <a href="#letter-D">D</a>
+            <a href="#letter-E">E</a>
+            <a href="#letter-F">F</a>
+            <a href="#letter-G">G</a>
+            <a href="#letter-H">H</a>
+            <a href="#letter-I">I</a>
+            <a href="#letter-J">J</a>
+            <a href="#letter-K">K</a>
+            <a href="#letter-L">L</a>
+            <a href="#letter-M">M</a>
+            <a href="#letter-N">N</a>
+            <a href="#letter-O">O</a>
+            <a href="#letter-P">P</a>
+            <a href="#letter-Q">Q</a>
+            <a href="#letter-R">R</a>
+            <a href="#letter-S">S</a>
+            <a href="#letter-T">T</a>
+            <a href="#letter-U">U</a>
+            <a href="#letter-V">V</a>
+            <a href="#letter-W">W</a>
+            <a href="#letter-X">X</a>
+            <a href="#letter-Y">Y</a>
+            <a href="#letter-Z">Z</a>
+        </div>
     </nav>
 
     <p class="stats">
-        <strong>421 documents</strong> indexed &bull;
-        Cross-referenced, deduplicated, hierarchical &bull;
-        <a href="../cyberspace-directory.html">Directory</a>
+        421 documents · cross-referenced · deduplicated ·
+        <a href="../cyberspace-directory.html">directory</a>
     </p>
 
 HEADER
@@ -285,11 +416,11 @@ cat >> "$OUTPUT_FILE" <<'FOOTER'
 
     <footer>
         <p>
-            <a href="../cyberspace-directory.html">Directory</a> &bull;
-            <a href="../DESIGN-SPECIFICATIONS.html">Design Specifications</a> &bull;
+            <a href="../cyberspace-directory.html">Directory</a> ·
+            <a href="../DESIGN-SPECIFICATIONS.html">Design</a> ·
             <a href="../spki/scheme/docs/rfc/">RFCs</a>
         </p>
-        <p>Library of Cyberspace &mdash; Permuted KWIC Index</p>
+        <p>Library of Cyberspace</p>
     </footer>
 
 </body>
