@@ -115,7 +115,7 @@ A smaller TCB means fewer bugs that can break security. We prove the crypto in C
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The command layer is sugar. The Scheme layer is substrate. Users start with English, graduate to Scheme when they need composition. No mode switching—parens are the only delimiter.
+The command layer is syntactic sugar. The Scheme layer is substrate. Users start with English, graduate to Scheme when they need composition. No mode switching—parens are the only delimiter.
 
 ---
 
