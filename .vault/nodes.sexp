@@ -30,11 +30,11 @@
     (notes "Legacy Intel node"))
 
   (node
-    (name "starlight")
+    (name "unnamed")
     (role full)
     (hardware "15\" MacBook Air")
     (cpu "M4 10-core")
     (memory "32GB")
     (storage "2TB")
-    (status incoming)
-    (notes "Starlight color, ordered Jan 2025")))
+    (status provisioning)
+    (notes "Starlight color, fresh install without Migration Assistant, Jan 2025")))
