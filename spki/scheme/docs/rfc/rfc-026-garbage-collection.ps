@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:12:49 2026
+%%CreationDate: Fri Jan  9 12:28:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -457,89 +457,77 @@ _S
 5 627 M
 (to avoid data loss.) s
 5 605 M
+(The Library of Cyberspace is an archival system. The default is preservation, not collect) s
+5 594 M
+(ion. Objects evaporate only with explicit consent.) s
+5 572 M
 (------------------------------------------------------------------------------) s
-5 583 M
-(Motivation) s
-5 561 M
-(Content-addressed storage accumulates objects forever unless actively pruned:) s
-5 539 M
-(- Orphaned objects - No longer referenced by any root) s
+5 550 M
+(Philosophy: The Soup Preserves) s
 5 528 M
-(- Superseded versions - Old versions after updates) s
-5 517 M
-(- Failed uploads - Partial or abandoned writes) s
+(The soup is not a runtime heap. It is a library.) s
 5 506 M
-(- Temporary objects - Intermediate computation results) s
-5 484 M
-(But deletion is dangerous:) s
-5 462 M
-(- Hash as capability - Someone may hold the hash) s
+(In runtime garbage collection, the goal is to reclaim memory quickly. Young objects die y) s
+5 495 M
+(oung. Old objects survive. Collect aggressively.) s
+5 473 M
+(In archival garbage collection, the opposite holds:) s
 5 451 M
-(- Lazy replication - Remote vaults may need it later) s
+(- Old objects are precious - They have survived, been referenced, replicated) s
 5 440 M
-(- Audit requirements - May need historical data) s
+(- Young objects are suspect - They may be transient, failed, or temporary) s
 5 429 M
-(- Resurrection - Deleted objects may be re-added) s
-5 407 M
-(GC must be conservative and auditable.) s
-5 385 M
+(- Deletion is violence - Once collected, an object is gone from this vault forever) s
+5 418 M
+(- Preservation is the default - When in doubt, keep it) s
+5 396 M
+(The Library of Alexandria burned once. We will not let it burn again.) s
+5 374 M
 (------------------------------------------------------------------------------) s
-5 363 M
-(Object Lifecycle) s
-5 341 M
-(States) s
-5 319 M
-(                    +---------+) s
+5 352 M
+(Motivation) s
+5 330 M
+(Content-addressed storage accumulates objects forever unless actively pruned:) s
 5 308 M
-(          write     |         |) s
+(- Orphaned objects - No longer referenced by any root) s
 5 297 M
-(        --------->  |  LIVE   |) s
+(- Superseded versions - Old versions after updates) s
 5 286 M
-(                    |         |) s
+(- Failed uploads - Partial or abandoned writes) s
 5 275 M
-(                    +----+----+) s
-5 264 M
-(                         |) s
+(- Temporary objects - Intermediate computation results) s
 5 253 M
-(              +----------+----------+) s
-5 242 M
-(              |          |          |) s
+(But deletion is dangerous:) s
 5 231 M
-(              v          v          v) s
+(- Hash as capability - Someone may hold the hash) s
 5 220 M
-(         +--------+ +--------+ +--------+) s
+(- Lazy replication - Remote vaults may need it later) s
 5 209 M
-(         |PINNED  | |TOMBSTONE| |ORPHANED|) s
+(- Audit requirements - May need historical data) s
 5 198 M
-(         +--------+ +--------+ +---+----+) s
-5 187 M
-(                                   |) s
+(- Resurrection - Deleted objects may be re-added) s
 5 176 M
-(                                   | GC) s
-5 165 M
-(                                   v) s
+(GC must be conservative, consensual, and auditable.) s
 5 154 M
-(                              +--------+) s
-5 143 M
-(                              |COLLECTED|) s
+(The default is: never collect. Collection requires explicit action.) s
 5 132 M
-(                              +--------+) s
+(------------------------------------------------------------------------------) s
 5 110 M
-(State Transitions) s
+(Object Lifecycle) s
 5 88 M
-(\(define \(object-state hash\)) s
-5 77 M
-(  \(cond) s
+(States) s
 5 66 M
-(    \(\(pinned? hash\) 'pinned\)) s
+(                    +---------+) s
 5 55 M
-(    \(\(tombstoned? hash\) 'tombstone\)) s
+(          write     |         |) s
 5 44 M
-(    \(\(referenced? hash\) 'live\)) s
+(        --------->  |  LIVE   |) s
 5 33 M
-(    \(else 'orphaned\)\)\)) s
+(                    |         |) s
+5 22 M
+(                    +----+----+) s
 5 11 M
-(\(define \(can-collect? hash\)) s
+(                         |) s
 _R
 S
 %%Page: (2) 2
@@ -554,107 +542,113 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  \(and \(eq? \(object-state hash\) 'orphaned\)) s
+(              +----------+----------+) s
 5 770 M
-(       \(not \(in-grace-period? hash\)\)) s
+(              |          |          |) s
 5 759 M
-(       \(not \(pending-replication? hash\)\)\)\)) s
+(              v          v          v) s
+5 748 M
+(         +--------+ +--------+ +--------+) s
 5 737 M
-(------------------------------------------------------------------------------) s
+(         |PINNED  | |TOMBSTONE| |ORPHANED|) s
+5 726 M
+(         +--------+ +--------+ +---+----+) s
 5 715 M
-(Reference Counting) s
+(                                   |) s
+5 704 M
+(                                   | GC) s
 5 693 M
-(Direct References) s
+(                                   v) s
+5 682 M
+(                              +--------+) s
 5 671 M
-(;; Track incoming references) s
+(                              |COLLECTED|) s
 5 660 M
-(\(define ref-counts \(make-hash-table\)\)) s
+(                              +--------+) s
 5 638 M
-(\(define \(add-reference from-hash to-hash\)) s
-5 627 M
-(  \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) s
+(State Transitions) s
 5 616 M
-(    \(hash-table-set! ref-counts to-hash \(+ count 1\)\)) s
+(\(define \(object-state hash\)) s
 5 605 M
-(    \(audit-append action: `\(add-ref ,from-hash ,to-hash\)\)\)\)) s
+(  \(cond) s
+5 594 M
+(    \(\(pinned? hash\) 'pinned\)) s
 5 583 M
-(\(define \(remove-reference from-hash to-hash\)) s
+(    \(\(tombstoned? hash\) 'tombstone\)) s
 5 572 M
-(  \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) s
+(    \(\(referenced? hash\) 'live\)) s
 5 561 M
-(    \(hash-table-set! ref-counts to-hash \(max 0 \(- count 1\)\)\)) s
-5 550 M
-(    \(audit-append action: `\(remove-ref ,from-hash ,to-hash\)\)\)\)) s
+(    \(else 'orphaned\)\)\)) s
+5 539 M
+(\(define \(can-collect? hash\)) s
 5 528 M
-(\(define \(reference-count hash\)) s
+(  \(and \(eq? \(object-state hash\) 'orphaned\)) s
 5 517 M
-(  \(hash-table-ref ref-counts hash 0\)\)) s
-5 495 M
-(Root References) s
-5 473 M
-(;; GC roots - objects that are always reachable) s
-5 462 M
-(\(define gc-roots \(make-hash-set\)\)) s
-5 440 M
-(\(define \(add-gc-root hash reason\)) s
-5 429 M
-(  \(hash-set-add! gc-roots hash\)) s
-5 418 M
-(  \(audit-append action: `\(add-root ,hash ,reason\)\)\)) s
-5 396 M
-(\(define \(remove-gc-root hash\)) s
-5 385 M
-(  \(hash-set-remove! gc-roots hash\)) s
-5 374 M
-(  \(audit-append action: `\(remove-root ,hash\)\)\)) s
-5 352 M
-(\(define \(gc-root? hash\)) s
-5 341 M
-(  \(hash-set-member? gc-roots hash\)\)) s
-5 319 M
-(Implicit Roots) s
-5 297 M
-(;; Some objects are implicitly rooted) s
-5 286 M
-(\(define \(implicit-root? hash\)) s
-5 275 M
-(  \(or \(pinned? hash\)) s
-5 264 M
-(      \(soup-object-type? hash 'certificate\)  ; Certs are roots) s
-5 253 M
-(      \(soup-object-type? hash 'audit-entry\)  ; Audit is sacred) s
-5 242 M
-(      \(recent-write? hash\)\)\)                 ; Grace period) s
-5 220 M
+(       \(not \(in-grace-period? hash\)\)) s
+5 506 M
+(       \(not \(pending-replication? hash\)\)\)\)) s
+5 484 M
 (------------------------------------------------------------------------------) s
-5 198 M
-(Mark and Sweep) s
+5 462 M
+(Reference Counting) s
+5 440 M
+(Direct References) s
+5 418 M
+(;; Track incoming references) s
+5 407 M
+(\(define ref-counts \(make-hash-table\)\)) s
+5 385 M
+(\(define \(add-reference from-hash to-hash\)) s
+5 374 M
+(  \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) s
+5 363 M
+(    \(hash-table-set! ref-counts to-hash \(+ count 1\)\)) s
+5 352 M
+(    \(audit-append action: `\(add-ref ,from-hash ,to-hash\)\)\)\)) s
+5 330 M
+(\(define \(remove-reference from-hash to-hash\)) s
+5 319 M
+(  \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) s
+5 308 M
+(    \(hash-table-set! ref-counts to-hash \(max 0 \(- count 1\)\)\)) s
+5 297 M
+(    \(audit-append action: `\(remove-ref ,from-hash ,to-hash\)\)\)\)) s
+5 275 M
+(\(define \(reference-count hash\)) s
+5 264 M
+(  \(hash-table-ref ref-counts hash 0\)\)) s
+5 242 M
+(Root References) s
+5 220 M
+(;; GC roots - objects that are always reachable) s
+5 209 M
+(\(define gc-roots \(make-hash-set\)\)) s
+5 187 M
+(\(define \(add-gc-root hash reason\)) s
 5 176 M
-(Mark Phase) s
-5 154 M
-(\(define \(mark-reachable\)) s
+(  \(hash-set-add! gc-roots hash\)) s
+5 165 M
+(  \(audit-append action: `\(add-root ,hash ,reason\)\)\)) s
 5 143 M
-(  "Mark all objects reachable from roots") s
+(\(define \(remove-gc-root hash\)) s
 5 132 M
-(  \(let \(\(marked \(make-hash-set\)\)\)) s
+(  \(hash-set-remove! gc-roots hash\)) s
 5 121 M
-(    \(define \(mark hash\)) s
-5 110 M
-(      \(unless \(hash-set-member? marked hash\)) s
+(  \(audit-append action: `\(remove-root ,hash\)\)\)) s
 5 99 M
-(        \(hash-set-add! marked hash\)) s
+(\(define \(gc-root? hash\)) s
 5 88 M
-(        \(for-each mark \(object-references hash\)\)\)\)) s
+(  \(hash-set-member? gc-roots hash\)\)) s
 5 66 M
-(    ;; Mark from explicit roots) s
-5 55 M
-(    \(for-each mark \(hash-set->list gc-roots\)\)) s
+(Implicit Roots) s
+5 44 M
+(;; Some objects are implicitly rooted) s
 5 33 M
-(    ;; Mark from implicit roots) s
+(\(define \(implicit-root? hash\)) s
 5 22 M
-(    \(for-each \(lambda \(hash\)) s
+(  \(or \(pinned? hash\)) s
 5 11 M
-(                \(when \(implicit-root? hash\)) s
+(      \(soup-object-type? hash 'certificate\)  ; Certs are roots) s
 _R
 S
 %%Page: (3) 3
@@ -669,117 +663,115 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(                  \(mark hash\)\)\)) s
+(      \(soup-object-type? hash 'audit-entry\)  ; Audit is sacred) s
 5 770 M
-(              \(all-object-hashes\)\)) s
+(      \(recent-write? hash\)\)\)                 ; Grace period) s
 5 748 M
-(    marked\)\)) s
+(Cycle Detection) s
 5 726 M
-(Sweep Phase) s
+(Reference counting alone cannot detect cycles \(A\342\\206\\222B\342\\206\\222C\342\\206\\222A\). The soup) s
+5 715 M
+( uses mark-and-sweep as the authoritative reachability test, with reference counts as a f) s
 5 704 M
-(\(define \(sweep marked\)) s
-5 693 M
-(  "Collect unmarked objects") s
+(ast path for common cases.) s
 5 682 M
-(  \(let \(\(collected '\(\)\)\)) s
+(;; Reference counting is advisory, not authoritative) s
 5 671 M
-(    \(for-each) s
+(\(define \(fast-unreachable? hash\)) s
 5 660 M
-(      \(lambda \(hash\)) s
+(  "Quick check - zero refs MIGHT mean unreachable") s
 5 649 M
-(        \(unless \(hash-set-member? marked hash\)) s
+(  \(and \(zero? \(reference-count hash\)\)) s
 5 638 M
-(          \(when \(can-collect? hash\)) s
+(       \(not \(gc-root? hash\)\)) s
 5 627 M
-(            \(set! collected \(cons hash collected\)\)) s
-5 616 M
-(            \(collect-object! hash\)\)\)\)) s
+(       \(not \(implicit-root? hash\)\)\)\)) s
 5 605 M
-(      \(all-object-hashes\)\)) s
+(;; Mark-and-sweep is authoritative) s
 5 594 M
-(    collected\)\)) s
+(\(define \(truly-unreachable? hash marked-set\)) s
+5 583 M
+(  "Authoritative check - not in marked set means unreachable") s
 5 572 M
-(\(define \(collect-object! hash\)) s
-5 561 M
-(  "Remove object from storage") s
+(  \(not \(hash-set-member? marked-set hash\)\)\)) s
 5 550 M
-(  \(let \(\(obj \(cas-get hash\)\)\)) s
+(;; Cycle detection via mark-and-sweep) s
 5 539 M
-(    \(audit-append) s
+(\(define \(detect-cycles\)) s
 5 528 M
-(      action: 'gc-collect) s
+(  "Find reference cycles \(objects that reference each other but are unreachable\)") s
 5 517 M
-(      hash: hash) s
+(  \(let* \(\(marked \(mark-reachable\)\)) s
 5 506 M
-(      size: \(object-size obj\)) s
+(         \(all-hashes \(all-object-hashes\)\)) s
 5 495 M
-(      age: \(object-age obj\)\)) s
+(         \(unmarked \(filter \(lambda \(h\) \(not \(hash-set-member? marked h\)\)\) all-hashes\)\)) s
 5 484 M
-(    \(cas-delete! hash\)\)\)) s
+(         \(with-refs \(filter \(lambda \(h\) \(> \(reference-count h\) 0\)\) unmarked\)\)\)) s
+5 473 M
+(    ;; These have refs but are unreachable - they're in cycles) s
 5 462 M
-(Full GC) s
+(    with-refs\)\)) s
 5 440 M
-(\(define \(gc-full\)) s
+(In archival mode, cycles are preserved \(they may be intentional - e.g., bidirectional lin) s
 5 429 M
-(  "Perform full garbage collection") s
-5 418 M
-(  \(let \(\(start \(current-time\)\)\)) s
+(ks\). Only explicit evaporation removes them.) s
 5 407 M
-(    \(audit-append action: 'gc-start type: 'full\)) s
-5 385 M
-(    \(let* \(\(marked \(mark-reachable\)\)) s
-5 374 M
-(           \(collected \(sweep marked\)\)\)) s
-5 352 M
-(      \(audit-append) s
-5 341 M
-(        action: 'gc-complete) s
-5 330 M
-(        type: 'full) s
-5 319 M
-(        duration: \(- \(current-time\) start\)) s
-5 308 M
-(        marked: \(hash-set-size marked\)) s
-5 297 M
-(        collected: \(length collected\)) s
-5 286 M
-(        bytes-freed: \(sum \(map object-size collected\)\)\)) s
-5 264 M
-(      collected\)\)\)) s
-5 242 M
 (------------------------------------------------------------------------------) s
-5 220 M
-(Incremental GC) s
+5 385 M
+(Mark and Sweep) s
+5 363 M
+(Tricolor Abstraction) s
+5 341 M
+(The naive recursive mark algorithm risks stack overflow on deep object graphs. The tricol) s
+5 330 M
+(or abstraction provides:) s
+5 308 M
+(1. White: Unvisited, potentially garbage) s
+5 297 M
+(2. Gray: Visited but references not yet scanned) s
+5 286 M
+(3. Black: Visited and all references scanned) s
+5 264 M
+(;; Tricolor sets - explicit worklist avoids stack overflow) s
+5 253 M
+(\(define white-set \(make-hash-set\)\)  ; Candidates for collection) s
+5 242 M
+(\(define gray-set \(make-hash-set\)\)   ; Work queue) s
+5 231 M
+(\(define black-set \(make-hash-set\)\)  ; Proven reachable) s
+5 209 M
+(\(define \(tricolor-init\)) s
 5 198 M
-(Generational Collection) s
+(  "Initialize: all objects are white") s
+5 187 M
+(  \(hash-set-clear! white-set\)) s
 5 176 M
-(;; Objects partitioned by age) s
+(  \(hash-set-clear! gray-set\)) s
 5 165 M
-(\(define generations) s
+(  \(hash-set-clear! black-set\)) s
 5 154 M
-(  '\(\(young . 86400\)      ; < 1 day) s
+(  \(for-each \(lambda \(h\) \(hash-set-add! white-set h\)\)) s
 5 143 M
-(    \(middle . 2592000\)   ; < 30 days) s
-5 132 M
-(    \(old . #f\)\)\)         ; >= 30 days) s
+(            \(all-object-hashes\)\)\)) s
+5 121 M
+(\(define \(shade-gray! hash\)) s
 5 110 M
-(\(define \(object-generation hash\)) s
+(  "Move object from white to gray \(discovered\)") s
 5 99 M
-(  \(let \(\(age \(object-age hash\)\)\)) s
+(  \(when \(hash-set-member? white-set hash\)) s
 5 88 M
-(    \(cond) s
+(    \(hash-set-remove! white-set hash\)) s
 5 77 M
-(      \(\(< age 86400\) 'young\)) s
-5 66 M
-(      \(\(< age 2592000\) 'middle\)) s
+(    \(hash-set-add! gray-set hash\)\)\)) s
 5 55 M
-(      \(else 'old\)\)\)\)) s
+(\(define \(shade-black! hash\)) s
+5 44 M
+(  "Move object from gray to black \(fully scanned\)") s
 5 33 M
-(\(define \(gc-generation gen\)) s
+(  \(hash-set-remove! gray-set hash\)) s
 5 22 M
-(  "Collect only specified generation") s
-5 11 M
-(  \(let \(\(candidates \(filter \(lambda \(h\)) s
+(  \(hash-set-add! black-set hash\)\)) s
 _R
 S
 %%Page: (4) 4
@@ -794,115 +786,123 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(                              \(eq? \(object-generation h\) gen\)\)) s
-5 770 M
-(                            \(all-object-hashes\)\)\)\)) s
+(Mark Phase \(Worklist Algorithm\)) s
 5 759 M
-(    \(gc-candidates candidates\)\)\)) s
+(\(define \(mark-reachable\)) s
+5 748 M
+(  "Mark all objects reachable from roots using worklist") s
 5 737 M
-(Write Barrier) s
+(  \(tricolor-init\)) s
 5 715 M
-(;; Track modified objects for incremental GC) s
+(  ;; Shade roots gray) s
 5 704 M
-(\(define modified-set \(make-hash-set\)\)) s
+(  \(for-each shade-gray! \(hash-set->list gc-roots\)\)) s
+5 693 M
+(  \(for-each \(lambda \(hash\)) s
 5 682 M
-(\(define \(cas-put-with-barrier data\)) s
+(              \(when \(implicit-root? hash\)) s
 5 671 M
-(  \(let \(\(hash \(cas-put data\)\)\)) s
+(                \(shade-gray! hash\)\)\)) s
 5 660 M
-(    \(hash-set-add! modified-set hash\)) s
-5 649 M
-(    hash\)\)) s
+(            \(all-object-hashes\)\)) s
+5 638 M
+(  ;; Process gray objects until none remain) s
 5 627 M
-(\(define \(gc-incremental\)) s
+(  \(let loop \(\)) s
 5 616 M
-(  "Collect recently modified objects if orphaned") s
+(    \(unless \(hash-set-empty? gray-set\)) s
 5 605 M
-(  \(let \(\(candidates \(hash-set->list modified-set\)\)\)) s
+(      \(let \(\(current \(hash-set-pop! gray-set\)\)\)) s
 5 594 M
-(    \(hash-set-clear! modified-set\)) s
+(        ;; Shade all white references gray) s
 5 583 M
-(    \(gc-candidates candidates\)\)\)) s
+(        \(for-each shade-gray! \(object-references current\)\)) s
+5 572 M
+(        ;; Current is now fully scanned) s
 5 561 M
-(Concurrent GC) s
-5 539 M
-(;; GC runs concurrently with mutations) s
+(        \(shade-black! current\)) s
+5 550 M
+(        \(loop\)\)\)\)) s
 5 528 M
-(\(define gc-lock \(make-mutex\)\)) s
-5 517 M
-(\(define gc-running? #f\)) s
-5 495 M
-(\(define \(gc-concurrent\)) s
+(  black-set\)  ; Return reachable set) s
+5 506 M
+(Incremental Tricolor Marking) s
 5 484 M
-(  "Run GC without stopping the world") s
-5 473 M
-(  \(when \(mutex-try-lock! gc-lock\)) s
+(For large soups, mark in batches to avoid long pauses:) s
 5 462 M
-(    \(set! gc-running? #t\)) s
-5 451 M
-(    \(let \(\(snapshot \(snapshot-roots\)\)\)) s
+(\(define mark-batch-size 1000\)  ; Objects per batch) s
 5 440 M
-(      ;; Mark phase uses snapshot) s
+(\(define \(mark-incremental\)) s
 5 429 M
-(      \(let \(\(marked \(mark-from-snapshot snapshot\)\)\)) s
+(  "Mark in batches, yielding between batches") s
 5 418 M
-(        ;; Sweep only clearly dead objects) s
+(  \(let \(\(batch 0\)\)) s
 5 407 M
-(        \(sweep-conservative marked\)\)\)) s
+(    \(let loop \(\)) s
 5 396 M
-(    \(set! gc-running? #f\)) s
+(      \(unless \(or \(hash-set-empty? gray-set\)) s
 5 385 M
-(    \(mutex-unlock! gc-lock\)\)\)) s
+(                  \(>= batch mark-batch-size\)\)) s
+5 374 M
+(        \(let \(\(current \(hash-set-pop! gray-set\)\)\)) s
 5 363 M
-(------------------------------------------------------------------------------) s
+(          \(for-each shade-gray! \(object-references current\)\)) s
+5 352 M
+(          \(shade-black! current\)) s
 5 341 M
-(Pinning) s
+(          \(set! batch \(+ batch 1\)\)) s
+5 330 M
+(          \(loop\)\)\)\)) s
 5 319 M
-(Pin Management) s
-5 297 M
-(\(define pins \(make-hash-table\)\)) s
+(    ;; Return whether more work remains) s
+5 308 M
+(    \(not \(hash-set-empty? gray-set\)\)\)\)) s
+5 286 M
+(;; Usage: call repeatedly until returns #f) s
 5 275 M
-(\(define \(pin! hash reason #!key duration\)) s
+(\(define \(incremental-gc-step\)) s
 5 264 M
-(  "Protect object from GC") s
+(  \(if \(mark-incremental\)) s
 5 253 M
-(  \(hash-table-set! pins hash) s
+(      'more-work) s
 5 242 M
-(    `\(\(reason . ,reason\)) s
+(      \(begin) s
 5 231 M
-(      \(pinned-at . ,\(current-time\)\)) s
+(        \(sweep-white\)) s
 5 220 M
-(      \(expires . ,\(and duration \(+ \(current-time\) duration\)\)\)) s
-5 209 M
-(      \(pinned-by . ,\(current-principal\)\)\)\)) s
+(        'complete\)\)\)) s
 5 198 M
-(  \(audit-append action: `\(pin ,hash ,reason\)\)\)) s
+(Concurrent Write Barrier) s
 5 176 M
-(\(define \(unpin! hash\)) s
+(For concurrent GC, mutations must maintain the tricolor invariant: a black object cannot ) s
 5 165 M
-(  "Allow object to be collected") s
-5 154 M
-(  \(hash-table-delete! pins hash\)) s
+(point to a white object.) s
 5 143 M
-(  \(audit-append action: `\(unpin ,hash\)\)\)) s
+(;; Write barrier for concurrent GC) s
+5 132 M
+(\(define \(cas-put-concurrent data\)) s
 5 121 M
-(\(define \(pinned? hash\)) s
+(  "Store with write barrier for concurrent GC") s
 5 110 M
-(  \(let \(\(pin \(hash-table-ref pins hash #f\)\)\)) s
+(  \(let \(\(hash \(cas-put data\)\)\)) s
 5 99 M
-(    \(and pin) s
+(    ;; If GC is running and we create new references) s
 5 88 M
-(         \(or \(not \(assoc-ref pin 'expires\)\)) s
+(    \(when gc-running?) s
 5 77 M
-(             \(> \(assoc-ref pin 'expires\) \(current-time\)\)\)\)\)\)) s
+(      ;; Shade new object gray \(conservative\)) s
+5 66 M
+(      \(shade-gray! hash\)) s
 5 55 M
-(Transitive Pinning) s
+(      ;; Re-shade any black object referencing new object) s
+5 44 M
+(      \(for-each \(lambda \(referencer\)) s
 5 33 M
-(\(define \(pin-tree! root-hash reason\)) s
+(                  \(when \(hash-set-member? black-set referencer\)) s
 5 22 M
-(  "Pin object and all objects it references") s
+(                    ;; Demote to gray - needs re-scanning) s
 5 11 M
-(  \(let \(\(visited \(make-hash-set\)\)\)) s
+(                    \(hash-set-remove! black-set referencer\)) s
 _R
 S
 %%Page: (5) 5
@@ -917,111 +917,121 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(define \(pin-recursive hash\)) s
+(                    \(hash-set-add! gray-set referencer\)\)\)) s
 5 770 M
-(      \(unless \(hash-set-member? visited hash\)) s
+(                \(incoming-references hash\)\)\)) s
 5 759 M
-(        \(hash-set-add! visited hash\)) s
-5 748 M
-(        \(pin! hash reason\)) s
+(    hash\)\)) s
 5 737 M
-(        \(for-each pin-recursive \(object-references hash\)\)\)\)) s
+(;; Snapshot-at-the-beginning \(SATB\) barrier) s
 5 726 M
-(    \(pin-recursive root-hash\)\)\)) s
+(\(define \(reference-update! from-hash old-ref new-ref\)) s
+5 715 M
+(  "SATB write barrier: preserve old reference for marking") s
 5 704 M
-(------------------------------------------------------------------------------) s
+(  \(when \(and gc-running? old-ref\)) s
+5 693 M
+(    ;; Keep old reference alive through this GC cycle) s
 5 682 M
-(Tombstones) s
-5 660 M
-(Tombstone Handling) s
-5 638 M
-(;; Tombstones are never collected) s
+(    \(shade-gray! old-ref\)\)) s
+5 671 M
+(  \(update-reference! from-hash new-ref\)\)) s
+5 649 M
+(Original Mark \(Preserved for Reference\)) s
 5 627 M
-(\(define \(tombstoned? hash\)) s
+(;; Simple recursive version \(for small object graphs only\)) s
 5 616 M
-(  \(let \(\(obj \(soup-get hash\)\)\)) s
+(\(define \(mark-reachable/simple\)) s
 5 605 M
-(    \(and obj \(eq? \(soup-object-type obj\) 'tombstone\)\)\)\)) s
+(  "Mark all objects reachable from roots \(recursive, can stack overflow\)") s
+5 594 M
+(  \(let \(\(marked \(make-hash-set\)\)\)) s
 5 583 M
-(;; Tombstones prevent resurrection) s
+(    \(define \(mark hash\)) s
 5 572 M
-(\(define \(cas-put-checked data\)) s
+(      \(unless \(hash-set-member? marked hash\)) s
 5 561 M
-(  \(let \(\(hash \(content-hash data\)\)\)) s
+(        \(hash-set-add! marked hash\)) s
 5 550 M
-(    \(when \(tombstoned? hash\)) s
-5 539 M
-(      \(error "Cannot resurrect tombstoned object" hash\)\)) s
+(        \(for-each mark \(object-references hash\)\)\)\)) s
 5 528 M
-(    \(cas-put data\)\)\)) s
-5 506 M
-(Tombstone Expiry) s
+(    ;; Mark from explicit roots) s
+5 517 M
+(    \(for-each mark \(hash-set->list gc-roots\)\)) s
+5 495 M
+(    ;; Mark from implicit roots) s
 5 484 M
-(;; Optional: tombstones can expire) s
+(    \(for-each \(lambda \(hash\)) s
 5 473 M
-(\(define \(tombstone-expired? hash\)) s
+(                \(when \(implicit-root? hash\)) s
 5 462 M
-(  \(let \(\(tomb \(soup-get hash\)\)\)) s
+(                  \(mark hash\)\)\)) s
 5 451 M
-(    \(and tomb) s
-5 440 M
-(         \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) s
+(              \(all-object-hashes\)\)) s
 5 429 M
-(         \(< \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) s
-5 418 M
-(            \(current-time\)\)\)\)\)) s
-5 396 M
-(\(define \(gc-expired-tombstones\)) s
+(    marked\)\)) s
+5 407 M
+(Sweep Phase) s
 5 385 M
-(  "Remove expired tombstones") s
+(\(define \(sweep marked\)) s
 5 374 M
-(  \(for-each) s
+(  "Collect unmarked objects") s
 5 363 M
-(    \(lambda \(hash\)) s
+(  \(let \(\(collected '\(\)\)\)) s
 5 352 M
-(      \(when \(and \(tombstoned? hash\) \(tombstone-expired? hash\)\)) s
+(    \(for-each) s
 5 341 M
-(        \(collect-object! hash\)\)\)) s
+(      \(lambda \(hash\)) s
 5 330 M
-(    \(all-object-hashes\)\)\)) s
+(        \(unless \(hash-set-member? marked hash\)) s
+5 319 M
+(          \(when \(can-collect? hash\)) s
 5 308 M
-(------------------------------------------------------------------------------) s
+(            \(set! collected \(cons hash collected\)\)) s
+5 297 M
+(            \(collect-object! hash\)\)\)\)) s
 5 286 M
-(Grace Periods) s
-5 264 M
-(Write Grace Period) s
+(      \(all-object-hashes\)\)) s
+5 275 M
+(    collected\)\)) s
+5 253 M
+(\(define \(collect-object! hash\)) s
 5 242 M
-(;; Recently written objects are protected) s
+(  "Remove object from storage") s
 5 231 M
-(\(define write-grace-period 86400\)  ; 24 hours) s
+(  \(let \(\(obj \(cas-get hash\)\)\)) s
+5 220 M
+(    \(audit-append) s
 5 209 M
-(\(define \(recent-write? hash\)) s
+(      action: 'gc-collect) s
 5 198 M
-(  \(let \(\(obj \(soup-get hash\)\)\)) s
+(      hash: hash) s
 5 187 M
-(    \(and obj) s
+(      size: \(object-size obj\)) s
 5 176 M
-(         \(< \(- \(current-time\) \(soup-object-created obj\)\)) s
+(      age: \(object-age obj\)\)) s
 5 165 M
-(            write-grace-period\)\)\)\)) s
+(    \(cas-delete! hash\)\)\)) s
 5 143 M
-(Replication Grace Period) s
+(Full GC) s
 5 121 M
-(;; Objects pending replication are protected) s
+(\(define \(gc-full\)) s
 5 110 M
-(\(define pending-replication \(make-hash-set\)\)) s
+(  "Perform full garbage collection") s
+5 99 M
+(  \(let \(\(start \(current-time\)\)\)) s
 5 88 M
-(\(define \(mark-pending-replication hash vaults\)) s
-5 77 M
-(  \(hash-set-add! pending-replication hash\)) s
+(    \(audit-append action: 'gc-start type: 'full\)) s
 5 66 M
-(  \(audit-append action: `\(pending-replication ,hash ,vaults\)\)\)) s
-5 44 M
-(\(define \(clear-pending-replication hash\)) s
+(    \(let* \(\(marked \(mark-reachable\)\)) s
+5 55 M
+(           \(collected \(sweep marked\)\)\)) s
 5 33 M
-(  \(hash-set-remove! pending-replication hash\)\)) s
+(      \(audit-append) s
+5 22 M
+(        action: 'gc-complete) s
 5 11 M
-(\(define \(pending-replication? hash\)) s
+(        type: 'full) s
 _R
 S
 %%Page: (6) 6
@@ -1036,111 +1046,117 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  \(hash-set-member? pending-replication hash\)\)) s
+(        duration: \(- \(current-time\) start\)) s
+5 770 M
+(        marked: \(hash-set-size marked\)) s
 5 759 M
+(        collected: \(length collected\)) s
+5 748 M
+(        bytes-freed: \(sum \(map object-size collected\)\)\)) s
+5 726 M
+(      collected\)\)\)) s
+5 704 M
 (------------------------------------------------------------------------------) s
-5 737 M
-(Distributed GC) s
-5 715 M
-(Coordinated Collection) s
-5 693 M
-(;; Multi-vault GC requires coordination) s
 5 682 M
-(\(define \(distributed-gc vaults\)) s
-5 671 M
-(  "Coordinate GC across vault federation") s
+(Incremental GC) s
 5 660 M
-(  ;; Phase 1: Gather root sets) s
-5 649 M
-(  \(let \(\(root-sets \(map vault-roots vaults\)\)\)) s
+(Archival Generational Collection) s
 5 638 M
-(    ;; Phase 2: Compute global reachability) s
+(Traditional generational GC collects young objects first \(they die young\). Archival GC in) s
 5 627 M
-(    \(let \(\(global-marked \(union-all root-sets\)\)\)) s
-5 616 M
-(      ;; Phase 3: Local sweep \(conservative\)) s
+(verts this: old objects are precious.) s
 5 605 M
-(      \(for-each \(lambda \(vault\)) s
+(;; Archival generations - age increases protection) s
 5 594 M
-(                  \(vault-sweep vault global-marked\)\)) s
+(\(define generations) s
 5 583 M
-(                vaults\)\)\)\)) s
+(  '\(\(ephemeral . 3600\)     ; < 1 hour: temporary, collect freely) s
+5 572 M
+(    \(young . 86400\)        ; < 1 day: probably transient) s
 5 561 M
-(Remote Reference Tracking) s
+(    \(maturing . 604800\)    ; < 1 week: gaining stability) s
+5 550 M
+(    \(stable . 2592000\)     ; < 30 days: likely permanent) s
 5 539 M
-(;; Track references from remote vaults) s
-5 528 M
-(\(define remote-refs \(make-hash-table\)\)) s
+(    \(archival . #f\)\)\)      ; >= 30 days: NEVER collect automatically) s
+5 517 M
+(\(define \(object-generation hash\)) s
 5 506 M
-(\(define \(add-remote-reference vault-id hash\)) s
+(  \(let \(\(age \(object-age hash\)\)\)) s
 5 495 M
-(  \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) s
+(    \(cond) s
 5 484 M
-(    \(hash-table-set! remote-refs hash \(cons vault-id refs\)\)\)\)) s
+(      \(\(< age 3600\) 'ephemeral\)) s
+5 473 M
+(      \(\(< age 86400\) 'young\)) s
 5 462 M
-(\(define \(remove-remote-reference vault-id hash\)) s
+(      \(\(< age 604800\) 'maturing\)) s
 5 451 M
-(  \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) s
+(      \(\(< age 2592000\) 'stable\)) s
 5 440 M
-(    \(hash-table-set! remote-refs hash \(delete vault-id refs\)\)\)\)) s
+(      \(else 'archival\)\)\)\)) s
 5 418 M
-(\(define \(has-remote-references? hash\)) s
+(;; Collection eligibility by generation) s
 5 407 M
-(  \(not \(null? \(hash-table-ref remote-refs hash '\(\)\)\)\)\)) s
+(\(define \(generation-collectible? gen\)) s
+5 396 M
+(  \(case gen) s
 5 385 M
-(Lease-Based Collection) s
+(    \(\(ephemeral\) #t\)       ; Freely collectible) s
+5 374 M
+(    \(\(young\) #t\)           ; Collectible with grace period) s
 5 363 M
-(;; Remote vaults lease objects) s
+(    \(\(maturing\) 'warning\)  ; Requires explicit approval) s
 5 352 M
-(\(define leases \(make-hash-table\)\)) s
-5 330 M
-(\(define \(grant-lease hash vault-id duration\)) s
+(    \(\(stable\) 'quorum\)     ; Requires federation quorum) s
+5 341 M
+(    \(\(archival\) #f\)\)\)      ; NEVER collect automatically) s
 5 319 M
-(  \(let \(\(expires \(+ \(current-time\) duration\)\)\)) s
+(\(define \(gc-generation gen\)) s
 5 308 M
-(    \(hash-table-set! leases hash) s
+(  "Collect only specified generation \(archival only via evaporation\)") s
 5 297 M
-(      \(cons \(cons vault-id expires\)) s
+(  \(when \(eq? gen 'archival\)) s
 5 286 M
-(            \(hash-table-ref leases hash '\(\)\)\)\)\)\)) s
+(    \(error "Archival objects require evaporation certificate"\)\)) s
+5 275 M
+(  \(let \(\(candidates \(filter \(lambda \(h\)) s
 5 264 M
-(\(define \(lease-active? hash\)) s
+(                              \(eq? \(object-generation h\) gen\)\)) s
 5 253 M
-(  \(let \(\(hash-leases \(hash-table-ref leases hash '\(\)\)\)\)) s
+(                            \(all-object-hashes\)\)\)\)) s
 5 242 M
-(    \(any \(lambda \(lease\)) s
-5 231 M
-(           \(> \(cdr lease\) \(current-time\)\)\)) s
+(    \(gc-candidates candidates\)\)\)) s
 5 220 M
-(         hash-leases\)\)\)) s
+(Write Barrier) s
 5 198 M
-(------------------------------------------------------------------------------) s
-5 176 M
-(GC Scheduling) s
+(;; Track modified objects for incremental GC) s
+5 187 M
+(\(define modified-set \(make-hash-set\)\)) s
+5 165 M
+(\(define \(cas-put-with-barrier data\)) s
 5 154 M
-(Triggers) s
+(  \(let \(\(hash \(cas-put data\)\)\)) s
+5 143 M
+(    \(hash-set-add! modified-set hash\)) s
 5 132 M
-(;; GC triggered by various conditions) s
-5 121 M
-(\(define \(should-gc?\)) s
+(    hash\)\)) s
 5 110 M
-(  \(or \(> \(storage-usage-percent\) 80\)      ; Disk pressure) s
+(\(define \(gc-incremental\)) s
 5 99 M
-(      \(> \(orphan-estimate\) 10000\)         ; Many orphans) s
+(  "Collect recently modified objects if orphaned") s
 5 88 M
-(      \(> \(time-since-last-gc\) 86400\)\)\)    ; Daily minimum) s
+(  \(let \(\(candidates \(hash-set->list modified-set\)\)\)) s
+5 77 M
+(    \(hash-set-clear! modified-set\)) s
 5 66 M
-(\(define \(gc-schedule\)) s
-5 55 M
-(  "Run appropriate GC based on conditions") s
+(    \(gc-candidates candidates\)\)\)) s
 5 44 M
-(  \(cond) s
-5 33 M
-(    \(\(> \(storage-usage-percent\) 95\)) s
+(Concurrent GC) s
 5 22 M
-(      \(gc-full\)\)                          ; Emergency: full GC) s
+(;; GC runs concurrently with mutations) s
 5 11 M
-(    \(\(> \(storage-usage-percent\) 80\)) s
+(\(define gc-lock \(make-mutex\)\)) s
 _R
 S
 %%Page: (7) 7
@@ -1155,117 +1171,117 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(      \(gc-generation 'young\)\)             ; Pressure: young gen) s
-5 770 M
-(    \(else) s
+(\(define gc-running? #f\)) s
 5 759 M
-(      \(gc-incremental\)\)\)\)                 ; Normal: incremental) s
+(\(define \(gc-concurrent\)) s
+5 748 M
+(  "Run GC without stopping the world") s
 5 737 M
-(Background GC) s
+(  \(when \(mutex-try-lock! gc-lock\)) s
+5 726 M
+(    \(set! gc-running? #t\)) s
 5 715 M
-(\(define gc-thread #f\)) s
+(    \(let \(\(snapshot \(snapshot-roots\)\)\)) s
+5 704 M
+(      ;; Mark phase uses snapshot) s
 5 693 M
-(\(define \(start-gc-daemon interval\)) s
+(      \(let \(\(marked \(mark-from-snapshot snapshot\)\)\)) s
 5 682 M
-(  \(set! gc-thread) s
+(        ;; Sweep only clearly dead objects) s
 5 671 M
-(    \(thread-start!) s
+(        \(sweep-conservative marked\)\)\)) s
 5 660 M
-(      \(make-thread) s
+(    \(set! gc-running? #f\)) s
 5 649 M
-(        \(lambda \(\)) s
-5 638 M
-(          \(let loop \(\)) s
+(    \(mutex-unlock! gc-lock\)\)\)) s
 5 627 M
-(            \(thread-sleep! interval\)) s
-5 616 M
-(            \(when \(should-gc?\)) s
+(------------------------------------------------------------------------------) s
 5 605 M
-(              \(gc-schedule\)\)) s
-5 594 M
-(            \(loop\)\)\)\)\)\)\)) s
-5 572 M
-(------------------------------------------------------------------------------) s
-5 550 M
-(Safety Mechanisms) s
+(Pinning) s
+5 583 M
+(Pin Management) s
+5 561 M
+(\(define pins \(make-hash-table\)\)) s
+5 539 M
+(\(define \(pin! hash reason #!key duration\)) s
 5 528 M
-(Dry Run) s
+(  "Protect object from GC") s
+5 517 M
+(  \(hash-table-set! pins hash) s
 5 506 M
-(\(define \(gc-dry-run\)) s
+(    `\(\(reason . ,reason\)) s
 5 495 M
-(  "Report what would be collected without collecting") s
+(      \(pinned-at . ,\(current-time\)\)) s
 5 484 M
-(  \(let* \(\(marked \(mark-reachable\)\)) s
+(      \(expires . ,\(and duration \(+ \(current-time\) duration\)\)\)) s
 5 473 M
-(         \(would-collect \(filter \(lambda \(h\)) s
+(      \(pinned-by . ,\(current-principal\)\)\)\)) s
 5 462 M
-(                                  \(not \(hash-set-member? marked h\)\)\)) s
-5 451 M
-(                                \(all-object-hashes\)\)\)\)) s
+(  \(audit-append action: `\(pin ,hash ,reason\)\)\)) s
 5 440 M
-(    `\(\(would-collect . ,\(length would-collect\)\)) s
+(\(define \(unpin! hash\)) s
 5 429 M
-(      \(bytes . ,\(sum \(map object-size would-collect\)\)\)) s
+(  "Allow object to be collected") s
 5 418 M
-(      \(samples . ,\(take would-collect 10\)\)\)\)\)) s
-5 396 M
-(Collection Log) s
+(  \(hash-table-delete! pins hash\)) s
+5 407 M
+(  \(audit-append action: `\(unpin ,hash\)\)\)) s
+5 385 M
+(\(define \(pinned? hash\)) s
 5 374 M
-(;; Every collection is logged with recovery info) s
+(  \(let \(\(pin \(hash-table-ref pins hash #f\)\)\)) s
 5 363 M
-(\(define \(collect-with-log! hash\)) s
+(    \(and pin) s
 5 352 M
-(  \(let \(\(obj \(cas-get hash\)\)\)) s
+(         \(or \(not \(assoc-ref pin 'expires\)\)) s
 5 341 M
-(    ;; Log enough to reconstruct if needed) s
-5 330 M
-(    \(audit-append) s
+(             \(> \(assoc-ref pin 'expires\) \(current-time\)\)\)\)\)\)) s
 5 319 M
-(      action: 'gc-collect) s
-5 308 M
-(      hash: hash) s
+(Transitive Pinning) s
 5 297 M
-(      size: \(object-size obj\)) s
+(\(define \(pin-tree! root-hash reason\)) s
 5 286 M
-(      type: \(soup-object-type obj\)) s
+(  "Pin object and all objects it references") s
 5 275 M
-(      references: \(object-references hash\)) s
+(  \(let \(\(visited \(make-hash-set\)\)\)) s
 5 264 M
-(      metadata: \(soup-object-metadata obj\)\)) s
+(    \(define \(pin-recursive hash\)) s
 5 253 M
-(    \(cas-delete! hash\)\)\)) s
+(      \(unless \(hash-set-member? visited hash\)) s
+5 242 M
+(        \(hash-set-add! visited hash\)) s
 5 231 M
-(Recovery) s
+(        \(pin! hash reason\)) s
+5 220 M
+(        \(for-each pin-recursive \(object-references hash\)\)\)\)) s
 5 209 M
-(;; Recover recently collected object from audit log) s
-5 198 M
-(\(define \(gc-recover hash\)) s
+(    \(pin-recursive root-hash\)\)\)) s
 5 187 M
-(  "Attempt to recover collected object") s
-5 176 M
-(  \(let \(\(entry \(find \(lambda \(e\)) s
-5 165 M
-(                       \(and \(eq? \(audit-action e\) 'gc-collect\)) s
-5 154 M
-(                            \(equal? \(audit-hash e\) hash\)\)\)) s
-5 143 M
-(                     \(recent-audit-entries\)\)\)\)) s
-5 132 M
-(    \(if entry) s
-5 121 M
-(        \(error "Object collected, metadata preserved in audit") s
-5 110 M
-(               \(audit-metadata entry\)\)) s
-5 99 M
-(        \(error "Object not found in recent collections"\)\)\)\)) s
-5 77 M
 (------------------------------------------------------------------------------) s
+5 165 M
+(Tombstones) s
+5 143 M
+(Tombstone Handling) s
+5 121 M
+(;; Tombstones are never collected) s
+5 110 M
+(\(define \(tombstoned? hash\)) s
+5 99 M
+(  \(let \(\(obj \(soup-get hash\)\)\)) s
+5 88 M
+(    \(and obj \(eq? \(soup-object-type obj\) 'tombstone\)\)\)\)) s
+5 66 M
+(;; Tombstones prevent resurrection) s
 5 55 M
-(Metrics) s
+(\(define \(cas-put-checked data\)) s
+5 44 M
+(  \(let \(\(hash \(content-hash data\)\)\)) s
 5 33 M
-(GC Statistics) s
+(    \(when \(tombstoned? hash\)) s
+5 22 M
+(      \(error "Cannot resurrect tombstoned object" hash\)\)) s
 5 11 M
-(\(define gc-stats) s
+(    \(cas-put data\)\)\)) s
 _R
 S
 %%Page: (8) 8
@@ -1279,115 +1295,771 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(  `\(\(collections . 0\)) s
 5 770 M
-(    \(bytes-freed . 0\)) s
-5 759 M
-(    \(objects-freed . 0\)) s
+(Tombstone Expiry) s
 5 748 M
-(    \(total-time . 0\)) s
+(;; Optional: tombstones can expire) s
 5 737 M
-(    \(last-gc . #f\)\)\)) s
+(\(define \(tombstone-expired? hash\)) s
+5 726 M
+(  \(let \(\(tomb \(soup-get hash\)\)\)) s
 5 715 M
-(\(define \(update-gc-stats collected duration\)) s
+(    \(and tomb) s
 5 704 M
-(  \(set! gc-stats) s
+(         \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) s
 5 693 M
-(    `\(\(collections . ,\(+ 1 \(assoc-ref gc-stats 'collections\)\)\)) s
+(         \(< \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) s
 5 682 M
-(      \(bytes-freed . ,\(+ \(sum \(map object-size collected\)\)) s
-5 671 M
-(                         \(assoc-ref gc-stats 'bytes-freed\)\)\)) s
+(            \(current-time\)\)\)\)\)) s
 5 660 M
-(      \(objects-freed . ,\(+ \(length collected\)) s
+(\(define \(gc-expired-tombstones\)) s
 5 649 M
-(                           \(assoc-ref gc-stats 'objects-freed\)\)\)) s
+(  "Remove expired tombstones") s
 5 638 M
-(      \(total-time . ,\(+ duration \(assoc-ref gc-stats 'total-time\)\)\)) s
+(  \(for-each) s
 5 627 M
-(      \(last-gc . ,\(current-time\)\)\)\)\)) s
+(    \(lambda \(hash\)) s
+5 616 M
+(      \(when \(and \(tombstoned? hash\) \(tombstone-expired? hash\)\)) s
 5 605 M
-(Monitoring) s
-5 583 M
-(;; Expose GC metrics) s
+(        \(collect-object! hash\)\)\)) s
+5 594 M
+(    \(all-object-hashes\)\)\)) s
 5 572 M
-(\(define \(gc-metrics\)) s
-5 561 M
-(  `\(\(storage-used . ,\(storage-used\)\)) s
+(------------------------------------------------------------------------------) s
 5 550 M
-(    \(storage-total . ,\(storage-total\)\)) s
-5 539 M
-(    \(object-count . ,\(object-count\)\)) s
+(Grace Periods) s
 5 528 M
-(    \(orphan-estimate . ,\(orphan-estimate\)\)) s
-5 517 M
-(    \(pinned-count . ,\(hash-table-size pins\)\)) s
+(Write Grace Period) s
 5 506 M
-(    \(gc-stats . ,gc-stats\)\)\)) s
-5 484 M
-(------------------------------------------------------------------------------) s
+(;; Recently written objects are protected) s
+5 495 M
+(\(define write-grace-period 86400\)  ; 24 hours) s
+5 473 M
+(\(define \(recent-write? hash\)) s
 5 462 M
-(Security Considerations) s
+(  \(let \(\(obj \(soup-get hash\)\)\)) s
+5 451 M
+(    \(and obj) s
 5 440 M
-(GC as Side Channel) s
-5 418 M
-(;; GC timing can leak information about object references) s
+(         \(< \(- \(current-time\) \(soup-object-created obj\)\)) s
+5 429 M
+(            write-grace-period\)\)\)\)) s
 5 407 M
-(;; Use constant-time operations where possible) s
-5 396 M
-(\(define \(constant-time-mark hash\)) s
+(Replication Grace Period) s
 5 385 M
-(  \(let \(\(refs \(object-references hash\)\)\)) s
+(;; Objects pending replication are protected) s
 5 374 M
-(    ;; Always process same number of refs) s
-5 363 M
-(    \(for-each mark \(pad-list refs max-refs\)\)\)\)) s
+(\(define pending-replication \(make-hash-set\)\)) s
+5 352 M
+(\(define \(mark-pending-replication hash vaults\)) s
 5 341 M
-(Denial of Service) s
-5 319 M
-(;; Prevent GC starvation attacks) s
+(  \(hash-set-add! pending-replication hash\)) s
+5 330 M
+(  \(audit-append action: `\(pending-replication ,hash ,vaults\)\)\)) s
 5 308 M
-(\(define max-pins-per-principal 10000\)) s
-5 286 M
-(\(define \(pin-with-limit! hash reason\)) s
+(\(define \(clear-pending-replication hash\)) s
+5 297 M
+(  \(hash-set-remove! pending-replication hash\)\)) s
 5 275 M
-(  \(let \(\(count \(principal-pin-count \(current-principal\)\)\)\)) s
+(\(define \(pending-replication? hash\)) s
 5 264 M
-(    \(when \(> count max-pins-per-principal\)) s
-5 253 M
-(      \(error "Pin limit exceeded"\)\)) s
+(  \(hash-set-member? pending-replication hash\)\)) s
 5 242 M
-(    \(pin! hash reason\)\)\)) s
+(------------------------------------------------------------------------------) s
 5 220 M
-(------------------------------------------------------------------------------) s
+(Evaporation \(Archival Collection\)) s
 5 198 M
-(References) s
-5 176 M
-(1. The Garbage Collection Handbook - Jones, Hosking, Moss) s
+(Objects don't get "garbage collected" in an archive. They evaporate - and only with expli) s
+5 187 M
+(cit, signed, multi-party consent.) s
 5 165 M
-(2. On-the-Fly Garbage Collection - Dijkstra et al.) s
-5 154 M
-(3. RFC-020: Content-Addressed Storage) s
+(Evaporation Certificate) s
 5 143 M
-(4. RFC-003: Cryptographic Audit Trail) s
+(;; An evaporation certificate authorizes deletion) s
+5 132 M
+(\(define-record-type evaporation-certificate) s
 5 121 M
-(------------------------------------------------------------------------------) s
+(  \(make-evaporation-cert hash reason signers timestamp\)) s
+5 110 M
+(  evaporation-cert?) s
 5 99 M
-(Changelog) s
+(  \(hash evap-hash\)           ; Object to evaporate) s
+5 88 M
+(  \(reason evap-reason\)       ; Why \(legal, storage, corruption, etc.\)) s
 5 77 M
-(- 2026-01-07 - Initial draft) s
-5 55 M
-(------------------------------------------------------------------------------) s
+(  \(signers evap-signers\)     ; List of \(principal . signature\)) s
+5 66 M
+(  \(timestamp evap-timestamp\)\)) s
+5 44 M
+(;; Reasons for evaporation \(enumerated, auditable\)) s
 5 33 M
-(Implementation Status: Draft) s
+(\(define evaporation-reasons) s
 5 22 M
-(Dependencies: cas, soup, audit) s
+(  '\(legal-requirement        ; Court order, DMCA, etc.) s
 5 11 M
+(    storage-emergency        ; Vault at capacity) s
+_R
+S
+%%Page: (9) 9
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 9 def
+/fname (rfc-026-garbage-collection.txt) def
+/fdir (.) def
+/ftail (rfc-026-garbage-collection.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(    data-corruption          ; Object verified corrupt) s
+5 770 M
+(    owner-request            ; Content owner requests removal) s
+5 759 M
+(    federation-consensus\)\)   ; Quorum agrees to remove) s
+5 737 M
+(\(define \(create-evaporation-cert hash reason\)) s
+5 726 M
+(  "Create unsigned evaporation certificate") s
+5 715 M
+(  \(make-evaporation-cert) s
+5 704 M
+(    hash) s
+5 693 M
+(    reason) s
+5 682 M
+(    '\(\)  ; No signatures yet) s
+5 671 M
+(    \(current-time\)\)\)) s
+5 649 M
+(\(define \(sign-evaporation-cert cert private-key\)) s
+5 638 M
+(  "Add signature to evaporation certificate") s
+5 627 M
+(  \(let* \(\(principal \(key->principal private-key\)\)) s
+5 616 M
+(         \(sig \(sign-data \(evap-hash cert\) private-key\)\)\)) s
+5 605 M
+(    \(make-evaporation-cert) s
+5 594 M
+(      \(evap-hash cert\)) s
+5 583 M
+(      \(evap-reason cert\)) s
+5 572 M
+(      \(cons \(cons principal sig\) \(evap-signers cert\)\)) s
+5 561 M
+(      \(evap-timestamp cert\)\)\)\)) s
+5 539 M
+(Quorum Requirement) s
+5 517 M
+(;; Evaporation requires M-of-N signatures from federation) s
+5 506 M
+(\(define evaporation-quorum) s
+5 495 M
+(  '\(\(ephemeral . 1\)     ; Single vault can evaporate) s
+5 484 M
+(    \(young . 1\)         ; Single vault can evaporate) s
+5 473 M
+(    \(maturing . 2\)      ; Two vaults must agree) s
+5 462 M
+(    \(stable . 3\)        ; Three vaults must agree) s
+5 451 M
+(    \(archival . #f\)\)\)   ; Requires special process \(see below\)) s
+5 429 M
+(\(define \(evaporation-quorum-met? cert generation\)) s
+5 418 M
+(  \(let \(\(required \(assoc-ref evaporation-quorum generation\)\)\)) s
+5 407 M
+(    \(cond) s
+5 396 M
+(      \(\(not required\) #f\)  ; Archival: never automatic) s
+5 385 M
+(      \(else \(>= \(length \(evap-signers cert\)\) required\)\)\)\)\)) s
+5 363 M
+(\(define \(evaporate! hash cert\)) s
+5 352 M
+(  "Evaporate object with valid certificate") s
+5 341 M
+(  \(let \(\(gen \(object-generation hash\)\)\)) s
+5 330 M
+(    \(unless \(evaporation-quorum-met? cert gen\)) s
+5 319 M
+(      \(error "Evaporation quorum not met") s
+5 308 M
+(             `\(generation ,gen required ,\(assoc-ref evaporation-quorum gen\)\)\)\)) s
+5 286 M
+(    ;; Archival objects require special handling) s
+5 275 M
+(    \(when \(eq? gen 'archival\)) s
+5 264 M
+(      \(unless \(archival-evaporation-authorized? cert\)) s
+5 253 M
+(        \(error "Archival evaporation requires governance approval"\)\)\)) s
+5 231 M
+(    ;; Log everything before deletion) s
+5 220 M
+(    \(audit-append) s
+5 209 M
+(      action: 'evaporate) s
+5 198 M
+(      hash: hash) s
+5 187 M
+(      generation: gen) s
+5 176 M
+(      certificate: cert) s
+5 165 M
+(      reason: \(evap-reason cert\)) s
+5 154 M
+(      signers: \(map car \(evap-signers cert\)\)\)) s
+5 132 M
+(    ;; Finally, delete) s
+5 121 M
+(    \(cas-delete! hash\)\)\)) s
+5 99 M
+(Archival Object Evaporation) s
+5 77 M
+(Archival objects \(>30 days\) receive maximum protection. They can only evaporate via:) s
+5 55 M
+(1. Legal requirement - With proof of legal order) s
+5 44 M
+(2. Data corruption - With cryptographic proof of corruption) s
+5 33 M
+(3. Governance vote - Per RFC-036 quorum protocol) s
+5 11 M
+(\(define \(archival-evaporation-authorized? cert\)) s
+_R
+S
+%%Page: (10) 10
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 10 def
+/fname (rfc-026-garbage-collection.txt) def
+/fdir (.) def
+/ftail (rfc-026-garbage-collection.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(  "Check if archival evaporation is properly authorized") s
+5 770 M
+(  \(case \(evap-reason cert\)) s
+5 759 M
+(    \(\(legal-requirement\)) s
+5 748 M
+(     ;; Must include legal order reference) s
+5 737 M
+(     \(and \(evap-legal-order cert\)) s
+5 726 M
+(          \(verify-legal-order \(evap-legal-order cert\)\)\)\)) s
+5 704 M
+(    \(\(data-corruption\)) s
+5 693 M
+(     ;; Must include corruption proof) s
+5 682 M
+(     \(and \(evap-corruption-proof cert\)) s
+5 671 M
+(          \(verify-corruption \(evap-hash cert\) \(evap-corruption-proof cert\)\)\)\)) s
+5 649 M
+(    \(\(federation-consensus\)) s
+5 638 M
+(     ;; Must have governance quorum \(RFC-036\)) s
+5 627 M
+(     \(governance-quorum-met? cert\)\)) s
+5 605 M
+(    \(else #f\)\)\)  ; No other reasons valid for archival) s
+5 583 M
+(------------------------------------------------------------------------------) s
+5 561 M
+(Distributed GC) s
+5 539 M
+(Coordinated Collection) s
+5 517 M
+(;; Multi-vault GC requires coordination) s
+5 506 M
+(\(define \(distributed-gc vaults\)) s
+5 495 M
+(  "Coordinate GC across vault federation") s
+5 484 M
+(  ;; Phase 1: Gather root sets) s
+5 473 M
+(  \(let \(\(root-sets \(map vault-roots vaults\)\)\)) s
+5 462 M
+(    ;; Phase 2: Compute global reachability) s
+5 451 M
+(    \(let \(\(global-marked \(union-all root-sets\)\)\)) s
+5 440 M
+(      ;; Phase 3: Propose evaporation \(no unilateral deletion\)) s
+5 429 M
+(      \(for-each \(lambda \(vault\)) s
+5 418 M
+(                  \(vault-propose-evaporation vault global-marked\)\)) s
+5 407 M
+(                vaults\)\)\)\)) s
+5 385 M
+(Remote Reference Tracking) s
+5 363 M
+(;; Track references from remote vaults) s
+5 352 M
+(\(define remote-refs \(make-hash-table\)\)) s
+5 330 M
+(\(define \(add-remote-reference vault-id hash\)) s
+5 319 M
+(  \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) s
+5 308 M
+(    \(hash-table-set! remote-refs hash \(cons vault-id refs\)\)\)\)) s
+5 286 M
+(\(define \(remove-remote-reference vault-id hash\)) s
+5 275 M
+(  \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) s
+5 264 M
+(    \(hash-table-set! remote-refs hash \(delete vault-id refs\)\)\)\)) s
+5 242 M
+(\(define \(has-remote-references? hash\)) s
+5 231 M
+(  \(not \(null? \(hash-table-ref remote-refs hash '\(\)\)\)\)\)) s
+5 209 M
+(Lease-Based Collection) s
+5 187 M
+(;; Remote vaults lease objects) s
+5 176 M
+(\(define leases \(make-hash-table\)\)) s
+5 154 M
+(\(define \(grant-lease hash vault-id duration\)) s
+5 143 M
+(  \(let \(\(expires \(+ \(current-time\) duration\)\)\)) s
+5 132 M
+(    \(hash-table-set! leases hash) s
+5 121 M
+(      \(cons \(cons vault-id expires\)) s
+5 110 M
+(            \(hash-table-ref leases hash '\(\)\)\)\)\)\)) s
+5 88 M
+(\(define \(lease-active? hash\)) s
+5 77 M
+(  \(let \(\(hash-leases \(hash-table-ref leases hash '\(\)\)\)\)) s
+5 66 M
+(    \(any \(lambda \(lease\)) s
+5 55 M
+(           \(> \(cdr lease\) \(current-time\)\)\)) s
+5 44 M
+(         hash-leases\)\)\)) s
+5 22 M
+(------------------------------------------------------------------------------) s
+_R
+S
+%%Page: (11) 11
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 11 def
+/fname (rfc-026-garbage-collection.txt) def
+/fdir (.) def
+/ftail (rfc-026-garbage-collection.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(GC Scheduling) s
+5 759 M
+(Archival Defaults) s
+5 737 M
+(The soup defaults to never collect. GC only runs when explicitly enabled and only conside) s
+5 726 M
+(rs ephemeral/young generations automatically.) s
+5 704 M
+(;; Archival GC mode) s
+5 693 M
+(\(define gc-mode 'archival\)  ; 'archival, 'conservative, or 'aggressive) s
+5 671 M
+(\(define \(gc-enabled?\)) s
+5 660 M
+(  "Check if automatic GC is enabled") s
+5 649 M
+(  \(not \(eq? gc-mode 'archival\)\)\)) s
+5 627 M
+(Triggers) s
+5 605 M
+(;; GC triggered only under pressure, and only for young generations) s
+5 594 M
+(\(define \(should-gc?\)) s
+5 583 M
+(  \(and \(gc-enabled?\)) s
+5 572 M
+(       \(or \(> \(storage-usage-percent\) 95\)    ; Emergency only) s
+5 561 M
+(           \(> \(ephemeral-orphan-count\) 1000\)\)\)\) ; Too many ephemeral orphans) s
+5 539 M
+(\(define \(gc-schedule\)) s
+5 528 M
+(  "Run appropriate GC based on conditions and mode") s
+5 517 M
+(  \(case gc-mode) s
+5 506 M
+(    \(\(archival\)) s
+5 495 M
+(     ;; Never automatic - only explicit evaporation) s
+5 484 M
+(     \(audit-append action: 'gc-skipped reason: 'archival-mode\)\)) s
+5 462 M
+(    \(\(conservative\)) s
+5 451 M
+(     ;; Only ephemeral objects) s
+5 440 M
+(     \(cond) s
+5 429 M
+(       \(\(> \(storage-usage-percent\) 99\)) s
+5 418 M
+(        \(gc-generation 'ephemeral\)) s
+5 407 M
+(        \(gc-generation 'young\)\)  ; Emergency: young too) s
+5 396 M
+(       \(\(> \(storage-usage-percent\) 95\)) s
+5 385 M
+(        \(gc-generation 'ephemeral\)\)) s
+5 374 M
+(       \(else) s
+5 363 M
+(        \(audit-append action: 'gc-skipped reason: 'no-pressure\)\)\)\)) s
+5 341 M
+(    \(\(aggressive\)) s
+5 330 M
+(     ;; Traditional GC \(NOT RECOMMENDED for archives\)) s
+5 319 M
+(     \(cond) s
+5 308 M
+(       \(\(> \(storage-usage-percent\) 95\)) s
+5 297 M
+(        \(gc-full\)\)) s
+5 286 M
+(       \(\(> \(storage-usage-percent\) 80\)) s
+5 275 M
+(        \(gc-generation 'young\)\)) s
+5 264 M
+(       \(else) s
+5 253 M
+(        \(gc-incremental\)\)\)\)\)\)) s
+5 231 M
+(Background GC) s
+5 209 M
+(\(define gc-thread #f\)) s
+5 187 M
+(\(define \(start-gc-daemon interval\)) s
+5 176 M
+(  "Start background GC daemon \(archival mode: monitoring only\)") s
+5 165 M
+(  \(set! gc-thread) s
+5 154 M
+(    \(thread-start!) s
+5 143 M
+(      \(make-thread) s
+5 132 M
+(        \(lambda \(\)) s
+5 121 M
+(          \(let loop \(\)) s
+5 110 M
+(            \(thread-sleep! interval\)) s
+5 99 M
+(            ;; Always report status) s
+5 88 M
+(            \(audit-append) s
+5 77 M
+(              action: 'gc-status) s
+5 66 M
+(              mode: gc-mode) s
+5 55 M
+(              storage-percent: \(storage-usage-percent\)) s
+5 44 M
+(              ephemeral-orphans: \(ephemeral-orphan-count\)) s
+5 33 M
+(              should-gc: \(should-gc?\)\)) s
+5 22 M
+(            ;; Only act if enabled) s
+5 11 M
+(            \(when \(should-gc?\)) s
+_R
+S
+%%Page: (12) 12
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 12 def
+/fname (rfc-026-garbage-collection.txt) def
+/fdir (.) def
+/ftail (rfc-026-garbage-collection.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(              \(gc-schedule\)\)) s
+5 770 M
+(            \(loop\)\)\)\)\)\)\)) s
+5 748 M
+(------------------------------------------------------------------------------) s
+5 726 M
+(Safety Mechanisms) s
+5 704 M
+(Dry Run) s
+5 682 M
+(\(define \(gc-dry-run\)) s
+5 671 M
+(  "Report what would be collected without collecting") s
+5 660 M
+(  \(let* \(\(marked \(mark-reachable\)\)) s
+5 649 M
+(         \(would-collect \(filter \(lambda \(h\)) s
+5 638 M
+(                                  \(not \(hash-set-member? marked h\)\)\)) s
+5 627 M
+(                                \(all-object-hashes\)\)\)\)) s
+5 616 M
+(    `\(\(would-collect . ,\(length would-collect\)\)) s
+5 605 M
+(      \(bytes . ,\(sum \(map object-size would-collect\)\)\)) s
+5 594 M
+(      \(samples . ,\(take would-collect 10\)\)\)\)\)) s
+5 572 M
+(Collection Log) s
+5 550 M
+(;; Every collection is logged with recovery info) s
+5 539 M
+(\(define \(collect-with-log! hash\)) s
+5 528 M
+(  \(let \(\(obj \(cas-get hash\)\)\)) s
+5 517 M
+(    ;; Log enough to reconstruct if needed) s
+5 506 M
+(    \(audit-append) s
+5 495 M
+(      action: 'gc-collect) s
+5 484 M
+(      hash: hash) s
+5 473 M
+(      size: \(object-size obj\)) s
+5 462 M
+(      type: \(soup-object-type obj\)) s
+5 451 M
+(      references: \(object-references hash\)) s
+5 440 M
+(      metadata: \(soup-object-metadata obj\)\)) s
+5 429 M
+(    \(cas-delete! hash\)\)\)) s
+5 407 M
+(Recovery) s
+5 385 M
+(;; Recover recently collected object from audit log) s
+5 374 M
+(\(define \(gc-recover hash\)) s
+5 363 M
+(  "Attempt to recover collected object") s
+5 352 M
+(  \(let \(\(entry \(find \(lambda \(e\)) s
+5 341 M
+(                       \(and \(eq? \(audit-action e\) 'gc-collect\)) s
+5 330 M
+(                            \(equal? \(audit-hash e\) hash\)\)\)) s
+5 319 M
+(                     \(recent-audit-entries\)\)\)\)) s
+5 308 M
+(    \(if entry) s
+5 297 M
+(        \(error "Object collected, metadata preserved in audit") s
+5 286 M
+(               \(audit-metadata entry\)\)) s
+5 275 M
+(        \(error "Object not found in recent collections"\)\)\)\)) s
+5 253 M
+(------------------------------------------------------------------------------) s
+5 231 M
+(Metrics) s
+5 209 M
+(GC Statistics) s
+5 187 M
+(\(define gc-stats) s
+5 176 M
+(  `\(\(collections . 0\)) s
+5 165 M
+(    \(bytes-freed . 0\)) s
+5 154 M
+(    \(objects-freed . 0\)) s
+5 143 M
+(    \(total-time . 0\)) s
+5 132 M
+(    \(last-gc . #f\)\)\)) s
+5 110 M
+(\(define \(update-gc-stats collected duration\)) s
+5 99 M
+(  \(set! gc-stats) s
+5 88 M
+(    `\(\(collections . ,\(+ 1 \(assoc-ref gc-stats 'collections\)\)\)) s
+5 77 M
+(      \(bytes-freed . ,\(+ \(sum \(map object-size collected\)\)) s
+5 66 M
+(                         \(assoc-ref gc-stats 'bytes-freed\)\)\)) s
+5 55 M
+(      \(objects-freed . ,\(+ \(length collected\)) s
+5 44 M
+(                           \(assoc-ref gc-stats 'objects-freed\)\)\)) s
+5 33 M
+(      \(total-time . ,\(+ duration \(assoc-ref gc-stats 'total-time\)\)\)) s
+5 22 M
+(      \(last-gc . ,\(current-time\)\)\)\)\)) s
+_R
+S
+%%Page: (13) 13
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 13 def
+/fname (rfc-026-garbage-collection.txt) def
+/fdir (.) def
+/ftail (rfc-026-garbage-collection.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(Monitoring) s
+5 759 M
+(;; Expose GC metrics) s
+5 748 M
+(\(define \(gc-metrics\)) s
+5 737 M
+(  `\(\(storage-used . ,\(storage-used\)\)) s
+5 726 M
+(    \(storage-total . ,\(storage-total\)\)) s
+5 715 M
+(    \(object-count . ,\(object-count\)\)) s
+5 704 M
+(    \(orphan-estimate . ,\(orphan-estimate\)\)) s
+5 693 M
+(    \(pinned-count . ,\(hash-table-size pins\)\)) s
+5 682 M
+(    \(gc-stats . ,gc-stats\)\)\)) s
+5 660 M
+(------------------------------------------------------------------------------) s
+5 638 M
+(Security Considerations) s
+5 616 M
+(GC as Side Channel) s
+5 594 M
+(;; GC timing can leak information about object references) s
+5 583 M
+(;; Use constant-time operations where possible) s
+5 572 M
+(\(define \(constant-time-mark hash\)) s
+5 561 M
+(  \(let \(\(refs \(object-references hash\)\)\)) s
+5 550 M
+(    ;; Always process same number of refs) s
+5 539 M
+(    \(for-each mark \(pad-list refs max-refs\)\)\)\)) s
+5 517 M
+(Denial of Service) s
+5 495 M
+(;; Prevent GC starvation attacks) s
+5 484 M
+(\(define max-pins-per-principal 10000\)) s
+5 462 M
+(\(define \(pin-with-limit! hash reason\)) s
+5 451 M
+(  \(let \(\(count \(principal-pin-count \(current-principal\)\)\)\)) s
+5 440 M
+(    \(when \(> count max-pins-per-principal\)) s
+5 429 M
+(      \(error "Pin limit exceeded"\)\)) s
+5 418 M
+(    \(pin! hash reason\)\)\)) s
+5 396 M
+(------------------------------------------------------------------------------) s
+5 374 M
+(Invariants) s
+5 352 M
+(G1. Preservation default) s
+5 341 M
+(    default-mode = archival \342\\206\\222 no-automatic-collection) s
+5 319 M
+(G2. Age increases protection) s
+5 308 M
+(    age\(obj\) > age\(obj'\) \342\\206\\222 protection\(obj\) \342\\211\245 protection\(obj'\)) s
+5 286 M
+(G3. Evaporation requires consent) s
+5 275 M
+(    evaporate\(hash\) requires signed-certificate\(hash\)) s
+5 253 M
+(G4. Quorum scales with age) s
+5 242 M
+(    generation = archival \342\\206\\222 quorum = governance-level) s
+5 220 M
+(G5. Archival objects are sacred) s
+5 209 M
+(    age > 30-days \342\\206\\222 no-automatic-evaporation) s
+5 187 M
+(G6. Audit trail preserved) s
+5 176 M
+(    evaporate\(hash\) \342\\206\\222 audit-append\(hash, certificate, reason, signers\)) s
+5 154 M
+(G7. Mark-and-sweep authoritative) s
+5 143 M
+(    truly-unreachable\(hash\) \342\\206\\224 \302\254member\(hash, mark-reachable\(\)\)) s
+5 121 M
+(G8. Cycles preserved) s
+5 110 M
+(    cycle\(A, B, C\) \342\\210\247 archival-mode \342\\206\\222 preserve\(A, B, C\)) s
+5 88 M
+(------------------------------------------------------------------------------) s
+5 66 M
+(References) s
+5 44 M
+(1. The Garbage Collection Handbook - Jones, Hosking, Moss) s
+5 33 M
+(2. On-the-Fly Garbage Collection - Dijkstra et al.) s
+5 22 M
+(3. RFC-020: Content-Addressed Storage) s
+5 11 M
+(4. RFC-003: Cryptographic Audit Trail) s
+_R
+S
+%%Page: (14) 14
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 14 def
+/fname (rfc-026-garbage-collection.txt) def
+/fdir (.) def
+/ftail (rfc-026-garbage-collection.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(5. RFC-036: Quorum Protocol with Homomorphic Voting) s
+5 770 M
+(6. RFC-007: Threshold Signature Governance) s
+5 748 M
+(------------------------------------------------------------------------------) s
+5 726 M
+(Changelog) s
+5 704 M
+(- 2026-01-09 - Tricolor marking with worklist \(eliminates stack overflow\), incremental ma) s
+5 693 M
+(rking, SATB write barriers, concurrent GC support) s
+5 682 M
+(- 2026-01-09 - Archival GC improvements: evaporation certificates, quorum requirements, r) s
+5 671 M
+(eversed generational policy, cycle detection, preservation-first defaults) s
+5 660 M
+(- 2026-01-07 - Initial draft) s
+5 638 M
+(------------------------------------------------------------------------------) s
+5 616 M
+(Implementation Status: Draft) s
+5 605 M
+(Dependencies: cas, soup, audit) s
+5 594 M
 (Integration: Storage management, replication, vault maintenance) s
 _R
 S
 %%Trailer
-%%Pages: 8
+%%Pages: 14
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

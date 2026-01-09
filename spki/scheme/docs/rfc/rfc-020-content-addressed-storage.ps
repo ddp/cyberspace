@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:12:49 2026
+%%CreationDate: Fri Jan  9 12:28:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -1502,99 +1502,99 @@ _S
 5 660 M
 (Compact probabilistic set membership for efficient replication.) s
 5 638 M
-(Structure) s
+(Multi-Level Existence Check) s
 5 616 M
-(\(define \(make-bloom-filter capacity error-rate\)) s
+(For the distributed soup, existence checks dominate replication overhead. A tiered approa) s
 5 605 M
-(  "Create bloom filter for approximate membership") s
-5 594 M
-(  \(let* \(\(bits \(bloom-optimal-bits capacity error-rate\)\)) s
+(ch minimizes latency:) s
 5 583 M
-(         \(hashes \(bloom-optimal-hashes capacity bits\)\)\)) s
+(+---------------------------------------------------------+) s
 5 572 M
-(    \(bloom-filter) s
+(| L1: Hot Set Cache \(1000 items, O\(1\), microseconds\)     |) s
 5 561 M
-(      \(bit-vector \(make-vector bits 0\)\)) s
+(+---------------------------------------------------------+) s
 5 550 M
-(      \(hash-count hashes\)) s
+(| L2: Blocked Bloom Filter \(100K items, O\(k\), cache-     |) s
 5 539 M
-(      \(capacity capacity\)) s
+(|     friendly memory layout\)                             |) s
 5 528 M
-(      \(error-rate error-rate\)\)\)\)) s
+(+---------------------------------------------------------+) s
+5 517 M
+(| L3: Quotient Filter \(1M items, supports deletion\)      |) s
 5 506 M
-(Operations) s
+(+---------------------------------------------------------+) s
+5 495 M
+(| L4: Disk/Network \(authoritative, milliseconds\)         |) s
 5 484 M
-(\(define \(bloom-add! filter hash\)) s
-5 473 M
-(  "Add hash to bloom filter") s
+(+---------------------------------------------------------+) s
 5 462 M
-(  \(for-each) s
-5 451 M
-(    \(lambda \(i\)) s
+(Blocked Bloom Filters) s
 5 440 M
-(      \(bit-vector-set! \(bloom-bits filter\) \(bloom-index filter hash i\) 1\)\)) s
-5 429 M
-(    \(iota \(bloom-hash-count filter\)\)\)\)) s
+(Cache-line aligned blocks for 10x faster lookups:) s
+5 418 M
+(;; Blocked Bloom: each block fits in CPU cache line \(64 bytes = 512 bits\)) s
 5 407 M
-(\(define \(bloom-contains? filter hash\)) s
+(\(define block-bits 512\)) s
 5 396 M
-(  "Check if hash MIGHT be in filter \(false positives possible\)") s
-5 385 M
-(  \(every) s
+(\(define cache-line 64\)) s
 5 374 M
-(    \(lambda \(i\)) s
+(\(define \(make-blocked-bloom capacity error-rate\)) s
 5 363 M
-(      \(= 1 \(bit-vector-ref \(bloom-bits filter\) \(bloom-index filter hash i\)\)\)\)) s
+(  "Cache-friendly blocked Bloom filter") s
 5 352 M
-(    \(iota \(bloom-hash-count filter\)\)\)\)) s
+(  \(let* \(\(bits \(bloom-optimal-bits capacity error-rate\)\)) s
+5 341 M
+(         \(num-blocks \(ceiling \(/ bits block-bits\)\)\)) s
 5 330 M
-(Replication Protocol) s
+(         \(hashes \(bloom-optimal-hashes capacity bits\)\)\)) s
+5 319 M
+(    \(blocked-bloom) s
 5 308 M
-(;; Sender: "Here's what I have") s
+(      \(blocks \(make-vector num-blocks \(make-u8vector cache-line 0\)\)\)) s
 5 297 M
-(\(define \(bloom-inventory\)) s
+(      \(hash-count hashes\)) s
 5 286 M
-(  \(let \(\(filter \(make-bloom-filter 10000 0.01\)\)\)) s
-5 275 M
-(    \(for-each \(lambda \(hash\) \(bloom-add! filter hash\)\)) s
+(      \(block-selector \(lambda \(hash\) \(modulo \(hash-part-1 hash\) num-blocks\)\)\)\)\)\)) s
 5 264 M
-(              \(all-object-hashes\)\)) s
+(\(define \(blocked-bloom-add! filter hash\)) s
 5 253 M
-(    filter\)\)) s
+(  "Add to block - all bits within same cache line") s
+5 242 M
+(  \(let* \(\(block-idx \(block-select filter hash\)\)) s
 5 231 M
-(;; Receiver: "Send me what I'm missing") s
+(         \(block \(vector-ref \(bloom-blocks filter\) block-idx\)\)\)) s
 5 220 M
-(\(define \(bloom-diff local-filter remote-filter\)) s
+(    \(for-each) s
 5 209 M
-(  \(filter \(lambda \(hash\)) s
+(      \(lambda \(i\)) s
 5 198 M
-(            \(and \(bloom-contains? remote-filter hash\)) s
+(        \(let \(\(bit-idx \(modulo \(bloom-hash filter hash i\) block-bits\)\)\)) s
 5 187 M
-(                 \(not \(cas-exists? hash\)\)\)\)) s
+(          \(u8vector-bit-set! block bit-idx 1\)\)\)) s
 5 176 M
-(          \(all-object-hashes\)\)\)) s
+(      \(iota \(bloom-hash-count filter\)\)\)\)\)) s
 5 154 M
-(;; Exchange is O\(bloom-size\) not O\(object-count\)) s
+(\(define \(blocked-bloom-contains? filter hash\)) s
+5 143 M
+(  "Check within single cache line - no cache misses") s
 5 132 M
-(Soup Integration) s
+(  \(let* \(\(block-idx \(block-select filter hash\)\)) s
+5 121 M
+(         \(block \(vector-ref \(bloom-blocks filter\) block-idx\)\)\)) s
 5 110 M
-(;; Bloom filter itself is a soup object) s
+(    \(every) s
 5 99 M
-(\(soup-object) s
+(      \(lambda \(i\)) s
 5 88 M
-(  \(name "bloom/2026-01-07"\)) s
+(        \(let \(\(bit-idx \(modulo \(bloom-hash filter hash i\) block-bits\)\)\)) s
 5 77 M
-(  \(type bloom-filter\)) s
+(          \(= 1 \(u8vector-bit-ref block bit-idx\)\)\)\)) s
 5 66 M
-(  \(size "12KB"\)) s
-5 55 M
-(  \(crypto \(sha256 "bloom-hash..."\)\)) s
+(      \(iota \(bloom-hash-count filter\)\)\)\)\)) s
 5 44 M
-(  \(capacity 10000\)) s
-5 33 M
-(  \(error-rate 0.01\)) s
+(Counting Bloom Filters) s
 5 22 M
-(  \(population 4723\)\)) s
+(For the soup, objects can be tombstoned \(soft-deleted\). Counting filters support removal:) s
 _R
 S
 %%Page: (11) 11
@@ -1609,117 +1609,125 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(------------------------------------------------------------------------------) s
+(;; Counting Bloom: 4-bit counters instead of single bits) s
+5 770 M
+(\(define \(make-counting-bloom capacity error-rate\)) s
 5 759 M
-(Content Types) s
+(  "Counting Bloom filter supporting deletions") s
+5 748 M
+(  \(let* \(\(slots \(bloom-optimal-bits capacity error-rate\)\)) s
 5 737 M
-(Typed objects with schema validation.) s
+(         \(nibbles \(make-u8vector \(ceiling \(/ slots 2\)\) 0\)\)) s
+5 726 M
+(         \(hashes \(bloom-optimal-hashes capacity slots\)\)\)) s
 5 715 M
-(Type Registry) s
+(    \(counting-bloom nibbles hashes slots\)\)\)) s
 5 693 M
-(\(define content-types) s
+(\(define \(counting-bloom-add! filter hash\)) s
 5 682 M
-(  '\(\(blob        . "application/octet-stream"\)) s
+(  "Increment counters \(saturate at 15\)") s
 5 671 M
-(    \(text        . "text/plain"\)) s
+(  \(for-each) s
 5 660 M
-(    \(markdown    . "text/markdown"\)) s
+(    \(lambda \(i\)) s
 5 649 M
-(    \(scheme      . "text/x-scheme"\)) s
+(      \(let \(\(slot \(bloom-slot filter hash i\)\)\)) s
 5 638 M
-(    \(sexp        . "application/x-sexp"\)) s
+(        \(nibble-increment! \(bloom-nibbles filter\) slot\)\)\)) s
 5 627 M
-(    \(json        . "application/json"\)) s
-5 616 M
-(    \(pdf         . "application/pdf"\)) s
+(    \(iota \(bloom-hash-count filter\)\)\)\)) s
 5 605 M
-(    \(archive     . "application/x-sealed-archive"\)) s
+(\(define \(counting-bloom-remove! filter hash\)) s
 5 594 M
-(    \(key         . "application/x-spki-key"\)) s
+(  "Decrement counters \(only if present\)") s
 5 583 M
-(    \(certificate . "application/x-spki-cert"\)\)\)) s
+(  \(when \(counting-bloom-contains? filter hash\)) s
+5 572 M
+(    \(for-each) s
 5 561 M
-(Typed Storage) s
+(      \(lambda \(i\)) s
+5 550 M
+(        \(let \(\(slot \(bloom-slot filter hash i\)\)\)) s
 5 539 M
-(\(define \(cas-put/typed content type #!key schema\)) s
+(          \(nibble-decrement! \(bloom-nibbles filter\) slot\)\)\)) s
 5 528 M
-(  "Store with type metadata") s
-5 517 M
-(  \(let* \(\(hash \(sha256 content\)\)) s
+(      \(iota \(bloom-hash-count filter\)\)\)\)\)) s
 5 506 M
-(         \(meta `\(typed-object) s
+(;; Integration with tombstones) s
 5 495 M
-(                 \(hash ,hash\)) s
+(\(define \(cas-tombstone/bloom hash reason\)) s
 5 484 M
-(                 \(type ,type\)) s
+(  "Tombstone with Bloom filter update") s
 5 473 M
-(                 \(size ,\(blob-length content\)\)) s
+(  \(counting-bloom-remove! existence-filter hash\)) s
 5 462 M
-(                 \(schema ,schema\)\)\)\)) s
-5 451 M
-(    \(cas-put content\)) s
+(  \(cas-tombstone hash reason: reason\)\)) s
 5 440 M
-(    \(cas-put \(serialize meta\)\)) s
-5 429 M
-(    hash\)\)) s
-5 407 M
-(Schema Validation) s
+(Quotient Filters) s
+5 418 M
+(Better space efficiency than Bloom, supports deletion, and can be resized:) s
+5 396 M
+(;; Quotient filter: fingerprint stored in quotient/remainder form) s
 5 385 M
-(\(define \(cas-validate hash\)) s
+(\(define \(make-quotient-filter capacity\)) s
 5 374 M
-(  "Validate object against its schema") s
+(  "Space-efficient filter with deletion support") s
 5 363 M
-(  \(let* \(\(meta \(cas-get-meta hash\)\)) s
+(  \(let* \(\(slots \(next-power-of-2 capacity\)\)) s
 5 352 M
-(         \(schema-hash \(typed-object-schema meta\)\)) s
+(         \(q-bits \(integer-log2 slots\)\)) s
 5 341 M
-(         \(schema \(cas-get schema-hash\)\)) s
+(         \(r-bits \(- 64 q-bits\)\)\)  ; 64-bit fingerprints) s
 5 330 M
-(         \(content \(cas-get hash\)\)\)) s
+(    \(quotient-filter) s
 5 319 M
-(    \(schema-validate schema content\)\)\)) s
+(      \(table \(make-vector slots #f\)\)) s
+5 308 M
+(      \(q-bits q-bits\)) s
 5 297 M
-(;; Schema is itself content-addressed) s
+(      \(r-bits r-bits\)) s
 5 286 M
-(\(soup-object) s
-5 275 M
-(  \(name "schema/soup-object"\)) s
+(      \(count 0\)\)\)\)) s
 5 264 M
-(  \(type schema\)) s
+(\(define \(qf-fingerprint hash q-bits r-bits\)) s
 5 253 M
-(  \(validates soup-object\)) s
+(  "Split hash into quotient and remainder") s
 5 242 M
-(  \(crypto \(sha256 "schema-hash..."\)\)\)) s
+(  \(let \(\(fp \(hash->u64 hash\)\)\)) s
+5 231 M
+(    \(values \(arithmetic-shift fp \(- r-bits\)\)  ; quotient) s
 5 220 M
-(MIME Detection) s
+(            \(bitwise-and fp \(- \(arithmetic-shift 1 r-bits\) 1\)\)\)\)\)  ; remainder) s
 5 198 M
-(\(define \(cas-detect-type content\)) s
+(\(define \(qf-insert! qf hash\)) s
 5 187 M
-(  "Detect content type from magic bytes") s
+(  "Insert with Robin Hood linear probing") s
 5 176 M
-(  \(cond) s
+(  \(let-values \(\(\(q r\) \(qf-fingerprint hash \(qf-q-bits qf\) \(qf-r-bits qf\)\)\)\)) s
 5 165 M
-(    \(\(pdf-magic? content\) 'pdf\)) s
-5 154 M
-(    \(\(gzip-magic? content\) 'archive\)) s
+(    \(qf-insert-slot! qf q r\)\)\)) s
 5 143 M
-(    \(\(utf8-text? content\)) s
+(\(define \(qf-delete! qf hash\)) s
 5 132 M
-(     \(cond) s
+(  "Delete fingerprint") s
 5 121 M
-(       \(\(sexp-syntax? content\) 'sexp\)) s
+(  \(let-values \(\(\(q r\) \(qf-fingerprint hash \(qf-q-bits qf\) \(qf-r-bits qf\)\)\)\)) s
 5 110 M
-(       \(\(markdown-syntax? content\) 'markdown\)) s
-5 99 M
-(       \(else 'text\)\)\)) s
+(    \(qf-delete-slot! qf q r\)\)\)) s
 5 88 M
-(    \(else 'blob\)\)\)) s
+(Replication Protocol) s
 5 66 M
-(------------------------------------------------------------------------------) s
+(;; Sender: "Here's what I have" \(compressed Bloom\)) s
+5 55 M
+(\(define \(bloom-inventory\)) s
 5 44 M
-(Object Capabilities) s
+(  \(let \(\(filter \(make-blocked-bloom 100000 0.01\)\)\)) s
+5 33 M
+(    \(for-each \(lambda \(hash\) \(blocked-bloom-add! filter hash\)\)) s
 5 22 M
-(Content addresses as capabilities: if you know the hash, you can retrieve it.) s
+(              \(all-object-hashes\)\)) s
+5 11 M
+(    filter\)\)) s
 _R
 S
 %%Page: (12) 12
@@ -1733,116 +1741,118 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(Hash as Capability) s
+5 770 M
+(;; Receiver: "Send me what I'm missing") s
 5 759 M
-(;; Knowledge of hash grants read access) s
+(\(define \(bloom-diff local-filter remote-filter\)) s
 5 748 M
-(\(define \(cas-get-if-known hash\)) s
+(  \(filter \(lambda \(hash\)) s
 5 737 M
-(  "Capability-based retrieval") s
+(            \(and \(blocked-bloom-contains? remote-filter hash\)) s
 5 726 M
-(  \(if \(valid-hash? hash\)) s
+(                 \(not \(cas-exists? hash\)\)\)\)) s
 5 715 M
-(      \(cas-get hash\)) s
-5 704 M
-(      \(error "Invalid capability"\)\)\)) s
+(          \(all-object-hashes\)\)\)) s
+5 693 M
+(;; Exchange is O\(bloom-size\) not O\(object-count\)) s
 5 682 M
-(;; Hashes are unguessable \(256-bit entropy\)) s
-5 671 M
-(;; Sharing a hash = sharing read access) s
-5 649 M
-(Capability Attenuation) s
+(;; Blocked Bloom: 10-100x faster due to cache locality) s
+5 660 M
+(Hierarchical Existence Check) s
+5 638 M
+(\(define \(cas-exists?/fast hash\)) s
 5 627 M
-(;; SPKI certificate granting access to specific content) s
+(  "Tiered existence check - fast path for common case") s
 5 616 M
-(\(spki-cert) s
+(  \(or \(lru-get hot-set hash\)              ; L1: O\(1\) in-memory) s
 5 605 M
-(  \(issuer vault-key\)) s
+(      \(and \(blocked-bloom-contains? l2-bloom hash\)  ; L2: O\(k\) cache-friendly) s
 5 594 M
-(  \(subject reader-key\)) s
+(           \(or \(qf-contains? l3-qf hash\)  ; L3: O\(1\) amortized) s
 5 583 M
-(  \(permission \(read \(hash sha256 "specific-content..."\)\)\)) s
-5 572 M
-(  \(validity \(not-after "2027-01-01"\)\)\)) s
-5 550 M
-(;; Grant access to a subtree) s
+(               \(cas-exists? hash\)\)\)\)\)      ; L4: authoritative) s
+5 561 M
+(;; 99% of checks hit L1/L2, avoiding disk/network entirely) s
 5 539 M
-(\(spki-cert) s
-5 528 M
-(  \(issuer vault-key\)) s
+(Soup Integration) s
 5 517 M
-(  \(subject reader-key\)) s
+(;; Bloom filter itself is a soup object) s
 5 506 M
-(  \(permission \(read \(tree sha256 "subtree-root..."\)\)\)) s
+(\(soup-object) s
 5 495 M
-(  \(propagate #t\)\)  ; Access to all referenced objects) s
+(  \(name "bloom/2026-01-09"\)) s
+5 484 M
+(  \(type bloom-filter\)) s
 5 473 M
-(Sealed Capabilities) s
+(  \(variant blocked\)           ; blocked, counting, or quotient) s
+5 462 M
+(  \(size "12KB"\)) s
 5 451 M
-(;; Encrypted capability - only holder of key can use) s
+(  \(crypto \(sha256 "bloom-hash..."\)\)) s
 5 440 M
-(\(define \(seal-capability hash recipient-key\)) s
+(  \(capacity 100000\)) s
 5 429 M
-(  \(let \(\(cap `\(capability) s
+(  \(error-rate 0.01\)) s
 5 418 M
-(               \(object ,hash\)) s
+(  \(population 47230\)) s
 5 407 M
-(               \(granted-at ,\(current-seconds\)\)\)\)\)) s
-5 396 M
-(    \(age-encrypt \(serialize cap\) recipient-key\)\)\)) s
-5 374 M
-(;; Recipient decrypts to obtain hash) s
-5 363 M
-(\(define \(unseal-capability sealed-cap identity\)) s
-5 352 M
-(  \(let \(\(cap \(deserialize \(age-decrypt sealed-cap identity\)\)\)\)) s
-5 341 M
-(    \(capability-object cap\)\)\)) s
-5 319 M
-(Capability Revocation) s
-5 297 M
-(;; Revocation via tombstone) s
-5 286 M
-(\(define \(revoke-capability hash\)) s
-5 275 M
-(  \(cas-tombstone hash reason: "Capability revoked"\)\)) s
-5 253 M
-(;; Or via SPKI CRL) s
-5 242 M
-(\(spki-crl) s
-5 231 M
-(  \(issuer vault-key\)) s
-5 220 M
-(  \(revoked) s
-5 209 M
-(    \(\(hash sha256 "revoked-content..."\)) s
-5 198 M
-(     \(reason "Superseded"\)) s
-5 187 M
-(     \(revoked-at 1767700000\)\)\)\)) s
-5 165 M
+(  \(load-factor 0.47\)\)) s
+5 385 M
 (------------------------------------------------------------------------------) s
+5 363 M
+(Content Types) s
+5 341 M
+(Typed objects with schema validation.) s
+5 319 M
+(Type Registry) s
+5 297 M
+(\(define content-types) s
+5 286 M
+(  '\(\(blob        . "application/octet-stream"\)) s
+5 275 M
+(    \(text        . "text/plain"\)) s
+5 264 M
+(    \(markdown    . "text/markdown"\)) s
+5 253 M
+(    \(scheme      . "text/x-scheme"\)) s
+5 242 M
+(    \(sexp        . "application/x-sexp"\)) s
+5 231 M
+(    \(json        . "application/json"\)) s
+5 220 M
+(    \(pdf         . "application/pdf"\)) s
+5 209 M
+(    \(archive     . "application/x-sealed-archive"\)) s
+5 198 M
+(    \(key         . "application/x-spki-key"\)) s
+5 187 M
+(    \(certificate . "application/x-spki-cert"\)\)\)) s
+5 165 M
+(Typed Storage) s
 5 143 M
-(Hash Migration) s
+(\(define \(cas-put/typed content type #!key schema\)) s
+5 132 M
+(  "Store with type metadata") s
 5 121 M
-(When cryptographic algorithms weaken, the system must migrate.) s
+(  \(let* \(\(hash \(sha256 content\)\)) s
+5 110 M
+(         \(meta `\(typed-object) s
 5 99 M
-(Multihash) s
+(                 \(hash ,hash\)) s
+5 88 M
+(                 \(type ,type\)) s
 5 77 M
-(;; Self-describing hash format) s
+(                 \(size ,\(blob-length content\)\)) s
 5 66 M
-(\(define \(multihash algo data\)) s
+(                 \(schema ,schema\)\)\)\)) s
 5 55 M
-(  \(let \(\(hash \(case algo) s
+(    \(cas-put content\)) s
 5 44 M
-(                \(\(sha256\) \(sha256 data\)\)) s
+(    \(cas-put \(serialize meta\)\)) s
 5 33 M
-(                \(\(sha384\) \(sha384 data\)\)) s
-5 22 M
-(                \(\(sha512\) \(sha512 data\)\)) s
+(    hash\)\)) s
 5 11 M
-(                \(\(blake3\) \(blake3 data\)\)\)\)\)) s
+(Schema Validation) s
 _R
 S
 %%Page: (13) 13
@@ -1856,114 +1866,118 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(    \(list algo \(blob-length hash\) hash\)\)\)) s
+5 770 M
+(\(define \(cas-validate hash\)) s
 5 759 M
-(;; Parse multihash) s
+(  "Validate object against its schema") s
 5 748 M
-(\(define \(multihash-algorithm mh\) \(car mh\)\)) s
+(  \(let* \(\(meta \(cas-get-meta hash\)\)) s
 5 737 M
-(\(define \(multihash-digest mh\) \(caddr mh\)\)) s
+(         \(schema-hash \(typed-object-schema meta\)\)) s
+5 726 M
+(         \(schema \(cas-get schema-hash\)\)) s
 5 715 M
-(Dual-Hash Period) s
-5 693 M
-(;; During migration, store under both hashes) s
+(         \(content \(cas-get hash\)\)\)) s
+5 704 M
+(    \(schema-validate schema content\)\)\)) s
 5 682 M
-(\(define \(cas-put/migrate content old-algo new-algo\)) s
+(;; Schema is itself content-addressed) s
 5 671 M
-(  \(let \(\(old-hash \(hash-with old-algo content\)\)) s
+(\(soup-object) s
 5 660 M
-(        \(new-hash \(hash-with new-algo content\)\)\)) s
+(  \(name "schema/soup-object"\)) s
 5 649 M
-(    \(cas-put-raw old-hash content\)) s
+(  \(type schema\)) s
 5 638 M
-(    \(cas-put-raw new-hash content\)) s
+(  \(validates soup-object\)) s
 5 627 M
-(    ;; Link old to new) s
-5 616 M
-(    \(ref-set \(string-append "migrate/" old-hash\) new-hash\)) s
+(  \(crypto \(sha256 "schema-hash..."\)\)\)) s
 5 605 M
-(    new-hash\)\)) s
+(MIME Detection) s
 5 583 M
-(;; Lookup follows migration links) s
+(\(define \(cas-detect-type content\)) s
 5 572 M
-(\(define \(cas-get/migrate hash\)) s
+(  "Detect content type from magic bytes") s
 5 561 M
-(  \(let \(\(migrated \(ref-get \(string-append "migrate/" hash\)\)\)\)) s
+(  \(cond) s
 5 550 M
-(    \(cas-get \(or migrated hash\)\)\)\)) s
+(    \(\(pdf-magic? content\) 'pdf\)) s
+5 539 M
+(    \(\(gzip-magic? content\) 'archive\)) s
 5 528 M
-(Migration Manifest) s
+(    \(\(utf8-text? content\)) s
+5 517 M
+(     \(cond) s
 5 506 M
-(\(migration-manifest) s
+(       \(\(sexp-syntax? content\) 'sexp\)) s
 5 495 M
-(  \(from-algorithm sha256\)) s
+(       \(\(markdown-syntax? content\) 'markdown\)) s
 5 484 M
-(  \(to-algorithm sha384\)) s
+(       \(else 'text\)\)\)) s
 5 473 M
-(  \(started-at 1767700000\)) s
-5 462 M
-(  \(status in-progress\)) s
+(    \(else 'blob\)\)\)) s
 5 451 M
-(  \(migrated 4723\)) s
-5 440 M
-(  \(remaining 1892\)) s
+(------------------------------------------------------------------------------) s
 5 429 M
-(  \(mappings) s
-5 418 M
-(    \(\("sha256:abc..." . "sha384:def..."\)) s
+(Object Capabilities) s
 5 407 M
-(     \("sha256:123..." . "sha384:456..."\)) s
-5 396 M
-(     ...\)\)\)) s
-5 374 M
-(Verification During Migration) s
+(Content addresses as capabilities: if you know the hash, you can retrieve it.) s
+5 385 M
+(Hash as Capability) s
+5 363 M
+(;; Knowledge of hash grants read access) s
 5 352 M
-(\(define \(verify-migration hash\)) s
+(\(define \(cas-get-if-known hash\)) s
 5 341 M
-(  "Verify object under both old and new hash") s
+(  "Capability-based retrieval") s
 5 330 M
-(  \(let* \(\(content \(cas-get hash\)\)) s
+(  \(if \(valid-hash? hash\)) s
 5 319 M
-(         \(old-hash \(sha256 content\)\)) s
+(      \(cas-get hash\)) s
 5 308 M
-(         \(new-hash \(sha384 content\)\)\)) s
-5 297 M
-(    \(and \(or \(equal? hash old-hash\)) s
+(      \(error "Invalid capability"\)\)\)) s
 5 286 M
-(             \(equal? hash new-hash\)\)) s
+(;; Hashes are unguessable \(256-bit entropy\)) s
 5 275 M
-(         \(equal? \(ref-get \(string-append "migrate/" old-hash\)\)) s
-5 264 M
-(                 new-hash\)\)\)\)) s
-5 242 M
-(------------------------------------------------------------------------------) s
+(;; Sharing a hash = sharing read access) s
+5 253 M
+(Capability Attenuation) s
+5 231 M
+(;; SPKI certificate granting access to specific content) s
 5 220 M
-(Comparison with Related Systems) s
+(\(spki-cert) s
+5 209 M
+(  \(issuer vault-key\)) s
 5 198 M
-(| System | Hash | Chunking | Naming |) s
+(  \(subject reader-key\)) s
 5 187 M
-(|--------|------|----------|--------|) s
+(  \(permission \(read \(hash sha256 "specific-content..."\)\)\)) s
 5 176 M
-(| Git | SHA-1 | Pack files | refs/branches |) s
-5 165 M
-(| IPFS | SHA-256/multihash | Rabin | IPNS, DNSLink |) s
+(  \(validity \(not-after "2027-01-01"\)\)\)) s
 5 154 M
-(| Perkeep | SHA-224 | Rolling hash | Permanodes |) s
+(;; Grant access to a subtree) s
 5 143 M
-(| Library CAS | SHA-256 | Configurable | Vault refs |) s
+(\(spki-cert) s
+5 132 M
+(  \(issuer vault-key\)) s
 5 121 M
-(------------------------------------------------------------------------------) s
+(  \(subject reader-key\)) s
+5 110 M
+(  \(permission \(read \(tree sha256 "subtree-root..."\)\)\)) s
 5 99 M
-(Security Considerations) s
+(  \(propagate #t\)\)  ; Access to all referenced objects) s
 5 77 M
-(Hash Collision Attacks) s
+(Sealed Capabilities) s
 5 55 M
-(SHA-256 provides 128-bit collision resistance. No practical attacks known.) s
+(;; Encrypted capability - only holder of key can use) s
+5 44 M
+(\(define \(seal-capability hash recipient-key\)) s
 5 33 M
-(If SHA-256 is ever broken:) s
+(  \(let \(\(cap `\(capability) s
+5 22 M
+(               \(object ,hash\)) s
 5 11 M
-(;; Multihash for algorithm agility) s
+(               \(granted-at ,\(current-seconds\)\)\)\)\)) s
 _R
 S
 %%Page: (14) 14
@@ -1978,103 +1992,117 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(\(define \(multihash algo data\)) s
-5 770 M
-(  \(case algo) s
+(    \(age-encrypt \(serialize cap\) recipient-key\)\)\)) s
 5 759 M
-(    \(\(sha256\) \(cons 'sha256 \(sha256 data\)\)\)) s
+(;; Recipient decrypts to obtain hash) s
 5 748 M
-(    \(\(sha384\) \(cons 'sha384 \(sha384 data\)\)\)) s
+(\(define \(unseal-capability sealed-cap identity\)) s
 5 737 M
-(    \(\(blake3\) \(cons 'blake3 \(blake3 data\)\)\)\)\)) s
-5 715 M
-(Length Extension Attacks) s
-5 693 M
-(SHA-256 is vulnerable to length extension. For authentication, use HMAC:) s
+(  \(let \(\(cap \(deserialize \(age-decrypt sealed-cap identity\)\)\)\)) s
+5 726 M
+(    \(capability-object cap\)\)\)) s
+5 704 M
+(Capability Revocation) s
+5 682 M
+(;; Revocation via tombstone) s
 5 671 M
-(\(define \(cas-mac key hash\)) s
+(\(define \(revoke-capability hash\)) s
 5 660 M
-(  \(hmac-sha256 key hash\)\)) s
+(  \(cas-tombstone hash reason: "Capability revoked"\)\)) s
 5 638 M
-(Timing Attacks) s
+(;; Or via SPKI CRL) s
+5 627 M
+(\(spki-crl) s
 5 616 M
-(Hash comparison MUST be constant-time:) s
+(  \(issuer vault-key\)) s
+5 605 M
+(  \(revoked) s
 5 594 M
-(\(define \(hash-equal? a b\)) s
+(    \(\(hash sha256 "revoked-content..."\)) s
 5 583 M
-(  \(let \(\(result 0\)\)) s
+(     \(reason "Superseded"\)) s
 5 572 M
-(    \(do \(\(i 0 \(+ i 1\)\)\)) s
-5 561 M
-(        \(\(= i 32\) \(zero? result\)\)) s
+(     \(revoked-at 1767700000\)\)\)\)) s
 5 550 M
-(      \(set! result \(bitwise-ior result) s
-5 539 M
-(                    \(bitwise-xor \(blob-ref a i\) \(blob-ref b i\)\)\)\)\)\)\)) s
-5 517 M
 (------------------------------------------------------------------------------) s
-5 495 M
-(Performance Considerations) s
-5 473 M
-(Caching) s
+5 528 M
+(Hash Migration) s
+5 506 M
+(When cryptographic algorithms weaken, the system must migrate.) s
+5 484 M
+(Multihash) s
+5 462 M
+(;; Self-describing hash format) s
 5 451 M
-(;; LRU cache for hot objects) s
+(\(define \(multihash algo data\)) s
 5 440 M
-(\(define cas-cache \(make-lru-cache 1000\)\)) s
+(  \(let \(\(hash \(case algo) s
+5 429 M
+(                \(\(sha256\) \(sha256 data\)\)) s
 5 418 M
-(\(define \(cas-get/cached hash\)) s
+(                \(\(sha384\) \(sha384 data\)\)) s
 5 407 M
-(  \(or \(lru-get cas-cache hash\)) s
+(                \(\(sha512\) \(sha512 data\)\)) s
 5 396 M
-(      \(let \(\(content \(cas-get hash\)\)\)) s
+(                \(\(blake3\) \(blake3 data\)\)\)\)\)) s
 5 385 M
-(        \(lru-put! cas-cache hash content\)) s
-5 374 M
-(        content\)\)\)) s
+(    \(list algo \(blob-length hash\) hash\)\)\)) s
+5 363 M
+(;; Parse multihash) s
 5 352 M
-(Parallel Hashing) s
-5 330 M
-(Large files benefit from parallel hashing of chunks.) s
-5 308 M
-(SSD Optimization) s
+(\(define \(multihash-algorithm mh\) \(car mh\)\)) s
+5 341 M
+(\(define \(multihash-digest mh\) \(caddr mh\)\)) s
+5 319 M
+(Dual-Hash Period) s
+5 297 M
+(;; During migration, store under both hashes) s
 5 286 M
-(Random access pattern. Use write-ahead log for durability:) s
+(\(define \(cas-put/migrate content old-algo new-algo\)) s
+5 275 M
+(  \(let \(\(old-hash \(hash-with old-algo content\)\)) s
 5 264 M
-(\(define \(cas-put/durable content\)) s
+(        \(new-hash \(hash-with new-algo content\)\)\)) s
 5 253 M
-(  \(let \(\(hash \(sha256 content\)\)\)) s
+(    \(cas-put-raw old-hash content\)) s
 5 242 M
-(    \(wal-append hash content\)) s
+(    \(cas-put-raw new-hash content\)) s
 5 231 M
-(    \(write-blob \(hash->path hash\) content\)) s
+(    ;; Link old to new) s
 5 220 M
-(    \(wal-commit hash\)) s
+(    \(ref-set \(string-append "migrate/" old-hash\) new-hash\)) s
 5 209 M
-(    hash\)\)) s
+(    new-hash\)\)) s
 5 187 M
-(------------------------------------------------------------------------------) s
+(;; Lookup follows migration links) s
+5 176 M
+(\(define \(cas-get/migrate hash\)) s
 5 165 M
-(Implementation Notes) s
-5 143 M
-(Dependencies) s
-5 121 M
-(| Component | Library |) s
+(  \(let \(\(migrated \(ref-get \(string-append "migrate/" hash\)\)\)\)) s
+5 154 M
+(    \(cas-get \(or migrated hash\)\)\)\)) s
+5 132 M
+(Migration Manifest) s
 5 110 M
-(|-----------|---------|) s
+(\(migration-manifest) s
 5 99 M
-(| SHA-256 | message-digest, sha2 |) s
+(  \(from-algorithm sha256\)) s
 5 88 M
-(| Blob I/O | CHICKEN I/O |) s
+(  \(to-algorithm sha384\)) s
 5 77 M
-(| Chunking | Custom |) s
+(  \(started-at 1767700000\)) s
+5 66 M
+(  \(status in-progress\)) s
 5 55 M
-(Error Handling) s
+(  \(migrated 4723\)) s
+5 44 M
+(  \(remaining 1892\)) s
 5 33 M
-(\(define-condition-type &cas-error &error) s
+(  \(mappings) s
 5 22 M
-(  cas-error?) s
+(    \(\("sha256:abc..." . "sha384:def..."\)) s
 5 11 M
-(  \(hash cas-error-hash\)\)) s
+(     \("sha256:123..." . "sha384:456..."\)) s
 _R
 S
 %%Page: (15) 15
@@ -2088,45 +2116,214 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(\(define-condition-type &cas-not-found &cas-error) s
+5 781 M
+(     ...\)\)\)) s
 5 759 M
-(  cas-not-found?\)) s
+(Verification During Migration) s
 5 737 M
-(\(define-condition-type &cas-corrupt &cas-error) s
+(\(define \(verify-migration hash\)) s
 5 726 M
-(  cas-corrupt?\)) s
+(  "Verify object under both old and new hash") s
+5 715 M
+(  \(let* \(\(content \(cas-get hash\)\)) s
 5 704 M
-(------------------------------------------------------------------------------) s
+(         \(old-hash \(sha256 content\)\)) s
+5 693 M
+(         \(new-hash \(sha384 content\)\)\)) s
 5 682 M
-(References) s
+(    \(and \(or \(equal? hash old-hash\)) s
+5 671 M
+(             \(equal? hash new-hash\)\)) s
 5 660 M
-(1. Merkle, R. \(1987\). A Digital Signature Based on a Conventional Encryption Function) s
+(         \(equal? \(ref-get \(string-append "migrate/" old-hash\)\)) s
 5 649 M
-(2. Git Internals - Git Objects) s
-5 638 M
-(3. IPFS Content Addressing) s
+(                 new-hash\)\)\)\)) s
 5 627 M
-(4. RFC-006: Vault System Architecture) s
-5 616 M
-(5. RFC-018: Sealed Archive Format) s
-5 594 M
 (------------------------------------------------------------------------------) s
+5 605 M
+(Comparison with Related Systems) s
+5 583 M
+(| System | Hash | Chunking | Naming |) s
 5 572 M
-(Changelog) s
+(|--------|------|----------|--------|) s
+5 561 M
+(| Git | SHA-1 | Pack files | refs/branches |) s
 5 550 M
-(- 2026-01-07 - Initial draft) s
+(| IPFS | SHA-256/multihash | Rabin | IPNS, DNSLink |) s
+5 539 M
+(| Perkeep | SHA-224 | Rolling hash | Permanodes |) s
 5 528 M
-(------------------------------------------------------------------------------) s
+(| Library CAS | SHA-256 | Configurable | Vault refs |) s
 5 506 M
-(Implementation Status: Draft) s
-5 495 M
-(Dependencies: sha2, message-digest) s
+(------------------------------------------------------------------------------) s
 5 484 M
+(Security Considerations) s
+5 462 M
+(Hash Collision Attacks) s
+5 440 M
+(SHA-256 provides 128-bit collision resistance. No practical attacks known.) s
+5 418 M
+(If SHA-256 is ever broken:) s
+5 396 M
+(;; Multihash for algorithm agility) s
+5 385 M
+(\(define \(multihash algo data\)) s
+5 374 M
+(  \(case algo) s
+5 363 M
+(    \(\(sha256\) \(cons 'sha256 \(sha256 data\)\)\)) s
+5 352 M
+(    \(\(sha384\) \(cons 'sha384 \(sha384 data\)\)\)) s
+5 341 M
+(    \(\(blake3\) \(cons 'blake3 \(blake3 data\)\)\)\)\)) s
+5 319 M
+(Length Extension Attacks) s
+5 297 M
+(SHA-256 is vulnerable to length extension. For authentication, use HMAC:) s
+5 275 M
+(\(define \(cas-mac key hash\)) s
+5 264 M
+(  \(hmac-sha256 key hash\)\)) s
+5 242 M
+(Timing Attacks) s
+5 220 M
+(Hash comparison MUST be constant-time:) s
+5 198 M
+(\(define \(hash-equal? a b\)) s
+5 187 M
+(  \(let \(\(result 0\)\)) s
+5 176 M
+(    \(do \(\(i 0 \(+ i 1\)\)\)) s
+5 165 M
+(        \(\(= i 32\) \(zero? result\)\)) s
+5 154 M
+(      \(set! result \(bitwise-ior result) s
+5 143 M
+(                    \(bitwise-xor \(blob-ref a i\) \(blob-ref b i\)\)\)\)\)\)\)) s
+5 121 M
+(------------------------------------------------------------------------------) s
+5 99 M
+(Performance Considerations) s
+5 77 M
+(Caching) s
+5 55 M
+(;; LRU cache for hot objects) s
+5 44 M
+(\(define cas-cache \(make-lru-cache 1000\)\)) s
+5 22 M
+(\(define \(cas-get/cached hash\)) s
+5 11 M
+(  \(or \(lru-get cas-cache hash\)) s
+_R
+S
+%%Page: (16) 16
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 16 def
+/fname (rfc-020-content-addressed-storage.txt) def
+/fdir (.) def
+/ftail (rfc-020-content-addressed-storage.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(      \(let \(\(content \(cas-get hash\)\)\)) s
+5 770 M
+(        \(lru-put! cas-cache hash content\)) s
+5 759 M
+(        content\)\)\)) s
+5 737 M
+(Parallel Hashing) s
+5 715 M
+(Large files benefit from parallel hashing of chunks.) s
+5 693 M
+(SSD Optimization) s
+5 671 M
+(Random access pattern. Use write-ahead log for durability:) s
+5 649 M
+(\(define \(cas-put/durable content\)) s
+5 638 M
+(  \(let \(\(hash \(sha256 content\)\)\)) s
+5 627 M
+(    \(wal-append hash content\)) s
+5 616 M
+(    \(write-blob \(hash->path hash\) content\)) s
+5 605 M
+(    \(wal-commit hash\)) s
+5 594 M
+(    hash\)\)) s
+5 572 M
+(------------------------------------------------------------------------------) s
+5 550 M
+(Implementation Notes) s
+5 528 M
+(Dependencies) s
+5 506 M
+(| Component | Library |) s
+5 495 M
+(|-----------|---------|) s
+5 484 M
+(| SHA-256 | message-digest, sha2 |) s
+5 473 M
+(| Blob I/O | CHICKEN I/O |) s
+5 462 M
+(| Chunking | Custom |) s
+5 440 M
+(Error Handling) s
+5 418 M
+(\(define-condition-type &cas-error &error) s
+5 407 M
+(  cas-error?) s
+5 396 M
+(  \(hash cas-error-hash\)\)) s
+5 374 M
+(\(define-condition-type &cas-not-found &cas-error) s
+5 363 M
+(  cas-not-found?\)) s
+5 341 M
+(\(define-condition-type &cas-corrupt &cas-error) s
+5 330 M
+(  cas-corrupt?\)) s
+5 308 M
+(------------------------------------------------------------------------------) s
+5 286 M
+(References) s
+5 264 M
+(1. Merkle, R. \(1987\), "A Digital Signature Based on a Conventional Encryption Function") s
+5 253 M
+(2. Git Internals - Git Objects) s
+5 242 M
+(3. IPFS Content Addressing) s
+5 231 M
+(4. Putze, Sanders, Singler \(2007\), "Cache-, Hash-, and Space-Efficient Bloom Filters") s
+5 220 M
+(5. Bender et al. \(2012\), "Don't Thrash: How to Cache Your Hash on Flash") s
+5 209 M
+(6. RFC-006: Vault System Architecture) s
+5 198 M
+(7. RFC-018: Sealed Archive Format) s
+5 176 M
+(------------------------------------------------------------------------------) s
+5 154 M
+(Changelog) s
+5 132 M
+(- 2026-01-09 - Advanced probabilistic data structures: blocked Bloom filters, counting Bl) s
+5 121 M
+(oom filters, quotient filters, hierarchical existence checking) s
+5 110 M
+(- 2026-01-07 - Initial draft) s
+5 88 M
+(------------------------------------------------------------------------------) s
+5 66 M
+(Implementation Status: Draft) s
+5 55 M
+(Dependencies: sha2, message-digest) s
+5 44 M
 (Integration: Vault, Replication, SPKI) s
 _R
 S
 %%Trailer
-%%Pages: 15
+%%Pages: 16
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

@@ -24,16 +24,8 @@ deferred as a very hard problem space.
 
 ## Publishing to Yoyodyne
 
-Before publishing RFCs, always:
+Generate and publish RFCs (handles stale detection, format generation, rsync, permissions):
 
-1. Generate all formats (only rebuilds stale/missing files):
+    cd spki/scheme/docs/rfc && ./generate-rfcs.sh
 
-       cd spki/scheme/docs/rfc && ./generate-rfcs.sh
-
-2. Rsync to yoyodyne:
-
-       rsync -avz --delete spki/scheme/docs/rfc/ www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/
-
-3. Fix permissions (rsync preserves local non-world-readable permissions):
-
-       ssh www.yoyodyne.com 'chmod 755 /www/yoyodyne/ddp/cyberspace && chmod 644 /www/yoyodyne/ddp/cyberspace/*'
+Published to: https://www.yoyodyne.com/ddp/cyberspace/

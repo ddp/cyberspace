@@ -11,6 +11,25 @@
 
 This RFC specifies garbage collection for the Library of Cyberspace: how vaults identify and reclaim storage from unreferenced objects while preserving pinned content, respecting tombstones, and maintaining audit trails. Content-addressed storage requires careful GC to avoid data loss.
 
+The Library of Cyberspace is an archival system. The default is preservation, not collection. Objects evaporate only with explicit consent.
+
+---
+
+## Philosophy: The Soup Preserves
+
+The soup is not a runtime heap. It is a library.
+
+In runtime garbage collection, the goal is to reclaim memory quickly. Young objects die young. Old objects survive. Collect aggressively.
+
+In archival garbage collection, the opposite holds:
+
+- **Old objects are precious** - They have survived, been referenced, replicated
+- **Young objects are suspect** - They may be transient, failed, or temporary
+- **Deletion is violence** - Once collected, an object is gone from this vault forever
+- **Preservation is the default** - When in doubt, keep it
+
+The Library of Alexandria burned once. We will not let it burn again.
+
 ---
 
 ## Motivation
@@ -29,7 +48,9 @@ But deletion is dangerous:
 - **Audit requirements** - May need historical data
 - **Resurrection** - Deleted objects may be re-added
 
-GC must be conservative and auditable.
+**GC must be conservative, consensual, and auditable.**
+
+The default is: **never collect**. Collection requires explicit action.
 
 ---
 
@@ -127,15 +148,168 @@ GC must be conservative and auditable.
       (recent-write? hash)))                 ; Grace period
 ```
 
+### Cycle Detection
+
+Reference counting alone cannot detect cycles (A→B→C→A). The soup uses mark-and-sweep as the authoritative reachability test, with reference counts as a fast path for common cases.
+
+```scheme
+;; Reference counting is advisory, not authoritative
+(define (fast-unreachable? hash)
+  "Quick check - zero refs MIGHT mean unreachable"
+  (and (zero? (reference-count hash))
+       (not (gc-root? hash))
+       (not (implicit-root? hash))))
+
+;; Mark-and-sweep is authoritative
+(define (truly-unreachable? hash marked-set)
+  "Authoritative check - not in marked set means unreachable"
+  (not (hash-set-member? marked-set hash)))
+
+;; Cycle detection via mark-and-sweep
+(define (detect-cycles)
+  "Find reference cycles (objects that reference each other but are unreachable)"
+  (let* ((marked (mark-reachable))
+         (all-hashes (all-object-hashes))
+         (unmarked (filter (lambda (h) (not (hash-set-member? marked h))) all-hashes))
+         (with-refs (filter (lambda (h) (> (reference-count h) 0)) unmarked)))
+    ;; These have refs but are unreachable - they're in cycles
+    with-refs))
+```
+
+In archival mode, cycles are preserved (they may be intentional - e.g., bidirectional links). Only explicit evaporation removes them.
+
 ---
 
 ## Mark and Sweep
 
-### Mark Phase
+### Tricolor Abstraction
+
+The naive recursive mark algorithm risks stack overflow on deep object graphs. The tricolor abstraction provides:
+
+1. **White**: Unvisited, potentially garbage
+2. **Gray**: Visited but references not yet scanned
+3. **Black**: Visited and all references scanned
+
+```scheme
+;; Tricolor sets - explicit worklist avoids stack overflow
+(define white-set (make-hash-set))  ; Candidates for collection
+(define gray-set (make-hash-set))   ; Work queue
+(define black-set (make-hash-set))  ; Proven reachable
+
+(define (tricolor-init)
+  "Initialize: all objects are white"
+  (hash-set-clear! white-set)
+  (hash-set-clear! gray-set)
+  (hash-set-clear! black-set)
+  (for-each (lambda (h) (hash-set-add! white-set h))
+            (all-object-hashes)))
+
+(define (shade-gray! hash)
+  "Move object from white to gray (discovered)"
+  (when (hash-set-member? white-set hash)
+    (hash-set-remove! white-set hash)
+    (hash-set-add! gray-set hash)))
+
+(define (shade-black! hash)
+  "Move object from gray to black (fully scanned)"
+  (hash-set-remove! gray-set hash)
+  (hash-set-add! black-set hash))
+```
+
+### Mark Phase (Worklist Algorithm)
 
 ```scheme
 (define (mark-reachable)
-  "Mark all objects reachable from roots"
+  "Mark all objects reachable from roots using worklist"
+  (tricolor-init)
+
+  ;; Shade roots gray
+  (for-each shade-gray! (hash-set->list gc-roots))
+  (for-each (lambda (hash)
+              (when (implicit-root? hash)
+                (shade-gray! hash)))
+            (all-object-hashes))
+
+  ;; Process gray objects until none remain
+  (let loop ()
+    (unless (hash-set-empty? gray-set)
+      (let ((current (hash-set-pop! gray-set)))
+        ;; Shade all white references gray
+        (for-each shade-gray! (object-references current))
+        ;; Current is now fully scanned
+        (shade-black! current)
+        (loop))))
+
+  black-set)  ; Return reachable set
+```
+
+### Incremental Tricolor Marking
+
+For large soups, mark in batches to avoid long pauses:
+
+```scheme
+(define *mark-batch-size* 1000)  ; Objects per batch
+
+(define (mark-incremental)
+  "Mark in batches, yielding between batches"
+  (let ((batch 0))
+    (let loop ()
+      (unless (or (hash-set-empty? gray-set)
+                  (>= batch *mark-batch-size*))
+        (let ((current (hash-set-pop! gray-set)))
+          (for-each shade-gray! (object-references current))
+          (shade-black! current)
+          (set! batch (+ batch 1))
+          (loop))))
+    ;; Return whether more work remains
+    (not (hash-set-empty? gray-set))))
+
+;; Usage: call repeatedly until returns #f
+(define (incremental-gc-step)
+  (if (mark-incremental)
+      'more-work
+      (begin
+        (sweep-white)
+        'complete)))
+```
+
+### Concurrent Write Barrier
+
+For concurrent GC, mutations must maintain the tricolor invariant: a black object cannot point to a white object.
+
+```scheme
+;; Write barrier for concurrent GC
+(define (cas-put-concurrent data)
+  "Store with write barrier for concurrent GC"
+  (let ((hash (cas-put data)))
+    ;; If GC is running and we create new references
+    (when gc-running?
+      ;; Shade new object gray (conservative)
+      (shade-gray! hash)
+      ;; Re-shade any black object referencing new object
+      (for-each (lambda (referencer)
+                  (when (hash-set-member? black-set referencer)
+                    ;; Demote to gray - needs re-scanning
+                    (hash-set-remove! black-set referencer)
+                    (hash-set-add! gray-set referencer)))
+                (incoming-references hash)))
+    hash))
+
+;; Snapshot-at-the-beginning (SATB) barrier
+(define (reference-update! from-hash old-ref new-ref)
+  "SATB write barrier: preserve old reference for marking"
+  (when (and gc-running? old-ref)
+    ;; Keep old reference alive through this GC cycle
+    (shade-gray! old-ref))
+  (update-reference! from-hash new-ref))
+```
+
+### Original Mark (Preserved for Reference)
+
+```scheme
+;; Simple recursive version (for small object graphs only)
+(define (mark-reachable/simple)
+  "Mark all objects reachable from roots (recursive, can stack overflow)"
   (let ((marked (make-hash-set)))
     (define (mark hash)
       (unless (hash-set-member? marked hash)
@@ -206,24 +380,41 @@ GC must be conservative and auditable.
 
 ## Incremental GC
 
-### Generational Collection
+### Archival Generational Collection
+
+Traditional generational GC collects young objects first (they die young). Archival GC inverts this: **old objects are precious**.
 
 ```scheme
-;; Objects partitioned by age
+;; Archival generations - age increases protection
 (define generations
-  '((young . 86400)      ; < 1 day
-    (middle . 2592000)   ; < 30 days
-    (old . #f)))         ; >= 30 days
+  '((ephemeral . 3600)     ; < 1 hour: temporary, collect freely
+    (young . 86400)        ; < 1 day: probably transient
+    (maturing . 604800)    ; < 1 week: gaining stability
+    (stable . 2592000)     ; < 30 days: likely permanent
+    (archival . #f)))      ; >= 30 days: NEVER collect automatically
 
 (define (object-generation hash)
   (let ((age (object-age hash)))
     (cond
+      ((< age 3600) 'ephemeral)
       ((< age 86400) 'young)
-      ((< age 2592000) 'middle)
-      (else 'old))))
+      ((< age 604800) 'maturing)
+      ((< age 2592000) 'stable)
+      (else 'archival))))
+
+;; Collection eligibility by generation
+(define (generation-collectible? gen)
+  (case gen
+    ((ephemeral) #t)       ; Freely collectible
+    ((young) #t)           ; Collectible with grace period
+    ((maturing) 'warning)  ; Requires explicit approval
+    ((stable) 'quorum)     ; Requires federation quorum
+    ((archival) #f)))      ; NEVER collect automatically
 
 (define (gc-generation gen)
-  "Collect only specified generation"
+  "Collect only specified generation (archival only via evaporation)"
+  (when (eq? gen 'archival)
+    (error "Archival objects require evaporation certificate"))
   (let ((candidates (filter (lambda (h)
                               (eq? (object-generation h) gen))
                             (all-object-hashes))))
@@ -388,6 +579,122 @@ GC must be conservative and auditable.
 
 ---
 
+## Evaporation (Archival Collection)
+
+Objects don't get "garbage collected" in an archive. They **evaporate** - and only with explicit, signed, multi-party consent.
+
+### Evaporation Certificate
+
+```scheme
+;; An evaporation certificate authorizes deletion
+(define-record-type evaporation-certificate
+  (make-evaporation-cert hash reason signers timestamp)
+  evaporation-cert?
+  (hash evap-hash)           ; Object to evaporate
+  (reason evap-reason)       ; Why (legal, storage, corruption, etc.)
+  (signers evap-signers)     ; List of (principal . signature)
+  (timestamp evap-timestamp))
+
+;; Reasons for evaporation (enumerated, auditable)
+(define *evaporation-reasons*
+  '(legal-requirement        ; Court order, DMCA, etc.
+    storage-emergency        ; Vault at capacity
+    data-corruption          ; Object verified corrupt
+    owner-request            ; Content owner requests removal
+    federation-consensus))   ; Quorum agrees to remove
+
+(define (create-evaporation-cert hash reason)
+  "Create unsigned evaporation certificate"
+  (make-evaporation-cert
+    hash
+    reason
+    '()  ; No signatures yet
+    (current-time)))
+
+(define (sign-evaporation-cert cert private-key)
+  "Add signature to evaporation certificate"
+  (let* ((principal (key->principal private-key))
+         (sig (sign-data (evap-hash cert) private-key)))
+    (make-evaporation-cert
+      (evap-hash cert)
+      (evap-reason cert)
+      (cons (cons principal sig) (evap-signers cert))
+      (evap-timestamp cert))))
+```
+
+### Quorum Requirement
+
+```scheme
+;; Evaporation requires M-of-N signatures from federation
+(define *evaporation-quorum*
+  '((ephemeral . 1)     ; Single vault can evaporate
+    (young . 1)         ; Single vault can evaporate
+    (maturing . 2)      ; Two vaults must agree
+    (stable . 3)        ; Three vaults must agree
+    (archival . #f)))   ; Requires special process (see below)
+
+(define (evaporation-quorum-met? cert generation)
+  (let ((required (assoc-ref *evaporation-quorum* generation)))
+    (cond
+      ((not required) #f)  ; Archival: never automatic
+      (else (>= (length (evap-signers cert)) required)))))
+
+(define (evaporate! hash cert)
+  "Evaporate object with valid certificate"
+  (let ((gen (object-generation hash)))
+    (unless (evaporation-quorum-met? cert gen)
+      (error "Evaporation quorum not met"
+             `(generation ,gen required ,(assoc-ref *evaporation-quorum* gen))))
+
+    ;; Archival objects require special handling
+    (when (eq? gen 'archival)
+      (unless (archival-evaporation-authorized? cert)
+        (error "Archival evaporation requires governance approval")))
+
+    ;; Log everything before deletion
+    (audit-append
+      action: 'evaporate
+      hash: hash
+      generation: gen
+      certificate: cert
+      reason: (evap-reason cert)
+      signers: (map car (evap-signers cert)))
+
+    ;; Finally, delete
+    (cas-delete! hash)))
+```
+
+### Archival Object Evaporation
+
+Archival objects (>30 days) receive maximum protection. They can only evaporate via:
+
+1. **Legal requirement** - With proof of legal order
+2. **Data corruption** - With cryptographic proof of corruption
+3. **Governance vote** - Per RFC-036 quorum protocol
+
+```scheme
+(define (archival-evaporation-authorized? cert)
+  "Check if archival evaporation is properly authorized"
+  (case (evap-reason cert)
+    ((legal-requirement)
+     ;; Must include legal order reference
+     (and (evap-legal-order cert)
+          (verify-legal-order (evap-legal-order cert))))
+
+    ((data-corruption)
+     ;; Must include corruption proof
+     (and (evap-corruption-proof cert)
+          (verify-corruption (evap-hash cert) (evap-corruption-proof cert))))
+
+    ((federation-consensus)
+     ;; Must have governance quorum (RFC-036)
+     (governance-quorum-met? cert))
+
+    (else #f)))  ; No other reasons valid for archival
+```
+
+---
+
 ## Distributed GC
 
 ### Coordinated Collection
@@ -400,9 +707,9 @@ GC must be conservative and auditable.
   (let ((root-sets (map vault-roots vaults)))
     ;; Phase 2: Compute global reachability
     (let ((global-marked (union-all root-sets)))
-      ;; Phase 3: Local sweep (conservative)
+      ;; Phase 3: Propose evaporation (no unilateral deletion)
       (for-each (lambda (vault)
-                  (vault-sweep vault global-marked))
+                  (vault-propose-evaporation vault global-marked))
                 vaults))))
 ```
 
@@ -447,24 +754,55 @@ GC must be conservative and auditable.
 
 ## GC Scheduling
 
+### Archival Defaults
+
+The soup defaults to **never collect**. GC only runs when explicitly enabled and only considers ephemeral/young generations automatically.
+
+```scheme
+;; Archival GC mode
+(define *gc-mode* 'archival)  ; 'archival, 'conservative, or 'aggressive
+
+(define (gc-enabled?)
+  "Check if automatic GC is enabled"
+  (not (eq? *gc-mode* 'archival)))
+```
+
 ### Triggers
 
 ```scheme
-;; GC triggered by various conditions
+;; GC triggered only under pressure, and only for young generations
 (define (should-gc?)
-  (or (> (storage-usage-percent) 80)      ; Disk pressure
-      (> (orphan-estimate) 10000)         ; Many orphans
-      (> (time-since-last-gc) 86400)))    ; Daily minimum
+  (and (gc-enabled?)
+       (or (> (storage-usage-percent) 95)    ; Emergency only
+           (> (ephemeral-orphan-count) 1000)))) ; Too many ephemeral orphans
 
 (define (gc-schedule)
-  "Run appropriate GC based on conditions"
-  (cond
-    ((> (storage-usage-percent) 95)
-      (gc-full))                          ; Emergency: full GC
-    ((> (storage-usage-percent) 80)
-      (gc-generation 'young))             ; Pressure: young gen
-    (else
-      (gc-incremental))))                 ; Normal: incremental
+  "Run appropriate GC based on conditions and mode"
+  (case *gc-mode*
+    ((archival)
+     ;; Never automatic - only explicit evaporation
+     (audit-append action: 'gc-skipped reason: 'archival-mode))
+
+    ((conservative)
+     ;; Only ephemeral objects
+     (cond
+       ((> (storage-usage-percent) 99)
+        (gc-generation 'ephemeral)
+        (gc-generation 'young))  ; Emergency: young too
+       ((> (storage-usage-percent) 95)
+        (gc-generation 'ephemeral))
+       (else
+        (audit-append action: 'gc-skipped reason: 'no-pressure))))
+
+    ((aggressive)
+     ;; Traditional GC (NOT RECOMMENDED for archives)
+     (cond
+       ((> (storage-usage-percent) 95)
+        (gc-full))
+       ((> (storage-usage-percent) 80)
+        (gc-generation 'young))
+       (else
+        (gc-incremental))))))
 ```
 
 ### Background GC
@@ -473,12 +811,21 @@ GC must be conservative and auditable.
 (define gc-thread #f)
 
 (define (start-gc-daemon interval)
+  "Start background GC daemon (archival mode: monitoring only)"
   (set! gc-thread
     (thread-start!
       (make-thread
         (lambda ()
           (let loop ()
             (thread-sleep! interval)
+            ;; Always report status
+            (audit-append
+              action: 'gc-status
+              mode: *gc-mode*
+              storage-percent: (storage-usage-percent)
+              ephemeral-orphans: (ephemeral-orphan-count)
+              should-gc: (should-gc?))
+            ;; Only act if enabled
             (when (should-gc?)
               (gc-schedule))
             (loop)))))))
@@ -603,17 +950,51 @@ GC must be conservative and auditable.
 
 ---
 
+## Invariants
+
+```
+G1. Preservation default
+    default-mode = archival → no-automatic-collection
+
+G2. Age increases protection
+    age(obj) > age(obj') → protection(obj) ≥ protection(obj')
+
+G3. Evaporation requires consent
+    evaporate(hash) requires signed-certificate(hash)
+
+G4. Quorum scales with age
+    generation = archival → quorum = governance-level
+
+G5. Archival objects are sacred
+    age > 30-days → no-automatic-evaporation
+
+G6. Audit trail preserved
+    evaporate(hash) → audit-append(hash, certificate, reason, signers)
+
+G7. Mark-and-sweep authoritative
+    truly-unreachable(hash) ↔ ¬member(hash, mark-reachable())
+
+G8. Cycles preserved
+    cycle(A, B, C) ∧ archival-mode → preserve(A, B, C)
+```
+
+---
+
 ## References
 
-1. [The Garbage Collection Handbook](https://gchandbook.org/) - Jones, Hosking, Moss
-2. [On-the-Fly Garbage Collection](https://dl.acm.org/doi/10.1145/359642.359655) - Dijkstra et al.
-3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.md)
-4. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.md)
+1. The Garbage Collection Handbook - Jones, Hosking, Moss
+2. On-the-Fly Garbage Collection - Dijkstra et al.
+3. RFC-020: Content-Addressed Storage
+4. RFC-003: Cryptographic Audit Trail
+5. RFC-036: Quorum Protocol with Homomorphic Voting
+6. RFC-007: Threshold Signature Governance
 
 ---
 
 ## Changelog
 
+- **2026-01-09** - Tricolor marking with worklist (eliminates stack overflow), incremental marking, SATB write barriers, concurrent GC support
+- **2026-01-09** - Archival GC improvements: evaporation certificates, quorum requirements, reversed generational policy, cycle detection, preservation-first defaults
 - **2026-01-07** - Initial draft
 
 ---

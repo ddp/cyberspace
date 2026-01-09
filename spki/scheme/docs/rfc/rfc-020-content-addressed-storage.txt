@@ -643,63 +643,169 @@ Bloom Filters
 
 Compact probabilistic set membership for efficient replication.
 
-Structure
+Multi-Level Existence Check
 
-(define (make-bloom-filter capacity error-rate)
-  "Create bloom filter for approximate membership"
+For the distributed soup, existence checks dominate replication overhead. A tiered approach minimizes latency:
+
++---------------------------------------------------------+
+| L1: Hot Set Cache (1000 items, O(1), microseconds)     |
++---------------------------------------------------------+
+| L2: Blocked Bloom Filter (100K items, O(k), cache-     |
+|     friendly memory layout)                             |
++---------------------------------------------------------+
+| L3: Quotient Filter (1M items, supports deletion)      |
++---------------------------------------------------------+
+| L4: Disk/Network (authoritative, milliseconds)         |
++---------------------------------------------------------+
+
+Blocked Bloom Filters
+
+Cache-line aligned blocks for 10x faster lookups:
+
+;; Blocked Bloom: each block fits in CPU cache line (64 bytes = 512 bits)
+(define block-bits 512)
+(define cache-line 64)
+
+(define (make-blocked-bloom capacity error-rate)
+  "Cache-friendly blocked Bloom filter"
   (let* ((bits (bloom-optimal-bits capacity error-rate))
+         (num-blocks (ceiling (/ bits block-bits)))
          (hashes (bloom-optimal-hashes capacity bits)))
-    (bloom-filter
-      (bit-vector (make-vector bits 0))
+    (blocked-bloom
+      (blocks (make-vector num-blocks (make-u8vector cache-line 0)))
       (hash-count hashes)
-      (capacity capacity)
-      (error-rate error-rate))))
+      (block-selector (lambda (hash) (modulo (hash-part-1 hash) num-blocks))))))
 
-Operations
+(define (blocked-bloom-add! filter hash)
+  "Add to block - all bits within same cache line"
+  (let* ((block-idx (block-select filter hash))
+         (block (vector-ref (bloom-blocks filter) block-idx)))
+    (for-each
+      (lambda (i)
+        (let ((bit-idx (modulo (bloom-hash filter hash i) block-bits)))
+          (u8vector-bit-set! block bit-idx 1)))
+      (iota (bloom-hash-count filter)))))
 
-(define (bloom-add! filter hash)
-  "Add hash to bloom filter"
+(define (blocked-bloom-contains? filter hash)
+  "Check within single cache line - no cache misses"
+  (let* ((block-idx (block-select filter hash))
+         (block (vector-ref (bloom-blocks filter) block-idx)))
+    (every
+      (lambda (i)
+        (let ((bit-idx (modulo (bloom-hash filter hash i) block-bits)))
+          (= 1 (u8vector-bit-ref block bit-idx))))
+      (iota (bloom-hash-count filter)))))
+
+Counting Bloom Filters
+
+For the soup, objects can be tombstoned (soft-deleted). Counting filters support removal:
+
+;; Counting Bloom: 4-bit counters instead of single bits
+(define (make-counting-bloom capacity error-rate)
+  "Counting Bloom filter supporting deletions"
+  (let* ((slots (bloom-optimal-bits capacity error-rate))
+         (nibbles (make-u8vector (ceiling (/ slots 2)) 0))
+         (hashes (bloom-optimal-hashes capacity slots)))
+    (counting-bloom nibbles hashes slots)))
+
+(define (counting-bloom-add! filter hash)
+  "Increment counters (saturate at 15)"
   (for-each
     (lambda (i)
-      (bit-vector-set! (bloom-bits filter) (bloom-index filter hash i) 1))
+      (let ((slot (bloom-slot filter hash i)))
+        (nibble-increment! (bloom-nibbles filter) slot)))
     (iota (bloom-hash-count filter))))
 
-(define (bloom-contains? filter hash)
-  "Check if hash MIGHT be in filter (false positives possible)"
-  (every
-    (lambda (i)
-      (= 1 (bit-vector-ref (bloom-bits filter) (bloom-index filter hash i))))
-    (iota (bloom-hash-count filter))))
+(define (counting-bloom-remove! filter hash)
+  "Decrement counters (only if present)"
+  (when (counting-bloom-contains? filter hash)
+    (for-each
+      (lambda (i)
+        (let ((slot (bloom-slot filter hash i)))
+          (nibble-decrement! (bloom-nibbles filter) slot)))
+      (iota (bloom-hash-count filter)))))
+
+;; Integration with tombstones
+(define (cas-tombstone/bloom hash reason)
+  "Tombstone with Bloom filter update"
+  (counting-bloom-remove! existence-filter hash)
+  (cas-tombstone hash reason: reason))
+
+Quotient Filters
+
+Better space efficiency than Bloom, supports deletion, and can be resized:
+
+;; Quotient filter: fingerprint stored in quotient/remainder form
+(define (make-quotient-filter capacity)
+  "Space-efficient filter with deletion support"
+  (let* ((slots (next-power-of-2 capacity))
+         (q-bits (integer-log2 slots))
+         (r-bits (- 64 q-bits)))  ; 64-bit fingerprints
+    (quotient-filter
+      (table (make-vector slots #f))
+      (q-bits q-bits)
+      (r-bits r-bits)
+      (count 0))))
+
+(define (qf-fingerprint hash q-bits r-bits)
+  "Split hash into quotient and remainder"
+  (let ((fp (hash->u64 hash)))
+    (values (arithmetic-shift fp (- r-bits))  ; quotient
+            (bitwise-and fp (- (arithmetic-shift 1 r-bits) 1)))))  ; remainder
+
+(define (qf-insert! qf hash)
+  "Insert with Robin Hood linear probing"
+  (let-values (((q r) (qf-fingerprint hash (qf-q-bits qf) (qf-r-bits qf))))
+    (qf-insert-slot! qf q r)))
+
+(define (qf-delete! qf hash)
+  "Delete fingerprint"
+  (let-values (((q r) (qf-fingerprint hash (qf-q-bits qf) (qf-r-bits qf))))
+    (qf-delete-slot! qf q r)))
 
 Replication Protocol
 
-;; Sender: "Here's what I have"
+;; Sender: "Here's what I have" (compressed Bloom)
 (define (bloom-inventory)
-  (let ((filter (make-bloom-filter 10000 0.01)))
-    (for-each (lambda (hash) (bloom-add! filter hash))
+  (let ((filter (make-blocked-bloom 100000 0.01)))
+    (for-each (lambda (hash) (blocked-bloom-add! filter hash))
               (all-object-hashes))
     filter))
 
 ;; Receiver: "Send me what I'm missing"
 (define (bloom-diff local-filter remote-filter)
   (filter (lambda (hash)
-            (and (bloom-contains? remote-filter hash)
+            (and (blocked-bloom-contains? remote-filter hash)
                  (not (cas-exists? hash))))
           (all-object-hashes)))
 
 ;; Exchange is O(bloom-size) not O(object-count)
+;; Blocked Bloom: 10-100x faster due to cache locality
+
+Hierarchical Existence Check
+
+(define (cas-exists?/fast hash)
+  "Tiered existence check - fast path for common case"
+  (or (lru-get hot-set hash)              ; L1: O(1) in-memory
+      (and (blocked-bloom-contains? l2-bloom hash)  ; L2: O(k) cache-friendly
+           (or (qf-contains? l3-qf hash)  ; L3: O(1) amortized
+               (cas-exists? hash)))))      ; L4: authoritative
+
+;; 99% of checks hit L1/L2, avoiding disk/network entirely
 
 Soup Integration
 
 ;; Bloom filter itself is a soup object
 (soup-object
-  (name "bloom/2026-01-07")
+  (name "bloom/2026-01-09")
   (type bloom-filter)
+  (variant blocked)           ; blocked, counting, or quotient
   (size "12KB")
   (crypto (sha256 "bloom-hash..."))
-  (capacity 10000)
+  (capacity 100000)
   (error-rate 0.01)
-  (population 4723))
+  (population 47230)
+  (load-factor 0.47))
 
 ------------------------------------------------------------------------------
 
@@ -996,16 +1102,19 @@ Error Handling
 
 References
 
-1. Merkle, R. (1987). A Digital Signature Based on a Conventional Encryption Function
+1. Merkle, R. (1987), "A Digital Signature Based on a Conventional Encryption Function"
 2. Git Internals - Git Objects
 3. IPFS Content Addressing
-4. RFC-006: Vault System Architecture
-5. RFC-018: Sealed Archive Format
+4. Putze, Sanders, Singler (2007), "Cache-, Hash-, and Space-Efficient Bloom Filters"
+5. Bender et al. (2012), "Don't Thrash: How to Cache Your Hash on Flash"
+6. RFC-006: Vault System Architecture
+7. RFC-018: Sealed Archive Format
 
 ------------------------------------------------------------------------------
 
 Changelog
 
+- 2026-01-09 - Advanced probabilistic data structures: blocked Bloom filters, counting Bloom filters, quotient filters, hierarchical existence checking
 - 2026-01-07 - Initial draft
 
 ------------------------------------------------------------------------------

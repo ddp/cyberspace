@@ -264,14 +264,127 @@ Index Types
   on: 'tags
   false-positive-rate: 0.01)
 
-Index Selection
+Cost-Based Index Selection
 
+Query planning uses Selinger-style cost estimation to select optimal execution plans. The optimizer considers:
+
+- Cardinality estimation: How many rows will each predicate return?
+- Index selectivity: How discriminating is each index?
+- I/O cost: Sequential scan vs. random access
+- Join ordering: Which order minimizes intermediate result sizes?
+
+;; Cardinality estimation using histograms
+(define (estimate-cardinality predicate index-stats)
+  "Estimate result size for predicate"
+  (let ((histogram (index-histogram index-stats)))
+    (case (predicate-type predicate)
+      ((equality)
+       ;; Use histogram bucket counts
+       (histogram-point-estimate histogram (predicate-value predicate)))
+      ((range)
+       ;; Sum histogram buckets in range
+       (histogram-range-estimate histogram
+                                  (predicate-low predicate)
+                                  (predicate-high predicate)))
+      ((like)
+       ;; Estimate based on prefix selectivity
+       (* (total-rows index-stats)
+          (prefix-selectivity (predicate-pattern predicate))))
+      (else
+       ;; Conservative estimate: 10% of total
+       (* 0.1 (total-rows index-stats))))))
+
+;; Cost model for execution plans
+(define (plan-cost plan index-stats)
+  "Estimate total cost in I/O operations"
+  (let ((cardinality (estimate-cardinality (plan-predicate plan) index-stats)))
+    (case (plan-access-method plan)
+      ((full-scan)
+       ;; Sequential I/O: count all pages
+       (total-pages index-stats))
+      ((index-scan)
+       ;; Random I/O: estimated rows + index traversal
+       (+ (log2 (total-rows index-stats))  ; B-tree depth
+          cardinality))                     ; Heap fetches
+      ((index-only)
+       ;; No heap access needed
+       (log2 (total-rows index-stats)))
+      ((bloom-filter)
+       ;; O(k) hash operations, negligible I/O
+       (* 0.001 cardinality)))))
+
+;; Dynamic programming for join ordering
+(define (optimize-join-order predicates indexes)
+  "Find optimal join order using Selinger algorithm"
+  (let ((memo (make-hash-table)))
+    (define (best-plan preds)
+      (cond
+        ((null? preds) (empty-plan))
+        ((hash-table-exists? memo preds)
+         (hash-table-ref memo preds))
+        (else
+         (let* ((candidates
+                 (map (lambda (p)
+                        (let ((rest (delete p preds)))
+                          (join-plans (single-predicate-plan p)
+                                      (best-plan rest))))
+                      preds))
+                (best (minimum-by plan-cost candidates)))
+           (hash-table-set! memo preds best)
+           best))))
+    (best-plan predicates)))
+
+;; Select best index for query
 (define (plan-query query indexes)
-  "Select best index for query"
-  (let ((predicates (query-predicates query)))
-    (find (lambda (idx)
-            (index-covers? idx predicates))
-          (sort indexes index-selectivity>))))
+  "Generate optimal query plan using cost-based optimization"
+  (let* ((predicates (query-predicates query))
+         (stats (map index-statistics indexes))
+         ;; Generate candidate plans
+         (candidates
+          (append
+           ;; Try each applicable index
+           (filter-map (lambda (idx stat)
+                        (and (index-covers? idx predicates)
+                             (make-plan 'index-scan idx
+                                        (plan-cost-for idx predicates stat))))
+                      indexes stats)
+           ;; Always consider full scan
+           (list (make-plan 'full-scan #f (full-scan-cost predicates stats)))))
+         ;; Select minimum cost plan
+         (best (minimum-by plan-cost candidates)))
+    (when (> (plan-cost best) query-cost-warning-threshold)
+      (log-warning "Expensive query plan" query (plan-cost best)))
+    best))
+
+Histogram Maintenance
+
+;; Equi-depth histograms for cardinality estimation
+(define (build-histogram values num-buckets)
+  "Build equi-depth histogram for cardinality estimation"
+  (let* ((sorted (sort values <))
+         (bucket-size (ceiling (/ (length sorted) num-buckets)))
+         (boundaries (map (lambda (i)
+                           (list-ref sorted (* i bucket-size)))
+                         (iota num-buckets))))
+    (make-histogram boundaries (/ (length sorted) num-buckets))))
+
+;; Update histogram incrementally
+(define (histogram-update! hist value)
+  "Incrementally update histogram with new value"
+  (let ((bucket (find-bucket hist value)))
+    (bucket-increment! bucket)))
+
+;; Statistics refresh
+(define (refresh-index-statistics idx)
+  "Rebuild index statistics (run periodically)"
+  (let* ((samples (index-sample idx 10000))  ; Sample 10K rows
+         (histogram (build-histogram samples 100)))
+    (set-index-statistics! idx
+      (make-stats
+        (total-rows (index-count idx))
+        (distinct-values (length (delete-duplicates samples)))
+        (histogram histogram)
+        (last-analyzed (current-time))))))
 
 Index Maintenance
 
@@ -330,22 +443,78 @@ Execution Strategies
 
 Query Caching
 
-;; Query results can be cached
-(define query-cache (make-lru-cache 1000))
+The soup is archival - objects rarely change, making aggressive caching safe.
 
-(define (cached-query query)
-  (let ((key (query->hash query)))
-    (or (lru-get query-cache key)
+;; Multi-tier cache: L1 hot results, L2 warm, L3 persistent
+(define l1-cache (make-lru-cache 100))    ; In-memory, microseconds
+(define l2-cache (make-lru-cache 10000))  ; Warm, milliseconds
+(define l3-cache 'persistent-index)        ; On-disk, query index
+
+(define (cached-query query principal)
+  "Multi-tier cached query with capability awareness"
+  (let ((key (query-cache-key query principal)))
+    (or (lru-get l1-cache key)
+        (lru-get l2-cache key)
+        (persistent-cache-get l3-cache key)
         (let ((result (execute-query query)))
-          (lru-put! query-cache key result)
+          ;; Promote to appropriate cache tier based on cost
+          (let ((cost (query-cost query)))
+            (cond
+              ((> cost 1000) (persistent-cache-put! l3-cache key result))
+              ((> cost 100) (lru-put! l2-cache key result))
+              (else (lru-put! l1-cache key result))))
           result))))
 
-;; Cache invalidation on soup changes
-(define (invalidate-query-cache obj)
-  (let ((affected (queries-affected-by obj)))
-    (for-each (lambda (q)
-                (lru-remove! query-cache (query->hash q)))
-              affected)))
+Dependency-Based Invalidation
+
+Track which predicates affect which cached queries using Bloom filters:
+
+;; Bloom filter tracking which attributes affect cached queries
+(define query-dependencies (make-counting-bloom-filter 100000 0.001))
+
+(define (cache-with-deps query result)
+  "Cache query and track its dependencies"
+  (let ((key (query->hash query))
+        (deps (query-attribute-deps query)))
+    (lru-put! query-cache key result)
+    ;; Track dependencies
+    (for-each (lambda (attr)
+                (bloom-add! query-dependencies (cons attr key)))
+              deps)))
+
+(define (invalidate-on-change obj)
+  "Invalidate only queries that MIGHT be affected (conservative)"
+  (let ((attrs (soup-object-attributes obj)))
+    (for-each (lambda (attr)
+                ;; Check if any cached query depends on this attribute
+                (when (bloom-might-contain? query-dependencies attr)
+                  (invalidate-queries-for-attribute attr)))
+              attrs)))
+
+Archival Cache Semantics
+
+For the soup's archival nature, implement copy-on-write cache entries:
+
+;; Immutable cache entries - archival objects never change
+(define (archival-cache-get cache hash)
+  "Archival objects can be cached permanently"
+  (let ((entry (hash-table-ref cache hash #f)))
+    (if entry
+        (if (archival-generation? (soup-get hash))
+            entry  ; Archival: never expires
+            (if (cache-entry-fresh? entry)
+                (cache-entry-value entry)
+                #f))  ; Non-archival: check freshness
+        #f)))
+
+;; Generation-aware caching
+(define (cache-ttl-for-generation gen)
+  (case gen
+    ((archival) +inf.0)       ; Never expires
+    ((stable) 86400)          ; 1 day
+    ((maturing) 3600)         ; 1 hour
+    ((young) 60)              ; 1 minute
+    ((ephemeral) 0)))         ; No caching
 
 ------------------------------------------------------------------------------
 
@@ -500,13 +669,16 @@ References
 
 1. Newton Programmer's Guide - Soup and cursor APIs
 2. SQLite Query Planner - Query optimization
-3. RFC-020: Content-Addressed Storage
-4. RFC-021: Capability Delegation
+3. Selinger et al., "Access Path Selection in a Relational Database Management System" (1979) - Cost-based optimization
+4. RFC-020: Content-Addressed Storage
+5. RFC-021: Capability Delegation
+6. RFC-026: Garbage Collection (generation-aware caching)
 
 ------------------------------------------------------------------------------
 
 Changelog
 
+- 2026-01-09 - Cost-based query optimization: Selinger algorithm, cardinality estimation, histograms, multi-tier caching with generation-aware TTL
 - 2026-01-07 - Initial draft
 
 ------------------------------------------------------------------------------
