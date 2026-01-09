@@ -90,10 +90,10 @@ pre{white-space:pre-wrap;}</style>
 EOF
 }
 
-# Generate PostScript from text using groff
+# Generate PostScript from text using enscript
 generate_ps() {
   local base="$1" source="$2"
-  groff -Tps "$source" > "${base}.ps" 2>/dev/null
+  enscript -B -f Courier10 -p "${base}.ps" "$source" 2>/dev/null
 }
 
 # Generate from Markdown source (prose, docs, RFCs)

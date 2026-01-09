@@ -4,19 +4,19 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-045: Cookie-Capability Protocol (CCP)
 
-**Status:** Implemented
-**Date:** January 2026
-**Author:** Library of Cyberspace Contributors
-**Inspiration:** PHOTURIS (Karn/Simpson, RFC 2522)
-**Implementation:** cyberspace-repl
+Status: Implemented
+Date: January 2026
+Author: Library of Cyberspace Contributors
+Inspiration: PHOTURIS (Karn/Simpson, RFC 2522)
+Implementation: cyberspace-repl
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 CCP establishes secure channels between Cyberspace nodes using stateless cookies for DoS resistance, ephemeral key exchange for forward secrecy, and capability attestation for authorization. No X.509. No CA hierarchy. No algorithm negotiation.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
@@ -33,11 +33,11 @@ PHOTURIS (1995) had better ideas:
 
 CCP resurrects these ideas with modern primitives.
 
----
+------------------------------------------------------------------------------
 
 Protocol Overview
 
-```
+`
 Initiator                          Responder
     |                                   |
     |-------- KNOCK (version) --------&gt;|  Stateless
@@ -60,22 +60,22 @@ Initiator                          Responder
     |========= CHANNEL OPEN ===========|
     |                                   |
     |&lt;----------- DATA --------------&gt;|
-```
+`
 
 10 messages to establish. Unlimited encrypted DATA after.
 
----
+------------------------------------------------------------------------------
 
 Message Format
 
 All messages use TLV encoding:
 
-```
+`
 +------+--------+------------------+
 | Type | Length | Payload          |
 | 1B   | 4B BE  | variable         |
 +------+--------+------------------+
-```
+`
 
 Message Types
 
@@ -90,73 +90,73 @@ Message Types
 | 0x10 | DATA | bidirectional |
 | 0xFF | CLOSE | bidirectional |
 
----
+------------------------------------------------------------------------------
 
 Phase 1: KNOCK
 
 Initiator announces intent and protocol version.
 
-```
+`
 KNOCK payload:
-  "CCP/" VERSION_MAJOR "." VERSION_MINOR
+  "CCP/" VERSIONMAJOR "." VERSIONMINOR
 
 Example: "CCP/1.0"
-```
+`
 
 Responder checks version compatibility:
 - Major mismatch: reject (incompatible suites)
 - Minor mismatch: accept (backward compatible)
 
-**Responder allocates no state.**
+Responder allocates no state.
 
----
+------------------------------------------------------------------------------
 
 Phase 2: COOKIE
 
 Responder returns stateless cookie.
 
-```scheme
+`scheme
 (define (make-cookie remote-addr remote-port)
   (let* ((data (string-append
-                (blob-&gt;string *cookie-secret*)
+                (blob-&gt;string cookie-secret)
                 remote-addr
                 (number-&gt;string remote-port)
-                (number-&gt;string *cookie-epoch*)))
+                (number-&gt;string cookie-epoch)))
          (hash (blake2b-hash (string-&gt;blob data))))
     (substring hash 0 16)))
-```
+`
 
 Cookie properties:
-- **Stateless**: Responder doesn't store it
-- **Unforgeable**: Requires server secret
-- **Expiring**: Epoch rotation invalidates old cookies
-- **Address-bound**: Different address = different cookie
+- Stateless: Responder doesn't store it
+- Unforgeable: Requires server secret
+- Expiring: Epoch rotation invalidates old cookies
+- Address-bound: Different address = different cookie
 
-**Responder still allocates no state.**
+Responder still allocates no state.
 
----
+------------------------------------------------------------------------------
 
 Phase 3: EXCHANGE
 
 Both parties exchange ephemeral public keys.
 
 Initiator sends:
-```
+`
 EXCHANGE payload:
   cookie-r "|" cookie-i "|" ephemeral-public-hex
-```
+`
 
-- `cookie-r`: Echo of responder's cookie (proves receipt)
-- `cookie-i`: Initiator's random cookie (for key derivation)
-- `ephemeral-public`: X25519 public key
+- cookie-r: Echo of responder's cookie (proves receipt)
+- cookie-i: Initiator's random cookie (for key derivation)
+- ephemeral-public: X25519 public key
 
 Responder verifies cookie echo, then responds with same format.
 
-**State now committed. Keys derived.**
+State now committed. Keys derived.
 
 Key Derivation
 
-```scheme
+`scheme
 (define (derive-session-keys shared-secret cookie-i cookie-r)
   (let* ((ikm (blob-append shared-secret
                            (string-&gt;blob cookie-i)
@@ -165,92 +165,92 @@ Key Derivation
          (k-ir (blake2b-hash (blob-append prk "initiator-&gt;responder")))
          (k-ri (blake2b-hash (blob-append prk "responder-&gt;initiator"))))
     (values (take k-ir 32) (take k-ri 32))))
-```
+`
 
 Directional keys prevent reflection attacks.
 
----
+------------------------------------------------------------------------------
 
 Phase 4: ATTEST
 
-**All subsequent messages encrypted.**
+All subsequent messages encrypted.
 
 Both parties prove identity using SPKI principals.
 
-```
+`
 ATTEST payload (encrypted):
   principal-hash "|" signature
-```
+`
 
-- `principal-hash`: SPKI principal (hex-encoded public key hash)
-- `signature`: Ed25519 signature over transcript
+- principal-hash: SPKI principal (hex-encoded public key hash)
+- signature: Ed25519 signature over transcript
 
-**Identity is cryptographic, not nominal.** A principal is identified solely by its public key hash, never by a human-readable name. This is a prime directive.
+Identity is cryptographic, not nominal. A principal is identified solely by its public key hash, never by a human-readable name. This is a prime directive.
 
 Transcript for signing:
-```
+`
 cookie-i || cookie-r || ephemeral-public
-```
+`
 
 Anonymous Attestation (Optional)
 
 For privacy, use Chaum-style blind signatures:
 
-```scheme
+`scheme
 (define (blind-attest capability-hash)
   ;; Prove authorization without revealing identity
   (blind-sign capability-hash (blind-factor)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Phase 5: OFFER
 
 Exchange authorized capabilities as SPKI tags.
 
-```
+`
 OFFER payload (encrypted):
   (tag (* set capability ...))
 
 Example: "(tag (* set read write replicate))"
-```
+`
 
 Capabilities follow RFC-021 (Capability Delegation):
 - Only offer what you hold
 - Attenuation only, no amplification
 - Explicit, not ambient
-- **Expressed as SPKI tag s-expressions**
+- Expressed as SPKI tag s-expressions
 
 Future: Full SPKI auth-certs with issuer signatures.
 
----
+------------------------------------------------------------------------------
 
 Phase 6: CONFIRM
 
 Bind entire transcript.
 
-```
+`
 CONFIRM payload (encrypted):
   BLAKE2b(cookie-i || cookie-r || their-principal)
-```
+`
 
 Both parties must produce matching hashes. Any tampering detected.
 
----
+------------------------------------------------------------------------------
 
 DATA Phase
 
 Channel open. Encrypted messaging.
 
-```
+`
 DATA payload:
   ChaCha20-Poly1305(key, nonce, plaintext)
-```
+`
 
 Nonce construction:
-```
+`
 nonce = sequence-number (8 bytes) || 0x00000000 (4 bytes)
-```
+`
 
 Sequence numbers:
 - Start at 0
@@ -258,11 +258,11 @@ Sequence numbers:
 - Prevent replay
 - Separate counters per direction
 
----
+------------------------------------------------------------------------------
 
 Algorithm Suites
 
-**No runtime negotiation.** Version determines suite.
+No runtime negotiation. Version determines suite.
 
 CCP/1.x (Current)
 
@@ -290,7 +290,7 @@ CCP/3.x (Reserved: Hybrid)
 | Key Exchange | X25519 + Kyber |
 | Signatures | Ed25519 + Dilithium |
 
----
+------------------------------------------------------------------------------
 
 Security Properties
 
@@ -312,7 +312,7 @@ Ephemeral X25519 keys:
 Identity Protection (SPKI Native)
 
 Principal identity:
-- **Is the public key hash** (not a name, not a certificate)
+- Is the public key hash (not a name, not a certificate)
 - Only revealed after encryption established
 - Only revealed to authenticated peer
 - Never in plaintext on wire
@@ -324,7 +324,7 @@ Replay Protection
 - Nonce never reused (fatal if violated)
 - AEAD authentication fails on replay
 
----
+------------------------------------------------------------------------------
 
 Comparison
 
@@ -339,11 +339,11 @@ Comparison
 
 CCP trades fewer round-trips for simplicity and capability integration.
 
----
+------------------------------------------------------------------------------
 
 Implementation
 
-```scheme
+`scheme
 ;; Initiator
 (define ch (node-connect "remote.host" 4433))
 (channel-send ch '(request object-hash))
@@ -354,9 +354,9 @@ Implementation
 (define ch (node-accept))
 (let ((msg (channel-recv ch)))
   (channel-send ch (process msg)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -367,14 +367,14 @@ References
 5. RFC-021: Capability Delegation
 6. RFC-040: Security Architecture
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07**: Initial specification
+- 2026-01-07: Initial specification
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Complete (placeholder crypto)
-**Test Status:** Passing (two-node handshake + messaging)
-**Next:** Real libsodium AEAD bindings</pre></body></html>
+Implementation Status: Complete (placeholder crypto)
+Test Status: Passing (two-node handshake + messaging)
+Next: Real libsodium AEAD bindings</pre></body></html>

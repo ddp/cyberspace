@@ -4,43 +4,43 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-028: Error Handling and Recovery
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper &lt;ddp@eludom.net&gt;
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies error handling and recovery for the Library of Cyberspace: how vaults detect, report, and recover from failures while maintaining integrity guarantees. Errors are first-class objects in the soup, enabling systematic analysis and automated recovery.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Distributed systems fail in creative ways:
 
-- **Network partitions** - Vaults lose contact
-- **Storage corruption** - Bits flip, disks fail
-- **Byzantine faults** - Nodes lie or misbehave
-- **Resource exhaustion** - Out of memory, disk, connections
-- **Protocol violations** - Malformed messages, invalid state
+- Network partitions - Vaults lose contact
+- Storage corruption - Bits flip, disks fail
+- Byzantine faults - Nodes lie or misbehave
+- Resource exhaustion - Out of memory, disk, connections
+- Protocol violations - Malformed messages, invalid state
 
 Recovery must be:
 
-- **Deterministic** - Same error, same recovery
-- **Auditable** - Every error logged with context
-- **Automatic** - Self-healing where possible
-- **Graceful** - Degrade rather than crash
+- Deterministic - Same error, same recovery
+- Auditable - Every error logged with context
+- Automatic - Self-healing where possible
+- Graceful - Degrade rather than crash
 
----
+------------------------------------------------------------------------------
 
 Error Model
 
 Error Types
 
-```scheme
+`scheme
 (define-error-type 'storage-error
   (subtypes corruption missing full readonly))
 
@@ -58,11 +58,11 @@ Error Types
 
 (define-error-type 'protocol-error
   (subtypes invalid-message invalid-state version-mismatch))
-```
+`
 
 Error Structure
 
-```scheme
+`scheme
 (define (make-error type message context)
   `(error
     (id ,(generate-error-id))
@@ -79,11 +79,11 @@ Error Structure
   (let ((hash (soup-put err type: 'error)))
     (audit-append action: 'error-recorded error-hash: hash)
     hash))
-```
+`
 
 Error Context
 
-```scheme
+`scheme
 ;; Capture rich context for debugging
 (define (error-context operation)
   `((operation . ,operation)
@@ -93,15 +93,15 @@ Error Context
     (attempt . ,(current-retry-count))
     (duration . ,(operation-duration))
     (inputs . ,(sanitize-inputs (operation-inputs)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Error Handling Patterns
 
 Result Type
 
-```scheme
+`scheme
 ;; Operations return (ok value) or (err error)
 (define (result-ok value) `(ok ,value))
 (define (result-err error) `(err ,error))
@@ -124,11 +124,11 @@ Result Type
       (result-bind (verify-signature data)
         (lambda (verified)
           (result-ok verified))))))
-```
+`
 
 Error Recovery
 
-```scheme
+`scheme
 (define (with-recovery operation recovery)
   "Execute operation with recovery on failure"
   (let ((result (guard (ex (else (result-err ex)))
@@ -144,11 +144,11 @@ Error Recovery
     (lambda (err)
       (audit-append action: 'read-fallback error: err)
       (cas-get-from-replica hash))))
-```
+`
 
 Retry Logic
 
-```scheme
+`scheme
 (define (with-retry operation max-retries backoff)
   "Retry operation with exponential backoff"
   (let loop ((attempt 1))
@@ -166,16 +166,16 @@ Retry Logic
            (loop (+ attempt 1))))))))
 
 ;; Retry configuration
-(define *default-retry-config*
+(define default-retry-config
   `((max-retries . 3)
     (initial-backoff . 100)    ; ms
     (max-backoff . 30000)      ; ms
     (jitter . 0.1)))           ; 10% randomization
-```
+`
 
 Circuit Breaker
 
-```scheme
+`scheme
 (define (make-circuit-breaker threshold timeout)
   (let ((failures 0)
         (state 'closed)
@@ -208,15 +208,15 @@ Circuit Breaker
            (cb-record-failure! cb)
            (result-err ex)))
     (result-ok (operation))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Storage Errors
 
 Corruption Detection
 
-```scheme
+`scheme
 (define (detect-corruption hash)
   "Verify object integrity"
   (let* ((data (storage-read-raw hash))
@@ -240,11 +240,11 @@ Corruption Detection
       (audit-append action: 'corruption-scan
                     corrupted: (length corrupted)))
     corrupted))
-```
+`
 
 Corruption Recovery
 
-```scheme
+`scheme
 (define (recover-corrupted hash)
   "Attempt to recover corrupted object"
   ;; Strategy 1: Fetch from replica
@@ -270,11 +270,11 @@ Corruption Recovery
   (mark-object-lost hash)
   (audit-append action: 'object-lost hash: hash)
   #f)
-```
+`
 
 Disk Full Handling
 
-```scheme
+`scheme
 (define (handle-disk-full)
   "Emergency disk space recovery"
   ;; Phase 1: Emergency GC
@@ -287,18 +287,18 @@ Disk Full Handling
   (compress-uncompressed-objects)
 
   ;; Phase 4: Alert and degrade
-  (when (&lt; (available-space) *critical-threshold*)
+  (when (&lt; (available-space) critical-threshold)
     (alert-disk-critical)
     (vault-readonly!)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Network Errors
 
 Timeout Handling
 
-```scheme
+`scheme
 (define (with-timeout duration operation)
   "Execute operation with timeout"
   (let ((result (make-channel)))
@@ -316,11 +316,11 @@ Timeout Handling
           (error (make-error 'timeout
                    "Operation timed out"
                    `((duration . ,duration))))))))
-```
+`
 
 Partition Detection
 
-```scheme
+`scheme
 (define (detect-partition peers)
   "Detect network partition"
   (let* ((reachable (filter peer-reachable? peers))
@@ -332,32 +332,32 @@ Partition Detection
       (if (&gt; (length reachable) (/ (length peers) 2))
           (continue-with-majority reachable)
           (enter-read-only-mode)))))
-```
+`
 
 Connection Pool Recovery
 
-```scheme
+`scheme
 (define (recover-connection-pool pool)
   "Recover from connection pool exhaustion"
   ;; Close idle connections
   (pool-close-idle! pool)
 
   ;; Close long-running connections
-  (pool-close-stale! pool *max-connection-age*)
+  (pool-close-stale! pool max-connection-age)
 
   ;; If still exhausted, reject new requests
   (when (pool-exhausted? pool)
     (audit-append action: 'pool-exhausted)
     (enable-request-shedding)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Consistency Errors
 
 Conflict Detection
 
-```scheme
+`scheme
 (define (detect-conflict hash versions)
   "Detect conflicting versions of object"
   (let ((unique-contents (delete-duplicates
@@ -369,11 +369,11 @@ Conflict Detection
           `((hash . ,hash)
             (versions . ,(length unique-contents))
             (sources . ,(map version-source versions))))))))
-```
+`
 
 Conflict Resolution
 
-```scheme
+`scheme
 (define (resolve-conflict hash versions strategy)
   "Resolve conflicting versions"
   (let ((resolved
@@ -390,11 +390,11 @@ Conflict Resolution
                   hash: hash
                   strategy: strategy)
     resolved))
-```
+`
 
 Merkle Divergence
 
-```scheme
+`scheme
 (define (handle-merkle-divergence local-root remote-root peer)
   "Handle diverged Merkle trees"
   (let ((divergence (find-divergence-point local-root remote-root)))
@@ -406,15 +406,15 @@ Merkle Divergence
     (for-each (lambda (subtree)
                 (sync-subtree subtree peer))
               (divergent-subtrees divergence))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Recovery Procedures
 
 Automatic Recovery
 
-```scheme
+`scheme
 (define recovery-handlers
   `((corruption . ,recover-corrupted)
     (missing . ,fetch-from-replica)
@@ -431,11 +431,11 @@ Automatic Recovery
                         error: (error-id error))
           (handler error))
         (escalate-error error))))
-```
+`
 
 Manual Recovery
 
-```scheme
+`scheme
 (define (queue-manual-recovery error)
   "Queue error for manual intervention"
   (soup-put
@@ -457,11 +457,11 @@ Manual Recovery
                  status: 'resolved
                  resolved-at: (current-time)
                  resolved-by: (current-principal))))
-```
+`
 
 Disaster Recovery
 
-```scheme
+`scheme
 (define (disaster-recovery backup-location)
   "Full vault recovery from backup"
   (audit-append action: 'disaster-recovery-start
@@ -484,15 +484,15 @@ Disaster Recovery
   (verify-restoration)
 
   (audit-append action: 'disaster-recovery-complete))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Error Reporting
 
 Error Aggregation
 
-```scheme
+`scheme
 (define (aggregate-errors window)
   "Aggregate errors over time window"
   (let ((errors (soup-query type: 'error
@@ -505,11 +505,11 @@ Error Aggregation
                                    error-type: error-type
                                    timestamp: (&gt; (- (current-time) window))))))
     (/ count window)))
-```
+`
 
 Alerting
 
-```scheme
+`scheme
 (define alert-thresholds
   `((corruption . 1)        ; Any corruption is critical
     (timeout . 100)         ; 100 timeouts per minute
@@ -524,15 +524,15 @@ Alerting
                 (when (&gt; (error-rate type 60) limit)
                   (send-alert type (error-rate type 60) limit))))
             alert-thresholds))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
 Error Information Leakage
 
-```scheme
+`scheme
 ;; Don't expose internal details in user-facing errors
 (define (sanitize-error-for-user error)
   `(error
@@ -544,11 +544,11 @@ Error Information Leakage
 (define (log-full-error error)
   (audit-append action: 'error
                 error: error))  ; Full context preserved
-```
+`
 
 Error-Based Attacks
 
-```scheme
+`scheme
 ;; Rate limit error generation to prevent DoS
 (define error-rate-limiter
   (make-rate-limiter 1000 60))  ; 1000 errors per minute max
@@ -557,25 +557,25 @@ Error-Based Attacks
   (if (rate-limiter-allow? error-rate-limiter)
       (record-error! err)
       (audit-append action: 'error-rate-limited)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [Release It!](https://pragprog.com/titles/mnee2/release-it-second-edition/) - Nygard
-2. [Hystrix](https://github.com/Netflix/Hystrix) - Netflix Circuit Breaker
-3. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.md)
-4. [RFC-026: Garbage Collection](rfc-026-garbage-collection.md)
+1. Release It! - Nygard
+2. Hystrix - Netflix Circuit Breaker
+3. RFC-003: Cryptographic Audit Trail
+4. RFC-026: Garbage Collection
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** soup, audit, storage
-**Integration:** All vault operations, monitoring, alerting</pre></body></html>
+Implementation Status: Draft
+Dependencies: soup, audit, storage
+Integration: All vault operations, monitoring, alerting</pre></body></html>

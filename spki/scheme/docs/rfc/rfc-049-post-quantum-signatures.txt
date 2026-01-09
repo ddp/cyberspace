@@ -1,17 +1,17 @@
 RFC-049: Post-Quantum Signatures
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Requires:** RFC-004 (SPKI Authorization), RFC-040 (Security Architecture), RFC-041 (Keystore), RFC-042 (Merkle Trees)
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Requires: RFC-004 (SPKI Authorization), RFC-040 (Security Architecture), RFC-041 (Keystore), RFC-042 (Merkle Trees)
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 Ed25519 won't survive. Shor's algorithm breaks elliptic curve cryptography in polynomial time. When quantum computers arrive, every capability ever signed, every realm identity ever created, becomes forgeable. This RFC specifies the transition from Ed25519 to post-quantum signature schemes: SPHINCS+ and CRYSTALS-Dilithium.
 
----
+------------------------------------------------------------------------------
 
 The Threat
 
@@ -19,8 +19,8 @@ Ed25519 security relies on the hardness of the elliptic curve discrete logarithm
 
 | Algorithm | Classical Security | Quantum Security |
 |-----------|-------------------|------------------|
-| Ed25519 | 128 bits | **0 bits** (broken) |
-| RSA-2048 | 112 bits | **0 bits** (broken) |
+| Ed25519 | 128 bits | 0 bits (broken) |
+| RSA-2048 | 112 bits | 0 bits (broken) |
 | SPHINCS+-256 | 256 bits | 128 bits |
 | Dilithium3 | 192 bits | 128 bits |
 
@@ -34,7 +34,7 @@ The capability chain breaks. The sealed closure unseals. Cyberspace falls.
 
 We must migrate before Q-Day.
 
----
+------------------------------------------------------------------------------
 
 The Candidates
 
@@ -42,42 +42,42 @@ NIST Post-Quantum Cryptography standardization selected:
 
 SPHINCS+ (Hash-Based)
 
-```
+`
 Type:           Stateless hash-based signatures
 Security basis: Hash function security (SHAKE256)
 Key size:       32 bytes (private), 32 bytes (public)
 Signature size: 7,856 - 49,856 bytes (parameter dependent)
 Speed:          Slow signing, fast verification
 Maturity:       Conservative, well-understood
-```
+`
 
-**Why SPHINCS+:**
+Why SPHINCS+:
 - Security reduces to hash function security
 - No number-theoretic assumptions
 - Stateless (no state management headaches)
 - Uses SHAKE256 (same as our Merkle trees)
 
-**Tradeoff:** Large signatures. A SPHINCS+-256s signature is ~8 KB.
+Tradeoff: Large signatures. A SPHINCS+-256s signature is ~8 KB.
 
 CRYSTALS-Dilithium (Lattice-Based)
 
-```
+`
 Type:           Lattice-based (Module-LWE)
 Security basis: Learning With Errors hardness
 Key size:       1,312 bytes (private), 1,952 bytes (public)
 Signature size: 2,420 - 4,595 bytes (parameter dependent)
 Speed:          Fast signing, fast verification
 Maturity:       Newer, but extensively analyzed
-```
+`
 
-**Why Dilithium:**
+Why Dilithium:
 - Smaller signatures than SPHINCS+
 - Faster operations
 - NIST primary recommendation
 
-**Tradeoff:** Relies on lattice assumptions (less conservative than hash-based).
+Tradeoff: Relies on lattice assumptions (less conservative than hash-based).
 
----
+------------------------------------------------------------------------------
 
 Cyberspace Strategy: Both
 
@@ -93,7 +93,7 @@ We support both. Different use cases, different tradeoffs:
 
 The keystore can hold multiple key types:
 
-```scheme
+`scheme
 (keystore
   (realm-keys
     (ed25519 #${legacy-key...})           ; Legacy (sunset)
@@ -101,49 +101,49 @@ The keystore can hold multiple key types:
     (dilithium #${pq-operational...}))    ; Post-quantum operational
   (active-signing 'sphincs+)
   (accept-verification '(sphincs+ dilithium ed25519)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Certificate Format
 
 Current (Ed25519)
 
-```scheme
+`scheme
 (spki-cert
   (issuer "ed25519:alice...")
   (subject "ed25519:bob...")
   (tag (read "sha512:doc..."))
   (signature #${64-byte-ed25519-sig}))
-```
+`
 
 Post-Quantum (SPHINCS+)
 
-```scheme
+`scheme
 (spki-cert
   (issuer "sphincs+:alice...")
   (subject "sphincs+:bob...")
   (tag (read "shake256:doc..."))           ; Merkle root
   (signature-algorithm "sphincs+-shake-256s")
   (signature #${7856-byte-sphincs-sig}))
-```
+`
 
 Post-Quantum (Dilithium)
 
-```scheme
+`scheme
 (spki-cert
   (issuer "dilithium:alice...")
   (subject "dilithium:bob...")
   (tag (read "shake256:doc..."))
   (signature-algorithm "dilithium3")
   (signature #${3293-byte-dilithium-sig}))
-```
+`
 
 Hybrid (Transition)
 
 During transition, sign with both:
 
-```scheme
+`scheme
 (spki-cert
   (issuer "hybrid:alice...")               ; Hybrid identity
   (subject "hybrid:bob...")
@@ -151,17 +151,17 @@ During transition, sign with both:
   (signatures
     (ed25519 #${64-byte-sig})              ; Legacy
     (sphincs+ #${7856-byte-sig})))         ; Post-quantum
-```
+`
 
 Both signatures must verify. If Ed25519 is later broken, SPHINCS+ still holds.
 
----
+------------------------------------------------------------------------------
 
 Key Generation
 
 SPHINCS+-SHAKE-256s
 
-```scheme
+`scheme
 (define (sphincs+-keygen)
   "Generate SPHINCS+ keypair using SHAKE256"
   (let* ((seed (random-bytes 96))          ; 3 × 32-byte seeds
@@ -184,11 +184,11 @@ SPHINCS+-SHAKE-256s
   (protection "passphrase")
   (kdf "argon2id")
   (ciphertext #${encrypted-sk}))
-```
+`
 
 Dilithium3
 
-```scheme
+`scheme
 (define (dilithium-keygen)
   "Generate Dilithium3 keypair"
   (let* ((seed (random-bytes 32))
@@ -207,15 +207,15 @@ Dilithium3
   (protection "passphrase")
   (kdf "argon2id")
   (ciphertext #${encrypted-sk}))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Signing Operations
 
 SPHINCS+ Signing
 
-```scheme
+`scheme
 (define (sphincs+-sign message private-key)
   "Sign message with SPHINCS+"
   (let* ((opt-rand (random-bytes 32))      ; Optional randomness
@@ -223,22 +223,22 @@ SPHINCS+ Signing
     signature))
 
 ;; Signature is large: 7,856 bytes for SPHINCS+-SHAKE-256s
-```
+`
 
 Dilithium Signing
 
-```scheme
+`scheme
 (define (dilithium-sign message private-key)
   "Sign message with Dilithium3"
   (let* ((signature (dilithium3-sign-internal message private-key)))
     signature))
 
 ;; Signature is moderate: 3,293 bytes for Dilithium3
-```
+`
 
 Hybrid Signing
 
-```scheme
+`scheme
 (define (hybrid-sign message ed25519-sk sphincs+-sk)
   "Sign with both algorithms for transition security"
   (let ((ed25519-sig (ed25519-sign message ed25519-sk))
@@ -246,15 +246,15 @@ Hybrid Signing
     `(hybrid-signature
       (ed25519 ,ed25519-sig)
       (sphincs+ ,sphincs+-sig))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Verification
 
 Multi-Algorithm Verification
 
-```scheme
+`scheme
 (define (verify-signature message signature public-key)
   "Verify signature, handling multiple algorithms"
   (let ((algorithm (signature-algorithm signature)))
@@ -269,30 +269,30 @@ Multi-Algorithm Verification
   "Both signatures must verify"
   (and (ed25519-verify message (hybrid-ed25519 signature) (keys-ed25519 public-keys))
        (sphincs+-verify message (hybrid-sphincs+ signature) (keys-sphincs+ public-keys))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Realm Identity
 
 A realm's principal expands to include algorithm:
 
-```
+`
 Current:   ed25519:7f3a2b4c5d6e...
 Future:    sphincs+:8a9b0c1d2e3f...
            dilithium:4e5f6a7b8c9d...
            hybrid:7f3a2b4c|8a9b0c1d...
-```
+`
 
 The principal is still coordinates in cyberspace - a place you can teleport to. The algorithm prefix tells you what cryptography guards the gate.
 
----
+------------------------------------------------------------------------------
 
 Capability Chain Implications
 
 Capability chains must handle mixed algorithms:
 
-```scheme
+`scheme
 ;; Alice (Ed25519) delegates to Bob (Dilithium) who delegates to Carol (SPHINCS+)
 (cert-chain
   (cert-1
@@ -303,11 +303,11 @@ Capability chains must handle mixed algorithms:
     (issuer "dilithium:bob...")
     (subject "sphincs+:carol...")
     (signature #${dilithium-sig})))
-```
+`
 
 Each link verified with its own algorithm. The chain is as strong as its weakest link - but even one post-quantum link prevents total collapse after Q-Day.
 
----
+------------------------------------------------------------------------------
 
 Migration Timeline
 
@@ -341,7 +341,7 @@ Phase 5: Pure Post-Quantum (Q-Day + 2 years)
 - Historical certificates retain for audit
 - Cyberspace survives
 
----
+------------------------------------------------------------------------------
 
 Storage Implications
 
@@ -361,7 +361,7 @@ A realm with 10,000 capabilities:
 
 Storage is cheap. Quantum resistance is not.
 
----
+------------------------------------------------------------------------------
 
 Performance
 
@@ -381,7 +381,7 @@ Use Dilithium for:
 - Audit entries (constant)
 - Bulk operations
 
----
+------------------------------------------------------------------------------
 
 Library Support
 
@@ -394,20 +394,20 @@ Required Libraries
 | OpenSSL 3.x | Provider | Provider | Via oqsprovider |
 | BoringSSL | No | Partial | Google internal |
 
-**Recommended:** liboqs (Open Quantum Safe)
+Recommended: liboqs (Open Quantum Safe)
 - Reference implementations
 - Actively maintained
 - C library, easy FFI
 
-```scheme
+`scheme
 ;; crypto-ffi.scm addition
 (define sphincs+-sign (foreign-lambda* ...))
 (define sphincs+-verify (foreign-lambda* ...))
 (define dilithium-sign (foreign-lambda* ...))
 (define dilithium-verify (foreign-lambda* ...))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
@@ -415,8 +415,8 @@ Algorithm Agility
 
 Cyberspace must survive algorithm obsolescence:
 
-```scheme
-(define *supported-algorithms*
+`scheme
+(define supported-algorithms
   '((signatures . (ed25519 sphincs+ dilithium))
     (hashes . (sha512 shake256 blake3))
     (encryption . (xchacha20-poly1305 aes-256-gcm))))
@@ -429,7 +429,7 @@ Cyberspace must survive algorithm obsolescence:
     ((sha512) 'legacy)         ; Quantum-reduced
     ((shake256) 'recommended)  ; Post-quantum
     ...))
-```
+`
 
 Side Channels
 
@@ -447,11 +447,11 @@ During transition, hybrid signatures provide defense in depth:
 
 Both must be broken to forge. Belt and suspenders.
 
----
+------------------------------------------------------------------------------
 
 Invariants
 
-```
+`
 S1. Post-quantum signatures are unforgeable (given hash security)
     forge(sphincs+-sig) requires break(shake256)
 
@@ -466,9 +466,9 @@ S4. Key algorithm matches signature algorithm
 
 S5. Migration preserves capability validity
     valid-pre-migration(cert) → valid-post-migration(cert) [during transition]
-```
+`
 
----
+------------------------------------------------------------------------------
 
 The Quantum Winter
 
@@ -484,7 +484,7 @@ When the quantum winter comes:
 
 Prepare now. Migrate early. Survive.
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -496,7 +496,7 @@ References
 6. RFC-041 - Keystore and Attestation
 7. RFC-042 - Quantum-Resistant Merkle Trees
 
----
+------------------------------------------------------------------------------
 
 Changelog
 

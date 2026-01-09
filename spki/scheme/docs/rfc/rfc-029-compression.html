@@ -4,42 +4,42 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-029: Compression and Deduplication
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper &lt;ddp@eludom.net&gt;
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies compression and deduplication for the Library of Cyberspace: how vaults reduce storage requirements while maintaining content-addressability, integrity verification, and efficient retrieval. Compression is transparent to the content-addressing layer.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Storage efficiency matters for preservation:
 
-- **Cost** - Less storage means more preservation per dollar
-- **Bandwidth** - Compressed transfers are faster
-- **Redundancy** - More copies fit in same space
-- **Longevity** - Smaller archives survive longer
+- Cost - Less storage means more preservation per dollar
+- Bandwidth - Compressed transfers are faster
+- Redundancy - More copies fit in same space
+- Longevity - Smaller archives survive longer
 
 But compression must not compromise:
 
-- **Integrity** - Hashes must remain valid
-- **Addressability** - Content addressing still works
-- **Deduplication** - Identical content stored once
-- **Accessibility** - Data remains retrievable
+- Integrity - Hashes must remain valid
+- Addressability - Content addressing still works
+- Deduplication - Identical content stored once
+- Accessibility - Data remains retrievable
 
----
+------------------------------------------------------------------------------
 
 Compression Model
 
 Layered Architecture
 
-```
+`
 ┌─────────────────────────────────────┐
 │         Application Layer           │
 │     (sees uncompressed data)        │
@@ -53,11 +53,11 @@ Layered Architecture
 │         Storage Layer               │
 │     (stores compressed data)        │
 └─────────────────────────────────────┘
-```
+`
 
 Compression Metadata
 
-```scheme
+`scheme
 (define (compress-object data algorithm)
   (let* ((compressed (compress algorithm data))
          (ratio (/ (bytevector-length compressed)
@@ -78,15 +78,15 @@ Compression Metadata
     (original-size 1048576)
     (compressed-size 524288)
     (ratio 0.5)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Compression Algorithms
 
 Supported Algorithms
 
-```scheme
+`scheme
 (define compression-algorithms
   `((zstd . ((extension . "zst")
              (levels . (1 3 9 19))
@@ -104,11 +104,11 @@ Supported Algorithms
              (levels . ())
              (default-level . #f)
              (dictionary . #f)))))
-```
+`
 
 Algorithm Selection
 
-```scheme
+`scheme
 (define (select-compression-algorithm content-type size)
   "Select best algorithm for content"
   (cond
@@ -128,11 +128,11 @@ Algorithm Selection
      'lz4)
     ;; Default
     (else 'zstd)))
-```
+`
 
 Zstd Dictionaries
 
-```scheme
+`scheme
 ;; Train dictionary on sample data
 (define (train-dictionary samples dict-size)
   "Train zstd dictionary from sample data"
@@ -149,15 +149,15 @@ Zstd Dictionaries
     (if dict
         (zstd-compress-with-dict data dict)
         (zstd-compress data))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Compression Operations
 
 Transparent Compression
 
-```scheme
+`scheme
 (define (cas-put-compressed data)
   "Store data with transparent compression"
   (let* ((hash (content-hash data))  ; Hash uncompressed
@@ -184,11 +184,11 @@ Transparent Compression
     (if (or (not algorithm) (eq? algorithm 'none))
         stored
         (decompress algorithm stored))))
-```
+`
 
 Batch Compression
 
-```scheme
+`scheme
 (define (compress-batch objects)
   "Compress multiple objects efficiently"
   ;; Group by content type for dictionary efficiency
@@ -201,11 +201,11 @@ Batch Compression
                  (compress-with-dictionary obj content-type))
                items)))
       groups)))
-```
+`
 
 Recompression
 
-```scheme
+`scheme
 (define (recompress-object hash new-algorithm new-level)
   "Recompress object with different settings"
   (let* ((data (cas-get-decompressed hash))
@@ -219,15 +219,15 @@ Recompression
     (audit-append action: 'recompressed
                   hash: hash
                   algorithm: new-algorithm)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Deduplication
 
 Content-Based Deduplication
 
-```scheme
+`scheme
 ;; Content addressing provides automatic deduplication
 (define (store-deduplicated data)
   (let ((hash (content-hash data)))
@@ -238,13 +238,13 @@ Content-Based Deduplication
           (audit-append action: 'deduplicated hash: hash)
           hash)
         (cas-put data))))
-```
+`
 
 Block-Level Deduplication
 
-```scheme
+`scheme
 ;; Split large objects into blocks
-(define *block-size* 65536)  ; 64KB
+(define block-size 65536)  ; 64KB
 
 (define (chunk-object data)
   "Split object into content-defined chunks"
@@ -269,11 +269,11 @@ Block-Level Deduplication
         ((= (bitwise-and (rabin-hash data pos) mask) 0)
          pos)
         (else (loop (+ pos 1)))))))
-```
+`
 
 Chunk Storage
 
-```scheme
+`scheme
 (define (store-chunked data)
   "Store large object as deduplicated chunks"
   (let* ((chunks (chunk-object data))
@@ -292,11 +292,11 @@ Chunk Storage
   (let* ((manifest (deserialize (cas-get manifest-hash)))
          (chunks (map cas-get (assoc-ref manifest 'chunks))))
     (bytevector-concatenate chunks)))
-```
+`
 
 Deduplication Statistics
 
-```scheme
+`scheme
 (define (deduplication-stats)
   "Calculate deduplication effectiveness"
   (let* ((objects (soup-query type: 'any))
@@ -307,15 +307,15 @@ Deduplication Statistics
       (physical-size . ,physical-size)
       (dedup-ratio . ,(/ logical-size physical-size))
       (space-saved . ,(- logical-size physical-size)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Delta Compression
 
 Version Deltas
 
-```scheme
+`scheme
 (define (store-delta base-hash new-data)
   "Store object as delta from base"
   (let* ((base-data (cas-get base-hash))
@@ -342,13 +342,13 @@ Version Deltas
                (delta (storage-get hash)))
           (apply-delta base-data delta))
         (storage-get hash))))
-```
+`
 
 Delta Chains
 
-```scheme
+`scheme
 ;; Limit delta chain depth
-(define *max-delta-depth* 10
+(define max-delta-depth 10
 
 (define (delta-chain-depth hash)
   "Calculate depth of delta chain"
@@ -359,16 +359,16 @@ Delta Chains
 
 (define (should-store-delta? base-hash)
   "Check if delta storage is appropriate"
-  (&lt; (delta-chain-depth base-hash) *max-delta-depth*))
-```
+  (&lt; (delta-chain-depth base-hash) max-delta-depth))
+`
 
----
+------------------------------------------------------------------------------
 
 Archive Compression
 
 Sealed Archive Format
 
-```scheme
+`scheme
 ;; RFC-018 integration
 (define (create-compressed-archive objects)
   "Create compressed sealed archive"
@@ -376,29 +376,29 @@ Sealed Archive Format
          (compressed (zstd-compress serialized 19))  ; Max compression
          (encrypted (age-encrypt compressed recipients)))
     (cas-put encrypted)))
-```
+`
 
 Streaming Compression
 
-```scheme
+`scheme
 (define (stream-compress input-port output-port algorithm)
   "Stream compression for large files"
   (let ((ctx (compression-context-create algorithm)))
     (let loop ()
-      (let ((chunk (read-bytevector *chunk-size* input-port)))
+      (let ((chunk (read-bytevector chunk-size input-port)))
         (unless (eof-object? chunk)
           (write-bytevector (compress-chunk ctx chunk) output-port)
           (loop))))
     (write-bytevector (compress-finish ctx) output-port)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Performance Optimization
 
 Compression Cache
 
-```scheme
+`scheme
 (define compression-cache (make-lru-cache 1000))
 
 (define (cached-decompress hash)
@@ -407,11 +407,11 @@ Compression Cache
       (let ((data (cas-get-decompressed hash)))
         (lru-put! compression-cache hash data)
         data)))
-```
+`
 
 Parallel Compression
 
-```scheme
+`scheme
 (define (parallel-compress objects num-threads)
   "Compress multiple objects in parallel"
   (let ((work-queue (make-channel))
@@ -431,11 +431,11 @@ Parallel Compression
     (for-each (lambda (obj) (channel-put! work-queue obj)) objects)
     ;; Collect results
     (map (lambda (_) (channel-get! results)) objects)))
-```
+`
 
 Adaptive Compression
 
-```scheme
+`scheme
 (define (adaptive-compress data)
   "Select compression based on content analysis"
   (let* ((sample (subbytevector data 0 (min 4096 (bytevector-length data))))
@@ -447,15 +447,15 @@ Adaptive Compression
       ((&lt; entropy 4.0) (values 'zstd 19))
       ;; Medium entropy - balanced
       (else (values 'zstd 3)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Integrity
 
 Verification
 
-```scheme
+`scheme
 (define (verify-compressed-object hash)
   "Verify compressed object integrity"
   (let* ((stored (storage-get hash))
@@ -463,11 +463,11 @@ Verification
          (decompressed (decompress (assoc-ref meta 'algorithm) stored))
          (computed-hash (content-hash decompressed)))
     (equal? hash computed-hash)))
-```
+`
 
 Corruption Recovery
 
-```scheme
+`scheme
 (define (recover-compressed hash)
   "Attempt to recover corrupted compressed object"
   ;; Try partial decompression
@@ -481,25 +481,25 @@ Corruption Recovery
     (when replica-data
       (storage-put hash replica-data)
       replica-data)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [Zstandard](https://github.com/facebook/zstd) - Facebook's compression algorithm
-2. [Content-Defined Chunking](https://restic.net/blog/2015-09-12/restic-foundation1-cdc/) - Restic blog
-3. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.md)
-4. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.md)
+1. Zstandard - Facebook's compression algorithm
+2. Content-Defined Chunking - Restic blog
+3. RFC-018: Sealed Archive Format
+4. RFC-020: Content-Addressed Storage
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** cas, zstd, soup
-**Integration:** Storage layer, archive creation, replication</pre></body></html>
+Implementation Status: Draft
+Dependencies: cas, zstd, soup
+Integration: Storage layer, archive creation, replication</pre></body></html>

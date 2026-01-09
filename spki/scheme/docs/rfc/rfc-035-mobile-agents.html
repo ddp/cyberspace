@@ -4,31 +4,31 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-035: Mobile Agents and Pub/Sub
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper &lt;ddp@eludom.net&gt;
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies the mobile agent architecture for the Library of Cyberspace: Telescript-inspired agents that migrate between realms, carry SPKI credentials, communicate via pub/sub channels, and operate under realm coordinator supervision. Agents are first-class citizens with cryptographic identity.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Distributed computation requires mobile code:
 
-- **Latency** - Move computation to data, not data to computation
-- **Autonomy** - Agents act on behalf of principals when disconnected
-- **Coordination** - Pub/sub enables loose coupling across realms
-- **Accountability** - Every agent action is auditable
+- Latency - Move computation to data, not data to computation
+- Autonomy - Agents act on behalf of principals when disconnected
+- Coordination - Pub/sub enables loose coupling across realms
+- Accountability - Every agent action is auditable
 
 General Magic's Telescript (1994) pioneered these ideas. We preserve the good parts while integrating with SPKI capabilities and content-addressed storage.
 
----
+------------------------------------------------------------------------------
 
 Agent Model
 
@@ -36,12 +36,12 @@ What is an Agent?
 
 An agent is:
 
-1. **Mobile code** - Scheme closures that can serialize and migrate
-2. **Credentialed** - Carries SPKI certificates granting capabilities
-3. **Accountable** - Every action recorded in audit trail
-4. **Supervised** - Realm coordinator can inspect, suspend, terminate
+1. Mobile code - Scheme closures that can serialize and migrate
+2. Credentialed - Carries SPKI certificates granting capabilities
+3. Accountable - Every action recorded in audit trail
+4. Supervised - Realm coordinator can inspect, suspend, terminate
 
-```scheme
+`scheme
 (define-record-type &lt;agent&gt;
   (make-agent id principal code state credentials realm)
   agent?
@@ -51,28 +51,28 @@ An agent is:
   (state agent-state)              ; Mutable state (content-addressed)
   (credentials agent-credentials)  ; SPKI certificate chain
   (realm agent-realm))             ; Current realm location
-```
+`
 
 Agent Lifecycle
 
-```
+`
 entangle → running → [teleport] → running → ... → decohere
              ↓                       ↓
           suspend               superpose
              ↓                       ↓
           resume                  collapse
-```
+`
 
 Telescript Parallels
 
 | Telescript | Cyberspace | Description |
 |------------|------------|-------------|
-| `go` | `teleport` | Move agent to another realm |
-| `meet` | `entangle` | Two agents become correlated |
-| `send` | `tunnel` | Message passes through barriers |
-| `permits` | SPKI certificates | Capability credentials |
-| `places` | Realms | Execution environments |
-| `telename` | Content hash | Globally unique identity |
+| go | teleport | Move agent to another realm |
+| meet | entangle | Two agents become correlated |
+| send | tunnel | Message passes through barriers |
+| permits | SPKI certificates | Capability credentials |
+| places | Realms | Execution environments |
+| telename | Content hash | Globally unique identity |
 
 Quantum Vocabulary
 
@@ -80,15 +80,15 @@ The fabric of cyberspace uses quantum metaphors:
 
 | Operation | Name | Metaphor |
 |-----------|------|----------|
-| send message | `tunnel` | Quantum tunneling through barriers |
-| receive message | `observe` | Collapse the wave function |
-| spawn agent | `entangle` | Create correlated pair |
-| migrate agent | `teleport` | Quantum teleportation |
-| terminate | `decohere` | Loss of quantum coherence |
-| checkpoint | `superpose` | Exist in multiple states |
-| link processes | `correlate` | Spooky action at a distance |
+| send message | tunnel | Quantum tunneling through barriers |
+| receive message | observe | Collapse the wave function |
+| spawn agent | entangle | Create correlated pair |
+| migrate agent | teleport | Quantum teleportation |
+| terminate | decohere | Loss of quantum coherence |
+| checkpoint | superpose | Exist in multiple states |
+| link processes | correlate | Spooky action at a distance |
 
-*"A wilderness of mirrors"* - James Angleton
+"A wilderness of mirrors" - James Angleton
 
 Agents live in a cryptographic wilderness where:
 - They cannot see plaintext (HE encryption)
@@ -96,7 +96,7 @@ Agents live in a cryptographic wilderness where:
 - Every interaction is mediated by certificates
 - Identity is what you can prove, not who you claim
 
----
+------------------------------------------------------------------------------
 
 Agent Operations
 
@@ -104,7 +104,7 @@ entangle (spawn)
 
 Create a new agent in the current realm:
 
-```scheme
+`scheme
 (entangle
   code: (lambda (self msg) ...)
   state: initial-state
@@ -112,55 +112,55 @@ Create a new agent in the current realm:
   #!key name timeout)
 
 ;; Returns agent-id (content hash)
-```
+`
 
-The spawning principal's key signs the agent, establishing provenance. The new agent is *entangled* with its creator - correlated through shared lineage.
+The spawning principal's key signs the agent, establishing provenance. The new agent is entangled with its creator - correlated through shared lineage.
 
 teleport (migrate)
 
 Move agent to another realm:
 
-```scheme
+`scheme
 (teleport agent-id target-realm
   #!key superpose)  ; checkpoint before teleport
-```
+`
 
-**Process:**
+Process:
 1. Serialize agent code + state
 2. Create migration certificate (signed by current realm)
 3. Transmit to target realm
 4. Target validates credentials against its policy
 5. Resume execution
 
-**Migration Certificate:**
-```scheme
+Migration Certificate:
+`scheme
 (spki-cert
   (issuer source-realm-key)
   (subject agent-id)
   (capability (action execute) (object target-realm))
   (validity (not-after migration-timeout)))
-```
+`
 
 decohere (terminate)
 
 End agent execution:
 
-```scheme
+`scheme
 (decohere agent-id
   #!key reason superpose-final)
-```
+`
 
 Decoherence can be:
-- **Self-initiated** - Agent calls `(decohere)`
-- **Coordinator-initiated** - Kill signal from realm coordinator
-- **Timeout** - Exceeded allocated time
-- **Revocation** - Credentials revoked mid-execution
+- Self-initiated - Agent calls (decohere)
+- Coordinator-initiated - Kill signal from realm coordinator
+- Timeout - Exceeded allocated time
+- Revocation - Credentials revoked mid-execution
 
 superpose / collapse (checkpoint / restore)
 
 Save and restore agent state:
 
-```scheme
+`scheme
 (superpose agent-id)
 ;; Returns content hash of serialized state
 ;; Agent exists in multiple potential states
@@ -168,14 +168,14 @@ Save and restore agent state:
 (collapse checkpoint-hash realm)
 ;; Resurrects agent from superposition
 ;; Wave function collapses to specific state
-```
+`
 
 Checkpoints are content-addressed, enabling:
 - Fault recovery
 - Time travel debugging
 - Forking (spawn from checkpoint)
 
----
+------------------------------------------------------------------------------
 
 Quantum Messaging
 
@@ -183,18 +183,18 @@ Topics (Observation Points)
 
 Topics are hierarchical, content-addressed channels where agents observe:
 
-```scheme
+`scheme
 (define-record-type &lt;topic&gt;
   (make-topic name realm observers)
   topic?
   (name topic-name)           ; Hierarchical name "realm/category/subject"
   (realm topic-realm)         ; Owning realm
   (observers topic-observers)); Set of observing agent-ids
-```
+`
 
 observe (subscribe)
 
-```scheme
+`scheme
 (observe topic-pattern handler
   #!key filter replay-from)
 
@@ -202,26 +202,26 @@ observe (subscribe)
 ;; handler: (lambda (topic message) ...)
 ;; filter: Predicate for message selection
 ;; replay-from: Sequence number for replay
-```
+`
 
 When you observe, you collapse potential messages into actual received values.
 
 tunnel (publish/send)
 
-```scheme
+`scheme
 (tunnel topic message
   #!key ttl priority)
 
 ;; message: Any serializable Scheme value
 ;; ttl: Time-to-live in seconds
 ;; priority: 'normal | 'high | 'critical
-```
+`
 
 Messages tunnel through the fabric of cyberspace, passing barriers that would block classical communication.
 
 Message Structure
 
-```scheme
+`scheme
 (quantum-message
   (id "sha256:msg-hash...")
   (topic "realm/agents/status")
@@ -230,7 +230,7 @@ Message Structure
   (sequence 42)
   (payload (status running) (progress 0.73))
   (signature #${ed25519-sig}))
-```
+`
 
 All messages are signed by the source agent.
 
@@ -238,11 +238,11 @@ Delivery Guarantees
 
 | Mode | Guarantee |
 |------|-----------|
-| `at-most-once` | Fire and forget (default) |
-| `at-least-once` | Retry until ack |
-| `exactly-once` | Deduplication + ack |
+| at-most-once | Fire and forget (default) |
+| at-least-once | Retry until ack |
+| exactly-once | Deduplication + ack |
 
----
+------------------------------------------------------------------------------
 
 Realm Coordination
 
@@ -250,12 +250,12 @@ What is a Realm?
 
 A realm is an execution domain with:
 
-- **Coordinator** - Supervises agents, enforces policy (quiescent until message)
-- **Policy** - What agents can do (SPKI-based)
-- **Resources** - CPU, memory, network quotas
-- **Pub/sub broker** - Message routing
+- Coordinator - Supervises agents, enforces policy (quiescent until message)
+- Policy - What agents can do (SPKI-based)
+- Resources - CPU, memory, network quotas
+- Pub/sub broker - Message routing
 
-```scheme
+`scheme
 (define-record-type &lt;realm&gt;
   (make-realm id coordinator policy agents topics)
   realm?
@@ -264,13 +264,13 @@ A realm is an execution domain with:
   (policy realm-policy)            ; SPKI authorization policy
   (agents realm-agents)            ; Hash table of active agents
   (topics realm-topics))           ; Hash table of topics
-```
+`
 
 Quiescent Coordinator
 
 Coordinators are event-driven, not polling. Zero CPU when idle:
 
-```scheme
+`scheme
 (define (coordinator-loop realm)
   (let loop ()
     ;; Block until message arrives (no busy-wait)
@@ -283,13 +283,13 @@ Coordinators are event-driven, not polling. Zero CPU when idle:
         ((lock-req)  (handle-lock-request realm msg))
         ((signal)    (handle-signal realm msg)))
       (loop))))
-```
+`
 
 Agent Heartbeat
 
 Agents must heartbeat to their coordinator:
 
-```scheme
+`scheme
 (agent-heartbeat
   (agent-id "sha256:...")
   (realm "sha256:realm...")
@@ -299,43 +299,43 @@ Agents must heartbeat to their coordinator:
     (cpu-ms 1234)
     (memory-kb 5678)
     (messages-sent 42)))
-```
+`
 
 Missing heartbeats trigger investigation:
 
-```
+`
 0s    - heartbeat expected
 30s   - grace period
 60s   - coordinator pings agent
 90s   - agent marked unhealthy
 120s  - agent decohered (or superposed)
-```
+`
 
 Remote Termination (Kill Signal)
 
 Coordinators can terminate agents remotely:
 
-```scheme
+`scheme
 (coordinator-kill agent-id
   #!key reason grace-period)
-```
+`
 
-**Kill Signal:**
-```scheme
+Kill Signal:
+`scheme
 (kill-signal
   (target agent-id)
   (issuer coordinator-key)
   (reason (policy-violation "exceeded-cpu-quota"))
   (grace-period 5)  ; seconds to superpose
   (signature #${ed25519-sig}))
-```
+`
 
 Agents MUST honor kill signals. Failure to terminate results in:
 1. Resource revocation (network, storage access removed)
 2. Forced decoherence by runtime
 3. Blacklisting of spawning principal
 
----
+------------------------------------------------------------------------------
 
 Distributed Locking (SCS-Style)
 
@@ -343,18 +343,18 @@ Lock Manager
 
 Each realm has a lock manager for coordination:
 
-```scheme
+`scheme
 (define-record-type &lt;lock-manager&gt;
   (make-lock-manager realm locks waiters)
   lock-manager?
   (realm lm-realm)
   (locks lm-locks)      ; Hash table: resource → holder
   (waiters lm-waiters)) ; Hash table: resource → queue
-```
+`
 
 Lock Operations
 
-```scheme
+`scheme
 (lock-acquire resource
   #!key timeout mode)
 ;; mode: 'exclusive | 'shared
@@ -364,36 +364,36 @@ Lock Operations
 (lock-upgrade resource)  ; shared → exclusive
 
 (lock-downgrade resource)  ; exclusive → shared
-```
+`
 
 Distributed Locks (Cross-Realm)
 
 For resources spanning realms:
 
-```scheme
+`scheme
 (distributed-lock resource realms
   #!key timeout coordinator)
-```
+`
 
 Uses two-phase locking:
-1. **Prepare** - All realms vote to grant lock
-2. **Commit** - Lock granted if all vote yes
-3. **Abort** - Any no vote aborts
+1. Prepare - All realms vote to grant lock
+2. Commit - Lock granted if all vote yes
+3. Abort - Any no vote aborts
 
 Deadlock Detection
 
 Lock manager maintains wait-for graph:
 
-```scheme
+`scheme
 (define (detect-deadlock lock-manager)
   "Find cycles in wait-for graph"
   (let ((graph (build-wait-for-graph lock-manager)))
     (find-cycles graph)))
-```
+`
 
 Resolution: Youngest agent in cycle is aborted.
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
@@ -403,9 +403,9 @@ Agent channels must resist covert channel analysis:
 
 | Channel Type | Leak Vector | Mitigation |
 |--------------|-------------|------------|
-| **Storage** | Message size, topic names | Pad to fixed sizes |
-| **Timing** | Response latency | Add jitter, batch windows |
-| **Signaling** | Pub/sub presence | Dummy traffic |
+| Storage | Message size, topic names | Pad to fixed sizes |
+| Timing | Response latency | Add jitter, batch windows |
+| Signaling | Pub/sub presence | Dummy traffic |
 
 Credential Validation
 
@@ -417,26 +417,26 @@ On every operation:
 
 Migration Security
 
-```scheme
+`scheme
 (define (validate-migration agent target-realm)
   (and (valid-credentials? (agent-credentials agent))
        (realm-admits? target-realm agent)
        (not-revoked? (agent-credentials agent))
        (within-quota? target-realm agent)))
-```
+`
 
 Audit Trail
 
 All agent actions recorded:
 
-```scheme
+`scheme
 (audit-append
   actor: (agent-principal agent)
   action: `(teleport ,agent-id ,target-realm)
   motivation: "data locality optimization")
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Homomorphic Encryption Integration
 
@@ -456,7 +456,7 @@ Encrypted Agent State
 
 Agents can carry encrypted state they cannot read:
 
-```scheme
+`scheme
 (entangle
   code: aggregation-circuit  ; Pre-compiled HE circuit
   state: (encrypted-state
@@ -464,32 +464,32 @@ Agents can carry encrypted state they cannot read:
            (scheme 'bfv)
            (operations '(add multiply)))
   credentials: cert-chain)
-```
+`
 
 The agent computes on encrypted data, returns encrypted result. Only the principal with the decryption key can read the result.
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. Telescript Language Reference - General Magic *(preserved)*
-2. Mobile Agents - Lange &amp; Oshima *(preserved)*
-3. Distributed Lock Manager - VAX/VMS SCS *(preserved)*
-4. Concurrency Oriented Programming in Termite Scheme - Germain *(preserved)*
+1. Telescript Language Reference - General Magic (preserved)
+2. Mobile Agents - Lange &amp; Oshima (preserved)
+3. Distributed Lock Manager - VAX/VMS SCS (preserved)
+4. Concurrency Oriented Programming in Termite Scheme - Germain (preserved)
 5. RFC-003: Cryptographic Audit Trail
 6. RFC-004: SPKI Authorization
 7. RFC-010: Federation Protocol
 8. RFC-021: Capability Delegation
 9. RFC-023: Agent Sandboxing
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft with quantum vocabulary
+- 2026-01-07 - Initial draft with quantum vocabulary
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Proposed
-**Dependencies:** spki, vault, audit, federation
-**Integration:** Realm coordinators, pub/sub broker, lock manager</pre></body></html>
+Implementation Status: Proposed
+Dependencies: spki, vault, audit, federation
+Integration: Realm coordinators, pub/sub broker, lock manager</pre></body></html>

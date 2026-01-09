@@ -4,33 +4,33 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-036: Quorum Protocol with Homomorphic Voting
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper &lt;ddp@eludom.net&gt;
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies the quorum protocol for the Library of Cyberspace: how principals reach collective decisions through homomorphic encryption-based voting, enabling private ballot tallying without revealing individual votes. Quorum integrates with threshold governance (RFC-007) and Byzantine consensus (RFC-011).
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Collective decisions require:
 
-- **Privacy** - Voters shouldn't know how others voted
-- **Verifiability** - Results must be provably correct
-- **Coercion resistance** - Can't prove how you voted to others
-- **Availability** - Voting continues despite failures
+- Privacy - Voters shouldn't know how others voted
+- Verifiability - Results must be provably correct
+- Coercion resistance - Can't prove how you voted to others
+- Availability - Voting continues despite failures
 
 Traditional approaches fail:
 
-- **Open ballot** - No privacy, enables coercion
-- **Trusted tallier** - Single point of compromise
-- **Secure multi-party computation** - Complex, high communication overhead
+- Open ballot - No privacy, enables coercion
+- Trusted tallier - Single point of compromise
+- Secure multi-party computation - Complex, high communication overhead
 
 Homomorphic encryption provides:
 
@@ -39,7 +39,7 @@ Homomorphic encryption provides:
 - Decrypt only the final tally
 - Mathematical proof of correctness
 
----
+------------------------------------------------------------------------------
 
 Cryptographic Foundation
 
@@ -47,15 +47,15 @@ Homomorphic Encryption Schemes
 
 | Scheme | Operations | Performance | Use Case |
 |--------|------------|-------------|----------|
-| **Paillier** | Addition | Fast | Vote tallying |
-| **BFV/BGV** | Add + Multiply | Medium | Complex predicates |
-| **TFHE** | Arbitrary | Slow | General computation |
+| Paillier | Addition | Fast | Vote tallying |
+| BFV/BGV | Add + Multiply | Medium | Complex predicates |
+| TFHE | Arbitrary | Slow | General computation |
 
 For quorum voting, Paillier suffices - we only need addition.
 
 Paillier Properties
 
-```scheme
+`scheme
 ;; Additive homomorphism
 (= (decrypt (he-add (encrypt a) (encrypt b)))
    (+ a b))
@@ -66,11 +66,11 @@ Paillier Properties
 
 ;; Semantic security - ciphertexts indistinguishable
 (not (distinguishable? (encrypt 0) (encrypt 1)))
-```
+`
 
 Key Generation
 
-```scheme
+`scheme
 (define-record-type &lt;quorum-keys&gt;
   (make-quorum-keys public private threshold shares)
   quorum-keys?
@@ -90,15 +90,15 @@ Key Generation
       #f  ; No single party holds private key
       threshold
       (map cons trustees shares))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Ballot Structure
 
 Ballot Definition
 
-```scheme
+`scheme
 (define-record-type &lt;ballot&gt;
   (make-ballot id question options threshold deadline)
   ballot?
@@ -115,11 +115,11 @@ Ballot Definition
   options: '(accept reject abstain)
   threshold: '(majority members)  ; &gt;50% of members
   deadline: 1767786000)
-```
+`
 
 Encrypted Vote
 
-```scheme
+`scheme
 (define-record-type &lt;encrypted-vote&gt;
   (make-encrypted-vote ballot-id voter ciphertext proof timestamp signature)
   encrypted-vote?
@@ -129,11 +129,11 @@ Encrypted Vote
   (proof vote-proof)             ; Zero-knowledge proof of validity
   (timestamp vote-timestamp)
   (signature vote-signature))
-```
+`
 
 Vote Encoding
 
-```scheme
+`scheme
 ;; One-hot encoding for multiple choices
 ;; accept=1, reject=0, abstain=0 → (1, 0, 0)
 
@@ -152,15 +152,15 @@ Vote Encoding
 ;; Vote for "accept"
 (encrypt-vote 'accept '(accept reject abstain) pub-key)
 ;; =&gt; (Enc(1), Enc(0), Enc(0))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Voting Protocol
 
 Phase 1: Ballot Creation
 
-```scheme
+`scheme
 (define (create-ballot question options threshold deadline trustees)
   "Create new ballot with threshold decryption"
   (let* ((keys (generate-quorum-keys 2048
@@ -184,11 +184,11 @@ Phase 1: Ballot Creation
     (audit-append action: 'ballot-created
                   ballot: (ballot-id ballot))
     ballot))
-```
+`
 
 Phase 2: Vote Casting
 
-```scheme
+`scheme
 (define (cast-vote ballot choice voter-key)
   "Cast encrypted vote with validity proof"
   (let* ((pub-key (ballot-public-key ballot))
@@ -223,11 +223,11 @@ Phase 2: Vote Casting
   (audit-append action: 'vote-cast
                 ballot: (vote-ballot-id vote)
                 voter: (vote-voter vote)))
-```
+`
 
 Phase 3: Homomorphic Tallying
 
-```scheme
+`scheme
 (define (tally-votes ballot)
   "Homomorphically sum all votes"
   (let* ((votes (soup-query type: 'encrypted-vote
@@ -245,11 +245,11 @@ Phase 3: Homomorphic Tallying
 ;; After tallying 100 votes:
 ;; (Enc(47), Enc(41), Enc(12))
 ;; Still encrypted - no one knows the result yet
-```
+`
 
 Phase 4: Threshold Decryption
 
-```scheme
+`scheme
 (define (decrypt-tally ballot encrypted-tally)
   "Threshold decrypt the tally"
   (let* ((trustees (ballot-trustees ballot))
@@ -283,11 +283,11 @@ Phase 4: Threshold Decryption
                       (tally ,encrypted-tally)))))
     (and (valid-share? response)
          response)))
-```
+`
 
 Phase 5: Result Publication
 
-```scheme
+`scheme
 (define (publish-result ballot tally)
   "Publish verified result"
   (let* ((options (ballot-options ballot))
@@ -305,9 +305,9 @@ Phase 5: Result Publication
                   ballot: (ballot-id ballot)
                   result: result
                   winner: winner)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Zero-Knowledge Proofs
 
@@ -315,7 +315,7 @@ Vote Validity Proof
 
 Prove vote is valid (exactly one 1, rest 0s) without revealing which:
 
-```scheme
+`scheme
 (define (generate-validity-proof encrypted-vote choice public-key)
   "ZK proof that vote encodes valid choice"
   ;; Disjunctive proof: prove one of N possibilities
@@ -339,13 +339,13 @@ Prove vote is valid (exactly one 1, rest 0s) without revealing which:
     (and (verify-or-proof proof ciphertext pub-key)
          ;; Verify sum of encrypted values equals Enc(1)
          (verify-sum-equals-one ciphertext pub-key))))
-```
+`
 
 Decryption Share Proof
 
 Prove decryption share is correct:
 
-```scheme
+`scheme
 (define (generate-share-proof share ciphertext trustee-key)
   "ZK proof that decryption share is correct"
   (make-dlog-proof
@@ -360,15 +360,15 @@ Prove decryption share is correct:
     (share-value share)
     trustee-pubkey
     ciphertext))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Voter Privacy
 
 Anonymous Voting Tokens
 
-```scheme
+`scheme
 (define (issue-voting-token voter-key ballot-id issuer-key)
   "Issue blind voting token"
   ;; Voter blinds their key
@@ -390,13 +390,13 @@ Anonymous Voting Tokens
   (let ((vote (cast-vote ballot choice token)))
     ;; Vote linked to token, not voter identity
     vote))
-```
+`
 
 Receipt-Freeness
 
 Voters cannot prove how they voted (prevents vote buying/coercion):
 
-```scheme
+`scheme
 ;; Re-encryption mixnet for receipt-freeness
 (define (submit-through-mixnet vote mixnet-nodes)
   "Submit vote through re-encryption mixnet"
@@ -407,59 +407,59 @@ Voters cannot prove how they voted (prevents vote buying/coercion):
             (mixnet-shuffle node re-encrypted)))
         vote
         mixnet-nodes))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Quorum Types
 
 Simple Majority
 
-```scheme
+`scheme
 (define (simple-majority tally total-eligible)
   "More than half of voters"
   (let ((total-votes (apply + tally))
         (winning-votes (apply max tally)))
     (&gt; winning-votes (/ total-votes 2))))
-```
+`
 
 Supermajority
 
-```scheme
+`scheme
 (define (supermajority tally fraction)
   "Require fraction (e.g., 2/3) agreement"
   (let ((total-votes (apply + tally))
         (winning-votes (apply max tally)))
     (&gt;= winning-votes (* fraction total-votes))))
-```
+`
 
 Threshold of Eligible
 
-```scheme
+`scheme
 (define (threshold-of-eligible tally total-eligible threshold)
   "Require threshold of all eligible voters"
   (let ((winning-votes (apply max tally)))
     (&gt;= winning-votes (* threshold total-eligible))))
-```
+`
 
 Weighted Voting
 
-```scheme
+`scheme
 (define (weighted-vote voter-key weight choice ballot)
   "Cast vote with weight"
   ;; Encode weight in vote
   (let ((encoded (map (lambda (v) (* v weight))
                       (encode-vote choice (ballot-options ballot)))))
     (encrypt-vote-vector encoded (ballot-public-key ballot))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Integration with Governance
 
 RFC-007 Threshold Governance
 
-```scheme
+`scheme
 ;; Quorum voting for threshold operations
 (define (threshold-operation-vote operation trustees)
   "Vote on threshold operation"
@@ -471,11 +471,11 @@ RFC-007 Threshold Governance
                   trustees: trustees)))
     ;; Wait for voting
     (await-ballot-result ballot)))
-```
+`
 
 RFC-011 Byzantine Consensus
 
-```scheme
+`scheme
 ;; Use quorum voting within Byzantine protocol
 (define (byzantine-propose-vote proposal validators)
   "Propose via encrypted voting"
@@ -489,11 +489,11 @@ RFC-011 Byzantine Consensus
 (define (byzantine-quorum n)
   "2f+1 for n=3f+1 validators"
   (+ (* 2 (floor (/ (- n 1) 3))) 1))
-```
+`
 
 Key Ceremony Voting
 
-```scheme
+`scheme
 ;; Vote to approve key ceremony
 (define (key-ceremony-approval ceremony guardians)
   "Guardians vote to approve ceremony"
@@ -507,9 +507,9 @@ Key Ceremony Voting
       (if (eq? (result-winner result) 'approve)
           (proceed-ceremony ceremony)
           (abort-ceremony ceremony)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
@@ -533,16 +533,16 @@ Attack Mitigations
 
 Audit Trail
 
-```scheme
+`scheme
 ;; All voting actions audited
 (audit-append action: 'ballot-created ...)
 (audit-append action: 'vote-cast ...)      ; Voter ID, not choice
 (audit-append action: 'tally-computed ...)
 (audit-append action: 'share-provided ...)
 (audit-append action: 'result-published ...)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Performance Considerations
 
@@ -558,7 +558,7 @@ Paillier Costs
 
 Scalability
 
-```scheme
+`scheme
 ;; For N voters, M options:
 ;; - Encryption: O(N * M) operations
 ;; - Tallying: O(N * M) additions (fast)
@@ -568,18 +568,18 @@ Scalability
 ;; ~50,000 encryptions (parallel)
 ;; ~30,000 additions (&lt;1 second)
 ;; ~15 decryptions (~150ms)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Implementation Notes
 
 Dependencies
 
-- `paillier` - Paillier cryptosystem
-- `shamir` - Secret sharing for threshold keys
-- `zkp` - Zero-knowledge proof primitives
-- `srfi-27` - Random number generation
+- paillier - Paillier cryptosystem
+- shamir - Secret sharing for threshold keys
+- zkp - Zero-knowledge proof primitives
+- srfi-27 - Random number generation
 
 Libraries
 
@@ -588,7 +588,7 @@ Recommended implementations:
 - python-paillier - Reference implementation
 - threshold-paillier - Distributed key generation
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -599,14 +599,14 @@ References
 5. RFC-011: Byzantine Consensus
 6. RFC-022: Key Ceremony Protocol
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Proposed
-**Dependencies:** paillier, shamir, zkp, spki
-**Integration:** Threshold governance, Byzantine consensus, key ceremonies</pre></body></html>
+Implementation Status: Proposed
+Dependencies: paillier, shamir, zkp, spki
+Integration: Threshold governance, Byzantine consensus, key ceremonies</pre></body></html>

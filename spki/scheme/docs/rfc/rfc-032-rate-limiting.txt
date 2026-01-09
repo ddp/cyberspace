@@ -1,41 +1,41 @@
 RFC-032: Rate Limiting and Quotas
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies rate limiting and quotas for the Library of Cyberspace: how vaults protect themselves from abuse while ensuring fair access for legitimate users. Limits are capability-aware and auditable.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Shared resources require protection:
 
-- **Denial of Service** - Malicious overload
-- **Resource exhaustion** - Runaway processes
-- **Fair sharing** - Equal access for all users
-- **Cost control** - Prevent unbounded consumption
+- Denial of Service - Malicious overload
+- Resource exhaustion - Runaway processes
+- Fair sharing - Equal access for all users
+- Cost control - Prevent unbounded consumption
 
 Limits must be:
 
-- **Configurable** - Different limits for different principals
-- **Graceful** - Degrade smoothly, don't cliff
-- **Transparent** - Users know their limits
-- **Auditable** - All limiting decisions logged
+- Configurable - Different limits for different principals
+- Graceful - Degrade smoothly, don't cliff
+- Transparent - Users know their limits
+- Auditable - All limiting decisions logged
 
----
+------------------------------------------------------------------------------
 
 Rate Limiting
 
 Token Bucket Algorithm
 
-```scheme
+`scheme
 (define (make-token-bucket capacity fill-rate)
   "Create token bucket rate limiter"
   (let ((tokens capacity)
@@ -58,11 +58,11 @@ Token Bucket Algorithm
 
 ;; Example: 100 requests per second, burst of 200
 (define request-limiter (make-token-bucket 200 100))
-```
+`
 
 Sliding Window
 
-```scheme
+`scheme
 (define (make-sliding-window size interval)
   "Sliding window rate limiter"
   (let ((events (make-deque)))
@@ -80,11 +80,11 @@ Sliding Window
             (deque-push-back! events (current-time-ms))
             #t)
           #f))))
-```
+`
 
 Leaky Bucket
 
-```scheme
+`scheme
 (define (make-leaky-bucket capacity leak-rate)
   "Leaky bucket for smoothing bursts"
   (let ((level 0)
@@ -104,15 +104,15 @@ Leaky Bucket
               (set! level (+ level amount))
               #t)
             #f)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Quota System
 
 Quota Types
 
-```scheme
+`scheme
 (define quota-types
   '((storage . ((unit . bytes)
                 (period . #f)          ; No reset
@@ -129,11 +129,11 @@ Quota Types
     (objects . ((unit . count)
                 (period . #f)
                 (default . 1000000)))))  ; 1M objects
-```
+`
 
 Quota Tracking
 
-```scheme
+`scheme
 (define principal-quotas (make-hash-table))
 
 (define (get-quota principal quota-type)
@@ -159,11 +159,11 @@ Quota Tracking
   (let ((quota (get-quota principal quota-type))
         (usage (get-usage principal quota-type)))
     (<= (+ usage amount) quota)))
-```
+`
 
 Quota Enforcement
 
-```scheme
+`scheme
 (define (enforce-quota principal quota-type amount)
   "Enforce quota, raise error if exceeded"
   (unless (check-quota principal quota-type amount)
@@ -189,15 +189,15 @@ Quota Enforcement
       (quota-type . ,quota-type)
       (amount . ,amount)
       (timestamp . ,(current-time)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Principal-Based Limits
 
 Limit Tiers
 
-```scheme
+`scheme
 (define limit-tiers
   '((anonymous . ((requests-per-second . 10)
                   (storage-bytes . 0)
@@ -222,11 +222,11 @@ Limit Tiers
     ((premium-principal? principal) 'premium)
     ((authenticated? principal) 'authenticated)
     (else 'anonymous)))
-```
+`
 
 Per-Principal Limiters
 
-```scheme
+`scheme
 (define principal-limiters (make-hash-table))
 
 (define (get-limiter principal)
@@ -247,11 +247,11 @@ Per-Principal Limiters
     (unless (limiter 1)
       (audit-append action: 'rate-limited principal: principal)
       (error 'rate-limited))))
-```
+`
 
 Capability-Based Limits
 
-```scheme
+`scheme
 ;; Capabilities can include rate limits
 (spki-cert
   (issuer vault-admin)
@@ -267,15 +267,15 @@ Capability-Based Limits
 (define (capability-rate-limit cap)
   "Extract rate limit from capability"
   (assoc-ref cap 'rate-limit))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Resource-Specific Limits
 
 Storage Limits
 
-```scheme
+`scheme
 (define (enforce-storage-limit principal size)
   "Enforce storage quota before write"
   (let* ((quota (get-quota principal 'storage))
@@ -291,11 +291,11 @@ Storage Limits
   (soup-aggregate
     where: (owner: principal)
     aggregate: (sum 'size)))
-```
+`
 
 Bandwidth Limits
 
-```scheme
+`scheme
 (define (enforce-bandwidth-limit principal bytes direction)
   "Enforce bandwidth quota"
   (let* ((quota (get-quota principal 'bandwidth))
@@ -306,11 +306,11 @@ Bandwidth Limits
                (used . ,used)
                (requested . ,bytes)
                (direction . ,direction))))))
-```
+`
 
 Connection Limits
 
-```scheme
+`scheme
 (define max-connections-per-principal 100)
 (define principal-connections (make-hash-table))
 
@@ -328,15 +328,15 @@ Connection Limits
       (case direction
         ((open) (+ count 1))
         ((close) (max 0 (- count 1)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Backpressure
 
 Request Queuing
 
-```scheme
+`scheme
 (define request-queue (make-bounded-queue 1000))
 
 (define (queue-request request)
@@ -346,11 +346,11 @@ Request Queuing
         (audit-append action: 'request-rejected reason: 'queue-full)
         (error 'service-unavailable))
       (queue-push! request-queue request)))
-```
+`
 
 Load Shedding
 
-```scheme
+`scheme
 (define (should-shed-load?)
   "Determine if load shedding needed"
   (or (> (cpu-usage) 0.9)
@@ -370,11 +370,11 @@ Load Shedding
      (error 'service-unavailable))
     (else
      (process-request request))))
-```
+`
 
 Retry-After
 
-```scheme
+`scheme
 (define (rate-limit-response retry-after)
   "Generate rate limit response"
   `((status . 429)
@@ -382,15 +382,15 @@ Retry-After
                 (X-RateLimit-Limit . ,(current-limit))
                 (X-RateLimit-Remaining . ,(remaining-tokens))
                 (X-RateLimit-Reset . ,(reset-time))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Monitoring
 
 Limit Metrics
 
-```scheme
+`scheme
 (define (record-limit-metrics)
   "Record rate limiting metrics"
   (metric-set! 'ratelimit.requests.allowed allowed-count)
@@ -398,11 +398,11 @@ Limit Metrics
   (metric-set! 'ratelimit.requests.queued (queue-length request-queue))
   (metric-set! 'quota.storage.used total-storage-used)
   (metric-set! 'quota.storage.available total-storage-available))
-```
+`
 
 Limit Alerts
 
-```scheme
+`scheme
 (define limit-alerts
   '((high-rejection-rate
      (condition (> (/ denied-count (+ allowed-count denied-count)) 0.1))
@@ -413,15 +413,15 @@ Limit Alerts
      (condition (> (/ used quota) 0.9))
      (severity warning)
      (message "Principal approaching quota limit"))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Configuration
 
 Dynamic Limits
 
-```scheme
+`scheme
 ;; Limits can be adjusted at runtime
 (define (set-limit principal limit-type value)
   "Set custom limit for principal"
@@ -440,11 +440,11 @@ Dynamic Limits
                       principal: principal
                       limit-type: limit-type)
       (tier-limit (principal-tier principal) limit-type)))
-```
+`
 
 Limit Inheritance
 
-```scheme
+`scheme
 ;; Groups can have limits that members inherit
 (define (group-limit group limit-type)
   (soup-query-one type: 'group-limit
@@ -457,15 +457,15 @@ Limit Inheritance
       (let ((groups (principal-groups principal)))
         (find (lambda (g) (group-limit g limit-type)) groups))
       (default-limit limit-type)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security
 
 Limit Bypass Prevention
 
-```scheme
+`scheme
 ;; Prevent limit bypass via identity rotation
 (define (track-ip-limits ip)
   "Track limits by IP in addition to principal"
@@ -477,36 +477,36 @@ Limit Bypass Prevention
 (define (combined-rate-limit principal ip)
   (and (rate-limit-principal principal)
        (track-ip-limits ip)))
-```
+`
 
 Audit Trail
 
-```scheme
+`scheme
 (define (audit-limit-event event-type principal details)
   (audit-append
     action: event-type
     principal: principal
     details: details
     timestamp: (current-time)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [Token Bucket Algorithm](https://en.wikipedia.org/wiki/Token_bucket)
-2. [Leaky Bucket Algorithm](https://en.wikipedia.org/wiki/Leaky_bucket)
-3. [RFC-021: Capability Delegation](rfc-021-capability-delegation.md)
-4. [RFC-031: Monitoring](rfc-031-monitoring.md)
+1. Token Bucket Algorithm
+2. Leaky Bucket Algorithm
+3. RFC-021: Capability Delegation
+4. RFC-031: Monitoring
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** soup, spki, monitoring
-**Integration:** API layer, network protocol, resource management
+Implementation Status: Draft
+Dependencies: soup, spki, monitoring
+Integration: API layer, network protocol, resource management

@@ -1,15 +1,17 @@
 RFC-043: Memo Conventions
 
-Status: Proposed Category: Informational Created: 2026-01-07 Author: Library
-of Cyberspace Contributors
+Status: Proposed
+Category: Informational
+Created: 2026-01-07
+Author: Library of Cyberspace Contributors
 
 ------------------------------------------------------------------------------
 
 Abstract
 
 This memo establishes naming conventions, metadata requirements, and scope
-rules for documentation in the Library of Cyberspace. We adopt IETF RFC format
-for technical compatibility while using “memo” as our vernacular.
+rules for documentation in the Library of Cyberspace. We adopt IETF RFC
+format for technical compatibility while using "memo" as our vernacular.
 
 ------------------------------------------------------------------------------
 
@@ -24,25 +26,31 @@ Distribution of this memo is unlimited.
 
 Motivation
 
-The IETF’s “Request for Comments” name reflects a historical process we don’t
-share.[1] We don’t request comments—we record decisions. But the RFC format is
-well-understood and serves our needs.
+The IETF's "Request for Comments" name reflects a historical process we
+don't share.[^h1] We don't request comments—we record decisions. But the
+RFC format is well-understood and serves our needs.
 
-The compromise: RFC format externally, “memo” internally.
+The compromise: RFC format externally, "memo" internally.
 
-    "I penned a memo on wormholes"     ← what we say
-    "See RFC-041"                       ← how we cite
+`
+"I penned a memo on wormholes"     ← what we say
+"See RFC-041"                       ← how we cite
+`
+
+[^h1]: Historical: The first RFC (RFC-1, April 1969) was literally a
+request for comments on host software. The name stuck. Fifty-seven years
+later, nobody requests comments—they publish specifications.
 
 ------------------------------------------------------------------------------
 
 Terminology
 
-  Term      Meaning
-  --------- ------------------------------------------------------
-  memo      Any document in the Library of Cyberspace
-  RFC       A memo published in RFC format with canonical number
-  pen       To author a memo
-  promote   To elevate scope (local → federation → core)
+| Term | Meaning |
+|------|---------|
+| memo | Any document in the Library of Cyberspace |
+| RFC | A memo published in RFC format with canonical number |
+| pen | To author a memo |
+| promote | To elevate scope (local → federation → core) |
 
 ------------------------------------------------------------------------------
 
@@ -50,44 +58,46 @@ Memo Metadata
 
 Every memo begins with a standardized header:
 
-    # RFC-NNN: Title
+`markdown
+RFC-NNN: Title
 
-    **Status:** Draft | Proposed | Implemented | Historic
-    **Category:** Standards Track | Informational | Experimental | BCP | Historic
-    **Scope:** core | federation | local
-    **Created:** YYYY-MM-DD
-    **Updated:** YYYY-MM-DD
-    **Author:** Name <email>
-    **Origin:** federation-name | core
-    **Signed:** <spki-hash> (optional)
-    **Updates:** RFC-NNN (if applicable)
-    **Obsoletes:** RFC-NNN (if applicable)
+Status: Draft | Proposed | Implemented | Historic
+Category: Standards Track | Informational | Experimental | BCP | Historic
+Scope: core | federation | local
+Created: YYYY-MM-DD
+Updated: YYYY-MM-DD
+Author: Name <email>
+Origin: federation-name | core
+Signed: <spki-hash> (optional)
+Updates: RFC-NNN (if applicable)
+Obsoletes: RFC-NNN (if applicable)
 
-    ---
+------------------------------------------------------------------------------
 
-    ## Abstract
+Abstract
 
-    One paragraph summary.
+One paragraph summary.
+`
 
 Required Fields
 
-  Field      Required   Description
-  ---------- ---------- -----------------------------
-  Status     Yes        Document lifecycle stage
-  Category   Yes        Document type (per RFC-019)
-  Scope      Yes        Visibility and authority
-  Created    Yes        Initial authorship date
-  Author     Yes        Who penned the memo
+| Field | Required | Description |
+|-------|----------|-------------|
+| Status | Yes | Document lifecycle stage |
+| Category | Yes | Document type (per RFC-019) |
+| Scope | Yes | Visibility and authority |
+| Created | Yes | Initial authorship date |
+| Author | Yes | Who penned the memo |
 
 Optional Fields
 
-  Field       When Used
-  ----------- -----------------------------
-  Updated     After modifications
-  Origin      For federation-scoped memos
-  Signed      For authenticated memos
-  Updates     When extending prior memo
-  Obsoletes   When replacing prior memo
+| Field | When Used |
+|-------|-----------|
+| Updated | After modifications |
+| Origin | For federation-scoped memos |
+| Signed | For authenticated memos |
+| Updates | When extending prior memo |
+| Obsoletes | When replacing prior memo |
 
 ------------------------------------------------------------------------------
 
@@ -97,40 +107,46 @@ Memos exist at three scopes:
 
 Table 1: Memo Scopes
 
-  Scope        Format           Authority            Visibility
-  ------------ ---------------- -------------------- -------------------
-  core         RFC-NNN          Core maintainers     Global, canonical
-  federation   <fed>:memo-NNN   Federation members   Federation-wide
-  local        local:memo-NNN   Node author          Single node
+| Scope | Format | Authority | Visibility |
+|-------|--------|-----------|------------|
+| core | RFC-NNN | Core maintainers | Global, canonical |
+| federation | <fed>:memo-NNN | Federation members | Federation-wide |
+| local | local:memo-NNN | Node author | Single node |
 
 Core Scope
 
 Core memos use IETF-style sequential numbering:
 
-    RFC-001, RFC-002, ... RFC-043
+`
+RFC-001, RFC-002, ... RFC-043
+`
 
-These are canonical specifications for the Library of Cyberspace. Core
-maintainer approval required for Standards Track, BCP, and Historic. Anyone
-may pen Informational or Experimental memos with maintainer review.
+These are canonical specifications for the Library of Cyberspace.
+Core maintainer approval required for Standards Track, BCP, and Historic.
+Anyone may pen Informational or Experimental memos with maintainer review.
 
 Federation Scope
 
 Federation memos are namespaced by federation identifier:
 
-    yoyodyne:memo-001
-    alexandria:memo-042
+`
+yoyodyne:memo-001
+alexandria:memo-042
+`
 
-Each federation maintains its own numbering sequence. Federation memos are
-visible to all federation members but not globally canonical.
+Each federation maintains its own numbering sequence. Federation memos
+are visible to all federation members but not globally canonical.
 
 Local Scope
 
 Local memos exist only on the authoring node:
 
-    local:memo-001
+`
+local:memo-001
+`
 
-Local memos are drafts, notes, or node-specific documentation. They never
-leave the node unless explicitly promoted.
+Local memos are drafts, notes, or node-specific documentation.
+They never leave the node unless explicitly promoted.
 
 ------------------------------------------------------------------------------
 
@@ -138,17 +154,21 @@ Promotion Path
 
 Memos flow upward through scopes:
 
-    local:memo  →  fed:memo  →  RFC
-        ↓            ↓           ↓
-      draft     federation    canonical
-                 review       consensus
+`
+local:memo  →  fed:memo  →  RFC
+    ↓            ↓           ↓
+  draft     federation    canonical
+             review       consensus
+`
 
 Local to Federation
 
 A node author submits a local memo to their federation:
 
-    (memo-promote "local:memo-007" 'federation)
-    ;; → yoyodyne:memo-023
+`scheme
+(memo-promote "local:memo-007" 'federation)
+;; → yoyodyne:memo-023
+`
 
 Federation review and rough consensus required.
 
@@ -156,11 +176,13 @@ Federation to Core
 
 A federation submits a memo for core adoption:
 
-    (memo-promote "yoyodyne:memo-023" 'core)
-    ;; → RFC-044 (after consensus)
+`scheme
+(memo-promote "yoyodyne:memo-023" 'core)
+;; → RFC-044 (after consensus)
+`
 
-Cross-federation review and rough consensus required. Standards Track requires
-core maintainer approval.
+Cross-federation review and rough consensus required.
+Standards Track requires core maintainer approval.
 
 ------------------------------------------------------------------------------
 
@@ -174,13 +196,17 @@ Federation Namespace
 
 Federation prefix provides isolation:
 
-    yoyodyne:memo-001  ≠  alexandria:memo-001
+`
+yoyodyne:memo-001  ≠  alexandria:memo-001
+`
 
 Content-Addressed Fallback
 
 For unambiguous citation across contexts:
 
-    memo:sha256:a7f3b2c1...
+`
+memo:sha256:a7f3b2c1...
+`
 
 The content hash identifies the exact memo regardless of scope or number.
 
@@ -190,16 +216,22 @@ Citation Format
 
 Within Scope
 
-    See RFC-041 for wormhole specification.
-    See memo-007 for local notes.
+`markdown
+See RFC-041 for wormhole specification.
+See memo-007 for local notes.
+`
 
 Cross-Federation
 
-    See yoyodyne:memo-023 for their implementation.
+`markdown
+See yoyodyne:memo-023 for their implementation.
+`
 
 Unambiguous
 
-    See memo:sha256:a7f3b2c1... for the canonical text.
+`markdown
+See memo:sha256:a7f3b2c1... for the canonical text.
+`
 
 ------------------------------------------------------------------------------
 
@@ -207,15 +239,15 @@ Vernacular
 
 We say:
 
-- “Pen a memo” — author a document
-- “The memo specifies…” — referring to content
-- “Promote the memo” — elevate scope
-- “See the RFC” — cite by number
+- "Pen a memo" — author a document
+- "The memo specifies..." — referring to content
+- "Promote the memo" — elevate scope
+- "See the RFC" — cite by number
 
-We don’t say:
+We don't say:
 
-- “Request for comments” — we’re not requesting
-- “Submit an RFC” — we pen memos, they become RFCs
+- "Request for comments" — we're not requesting
+- "Submit an RFC" — we pen memos, they become RFCs
 
 ------------------------------------------------------------------------------
 
@@ -225,27 +257,29 @@ Signed Memos
 
 Memos MAY include SPKI signatures for authentication:
 
-    **Signed:** sha256:a7f3b2c1...
+`markdown
+Signed: sha256:a7f3b2c1...
+`
 
 The signature covers the memo content hash, binding author to text.
 
 Scope Escalation
 
-Promotion from local to federation to core requires appropriate authorization.
-A local memo cannot claim core status without consensus.
+Promotion from local to federation to core requires appropriate
+authorization. A local memo cannot claim core status without consensus.
 
 Metadata Integrity
 
-Memo metadata is stored with content in the vault. Tampering with metadata
-(scope, author, date) is detectable via content addressing.
+Memo metadata is stored with content in the vault. Tampering with
+metadata (scope, author, date) is detectable via content addressing.
 
 ------------------------------------------------------------------------------
 
 References
 
-1.  RFC-019 — Documentation Pipeline
-2.  RFC-042 — IETF Normative Reference
-3.  RFC-004 — SPKI Authorization
+1. RFC-019 — Documentation Pipeline
+2. RFC-042 — IETF Normative Reference
+3. RFC-004 — SPKI Authorization
 
 ------------------------------------------------------------------------------
 
@@ -256,7 +290,3 @@ Changelog
 ------------------------------------------------------------------------------
 
 Implementation Status: Proposed
-
-[1] Historical: The first RFC (RFC-1, April 1969) was literally a request for
-comments on host software. The name stuck. Fifty-seven years later, nobody
-requests comments—they publish specifications.

@@ -1,43 +1,43 @@
 RFC-034: Audit Log Protection
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies protection mechanisms for the Library of Cyberspace audit log: how the system prevents resource exhaustion, log flooding, and denial of service attacks against the audit trail while maintaining its integrity as the authoritative record of all vault operations.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 The audit log is sacred:
 
-- **Evidence** - Legal and forensic record
-- **Accountability** - Who did what when
-- **Recovery** - Reconstruct state after failure
-- **Trust** - Foundation of the security model
+- Evidence - Legal and forensic record
+- Accountability - Who did what when
+- Recovery - Reconstruct state after failure
+- Trust - Foundation of the security model
 
 But the audit log is also a target:
 
-- **Flooding** - Generate noise to hide malicious activity
-- **Exhaustion** - Fill storage to halt operations
-- **Evasion** - Overwhelm to prevent logging of real attacks
-- **Amplification** - Small action triggers large log entries
+- Flooding - Generate noise to hide malicious activity
+- Exhaustion - Fill storage to halt operations
+- Evasion - Overwhelm to prevent logging of real attacks
+- Amplification - Small action triggers large log entries
 
 The audit log must protect itself while never failing to record.
 
----
+------------------------------------------------------------------------------
 
 Threat Model
 
 Attack Vectors
 
-```scheme
+`scheme
 (define audit-threats
   '((flooding
      (description "Generate massive log volume")
@@ -63,11 +63,11 @@ Attack Vectors
      (description "Force log rotation/deletion")
      (goal "Remove evidence")
      (method "Fill logs to trigger cleanup"))))
-```
+`
 
 Attacker Capabilities
 
-```scheme
+`scheme
 ;; Assume attacker can:
 ;; - Authenticate as a valid principal
 ;; - Perform many legitimate operations
@@ -78,15 +78,15 @@ Attacker Capabilities
 ;; - Directly write to audit storage
 ;; - Forge signatures on log entries
 ;; - Break cryptographic primitives
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Rate Limiting
 
 Per-Principal Audit Limits
 
-```scheme
+`scheme
 (define audit-rate-limits
   `((entries-per-second . 100)
     (bytes-per-second . 102400)      ; 100KB/s
@@ -107,11 +107,11 @@ Per-Principal Audit Limits
   "Check if principal can generate audit entry"
   (let ((bucket (get-audit-bucket principal)))
     (bucket 1)))  ; Consume one token
-```
+`
 
 Audit Entry Costing
 
-```scheme
+`scheme
 ;; Different operations have different audit costs
 (define audit-costs
   `((read . 1)
@@ -138,11 +138,11 @@ Audit Entry Costing
             principal: principal
             attempted-action: action)
           #f))))
-```
+`
 
 Burst Handling
 
-```scheme
+`scheme
 ;; Allow short bursts but limit sustained rate
 (define (make-audit-limiter)
   (let ((short-term (make-token-bucket 200 100))   ; 100/s, burst 200
@@ -150,22 +150,22 @@ Burst Handling
     (lambda (cost)
       (and (short-term cost)
            (long-term)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Storage Protection
 
 Reserved Audit Space
 
-```scheme
+`scheme
 ;; Always reserve space for audit
-(define *audit-reserved-space* (* 1024 1024 1024))  ; 1GB minimum
+(define audit-reserved-space (* 1024 1024 1024))  ; 1GB minimum
 
 (define (audit-storage-available)
   (let ((total (storage-available))
         (audit-used (audit-storage-used)))
-    (max 0 (- total *audit-reserved-space*))))
+    (max 0 (- total audit-reserved-space))))
 
 (define (check-audit-storage entry-size)
   "Ensure space for audit entry"
@@ -175,11 +175,11 @@ Reserved Audit Space
       (enter-audit-protection-mode)
       ;; But always log
       #t)))
-```
+`
 
 Audit Protection Mode
 
-```scheme
+`scheme
 (define audit-protection-mode? (make-parameter #f))
 
 (define (enter-audit-protection-mode)
@@ -193,16 +193,16 @@ Audit Protection Mode
 
 (define (exit-audit-protection-mode)
   "Resume normal operations"
-  (when (> (audit-storage-available) (* 2 *audit-reserved-space*))
+  (when (> (audit-storage-available) ( 2 audit-reserved-space*))
     (audit-protection-mode? #f)
     (set-vault-mode! 'normal)
     (audit-append-privileged
       action: 'audit-protection-disabled)))
-```
+`
 
 Tiered Storage
 
-```scheme
+`scheme
 ;; Audit log tiers
 (define audit-tiers
   '((hot . ((retention . 86400)      ; 1 day
@@ -225,29 +225,29 @@ Tiered Storage
                           (< age (assoc-ref (cdr t) 'retention))))
                     audit-tiers)))
     (migrate-to-tier entry (car tier))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Entry Size Limits
 
 Maximum Entry Size
 
-```scheme
-(define *max-audit-entry-size* 65536)  ; 64KB
+`scheme
+(define max-audit-entry-size 65536)  ; 64KB
 
 (define (validate-audit-entry entry)
   "Validate entry before logging"
   (let ((size (serialized-size entry)))
-    (when (> size *max-audit-entry-size*)
+    (when (> size max-audit-entry-size)
       (error 'audit-entry-too-large
              `((size . ,size)
-               (limit . ,*max-audit-entry-size*))))))
-```
+               (limit . ,max-audit-entry-size))))))
+`
 
 Entry Truncation
 
-```scheme
+`scheme
 (define (truncate-audit-entry entry max-size)
   "Truncate oversized entry while preserving critical fields"
   (let ((critical '(action principal timestamp hash signature)))
@@ -267,11 +267,11 @@ Entry Truncation
                     action: 'audit-entry-truncation-failed
                     original-size: (serialized-size entry))
                   entry)))))))
-```
+`
 
 Payload Summarization
 
-```scheme
+`scheme
 (define (summarize-large-payload payload)
   "Summarize large payloads for audit"
   (if (> (bytevector-length payload) 1024)
@@ -280,15 +280,15 @@ Payload Summarization
         (hash . ,(content-hash payload))
         (preview . ,(subbytevector payload 0 256)))
       payload))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Aggregation
 
 Event Aggregation
 
-```scheme
+`scheme
 ;; Aggregate similar events to reduce volume
 (define aggregation-window 60)  ; seconds
 (define pending-aggregations (make-hash-table))
@@ -328,11 +328,11 @@ Event Aggregation
           window-end: (assoc-ref agg 'last-seen)
           sample: (assoc-ref agg 'sample))
         (hash-table-delete! pending-aggregations key)))))
-```
+`
 
 Sampling
 
-```scheme
+`scheme
 ;; Sample high-volume events
 (define (should-sample? action principal)
   (let ((rate (current-rate action principal)))
@@ -351,15 +351,15 @@ Sampling
                     sampled: #t)
       ;; Still count for rate tracking
       (increment-audit-counter action principal)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Anomaly Detection
 
 Baseline Establishment
 
-```scheme
+`scheme
 (define (establish-audit-baseline principal duration)
   "Establish normal audit patterns for principal"
   (let ((events (soup-query type: 'audit-entry
@@ -369,11 +369,11 @@ Baseline Establishment
       (common-actions . ,(top-n (map audit-action events) 10))
       (typical-hours . ,(typical-active-hours events))
       (established-at . ,(current-time)))))
-```
+`
 
 Anomaly Detection
 
-```scheme
+`scheme
 (define (detect-audit-anomaly principal current-rate baseline)
   "Detect anomalous audit patterns"
   (let ((expected (assoc-ref baseline 'events-per-hour))
@@ -390,11 +390,11 @@ Anomaly Detection
       ;; Potentially throttle
       (when (> current-rate (* 10 expected))
         (throttle-principal principal)))))
-```
+`
 
 Flood Detection
 
-```scheme
+`scheme
 (define (detect-audit-flood)
   "Detect system-wide audit flooding"
   (let ((current-rate (global-audit-rate))
@@ -410,15 +410,15 @@ Flood Detection
         ;; Throttle top contributors
         (for-each throttle-principal
                   (map car top-principals))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Privileged Logging
 
 System Events
 
-```scheme
+`scheme
 ;; Some events bypass rate limits
 (define privileged-actions
   '(audit-rate-limited
@@ -438,11 +438,11 @@ System Events
     ;; Alert on privileged events
     (when (member (assoc-ref entry 'action) '(security-alert emergency-revoke))
       (send-security-alert entry))))
-```
+`
 
 Guaranteed Delivery
 
-```scheme
+`scheme
 (define (audit-write-guaranteed entry)
   "Write audit entry with guaranteed delivery"
   ;; Write to multiple locations
@@ -457,15 +457,15 @@ Guaranteed Delivery
       (when (< (length successes) 2)
         ;; Failed to write to enough locations
         (emergency-audit-alert entry successes)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Integrity Protection
 
 Append-Only Enforcement
 
-```scheme
+`scheme
 ;; Audit log is strictly append-only
 (define (audit-write entry)
   "Append entry to audit log"
@@ -478,11 +478,11 @@ Append-Only Enforcement
       (write-entry log (cons `(sequence . ,seq) entry))
       ;; Sign the entry
       (sign-entry log entry))))
-```
+`
 
 Chain Integrity
 
-```scheme
+`scheme
 ;; Each entry references previous (blockchain-style)
 (define (chain-entry entry previous-hash)
   `((previous-hash . ,previous-hash)
@@ -502,15 +502,15 @@ Chain Integrity
                    (equal? (assoc-ref entry 'previous-hash) expected-prev))
                (loop (cdr entries)
                      (assoc-ref entry 'hash)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Recovery
 
 Log Reconstruction
 
-```scheme
+`scheme
 (define (reconstruct-audit-log backups)
   "Reconstruct audit log from multiple backups"
   (let ((entries (merge-backup-entries backups)))
@@ -520,11 +520,11 @@ Log Reconstruction
       (unless (verify-audit-chain deduped)
         (error 'audit-chain-broken))
       deduped)))
-```
+`
 
 Gap Detection
 
-```scheme
+`scheme
 (define (detect-audit-gaps log)
   "Find gaps in audit sequence"
   (let loop ((entries (audit-entries log))
@@ -537,25 +537,25 @@ Gap Detection
               (loop (cdr entries) (+ seq 1) gaps)
               (loop (cdr entries) (+ seq 1)
                     (cons (list expected-seq (- seq 1)) gaps)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [NIST SP 800-92: Guide to Computer Security Log Management](https://csrc.nist.gov/publications/detail/sp/800-92/final)
-2. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.md)
-3. [RFC-032: Rate Limiting and Quotas](rfc-032-rate-limiting.md)
-4. [RFC-028: Error Handling and Recovery](rfc-028-error-handling.md)
+1. NIST SP 800-92: Guide to Computer Security Log Management
+2. RFC-003: Cryptographic Audit Trail
+3. RFC-032: Rate Limiting and Quotas
+4. RFC-028: Error Handling and Recovery
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** audit, storage, monitoring
-**Integration:** All vault operations, security monitoring, forensics
+Implementation Status: Draft
+Dependencies: audit, storage, monitoring
+Integration: All vault operations, security monitoring, forensics

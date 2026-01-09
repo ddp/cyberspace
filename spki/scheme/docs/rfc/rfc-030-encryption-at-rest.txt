@@ -1,41 +1,41 @@
 RFC-030: Encryption at Rest
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies encryption at rest for the Library of Cyberspace: how vaults protect stored data using modern cryptography while maintaining content-addressability, key management, and operational flexibility. All sensitive data is encrypted before touching persistent storage.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Data at rest faces threats:
 
-- **Physical theft** - Disks, servers, backups stolen
-- **Insider access** - Unauthorized admin access
-- **Legal compulsion** - Forced disclosure orders
-- **Decommissioning** - Data remnants on old hardware
+- Physical theft - Disks, servers, backups stolen
+- Insider access - Unauthorized admin access
+- Legal compulsion - Forced disclosure orders
+- Decommissioning - Data remnants on old hardware
 
 Encryption must be:
 
-- **Transparent** - Applications unaware of encryption
-- **Performant** - Minimal overhead
-- **Recoverable** - Key loss doesn't mean data loss
-- **Auditable** - All key operations logged
+- Transparent - Applications unaware of encryption
+- Performant - Minimal overhead
+- Recoverable - Key loss doesn't mean data loss
+- Auditable - All key operations logged
 
----
+------------------------------------------------------------------------------
 
 Encryption Model
 
 Layered Encryption
 
-```
+`
 ┌─────────────────────────────────────┐
 │         Application Layer           │
 │       (plaintext objects)           │
@@ -49,11 +49,11 @@ Layered Encryption
 │         Physical Storage            │
 │        (encrypted at rest)          │
 └─────────────────────────────────────┘
-```
+`
 
 Encryption Scope
 
-```scheme
+`scheme
 ;; What gets encrypted
 (define encryption-policy
   `((content . always)           ; Object content - always encrypted
@@ -61,15 +61,15 @@ Encryption Scope
     (indexes . optional)         ; Search indexes - configurable
     (audit-log . always)         ; Audit trail - always encrypted
     (keys . never-plaintext)))   ; Keys never stored plaintext
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Key Hierarchy
 
 Key Types
 
-```scheme
+`scheme
 (define key-hierarchy
   '(master-key                    ; Root of trust
     └── vault-key                 ; Per-vault encryption
@@ -84,11 +84,11 @@ Key Types
                salt: (purpose->salt purpose)
                info: (string->utf8 (symbol->string purpose))
                length: 32))
-```
+`
 
 Master Key
 
-```scheme
+`scheme
 ;; Master key from key ceremony (RFC-022)
 (define (initialize-master-key shares threshold)
   "Reconstruct master key from shares"
@@ -100,11 +100,11 @@ Master Key
       ;; Clear master from memory
       (secure-clear! master)
       vault-key)))
-```
+`
 
 Key Derivation
 
-```scheme
+`scheme
 (define (derive-content-key vault-key object-hash)
   "Derive unique key for each object"
   (hkdf-sha256 vault-key
@@ -118,15 +118,15 @@ Key Derivation
                salt: (integer->bytevector chunk-index)
                info: #u8(99 104 117 110 107)  ; "chunk"
                length: 32))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Object Encryption
 
 Age Format
 
-```scheme
+`scheme
 ;; Use age for object encryption (RFC-018)
 (define (encrypt-object data recipient-keys)
   "Encrypt object using age format"
@@ -135,11 +135,11 @@ Age Format
 (define (decrypt-object encrypted identity)
   "Decrypt object using age format"
   (age-decrypt encrypted identity))
-```
+`
 
 Symmetric Encryption
 
-```scheme
+`scheme
 ;; For internal encryption with derived keys
 (define (encrypt-symmetric data key)
   "Encrypt with ChaCha20-Poly1305"
@@ -152,11 +152,11 @@ Symmetric Encryption
   (let ((nonce (subbytevector encrypted 0 12))
         (ciphertext (subbytevector encrypted 12)))
     (chacha20-poly1305-decrypt ciphertext key nonce)))
-```
+`
 
 Streaming Encryption
 
-```scheme
+`scheme
 (define (encrypt-stream input-port output-port key)
   "Stream encryption for large objects"
   (let ((chunk-size 65536)
@@ -169,15 +169,15 @@ Streaming Encryption
             (secure-clear! chunk-key))
           (set! chunk-index (+ chunk-index 1))
           (loop))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Storage Integration
 
 Encrypted CAS
 
-```scheme
+`scheme
 (define (cas-put-encrypted data)
   "Store encrypted object in CAS"
   (let* ((hash (content-hash data))            ; Hash plaintext
@@ -198,11 +198,11 @@ Encrypted CAS
     (unless (equal? hash (content-hash data))
       (error "Hash verification failed after decryption"))
     data))
-```
+`
 
 Encrypted Soup
 
-```scheme
+`scheme
 (define (soup-put-encrypted hash metadata)
   "Store encrypted soup entry"
   (let* ((serialized (serialize metadata))
@@ -218,11 +218,11 @@ Encrypted Soup
          (serialized (decrypt-symmetric encrypted key)))
     (secure-clear! key)
     (deserialize serialized)))
-```
+`
 
 Encrypted Indexes
 
-```scheme
+`scheme
 ;; Searchable encryption for indexes
 (define (index-put-encrypted term hash)
   "Add encrypted index entry"
@@ -237,15 +237,15 @@ Encrypted Indexes
   "Deterministic encryption for searchable indexes"
   (let ((derived-key (hkdf-sha256 key salt: data length: 32)))
     (siv-encrypt data derived-key)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Key Management
 
 Key Storage
 
-```scheme
+`scheme
 ;; Keys encrypted with master key
 (define (store-vault-key vault-key master-key)
   "Store vault key encrypted with master key"
@@ -261,11 +261,11 @@ Key Storage
       type: 'encrypted-key
       recipient: principal)
     hash))
-```
+`
 
 Key Rotation
 
-```scheme
+`scheme
 (define (rotate-vault-key)
   "Rotate vault encryption key"
   (let ((old-key (vault-key))
@@ -286,11 +286,11 @@ Key Rotation
     (secure-clear! old-key)
 
     (audit-append action: 'key-rotation-complete)))
-```
+`
 
 Key Escrow
 
-```scheme
+`scheme
 ;; Threshold key escrow for recovery
 (define (escrow-vault-key vault-key custodians threshold)
   "Split vault key among custodians"
@@ -308,15 +308,15 @@ Key Escrow
                 (age-decrypt share (custodian-identity custodian)))
               custodian-shares custodians)))
     (shamir-combine decrypted-shares)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Access Control
 
 Key Access
 
-```scheme
+`scheme
 ;; Keys protected by capabilities
 (spki-cert
   (issuer vault-admin)
@@ -329,11 +329,11 @@ Key Access
 (define (authorized-decrypt? principal hash)
   "Check if principal can decrypt object"
   (has-capability? principal 'decrypt hash))
-```
+`
 
 Envelope Encryption
 
-```scheme
+`scheme
 ;; Object encrypted with DEK, DEK encrypted with KEK
 (define (envelope-encrypt data recipients)
   "Envelope encryption for multiple recipients"
@@ -353,15 +353,15 @@ Envelope Encryption
          (dek (find-and-decrypt-dek encrypted-deks identity))
          (encrypted-data (assoc-ref envelope 'encrypted-data)))
     (decrypt-symmetric encrypted-data dek)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Secure Memory
 
 Key Handling
 
-```scheme
+`scheme
 ;; Keys must be handled carefully in memory
 (define (with-key key-source proc)
   "Use key with automatic cleanup"
@@ -376,11 +376,11 @@ Key Handling
   (bytevector-fill! bytevector 0)
   ;; Prevent compiler optimization
   (memory-barrier))
-```
+`
 
 Memory Protection
 
-```scheme
+`scheme
 ;; Lock key pages in memory (prevent swap)
 (define (allocate-secure-memory size)
   (let ((mem (allocate-memory size)))
@@ -391,15 +391,15 @@ Memory Protection
   (secure-clear! mem)
   (munlock mem size)
   (free-memory mem))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Volume Encryption
 
 LUKS Integration
 
-```scheme
+`scheme
 ;; Storage volume encryption
 (define (setup-encrypted-volume device passphrase)
   "Initialize LUKS encrypted volume"
@@ -413,11 +413,11 @@ LUKS Integration
                "vault-storage"
                stdin: passphrase)
   (run-command "mount" "/dev/mapper/vault-storage" (storage-path)))
-```
+`
 
 Hardware Security Modules
 
-```scheme
+`scheme
 ;; HSM for key protection
 (define (hsm-generate-key hsm-slot)
   "Generate key in HSM"
@@ -434,15 +434,15 @@ Hardware Security Modules
     key: key-handle
     mechanism: 'aes-gcm
     data: data))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Audit
 
 Encryption Audit
 
-```scheme
+`scheme
 (define (audit-encryption-operation op hash principal)
   "Log encryption operation"
   (audit-append
@@ -460,11 +460,11 @@ Encryption Audit
     key-id: key-id
     principal: principal
     timestamp: (current-time)))
-```
+`
 
 Compliance Reporting
 
-```scheme
+`scheme
 (define (encryption-compliance-report)
   "Generate encryption compliance report"
   `((total-objects . ,(count-objects))
@@ -473,40 +473,40 @@ Compliance Reporting
     (key-rotation-date . ,(last-key-rotation))
     (algorithm . "ChaCha20-Poly1305")
     (key-length . 256)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Performance
 
 Encryption Overhead
 
-```scheme
+`scheme
 ;; Benchmark encryption overhead
 (define (benchmark-encryption size iterations)
   (let ((data (generate-random-bytes size))
         (key (generate-key 32)))
     (time-iterations iterations
       (encrypt-symmetric data key))))
-```
+`
 
 Hardware Acceleration
 
-```scheme
+`scheme
 ;; Use AES-NI when available
 (define (select-cipher)
   (if (cpu-supports-aes-ni?)
       'aes-256-gcm
       'chacha20-poly1305))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
 Key Compromise
 
-```scheme
+`scheme
 ;; If key is compromised
 (define (handle-key-compromise compromised-key-id)
   "Emergency response to key compromise"
@@ -523,11 +523,11 @@ Key Compromise
 
   ;; Re-encrypt with new key
   (re-encrypt-all-objects))
-```
+`
 
 Side Channels
 
-```scheme
+`scheme
 ;; Constant-time operations
 (define (constant-time-compare a b)
   "Compare without timing leaks"
@@ -537,25 +537,25 @@ Side Channels
       (set! result (bitwise-ior result
                     (bitwise-xor (bytevector-u8-ref a i)
                                  (bytevector-u8-ref b i)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [age](https://age-encryption.org/) - Modern file encryption
-2. [LUKS](https://gitlab.com/cryptsetup/cryptsetup) - Linux Unified Key Setup
-3. [RFC-022: Key Ceremony Protocol](rfc-022-key-ceremony.md)
-4. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.md)
+1. age - Modern file encryption
+2. LUKS - Linux Unified Key Setup
+3. RFC-022: Key Ceremony Protocol
+4. RFC-018: Sealed Archive Format
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** age, chacha20-poly1305, hkdf
-**Integration:** Storage layer, key management, audit
+Implementation Status: Draft
+Dependencies: age, chacha20-poly1305, hkdf
+Integration: Storage layer, key management, audit
