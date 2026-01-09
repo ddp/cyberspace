@@ -2584,6 +2584,10 @@ Cyberspace REPL - Available Commands:
                         (directory path)))
         0)))
 
+(define (plural n singular)
+  "Return 'N thing' or 'N things' based on count"
+  (string-append (number->string n) " " singular (if (= n 1) "" "s")))
+
 (define (banner)
   (let* ((title "Library of Cyberspace")
          (objs (count-vault-items "objects"))
@@ -2594,12 +2598,12 @@ Cyberspace REPL - Available Commands:
          ;; Line 1: title
          (line1 (string-append "  " title))
          (line1-pad (make-string (- 50 (string-length line1)) #\space))
-         ;; Line 2: stats
+         ;; Line 2: stats (plural-aware)
          (stats (string-append "  "
-                   (number->string objs) " objects  "
-                   (number->string rels) " releases  "
-                   (number->string keys) " keys  "
-                   (number->string peers) " peers"))
+                   (plural objs "object") "  "
+                   (plural rels "release") "  "
+                   (plural keys "key") "  "
+                   (plural peers "peer")))
          (line2-pad (make-string (max 0 (- 50 (string-length stats))) #\space)))
     (print "")
     (print "┌" bar "┐")
