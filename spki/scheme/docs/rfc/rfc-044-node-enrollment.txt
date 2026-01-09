@@ -1,0 +1,470 @@
+RFC-044: Node Enrollment Protocol
+
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: Proposed
+
+------------------------------------------------------------------------------
+
+Abstract
+
+This RFC specifies how a new node joins the Library of Cyberspace
+confederation. The goal: a simple, memorable process that a human can
+complete in five minutes with no special knowledge.
+
+If you can verify a phone number by reading back a code, you can enroll
+a node.
+
+------------------------------------------------------------------------------
+
+Motivation
+
+Starlight just arrived. It's a beautiful machine. Now what?
+
+The question every new node faces:
+
+    "How do I become part of the confederation?"
+
+This should be obvious. Like plugging in a new device and having it
+just work. But we also need:
+
+- Cryptographic identity - the node proves it is who it claims
+- Human verification - a person confirms this is the right machine
+- No blind trust - the master doesn't just accept any stranger
+
+The challenge: make it simple enough for anyone, secure enough for
+cryptographers.
+
+------------------------------------------------------------------------------
+
+Design Principles
+
+1. Physical Presence Is Attestation
+
+    If you're sitting at the keyboard, you can vouch for the machine.
+    No TPM, no attestation servers, no remote proof. Just you.
+
+2. The Master Blesses, The Node Requests
+
+    The node never decides on its own identity. It generates keys,
+    presents them, and asks: "Will you name me?"
+
+3. Human-Readable Verification
+
+    No comparing 64-character hex strings. Use words humans can speak
+    aloud and verify by ear.
+
+4. One Command Each Side
+
+    On the new node: one command to request enrollment.
+    On the master: one command to approve.
+
+------------------------------------------------------------------------------
+
+The Protocol
+
+Overview
+
+    ┌─────────────┐                      ┌─────────────┐
+    │  starlight  │                      │   fluffy    │
+    │  (new node) │                      │  (master)   │
+    └──────┬──────┘                      └──────┬──────┘
+           │                                    │
+           │  1. Generate keypair               │
+           │  2. Display verification words     │
+           │                                    │
+           │──── enrollment request ───────────>│
+           │     (pubkey, proposed name)        │
+           │                                    │
+           │                      3. Display words
+           │                      4. Human verifies
+           │                      5. Master signs cert
+           │                                    │
+           │<─── enrollment response ───────────│
+           │     (signed certificate)           │
+           │                                    │
+           │  6. Store certificate              │
+           │  7. Node is enrolled               │
+           │                                    │
+           ▼                                    ▼
+
+------------------------------------------------------------------------------
+
+Step 1: New Node Generates Keys
+
+On starlight, run:
+
+    $ cyberspace enroll starlight
+
+The node:
+
+1. Generates an Ed25519 keypair
+2. Computes verification words from the public key
+3. Displays them prominently
+
+    ╭────────────────────────────────────────────────╮
+    │                                                │
+    │  Requesting enrollment as: starlight           │
+    │                                                │
+    │  Verification words:                           │
+    │                                                │
+    │      castle  river  orange  lighthouse         │
+    │                                                │
+    │  Waiting for master to approve...              │
+    │                                                │
+    ╰────────────────────────────────────────────────╯
+
+The node broadcasts its enrollment request on the local network
+(mDNS/Bonjour) and waits.
+
+------------------------------------------------------------------------------
+
+Step 2: Master Receives Request
+
+On fluffy, the master sees:
+
+    ╭────────────────────────────────────────────────╮
+    │                                                │
+    │  Enrollment request received                   │
+    │                                                │
+    │  Proposed name: starlight                      │
+    │  From: 192.168.0.42                            │
+    │  Hardware: MacBook Air (M4)                    │
+    │                                                │
+    │  Verification words:                           │
+    │                                                │
+    │      castle  river  orange  lighthouse         │
+    │                                                │
+    │  Do these match what you see on starlight?     │
+    │                                                │
+    │  [y] Approve   [n] Reject   [?] Help           │
+    │                                                │
+    ╰────────────────────────────────────────────────╯
+
+The human:
+
+1. Walks over to starlight (or looks at it across the room)
+2. Reads the words displayed there
+3. Confirms they match
+
+This is the attestation. Physical presence. Human verification.
+
+------------------------------------------------------------------------------
+
+Step 3: Master Signs Certificate
+
+If approved, the master:
+
+1. Creates an SPKI certificate binding the name to the public key
+2. Signs it with the master key
+3. Sends it back to the node
+
+    (spki-cert
+      (issuer (public-key (ed25519 "fluffy-master-key...")))
+      (subject (public-key (ed25519 "starlight-pubkey...")))
+      (name starlight)
+      (capability
+        (action vault-read vault-write sync-participate))
+      (validity
+        (not-before 2026-01-09)
+        (not-after 2027-01-09))
+      (signature ...))
+
+The certificate says: "I, fluffy, declare that this key is starlight,
+and starlight may read, write, and sync."
+
+------------------------------------------------------------------------------
+
+Step 4: Node Receives Certificate
+
+Starlight receives and stores the certificate:
+
+    ╭────────────────────────────────────────────────╮
+    │                                                │
+    │  Enrollment complete!                          │
+    │                                                │
+    │  You are now: starlight                        │
+    │  Blessed by: fluffy                            │
+    │  Role: full                                    │
+    │  Valid until: 2027-01-09                       │
+    │                                                │
+    │  Certificate stored in ~/.cyberspace/          │
+    │                                                │
+    │  Run 'cyberspace status' to verify.            │
+    │                                                │
+    ╰────────────────────────────────────────────────╯
+
+Done. Five minutes. No hex strings. No manual key copying.
+
+------------------------------------------------------------------------------
+
+Verification Words
+
+The word list uses the PGP Word List (or similar):
+
+- 256 even-position words (two syllables)
+- 256 odd-position words (three syllables)
+- Phonetically distinct (no rhymes, no similar sounds)
+- Easy to speak over the phone
+
+Converting public key to words:
+
+    (define (pubkey->words pubkey)
+      "Convert public key to verification words"
+      (let* ((hash (sha256 pubkey))
+             (bytes (take hash 4)))  ; First 4 bytes = 4 words
+        (map byte->word bytes)))
+
+    ;; Example
+    (pubkey->words starlight-pubkey)
+    => ("castle" "river" "orange" "lighthouse")
+
+Why only 4 words?
+
+- 32 bits of entropy
+- Enough to prevent accidental confusion
+- Not trying to prevent brute force (physical presence does that)
+- Short enough to remember while walking across the room
+
+------------------------------------------------------------------------------
+
+Local Discovery
+
+Enrollment uses mDNS (Bonjour) for local discovery:
+
+    Service: _cyberspace-enroll._tcp.local
+    TXT record: name=starlight, pubkey=<base64>
+
+The master listens for enrollment requests on the local network only.
+No enrollment over the internet. Physical proximity required.
+
+    (define (broadcast-enrollment-request name pubkey)
+      (mdns-register
+        service: "_cyberspace-enroll._tcp.local"
+        port: 7654
+        txt: `((name ,name)
+               (pubkey ,(base64-encode pubkey))
+               (timestamp ,(current-time)))))
+
+------------------------------------------------------------------------------
+
+Roles and Capabilities
+
+When approving, the master assigns a role:
+
+    ╭────────────────────────────────────────────────╮
+    │                                                │
+    │  Assign role for starlight:                    │
+    │                                                │
+    │  [1] full     - Read, write, sync, witness     │
+    │  [2] witness  - Read, sync, witness votes      │
+    │  [3] archive  - Read-only backup               │
+    │  [4] custom   - Choose specific capabilities   │
+    │                                                │
+    ╰────────────────────────────────────────────────╯
+
+Roles map to SPKI capabilities:
+
+    (define roles
+      '((full    (vault-read vault-write sync-participate witness-vote))
+        (witness (vault-read sync-participate witness-vote))
+        (archive (vault-read sync-receive))))
+
+------------------------------------------------------------------------------
+
+Certificate Renewal
+
+Certificates expire (default: 1 year). Before expiry:
+
+    ╭────────────────────────────────────────────────╮
+    │                                                │
+    │  Certificate expires in 30 days               │
+    │                                                │
+    │  Run 'cyberspace renew' to request renewal    │
+    │                                                │
+    ╰────────────────────────────────────────────────╯
+
+Renewal is simpler than initial enrollment - the node already has a
+valid certificate, so it can authenticate the renewal request
+cryptographically. No word verification needed.
+
+    $ cyberspace renew
+
+    ╭────────────────────────────────────────────────╮
+    │                                                │
+    │  Renewal request sent to fluffy               │
+    │  ...                                           │
+    │  Certificate renewed until 2028-01-09          │
+    │                                                │
+    ╰────────────────────────────────────────────────╯
+
+------------------------------------------------------------------------------
+
+Revocation
+
+If a node is compromised or retired:
+
+    $ cyberspace revoke starlight
+
+    ╭────────────────────────────────────────────────╮
+    │                                                │
+    │  Revoke certificate for: starlight            │
+    │                                                │
+    │  This will:                                    │
+    │  - Add starlight to the revocation list       │
+    │  - Notify all confederation nodes             │
+    │  - Prevent starlight from syncing             │
+    │                                                │
+    │  Type 'starlight' to confirm: _               │
+    │                                                │
+    ╰────────────────────────────────────────────────╯
+
+Revocation propagates via the sync protocol. All nodes learn that
+starlight is no longer trusted.
+
+------------------------------------------------------------------------------
+
+Implementation
+
+Node-Side CLI
+
+    (define (cmd-enroll name)
+      "Request enrollment in the confederation"
+
+      ;; Generate keypair
+      (let* ((keypair (ed25519-generate-keypair))
+             (pubkey (keypair-public keypair))
+             (words (pubkey->words pubkey)))
+
+        ;; Save private key locally
+        (save-private-key keypair)
+
+        ;; Display verification words
+        (display-enrollment-ui name words)
+
+        ;; Broadcast enrollment request
+        (broadcast-enrollment-request name pubkey)
+
+        ;; Wait for response
+        (let ((response (wait-for-enrollment-response)))
+          (if (enrollment-approved? response)
+              (begin
+                (save-certificate (enrollment-certificate response))
+                (display-success name))
+              (display-rejection response)))))
+
+Master-Side Handler
+
+    (define (handle-enrollment-request request)
+      "Process incoming enrollment request"
+      (let* ((name (request-name request))
+             (pubkey (request-pubkey request))
+             (words (pubkey->words pubkey)))
+
+        ;; Display for human verification
+        (display-approval-ui name words)
+
+        ;; Get human decision
+        (let ((decision (prompt-approval)))
+          (case decision
+            ((approve)
+             (let* ((role (prompt-role))
+                    (cert (create-enrollment-cert name pubkey role)))
+               (send-enrollment-response request cert)))
+
+            ((reject)
+             (send-rejection request "Rejected by operator"))))))
+
+------------------------------------------------------------------------------
+
+Security Considerations
+
+Physical Presence Requirement
+
+    The entire security model rests on physical presence:
+
+    - Enrollment only works on local network
+    - Human must visually verify words
+    - No remote enrollment possible
+
+    If an attacker has physical access to your network AND can
+    intercept your visual verification, you have bigger problems.
+
+Word Collision
+
+    With 32 bits, collision probability is ~1 in 4 billion.
+    If you're enrolling billions of nodes, use more words.
+    For a small confederation, 4 words is plenty.
+
+Certificate Theft
+
+    If someone steals a node's private key:
+
+    1. Revoke the certificate immediately
+    2. Re-enroll with a new keypair
+    3. The old key is useless once revoked
+
+Man-in-the-Middle
+
+    An attacker could intercept the enrollment and substitute their
+    own public key. But then the words wouldn't match. The human
+    verification defeats this attack.
+
+------------------------------------------------------------------------------
+
+Future Extensions
+
+Multi-Master Enrollment
+
+    For confederations with multiple masters, enrollment could require
+    approval from K-of-N masters (threshold enrollment). This is
+    explicitly deferred to keep the initial protocol simple.
+
+Remote Enrollment
+
+    For nodes that can't be physically present, a ceremony involving
+    video call + word verification could work. Also deferred.
+
+Hardware Attestation
+
+    TPM-based attestation could supplement (not replace) human
+    verification. This adds complexity without clear benefit for
+    small confederations.
+
+------------------------------------------------------------------------------
+
+User Experience Summary
+
+For the person enrolling starlight:
+
+    1. Run: cyberspace enroll starlight
+    2. See four words on screen
+    3. Walk to the master
+    4. Confirm the same words appear there
+    5. Press 'y'
+    6. Done
+
+That's it. Four words. One confirmation. Welcome to the confederation.
+
+------------------------------------------------------------------------------
+
+References
+
+1. RFC-000: The Library of Cyberspace
+2. RFC-022: Key Ceremony Protocol
+3. RFC-010: Federation
+4. PGP Word List - https://en.wikipedia.org/wiki/PGP_word_list
+5. RFC 2693 - SPKI Certificate Theory
+
+------------------------------------------------------------------------------
+
+Changelog
+
+- 2026-01-09: Initial draft, inspired by starlight's arrival
+
+------------------------------------------------------------------------------
+
+Implementation Status: Draft
+Dependencies: spki, mdns, word-list
+Integration: cyberspace CLI, vault initialization
