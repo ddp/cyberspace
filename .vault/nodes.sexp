@@ -37,4 +37,15 @@
     (memory "32GB")
     (storage "2TB")
     (status provisioning)
-    (notes "Starlight color, fresh install without Migration Assistant, Jan 2025")))
+    (notes "Starlight color, fresh install without Migration Assistant, Jan 2025"))
+
+  (node
+    (name "unnamed")
+    (role full)
+    (hardware "16\" Framework Laptop")
+    (cpu "TBD")
+    (memory "TBD")
+    (storage "TBD")
+    (os "Fedora or Ubuntu Linux")
+    (status incoming)
+    (notes "First Linux node, cluster heterogeneity test")))
