@@ -4,83 +4,102 @@
 
 ## Overview
 
-This directory contains the minimal Trusted Computing Base for SPKI/SDSI - only the cryptographic primitives that MUST be correct and provably secure.
+This directory contains the minimal Trusted Computing Base for SPKI/SDSI - only the security-critical code that MUST be correct and provably secure.
 
-**TCB Size**: ~200 lines of OCaml + C stubs
+**TCB Size**: ~988 lines OCaml + ~266 lines C stubs (1254 total)
 
 **TCB Guarantees**:
 1. **Signature correctness**: sign/verify round-trip always succeeds
 2. **Unforgeability**: valid signatures prove key possession
 3. **Key binding**: signatures tied to specific keys
 4. **Constant-time**: no timing attacks (libsodium guarantee)
+5. **Certificate chain validation**: monotonic capability attenuation
+6. **Audit trail integrity**: hash-chained, signed log entries
+7. **FIPS-181 verification**: pronounceable codes for enrollment
+
+**Post-Quantum**: Planned (ML-DSA-65, SPHINCS+-SHAKE) when liboqs builds without OpenSSL.
+Prime directive: TCB depends only on libsodium.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────┐
-│   Chicken Scheme (Everything)      │
-│   - Policy, tools, network, UI     │
-│   - All user-facing code           │
-│   - Human-readable s-expressions   │
-└──────────────┬──────────────────────┘
-               │ FFI (minimal boundary)
-               ▼
-┌─────────────────────────────────────┐
-│   OCaml TCB (Crypto Only)          │
-│   - Ed25519 signatures             │
-│   - SHA-512 hashing                │
-│   - libsodium bindings             │
-│   - Coq-provable core              │
-└──────────────┬──────────────────────┘
-               │ C FFI
-               ▼
-┌─────────────────────────────────────┐
-│        libsodium                   │
-│   - Constant-time crypto           │
-│   - Audited implementation         │
-└─────────────────────────────────────┘
++-------------------------------------+
+|   Chicken Scheme (Everything)       |
+|   - Policy, tools, network, UI      |
+|   - All user-facing code            |
+|   - Human-readable s-expressions    |
++-----------------+-------------------+
+                  | FFI (minimal boundary)
+                  v
++-------------------------------------+
+|   OCaml TCB (Security-Critical)     |
+|   - Ed25519 signatures              |
+|   - SHA-256/512, BLAKE2b            |
+|   - Certificate chain validation    |
+|   - Capability tag intersection     |
+|   - FIPS-181 verification codes     |
+|   - Audit trail (hash-chained)      |
+|   - CCP cookie verification         |
++-----------------+-------------------+
+                  | C FFI
+                  v
++-------------------------------------+
+|         libsodium (audited)         |
+|   - Constant-time crypto            |
+|   - No OpenSSL dependency           |
+|   - Single, audited library         |
++-------------------------------------+
 ```
 
 ## Files
 
-### Core TCB (OCaml)
+### Unified TCB (OCaml)
 
-**signature.ml** (91 lines)
-- OCaml interface to libsodium
+**spki_tcb.ml** (~1000 lines)
+The complete security-critical code:
+- **Principals**: Key/KeyHash identity with constant-time comparison
+- **Tags**: Capability tags with monotonic intersection (TagAll, TagSet, TagPrefix, TagRange, TagThreshold)
+- **Certificates**: SPKI certificate structure and chain validation
+- **Authorization**: Single authorization decision point
+- **CCP Cookies**: Stateless DoS defense (PHOTURIS-style)
+- **Audit Trail**: Hash-chained, signed log entries
+- **FIPS-181**: Pronounceable verification codes for enrollment
+
+**tcb_stubs.c** (~260 lines)
+C FFI bindings to libsodium:
 - Ed25519 keypair generation, signing, verification
-- SHA-512 hashing
-- Type-safe wrappers around C bindings
+- SHA-256, SHA-512, BLAKE2b hashing
+- HMAC-SHA256 for cookies
+- Constant-time comparison
+- Cryptographic random bytes
 
-**signature_stubs.c** (114 lines)
-- C FFI bindings to libsodium
-- `caml_sodium_init()` - initialize libsodium
-- `caml_ed25519_keypair()` - generate keypair
-- `caml_ed25519_sign()` - create signature
-- `caml_ed25519_verify()` - verify signature (TCB CRITICAL)
-- `caml_sha512_hash()` - SHA-512 hash
+### Legacy Modules
 
-### Export Layer (for Scheme FFI - future)
+**signature.ml** (91 lines) - Standalone Ed25519 module
+**signature_stubs.c** (114 lines) - libsodium bindings only
 
-**export.ml** (104 lines)
-- C API exported from OCaml
-- Callback registration for Scheme FFI
-- Buffer management for cross-language calls
+### Export Layer (for Scheme FFI)
 
-**export_stubs.c** (165 lines)
-- C wrappers for Scheme FFI
-- Translates between Scheme bytevectors and OCaml bytes
+**export.ml** (104 lines) - C API exported from OCaml
+**export_stubs.c** (165 lines) - Scheme FFI wrappers
 
 ### Testing
 
-**test_signature.ml**
-- Test Ed25519 sign/verify round-trip
-- Test tampering detection
-- Test wrong key rejection
-- Test SHA-512 hashing
+**test_tcb.ml** - 62 tests covering:
+- Principal comparison (reflexive, symmetric, transitive)
+- Tag intersection (monotonic attenuation)
+- All cryptographic primitives (Ed25519, SHA-*, BLAKE2b, HMAC)
+- Cookie generation/verification
+- Audit trail integrity
+- FIPS-181 syllable generation
+- Certificate validity checking
+- Authorization decisions
 
-**dune**
-- Build configuration
-- Links against libsodium (via Homebrew on macOS)
+**test_signature.ml** - Legacy Ed25519 tests
+
+**dune** - Build configuration (libsodium only)
+
+**build-liboqs.sh** - Script to build liboqs without OpenSSL (for future PQ support)
 
 ## Cryptographic Primitives
 
@@ -88,31 +107,36 @@ This directory contains the minimal Trusted Computing Base for SPKI/SDSI - only 
 
 **Key sizes**:
 - Public key: 32 bytes
-- Secret key: 64 bytes (32-byte seed + 32-byte public key)
+- Secret key: 64 bytes
 - Signature: 64 bytes
 
 **Properties**:
 - Deterministic (same message + key = same signature)
 - Fast verification (~70K verifications/second)
 - Constant-time (no timing attacks)
-- Post-quantum security level: broken by Grover's algorithm (2^128 operations)
+- Classical security: 128-bit
 
 **TCB Critical Path**: `ed25519_verify()`
-This is the security guarantee. If it returns `true`, the signature was created by the holder of the corresponding private key. No forgery is possible without the private key.
+If it returns `true`, the signature was created by the holder of the private key.
 
-### SHA-512 Hashing
+### Hash Functions
 
-**Hash size**: 64 bytes
+| Algorithm | Output | Use Case |
+|-----------|--------|----------|
+| SHA-256 | 32 bytes | Content addressing, Merkle trees, FIPS-181 |
+| SHA-512 | 64 bytes | Principal hashes, key identifiers |
+| BLAKE2b | 32 bytes | Audit trail, fast hashing |
 
-**Usage**:
-- Key hashes (for SPKI key identifiers)
-- Message digests
-- Certificate fingerprints
+All hashes provide 128-bit quantum security against Grover's algorithm.
 
-**Properties**:
-- Collision-resistant (2^256 operations to find collision)
-- Pre-image resistant
-- Fast (~300 MB/s)
+### FIPS-181 Verification Codes
+
+Converts public key hashes to pronounceable syllables for verbal verification:
+- Pattern: CVC (consonant-vowel-consonant)
+- 4 syllables from first 4 bytes of SHA-256
+- Example: `bek-fom-riz-tup`
+
+Used during node enrollment (RFC-044) for out-of-band verification.
 
 ## Building
 
@@ -120,22 +144,28 @@ This is the security guarantee. If it returns `true`, the signature was created 
 # From spki/ directory
 dune build tcb/
 
-# Run tests
-dune build tcb/test_signature.exe
-./_build/default/tcb/test_signature.exe
+# Run all tests (62 tests)
+dune exec tcb/test_tcb.exe
+
+# Run legacy signature tests
+dune exec tcb/test_signature.exe
+
+# Run full test suite
+dune runtest
 ```
 
 ## Dependencies
 
-**System**:
-- libsodium (via Homebrew: `/opt/homebrew/lib/libsodium.dylib`)
+**System library** (via Homebrew on macOS):
+```bash
+brew install libsodium
+```
 
 **OCaml**:
 - OCaml >= 4.14
 - dune >= 3.0
-- conf-libsodium (opam package)
 
-**No CryptoKit** - we replaced the placeholder RSA implementation with Ed25519 via libsodium.
+**Prime Directive**: TCB depends only on libsodium. No OpenSSL. No other crypto libraries.
 
 ## Verification Path (Roadmap Month 4)
 
@@ -229,11 +259,11 @@ For SPKI certificate chains, verification is the bottleneck. With 70K verificati
 - Not verifiable
 
 **New** (`spki/tcb/`):
-- ~200 lines total (OCaml + C)
+- ~1254 lines total (988 OCaml + 266 C)
 - Real Ed25519 via libsodium
 - Production-ready crypto
 - Designed for Coq verification
-- SHA-512 instead of SHA-256
+- FIPS-181 verification codes
 - Clean separation: crypto (OCaml) vs policy (Scheme)
 
 ## Next Steps
@@ -264,5 +294,12 @@ For SPKI certificate chains, verification is the bottleneck. With 70K verificati
 ---
 
 **Status**: TCB complete and tested (January 2026)
+- 62 tests passing
+- FIPS-181 verification codes
+- Pure libsodium (no OpenSSL)
 
-**Next milestone**: Scheme FFI integration (Month 1, Week 2)
+**Post-Quantum**: Planned when liboqs builds without OpenSSL dependency.
+The SHAKE-based variants (ML-DSA, SPHINCS+-SHAKE) use Keccak internally
+and don't fundamentally require OpenSSL - just need a clean liboqs build.
+
+**Next milestone**: Scheme FFI integration

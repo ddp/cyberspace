@@ -253,9 +253,14 @@ CAMLprim value caml_randombytes(value n) {
 
 /*
  * TCB Statistics:
- * - Lines of C: ~200
- * - Dependencies: libsodium only
+ * - Lines of C: ~260
+ * - Dependencies: libsodium only (audited)
  * - All operations constant-time (libsodium guarantees)
  * - No malloc/free (OCaml GC handles allocation)
  * - No global mutable state
+ *
+ * Post-Quantum Note:
+ * ML-DSA-65 and SPHINCS+ support planned when liboqs
+ * builds without OpenSSL dependency (prime directive:
+ * TCB depends only on libsodium).
  */

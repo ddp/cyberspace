@@ -876,3 +876,113 @@ let authorize_with_audit log request root_keys now =
   in
   let _entry = audit_append log request result chain_hash in
   result
+
+(* ============================================================
+   FIPS-181 Pronounceable Verification Codes
+
+   @metadata
+   - standard: FIPS PUB 181 (Automated Password Generator)
+   - pattern: CVC (consonant-vowel-consonant)
+   - entropy: ~7.7 bits per syllable (256 values -> limited by CVC)
+   - use_case: verbal verification during node enrollment
+
+   @security
+   Verification codes are NOT cryptographic - they provide
+   human-readable fingerprints for verbal confirmation.
+   Security relies on the underlying hash (SHA-256).
+   ============================================================ *)
+
+(** FIPS-181 vowels *)
+let fips181_vowels = "aeiou"
+
+(** FIPS-181 consonants *)
+let fips181_consonants = "bcdfghjklmnpqrstvwxyz"
+
+(** Convert a byte to a pronounceable CVC syllable (FIPS-181 style)
+
+    @param byte Value 0-255
+    @returns 3-character string (consonant-vowel-consonant)
+
+    Algorithm:
+    - c1 = consonants[byte mod 21]
+    - v  = vowels[(byte / 21) mod 5]
+    - c2 = consonants[(byte / 105 + c1_idx) mod 21]
+
+    The c2 mixing ensures better distribution across syllables.
+*)
+let fips181_byte_to_syllable byte =
+  let c1_idx = byte mod 21 in
+  let v_idx = (byte / 21) mod 5 in
+  let c2_idx = (byte / 105) mod 21 in
+  let c1 = fips181_consonants.[c1_idx] in
+  let v = fips181_vowels.[v_idx] in
+  let c2 = fips181_consonants.[(c2_idx + c1_idx) mod 21] in
+  String.init 3 (function 0 -> c1 | 1 -> v | _ -> c2)
+
+(** Convert bytes to FIPS-181 pronounceable syllables
+
+    @param data Bytes to encode
+    @returns List of 3-character syllables
+*)
+let fips181_encode data =
+  let len = Bytes.length data in
+  let rec loop i acc =
+    if i >= len then List.rev acc
+    else loop (i + 1) (fips181_byte_to_syllable (Char.code (Bytes.get data i)) :: acc)
+  in
+  loop 0 []
+
+(** Convert public key to FIPS-181 verification code
+
+    @param pubkey Public key bytes
+    @returns 4 syllables from first 4 bytes of SHA-256 hash
+
+    4 syllables provide ~30 bits of verification entropy,
+    sufficient to prevent accidental confusion while
+    remaining easy to verify verbally.
+*)
+let fips181_pubkey_code pubkey =
+  let hash = sha256_hash pubkey in
+  let syllables = [
+    fips181_byte_to_syllable (Char.code (Bytes.get hash 0));
+    fips181_byte_to_syllable (Char.code (Bytes.get hash 1));
+    fips181_byte_to_syllable (Char.code (Bytes.get hash 2));
+    fips181_byte_to_syllable (Char.code (Bytes.get hash 3));
+  ] in
+  syllables
+
+(** Format FIPS-181 syllables for display
+
+    @param syllables List of syllables
+    @returns Hyphen-separated string (e.g., "bek-fom-riz-tup")
+*)
+let fips181_display syllables =
+  String.concat "-" syllables
+
+(** Validate a CVC syllable (for input validation)
+
+    @param s String to validate
+    @returns true if valid CVC pattern
+*)
+let fips181_valid_syllable s =
+  String.length s = 3 &&
+  not (String.contains fips181_vowels s.[0]) &&
+  String.contains fips181_vowels s.[1] &&
+  not (String.contains fips181_vowels s.[2])
+
+(* ============================================================
+   Post-Quantum Signatures (PLANNED)
+
+   @metadata
+   - status: PLANNED (awaiting liboqs without OpenSSL dependency)
+   - algorithms: ML-DSA-65 (FIPS 204), SPHINCS+ (FIPS 205)
+   - security: NIST Level 3-5 (128-bit post-quantum)
+
+   @note
+   Post-quantum signatures will be added when liboqs can be built
+   without OpenSSL dependency. Prime directive: TCB depends only
+   on libsodium (audited, minimal).
+
+   Current mitigation: SHA-256/512 provide 128-bit quantum security
+   against Grover's algorithm for hashing operations.
+   ============================================================ *)

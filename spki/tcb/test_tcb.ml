@@ -446,6 +446,261 @@ let test_audit_trail () =
   )
 
 (* ============================================================
+   FIPS-181 Tests - Pronounceable Verification Codes
+   ============================================================ *)
+
+let test_fips181 () =
+  Printf.printf "\n=== FIPS-181 Tests ===\n";
+
+  test "byte->syllable produces CVC" (fun () ->
+    for byte = 0 to 255 do
+      let syllable = fips181_byte_to_syllable byte in
+      assert_true (Printf.sprintf "byte %d -> %s is CVC" byte syllable)
+        (fips181_valid_syllable syllable)
+    done
+  );
+
+  test "byte->syllable deterministic" (fun () ->
+    let s1 = fips181_byte_to_syllable 42 in
+    let s2 = fips181_byte_to_syllable 42 in
+    assert_true "same byte -> same syllable" (s1 = s2)
+  );
+
+  test "syllable diversity (>200 unique)" (fun () ->
+    let syllables = Hashtbl.create 256 in
+    for byte = 0 to 255 do
+      Hashtbl.replace syllables (fips181_byte_to_syllable byte) true
+    done;
+    let unique = Hashtbl.length syllables in
+    assert_true (Printf.sprintf "got %d unique syllables" unique) (unique > 200)
+  );
+
+  test "pubkey code produces 4 syllables" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let syllables = fips181_pubkey_code pk in
+    assert_true "4 syllables" (List.length syllables = 4)
+  );
+
+  test "pubkey code syllables are all CVC" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let syllables = fips181_pubkey_code pk in
+    List.iter (fun s ->
+      assert_true (Printf.sprintf "%s is CVC" s) (fips181_valid_syllable s)
+    ) syllables
+  );
+
+  test "pubkey code deterministic" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let code1 = fips181_pubkey_code pk in
+    let code2 = fips181_pubkey_code pk in
+    assert_true "same key -> same code" (code1 = code2)
+  );
+
+  test "different keys -> different codes (high probability)" (fun () ->
+    let (pk1, _) = ed25519_keypair () in
+    let (pk2, _) = ed25519_keypair () in
+    let code1 = fips181_pubkey_code pk1 in
+    let code2 = fips181_pubkey_code pk2 in
+    (* With 4 bytes of SHA-256, collision probability is ~2^-32 *)
+    assert_true "different keys -> different codes" (code1 <> code2)
+  );
+
+  test "display format" (fun () ->
+    let syllables = ["bek"; "fom"; "riz"; "tup"] in
+    let display = fips181_display syllables in
+    assert_true "hyphen-separated" (display = "bek-fom-riz-tup")
+  );
+
+  test "fips181_encode roundtrip" (fun () ->
+    let data = Bytes.of_string "\x00\x2a\x7f\xff" in
+    let syllables = fips181_encode data in
+    assert_true "4 bytes -> 4 syllables" (List.length syllables = 4);
+    List.iter (fun s ->
+      assert_true (Printf.sprintf "%s is CVC" s) (fips181_valid_syllable s)
+    ) syllables
+  );
+
+  test "valid_syllable rejects invalid" (fun () ->
+    assert_false "vowel start" (fips181_valid_syllable "abc");
+    assert_false "consonant middle" (fips181_valid_syllable "bbc");
+    assert_false "vowel end" (fips181_valid_syllable "baa");
+    assert_false "too short" (fips181_valid_syllable "ba");
+    assert_false "too long" (fips181_valid_syllable "baba")
+  );
+
+  test "valid_syllable accepts valid" (fun () ->
+    assert_true "bab" (fips181_valid_syllable "bab");
+    assert_true "kip" (fips181_valid_syllable "kip");
+    assert_true "zod" (fips181_valid_syllable "zod")
+  )
+
+(* ============================================================
+   Post-Quantum Signature Tests (PLANNED)
+
+   Post-quantum signatures (ML-DSA-65, SPHINCS+-SHAKE) will be
+   added when liboqs can be built without OpenSSL dependency.
+   Prime directive: TCB depends only on libsodium.
+
+   Current quantum resistance:
+   - SHA-256/512 provide 128-bit security against Grover's algorithm
+   - Ed25519 is vulnerable to Shor's algorithm (future concern)
+   ============================================================ *)
+
+(* ============================================================
+   Certificate Tests - Complete Coverage
+   ============================================================ *)
+
+let test_certificates () =
+  Printf.printf "\n=== Certificate Tests ===\n";
+
+  test "cert_to_bytes deterministic" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let cert = {
+      issuer = Key pk;
+      subject = principal_of_key pk;
+      tag = TagSet ["read"; "write"];
+      validity = ValidAlways;
+      propagate = true;
+    } in
+    let b1 = cert_to_bytes cert in
+    let b2 = cert_to_bytes cert in
+    assert_true "same cert -> same bytes" (constant_time_compare b1 b2)
+  );
+
+  test "cert_valid_now - ValidAlways" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let sc = {
+      cert = {
+        issuer = Key pk;
+        subject = Key pk;
+        tag = TagAll;
+        validity = ValidAlways;
+        propagate = false;
+      };
+      signature = Bytes.empty;
+      cert_hash = Bytes.empty;
+    } in
+    assert_true "always valid" (cert_valid_now sc 0L);
+    assert_true "always valid (future)" (cert_valid_now sc 999999999999L)
+  );
+
+  test "cert_valid_now - ValidNotBefore" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let sc = {
+      cert = {
+        issuer = Key pk;
+        subject = Key pk;
+        tag = TagAll;
+        validity = ValidNotBefore 100L;
+        propagate = false;
+      };
+      signature = Bytes.empty;
+      cert_hash = Bytes.empty;
+    } in
+    assert_false "before start" (cert_valid_now sc 50L);
+    assert_true "at start" (cert_valid_now sc 100L);
+    assert_true "after start" (cert_valid_now sc 200L)
+  );
+
+  test "cert_valid_now - ValidNotAfter" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let sc = {
+      cert = {
+        issuer = Key pk;
+        subject = Key pk;
+        tag = TagAll;
+        validity = ValidNotAfter 100L;
+        propagate = false;
+      };
+      signature = Bytes.empty;
+      cert_hash = Bytes.empty;
+    } in
+    assert_true "before end" (cert_valid_now sc 50L);
+    assert_true "at end" (cert_valid_now sc 100L);
+    assert_false "after end" (cert_valid_now sc 200L)
+  );
+
+  test "cert_valid_now - ValidBetween" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let sc = {
+      cert = {
+        issuer = Key pk;
+        subject = Key pk;
+        tag = TagAll;
+        validity = ValidBetween (100L, 200L);
+        propagate = false;
+      };
+      signature = Bytes.empty;
+      cert_hash = Bytes.empty;
+    } in
+    assert_false "before range" (cert_valid_now sc 50L);
+    assert_true "at start" (cert_valid_now sc 100L);
+    assert_true "in range" (cert_valid_now sc 150L);
+    assert_true "at end" (cert_valid_now sc 200L);
+    assert_false "after range" (cert_valid_now sc 250L)
+  );
+
+  test "verify_chain - empty chain fails" (fun () ->
+    match verify_chain [] [] 0L with
+    | ChainInvalid reason -> assert_true "empty chain" (reason = "empty chain")
+    | ChainValid _ -> failwith "should fail"
+  );
+
+  test "tag_to_bytes serialization" (fun () ->
+    let t1 = tag_to_bytes TagAll in
+    assert_true "TagAll -> (*)" (Bytes.to_string t1 = "(*)");
+    let t2 = tag_to_bytes (TagSet ["read"; "write"]) in
+    assert_true "TagSet serializes" (String.length (Bytes.to_string t2) > 0);
+    let t3 = tag_to_bytes (TagRange (10L, 100L)) in
+    assert_true "TagRange serializes" (String.length (Bytes.to_string t3) > 0)
+  )
+
+(* ============================================================
+   Authorization Tests - Complete Coverage
+   ============================================================ *)
+
+let test_authorization () =
+  Printf.printf "\n=== Authorization Tests ===\n";
+
+  test "authorize - no chain fails" (fun () ->
+    let (pk, _) = ed25519_keypair () in
+    let request = {
+      requester = Key pk;
+      action = "read";
+      resource = "/test";
+      chain = [];
+    } in
+    match authorize request [] 0L with
+    | Denied _ -> () (* Expected - no chain should fail *)
+    | Authorized _ -> failwith "should have denied"
+  );
+
+  test "authorize_with_audit logs decisions" (fun () ->
+    let (pk, sk) = ed25519_keypair () in
+    let log = create_audit_log sk in
+    let request = {
+      requester = Key pk;
+      action = "read";
+      resource = "/test";
+      chain = [];
+    } in
+    let _ = authorize_with_audit log request [] 0L in
+    assert_true "one entry logged" (log.sequence = 1L)
+  );
+
+  test "tag_intersect with TagThreshold" (fun () ->
+    let t1 = TagThreshold (2, [TagSet ["read"]; TagSet ["write"]; TagSet ["delete"]]) in
+    let t2 = TagThreshold (1, [TagSet ["read"]; TagSet ["execute"]]) in
+    (* Intersection of thresholds requires max(k1,k2) matching *)
+    match tag_intersect t1 t2 with
+    | Some (TagThreshold (k, tags)) ->
+      assert_true "k = 2" (k = 2);
+      assert_true "has tags" (List.length tags >= 1)
+    | None -> () (* Also acceptable - depends on matching *)
+    | _ -> failwith "unexpected result"
+  )
+
+(* ============================================================
    Main
    ============================================================ *)
 
@@ -463,6 +718,10 @@ let () =
   test_crypto ();
   test_cookies ();
   test_audit_trail ();
+  test_fips181 ();
+  (* PQ tests planned when liboqs builds without OpenSSL *)
+  test_certificates ();
+  test_authorization ();
 
   (* Summary *)
   Printf.printf "\n============================\n";

@@ -145,7 +145,10 @@
   "Ensure all required modules are built for current platform"
   (let ((stamp (platform-stamp))
         (arch (current-arch))
-        (modules '("crypto-ffi" "vault")))
+        ;; Build order matters: dependencies before dependents
+        ;; vault imports cert, crypto-ffi, audit
+        ;; enroll imports wordlist, crypto-ffi
+        (modules '("crypto-ffi" "sexp" "audit" "cert" "wordlist" "enroll" "vault")))
     (for-each
      (lambda (module)
        (when (needs-rebuild? module stamp)
@@ -161,6 +164,8 @@
 (import audit)
 (import cert)
 (import sexp)
+(import wordlist)
+(import enroll)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -2408,6 +2413,17 @@ Cyberspace REPL - Available Commands:
     (secure-erase-encrypted hash)    Destroy via key destruction
     (session-key-destroy! id)        Destroy session key
     (erase-audit)                    Show erasure audit trail
+
+  Node Enrollment (RFC-044):
+    (enroll-request 'name)           Request enrollment (FIPS-181)
+    (enroll-listen)                  Listen for enrollment requests
+    (enroll-approve req key)         Approve enrollment
+    (introspect-system)              Full system introspection
+    (introspect-hardware)            Hardware config
+    (introspect-network)             Network interfaces
+    (introspect-storage)             Storage info
+    (announce-presence n k)          Start mDNS presence
+    (discover-peers)                 Find peers on network
 
   Compilation & Replication:
     (compile-source source)          Full compilation pipeline
