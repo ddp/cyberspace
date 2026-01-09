@@ -17,6 +17,20 @@ This RFC specifies the cryptographic audit trail system for the Library of Cyber
 
 Distributed systems require accountability. Who did what, when, and under whose authority?
 
+### Heritage: VMS Cluster-Wide Audit
+
+This audit trail descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:
+
+- **SECURITY_POLICY bit 7 propagation** - Intrusion detection state replicated cluster-wide
+- **Cluster-wide intrusion detection** - Breakin attempts detected across all nodes as one
+- **TLV-encoded object store** - The [000000]SECURITY.SYS file in ODS5 stored SECURITY_CLASS records
+
+The design principle then, as now: **cluster nodes behave identically**. N nodes, one security domain. Every significant action audited, every audit record signed.
+
+Cyberspace audit trails apply the same principle at IPv6 scale.
+
+### The Problem
+
 Traditional logging fails on all counts:
 - **Tamperable**: Text files can be edited
 - **Anonymous**: No cryptographic identity

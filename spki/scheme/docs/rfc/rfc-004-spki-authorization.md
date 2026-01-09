@@ -15,6 +15,20 @@ This RFC specifies the SPKI/SDSI certificate system for Cyberspace, providing au
 
 ## Motivation
 
+### Heritage: SDSI at IETF 29
+
+Ron Rivest presented SDSI (A Simple Distributed Security Infrastructure) at IETF 29 in Seattle (March 28 - April 1, 1994). The idea was elegant: self-certifying keys and local names. No global namespace. No certificate authorities. Just cryptographic principals naming what they choose to name.
+
+SDSI later merged with SPKI to form SPKI/SDSI, standardized in RFC 2692 and RFC 2693 (1999).
+
+Some in the PKI industry understood SPKI was technically superior. But they saw a monopoly to be mined—certificate authorities as toll booths on the internet. SPKI threatened that model. It was too decentralized to profit from.
+
+HP quietly adopted SPKI for their E-speak middleware and printer authorization. Printers. The technology worked. The politics didn't favor it.
+
+Cyberspace picks up where SPKI left off.
+
+### The X.509 Problem
+
 X.509 certificates bind names to keys. This requires:
 - Certificate authorities (trust hierarchies)
 - Global name registries (DNS)

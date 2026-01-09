@@ -19,6 +19,47 @@ in our language.
 
 ------------------------------------------------------------------------------
 
+The Manifesto
+
+  Authorized capability set with auditing. No central authority.
+
+You can have a central authority if you want one. That’s up to you. But you
+don’t need one. The architecture doesn’t require it. Trust flows from keys you
+choose to trust, not from a hierarchy imposed upon you.
+
+These principles were proven in VAXcluster security (1984-1994), proposed in
+SDSI at IETF 29 Seattle (1994), and implemented partially in products that
+didn’t survive their parent companies. Cyberspace completes what was started.
+
+Design Lineage
+
+  -----------------------------------------------------------------------------
+  Era            System                 Contribution
+  -------------- ---------------------- ---------------------------------------
+  1984           VAXcluster             “Behave as one” - N nodes, one security
+                                        domain
+
+  1985           VMS C2                 Audit trails, access control, TCSEC
+                                        security primitives
+
+  1993           VMS 6.0                Cluster-wide intrusion detection, TLV
+                                        object store
+
+  1994           SDSI                   Self-certifying keys, local names
+                                        (Rivest, IETF 29)
+
+  1999           SPKI                   Authorization certificates, capability
+                                        delegation
+
+  2026           Cyberspace             Synthesis: SPKI + audit + IPv6 mesh +
+                                        no central authority
+  -----------------------------------------------------------------------------
+
+DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace is
+designed for IPv6: 128-bit addresses, global mesh, same security principles.
+
+------------------------------------------------------------------------------
+
 Security Object Types
 
 Every first-class object in cyberspace. Names as defined.
@@ -268,6 +309,221 @@ The object has no labels. The policy lives in the certificates.
 
 ------------------------------------------------------------------------------
 
+Information Flow
+
+The mathematics of multilevel security, expressed in capabilities.
+
+The Properties
+
+Traditional formulations speak of “read up” and “write down” with respect to
+classification labels. We preserve the mathematics but speak differently:
+
+  ------------------------------------------------------------------------------
+  Traditional             Cyberspace            Formal Statement
+  ----------------------- --------------------- --------------------------------
+  “No read up”            Read requires         ∀ read(P,O): P ∈
+                          capability            holders(cap_read(O))
+
+  “No write down”         Write requires        ∀ write(P,O): P ∈
+                          capability            holders(cap_write(O))
+
+  “No read down”          Integrity via         ∀ accept(P,O):
+                          provenance            verify(signature(O))
+
+  “No write up”           Attenuation only      ∀ delegate(P₁,P₂,C): C ⊆
+                                                capabilities(P₁)
+  ------------------------------------------------------------------------------
+
+The capability graph IS the lattice. Delegation flows down. Authority cannot
+flow up.
+
+Confidentiality
+
+Information flows only through capabilities:
+
+    ∀ read(P,O): P ∈ holders(cap_read(O))
+    ∀ write(P,O): P ∈ holders(cap_write(O))
+    ∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)
+
+A principal without read capability cannot observe content. A principal
+without write capability cannot exfiltrate via storage. Delegation cannot
+grant what you don’t hold.
+
+Integrity
+
+Modification flows only through capabilities:
+
+    ∀ modify(P,O): P ∈ holders(cap_write(O))
+    ∀ delegate(P₁,P₂,C'): integrity(C') ≤ integrity(C)
+    ∀ capability C: provenance(C) ⊆ audit_trail
+
+Objects cannot be corrupted without write capability. Delegated capabilities
+cannot exceed held capabilities. All grants are traceable.
+
+Confinement
+
+The capability discipline eliminates ambient authority:
+
+    ∀ access(P,O): ∃ C ∈ capabilities(P): authorizes(C,O)
+    ∀ C: unforgeable(C)
+    ∀ acquire(P,C): ∃ P': delegate(P',P,C) ∨ create(P,O)
+
+No access without explicit capability. Capabilities cannot be manufactured.
+The only paths: receive via delegation, or create the object.
+
+Wormhole Enforcement
+
+Wormholes (RFC-041) are channel boundaries. Information flow is enforced at
+every crossing:
+
+    (wormhole-flow-guard wormhole operation object)
+      ;; Checks:
+      ;; 1. wormhole has capabilities (no ambient authority)
+      ;; 2. operation permitted by held capabilities
+      ;; 3. audit entry created
+
+  Operation              Required Capability   Violation Type
+  ---------------------- --------------------- -----------------
+  read, stat, readdir    read                  confidentiality
+  write, create, chmod   write                 integrity
+  delete, unlink         delete                integrity
+  delegate               delegate              amplification
+
+Denied operations raise typed errors: - no-ambient-authority — wormhole has no
+capabilities - read-denied — missing read capability - write-denied — missing
+write capability - capability-amplification — delegation exceeds held
+
+The Lattice
+
+Capabilities form a partial order. The lattice:
+
+            full
+              │
+        ┌─────┼─────┐
+        │     │     │
+      admin synch read-write
+        │     │     │
+        └─────┼─────┘
+              │
+          read-only
+              │
+            none
+
+Delegation can only move DOWN the lattice. This is attenuation. You cannot
+delegate admin if you hold read-only. You cannot grant write if you hold read.
+
+The math is sound. We just speak it in capabilities.
+
+------------------------------------------------------------------------------
+
+Secure Erasure
+
+When sensitive data must be destroyed, it must be destroyed completely.
+
+Erasure Requirements
+
+  What               How                                   Verification
+  ------------------ ------------------------------------- ----------------------
+  Object content     Overwrite with random, then zeros     Read-back verify
+  Memory buffers     Secure memset, compiler barrier       Not optimized away
+  Key material       Zeroize immediately after use         Audit trail entry
+  Audit entries      Preserve hash chain, redact content   Chain integrity
+  Capability certs   Revoke, then destroy                  Revocation published
+
+Erasure Guarantees
+
+    E1. Zeroization is atomic
+        erase(o) → ¬recoverable(o)
+
+    E2. Memory clearing defeats inspection
+        clear(buffer) → ∀ address ∈ buffer: read(address) = 0
+
+    E3. Key destruction is immediate
+        destroy(key) → ¬usable(key) ∧ audit(destroyed, key)
+
+    E4. Revocation propagates
+        revoke(cert) → ∀ delegate(cert, c'): revoke(c')
+
+Implementation
+
+    ;; Secure memory clearing (defeats compiler optimization)
+    (define (secure-clear! buffer)
+      "Overwrite buffer with zeros, verify"
+      (let ((len (blob-size buffer)))
+        ;; Write zeros
+        (do ((i 0 (+ i 1)))
+            ((>= i len))
+          (blob-set! buffer i 0))
+        ;; Memory barrier (implementation-specific)
+        ;; Verify
+        (do ((i 0 (+ i 1)))
+            ((>= i len) #t)
+          (unless (zero? (blob-ref buffer i))
+            (error 'secure-clear-failed)))))
+
+    ;; Key zeroization
+    (define (key-destroy! key)
+      "Zeroize key material, audit"
+      (let ((material (key-material key)))
+        (secure-clear! material)
+        (audit-append actor: (current-principal)
+                      action: 'key-destroyed
+                      target: (key-id key))
+        'destroyed))
+
+    ;; Object secure deletion
+    (define (object-erase! hash)
+      "Securely erase object content"
+      (let ((path (vault-object-path hash)))
+        ;; Overwrite with random
+        (call-with-output-file path
+          (lambda (port)
+            (write-blob port (random-bytes (file-size path)))))
+        ;; Overwrite with zeros
+        (call-with-output-file path
+          (lambda (port)
+            (write-blob port (make-blob (file-size path) 0))))
+        ;; Delete
+        (delete-file path)
+        ;; Audit
+        (audit-append actor: (current-principal)
+                      action: 'object-erased
+                      target: hash)
+        'erased))
+
+What Cannot Be Erased
+
+Some things must persist:
+
+  Thing                   Why
+  ----------------------- -------------------------------
+  Audit chain structure   Hash links must verify
+  Revocation records      Must prove capability invalid
+  Content hashes          May exist in other chains
+
+Redaction, not deletion: the fact that something existed remains, but the
+content is gone.
+
+SSD/Flash Considerations
+
+Modern storage complicates secure erasure:
+
+- Wear leveling moves data without notification
+- Trim/discard doesn’t guarantee overwrite
+- Encryption is the only reliable approach
+
+Our answer: Encrypt at rest (RFC-030). Erasing the key erases the data.
+
+    ;; With encryption at rest, key destruction = data destruction
+    (define (secure-erase-encrypted hash)
+      "For encrypted objects: destroy decryption key"
+      (let ((dek (object-data-encryption-key hash)))
+        (key-destroy! dek)
+        ;; The ciphertext remains but is now meaningless
+        'erased-via-key-destruction))
+
+------------------------------------------------------------------------------
+
 The Trusted Core
 
 What must work correctly for security to hold:
@@ -479,6 +735,10 @@ References
 3.  Miller, M., Robust Composition, 2006
 4.  Lampson, B., A Note on the Confinement Problem, 1973
 5.  DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens
+6.  Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical
+    Foundations, 1973 - confidentiality model
+7.  Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 -
+    integrity model
 
 ------------------------------------------------------------------------------
 

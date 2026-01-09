@@ -15,6 +15,29 @@ We use the rigor of TCSEC B2 as a lens - particularly for covert channel analysi
 
 ---
 
+## The Manifesto
+
+> **Authorized capability set with auditing. No central authority.**
+
+You can have a central authority if you want one. That's up to you. But you don't *need* one. The architecture doesn't require it. Trust flows from keys you choose to trust, not from a hierarchy imposed upon you.
+
+These principles were proven in VAXcluster security (1984-1994), proposed in SDSI at IETF 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.
+
+### Design Lineage
+
+| Era | System | Contribution |
+|-----|--------|--------------|
+| 1984 | VAXcluster | "Behave as one" - N nodes, one security domain |
+| 1985 | VMS C2 | Audit trails, access control, TCSEC security primitives |
+| 1993 | VMS 6.0 | Cluster-wide intrusion detection, TLV object store |
+| 1994 | SDSI | Self-certifying keys, local names (Rivest, IETF 29) |
+| 1999 | SPKI | Authorization certificates, capability delegation |
+| 2026 | Cyberspace | Synthesis: SPKI + audit + IPv6 mesh + no central authority |
+
+DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.
+
+---
+
 ## Security Object Types
 
 Every first-class object in cyberspace. Names as defined.

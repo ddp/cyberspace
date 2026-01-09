@@ -254,6 +254,70 @@ ACLs, no ambient authority. You hold a capability or you don’t.</p>
 channel analysis - but cyberspace is its own thing. This is our security
 architecture, in our language.</p>
 <hr />
+<h2 id="the-manifesto">The Manifesto</h2>
+<blockquote>
+<p><strong>Authorized capability set with auditing. No central
+authority.</strong></p>
+</blockquote>
+<p>You can have a central authority if you want one. That’s up to you.
+But you don’t <em>need</em> one. The architecture doesn’t require it.
+Trust flows from keys you choose to trust, not from a hierarchy imposed
+upon you.</p>
+<p>These principles were proven in VAXcluster security (1984-1994),
+proposed in SDSI at IETF 29 Seattle (1994), and implemented partially in
+products that didn’t survive their parent companies. Cyberspace
+completes what was started.</p>
+<h3 id="design-lineage">Design Lineage</h3>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 29%" />
+<col style="width: 51%" />
+</colgroup>
+<thead>
+<tr>
+<th>Era</th>
+<th>System</th>
+<th>Contribution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1984</td>
+<td>VAXcluster</td>
+<td>“Behave as one” - N nodes, one security domain</td>
+</tr>
+<tr>
+<td>1985</td>
+<td>VMS C2</td>
+<td>Audit trails, access control, TCSEC security primitives</td>
+</tr>
+<tr>
+<td>1993</td>
+<td>VMS 6.0</td>
+<td>Cluster-wide intrusion detection, TLV object store</td>
+</tr>
+<tr>
+<td>1994</td>
+<td>SDSI</td>
+<td>Self-certifying keys, local names (Rivest, IETF 29)</td>
+</tr>
+<tr>
+<td>1999</td>
+<td>SPKI</td>
+<td>Authorization certificates, capability delegation</td>
+</tr>
+<tr>
+<td>2026</td>
+<td>Cyberspace</td>
+<td>Synthesis: SPKI + audit + IPv6 mesh + no central authority</td>
+</tr>
+</tbody>
+</table>
+<p>DECnet Phase IV had 24-bit addressing—fatal for internet scale.
+Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same
+security principles.</p>
+<hr />
 <h2 id="security-object-types">Security Object Types</h2>
 <p>Every first-class object in cyberspace. Names as defined.</p>
 <p><em>Table 0: Security Object Registry</em></p>
@@ -657,6 +721,285 @@ object itself 2. Appropriate clearance capability 3. All required
 compartment capabilities</p>
 <p>The object has no labels. The policy lives in the certificates.</p>
 <hr />
+<h2 id="information-flow">Information Flow</h2>
+<p>The mathematics of multilevel security, expressed in
+capabilities.</p>
+<h3 id="the-properties">The Properties</h3>
+<p>Traditional formulations speak of “read up” and “write down” with
+respect to classification labels. We preserve the mathematics but speak
+differently:</p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 27%" />
+<col style="width: 41%" />
+</colgroup>
+<thead>
+<tr>
+<th>Traditional</th>
+<th>Cyberspace</th>
+<th>Formal Statement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“No read up”</td>
+<td>Read requires capability</td>
+<td>∀ read(P,O): P ∈ holders(cap_read(O))</td>
+</tr>
+<tr>
+<td>“No write down”</td>
+<td>Write requires capability</td>
+<td>∀ write(P,O): P ∈ holders(cap_write(O))</td>
+</tr>
+<tr>
+<td>“No read down”</td>
+<td>Integrity via provenance</td>
+<td>∀ accept(P,O): verify(signature(O))</td>
+</tr>
+<tr>
+<td>“No write up”</td>
+<td>Attenuation only</td>
+<td>∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)</td>
+</tr>
+</tbody>
+</table>
+<p>The capability graph IS the lattice. Delegation flows down. Authority
+cannot flow up.</p>
+<h3 id="confidentiality">Confidentiality</h3>
+<p>Information flows only through capabilities:</p>
+<pre><code>∀ read(P,O): P ∈ holders(cap_read(O))
+∀ write(P,O): P ∈ holders(cap_write(O))
+∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)</code></pre>
+<p>A principal without read capability cannot observe content. A
+principal without write capability cannot exfiltrate via storage.
+Delegation cannot grant what you don’t hold.</p>
+<h3 id="integrity">Integrity</h3>
+<p>Modification flows only through capabilities:</p>
+<pre><code>∀ modify(P,O): P ∈ holders(cap_write(O))
+∀ delegate(P₁,P₂,C&#39;): integrity(C&#39;) ≤ integrity(C)
+∀ capability C: provenance(C) ⊆ audit_trail</code></pre>
+<p>Objects cannot be corrupted without write capability. Delegated
+capabilities cannot exceed held capabilities. All grants are
+traceable.</p>
+<h3 id="confinement">Confinement</h3>
+<p>The capability discipline eliminates ambient authority:</p>
+<pre><code>∀ access(P,O): ∃ C ∈ capabilities(P): authorizes(C,O)
+∀ C: unforgeable(C)
+∀ acquire(P,C): ∃ P&#39;: delegate(P&#39;,P,C) ∨ create(P,O)</code></pre>
+<p>No access without explicit capability. Capabilities cannot be
+manufactured. The only paths: receive via delegation, or create the
+object.</p>
+<h3 id="wormhole-enforcement">Wormhole Enforcement</h3>
+<p>Wormholes (RFC-041) are channel boundaries. Information flow is
+enforced at every crossing:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(wormhole-flow-guard wormhole operation object)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Checks:</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; 1. wormhole has capabilities (no ambient authority)</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; 2. operation permitted by held capabilities</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; 3. audit entry created</span></span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Required Capability</th>
+<th>Violation Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>read, stat, readdir</td>
+<td><code>read</code></td>
+<td>confidentiality</td>
+</tr>
+<tr>
+<td>write, create, chmod</td>
+<td><code>write</code></td>
+<td>integrity</td>
+</tr>
+<tr>
+<td>delete, unlink</td>
+<td><code>delete</code></td>
+<td>integrity</td>
+</tr>
+<tr>
+<td>delegate</td>
+<td><code>delegate</code></td>
+<td>amplification</td>
+</tr>
+</tbody>
+</table>
+<p>Denied operations raise typed errors: -
+<code>no-ambient-authority</code> — wormhole has no capabilities -
+<code>read-denied</code> — missing read capability -
+<code>write-denied</code> — missing write capability -
+<code>capability-amplification</code> — delegation exceeds held</p>
+<h3 id="the-lattice">The Lattice</h3>
+<p>Capabilities form a partial order. The lattice:</p>
+<pre><code>        full
+          │
+    ┌─────┼─────┐
+    │     │     │
+  admin synch read-write
+    │     │     │
+    └─────┼─────┘
+          │
+      read-only
+          │
+        none</code></pre>
+<p>Delegation can only move DOWN the lattice. This is attenuation. You
+cannot delegate <code>admin</code> if you hold <code>read-only</code>.
+You cannot grant <code>write</code> if you hold <code>read</code>.</p>
+<p>The math is sound. We just speak it in capabilities.</p>
+<hr />
+<h2 id="secure-erasure">Secure Erasure</h2>
+<p>When sensitive data must be destroyed, it must be destroyed
+completely.</p>
+<h3 id="erasure-requirements">Erasure Requirements</h3>
+<table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 20%" />
+<col style="width: 56%" />
+</colgroup>
+<thead>
+<tr>
+<th>What</th>
+<th>How</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Object content</td>
+<td>Overwrite with random, then zeros</td>
+<td>Read-back verify</td>
+</tr>
+<tr>
+<td>Memory buffers</td>
+<td>Secure memset, compiler barrier</td>
+<td>Not optimized away</td>
+</tr>
+<tr>
+<td>Key material</td>
+<td>Zeroize immediately after use</td>
+<td>Audit trail entry</td>
+</tr>
+<tr>
+<td>Audit entries</td>
+<td>Preserve hash chain, redact content</td>
+<td>Chain integrity</td>
+</tr>
+<tr>
+<td>Capability certs</td>
+<td>Revoke, then destroy</td>
+<td>Revocation published</td>
+</tr>
+</tbody>
+</table>
+<h3 id="erasure-guarantees">Erasure Guarantees</h3>
+<pre><code>E1. Zeroization is atomic
+    erase(o) → ¬recoverable(o)
+
+E2. Memory clearing defeats inspection
+    clear(buffer) → ∀ address ∈ buffer: read(address) = 0
+
+E3. Key destruction is immediate
+    destroy(key) → ¬usable(key) ∧ audit(destroyed, key)
+
+E4. Revocation propagates
+    revoke(cert) → ∀ delegate(cert, c&#39;): revoke(c&#39;)</code></pre>
+<h3 id="implementation">Implementation</h3>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Secure memory clearing (defeats compiler optimization)</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">secure-clear! </span>buffer)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Overwrite buffer with zeros, verify&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((len (blob-size buffer)))</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Write zeros</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">do</span> ((i <span class="dv">0</span> (<span class="op">+</span> i <span class="dv">1</span>)))</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        ((<span class="op">&gt;=</span> i len))</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>      (blob-set! buffer i <span class="dv">0</span>))</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Memory barrier (implementation-specific)</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Verify</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">do</span> ((i <span class="dv">0</span> (<span class="op">+</span> i <span class="dv">1</span>)))</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>        ((<span class="op">&gt;=</span> i len) <span class="dv">#t</span>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>      (unless (<span class="kw">zero?</span> (blob-ref buffer i))</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> &#39;secure-clear-failed)))))</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="co">;; Key zeroization</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">key-destroy! </span>key)</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Zeroize key material, audit&quot;</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((material (key-material key)))</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    (secure-clear! material)</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>    (audit-append actor: (current-principal)</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>                  action: &#39;key-destroyed</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>                  target: (key-id key))</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>    &#39;destroyed))</span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a><span class="co">;; Object secure deletion</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">object-erase! </span>hash)</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Securely erase object content&quot;</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((path (vault-object-path hash)))</span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Overwrite with random</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">call-with-output-file</span> path</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">lambda</span> (port)</span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>        (write-blob port (random-bytes (file-size path)))))</span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Overwrite with zeros</span></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">call-with-output-file</span> path</span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">lambda</span> (port)</span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>        (write-blob port (make-blob (file-size path) <span class="dv">0</span>))))</span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Delete</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">delete-file</span> path)</span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Audit</span></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>    (audit-append actor: (current-principal)</span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>                  action: &#39;object-erased</span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>                  target: hash)</span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>    &#39;erased))</span></code></pre></div>
+<h3 id="what-cannot-be-erased">What Cannot Be Erased</h3>
+<p>Some things must persist:</p>
+<table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Audit chain structure</td>
+<td>Hash links must verify</td>
+</tr>
+<tr>
+<td>Revocation records</td>
+<td>Must prove capability invalid</td>
+</tr>
+<tr>
+<td>Content hashes</td>
+<td>May exist in other chains</td>
+</tr>
+</tbody>
+</table>
+<p>Redaction, not deletion: the fact that something existed remains, but
+the content is gone.</p>
+<h3 id="ssdflash-considerations">SSD/Flash Considerations</h3>
+<p>Modern storage complicates secure erasure:</p>
+<ul>
+<li>Wear leveling moves data without notification</li>
+<li>Trim/discard doesn’t guarantee overwrite</li>
+<li>Encryption is the only reliable approach</li>
+</ul>
+<p><strong>Our answer:</strong> Encrypt at rest (RFC-030). Erasing the
+key erases the data.</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; With encryption at rest, key destruction = data destruction</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">secure-erase-encrypted </span>hash)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;For encrypted objects: destroy decryption key&quot;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((dek (object-data-encryption-key hash)))</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    (key-destroy! dek)</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; The ciphertext remains but is now meaningless</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    &#39;erased-via-key-destruction))</span></code></pre></div>
+<hr />
 <h2 id="the-trusted-core">The Trusted Core</h2>
 <p>What must work correctly for security to hold:</p>
 <table>
@@ -835,17 +1178,17 @@ signals. Acceptable residual risk for our threat model.</p>
 <hr />
 <h2 id="audit">Audit</h2>
 <p>Everything important gets logged.</p>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">12345</span>)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  (lamport <span class="dv">67890</span>)</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  (type capability-exercise)</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  (actor <span class="st">&quot;ed25519:subject...&quot;</span>)</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  (action (<span class="kw">read</span> <span class="st">&quot;sha512:object...&quot;</span>))</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  (capability <span class="st">&quot;sha512:cert...&quot;</span>)</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  (previous <span class="st">&quot;sha512:prev-entry...&quot;</span>)</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:auditor...&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">12345</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  (lamport <span class="dv">67890</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  (type capability-exercise)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  (actor <span class="st">&quot;ed25519:subject...&quot;</span>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  (action (<span class="kw">read</span> <span class="st">&quot;sha512:object...&quot;</span>))</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  (capability <span class="st">&quot;sha512:cert...&quot;</span>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  (previous <span class="st">&quot;sha512:prev-entry...&quot;</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:auditor...&quot;</span>))</span></code></pre></div>
 <p><strong>Properties:</strong> - Hash-chained: tamper-evident - Signed:
 non-repudiable - Monotonic: gaps detected - Distributed: witnesses
 replicate</p>
@@ -991,6 +1334,10 @@ Multiprogrammed Computations, 1966</li>
 <li>Lampson, B., A Note on the Confinement Problem, 1973</li>
 <li>DoD 5200.28-STD (Orange Book), 1985 - for the covert channel
 lens</li>
+<li>Bell, D.E. &amp; LaPadula, L.J., Secure Computer Systems:
+Mathematical Foundations, 1973 - confidentiality model</li>
+<li>Biba, K.J., Integrity Considerations for Secure Computer Systems,
+1977 - integrity model</li>
 </ol>
 <hr />
 <h2 id="changelog">Changelog</h2>
