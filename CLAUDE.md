@@ -21,3 +21,12 @@ individual commits. The project-level RFC handles this once and for all.
 
 Single-realm model. Enclaves with own consensus policies are explicitly
 deferred as a very hard problem space.
+
+## Publishing to Yoyodyne
+
+After rsync to www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/, always fix
+permissions to be world-readable:
+
+    ssh www.yoyodyne.com 'chmod 755 /www/yoyodyne/ddp/cyberspace && chmod 644 /www/yoyodyne/ddp/cyberspace/*'
+
+The rsync preserves local permissions which are not world-readable by default.
