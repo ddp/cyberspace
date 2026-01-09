@@ -24,6 +24,7 @@
         (chicken bitwise)
         (chicken string)
         (chicken sort)
+        (chicken condition)
         srfi-1
         srfi-4
         srfi-13
@@ -2258,7 +2259,24 @@
 (define (help)
   "Show available commands"
   (print "
-Cyberspace REPL - Available Commands:
+Cyberspace REPL - Available Commands
+
+  Command Mode (no parens needed):
+    status                         Vault status
+    commit \"message\"               Commit changes
+    release \"1.0\"                  Create release
+    keys                           List keys
+    keygen                         Generate keypair
+    soup                           List objects
+    peers                          List nodes
+    help                           This help
+    clear                          Clear screen
+    quit                           Exit
+
+  Scheme Mode (full power):
+    (define x 42)                  Define variables
+    (map f list)                   Full Scheme available
+    (+ 1 2)                        Expressions
 
   Object State (RFC-040):
     (chaotic thing)              Mark thing as chaotic (in flux)
@@ -3301,6 +3319,89 @@ Cyberspace REPL - Available Commands:
         (write manifest)
         (newline)))))
 
+;;; ============================================================
+;;; Command Mode - paren-optional syntax
+;;; ============================================================
+;;;
+;;; Lines starting with ( are Scheme.
+;;; Bare words are commands: "status" → (status)
+;;; Arguments follow: "commit msg" → (seal-commit "msg")
+
+(define *command-aliases*
+  '((status    . vault-status)
+    (commit    . seal-commit)
+    (release   . seal-release)
+    (archive   . seal-archive)
+    (history   . seal-history)
+    (sync      . seal-synchronize)
+    (keys      . keystore-list)
+    (keygen    . ed25519-keypair)
+    (sign      . ed25519-sign)
+    (verify    . ed25519-verify)
+    (hash      . sha512-hash)
+    (put       . content-put)
+    (get       . content-get)
+    (soup      . soup)
+    (peers     . nodes)
+    (listen    . node-listen)
+    (connect   . node-connect)
+    (ping      . node-ping)
+    (enroll    . enroll-request)
+    (approve   . enroll-approve)
+    (discover  . discover-peers)
+    (gossip    . gossip-status)
+    (audit     . audit-read)
+    (clear     . clear)
+    (help      . help)
+    (quit      . exit)
+    (exit      . exit)))
+
+(define (resolve-command cmd)
+  "Resolve command alias or return as-is"
+  (let ((alias (assq cmd *command-aliases*)))
+    (if alias (cdr alias) cmd)))
+
+(define (parse-command-line line)
+  "Parse command line into S-expression"
+  (let* ((trimmed (string-trim-both line))
+         (port (open-input-string trimmed)))
+    (if (or (string=? trimmed "")
+            (char=? (string-ref trimmed 0) #\())
+        ;; Empty or Scheme - read directly
+        (if (string=? trimmed "")
+            #f
+            (read port))
+        ;; Command mode - tokenize and wrap
+        (let loop ((tokens '()))
+          (let ((tok (read port)))
+            (if (eof-object? tok)
+                (if (null? tokens)
+                    #f
+                    (cons (resolve-command (car (reverse tokens)))
+                          (reverse (cdr (reverse tokens)))))
+                (loop (cons tok tokens))))))))
+
+(define (command-repl)
+  "REPL with command mode"
+  (let loop ()
+    (display "> ")
+    (flush-output)
+    (let ((line (read-line)))
+      (cond
+       ((eof-object? line)
+        (newline)
+        (print "Goodbye."))
+       (else
+        (condition-case
+          (let ((expr (parse-command-line line)))
+            (when expr
+              (let ((result (eval expr)))
+                (unless (eq? result (void))
+                  (write result)
+                  (newline)))))
+          (e () (print-error-message e)))
+        (loop))))))
+
 ;; Show current directory context
 (print "Working directory: " (current-directory))
 (when (directory-exists? ".vault")
@@ -3308,3 +3409,6 @@ Cyberspace REPL - Available Commands:
   (node-hardware-refresh!)
   (print "Hardware: " (platform-stamp)))
 (print "")
+
+;; Start command REPL
+(command-repl)
