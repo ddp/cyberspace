@@ -30,7 +30,7 @@
     (notes "Legacy Intel node"))
 
   (node
-    (name "unnamed")
+    (name "starlight")
     (role full)
     (hardware "15\" MacBook Air")
     (cpu "M4 10-core")
