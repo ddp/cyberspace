@@ -386,3 +386,18 @@ if [[ -f "$REPL_FILE" ]]; then
 else
   echo "  [skip] REPL not found at $REPL_FILE"
 fi
+
+# Publish to yoyodyne (world-readable web directory)
+echo ""
+echo "=== Publishing to yoyodyne ==="
+
+YOYODYNE_HOST="ddp@www.yoyodyne.com"
+YOYODYNE_PATH="~/cyberspace/spki/scheme/docs/rfc/"
+
+if ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
+  ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_PATH"
+  rsync -av --delete *.html *.ps *.txt "$YOYODYNE_HOST:$YOYODYNE_PATH"
+  echo "  ✓ Published to $YOYODYNE_HOST:$YOYODYNE_PATH"
+else
+  echo "  [skip] Cannot reach yoyodyne"
+fi
