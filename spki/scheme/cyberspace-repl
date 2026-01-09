@@ -2577,16 +2577,29 @@ Cyberspace REPL - Available Commands:
           (string-append first suffix))))))
 
 (define (format-status)
-  "Format right status: cluster/replication"
-  (string-append (symbol->string *cluster-state*)
-                 "/"
-                 (symbol->string *replication-state*)))
+  "Format right status"
+  (if (eq? *cluster-state* 'solo)
+      "standalone"
+      (string-append (number->string (+ 1 (length *cluster-nodes*))) " nodes")))
 
 (define (banner)
-  (let ((status (format-status)))
+  (let* ((title "Library of Cyberspace")
+         (status (format-status))
+         (vault-status (if (directory-exists? ".vault") "vault" "no vault"))
+         (bar "──────────────────────────────────────────────────")
+         ;; Line 1: title + cluster status
+         (line1-left (string-append "  " title))
+         (line1-right (string-append status "  "))
+         (line1-pad (make-string (max 1 (- 50 (string-length line1-left) (string-length line1-right))) #\space))
+         ;; Line 2: vault + help hint
+         (line2-left (string-append "  " vault-status))
+         (line2-right "(help)  ")
+         (line2-pad (make-string (max 1 (- 50 (string-length line2-left) (string-length line2-right))) #\space)))
     (print "")
-    (print "Library of Cyberspace [" status "]")
-    (print "(help) for commands")
+    (print "┌" bar "┐")
+    (print "│" line1-left line1-pad line1-right "│")
+    (print "│" line2-left line2-pad line2-right "│")
+    (print "└" bar "┘")
     (print "")))
 
 ;;; ============================================================
