@@ -1,52 +1,52 @@
 RFC-009: Library Directory System
 
-**Status:** Implemented
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** directory.scm, directory-repl.scm, directory-parser.scm
+Status: Implemented
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: directory.scm, directory-repl.scm, directory-parser.scm
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies the Library Directory System for the Library of Cyberspace: a searchable catalog of research papers with natural language queries, fuzzy matching, and beautiful output. Finding knowledge should be delightful.
 
----
+------------------------------------------------------------------------------
 
 E Pluribus Unum
 
-```
+`
 ╔═══════════════════════════════════════════════════════════════╗
 ║  📚 Cyberspace Library Directory                               ║
 ║  Finding knowledge should be joyful                            ║
 ╚═══════════════════════════════════════════════════════════════╝
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 The Library of Cyberspace contains 421+ research papers spanning 50 years of computing history. Without a catalog:
 
-- **Discoverability**: How to find Lamport's clock paper?
-- **Connections**: What relates to SPKI?
-- **Context**: When was this written? By whom?
+- Discoverability: How to find Lamport's clock paper?
+- Connections: What relates to SPKI?
+- Context: When was this written? By whom?
 
 The Directory System provides:
 
-1. **Natural language search** - "papers by Lampson about protection"
-2. **Multi-index access** - By author, topic, year, collection
-3. **Fuzzy matching** - "Lamp" finds Lampson and Lamport
-4. **Beautiful output** - Unicode, emoji, formatted results
-5. **S-expression export** - Machine-readable catalogs
+1. Natural language search - "papers by Lampson about protection"
+2. Multi-index access - By author, topic, year, collection
+3. Fuzzy matching - "Lamp" finds Lampson and Lamport
+4. Beautiful output - Unicode, emoji, formatted results
+5. S-expression export - Machine-readable catalogs
 
----
+------------------------------------------------------------------------------
 
 Data Model
 
 Document Record
 
-```scheme
+`scheme
 (define-record-type <document>
   (make-document title authors year topics file-path
                  collection source-url description)
@@ -59,11 +59,11 @@ Document Record
   (collection document-collection)
   (source-url document-source-url)
   (description document-description))
-```
+`
 
 Collection Record
 
-```scheme
+`scheme
 (define-record-type <collection>
   (make-collection name path documents description)
   collection?
@@ -71,11 +71,11 @@ Collection Record
   (path collection-path)
   (documents collection-documents)  ; List of documents
   (description collection-description))
-```
+`
 
 Library Record
 
-```scheme
+`scheme
 (define-record-type <library>
   (make-library collections documents
                 author-index topic-index year-index collection-index)
@@ -86,24 +86,24 @@ Library Record
   (topic-index library-topic-index)       ; Hash table
   (year-index library-year-index)         ; Hash table
   (collection-index library-collection-index))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Index System
 
 Four hash table indexes for O(1) lookup:
 
-```
+`
 author-index:     "Lamport" → [doc1, doc2, doc5, ...]
 topic-index:      "cryptography" → [doc3, doc7, doc12, ...]
 year-index:       1978 → [doc1, doc4, ...]
 collection-index: "lampson" → <collection>
-```
+`
 
 Building Indexes
 
-```scheme
+`scheme
 (define (build-author-index documents)
   (let ((index (make-hash-table equal?)))
     (for-each
@@ -118,15 +118,15 @@ Building Indexes
           (document-authors doc)))
       documents)
     index))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Query Interface
 
 Natural Language Parsing
 
-```scheme
+`scheme
 (parse-query "papers by Lampson about protection")
 ;; => (query (author "Lampson") (topic "protection"))
 
@@ -135,24 +135,24 @@ Natural Language Parsing
 
 (parse-query "SPKI certificates")
 ;; => (query (topic "SPKI") (topic "certificates"))
-```
+`
 
-**Recognized Patterns:**
-- `by <name>` → author search
-- `about <topic>` → topic search
-- `from <year>` → year search
-- `in <collection>` → collection filter
+Recognized Patterns:
+- by <name> → author search
+- about <topic> → topic search
+- from <year> → year search
+- in <collection> → collection filter
 - Bare words → topic search
 
 Fuzzy Matching
 
-```scheme
+`scheme
 (fuzzy-match "Lamp" author-list)
 ;; => ("Lampson" "Lamport")
 
 (fuzzy-match "crypto" topic-list)
 ;; => ("cryptography" "cryptographic" "encryption")
-```
+`
 
 Matching strategies:
 1. Exact match (highest priority)
@@ -162,21 +162,21 @@ Matching strategies:
 
 Query Functions
 
-```scheme
+`scheme
 (find-by-author library "Lampson")
 (find-by-topic library "SPKI")
 (find-by-year library 1978)
 (find-by-collection library "lampson")
 (find-related library document)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 REPL Interface
 
 Interactive Session
 
-```
+`
 $ csi -s directory-repl.scm
 
 ╔═══════════════════════════════════════════════════════════════╗
@@ -215,47 +215,47 @@ Library Statistics:
 
 📖 > quit
 Happy exploring! 📚✨
-```
+`
 
 Commands
 
 | Command | Description |
 |---------|-------------|
-| `help` | Show search tips |
-| `stats` | Library statistics |
-| `collections` | List all collections |
-| `authors` | Show author index |
-| `topics` | Show topic index |
-| `years` | Show year distribution |
-| `quit` | Exit REPL |
+| help | Show search tips |
+| stats | Library statistics |
+| collections | List all collections |
+| authors | Show author index |
+| topics | Show topic index |
+| years | Show year distribution |
+| quit | Exit REPL |
 
----
+------------------------------------------------------------------------------
 
 INDEX.md Parser
 
 Each collection contains an INDEX.md with paper listings:
 
-```markdown
+`markdown
 Lampson Collection
 
 Butler Lampson's papers on protection, capability systems, and distributed computing.
 
 Papers
 
-1. **Protection** (1971)
+1. Protection (1971)
    - Author: Butler Lampson
    - Topics: capability, protection, access control
    - Source: ACM Operating Systems Review
 
-2. **Hints for Computer System Design** (1983)
+2. Hints for Computer System Design (1983)
    - Author: Butler Lampson
    - Topics: systems design, engineering
    - Source: ACM Operating Systems Review
-```
+`
 
 Parser Output
 
-```scheme
+`scheme
 (parse-index-file "lampson/INDEX.md")
 ;; =>
 (collection
@@ -267,20 +267,20 @@ Parser Output
      (year 1971)
      (topics "capability" "protection" "access control"))
     ...))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Export Formats
 
 S-expression Export
 
-```scheme
+`scheme
 (export-to-sexp library "catalog.sexp")
-```
+`
 
 Output:
-```scheme
+`scheme
 (library
   (metadata
     (document-count 312)
@@ -297,13 +297,13 @@ Output:
           (topics ("capability" "protection")))
         ...))
     ...))
-```
+`
 
 HTML Export
 
-```scheme
+`scheme
 (export-to-html library "catalog.html")
-```
+`
 
 Generates browsable web catalog with:
 - Alphabetical author index
@@ -313,13 +313,13 @@ Generates browsable web catalog with:
 
 Markdown Export
 
-```scheme
+`scheme
 (export-to-markdown library "catalog.md")
-```
+`
 
 Documentation-friendly format for README files.
 
----
+------------------------------------------------------------------------------
 
 Design Philosophy
 
@@ -344,7 +344,7 @@ Hone In On What You Need
 - Cross-references
 - Related paper discovery
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
@@ -360,19 +360,19 @@ Path Traversal
 
 File paths validated:
 - Must be within library root
-- No `..` components
+- No .. components
 - Normalized before use
 
----
+------------------------------------------------------------------------------
 
 Implementation Notes
 
 Dependencies
 
-- `srfi-1` - List utilities
-- `srfi-13` - String utilities
-- `srfi-69` - Hash tables
-- `chicken file` - Directory scanning
+- srfi-1 - List utilities
+- srfi-13 - String utilities
+- srfi-69 - Hash tables
+- chicken file - Directory scanning
 
 Performance
 
@@ -389,7 +389,7 @@ Future enhancements:
 - Web API server
 - Semantic search with embeddings
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -398,14 +398,14 @@ References
 3. BibTeX format specification
 4. Unicode Standard for box drawing
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-06** - Initial specification
+- 2026-01-06 - Initial specification
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Complete
-**Test Status:** Passing (test-directory.scm)
-**Documents Indexed:** 421+
+Implementation Status: Complete
+Test Status: Passing (test-directory.scm)
+Documents Indexed: 421+

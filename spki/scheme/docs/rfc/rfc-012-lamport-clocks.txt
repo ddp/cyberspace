@@ -1,44 +1,44 @@
 RFC-012: Lamport Logical Clocks
 
-**Status:** Proposed
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
+Status: Proposed
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies Lamport logical clocks for Cyberspace distributed ordering, providing a happened-before relation across federated vaults without synchronized physical clocks.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Physical clocks lie:
 
-- **Clock skew**: Machines disagree on time
-- **Clock drift**: Skew grows over time
-- **NTP failures**: Synchronization breaks
-- **Relativity**: No global "now" anyway
+- Clock skew: Machines disagree on time
+- Clock drift: Skew grows over time
+- NTP failures: Synchronization breaks
+- Relativity: No global "now" anyway
 
 Lamport clocks provide:
 
-1. **Logical ordering**: a → b means a happened before b
-2. **No synchronization**: No NTP, no GPS, no trusted time
-3. **Causality tracking**: If a caused b, then C(a) < C(b)
-4. **Consistency**: All nodes agree on partial order
+1. Logical ordering: a → b means a happened before b
+2. No synchronization: No NTP, no GPS, no trusted time
+3. Causality tracking: If a caused b, then C(a) < C(b)
+4. Consistency: All nodes agree on partial order
 
 From Lamport (1978):
 
-> *Time, Clocks, and the Ordering of Events in a Distributed System*
+  Time, Clocks, and the Ordering of Events in a Distributed System
 
----
+------------------------------------------------------------------------------
 
 Specification
 
 The Happened-Before Relation
 
-**Definition**: a → b (a happened before b) if:
+Definition: a → b (a happened before b) if:
 
 1. a and b are in same process and a comes before b, or
 2. a is sending a message and b is receiving it, or
@@ -48,7 +48,7 @@ Lamport Clock Rules
 
 Each process P maintains counter C(P):
 
-```
+`
 Rule 1: Before each event, increment C(P)
          C(P) := C(P) + 1
 
@@ -57,7 +57,7 @@ Rule 2: When sending message m, attach C(P)
 
 Rule 3: When receiving message (m, T), update clock
          C(P) := max(C(P), T) + 1
-```
+`
 
 Clock Condition
 
@@ -65,47 +65,47 @@ If a → b then C(a) < C(b).
 
 Note: Converse is not guaranteed. C(a) < C(b) does not imply a → b.
 
----
+------------------------------------------------------------------------------
 
 Data Structures
 
 Logical Timestamp
 
-```scheme
+`scheme
 (define-record-type <lamport-clock>
   (make-lamport-clock counter node-id)
   lamport-clock?
   (counter clock-counter)
   (node-id clock-node-id))
-```
+`
 
 Timestamped Event
 
-```scheme
+`scheme
 (define-record-type <timestamped-event>
   (make-timestamped-event clock event)
   timestamped-event?
   (clock event-clock)
   (event event-data))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Operations
 
 Increment (Local Event)
 
-```scheme
+`scheme
 (define (clock-tick! clock)
   "Increment clock for local event"
   (set! (clock-counter clock)
         (+ 1 (clock-counter clock)))
   clock)
-```
+`
 
 Send (Message Departure)
 
-```scheme
+`scheme
 (define (clock-send clock message)
   "Attach timestamp to outgoing message"
   (clock-tick! clock)
@@ -113,26 +113,26 @@ Send (Message Departure)
     (clock-counter clock)
     (clock-node-id clock)
     message))
-```
+`
 
 Receive (Message Arrival)
 
-```scheme
+`scheme
 (define (clock-receive! clock timestamped-message)
   "Update clock on message receipt"
   (let ((remote-time (message-timestamp timestamped-message)))
     (set! (clock-counter clock)
           (+ 1 (max (clock-counter clock) remote-time)))
     (message-payload timestamped-message)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Total Ordering
 
 Lamport clocks give partial order. For total order, break ties with node ID:
 
-```scheme
+`scheme
 (define (lamport-compare a b)
   "Total order: compare by timestamp, then by node-id"
   (let ((ta (clock-counter (event-clock a)))
@@ -145,33 +145,33 @@ Lamport clocks give partial order. For total order, break ties with node ID:
       ((string<? na nb) -1)
       ((string>? na nb) 1)
       (else 0))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Application to Cyberspace
 
 Audit Trail Ordering
 
-```scheme
+`scheme
 (audit-entry
   (lamport-clock 1042 "alice-vault")
   (timestamp "2026-01-06T15:30:00Z")  ; Physical (advisory)
   (action (seal-commit "abc123"))
   ...)
-```
+`
 
 Logical clock provides causal ordering even if physical clocks differ.
 
 Federation Message Ordering
 
-```scheme
+`scheme
 (federation-message
   (logical-time 573)
   (from "bob-vault")
   (type announcement)
   (payload ...))
-```
+`
 
 Receivers update their clocks, ensuring consistent view of causality.
 
@@ -179,7 +179,7 @@ Conflict Detection
 
 If events are concurrent (neither a → b nor b → a):
 
-```scheme
+`scheme
 (define (concurrent? a b)
   "True if neither event happened before the other"
   (let ((ta (clock-counter (event-clock a)))
@@ -189,15 +189,15 @@ If events are concurrent (neither a → b nor b → a):
     (and (= ta tb)
          (not (equal? (clock-node-id (event-clock a))
                       (clock-node-id (event-clock b)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Vector Clocks (Extension)
 
 For precise concurrency detection, use vector clocks:
 
-```scheme
+`scheme
 (define-record-type <vector-clock>
   (make-vector-clock entries)
   vector-clock?
@@ -205,42 +205,42 @@ For precise concurrency detection, use vector clocks:
 
 ;; a → b iff VC(a) < VC(b) (component-wise)
 ;; a || b (concurrent) iff neither VC(a) < VC(b) nor VC(b) < VC(a)
-```
+`
 
 Trade-off: O(N) space vs O(1) for Lamport clocks.
 
----
+------------------------------------------------------------------------------
 
 Integration Points
 
 With Audit Trail (RFC-003)
 
-```scheme
+`scheme
 (audit-entry
   (sequence 42)           ; Local sequence
   (lamport-clock 1042)    ; Logical timestamp
   (physical-time "...")   ; Advisory only
   ...)
-```
+`
 
 With Consensus (RFC-011)
 
-```scheme
+`scheme
 (consensus-message
   (sequence 573)          ; Consensus sequence
   (lamport-clock 2891)    ; Causal context
   ...)
-```
+`
 
 With Replication (RFC-001)
 
-```scheme
+`scheme
 (seal-publish "2.0.0"
   (logical-time 892)
   ...)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
@@ -261,7 +261,7 @@ Flooding with high-timestamped messages forces clock advancement.
 
 Mitigation: Rate limiting, reputation systems.
 
----
+------------------------------------------------------------------------------
 
 Implementation Notes
 
@@ -269,27 +269,27 @@ Thread Safety
 
 Clock updates must be atomic:
 
-```scheme
+`scheme
 (define (atomic-tick! clock)
   (mutex-lock! clock-mutex)
   (clock-tick! clock)
   (mutex-unlock! clock-mutex))
-```
+`
 
 Persistence
 
 Clock state survives restarts:
 
-```scheme
+`scheme
 (define (save-clock clock path)
   (with-output-to-file path
     (lambda ()
       (write `(lamport-clock
                 (counter ,(clock-counter clock))
                 (node-id ,(clock-node-id clock)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -299,14 +299,14 @@ References
 4. RFC-003: Cryptographic Audit Trail
 5. RFC-010: Federation Protocol
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-06** - Initial specification
+- 2026-01-06 - Initial specification
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Proposed
-**Clock Type:** Lamport scalar, vector clock extension
-**Ordering:** Partial (causal), total with tie-breaking
+Implementation Status: Proposed
+Clock Type: Lamport scalar, vector clock extension
+Ordering: Partial (causal), total with tie-breaking

@@ -1,36 +1,36 @@
 RFC-027: Vault Migration
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies vault migration for the Library of Cyberspace: how to move vaults between hosts, storage backends, and administrative domains while preserving content integrity, capability chains, and audit continuity. Migration is essential for long-term preservation.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Vaults must outlive their infrastructure:
 
-- **Hardware failure** - Disks die, servers decommission
-- **Provider changes** - Cloud vendors come and go
-- **Jurisdiction** - Legal requirements may force relocation
-- **Performance** - Move closer to users
-- **Cost** - Cheaper storage becomes available
+- Hardware failure - Disks die, servers decommission
+- Provider changes - Cloud vendors come and go
+- Jurisdiction - Legal requirements may force relocation
+- Performance - Move closer to users
+- Cost - Cheaper storage becomes available
 
 Migration must be:
 
-- **Complete** - All objects, metadata, capabilities
-- **Verifiable** - Cryptographic proof of integrity
-- **Resumable** - Handle interruptions gracefully
-- **Auditable** - Full trail of what moved where
+- Complete - All objects, metadata, capabilities
+- Verifiable - Cryptographic proof of integrity
+- Resumable - Handle interruptions gracefully
+- Auditable - Full trail of what moved where
 
----
+------------------------------------------------------------------------------
 
 Migration Types
 
@@ -38,7 +38,7 @@ Full Migration
 
 Move entire vault to new location:
 
-```scheme
+`scheme
 (define (full-migration source-vault target-host)
   "Migrate entire vault to new host"
   (let ((migration-id (generate-migration-id)))
@@ -55,26 +55,26 @@ Move entire vault to new location:
       (verify-transfer snapshot target-host)
       ;; Phase 4: Cutover
       (cutover source-vault target-host migration-id))))
-```
+`
 
 Partial Migration
 
 Move subset of objects:
 
-```scheme
+`scheme
 (define (partial-migration source-vault target-host predicate)
   "Migrate objects matching predicate"
   (let ((objects (soup-query source-vault predicate)))
     (for-each (lambda (obj)
                 (migrate-object obj target-host))
               objects)))
-```
+`
 
 Live Migration
 
 Migrate while vault remains active:
 
-```scheme
+`scheme
 (define (live-migration source-vault target-host)
   "Migrate without downtime"
   ;; Phase 1: Initial sync
@@ -82,19 +82,19 @@ Migrate while vault remains active:
     ;; Phase 2: Catch up changes
     (let loop ((last-checkpoint checkpoint))
       (let ((changes (changes-since source-vault last-checkpoint)))
-        (if (< (length changes) *catchup-threshold*)
+        (if (< (length changes) catchup-threshold)
             ;; Phase 3: Final cutover (brief pause)
             (atomic-cutover source-vault target-host changes)
             (loop (sync-changes changes target-host)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Object Transfer
 
 Export Format
 
-```scheme
+`scheme
 ;; Sealed archive format (RFC-018)
 (define (export-object hash)
   `(vault-object
@@ -109,11 +109,11 @@ Export Format
     (seal-archive objects
       compression: 'zstd
       encryption: target-vault-key)))
-```
+`
 
 Transfer Protocol
 
-```scheme
+`scheme
 (define (transfer-object obj source target)
   "Transfer single object with verification"
   (let* ((hash (object-hash obj))
@@ -127,11 +127,11 @@ Transfer Protocol
       (audit-append action: `(object-transferred ,hash)
                     source: source
                     target: target))))
-```
+`
 
 Streaming Transfer
 
-```scheme
+`scheme
 (define (stream-transfer source target)
   "Stream objects for efficient bulk transfer"
   (let ((stream (open-transfer-stream source target)))
@@ -142,15 +142,15 @@ Streaming Transfer
                     (stream-flush stream))))
               (vault-all-hashes source))
     (stream-close stream)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Metadata Migration
 
 Soup Entries
 
-```scheme
+`scheme
 (define (migrate-soup-entry hash source target)
   "Migrate soup metadata for object"
   (let ((entry (soup-get source hash)))
@@ -159,11 +159,11 @@ Soup Entries
       ;; Verify
       (unless (equal? (soup-get target hash) entry)
         (error "Soup entry migration failed" hash)))))
-```
+`
 
 Index Migration
 
-```scheme
+`scheme
 (define (migrate-indexes source target)
   "Rebuild indexes on target"
   ;; Option 1: Export and import index data
@@ -172,11 +172,11 @@ Index Migration
 
   ;; Option 2: Rebuild from soup (slower but guaranteed correct)
   (rebuild-indexes target))
-```
+`
 
 Audit Trail
 
-```scheme
+`scheme
 (define (migrate-audit source target)
   "Migrate audit trail (critical for provenance)"
   (let ((audit-entries (audit-export source)))
@@ -193,15 +193,15 @@ Audit Trail
              (timestamp ,(current-time)))))
       (audit-append source migration-entry)
       (audit-append target migration-entry))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Capability Migration
 
 Certificate Transfer
 
-```scheme
+`scheme
 (define (migrate-capabilities source target)
   "Migrate SPKI certificates"
   (let ((certs (soup-query source type: 'certificate)))
@@ -210,11 +210,11 @@ Certificate Transfer
                 (let ((hash (cert-hash cert)))
                   (migrate-object hash source target)))
               certs)))
-```
+`
 
 Key Migration
 
-```scheme
+`scheme
 ;; Private keys require special handling
 (define (migrate-vault-keys source target ceremony-witnesses)
   "Migrate vault keys via key ceremony"
@@ -231,11 +231,11 @@ Key Migration
     ;; Record in both vaults
     (audit-append source action: `(key-transition ,transition-cert))
     (audit-append target action: `(key-transition ,transition-cert))))
-```
+`
 
 Delegation Chain Continuity
 
-```scheme
+`scheme
 (define (verify-delegation-chains target)
   "Verify all delegation chains remain valid after migration"
   (let ((certs (soup-query target type: 'certificate)))
@@ -244,15 +244,15 @@ Delegation Chain Continuity
                   (unless (valid-chain? chain)
                     (warn "Broken delegation chain" cert))))
               certs)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Verification
 
 Content Verification
 
-```scheme
+`scheme
 (define (verify-migration source target)
   "Verify all content transferred correctly"
   (let ((source-hashes (vault-all-hashes source))
@@ -277,11 +277,11 @@ Content Verification
                                 (soup-get target hash))
                   (error "Soup mismatch" hash)))
               (random-sample source-hashes 1000))))
-```
+`
 
 Merkle Verification
 
-```scheme
+`scheme
 (define (merkle-verify-migration source target)
   "Verify migration via Merkle root comparison"
   (let ((source-root (vault-merkle-root source))
@@ -290,11 +290,11 @@ Merkle Verification
       ;; Find divergence
       (let ((divergence (find-merkle-divergence source target)))
         (error "Merkle verification failed" divergence)))))
-```
+`
 
 Audit Verification
 
-```scheme
+`scheme
 (define (verify-audit-continuity source target)
   "Verify audit trail continuity"
   (let ((source-audit (audit-export source))
@@ -302,15 +302,15 @@ Audit Verification
     ;; Target should have all source entries plus migration events
     (unless (subsequence? source-audit target-audit)
       (error "Audit trail discontinuity"))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Cutover
 
 Atomic Cutover
 
-```scheme
+`scheme
 (define (atomic-cutover source target migration-id)
   "Atomically switch from source to target"
   ;; Phase 1: Quiesce source
@@ -331,11 +331,11 @@ Atomic Cutover
 
   ;; Phase 6: Record completion
   (audit-append target action: `(migration-complete ,migration-id)))
-```
+`
 
 Rollback
 
-```scheme
+`scheme
 (define (migration-rollback migration-id)
   "Rollback failed migration"
   (let ((migration (get-migration migration-id)))
@@ -351,15 +351,15 @@ Rollback
        (vault-activate! (migration-source migration)))
       ((complete)
        (error "Cannot rollback completed migration")))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Incremental Migration
 
 Checkpoint System
 
-```scheme
+`scheme
 (define (migration-checkpoint migration-id progress)
   "Save migration progress for resumption"
   (let ((checkpoint
@@ -377,11 +377,11 @@ Checkpoint System
     (if checkpoint
         (continue-from-checkpoint checkpoint)
         (error "No checkpoint found" migration-id))))
-```
+`
 
 Change Tracking
 
-```scheme
+`scheme
 ;; Track changes during migration
 (define (changes-since vault timestamp)
   "Get all changes since timestamp"
@@ -398,15 +398,15 @@ Change Tracking
                 ((delete)
                  (cas-delete target (change-hash change)))))
             changes))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Storage Backend Migration
 
 Backend Abstraction
 
-```scheme
+`scheme
 ;; Migrate between storage backends
 (define (backend-migration vault old-backend new-backend)
   "Migrate vault to different storage backend"
@@ -421,11 +421,11 @@ Backend Abstraction
   (backend-migration vault
                      (make-s3-backend bucket)
                      (make-fs-backend path)))
-```
+`
 
 Format Conversion
 
-```scheme
+`scheme
 ;; Migrate between storage formats
 (define (format-migration vault old-format new-format)
   "Convert storage format during migration"
@@ -434,15 +434,15 @@ Format Conversion
                      (new-data (convert-format old-data new-format)))
                 (write-format new-format hash new-data)))
             (vault-all-hashes vault)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Federation Migration
 
 Vault Federation Changes
 
-```scheme
+`scheme
 (define (federation-migrate vault old-federation new-federation)
   "Migrate vault between federations"
   ;; Leave old federation
@@ -456,11 +456,11 @@ Vault Federation Changes
 
   ;; Announce to peers
   (federation-announce new-federation vault))
-```
+`
 
 Cross-Federation Transfer
 
-```scheme
+`scheme
 (define (cross-federation-transfer hash source-fed target-fed)
   "Transfer object between federations"
   (let* ((source-vault (federation-locate source-fed hash))
@@ -468,15 +468,15 @@ Cross-Federation Transfer
          (obj (vault-get source-vault hash)))
     (vault-put target-vault obj)
     (federation-announce target-fed hash target-vault)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
 Migration Authorization
 
-```scheme
+`scheme
 ;; Migration requires appropriate capability
 (spki-cert
   (issuer vault-admin)
@@ -489,11 +489,11 @@ Migration Authorization
 (define (authorized-migration? operator source target)
   (and (has-capability? operator 'migrate source)
        (has-capability? operator 'write target)))
-```
+`
 
 Encryption in Transit
 
-```scheme
+`scheme
 (define (secure-transfer source target)
   "Transfer with encryption"
   (let ((session-key (establish-session-key source target)))
@@ -502,11 +502,11 @@ Encryption in Transit
                        (encrypted (encrypt session-key data)))
                   (send-encrypted target encrypted)))
               (vault-all-hashes source))))
-```
+`
 
 Migration Audit
 
-```scheme
+`scheme
 ;; All migrations are fully audited
 (define (audited-migration source target)
   (let ((migration-id (generate-migration-id)))
@@ -520,25 +520,25 @@ Migration Audit
                   migration-id: migration-id
                   objects: (count-migrated)
                   verification: (verification-result))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [Live Migration of Virtual Machines](https://dl.acm.org/doi/10.1145/1095810.1095816) - Clark et al.
-2. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.md)
-3. [RFC-022: Key Ceremony Protocol](rfc-022-key-ceremony.md)
-4. [RFC-024: Network Protocol](rfc-024-network-protocol.md)
+1. Live Migration of Virtual Machines - Clark et al.
+2. RFC-018: Sealed Archive Format
+3. RFC-022: Key Ceremony Protocol
+4. RFC-024: Network Protocol
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** vault, cas, soup, federation
-**Integration:** Vault operations, federation, disaster recovery
+Implementation Status: Draft
+Dependencies: vault, cas, soup, federation
+Integration: Vault operations, federation, disaster recovery

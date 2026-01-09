@@ -1,17 +1,17 @@
 RFC-023: Demonic Agents
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies demonic agents for the Library of Cyberspace: how autonomous agents—daemons in the BSD tradition—are spawned, constrained, monitored, and terminated. Agents are helpful spirits that operate with capability-based authority in isolated sandboxes, enabling safe delegation of tasks while maintaining security boundaries. The vault daemons watch over all.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
@@ -25,27 +25,27 @@ The General Magic Vision
 
 Telescript, from 1994:
 
-> "Programs that travel from machine to machine, carrying your authority, doing things while you sleep."
+  "Programs that travel from machine to machine, carrying your authority, doing things while you sleep."
 
 That vision failed because:
 
-- **No security model** - Agents ran with ambient authority
-- **No isolation** - One agent could corrupt another
-- **No accountability** - No audit of agent actions
-- **No revocation** - Once launched, agents were uncontrollable
+- No security model - Agents ran with ambient authority
+- No isolation - One agent could corrupt another
+- No accountability - No audit of agent actions
+- No revocation - Once launched, agents were uncontrollable
 
 The Demonic Solution
 
 The Library realizes this vision with proper daemonology:
 
-- **Capability-based authority** - Daemons have only granted permissions
-- **Sandbox isolation** - Process, filesystem, network boundaries
-- **Full audit trail** - The Audit Daemon witnesses every action
-- **Remote termination** - Daemons can be banished at any time
+- Capability-based authority - Daemons have only granted permissions
+- Sandbox isolation - Process, filesystem, network boundaries
+- Full audit trail - The Audit Daemon witnesses every action
+- Remote termination - Daemons can be banished at any time
 
-Daemons don't rule—they serve. They don't watch *over*—they watch *with*.
+Daemons don't rule—they serve. They don't watch over—they watch with.
 
----
+------------------------------------------------------------------------------
 
 Daemon Model
 
@@ -53,7 +53,7 @@ What is a Daemon?
 
 A daemon is a helpful spirit—an autonomous agent that serves its principal:
 
-```scheme
+`scheme
 (agent
   (id "agent-2026-001")
   (spawned-by user-principal)
@@ -68,11 +68,11 @@ A daemon is a helpful spirit—an autonomous agent that serves its principal:
     (max-storage (* 1 1024 1024 1024)))  ; 1GB
   (sandbox posix-sandbox)
   (status running))
-```
+`
 
 Agent Lifecycle
 
-```
+`
     ┌─────────┐
     │ DEFINED │ Agent specification created
     └────┬────┘
@@ -101,15 +101,15 @@ Agent Lifecycle
     ┌─────────┐
     │ ARCHIVED│ Audit log preserved, resources released
     └─────────┘
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Spawning Agents
 
 Spawn Request
 
-```scheme
+`scheme
 (define (spawn-agent spec)
   "Spawn new agent from specification"
   (let* ((agent-id (generate-agent-id))
@@ -140,11 +140,11 @@ Spawn Request
 
     ;; Return agent handle
     agent))
-```
+`
 
 Capability Verification
 
-```scheme
+`scheme
 (define (verify-spawn-authority spawner requested-caps)
   "Verify spawner can grant requested capabilities"
   (for-each
@@ -152,11 +152,11 @@ Capability Verification
       (unless (authorized? spawner 'delegate cap)
         (error "Cannot delegate capability" cap)))
     requested-caps))
-```
+`
 
 Agent Code Loading
 
-```scheme
+`scheme
 (define (load-agent-code spec)
   "Load and verify agent code"
   (let* ((code-hash (spec-code-hash spec))
@@ -172,9 +172,9 @@ Agent Code Loading
         (error "Code signature invalid")))
 
     code))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Sandbox Types
 
@@ -182,7 +182,7 @@ POSIX Sandbox
 
 Process isolation using OS primitives:
 
-```scheme
+`scheme
 (define (create-posix-sandbox constraints)
   "Create POSIX-based sandbox"
   (sandbox
@@ -211,13 +211,13 @@ Process isolation using OS primitives:
     (network
       (allowed-hosts ,(constraints-network-hosts constraints))
       (allowed-ports ,(constraints-network-ports constraints)))))
-```
+`
 
 Scheme Sandbox
 
 Language-level isolation for Scheme agents:
 
-```scheme
+`scheme
 (define (create-scheme-sandbox constraints)
   "Create Scheme-level sandbox"
   (sandbox
@@ -240,13 +240,13 @@ Language-level isolation for Scheme agents:
 
     ;; Capability-restricted I/O
     (io-capabilities ,(constraints-io constraints))))
-```
+`
 
 Container Sandbox
 
 OCI container isolation:
 
-```scheme
+`scheme
 (define (create-container-sandbox constraints image)
   "Create container-based sandbox"
   (sandbox
@@ -270,13 +270,13 @@ OCI container isolation:
     (network
       (mode bridge)
       (egress-policy ,(network-policy constraints)))))
-```
+`
 
 WASM Sandbox
 
 WebAssembly isolation:
 
-```scheme
+`scheme
 (define (create-wasm-sandbox constraints)
   "Create WebAssembly sandbox"
   (sandbox
@@ -299,9 +299,9 @@ WebAssembly isolation:
       (log "library:log")
       (cas-get "library:cas_get")
       (cas-put "library:cas_put"))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Capability Enforcement
 
@@ -309,7 +309,7 @@ Capability Proxy
 
 All agent I/O goes through capability-checking proxies:
 
-```scheme
+`scheme
 (define (make-capability-proxy agent capabilities)
   "Create proxy that enforces capability checks"
 
@@ -340,11 +340,11 @@ All agent I/O goes through capability-checking proxies:
      `(read (hash ,(car args))))
     (else
      (error "Unknown operation" op))))
-```
+`
 
 Attenuation on Delegation
 
-```scheme
+`scheme
 (define (agent-spawn-child parent-agent child-spec)
   "Agent spawning child agent with attenuated capabilities"
   (let* ((parent-caps (agent-capabilities parent-agent))
@@ -357,9 +357,9 @@ Attenuation on Delegation
       (warn "Child capabilities attenuated"))
 
     (spawn-agent (spec-with-capabilities child-spec child-caps))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Agent Communication
 
@@ -367,7 +367,7 @@ Message Passing
 
 Agents communicate via typed, capability-checked messages:
 
-```scheme
+`scheme
 (define (agent-send from-agent to-agent message)
   "Send message between agents"
 
@@ -396,13 +396,13 @@ Agents communicate via typed, capability-checked messages:
       ;; Verify signature
       (verify-message-signature msg)
       msg)))
-```
+`
 
 Shared State
 
 Agents can share state through CAS:
 
-```scheme
+`scheme
 (define (agent-share agent hash recipients)
   "Share CAS object with other agents"
 
@@ -420,15 +420,15 @@ Agents can share state through CAS:
   ;; Audit sharing
   (audit-append
     action: `(agent-share ,hash ,recipients)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Monitoring and Control
 
 Agent Status
 
-```scheme
+`scheme
 (define (agent-status agent)
   "Get current agent status"
   `(agent-status
@@ -442,11 +442,11 @@ Agent Status
     (actions ,(agent-action-count agent))
     (messages-sent ,(agent-messages-sent agent))
     (messages-received ,(agent-messages-received agent))))
-```
+`
 
 Agent Control
 
-```scheme
+`scheme
 (define (agent-pause agent #!key reason)
   "Pause agent execution"
   (unless (authorized? (current-principal) 'control agent)
@@ -474,13 +474,13 @@ Agent Control
     motivation: reason
     priority: 'high)
   (cleanup-agent agent))
-```
+`
 
 Watchdog Daemon
 
 The watchdog daemon tends the flock of agents—a daemon watching daemons:
 
-```scheme
+`scheme
 (define (agent-watchdog)
   "Monitor all agents, enforce constraints"
   (for-each
@@ -500,15 +500,15 @@ The watchdog daemon tends the flock of agents—a daemon watching daemons:
                  agent-heartbeat-timeout)
           (agent-terminate agent reason: "Heartbeat timeout"))))
     (all-agents)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Soup Integration
 
 Agents in the Soup
 
-```scheme
+`scheme
 (soup-object
   (name "agent/2026-001")
   (type agent)
@@ -519,11 +519,11 @@ Agents in the Soup
   (runtime "4h 23m")
   (resources (memory "234MB") (storage "890MB"))
   (capabilities (read "arxiv.org/*") (write "/vault/papers/")))
-```
+`
 
 Querying Agents
 
-```scheme
+`scheme
 ;; All running agents
 (soup-query type: 'agent status: 'running)
 
@@ -535,11 +535,11 @@ Querying Agents
 
 ;; Resource hogs
 (soup-query type: 'agent min-memory: (* 256 1024 1024))
-```
+`
 
 Agent Introspection
 
-```scheme
+`scheme
 ;; Agent can query itself
 (define (agent-self-inspect)
   `(self
@@ -549,15 +549,15 @@ Agent Introspection
       (memory ,(- max-memory (current-memory)))
       (runtime ,(- max-runtime (current-uptime)))
       (fuel ,(remaining-fuel)))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Agent Patterns
 
 Pattern 1: Periodic Task Agent
 
-```scheme
+`scheme
 (spawn-agent
   (code '(lambda ()
            (let loop ()
@@ -571,11 +571,11 @@ Pattern 1: Periodic Task Agent
   (constraints
     (max-runtime (* 30 24 3600))  ; 30 days
     (max-memory (* 128 1024 1024))))
-```
+`
 
 Pattern 2: One-Shot Processing Agent
 
-```scheme
+`scheme
 (spawn-agent
   (code '(lambda ()
            (let ((input (cas-get input-hash)))
@@ -587,11 +587,11 @@ Pattern 2: One-Shot Processing Agent
   (constraints
     (max-runtime 3600)
     (max-memory (* 1024 1024 1024))))
-```
+`
 
 Pattern 3: Reactive Agent
 
-```scheme
+`scheme
 (spawn-agent
   (code '(lambda ()
            (let loop ()
@@ -607,11 +607,11 @@ Pattern 3: Reactive Agent
   (constraints
     (max-runtime #f)  ; runs until terminated
     (max-memory (* 256 1024 1024))))
-```
+`
 
 Pattern 4: Mobile Agent
 
-```scheme
+`scheme
 ;; Agent that migrates between vaults
 (spawn-agent
   (code '(lambda ()
@@ -625,15 +625,15 @@ Pattern 4: Mobile Agent
   (constraints
     (max-migrations 10)
     (max-runtime (* 24 3600))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
 Escape Prevention
 
-```scheme
+`scheme
 ;; Sandbox escape mitigations
 (define sandbox-security
   '((seccomp "restrict system calls")
@@ -642,11 +642,11 @@ Escape Prevention
     (no-setuid "prevent privilege escalation")
     (read-only-root "immutable rootfs")
     (no-raw-sockets "prevent network attacks")))
-```
+`
 
 Resource Exhaustion
 
-```scheme
+`scheme
 ;; Prevent denial of service
 (define resource-limits
   '((memory "hard limit, OOM killer")
@@ -655,11 +655,11 @@ Resource Exhaustion
     (network "bandwidth limiting")
     (processes "prevent fork bombs")
     (file-descriptors "prevent fd exhaustion")))
-```
+`
 
 Information Leakage
 
-```scheme
+`scheme
 ;; Prevent covert channels
 (define isolation-measures
   '((timing "fuel-based execution, no precise timers")
@@ -667,11 +667,11 @@ Information Leakage
     (network "egress filtering")
     (ipc "message passing only, no shared memory")
     (environment "sanitized env vars")))
-```
+`
 
 Malicious Agents
 
-```scheme
+`scheme
 (define (detect-malicious-behavior agent)
   "Heuristics for detecting malicious agents"
   (or
@@ -683,9 +683,9 @@ Malicious Agents
     (> (agent-violation-count agent) max-violations)
     ;; Anomalous message patterns
     (anomalous-messaging? agent)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Implementation Notes
 
@@ -704,29 +704,29 @@ Performance
 - Message passing: ~10μs (local), ~1ms (cross-sandbox)
 - Capability check: ~100ns (cached), ~10μs (chain validation)
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [Telescript Technology: Mobile Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html)
-2. [Capsicum: Practical Capabilities for UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/)
-3. [WebAssembly System Interface (WASI)](https://wasi.dev/)
-4. [RFC-021: Capability Delegation](rfc-021-capability-delegation.md)
-5. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.md)
-6. [E Programming Language](http://erights.org/) - Object capabilities
+1. Telescript Technology: Mobile Agents
+2. Capsicum: Practical Capabilities for UNIX
+3. WebAssembly System Interface (WASI)
+4. RFC-021: Capability Delegation
+5. RFC-003: Cryptographic Audit Trail
+6. E Programming Language - Object capabilities
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** sandbox (OS-specific), capabilities, audit
-**Integration:** Vault operations, distributed processing, automation
+Implementation Status: Draft
+Dependencies: sandbox (OS-specific), capabilities, audit
+Integration: Vault operations, distributed processing, automation
 
----
+------------------------------------------------------------------------------
 
-*The Library is a distributed conspiracy—con spirare, to breathe together—of helpful daemons tending a federation of enclaves. Not a cult, just people who want the same things: privacy, preservation, persistence.*
+The Library is a distributed conspiracy—con spirare, to breathe together—of helpful daemons tending a federation of enclaves. Not a cult, just people who want the same things: privacy, preservation, persistence.

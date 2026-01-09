@@ -4,15 +4,15 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-002: Cyberspace Architecture
 
-Status: Informational Date: January 2026 Author: Derrell Piper ddp@eludom.net
+Status: Informational
+Date: January 2026
+Author: Derrell Piper &lt;ddp@eludom.net&gt;
 
 ------------------------------------------------------------------------------
 
 Abstract
 
-Cyberspace is a distributed systems architecture built on S-expressions and
-Scheme, designed for cryptographic security without complexity. This RFC
-describes the overall system design, philosophy, and components.
+Cyberspace is a distributed systems architecture built on S-expressions and Scheme, designed for cryptographic security without complexity. This RFC describes the overall system design, philosophy, and components.
 
 ------------------------------------------------------------------------------
 
@@ -20,58 +20,39 @@ E Pluribus Unum
 
 Out of many, one.
 
-             ╭─────────────────────────────────────╮
-             │                                     │
-             │   Rough consensus, cryptography,    │
-             │   trusted systems, running code.    │
-             │                                     │
-             ╰─────────────────────────────────────╯
+`
+         ╭─────────────────────────────────────╮
+         │                                     │
+         │   Rough consensus, cryptography,    │
+         │   trusted systems, running code.    │
+         │                                     │
+         ╰─────────────────────────────────────╯
+`
 
 ------------------------------------------------------------------------------
 
 1. Motivation
 
-Modern distributed systems are drowning in complexity. X.509 certificates
-require decoder rings. Container orchestration demands armies of SREs.
-Security policies hide in YAML nested seventeen levels deep.
+Modern distributed systems are drowning in complexity. X.509 certificates require decoder rings. Container orchestration demands armies of SREs. Security policies hide in YAML nested seventeen levels deep.
 
 The Manifesto:
 
   Authorized capability set with auditing. No central authority.
 
-These three principles - SPKI authorization, cryptographic audit trails, and
-optional centralization - are not new. They were proven in VAXcluster security
-(1984-1994), proposed in SDSI at IETF 29 Seattle (1994), and implemented
-partially in products that didn’t survive their parent companies. Cyberspace
-completes what was started.
+These three principles - SPKI authorization, cryptographic audit trails, and optional centralization - are not new. They were proven in VAXcluster security (1984-1994), proposed in SDSI at IETF 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.
 
 Design Lineage:
 
-  -----------------------------------------------------------------------------
-  Era            System                 Contribution
-  -------------- ---------------------- ---------------------------------------
-  1984           VAXcluster             “Behave as one” - N nodes, one security
-                                        domain
+| Era | System | Contribution |
+|-----|--------|--------------|
+| 1984 | VAXcluster | "Behave as one" - N nodes, one security domain |
+| 1985 | VMS C2 | Audit trails, access control, security primitives |
+| 1993 | VMS 6.0 | Cluster-wide intrusion detection, TLV object store |
+| 1994 | SDSI | Self-certifying keys, local names (Rivest, IETF 29) |
+| 1999 | SPKI | Authorization certificates, capability delegation |
+| 2026 | Cyberspace | Synthesis: SPKI + audit + IPv6 mesh + no central authority |
 
-  1985           VMS C2                 Audit trails, access control, security
-                                        primitives
-
-  1993           VMS 6.0                Cluster-wide intrusion detection, TLV
-                                        object store
-
-  1994           SDSI                   Self-certifying keys, local names
-                                        (Rivest, IETF 29)
-
-  1999           SPKI                   Authorization certificates, capability
-                                        delegation
-
-  2026           Cyberspace             Synthesis: SPKI + audit + IPv6 mesh +
-                                        no central authority
-  -----------------------------------------------------------------------------
-
-DECnet Phase IV had 24-bit addressing - fatal for internet scale. Cyberspace
-is designed for IPv6: 128-bit addresses, global mesh, same security
-principles.
+DECnet Phase IV had 24-bit addressing - fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.
 
 Cyberspace returns to first principles:
 
@@ -84,43 +65,43 @@ Cyberspace returns to first principles:
 
 2. The Prime Directive
 
-  If it’s in the TCB, it’s in OCaml. Otherwise it’s in Chicken Scheme.
+  If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.
 
-    ┌─────────────────────────────────────────────────────────────┐
-    │                                                             │
-    │   TRUSTED COMPUTING BASE (OCaml, ~1000 lines)              │
-    │                                                             │
-    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-    │   │   Ed25519   │  │   SHA-512   │  │   Verify    │        │
-    │   │   Sign      │  │   Hash      │  │   Chain     │        │
-    │   └─────────────┘  └─────────────┘  └─────────────┘        │
-    │                                                             │
-    │   That's it. Everything else is policy.                    │
-    │                                                             │
-    └─────────────────────────────────────────────────────────────┘
-                               │
-                               │ FFI (tiny surface)
-                               ▼
-    ┌─────────────────────────────────────────────────────────────┐
-    │                                                             │
-    │   EVERYTHING ELSE (Chicken Scheme, unlimited)              │
-    │                                                             │
-    │   Vault · Audit · Replication · Names · Discovery          │
-    │   CLI Tools · API Server · Library · Scripts               │
-    │                                                             │
-    │   Change it anytime. It's just policy.                     │
-    │                                                             │
-    └─────────────────────────────────────────────────────────────┘
+`
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   TRUSTED COMPUTING BASE (OCaml, ~1000 lines)              │
+│                                                             │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│   │   Ed25519   │  │   SHA-512   │  │   Verify    │        │
+│   │   Sign      │  │   Hash      │  │   Chain     │        │
+│   └─────────────┘  └─────────────┘  └─────────────┘        │
+│                                                             │
+│   That's it. Everything else is policy.                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ FFI (tiny surface)
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   EVERYTHING ELSE (Chicken Scheme, unlimited)              │
+│                                                             │
+│   Vault · Audit · Replication · Names · Discovery          │
+│   CLI Tools · API Server · Library · Scripts               │
+│                                                             │
+│   Change it anytime. It's just policy.                     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+`
 
 Rationale:
 
 - OCaml: Strong types, formal verification with Coq, compile-time safety
-- Chicken Scheme: Interactive development, S-expressions everywhere, rapid
-  evolution
+- Chicken Scheme: Interactive development, S-expressions everywhere, rapid evolution
 - The boundary: Tiny, frozen, proven. The TCB does crypto and nothing else.
 
-A smaller TCB means fewer bugs that can break security. We prove the crypto in
-Coq. Everything else can evolve freely.
+A smaller TCB means fewer bugs that can break security. We prove the crypto in Coq. Everything else can evolve freely.
 
 ------------------------------------------------------------------------------
 
@@ -130,10 +111,12 @@ Coq. Everything else can evolve freely.
 
 Sealed version control with cryptographic signatures.
 
-    $ cyberspace vault init
-    $ cyberspace vault commit -m "Deploy new API"
-    $ cyberspace vault verify
-    ✓ All signatures valid
+`bash
+$ cyberspace vault init
+$ cyberspace vault commit -m "Deploy new API"
+$ cyberspace vault verify
+✓ All signatures valid
+`
 
 Every commit is cryptographically sealed. No GPG. No separate signing step.
 
@@ -141,13 +124,15 @@ Every commit is cryptographically sealed. No GPG. No separate signing step.
 
 Tamper-evident logging with hash chains.
 
-    (audit-entry
-      (sequence 1042)
-      (timestamp "2026-01-06T15:30:00Z")
-      (action (commit "Deploy v2.1"))
-      (actor (public-key |...|))
-      (previous-hash |...|)
-      (signature |...|))
+`scheme
+(audit-entry
+  (sequence 1042)
+  (timestamp "2026-01-06T15:30:00Z")
+  (action (commit "Deploy v2.1"))
+  (actor (public-key |...|))
+  (previous-hash |...|)
+  (signature |...|))
+`
 
 Append-only. Hash-chained. Signed. Export as text.
 
@@ -155,11 +140,13 @@ Append-only. Hash-chained. Signed. Export as text.
 
 Authorization without identity.
 
-    (cert
-      (issuer (public-key ed25519 |base64....|))
-      (subject (name alice "deploy-server"))
-      (grant (tag (http-api (method POST) (path "/deploy/*"))))
-      (valid (not-after "2026-12-31")))
+`scheme
+(cert
+  (issuer (public-key ed25519 |base64....|))
+  (subject (name alice "deploy-server"))
+  (grant (tag (http-api (method POST) (path "/deploy/*"))))
+  (valid (not-after "2026-12-31")))
+`
 
 Human-readable security policy. No ASN.1. No X.509.
 
@@ -167,9 +154,11 @@ Human-readable security policy. No ASN.1. No X.509.
 
 Democracy in code.
 
-    $ cyberspace policy set deploy/prod --threshold 3 --signers alice,bob,carol,dave,eve
-    $ cyberspace execute proposal-42
-    ✓ 3/5 signatures verified
+`bash
+$ cyberspace policy set deploy/prod --threshold 3 --signers alice,bob,carol,dave,eve
+$ cyberspace execute proposal-42
+✓ 3/5 signatures verified
+`
 
 No single point of failure. No rogue admin.
 
@@ -177,25 +166,31 @@ No single point of failure. No rogue admin.
 
 Survive key loss with Shamir splitting.
 
-    (define shares (shamir-split master-key 5 3))
-    ;; Distribute 5 shares. Recover with any 3.
+`scheme
+(define shares (shamir-split master-key 5 3))
+;; Distribute 5 shares. Recover with any 3.
+`
 
 3.6 Replication Layer
 
 Federated distribution without central registry. See RFC-001.
 
-    (seal-publish "1.0.0" remote: "/shared/releases")
-    (seal-subscribe "/shared/releases" verify-key: alice-pub)
-    (seal-synchronize peer-remote direction: 'both)
+`scheme
+(seal-publish "1.0.0" remote: "/shared/releases")
+(seal-subscribe "/shared/releases" verify-key: alice-pub)
+(seal-synchronize peer-remote direction: 'both)
+`
 
 3.7 The Library Directory
 
 421 research papers, searchable.
 
-    📖 &gt; papers by Lamport
-    📚 Found 15 documents
-    📖 &gt; about SPKI
-    📖 &gt; from 1979
+`
+📖 &gt; papers by Lamport
+📚 Found 15 documents
+📖 &gt; about SPKI
+📖 &gt; from 1979
+`
 
 ------------------------------------------------------------------------------
 
@@ -203,44 +198,49 @@ Federated distribution without central registry. See RFC-001.
 
 4.1 Layer Diagram
 
-    ┌──────────────────────────────────────────────────────────────────┐
-    │                        CYBERSPACE                                │
-    ├──────────────────────────────────────────────────────────────────┤
-    │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
-    │  │   Vault    │  │   Audit    │  │   SPKI     │  │  Library   │ │
-    │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘ │
-    │        └───────────────┴───────┬───────┴───────────────┘        │
-    │                    ┌───────────▼───────────┐                    │
-    │                    │    Chicken Scheme     │                    │
-    │                    │    (Policy Layer)     │                    │
-    │                    └───────────┬───────────┘                    │
-    │                    ┌───────────▼───────────┐                    │
-    │                    │    OCaml TCB          │                    │
-    │                    │    (Crypto Only)      │                    │
-    │                    └───────────┬───────────┘                    │
-    │                    ┌───────────▼───────────┐                    │
-    │                    │    libsodium          │                    │
-    │                    └───────────────────────┘                    │
-    └──────────────────────────────────────────────────────────────────┘
+`
+┌──────────────────────────────────────────────────────────────────┐
+│                        CYBERSPACE                                │
+├──────────────────────────────────────────────────────────────────┤
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
+│  │   Vault    │  │   Audit    │  │   SPKI     │  │  Library   │ │
+│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘ │
+│        └───────────────┴───────┬───────┴───────────────┘        │
+│                    ┌───────────▼───────────┐                    │
+│                    │    Chicken Scheme     │                    │
+│                    │    (Policy Layer)     │                    │
+│                    └───────────┬───────────┘                    │
+│                    ┌───────────▼───────────┐                    │
+│                    │    OCaml TCB          │                    │
+│                    │    (Crypto Only)      │                    │
+│                    └───────────┬───────────┘                    │
+│                    ┌───────────▼───────────┐                    │
+│                    │    libsodium          │                    │
+│                    └───────────────────────┘                    │
+└──────────────────────────────────────────────────────────────────┘
+`
 
 4.2 No Central Authority
 
-         Alice                    Bob                     Carol
-           │                       │                        │
-           │    ┌─────────────┐    │    ┌─────────────┐    │
-           └───►│ Alice's     │◄───┴───►│ Bob's       │◄───┘
-                │ Namespace   │         │ Namespace   │
-                │             │         │             │
-                │ bob → key   │         │ alice → key │
-                │ carol → key │         │ carol → key │
-                └─────────────┘         └─────────────┘
+`
+     Alice                    Bob                     Carol
+       │                       │                        │
+       │    ┌─────────────┐    │    ┌─────────────┐    │
+       └───►│ Alice's     │◄───┴───►│ Bob's       │◄───┘
+            │ Namespace   │         │ Namespace   │
+            │             │         │             │
+            │ bob → key   │         │ alice → key │
+            │ carol → key │         │ carol → key │
+            └─────────────┘         └─────────────┘
 
-             No DNS. No CA. No single point of failure.
-             Just keys and local names.
+         No DNS. No CA. No single point of failure.
+         Just keys and local names.
+`
 
-SPKI/SDSI gives you: - Local namespaces: “bob” means what you say it means -
-Authorization without identity: Grant permissions to keys, not people -
-Delegation chains: Alice → Bob → Carol, each step verified
+SPKI/SDSI gives you:
+- Local namespaces: "bob" means what you say it means
+- Authorization without identity: Grant permissions to keys, not people
+- Delegation chains: Alice → Bob → Carol, each step verified
 
 ------------------------------------------------------------------------------
 
@@ -248,34 +248,15 @@ Delegation chains: Alice → Bob → Carol, each step verified
 
 Every feature traces to a foundational paper:
 
-  ------------------------------------------------------------------------------
-  Feature                 Paper             Author               Year
-  ----------------------- ----------------- -------------------- ---------------
-  Vault signatures        “New Directions   Diffie &amp; Hellman     1976
-                          in Cryptography”                       
-
-  Audit trails            “How to           Haber &amp; Stornetta    1991
-                          Time-Stamp a                           
-                          Digital Document”                      
-
-  Merkle proofs           “A Digital        Merkle               1987
-                          Signature Based                        
-                          on a Conventional                      
-                          Encryption                             
-                          Function”                              
-
-  Threshold sigs          “How to Share a   Shamir               1979
-                          Secret”                                
-
-  Logical clocks          “Time, Clocks,    Lamport              1978
-                          and the Ordering                       
-                          of Events”                             
-
-  Capabilities            “Protection”      Lampson              1971
-
-  SPKI certs              “SPKI Certificate Ellison et al.       1999
-                          Theory”                                
-  ------------------------------------------------------------------------------
+| Feature | Paper | Author | Year |
+|---------|-------|--------|------|
+| Vault signatures | "New Directions in Cryptography" | Diffie &amp; Hellman | 1976 |
+| Audit trails | "How to Time-Stamp a Digital Document" | Haber &amp; Stornetta | 1991 |
+| Merkle proofs | "A Digital Signature Based on a Conventional Encryption Function" | Merkle | 1987 |
+| Threshold sigs | "How to Share a Secret" | Shamir | 1979 |
+| Logical clocks | "Time, Clocks, and the Ordering of Events" | Lamport | 1978 |
+| Capabilities | "Protection" | Lampson | 1971 |
+| SPKI certs | "SPKI Certificate Theory" | Ellison et al. | 1999 |
 
 421 papers in the library. Not just referenced—studied, implemented, running.
 
@@ -283,11 +264,13 @@ Every feature traces to a foundational paper:
 
 6. Implementation Status
 
-    ✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities
-    ✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures
-    ✓ SPKI Certs        ✓ Vault             ✓ Audit Trails
-    ✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing
-    ✓ Library Directory
+`
+✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities
+✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures
+✓ SPKI Certs        ✓ Vault             ✓ Audit Trails
+✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing
+✓ Library Directory
+`
 
 Each traces to original research. Each runs. Each is tested.
 
@@ -297,8 +280,7 @@ Each traces to original research. Each runs. Each is tested.
 
 7.1 TCB Minimization
 
-The attack surface is limited to ~1000 lines of OCaml calling libsodium. This
-code is:
+The attack surface is limited to ~1000 lines of OCaml calling libsodium. This code is:
 
 - Formally specified
 - Proven in Coq
@@ -320,11 +302,13 @@ code is:
 
 8. Getting Started
 
-    git clone git@github.com:ddp/cyberspace.git
-    cd cyberspace/spki/scheme
-    ./spki-keygen alice
-    ./seal init --key alice.private
-    ./seal commit -m "Hello, Cyberspace"
+`bash
+git clone git@github.com:ddp/cyberspace.git
+cd cyberspace/spki/scheme
+./spki-keygen alice
+./seal init --key alice.private
+./seal commit -m "Hello, Cyberspace"
+`
 
 ------------------------------------------------------------------------------
 
@@ -341,16 +325,13 @@ code is:
 
 10. References
 
-1.  Diffie, W., &amp; Hellman, M. (1976). New directions in cryptography.
-2.  Haber, S., &amp; Stornetta, W. S. (1991). How to time-stamp a digital
-    document.
-3.  Merkle, R. C. (1987). A digital signature based on a conventional
-    encryption function.
-4.  Shamir, A. (1979). How to share a secret.
-5.  Lamport, L. (1978). Time, clocks, and the ordering of events in a
-    distributed system.
-6.  Lampson, B. W. (1971). Protection.
-7.  Ellison, C., et al. (1999). SPKI certificate theory. RFC 2693.
+1. Diffie, W., &amp; Hellman, M. (1976). New directions in cryptography.
+2. Haber, S., &amp; Stornetta, W. S. (1991). How to time-stamp a digital document.
+3. Merkle, R. C. (1987). A digital signature based on a conventional encryption function.
+4. Shamir, A. (1979). How to share a secret.
+5. Lamport, L. (1978). Time, clocks, and the ordering of events in a distributed system.
+6. Lampson, B. W. (1971). Protection.
+7. Ellison, C., et al. (1999). SPKI certificate theory. RFC 2693.
 
 ------------------------------------------------------------------------------
 
@@ -360,13 +341,14 @@ Changelog
 
 ------------------------------------------------------------------------------
 
-                        ╭────────────────────────────────╮
-                        │                                │
-                        │      "E Pluribus Unum"         │
-                        │                                │
-                        │   github.com/ddp/cyberspace    │
-                        │                                │
-                        ╰────────────────────────────────╯
+`
+                    ╭────────────────────────────────╮
+                    │                                │
+                    │      "E Pluribus Unum"         │
+                    │                                │
+                    │   github.com/ddp/cyberspace    │
+                    │                                │
+                    ╰────────────────────────────────╯
+`
 
-Built on 50 years of cryptographic research. Standing on the shoulders of
-giants.</pre></body></html>
+Built on 50 years of cryptographic research. Standing on the shoulders of giants.</pre></body></html>

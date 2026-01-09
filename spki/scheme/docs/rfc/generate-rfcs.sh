@@ -101,9 +101,18 @@ generate_from_md() {
   local rfc="$1"
   local generated=""
 
-  # First ensure we have .txt (strip markdown headers)
+  # First ensure we have .txt (strip markdown to plain text)
   if is_stale "${rfc}.md" "${rfc}.txt"; then
-    sed 's/^#\{1,6\} //' "${rfc}.md" > "${rfc}.txt"
+    sed -e 's/^#\{1,6\} //' \
+        -e 's/\*\*\([^*]*\)\*\*/\1/g' \
+        -e 's/__\([^_]*\)__/\1/g' \
+        -e 's/\*\([^*]*\)\*/\1/g' \
+        -e 's/_\([^_]*\)_/\1/g' \
+        -e 's/`\([^`]*\)`/\1/g' \
+        -e 's/\[\([^]]*\)\]([^)]*)/\1/g' \
+        -e 's/^---$/------------------------------------------------------------------------------/' \
+        -e 's/^> /  /' \
+        "${rfc}.md" > "${rfc}.txt"
     generated="txt "
   fi
 

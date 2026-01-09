@@ -4,22 +4,22 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-018: Sealed Archive Format
 
-**Status:** Implemented
-**Date:** January 2026
-**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
-**Implementation:** vault.scm
+Status: Implemented
+Date: January 2026
+Author: Derrell Piper &lt;ddp@eludom.net&gt;
+Implementation: vault.scm
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies the Zstd+Age archive format for the Library of Cyberspace: a modern archive format combining Zstd compression with Age encryption, replacing gzip for cryptographic archives.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
-The legacy `cryptographic` archive format uses gzip compression without encryption:
+The legacy cryptographic archive format uses gzip compression without encryption:
 
 | Aspect | gzip (legacy) | zstd + age |
 |--------|---------------|------------|
@@ -29,38 +29,38 @@ The legacy `cryptographic` archive format uses gzip compression without encrypti
 | Key compatibility | N/A | X25519/Ed25519 (SPKI aligned) |
 | Streaming | Yes | Yes |
 
-**Why change?**
+Why change?
 
-1. **Encryption at rest** - Archives contain potentially sensitive data
-2. **Faster compression** - Zstd is 3-5x faster than gzip
-3. **Better ratios** - Zstd typically achieves 10-20% better compression
-4. **Key alignment** - Age uses X25519/Ed25519, same curve family as SPKI
-5. **Parallel support** - `zstd -T0` uses all cores
+1. Encryption at rest - Archives contain potentially sensitive data
+2. Faster compression - Zstd is 3-5x faster than gzip
+3. Better ratios - Zstd typically achieves 10-20% better compression
+4. Key alignment - Age uses X25519/Ed25519, same curve family as SPKI
+5. Parallel support - zstd -T0 uses all cores
 
----
+------------------------------------------------------------------------------
 
 Specification
 
 Archive Creation Pipeline
 
-```
+`
 git archive | tar --zstd | age -r &lt;recipients&gt; &gt; archive.tar.zst.age
-```
+`
 
 Or equivalently:
-```
+`
 tar --zstd -cf - &lt;files&gt; | age -r &lt;recipient1&gt; -r &lt;recipient2&gt; &gt; archive.tar.zst.age
-```
+`
 
 Archive Restoration Pipeline
 
-```
+`
 age -d -i &lt;identity&gt; &lt; archive.tar.zst.age | zstd -d | tar -xf -
-```
+`
 
 Manifest Format
 
-```scheme
+`scheme
 (sealed-archive
   (version "1.0.0")
   (format zstd-age)
@@ -70,18 +70,18 @@ Manifest Format
   (recipients ("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"))
   (hash "sha512:...")
   (signature "ed25519:..."))
-```
+`
 
 File Extensions
 
 | Extension | Contents |
 |-----------|----------|
-| `.archive` | S-expression manifest |
-| `.tar.zst.age` | Encrypted, compressed tarball |
+| .archive | S-expression manifest |
+| .tar.zst.age | Encrypted, compressed tarball |
 
 Configuration
 
-```scheme
+`scheme
 ;; Set age recipients for encryption
 (vault-config 'age-recipients
   '("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
@@ -92,15 +92,15 @@ Configuration
 
 ;; Set default archive format
 (vault-config 'archive-format 'zstd-age)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Performance Characteristics
 
 Compression
 
-```
+`
 Zstd default (-3):
   Compression:   ~400 MB/s
   Decompression: ~800 MB/s
@@ -114,11 +114,11 @@ Gzip comparison:
   Compression:   ~30 MB/s
   Decompression: ~200 MB/s
   Ratio:         ~2.5:1
-```
+`
 
 Encryption
 
-```
+`
 Age X25519:
   Encrypt:  ~1 GB/s (ChaCha20-Poly1305)
   Decrypt:  ~1 GB/s
@@ -127,20 +127,20 @@ Age X25519:
 Age overhead:
   Header:   ~200 bytes per recipient
   MAC:      16 bytes
-```
+`
 
 Signature
 
-```
+`
 Ed25519:
   Sign:     ~10 μs
   Verify:   ~10 μs
   Signature: 64 bytes
-```
+`
 
 Total Pipeline
 
-```
+`
 10 MB archive:
   Compress (zstd -T0): ~25 ms
   Encrypt (age):       ~10 ms
@@ -155,31 +155,31 @@ vs gzip legacy:
   Total:               ~301 ms
 
 Speedup: ~8x
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Model
 
 Encryption Layer (Age)
 
-- **Algorithm**: X25519 + ChaCha20-Poly1305
-- **Recipients**: Multiple allowed (each can decrypt)
-- **Forward secrecy**: Ephemeral key per archive
-- **Authenticity**: Poly1305 MAC
+- Algorithm: X25519 + ChaCha20-Poly1305
+- Recipients: Multiple allowed (each can decrypt)
+- Forward secrecy: Ephemeral key per archive
+- Authenticity: Poly1305 MAC
 
 Signature Layer (SPKI)
 
-- **Algorithm**: Ed25519
-- **Scope**: Signs encrypted archive hash
-- **Non-repudiation**: Signer cannot deny creating archive
+- Algorithm: Ed25519
+- Scope: Signs encrypted archive hash
+- Non-repudiation: Signer cannot deny creating archive
 
 Verification Order
 
-1. **Verify signature** - Before decryption (fail fast on tampering)
-2. **Verify hash** - Encrypted archive integrity
-3. **Decrypt** - Only after signature verified
-4. **Extract** - Only after successful decryption
+1. Verify signature - Before decryption (fail fast on tampering)
+2. Verify hash - Encrypted archive integrity
+3. Decrypt - Only after signature verified
+4. Extract - Only after successful decryption
 
 Threat Mitigations
 
@@ -191,13 +191,13 @@ Threat Mitigations
 | Key compromise | Multiple recipients, key rotation |
 | Chosen ciphertext | Poly1305 authentication |
 
----
+------------------------------------------------------------------------------
 
 Compatibility
 
 Age Identity Types
 
-```
+`
 Native age key
 age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
 
@@ -206,7 +206,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...
 
 GitHub key (via age-plugin-github or ssh)
 github:username
-```
+`
 
 Platform Support
 
@@ -219,20 +219,20 @@ Platform Support
 
 Fallback
 
-If zstd or age unavailable, fall back to `cryptographic` format:
-```scheme
+If zstd or age unavailable, fall back to cryptographic format:
+`scheme
 (if (and (command-exists? "zstd") (command-exists? "age"))
     (seal-archive version format: 'zstd-age)
     (seal-archive version format: 'cryptographic))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Implementation
 
 seal-archive-zstd-age
 
-```scheme
+`scheme
 (define (seal-archive-zstd-age version output)
   "Create zstd-compressed, age-encrypted archive with SPKI signature"
 
@@ -274,11 +274,11 @@ seal-archive-zstd-age
                        (recipients ,recipients)
                        (hash ,(blob-&gt;hex archive-hash))
                        (signature ,(blob-&gt;hex signature)))))))))))
-```
+`
 
 seal-restore-zstd-age
 
-```scheme
+`scheme
 (define (seal-restore-zstd-age manifest verify-key target-dir identity)
   "Restore zstd+age encrypted archive"
 
@@ -309,15 +309,15 @@ seal-restore-zstd-age
     ;; Decrypt and extract: age -d | zstd -d | tar -x
     (system (sprintf "age -d -i ~a &lt; ~a | zstd -d | tar -xf - -C ~a"
                     id-file archive-file target-dir))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Usage Examples
 
 Create Encrypted Archive
 
-```scheme
+`scheme
 ;; Configure recipients
 (vault-config 'age-recipients
   '("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"))
@@ -326,11 +326,11 @@ Create Encrypted Archive
 (seal-archive "1.0.0" format: 'zstd-age)
 ;; =&gt; vault-1.0.0.archive
 ;; =&gt; vault-1.0.0.archive.tar.zst.age
-```
+`
 
 Restore Encrypted Archive
 
-```scheme
+`scheme
 ;; Configure identity
 (vault-config 'age-identity "~/.config/age/identity.txt")
 
@@ -338,11 +338,11 @@ Restore Encrypted Archive
 (seal-restore "vault-1.0.0.archive"
               verify-key: "publisher.public"
               target: "./restored")
-```
+`
 
 Command Line Equivalents
 
-```bash
+`bash
 Create
 git archive --prefix=vault/ 1.0.0 | \
   zstd -T0 | \
@@ -353,46 +353,46 @@ Restore
 age -d -i ~/.config/age/identity.txt &lt; vault-1.0.0.tar.zst.age | \
   zstd -d | \
   tar -xf -
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Migration
 
 From Cryptographic to Zstd-Age
 
-```scheme
+`scheme
 ;; Re-archive existing releases with new format
 (for-each
   (lambda (version)
     (seal-archive version format: 'zstd-age))
   (get-local-releases))
-```
+`
 
 Backward Compatibility
 
-Both formats can coexist. The manifest `format` field determines restoration method:
-- `(format cryptographic)` → `seal-restore-cryptographic`
-- `(format zstd-age)` → `seal-restore-zstd-age`
+Both formats can coexist. The manifest format field determines restoration method:
+- (format cryptographic) → seal-restore-cryptographic
+- (format zstd-age) → seal-restore-zstd-age
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm
-2. [Age](https://age-encryption.org/) - Modern encryption tool
-3. [RFC-006](rfc-006-vault-architecture.md) - Vault System Architecture
-4. [RFC-004](rfc-004-spki-authorization.md) - SPKI Authorization
+1. Zstd - Facebook's compression algorithm
+2. Age - Modern encryption tool
+3. RFC-006 - Vault System Architecture
+4. RFC-004 - SPKI Authorization
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-06** - Initial specification
+- 2026-01-06 - Initial specification
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Complete
-**Compression:** Zstd (parallel)
-**Encryption:** Age (X25519 + ChaCha20-Poly1305)
-**Signature:** Ed25519 (SPKI)</pre></body></html>
+Implementation Status: Complete
+Compression: Zstd (parallel)
+Encryption: Age (X25519 + ChaCha20-Poly1305)
+Signature: Ed25519 (SPKI)</pre></body></html>

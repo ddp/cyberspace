@@ -1,39 +1,39 @@
 RFC-024: Network Protocol
 
-**Status:** Draft
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** Proposed
+Status: Draft
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: Proposed
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies the network protocol for the Library of Cyberspace: how vaults discover each other, authenticate, exchange objects, and synchronize state. The protocol is transport-agnostic, capability-authenticated, and optimized for content-addressed data.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Vaults must communicate to:
 
-- **Replicate** - Distribute objects across vaults
-- **Federate** - Link independent vaults into networks
-- **Subscribe** - Receive updates from publishers
-- **Query** - Search the distributed soup
+- Replicate - Distribute objects across vaults
+- Federate - Link independent vaults into networks
+- Subscribe - Receive updates from publishers
+- Query - Search the distributed soup
 
 The protocol must handle:
 
-- **Intermittent connectivity** - Vaults may be offline
-- **Untrusted networks** - All communication authenticated
-- **Large objects** - Efficient chunked transfer
-- **Partial sync** - Resume interrupted transfers
+- Intermittent connectivity - Vaults may be offline
+- Untrusted networks - All communication authenticated
+- Large objects - Efficient chunked transfer
+- Partial sync - Resume interrupted transfers
 
----
+------------------------------------------------------------------------------
 
 Protocol Layers
 
-```
+`
 ┌─────────────────────────────────────────┐
 │           APPLICATION LAYER             │
 │  (vault operations, soup queries)       │
@@ -47,15 +47,15 @@ Protocol Layers
 │           TRANSPORT LAYER               │
 │  (TCP, QUIC, Unix socket, etc.)         │
 └─────────────────────────────────────────┘
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Transport Layer
 
 Supported Transports
 
-```scheme
+`scheme
 (define transports
   '((tcp "Traditional TCP/IP")
     (quic "UDP-based, multiplexed")
@@ -64,11 +64,11 @@ Supported Transports
     (i2p "Garlic-routed")
     (bluetooth "Local mesh")
     (sneakernet "Physical media exchange")))
-```
+`
 
 Connection Establishment
 
-```scheme
+`scheme
 (define (connect-vault address transport)
   "Establish connection to remote vault"
   (let* ((socket (transport-connect transport address))
@@ -79,13 +79,13 @@ Connection Establishment
 
     ;; Return authenticated connection
     connection))
-```
+`
 
 Multiplexing
 
 Multiple streams over single connection:
 
-```scheme
+`scheme
 (define (open-stream connection stream-type)
   "Open multiplexed stream within connection"
   (let ((stream-id (allocate-stream-id connection)))
@@ -94,9 +94,9 @@ Multiple streams over single connection:
              stream-id: stream-id
              stream-type: stream-type))
     (make-stream connection stream-id stream-type)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Layer
 
@@ -104,7 +104,7 @@ Handshake Protocol
 
 Mutual authentication using SPKI certificates:
 
-```
+`
 Client                                   Server
   │                                        │
   │──── ClientHello ──────────────────────▶│
@@ -120,11 +120,11 @@ Client                                   Server
   │      (challenge-response)              │
   │                                        │
   │══════ Encrypted Channel ══════════════│
-```
+`
 
 Handshake Implementation
 
-```scheme
+`scheme
 (define (connection-handshake connection)
   "Perform mutual authentication handshake"
 
@@ -162,11 +162,11 @@ Handshake Implementation
 
           ;; Derive session keys
           (derive-session-keys connection shared-secret))))))
-```
+`
 
 Session Encryption
 
-```scheme
+`scheme
 (define (derive-session-keys connection shared-secret)
   "Derive symmetric keys for session"
   (let* ((key-material (hkdf shared-secret
@@ -196,15 +196,15 @@ Session Encryption
         (connection-receive-key connection)
         nonce
         ciphertext))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Message Layer
 
 Message Format
 
-```scheme
+`scheme
 (library-message
   (version 1)
   (type request|response|stream|error)
@@ -212,11 +212,11 @@ Message Format
   (in-reply-to <message-id>|#f)
   (capability <spki-cert>|#f)
   (body <payload>))
-```
+`
 
 Request Types
 
-```scheme
+`scheme
 (define request-types
   '(;; Object operations
     (get-object hash)
@@ -240,11 +240,11 @@ Request Types
     ;; Discovery
     (get-capabilities)
     (get-peers)))
-```
+`
 
 Request/Response
 
-```scheme
+`scheme
 (define (vault-request connection request #!key capability timeout)
   "Send request, wait for response"
   (let ((message-id (generate-message-id)))
@@ -263,13 +263,13 @@ Request/Response
       (if (eq? (message-type response) 'error)
           (error (message-body response))
           (message-body response)))))
-```
+`
 
 Streaming
 
 For large transfers:
 
-```scheme
+`scheme
 (define (stream-object connection hash)
   "Stream large object in chunks"
   (let ((stream (open-stream connection 'object-transfer)))
@@ -294,15 +294,15 @@ For large transfers:
           (begin
             (callback chunk)
             (loop (cons chunk chunks)))))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Object Exchange
 
 Get Object
 
-```scheme
+`scheme
 ;; Request
 (get-object
   (hash "sha256:abc123..."))
@@ -318,11 +318,11 @@ Get Object
   (hash "sha256:abc123...")
   (size 10485760)
   (stream-id 42))
-```
+`
 
 Put Object
 
-```scheme
+`scheme
 ;; Request
 (put-object
   (hash "sha256:abc123...")
@@ -333,11 +333,11 @@ Put Object
   (hash "sha256:abc123...")
   (status stored|duplicate|rejected)
   (reason #f|"quota exceeded"))
-```
+`
 
 Batch Operations
 
-```scheme
+`scheme
 ;; Request multiple objects
 (get-objects
   (hashes ("sha256:aaa..." "sha256:bbb..." "sha256:ccc...")))
@@ -348,13 +348,13 @@ Batch Operations
     ((hash "sha256:aaa..." data #${...})
      (hash "sha256:bbb..." data #${...})
      (hash "sha256:ccc..." status: missing))))
-```
+`
 
 Tree Transfer
 
 Efficient Merkle tree sync:
 
-```scheme
+`scheme
 ;; Request tree
 (get-tree
   (root "sha256:root...")
@@ -368,9 +368,9 @@ Efficient Merkle tree sync:
     ((hash "sha256:root..." data #${...})
      (hash "sha256:child1..." data #${...})
      (hash "sha256:child2..." data #${...}))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Synchronization
 
@@ -378,7 +378,7 @@ Bloom Filter Exchange
 
 Efficient "what do you have?" queries:
 
-```scheme
+`scheme
 ;; Step 1: Exchange bloom filters
 (define (sync-init local-vault remote-connection)
   (let ((local-bloom (vault-bloom-filter local-vault)))
@@ -409,11 +409,11 @@ Efficient "what do you have?" queries:
     (for-each (lambda (hash)
                 (receive-object connection hash))
               to-receive)))
-```
+`
 
 Incremental Sync
 
-```scheme
+`scheme
 (define (incremental-sync local-vault remote-connection since)
   "Sync changes since timestamp or commit"
 
@@ -427,11 +427,11 @@ Incremental Sync
       ;; Bidirectional merge
       (sync-merge local-vault remote-connection
                   local-changes remote-changes))))
-```
+`
 
 Conflict Resolution
 
-```scheme
+`scheme
 (define (sync-merge local-vault remote changes-local changes-remote)
   "Merge changes with conflict resolution"
 
@@ -454,15 +454,15 @@ Conflict Resolution
          ;; Content-addressed, so same hash = same content
          #t)))
     (union changes-local changes-remote)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Discovery
 
 Peer Discovery
 
-```scheme
+`scheme
 ;; Well-known peers (bootstrap)
 (define (discover-bootstrap)
   (map parse-address
@@ -470,7 +470,7 @@ Peer Discovery
 
 ;; mDNS/DNS-SD for local network
 (define (discover-local)
-  (mdns-browse "_library._tcp.local"))
+  (mdns-browse "library.tcp.local"))
 
 ;; DHT for global discovery
 (define (discover-dht target-hash)
@@ -479,11 +479,11 @@ Peer Discovery
 ;; Peer exchange
 (define (discover-pex connection)
   (vault-request connection '(get-peers)))
-```
+`
 
 Capability Advertisement
 
-```scheme
+`scheme
 ;; Query vault capabilities
 (get-capabilities)
 
@@ -497,15 +497,15 @@ Capability Advertisement
   (services
     ((soup-query rate-limit: 100/minute)
      (object-transfer rate-limit: 10MB/second))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Soup Queries
 
 Remote Query
 
-```scheme
+`scheme
 ;; Query remote soup
 (soup-query
   (type certificate)
@@ -519,11 +519,11 @@ Remote Query
     ((name "cert/alice" type certificate ...)
      (name "cert/bob" type certificate ...)
      ...)))
-```
+`
 
 Subscription
 
-```scheme
+`scheme
 ;; Subscribe to soup changes
 (soup-subscribe
   (query (type release))
@@ -539,15 +539,15 @@ Subscription
 (soup-notification
   (subscription-id "sub-123")
   (object (name "release/1.2.0" type release ...)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Error Handling
 
 Error Types
 
-```scheme
+`scheme
 (define error-types
   '((not-found "Object not found")
     (unauthorized "Capability required")
@@ -558,11 +558,11 @@ Error Types
     (invalid-request "Malformed request")
     (internal-error "Server error")
     (unavailable "Service temporarily unavailable")))
-```
+`
 
 Error Response
 
-```scheme
+`scheme
 (library-message
   (type error)
   (id <message-id>)
@@ -572,11 +572,11 @@ Error Response
       (code not-found)
       (message "Object sha256:abc... not found")
       (retry-after #f))))
-```
+`
 
 Retry Logic
 
-```scheme
+`scheme
 (define (vault-request-with-retry connection request #!key max-retries)
   "Request with exponential backoff retry"
   (let loop ((attempt 0) (delay 1000))
@@ -588,15 +588,15 @@ Retry Logic
             (sleep delay)
             (loop (+ attempt 1) (* delay 2)))
           result))))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
 Capability Verification
 
-```scheme
+`scheme
 (define (verify-request-capability request connection)
   "Verify request has sufficient capability"
   (let ((required-cap (request->capability request))
@@ -614,11 +614,11 @@ Capability Verification
     ;; Verify capability chain back to trusted root
     (unless (verify-capability-chain presented-cap)
       (error 'forbidden "Capability chain invalid"))))
-```
+`
 
 Denial of Service Protection
 
-```scheme
+`scheme
 (define (rate-limit connection request-type)
   "Apply rate limiting"
   (let ((limit (get-rate-limit request-type))
@@ -631,20 +631,20 @@ Denial of Service Protection
   "Enforce size limits"
   (when (> (request-size request) max-request-size)
     (error 'invalid-request "Request too large")))
-```
+`
 
 Replay Prevention
 
-```scheme
+`scheme
 (define (verify-nonce connection message)
   "Prevent replay attacks"
   (let ((nonce (message-nonce message)))
     (when (nonce-seen? connection nonce)
       (error 'invalid-request "Replay detected"))
     (record-nonce connection nonce)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Implementation Notes
 
@@ -652,7 +652,7 @@ Wire Format
 
 Messages serialized as canonical S-expressions:
 
-```scheme
+`scheme
 (define (serialize-message message)
   "Canonical S-expression serialization"
   (canonical-sexp->bytes message))
@@ -660,22 +660,22 @@ Messages serialized as canonical S-expressions:
 (define (deserialize-message bytes)
   "Parse S-expression"
   (bytes->canonical-sexp bytes))
-```
+`
 
 Compression
 
 Optional compression for large payloads:
 
-```scheme
+`scheme
 (define (maybe-compress data)
   (if (> (blob-length data) compression-threshold)
       (values (zstd-compress data) 'zstd)
       (values data 'none)))
-```
+`
 
 Connection Pooling
 
-```scheme
+`scheme
 (define connection-pool (make-hash-table))
 
 (define (get-connection address)
@@ -684,27 +684,27 @@ Connection Pooling
       (let ((conn (connect-vault address)))
         (hash-table-set! connection-pool address conn)
         conn)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 References
 
-1. [QUIC Protocol - RFC 9000](https://tools.ietf.org/html/rfc9000)
-2. [Noise Protocol Framework](http://noiseprotocol.org/)
-3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.md)
-4. [RFC-021: Capability Delegation](rfc-021-capability-delegation.md)
-5. [IPFS Bitswap Protocol](https://docs.ipfs.tech/concepts/bitswap/)
-6. [libp2p Specifications](https://github.com/libp2p/specs)
+1. QUIC Protocol - RFC 9000
+2. Noise Protocol Framework
+3. RFC-020: Content-Addressed Storage
+4. RFC-021: Capability Delegation
+5. IPFS Bitswap Protocol
+6. libp2p Specifications
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-07** - Initial draft
+- 2026-01-07 - Initial draft
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Draft
-**Dependencies:** transport, crypto, cas
-**Integration:** Replication, federation, distributed soup
+Implementation Status: Draft
+Dependencies: transport, crypto, cas
+Integration: Replication, federation, distributed soup

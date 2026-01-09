@@ -1,37 +1,37 @@
 RFC-013: TLA+ Formal Specification
 
-**Status:** Proposed
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
+Status: Proposed
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies the use of TLA+ (Temporal Logic of Actions) for formal specification and model checking of Cyberspace protocols, ensuring correctness before implementation.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Running code is necessary but not sufficient:
 
-- **Tests check examples**: Not all possible executions
-- **Reviews check logic**: Not all interleavings
-- **Bugs hide in corners**: Race conditions, edge cases
+- Tests check examples: Not all possible executions
+- Reviews check logic: Not all interleavings
+- Bugs hide in corners: Race conditions, edge cases
 
 TLA+ provides:
 
-1. **Precise specification**: Mathematical description of behavior
-2. **Model checking**: Exhaustive state space exploration
-3. **Proof capability**: Formal verification of properties
-4. **Design tool**: Find bugs before writing code
+1. Precise specification: Mathematical description of behavior
+2. Model checking: Exhaustive state space exploration
+3. Proof capability: Formal verification of properties
+4. Design tool: Find bugs before writing code
 
 From Lamport:
 
-> *If you're thinking without writing, you only think you're thinking.*
+  If you're thinking without writing, you only think you're thinking.
 
----
+------------------------------------------------------------------------------
 
 Specification
 
@@ -39,7 +39,7 @@ TLA+ Overview
 
 TLA+ describes systems as state machines:
 
-```tla
+`tla
 VARIABLES state, messages, decisions
 
 Init ==
@@ -54,13 +54,13 @@ Next ==
   \/ Decide(...)
 
 Spec == Init /\ [][Next]_<<state, messages, decisions>>
-```
+`
 
 Safety Properties
 
-**Invariants** that must always hold:
+Invariants that must always hold:
 
-```tla
+`tla
 TypeOK ==
   /\ state \in [Nodes -> {"idle", "prepared", "committed"}]
   /\ messages \subseteq Message
@@ -70,27 +70,27 @@ Agreement ==
   \A n1, n2 \in Nodes:
     (decisions[n1] # {} /\ decisions[n2] # {}) =>
       decisions[n1] = decisions[n2]
-```
+`
 
 Liveness Properties
 
-**Temporal** properties about progress:
+Temporal properties about progress:
 
-```tla
+`tla
 Termination ==
   <>(\A n \in Nodes: decisions[n] # {})
 
 EventualConsistency ==
   []<>(\A n1, n2 \in Nodes: state[n1] = state[n2])
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Cyberspace Protocol Specifications
 
 Threshold Signatures (RFC-007)
 
-```tla
+`tla
 --------------------------- MODULE ThresholdSig ---------------------------
 EXTENDS Integers, FiniteSets
 
@@ -127,11 +127,11 @@ Liveness ==
   (Cardinality(Signers) >= Threshold) => <>(verified)
 
 =============================================================================
-```
+`
 
 Audit Trail (RFC-003)
 
-```tla
+`tla
 --------------------------- MODULE AuditTrail ---------------------------
 EXTENDS Integers, Sequences
 
@@ -165,11 +165,11 @@ MonotonicSequence ==
     log[i+1].seq = log[i].seq + 1
 
 =============================================================================
-```
+`
 
 Byzantine Consensus (RFC-011)
 
-```tla
+`tla
 --------------------------- MODULE PBFT ---------------------------
 EXTENDS Integers, FiniteSets
 
@@ -215,9 +215,9 @@ Agreement ==
       decisions[n1] = decisions[n2]
 
 =============================================================================
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Model Checking Process
 
@@ -227,29 +227,29 @@ Define state machine and properties.
 
 2. Configure Model
 
-```tla
+`tla
 CONSTANTS
   Nodes = {n1, n2, n3, n4}
   f = 1
   Values = {v1, v2}
-```
+`
 
 3. Run TLC Model Checker
 
-```bash
+`bash
 $ tlc PBFT.tla
 TLC2 Version 2.18
 ...
 Model checking completed. No errors found.
   States explored: 847293
   Distinct states: 12847
-```
+`
 
 4. Analyze Counterexamples
 
 If property violated, TLC shows trace:
 
-```
+`
 Error: Invariant Agreement is violated.
 Trace:
   State 1: <Initial>
@@ -257,26 +257,26 @@ Trace:
   State 3: Prepare(n2, v1)
   ...
   State 12: decisions = [n1 |-> {v1}, n2 |-> {v2}]  << VIOLATION
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Integration with Implementation
 
 Specification → Implementation
 
-```
+`
 TLA+ Spec          Scheme Implementation
 -----------        ---------------------
 VARIABLES state    (define-record-type <state> ...)
 Init ==            (define (init) ...)
 Action(x) ==       (define (action x) ...)
 Invariant          (assert (invariant? state))
-```
+`
 
 Runtime Assertions
 
-```scheme
+`scheme
 (define (append-audit! entry)
   ;; TLA+ invariant: MonotonicSequence
   (assert (> (entry-sequence entry)
@@ -286,15 +286,15 @@ Runtime Assertions
                   (entry-hash (last-entry))))
   ;; Proceed with append
   ...)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 PlusCal (Algorithmic TLA+)
 
 Higher-level syntax that compiles to TLA+:
 
-```tla
+`tla
 --algorithm ThresholdSign {
   variables signatures = {}, verified = FALSE;
 
@@ -311,9 +311,9 @@ Higher-level syntax that compiles to TLA+:
       verified := TRUE;
   }
 }
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Benefits
 
@@ -325,21 +325,21 @@ Benefits
 | Documentation | Natural language | Executable specification |
 | Maintenance | Risky changes | Verify changes |
 
----
+------------------------------------------------------------------------------
 
 Limitations
 
-- **State explosion**: Large state spaces take time
-- **Learning curve**: TLA+ is different
-- **Abstraction gap**: Spec ≠ implementation
-- **Finite models**: Cannot check infinite systems directly
+- State explosion: Large state spaces take time
+- Learning curve: TLA+ is different
+- Abstraction gap: Spec ≠ implementation
+- Finite models: Cannot check infinite systems directly
 
 Mitigations:
 - Symmetry reduction
 - Abstraction
 - Proof for infinite cases
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -348,14 +348,14 @@ References
 3. Newcombe, C., et al. (2015). How Amazon Web Services Uses Formal Methods.
 4. TLA+ Tools: https://lamport.azurewebsites.net/tla/tools.html
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-06** - Initial specification
+- 2026-01-06 - Initial specification
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Proposed
-**Tool:** TLA+ / TLC Model Checker
-**Target Protocols:** RFC-003, RFC-007, RFC-011
+Implementation Status: Proposed
+Tool: TLA+ / TLC Model Checker
+Target Protocols: RFC-003, RFC-007, RFC-011

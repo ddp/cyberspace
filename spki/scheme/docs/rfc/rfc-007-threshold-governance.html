@@ -4,44 +4,44 @@
 pre{white-space:pre-wrap;}</style>
 </head><body><pre>RFC-007: Threshold Signature Governance
 
-**Status:** Implemented
-**Date:** January 2026
-**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
-**Implementation:** script.scm, cyberspace.scm
+Status: Implemented
+Date: January 2026
+Author: Derrell Piper &lt;ddp@eludom.net&gt;
+Implementation: script.scm, cyberspace.scm
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies the threshold signature system for Cyberspace governance, enabling K-of-N multi-party authorization for critical operations. Democracy in code: no single point of failure, no rogue administrator.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Critical operations require collective authorization:
 
-- **Release signing**: Multiple maintainers must approve
-- **Deployment**: Operations team quorum required
-- **Key ceremonies**: Distributed trust for root keys
-- **Emergency response**: Prevent unilateral action
+- Release signing: Multiple maintainers must approve
+- Deployment: Operations team quorum required
+- Key ceremonies: Distributed trust for root keys
+- Emergency response: Prevent unilateral action
 
 Traditional approaches fail:
-- **Shared passwords**: Who has it? Who used it?
-- **Sudo access**: Root is root
-- **Approval workflows**: Soft controls, bypassable
+- Shared passwords: Who has it? Who used it?
+- Sudo access: Root is root
+- Approval workflows: Soft controls, bypassable
 
 Threshold signatures provide cryptographic enforcement:
 
-&gt; **K valid signatures required. Not K-1. Not bypass. Mathematics.**
+  K valid signatures required. Not K-1. Not bypass. Mathematics.
 
----
+------------------------------------------------------------------------------
 
 Specification
 
 Tiered Signing Model
 
-```
+`
 ┌─────────────────────────────────────────────────────────────┐
 │                    SIGNING TIERS                            │
 ├─────────────────────────────────────────────────────────────┤
@@ -50,28 +50,28 @@ Tiered Signing Model
 │  Production      3-of-5    Governance council quorum        │
 │  Emergency       5-of-7    Full council for critical ops    │
 └─────────────────────────────────────────────────────────────┘
-```
+`
 
 Script Signature Record
 
-```scheme
+`scheme
 (define-record-type &lt;script-signature&gt;
   (make-script-signature signer signature timestamp)
   script-signature?
   (signer signature-signer)        ; Ed25519 public key (32 bytes)
   (signature signature-value)      ; Ed25519 signature (64 bytes)
   (timestamp signature-timestamp)) ; Unix epoch seconds
-```
+`
 
 Signing a Script
 
-```scheme
+`scheme
 (define (sign-script script-content private-key #!optional public-key)
   "Sign script content with a private key"
   ...)
-```
+`
 
-**Process:**
+Process:
 1. Convert content to blob if string
 2. Derive public key from private (if not provided)
 3. Sign content with Ed25519
@@ -80,17 +80,17 @@ Signing a Script
 
 Verifying Single Signature
 
-```scheme
+`scheme
 (define (verify-script script-content signature-record)
   "Verify a script signature"
   (ed25519-verify (signature-signer signature-record)
                   content-blob
                   (signature-value signature-record)))
-```
+`
 
 Threshold Verification
 
-```scheme
+`scheme
 (define (verify-threshold-script script-content signature-records threshold)
   "Verify threshold signatures on a script
    Returns: #t if at least K signatures are valid"
@@ -99,31 +99,31 @@ Threshold Verification
                              signature-records))
          (valid-count (length valid-sigs)))
     (&gt;= valid-count threshold)))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Signature File Format
 
-```scheme
+`scheme
 ;; deploy.sig
 ((signature "hex-signature" "hex-pubkey" 1767685100)
  (signature "hex-signature" "hex-pubkey" 1767685200)
  (signature "hex-signature" "hex-pubkey" 1767685300))
-```
+`
 
 Each entry contains:
 - Signature bytes (hex-encoded)
 - Signer public key (hex-encoded)
 - Timestamp (Unix epoch)
 
----
+------------------------------------------------------------------------------
 
 CLI Interface
 
 cyberspace verify
 
-```bash
+`bash
 $ cyberspace verify deploy.scm deploy.sig \
     --threshold 3 \
     --keys alice.pub bob.pub carol.pub dave.pub eve.pub
@@ -141,11 +141,11 @@ Found 3 signature(s) in file
   Signature 3: ✓ VALID (signer: 7d3e8b2c1a0f5e4d...)
 
 ✓ SUCCESS: Script verified with 3-of-3 threshold
-```
+`
 
 cyberspace run
 
-```bash
+`bash
 $ cyberspace run deploy.scm deploy.sig \
     --threshold 3 \
     --keys alice.pub bob.pub carol.pub dave.pub eve.pub
@@ -158,15 +158,15 @@ $ cyberspace run deploy.scm deploy.sig \
 (seal-release "2.0.0"
   message: "Major release with new governance model"
   preserve: #t)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Governance Scenarios
 
 Production Deployment (3-of-5)
 
-```scheme
+`scheme
 ;; Governance Council: Alice, Bob, Carol, Dave, Eve
 ;; Threshold: 3 signatures required
 
@@ -192,22 +192,22 @@ Production Deployment (3-of-5)
                         (list sig-alice sig-carol sig-dave)
                         3)
 ;; =&gt; #t
-```
+`
 
 Insufficient Signatures
 
-```scheme
+`scheme
 ;; Only 2 signatures
 (define insufficient-sigs
   (list sig-alice sig-carol))
 
 (verify-threshold-script deployment-script insufficient-sigs 3)
 ;; =&gt; #f (rejected: need 3, got 2)
-```
+`
 
 Tampered Script Detection
 
-```scheme
+`scheme
 ;; Attacker modifies script
 (define tampered-script
   "(seal-release \"2.0.0\"
@@ -216,9 +216,9 @@ Tampered Script Detection
 
 (verify-threshold-script tampered-script sufficient-sigs 3)
 ;; =&gt; #f (signatures don't match modified content)
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Multi-Signature vs Shamir
 
@@ -226,14 +226,14 @@ Two threshold approaches exist:
 
 Multi-Signature (This RFC)
 
-```
+`
 Each party: own keypair
 Signing:    each signs independently
 Verify:     count valid signatures ≥ K
 Use case:   governance, approvals
-```
+`
 
-**Advantages:**
+Advantages:
 - Each party maintains own key
 - Clear audit trail (who signed)
 - Simple revocation (by key)
@@ -241,14 +241,14 @@ Use case:   governance, approvals
 
 Shamir Splitting (RFC-008)
 
-```
+`
 Single key: split into N shares
 Signing:    K parties reconstruct, sign once
 Verify:     single signature
 Use case:   key backup, recovery
-```
+`
 
-**Advantages:**
+Advantages:
 - Single signature output
 - Key never fully assembled (in advanced schemes)
 - Smaller signature files
@@ -258,29 +258,29 @@ For governance, multi-signature is preferred:
 - No reconstruction ceremony
 - Works asynchronously
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
 Threat Model
 
-**Protected against:**
+Protected against:
 - Single compromised key (need K)
 - Rogue administrator (need quorum)
 - Script tampering (signatures fail)
 - Replay of old scripts (timestamps, context)
 
-**Not protected against:**
+Not protected against:
 - K compromised keys
 - All parties colluding
 - Side-channel on signing devices
 
 Key Management
 
-1. **Generation**: Secure random via libsodium
-2. **Storage**: Hardware tokens preferred, encrypted files acceptable
-3. **Distribution**: Out-of-band verification of public keys
-4. **Rotation**: New ceremony, revoke old keys
+1. Generation: Secure random via libsodium
+2. Storage: Hardware tokens preferred, encrypted files acceptable
+3. Distribution: Out-of-band verification of public keys
+4. Rotation: New ceremony, revoke old keys
 
 Threshold Selection
 
@@ -292,19 +292,19 @@ Threshold Selection
 | Root key | 5-of-7 | Supermajority |
 | Emergency | N-of-N | Full consensus |
 
----
+------------------------------------------------------------------------------
 
 Audit Integration
 
 Every verified execution records:
 
-```scheme
+`scheme
 (audit-append
   actor: (threshold-verifier-list)
   action: (list 'script-execute script-hash)
   motivation: "Production deployment authorized"
   context: (list 'threshold 3 'signatures 3))
-```
+`
 
 Audit trail shows:
 - Which signers authorized
@@ -312,15 +312,15 @@ Audit trail shows:
 - When authorization occurred
 - Threshold requirements met
 
----
+------------------------------------------------------------------------------
 
 Implementation Notes
 
 Dependencies
 
-- `crypto-ffi` - Ed25519 operations
-- `cert` - SPKI integration
-- `audit` - Trail recording
+- crypto-ffi - Ed25519 operations
+- cert - SPKI integration
+- audit - Trail recording
 
 Performance
 
@@ -328,7 +328,7 @@ Performance
 - Threshold check: O(N) where N = signature count
 - No network round-trips (offline verification)
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -337,14 +337,14 @@ References
 3. NIST SP 800-57. Recommendation for Key Management.
 4. RFC-004: SPKI Authorization Integration
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-06** - Initial specification
+- 2026-01-06 - Initial specification
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Complete
-**Test Status:** Passing (test-threshold-sig.scm)
-**CLI Tool:** cyberspace verify/run</pre></body></html>
+Implementation Status: Complete
+Test Status: Passing (test-threshold-sig.scm)
+CLI Tool: cyberspace verify/run</pre></body></html>

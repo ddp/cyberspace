@@ -1,44 +1,44 @@
 RFC-008: Shamir Secret Sharing
 
-**Status:** Implemented
-**Date:** January 2026
-**Author:** Derrell Piper <ddp@eludom.net>
-**Implementation:** crypto-ffi.scm (shamir-split, shamir-reconstruct)
+Status: Implemented
+Date: January 2026
+Author: Derrell Piper <ddp@eludom.net>
+Implementation: crypto-ffi.scm (shamir-split, shamir-reconstruct)
 
----
+------------------------------------------------------------------------------
 
 Abstract
 
 This RFC specifies Shamir's Secret Sharing implementation for the Library of Cyberspace, enabling K-of-N threshold splitting and reconstruction of cryptographic keys and other secrets.
 
----
+------------------------------------------------------------------------------
 
 Motivation
 
 Private keys are single points of failure:
 
-- **Key loss**: Funds locked forever
-- **Key theft**: Complete compromise
-- **Key escrow**: Trust a third party?
+- Key loss: Funds locked forever
+- Key theft: Complete compromise
+- Key escrow: Trust a third party?
 
 Shamir's Secret Sharing provides:
 
-1. **Threshold recovery**: Any K of N shares reconstruct
-2. **Information-theoretic security**: K-1 shares reveal nothing
-3. **Distributed custody**: No single holder
-4. **Backup flexibility**: Geographic distribution
+1. Threshold recovery: Any K of N shares reconstruct
+2. Information-theoretic security: K-1 shares reveal nothing
+3. Distributed custody: No single holder
+4. Backup flexibility: Geographic distribution
 
 From Adi Shamir's 1979 paper "How to Share a Secret":
 
-> *Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing.*
+  Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing.
 
----
+------------------------------------------------------------------------------
 
 Specification
 
 Share Record
 
-```scheme
+`scheme
 (define-record-type <shamir-share>
   (make-shamir-share id threshold x y)
   shamir-share?
@@ -46,22 +46,22 @@ Share Record
   (threshold share-threshold)  ; K value
   (x share-x)              ; X-coordinate (1 to N)
   (y share-y))             ; Y-coordinate (blob, same size as secret)
-```
+`
 
 Splitting a Secret
 
-```scheme
+`scheme
 (shamir-split secret #!key (threshold 3) (total 5))
-```
+`
 
-**Parameters:**
-- `secret` - Blob to split (any size, typically 32 or 64 bytes)
-- `threshold` - Minimum shares to reconstruct (K)
-- `total` - Total shares to create (N)
+Parameters:
+- secret - Blob to split (any size, typically 32 or 64 bytes)
+- threshold - Minimum shares to reconstruct (K)
+- total - Total shares to create (N)
 
-**Returns:** List of N shamir-share records
+Returns: List of N shamir-share records
 
-**Algorithm:**
+Algorithm:
 1. For each byte of secret:
    - Generate K-1 random coefficients
    - Coefficient[0] = secret byte
@@ -71,29 +71,29 @@ Splitting a Secret
 
 Reconstructing a Secret
 
-```scheme
+`scheme
 (shamir-reconstruct shares)
-```
+`
 
-**Parameters:**
-- `shares` - List of at least K shamir-share records
+Parameters:
+- shares - List of at least K shamir-share records
 
-**Returns:** Reconstructed secret blob
+Returns: Reconstructed secret blob
 
-**Algorithm:**
+Algorithm:
 1. Take first K shares
 2. For each byte position:
    - Use Lagrange interpolation
    - Compute f(0) = secret byte
 3. Assemble reconstructed secret
 
----
+------------------------------------------------------------------------------
 
 Galois Field Arithmetic
 
 Operations performed in GF(2⁸) with irreducible polynomial x⁸ + x⁴ + x³ + x + 1:
 
-```scheme
+`scheme
 (define gf256-primitive #x11b)  ; x^8 + x^4 + x^3 + x + 1
 
 (define (gf256-mul a b)
@@ -107,20 +107,20 @@ Operations performed in GF(2⁸) with irreducible polynomial x⁸ + x⁴ + x³ +
 (define (gf256-poly-eval coeffs x)
   "Evaluate polynomial at x using Horner's method"
   ...)
-```
+`
 
 GF(2⁸) ensures:
 - All operations stay within byte range
 - No overflow issues
 - Proper field properties (every non-zero element has inverse)
 
----
+------------------------------------------------------------------------------
 
 Usage Examples
 
 Basic Secret Splitting
 
-```scheme
+`scheme
 (import crypto-ffi)
 
 (sodium-init)
@@ -135,11 +135,11 @@ Basic Secret Splitting
 ;; Distribute shares to custodians
 (print "Created " (length shares) " shares")
 (print "Threshold: " (share-threshold (car shares)))
-```
+`
 
 Reconstruction from K Shares
 
-```scheme
+`scheme
 ;; Collect any 3 shares
 (define collected (list share-1 share-3 share-5))
 
@@ -150,11 +150,11 @@ Reconstruction from K Shares
 (if (equal? (blob->hex secret) (blob->hex reconstructed))
     (print "✓ Reconstruction successful!")
     (print "✗ Reconstruction failed"))
-```
+`
 
 Ed25519 Key Backup
 
-```scheme
+`scheme
 ;; Generate keypair
 (define keypair (ed25519-keypair))
 (define public-key (car keypair))
@@ -174,17 +174,17 @@ Ed25519 Key Backup
 (if valid?
     (print "✓ Recovered key produces valid signatures!")
     (print "✗ Key recovery failed"))
-```
+`
 
----
+------------------------------------------------------------------------------
 
 Security Properties
 
 Information-Theoretic Security
 
 With K-1 shares:
-- **No information** about secret is revealed
-- **Not computationally hard** - literally impossible
+- No information about secret is revealed
+- Not computationally hard - literally impossible
 - Even infinite compute power cannot break
 
 This is because K-1 points determine infinitely many degree-(K-1) polynomials.
@@ -203,7 +203,7 @@ Exactly K shares required:
 - K-1 shares: no information
 - K+1 shares: still works (overdetermined)
 
----
+------------------------------------------------------------------------------
 
 Threshold Selection Guidelines
 
@@ -217,34 +217,34 @@ Threshold Selection Guidelines
 
 Considerations
 
-- **Availability**: Higher K = harder to recover
-- **Security**: Lower K = easier to collude
-- **Geography**: Consider time zones for ceremonies
-- **Succession**: What if custodians unavailable?
+- Availability: Higher K = harder to recover
+- Security: Lower K = easier to collude
+- Geography: Consider time zones for ceremonies
+- Succession: What if custodians unavailable?
 
----
+------------------------------------------------------------------------------
 
 Share Distribution
 
 Physical Security
 
-```
+`
 Share 1: Safe deposit box (Bank A)
 Share 2: Home safe
 Share 3: Attorney's vault
 Share 4: Trusted family member
 Share 5: Offshore location
-```
+`
 
 Digital Storage
 
-```
+`
 Share 1: Hardware security module
 Share 2: Air-gapped laptop
 Share 3: Encrypted USB (passphrase protected)
 Share 4: Paper printout (secure location)
 Share 5: Tattoo (not recommended)
-```
+`
 
 Geographic Distribution
 
@@ -252,54 +252,54 @@ Geographic Distribution
 - Different failure domains
 - Different time zones (for ceremonies)
 
----
+------------------------------------------------------------------------------
 
 Verification Without Reconstruction
 
 For periodic verification that shares are intact:
 
-```scheme
+`scheme
 ;; Each custodian verifies their share
 (define (verify-share share expected-id expected-threshold)
   (and (eq? (share-id share) expected-id)
        (= (share-threshold share) expected-threshold)
        (= (blob-size (share-y share)) expected-length)))
-```
+`
 
 Full reconstruction should be rare:
 - Key rotation ceremonies
 - Emergency recovery
 - Succession events
 
----
+------------------------------------------------------------------------------
 
 Integration with Threshold Signatures
 
 Two complementary approaches:
 
 Shamir for Key Backup (This RFC)
-```
+`
 Private key → split → N shares
 Recovery: K shares → reconstruct → use key
-```
+`
 
 Multi-Signature for Governance (RFC-007)
-```
+`
 N parties → N keys → N signatures
 Verification: count valid ≥ K
-```
+`
 
-**Use Shamir when:**
+Use Shamir when:
 - Backing up existing keys
 - Emergency recovery scenarios
 - Single key must be reconstructable
 
-**Use Multi-Sig when:**
+Use Multi-Sig when:
 - Ongoing governance decisions
 - Need audit trail of who signed
 - Asynchronous authorization
 
----
+------------------------------------------------------------------------------
 
 Security Considerations
 
@@ -323,20 +323,20 @@ Threats Remaining
 
 Operational Security
 
-1. **Generation**: Air-gapped machine, secure random
-2. **Distribution**: Out-of-band verification
-3. **Storage**: Encrypted, physically secure
-4. **Reconstruction**: Secure room, witnesses
-5. **Destruction**: Secure wipe after use
+1. Generation: Air-gapped machine, secure random
+2. Distribution: Out-of-band verification
+3. Storage: Encrypted, physically secure
+4. Reconstruction: Secure room, witnesses
+5. Destruction: Secure wipe after use
 
----
+------------------------------------------------------------------------------
 
 Implementation Notes
 
 Dependencies
 
-- `libsodium` - Secure random number generation
-- `srfi-4` - u8vectors for byte manipulation
+- libsodium - Secure random number generation
+- srfi-4 - u8vectors for byte manipulation
 
 Performance
 
@@ -350,7 +350,7 @@ Limitations
 - Share count: Practical limit ~255 (byte x-coordinates)
 - Threshold: 2 ≤ K ≤ N
 
----
+------------------------------------------------------------------------------
 
 References
 
@@ -359,14 +359,14 @@ References
 3. Beimel, A. (2011). Secret-Sharing Schemes: A Survey.
 4. NIST SP 800-57. Recommendation for Key Management.
 
----
+------------------------------------------------------------------------------
 
 Changelog
 
-- **2026-01-06** - Initial specification
+- 2026-01-06 - Initial specification
 
----
+------------------------------------------------------------------------------
 
-**Implementation Status:** Complete
-**Test Status:** Passing (test-shamir.scm)
-**Field Arithmetic:** GF(2⁸)
+Implementation Status: Complete
+Test Status: Passing (test-shamir.scm)
+Field Arithmetic: GF(2⁸)
