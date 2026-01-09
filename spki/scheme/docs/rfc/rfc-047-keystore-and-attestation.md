@@ -1,4 +1,4 @@
-# RFC-041: Realm Keystore and Attestation
+# RFC-047: Realm Keystore and Attestation
 
 **Status:** Draft
 **Date:** January 2026

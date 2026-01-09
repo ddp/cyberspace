@@ -1,4 +1,4 @@
-# RFC-043: Post-Quantum Signatures
+# RFC-049: Post-Quantum Signatures
 
 **Status:** Draft
 **Date:** January 2026

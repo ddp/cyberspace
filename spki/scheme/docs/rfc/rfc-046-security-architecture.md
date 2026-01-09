@@ -1,4 +1,4 @@
-# RFC-040: Cyberspace Security Architecture
+# RFC-046: Cyberspace Security Architecture
 
 **Status:** Draft
 **Date:** January 2026

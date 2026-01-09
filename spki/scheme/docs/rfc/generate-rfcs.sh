@@ -2,6 +2,7 @@
 # RFC Documentation Pipeline
 setopt null_glob
 # Generates all RFC formats and index catalog
+# Auto-discovers all rfc-*.md and rfc-*.txt files
 #
 # Source formats:
 #   .md   - Markdown (prose, docs, RFCs) → pandoc
@@ -17,52 +18,34 @@ setopt null_glob
 
 set -e
 
-RFCS=(
-  rfc-000-declaration
-  rfc-001-replication-layer
-  rfc-002-architecture
-  rfc-003-audit-trail
-  rfc-004-spki-authorization
-  rfc-005-metadata-levels
-  rfc-006-vault-architecture
-  rfc-007-threshold-governance
-  rfc-008-shamir-sharing
-  rfc-009-library-directory
-  rfc-010-federation
-  rfc-011-byzantine-consensus
-  rfc-012-lamport-clocks
-  rfc-013-tla-specification
-  rfc-014-coq-extraction
-  rfc-015-versioning-rollback
-  rfc-016-lazy-clustering
-  rfc-017-opera
-  rfc-018-sealed-archive
-  rfc-019-documentation-pipeline
-  rfc-020-content-addressed-storage
-  rfc-021-capability-delegation
-  rfc-022-key-ceremony
-  rfc-023-agent-sandboxing
-  rfc-024-network-protocol
-  rfc-025-query-language
-  rfc-026-garbage-collection
-  rfc-027-vault-migration
-  rfc-028-error-handling
-  rfc-029-compression
-  rfc-030-encryption-at-rest
-  rfc-031-monitoring
-  rfc-032-rate-limiting
-  rfc-033-schema-evolution
-  rfc-034-audit-protection
-  rfc-035-mobile-agents
-  rfc-036-quorum-voting
-  rfc-037-node-roles
-  rfc-038-local-inference
-  rfc-039-ipv6-scaling
-  rfc-040-security-architecture
-  rfc-041-fuse-filesystem
-  rfc-042-ietf-normative
-  rfc-043-memo-conventions
-)
+# Discover RFCs from filesystem (unique basenames, sorted by number)
+discover_rfcs() {
+  for f in rfc-*.md rfc-*.txt; do
+    [[ -f "$f" ]] && echo "${f%.*}"
+  done | sort -u | sort -t- -k2,2n
+}
+
+# Check for duplicate RFC numbers
+check_duplicates() {
+  local prev_num=""
+  local prev_rfc=""
+  for rfc in "$@"; do
+    local num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/')
+    if [[ -n "$prev_num" && "$num" == "$prev_num" ]]; then
+      echo "WARNING: Duplicate RFC number $num:" >&2
+      echo "  - $prev_rfc" >&2
+      echo "  - $rfc" >&2
+    fi
+    prev_num="$num"
+    prev_rfc="$rfc"
+  done
+}
+
+# Build array from discovery
+RFCS=("${(@f)$(discover_rfcs)}")
+
+echo "Discovered ${#RFCS[@]} RFCs"
+check_duplicates "${RFCS[@]}"
 
 # Extract title from markdown file
 get_title_md() {

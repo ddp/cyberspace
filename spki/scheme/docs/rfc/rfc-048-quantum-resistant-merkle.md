@@ -1,4 +1,4 @@
-# RFC-042: Quantum-Resistant Merkle Trees
+# RFC-048: Quantum-Resistant Merkle Trees
 
 **Status:** Draft
 **Date:** January 2026
