@@ -37,7 +37,6 @@ Threat Model
 
 Attack Vectors
 
-`scheme
 (define audit-threats
   '((flooding
      (description "Generate massive log volume")
@@ -63,11 +62,9 @@ Attack Vectors
      (description "Force log rotation/deletion")
      (goal "Remove evidence")
      (method "Fill logs to trigger cleanup"))))
-`
 
 Attacker Capabilities
 
-`scheme
 ;; Assume attacker can:
 ;; - Authenticate as a valid principal
 ;; - Perform many legitimate operations
@@ -78,7 +75,6 @@ Attacker Capabilities
 ;; - Directly write to audit storage
 ;; - Forge signatures on log entries
 ;; - Break cryptographic primitives
-`
 
 ------------------------------------------------------------------------------
 
@@ -86,7 +82,6 @@ Rate Limiting
 
 Per-Principal Audit Limits
 
-`scheme
 (define audit-rate-limits
   `((entries-per-second . 100)
     (bytes-per-second . 102400)      ; 100KB/s
@@ -107,11 +102,9 @@ Per-Principal Audit Limits
   "Check if principal can generate audit entry"
   (let ((bucket (get-audit-bucket principal)))
     (bucket 1)))  ; Consume one token
-`
 
 Audit Entry Costing
 
-`scheme
 ;; Different operations have different audit costs
 (define audit-costs
   `((read . 1)
@@ -138,11 +131,9 @@ Audit Entry Costing
             principal: principal
             attempted-action: action)
           #f))))
-`
 
 Burst Handling
 
-`scheme
 ;; Allow short bursts but limit sustained rate
 (define (make-audit-limiter)
   (let ((short-term (make-token-bucket 200 100))   ; 100/s, burst 200
@@ -150,7 +141,6 @@ Burst Handling
     (lambda (cost)
       (and (short-term cost)
            (long-term)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -158,7 +148,6 @@ Storage Protection
 
 Reserved Audit Space
 
-`scheme
 ;; Always reserve space for audit
 (define audit-reserved-space (* 1024 1024 1024))  ; 1GB minimum
 
@@ -175,11 +164,9 @@ Reserved Audit Space
       (enter-audit-protection-mode)
       ;; But always log
       #t)))
-`
 
 Audit Protection Mode
 
-`scheme
 (define audit-protection-mode? (make-parameter #f))
 
 (define (enter-audit-protection-mode)
@@ -198,11 +185,9 @@ Audit Protection Mode
     (set-vault-mode! 'normal)
     (audit-append-privileged
       action: 'audit-protection-disabled)))
-`
 
 Tiered Storage
 
-`scheme
 ;; Audit log tiers
 (define audit-tiers
   '((hot . ((retention . 86400)      ; 1 day
@@ -225,7 +210,6 @@ Tiered Storage
                           (< age (assoc-ref (cdr t) 'retention))))
                     audit-tiers)))
     (migrate-to-tier entry (car tier))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -233,7 +217,6 @@ Entry Size Limits
 
 Maximum Entry Size
 
-`scheme
 (define max-audit-entry-size 65536)  ; 64KB
 
 (define (validate-audit-entry entry)
@@ -243,11 +226,9 @@ Maximum Entry Size
       (error 'audit-entry-too-large
              `((size . ,size)
                (limit . ,max-audit-entry-size))))))
-`
 
 Entry Truncation
 
-`scheme
 (define (truncate-audit-entry entry max-size)
   "Truncate oversized entry while preserving critical fields"
   (let ((critical '(action principal timestamp hash signature)))
@@ -267,11 +248,9 @@ Entry Truncation
                     action: 'audit-entry-truncation-failed
                     original-size: (serialized-size entry))
                   entry)))))))
-`
 
 Payload Summarization
 
-`scheme
 (define (summarize-large-payload payload)
   "Summarize large payloads for audit"
   (if (> (bytevector-length payload) 1024)
@@ -280,7 +259,6 @@ Payload Summarization
         (hash . ,(content-hash payload))
         (preview . ,(subbytevector payload 0 256)))
       payload))
-`
 
 ------------------------------------------------------------------------------
 
@@ -288,7 +266,6 @@ Aggregation
 
 Event Aggregation
 
-`scheme
 ;; Aggregate similar events to reduce volume
 (define aggregation-window 60)  ; seconds
 (define pending-aggregations (make-hash-table))
@@ -328,11 +305,9 @@ Event Aggregation
           window-end: (assoc-ref agg 'last-seen)
           sample: (assoc-ref agg 'sample))
         (hash-table-delete! pending-aggregations key)))))
-`
 
 Sampling
 
-`scheme
 ;; Sample high-volume events
 (define (should-sample? action principal)
   (let ((rate (current-rate action principal)))
@@ -351,7 +326,6 @@ Sampling
                     sampled: #t)
       ;; Still count for rate tracking
       (increment-audit-counter action principal)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -359,7 +333,6 @@ Anomaly Detection
 
 Baseline Establishment
 
-`scheme
 (define (establish-audit-baseline principal duration)
   "Establish normal audit patterns for principal"
   (let ((events (soup-query type: 'audit-entry
@@ -369,11 +342,9 @@ Baseline Establishment
       (common-actions . ,(top-n (map audit-action events) 10))
       (typical-hours . ,(typical-active-hours events))
       (established-at . ,(current-time)))))
-`
 
 Anomaly Detection
 
-`scheme
 (define (detect-audit-anomaly principal current-rate baseline)
   "Detect anomalous audit patterns"
   (let ((expected (assoc-ref baseline 'events-per-hour))
@@ -390,11 +361,9 @@ Anomaly Detection
       ;; Potentially throttle
       (when (> current-rate (* 10 expected))
         (throttle-principal principal)))))
-`
 
 Flood Detection
 
-`scheme
 (define (detect-audit-flood)
   "Detect system-wide audit flooding"
   (let ((current-rate (global-audit-rate))
@@ -410,7 +379,6 @@ Flood Detection
         ;; Throttle top contributors
         (for-each throttle-principal
                   (map car top-principals))))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -418,7 +386,6 @@ Privileged Logging
 
 System Events
 
-`scheme
 ;; Some events bypass rate limits
 (define privileged-actions
   '(audit-rate-limited
@@ -438,11 +405,9 @@ System Events
     ;; Alert on privileged events
     (when (member (assoc-ref entry 'action) '(security-alert emergency-revoke))
       (send-security-alert entry))))
-`
 
 Guaranteed Delivery
 
-`scheme
 (define (audit-write-guaranteed entry)
   "Write audit entry with guaranteed delivery"
   ;; Write to multiple locations
@@ -457,7 +422,6 @@ Guaranteed Delivery
       (when (< (length successes) 2)
         ;; Failed to write to enough locations
         (emergency-audit-alert entry successes)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -465,7 +429,6 @@ Integrity Protection
 
 Append-Only Enforcement
 
-`scheme
 ;; Audit log is strictly append-only
 (define (audit-write entry)
   "Append entry to audit log"
@@ -478,11 +441,9 @@ Append-Only Enforcement
       (write-entry log (cons `(sequence . ,seq) entry))
       ;; Sign the entry
       (sign-entry log entry))))
-`
 
 Chain Integrity
 
-`scheme
 ;; Each entry references previous (blockchain-style)
 (define (chain-entry entry previous-hash)
   `((previous-hash . ,previous-hash)
@@ -502,7 +463,6 @@ Chain Integrity
                    (equal? (assoc-ref entry 'previous-hash) expected-prev))
                (loop (cdr entries)
                      (assoc-ref entry 'hash)))))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -510,7 +470,6 @@ Recovery
 
 Log Reconstruction
 
-`scheme
 (define (reconstruct-audit-log backups)
   "Reconstruct audit log from multiple backups"
   (let ((entries (merge-backup-entries backups)))
@@ -520,11 +479,9 @@ Log Reconstruction
       (unless (verify-audit-chain deduped)
         (error 'audit-chain-broken))
       deduped)))
-`
 
 Gap Detection
 
-`scheme
 (define (detect-audit-gaps log)
   "Find gaps in audit sequence"
   (let loop ((entries (audit-entries log))
@@ -537,7 +494,6 @@ Gap Detection
               (loop (cdr entries) (+ seq 1) gaps)
               (loop (cdr entries) (+ seq 1)
                     (cons (list expected-seq (- seq 1)) gaps)))))))
-`
 
 ------------------------------------------------------------------------------
 

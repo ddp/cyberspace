@@ -83,13 +83,11 @@ Object Properties
 
 All security objects share:
 
-`
 1. Content-addressed identity (SHA-512 hash)
 2. Cryptographic signature (Ed25519)
 3. Audit trail integration (RFC-003)
 4. Capability-gated access (RFC-004)
 5. State: chaotic | quiescent
-`
 
 Object State
 
@@ -102,12 +100,10 @@ All things in cyberspace exist in two states:
 
 Transitions:
 
-`
-chaotic ──commit──▶ quiescent
-    ▲                   │
-    │                   │
-    └───── fork ────────┘
-`
+chaotic --commit--▶ quiescent
+    ^                   |
+    |                   |
+    +----- fork --------+
 
 Only quiescent objects:
 - Have stable content hashes
@@ -158,31 +154,26 @@ work, intermediate computations: let them vanish.
 
 Marking a thing persistent schedules vault migration.
 
-`scheme
 (persist thing)    ; guarantee vault migration
 (ephemeral thing)  ; no durability promise
-`
 
 Object Relationships
 
-`
-principal ──creates──▶ certificate ──grants──▶ tag
-    │                      │
-    │                      ▼
-    │                   object ◀──stores── vault
-    │                      │
-    ▼                      ▼
-  agent ──operates──▶ wormhole ──bridges──▶ realm
-    │                                         │
-    │                                         ▼
-    └──────────────────────────────────▶ federation
-`
+principal --creates--▶ certificate --grants--▶ tag
+    |                      |
+    |                      v
+    |                   object ◀--stores-- vault
+    |                      |
+    v                      v
+  agent --operates--▶ wormhole --bridges--▶ realm
+    |                                         |
+    |                                         v
+    +----------------------------------▶ federation
 
 ------------------------------------------------------------------------------
 
 The Axioms
 
-`
 A1. No Ambient Authority
     You have nothing until someone gives you something.
     Every access requires presenting a capability.
@@ -199,7 +190,6 @@ A4. Objects Are Immutable Content
     SHA-512 hash IS identity.
     No metadata. No labels. No ACLs.
     Objects don't know who can access them.
-`
 
 ------------------------------------------------------------------------------
 
@@ -207,23 +197,21 @@ The Realm
 
 A realm is your place in cyberspace. It is sovereign.
 
-`
-┌─────────────────────────────────────────────────────────────┐
-│                        YOUR REALM                            │
-│                                                              │
-│   Principal: ed25519:a1b2c3...  (this is you)               │
-│                                                              │
-│   ┌──────────────────────────────────────────────────────┐  │
-│   │                      VAULT                            │  │
-│   │  Objects:     content-addressed, signed               │  │
-│   │  Capabilities: certificates you hold                  │  │
-│   │  Audit:       what happened here                      │  │
-│   └──────────────────────────────────────────────────────┘  │
-│                                                              │
-│   Trust boundary: your signing key                          │
-│   You decide: what to store, who to trust, what to share    │
-└─────────────────────────────────────────────────────────────┘
-`
++-------------------------------------------------------------+
+|                        YOUR REALM                            |
+|                                                              |
+|   Principal: ed25519:a1b2c3...  (this is you)               |
+|                                                              |
+|   +------------------------------------------------------+  |
+|   |                      VAULT                            |  |
+|   |  Objects:     content-addressed, signed               |  |
+|   |  Capabilities: certificates you hold                  |  |
+|   |  Audit:       what happened here                      |  |
+|   +------------------------------------------------------+  |
+|                                                              |
+|   Trust boundary: your signing key                          |
+|   You decide: what to store, who to trust, what to share    |
++-------------------------------------------------------------+
 
 Your realm is local-first. Federation is optional. When you federate, realms overlap - objects flow according to capability chains. But your realm remains yours.
 
@@ -233,7 +221,6 @@ Capabilities
 
 The Certificate
 
-`scheme
 (spki-cert
   (issuer "ed25519:alice...")        ; Who grants
   (subject "ed25519:bob...")         ; Who receives
@@ -241,11 +228,9 @@ The Certificate
   (valid (not-after 1736400000))     ; When: expires in 24h
   (propagate #f)                     ; Bob cannot delegate
   (signature "ed25519:..."))         ; Alice's signature
-`
 
 Access Check
 
-`
 Can Bob read sha512:doc?
 
 1. Does Bob hold a cert granting (read "sha512:doc")?
@@ -256,27 +241,22 @@ Can Bob read sha512:doc?
 
 All yes? Access granted.
 Any no?  Access denied.
-`
 
 Delegation
 
 Alice can give Bob read access:
-`scheme
 (spki-cert
   (issuer "ed25519:alice...")
   (subject "ed25519:bob...")
   (tag (read "sha512:doc..."))
   (propagate #t))                    ; Bob CAN delegate
-`
 
 Bob can give Carol read access (because Alice allowed propagation):
-`scheme
 (spki-cert
   (issuer "ed25519:bob...")
   (subject "ed25519:carol...")
   (tag (read "sha512:doc..."))
   (propagate #f))                    ; Carol cannot delegate further
-`
 
 Carol cannot give anyone else access. The chain stops.
 
@@ -288,7 +268,6 @@ Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP SECRET.
 
 In cyberspace, classification is a capability you hold:
 
-`scheme
 ;; Security officer grants SECRET clearance
 (spki-cert
   (issuer "ed25519:security-officer...")
@@ -301,7 +280,6 @@ In cyberspace, classification is a capability you hold:
   (issuer "ed25519:program-manager...")
   (subject "ed25519:engineer...")
   (tag (compartment "project-atlas")))
-`
 
 Access to a classified object requires:
 1. Capability to read the object itself
@@ -333,11 +311,9 @@ Confidentiality
 
 Information flows only through capabilities:
 
-`
 ∀ read(P,O): P ∈ holders(cap_read(O))
 ∀ write(P,O): P ∈ holders(cap_write(O))
 ∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)
-`
 
 A principal without read capability cannot observe content.
 A principal without write capability cannot exfiltrate via storage.
@@ -347,11 +323,9 @@ Integrity
 
 Modification flows only through capabilities:
 
-`
 ∀ modify(P,O): P ∈ holders(cap_write(O))
 ∀ delegate(P₁,P₂,C'): integrity(C') ≤ integrity(C)
 ∀ capability C: provenance(C) ⊆ audit_trail
-`
 
 Objects cannot be corrupted without write capability.
 Delegated capabilities cannot exceed held capabilities.
@@ -361,11 +335,9 @@ Confinement
 
 The capability discipline eliminates ambient authority:
 
-`
 ∀ access(P,O): ∃ C ∈ capabilities(P): authorizes(C,O)
 ∀ C: unforgeable(C)
 ∀ acquire(P,C): ∃ P': delegate(P',P,C) ∨ create(P,O)
-`
 
 No access without explicit capability.
 Capabilities cannot be manufactured.
@@ -375,13 +347,11 @@ Wormhole Enforcement
 
 Wormholes (RFC-041) are channel boundaries. Information flow is enforced at every crossing:
 
-`scheme
 (wormhole-flow-guard wormhole operation object)
   ;; Checks:
   ;; 1. wormhole has capabilities (no ambient authority)
   ;; 2. operation permitted by held capabilities
   ;; 3. audit entry created
-`
 
 | Operation | Required Capability | Violation Type |
 |-----------|-------------------|----------------|
@@ -400,19 +370,17 @@ The Lattice
 
 Capabilities form a partial order. The lattice:
 
-`
         full
-          │
-    ┌─────┼─────┐
-    │     │     │
+          |
+    +-----+-----+
+    |     |     |
   admin synch read-write
-    │     │     │
-    └─────┼─────┘
-          │
+    |     |     |
+    +-----+-----+
+          |
       read-only
-          │
+          |
         none
-`
 
 Delegation can only move DOWN the lattice. This is attenuation.
 You cannot delegate admin if you hold read-only.
@@ -438,7 +406,6 @@ Erasure Requirements
 
 Erasure Guarantees
 
-`
 E1. Zeroization is atomic
     erase(o) → ¬recoverable(o)
 
@@ -450,11 +417,9 @@ E3. Key destruction is immediate
 
 E4. Revocation propagates
     revoke(cert) → ∀ delegate(cert, c'): revoke(c')
-`
 
 Implementation
 
-`scheme
 ;; Secure memory clearing (defeats compiler optimization)
 (define (secure-clear! buffer)
   "Overwrite buffer with zeros, verify"
@@ -499,7 +464,6 @@ Implementation
                   action: 'object-erased
                   target: hash)
     'erased))
-`
 
 What Cannot Be Erased
 
@@ -523,7 +487,6 @@ Modern storage complicates secure erasure:
 
 Our answer: Encrypt at rest (RFC-030). Erasing the key erases the data.
 
-`scheme
 ;; With encryption at rest, key destruction = data destruction
 (define (secure-erase-encrypted hash)
   "For encrypted objects: destroy decryption key"
@@ -531,7 +494,6 @@ Our answer: Encrypt at rest (RFC-030). Erasing the key erases the data.
     (key-destroy! dek)
     ;; The ciphertext remains but is now meaningless
     'erased-via-key-destruction))
-`
 
 ------------------------------------------------------------------------------
 
@@ -599,12 +561,10 @@ Total covert bandwidth: ~1-2 bits/second under ideal conditions. Not enough for 
 
 Mitigation Principles
 
-`
 1. Add noise where practical (bloom filters, random delays)
 2. Quantize where observable (object sizes, batch windows)
 3. Rate limit where controllable (operations per time)
 4. Accept what remains (document it, move on)
-`
 
 ------------------------------------------------------------------------------
 
@@ -612,7 +572,6 @@ Audit
 
 Everything important gets logged.
 
-`scheme
 (audit-entry
   (sequence 12345)
   (timestamp 1736300000)
@@ -623,7 +582,6 @@ Everything important gets logged.
   (capability "sha512:cert...")
   (previous "sha512:prev-entry...")
   (signature "ed25519:auditor..."))
-`
 
 Properties:
 - Hash-chained: tamper-evident
@@ -645,22 +603,20 @@ Trusted Path
 
 When it matters, talk directly to the core.
 
-`
-┌──────────────────────────────────────┐
-│           HUMAN OPERATOR              │
-└─────────────────┬────────────────────┘
-                  │ Local terminal, no network
-┌─────────────────▼────────────────────┐
-│          CYBERSPACE REPL              │
-│    ╔═════════════════════════════╗   │
-│    ║  TRUSTED PATH ACTIVE        ║   │
-│    ╚═════════════════════════════╝   │
-└─────────────────┬────────────────────┘
-                  │
-┌─────────────────▼────────────────────┐
-│           TRUSTED CORE                │
-└──────────────────────────────────────┘
-`
++--------------------------------------+
+|           HUMAN OPERATOR              |
++-----------------+--------------------+
+                  | Local terminal, no network
++-----------------v--------------------+
+|          CYBERSPACE REPL              |
+|    ╔═════════════════════════════╗   |
+|    ║  TRUSTED PATH ACTIVE        ║   |
+|    ╚═════════════════════════════╝   |
++-----------------+--------------------+
+                  |
++-----------------v--------------------+
+|           TRUSTED CORE                |
++--------------------------------------+
 
 Operations requiring trusted path:
 - (ed25519-keypair) - key generation
@@ -703,7 +659,6 @@ The Invariants
 
 These must always hold:
 
-`
 I1. No access without valid capability
     access(s,o,r) → ∃c: valid_chain(s,o,r,c)
 
@@ -721,7 +676,6 @@ I5. Revocation is permanent
 
 I6. No ambient authority
     ¬∃c: grants(c,,)
-`
 
 ------------------------------------------------------------------------------
 

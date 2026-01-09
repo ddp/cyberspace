@@ -36,7 +36,6 @@ Metrics
 
 Core Metrics
 
-`scheme
 (define vault-metrics
   '(;; Storage
     (storage.used.bytes gauge "Total bytes used")
@@ -68,11 +67,9 @@ Core Metrics
     ;; Errors
     (errors.total counter "Total errors" labels: (type))
     (errors.rate gauge "Error rate per second")))
-`
 
 Metric Collection
 
-`scheme
 (define metrics-registry (make-hash-table))
 
 (define (register-metric name type help #!key labels)
@@ -99,11 +96,9 @@ Metric Collection
 (define (metric-observe! name value #!key labels)
   (let ((metric (hash-table-ref metrics-registry name)))
     (histogram-observe! (assoc-ref metric 'value) value)))
-`
 
 Histogram Buckets
 
-`scheme
 (define (make-histogram-buckets)
   "Default latency buckets in milliseconds"
   (let ((buckets '(1 5 10 25 50 100 250 500 1000 2500 5000 10000)))
@@ -114,7 +109,6 @@ Histogram Buckets
               (when (<= value (car bucket))
                 (set-cdr! bucket (+ (cdr bucket) 1))))
             histogram))
-`
 
 ------------------------------------------------------------------------------
 
@@ -122,7 +116,6 @@ Tracing
 
 Trace Structure
 
-`scheme
 (define (make-trace operation)
   `(trace
     (trace-id ,(generate-trace-id))
@@ -143,11 +136,9 @@ Trace Structure
   (set! (assoc-ref trace 'end-time) (current-time-ns))
   (set! (assoc-ref trace 'status) status)
   (record-trace! trace))
-`
 
 Span Context
 
-`scheme
 (define current-trace (make-parameter #f))
 (define current-span (make-parameter #f))
 
@@ -172,11 +163,9 @@ Span Context
     (lambda ()
       (span-set-attribute! "hash" hash)
       (cas-get hash))))
-`
 
 Distributed Tracing
 
-`scheme
 ;; Propagate trace context across vault boundaries
 (define (inject-trace-context headers)
   "Inject trace context into outgoing request"
@@ -192,7 +181,6 @@ Distributed Tracing
     (when trace-id
       (current-trace trace-id)
       (make-span-with-parent parent-span-id))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -200,7 +188,6 @@ Logging
 
 Structured Logging
 
-`scheme
 (define (log level message #!rest attributes)
   "Emit structured log entry"
   (let ((entry `((timestamp . ,(current-time-iso8601))
@@ -221,11 +208,9 @@ Structured Logging
           'hash hash
           'size (bytevector-length data)
           'duration-ms elapsed)
-`
 
 Log Levels
 
-`scheme
 (define log-levels '((trace . 0) (debug . 1) (info . 2)
                      (warn . 3) (error . 4) (fatal . 5)))
 
@@ -234,11 +219,9 @@ Log Levels
 (define (log-enabled? level)
   (>= (assoc-ref log-levels level)
       (assoc-ref log-levels (current-log-level))))
-`
 
 Log Sinks
 
-`scheme
 ;; Multiple output destinations
 (define log-sinks '())
 
@@ -261,7 +244,6 @@ Log Sinks
 (define (make-soup-sink)
   (lambda (entry)
     (soup-put entry type: 'log-entry)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -269,7 +251,6 @@ Health Checks
 
 Health Endpoints
 
-`scheme
 (define (health-check)
   "Comprehensive health check"
   `((status . ,(if (all-healthy?) 'healthy 'unhealthy))
@@ -293,11 +274,9 @@ Health Endpoints
   `((status . ,(if (replication-healthy?) 'healthy 'unhealthy))
     (lag-seconds . ,(replication-lag))
     (pending . ,(pending-replication-count))))
-`
 
 Readiness vs Liveness
 
-`scheme
 ;; Liveness: is the process running?
 (define (liveness-check)
   '((status . alive)))
@@ -309,7 +288,6 @@ Readiness vs Liveness
            (not (vault-readonly?)))
       '((status . ready))
       '((status . not-ready))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -317,7 +295,6 @@ Alerting
 
 Alert Rules
 
-`scheme
 (define alert-rules
   `((storage-critical
      (condition (> (metric-value 'storage.percent.used) 95))
@@ -343,11 +320,9 @@ Alert Rules
      (condition (< (metric-value 'network.peers.connected) 1))
      (severity critical)
      (message "No peers connected"))))
-`
 
 Alert Evaluation
 
-`scheme
 (define (evaluate-alerts)
   "Check all alert conditions"
   (filter-map
@@ -364,7 +339,6 @@ Alert Evaluation
     (audit-append action: 'alert-fired alert: alert)
     (notify-alert alert)
     alert))
-`
 
 ------------------------------------------------------------------------------
 
@@ -372,7 +346,6 @@ Dashboards
 
 Metric Export
 
-`scheme
 ;; Prometheus format
 (define (export-prometheus)
   (with-output-to-string
@@ -385,11 +358,9 @@ Metric Export
             (format #t "# TYPE ~a ~a~%" name (assoc-ref data 'type))
             (format #t "~a ~a~%" name (assoc-ref data 'value))))
         (hash-table->alist metrics-registry)))))
-`
 
 Status Page
 
-`scheme
 (define (status-page)
   "Generate human-readable status"
   `(vault-status
@@ -400,7 +371,6 @@ Status Page
                 (operations . ,(operation-metrics))
                 (network . ,(network-metrics))))
     (recent-errors . ,(recent-errors 10))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -408,7 +378,6 @@ Privacy
 
 Metric Sanitization
 
-`scheme
 ;; Never expose sensitive data in metrics
 (define (sanitize-metric-labels labels)
   (map (lambda (label)
@@ -420,18 +389,15 @@ Metric Sanitization
 
 (define (safe-metric name value #!key labels)
   (metric-set! name value labels: (sanitize-metric-labels labels)))
-`
 
 Aggregate Metrics Only
 
-`scheme
 ;; Expose only aggregates, not individual operations
 (define (operation-metrics)
   `((total-operations . ,(metric-value 'cas.operations.total))
     (operations-per-second . ,(metric-value 'cas.operations.rate))
     (average-latency-ms . ,(metric-value 'cas.latency.average))
     (p99-latency-ms . ,(metric-value 'cas.latency.p99))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -439,7 +405,6 @@ Storage
 
 Metric Retention
 
-`scheme
 ;; Metrics stored in soup with TTL
 (define metric-retention (* 30 24 3600))  ; 30 days
 
@@ -456,11 +421,9 @@ Metric Retention
   (let ((expired (soup-query type: 'metric-snapshot
                              timestamp: (< (- (current-time) metric-retention)))))
     (for-each soup-delete! expired)))
-`
 
 Trace Sampling
 
-`scheme
 ;; Sample traces to control storage
 (define trace-sample-rate 0.1)  ; 10%
 
@@ -471,7 +434,6 @@ Trace Sampling
   (when (or (trace-has-error? trace)
             (should-sample-trace?))
     (soup-put trace type: 'trace)))
-`
 
 ------------------------------------------------------------------------------
 

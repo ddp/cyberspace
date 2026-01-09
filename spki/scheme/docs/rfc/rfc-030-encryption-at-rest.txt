@@ -35,25 +35,22 @@ Encryption Model
 
 Layered Encryption
 
-`
-┌─────────────────────────────────────┐
-│         Application Layer           │
-│       (plaintext objects)           │
-├─────────────────────────────────────┤
-│      Object-Level Encryption        │
-│    (per-object keys, age format)    │
-├─────────────────────────────────────┤
-│      Storage-Level Encryption       │
-│    (volume encryption, LUKS/dm)     │
-├─────────────────────────────────────┤
-│         Physical Storage            │
-│        (encrypted at rest)          │
-└─────────────────────────────────────┘
-`
++-------------------------------------+
+|         Application Layer           |
+|       (plaintext objects)           |
++-------------------------------------+
+|      Object-Level Encryption        |
+|    (per-object keys, age format)    |
++-------------------------------------+
+|      Storage-Level Encryption       |
+|    (volume encryption, LUKS/dm)     |
++-------------------------------------+
+|         Physical Storage            |
+|        (encrypted at rest)          |
++-------------------------------------+
 
 Encryption Scope
 
-`scheme
 ;; What gets encrypted
 (define encryption-policy
   `((content . always)           ; Object content - always encrypted
@@ -61,7 +58,6 @@ Encryption Scope
     (indexes . optional)         ; Search indexes - configurable
     (audit-log . always)         ; Audit trail - always encrypted
     (keys . never-plaintext)))   ; Keys never stored plaintext
-`
 
 ------------------------------------------------------------------------------
 
@@ -69,14 +65,13 @@ Key Hierarchy
 
 Key Types
 
-`scheme
 (define key-hierarchy
   '(master-key                    ; Root of trust
-    └── vault-key                 ; Per-vault encryption
-        ├── content-key           ; Object encryption
-        ├── metadata-key          ; Soup encryption
-        ├── index-key             ; Index encryption
-        └── audit-key))           ; Audit log encryption
+    +-- vault-key                 ; Per-vault encryption
+        +-- content-key           ; Object encryption
+        +-- metadata-key          ; Soup encryption
+        +-- index-key             ; Index encryption
+        +-- audit-key))           ; Audit log encryption
 
 (define (derive-key parent purpose)
   "Derive child key from parent"
@@ -84,11 +79,9 @@ Key Types
                salt: (purpose->salt purpose)
                info: (string->utf8 (symbol->string purpose))
                length: 32))
-`
 
 Master Key
 
-`scheme
 ;; Master key from key ceremony (RFC-022)
 (define (initialize-master-key shares threshold)
   "Reconstruct master key from shares"
@@ -100,11 +93,9 @@ Master Key
       ;; Clear master from memory
       (secure-clear! master)
       vault-key)))
-`
 
 Key Derivation
 
-`scheme
 (define (derive-content-key vault-key object-hash)
   "Derive unique key for each object"
   (hkdf-sha256 vault-key
@@ -118,7 +109,6 @@ Key Derivation
                salt: (integer->bytevector chunk-index)
                info: #u8(99 104 117 110 107)  ; "chunk"
                length: 32))
-`
 
 ------------------------------------------------------------------------------
 
@@ -126,7 +116,6 @@ Object Encryption
 
 Age Format
 
-`scheme
 ;; Use age for object encryption (RFC-018)
 (define (encrypt-object data recipient-keys)
   "Encrypt object using age format"
@@ -135,11 +124,9 @@ Age Format
 (define (decrypt-object encrypted identity)
   "Decrypt object using age format"
   (age-decrypt encrypted identity))
-`
 
 Symmetric Encryption
 
-`scheme
 ;; For internal encryption with derived keys
 (define (encrypt-symmetric data key)
   "Encrypt with ChaCha20-Poly1305"
@@ -152,11 +139,9 @@ Symmetric Encryption
   (let ((nonce (subbytevector encrypted 0 12))
         (ciphertext (subbytevector encrypted 12)))
     (chacha20-poly1305-decrypt ciphertext key nonce)))
-`
 
 Streaming Encryption
 
-`scheme
 (define (encrypt-stream input-port output-port key)
   "Stream encryption for large objects"
   (let ((chunk-size 65536)
@@ -169,7 +154,6 @@ Streaming Encryption
             (secure-clear! chunk-key))
           (set! chunk-index (+ chunk-index 1))
           (loop))))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -177,7 +161,6 @@ Storage Integration
 
 Encrypted CAS
 
-`scheme
 (define (cas-put-encrypted data)
   "Store encrypted object in CAS"
   (let* ((hash (content-hash data))            ; Hash plaintext
@@ -198,11 +181,9 @@ Encrypted CAS
     (unless (equal? hash (content-hash data))
       (error "Hash verification failed after decryption"))
     data))
-`
 
 Encrypted Soup
 
-`scheme
 (define (soup-put-encrypted hash metadata)
   "Store encrypted soup entry"
   (let* ((serialized (serialize metadata))
@@ -218,11 +199,9 @@ Encrypted Soup
          (serialized (decrypt-symmetric encrypted key)))
     (secure-clear! key)
     (deserialize serialized)))
-`
 
 Encrypted Indexes
 
-`scheme
 ;; Searchable encryption for indexes
 (define (index-put-encrypted term hash)
   "Add encrypted index entry"
@@ -237,7 +216,6 @@ Encrypted Indexes
   "Deterministic encryption for searchable indexes"
   (let ((derived-key (hkdf-sha256 key salt: data length: 32)))
     (siv-encrypt data derived-key)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -245,7 +223,6 @@ Key Management
 
 Key Storage
 
-`scheme
 ;; Keys encrypted with master key
 (define (store-vault-key vault-key master-key)
   "Store vault key encrypted with master key"
@@ -261,11 +238,9 @@ Key Storage
       type: 'encrypted-key
       recipient: principal)
     hash))
-`
 
 Key Rotation
 
-`scheme
 (define (rotate-vault-key)
   "Rotate vault encryption key"
   (let ((old-key (vault-key))
@@ -286,11 +261,9 @@ Key Rotation
     (secure-clear! old-key)
 
     (audit-append action: 'key-rotation-complete)))
-`
 
 Key Escrow
 
-`scheme
 ;; Threshold key escrow for recovery
 (define (escrow-vault-key vault-key custodians threshold)
   "Split vault key among custodians"
@@ -308,7 +281,6 @@ Key Escrow
                 (age-decrypt share (custodian-identity custodian)))
               custodian-shares custodians)))
     (shamir-combine decrypted-shares)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -316,7 +288,6 @@ Access Control
 
 Key Access
 
-`scheme
 ;; Keys protected by capabilities
 (spki-cert
   (issuer vault-admin)
@@ -329,11 +300,9 @@ Key Access
 (define (authorized-decrypt? principal hash)
   "Check if principal can decrypt object"
   (has-capability? principal 'decrypt hash))
-`
 
 Envelope Encryption
 
-`scheme
 ;; Object encrypted with DEK, DEK encrypted with KEK
 (define (envelope-encrypt data recipients)
   "Envelope encryption for multiple recipients"
@@ -353,7 +322,6 @@ Envelope Encryption
          (dek (find-and-decrypt-dek encrypted-deks identity))
          (encrypted-data (assoc-ref envelope 'encrypted-data)))
     (decrypt-symmetric encrypted-data dek)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -361,7 +329,6 @@ Secure Memory
 
 Key Handling
 
-`scheme
 ;; Keys must be handled carefully in memory
 (define (with-key key-source proc)
   "Use key with automatic cleanup"
@@ -376,11 +343,9 @@ Key Handling
   (bytevector-fill! bytevector 0)
   ;; Prevent compiler optimization
   (memory-barrier))
-`
 
 Memory Protection
 
-`scheme
 ;; Lock key pages in memory (prevent swap)
 (define (allocate-secure-memory size)
   (let ((mem (allocate-memory size)))
@@ -391,7 +356,6 @@ Memory Protection
   (secure-clear! mem)
   (munlock mem size)
   (free-memory mem))
-`
 
 ------------------------------------------------------------------------------
 
@@ -399,7 +363,6 @@ Volume Encryption
 
 LUKS Integration
 
-`scheme
 ;; Storage volume encryption
 (define (setup-encrypted-volume device passphrase)
   "Initialize LUKS encrypted volume"
@@ -413,11 +376,9 @@ LUKS Integration
                "vault-storage"
                stdin: passphrase)
   (run-command "mount" "/dev/mapper/vault-storage" (storage-path)))
-`
 
 Hardware Security Modules
 
-`scheme
 ;; HSM for key protection
 (define (hsm-generate-key hsm-slot)
   "Generate key in HSM"
@@ -434,7 +395,6 @@ Hardware Security Modules
     key: key-handle
     mechanism: 'aes-gcm
     data: data))
-`
 
 ------------------------------------------------------------------------------
 
@@ -442,7 +402,6 @@ Audit
 
 Encryption Audit
 
-`scheme
 (define (audit-encryption-operation op hash principal)
   "Log encryption operation"
   (audit-append
@@ -460,11 +419,9 @@ Encryption Audit
     key-id: key-id
     principal: principal
     timestamp: (current-time)))
-`
 
 Compliance Reporting
 
-`scheme
 (define (encryption-compliance-report)
   "Generate encryption compliance report"
   `((total-objects . ,(count-objects))
@@ -473,7 +430,6 @@ Compliance Reporting
     (key-rotation-date . ,(last-key-rotation))
     (algorithm . "ChaCha20-Poly1305")
     (key-length . 256)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -481,24 +437,20 @@ Performance
 
 Encryption Overhead
 
-`scheme
 ;; Benchmark encryption overhead
 (define (benchmark-encryption size iterations)
   (let ((data (generate-random-bytes size))
         (key (generate-key 32)))
     (time-iterations iterations
       (encrypt-symmetric data key))))
-`
 
 Hardware Acceleration
 
-`scheme
 ;; Use AES-NI when available
 (define (select-cipher)
   (if (cpu-supports-aes-ni?)
       'aes-256-gcm
       'chacha20-poly1305))
-`
 
 ------------------------------------------------------------------------------
 
@@ -506,7 +458,6 @@ Security Considerations
 
 Key Compromise
 
-`scheme
 ;; If key is compromised
 (define (handle-key-compromise compromised-key-id)
   "Emergency response to key compromise"
@@ -523,11 +474,9 @@ Key Compromise
 
   ;; Re-encrypt with new key
   (re-encrypt-all-objects))
-`
 
 Side Channels
 
-`scheme
 ;; Constant-time operations
 (define (constant-time-compare a b)
   "Compare without timing leaks"
@@ -537,7 +486,6 @@ Side Channels
       (set! result (bitwise-ior result
                     (bitwise-xor (bytevector-u8-ref a i)
                                  (bytevector-u8-ref b i)))))))
-`
 
 ------------------------------------------------------------------------------
 

@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:51 2026
+%%CreationDate: Fri Jan  9 12:12:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -509,33 +509,31 @@ _S
 5 220 M
 (opy source:) s
 5 198 M
-(`) s
-5 187 M
 (randombytes_buf\(buffer, size\)) s
 5 176 M
-(`) s
-5 154 M
 (libsodium automatically selects the best available source:) s
-5 143 M
+5 165 M
 (- Linux: getrandom\(2\) syscall, falls back to /dev/urandom) s
-5 132 M
+5 154 M
 (- macOS/iOS: arc4random_buf\(\)) s
-5 121 M
+5 143 M
 (- Windows: RtlGenRandom\(\)) s
-5 110 M
+5 132 M
 (- OpenBSD: arc4random_buf\(\) \(ChaCha20-based\)) s
-5 88 M
+5 110 M
 (Why libsodium?) s
-5 66 M
+5 88 M
 (1. Cross-platform consistency - Same API everywhere) s
-5 55 M
+5 77 M
 (2. Automatic best-source selection - No platform-specific code) s
-5 44 M
+5 66 M
 (3. Initialization safety - Blocks until entropy available) s
-5 33 M
+5 55 M
 (4. Fork safety - Handles process forking correctly) s
-5 22 M
+5 44 M
 (5. Audited implementation - Widely reviewed cryptographic library) s
+5 22 M
+(Platform Requirements) s
 _R
 S
 %%Page: (2) 2
@@ -550,109 +548,105 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(Platform Requirements) s
-5 759 M
 (Scheme \(CHICKEN\)) s
-5 737 M
-(`scheme) s
-5 726 M
+5 759 M
 (;; crypto-ffi.scm provides:) s
-5 715 M
+5 748 M
 (\(define \(random-bytes n\)) s
-5 704 M
+5 737 M
 (  "Generate n cryptographically secure random bytes") s
-5 693 M
+5 726 M
 (  \(let \(\(buf \(make-blob n\)\)\)) s
-5 682 M
+5 715 M
 (    \(\(foreign-lambda void "randombytes_buf" scheme-pointer unsigned-integer\)) s
-5 671 M
+5 704 M
 (     buf n\)) s
-5 660 M
+5 693 M
 (    buf\)\)) s
-5 649 M
-(`) s
-5 627 M
+5 671 M
 (All Scheme code MUST use random-bytes from crypto-ffi. NEVER use:) s
-5 616 M
+5 660 M
 (- \(chicken random\) - Uses PRNG, not cryptographically secure) s
-5 605 M
+5 649 M
 (- /dev/random directly - Platform-specific, may block) s
-5 594 M
+5 638 M
 (- Custom PRNGs - Unaudited, likely insecure) s
-5 572 M
+5 616 M
 (OCaml) s
-5 550 M
+5 594 M
 (Status: Open Issue) s
-5 528 M
+5 572 M
 (OCaml implementations should use one of:) s
-5 517 M
+5 561 M
 (- mirage-crypto-rng with Nocrypto.Rng.generate) s
-5 506 M
+5 550 M
 (- Direct FFI to libsodium via ctypes) s
-5 484 M
+5 528 M
 (Decision pending based on:) s
-5 473 M
+5 517 M
 (- Multicore OCaml compatibility) s
-5 462 M
+5 506 M
 (- Domain-local PRNG state handling) s
-5 451 M
+5 495 M
 (- Build system integration \(dune vs opam\)) s
-5 429 M
+5 473 M
 (Entropy Initialization) s
-5 407 M
+5 451 M
 (Before ANY cryptographic operation, ensure libsodium is initialized:) s
-5 385 M
-(`scheme) s
-5 374 M
+5 429 M
 (\(define \(sodium-init\)) s
-5 363 M
+5 418 M
 (  \(let \(\(result \(\(foreign-lambda int "sodium_init"\)\)\)\)) s
-5 352 M
+5 407 M
 (    \(when \(= result -1\)) s
-5 341 M
+5 396 M
 (      \(error "sodium_init failed - entropy source unavailable"\)\)\)\)) s
-5 330 M
-(`) s
-5 308 M
+5 374 M
 (sodium_init\(\) is idempotent and thread-safe. Call it early in program startup.) s
-5 286 M
+5 352 M
 (Key Generation) s
-5 264 M
+5 330 M
 (All key generation MUST use libsodium's key generation functions, which internally use ra) s
-5 253 M
+5 319 M
 (ndombytes_buf\(\):) s
-5 231 M
+5 297 M
 (| Operation | Function |) s
-5 220 M
+5 286 M
 (|-----------|----------|) s
-5 209 M
+5 275 M
 (| Ed25519 signing key | cryptosignkeypair\(\) |) s
-5 198 M
+5 264 M
 (| X25519 key exchange | cryptoboxkeypair\(\) |) s
-5 187 M
+5 253 M
 (| Symmetric key | cryptosecretboxkeygen\(\) |) s
-5 176 M
+5 242 M
 (| Generic random | randombytes_buf\(\) |) s
-5 154 M
+5 220 M
 (Nonce Generation) s
-5 132 M
+5 198 M
 (Nonces MUST be generated fresh for each encryption:) s
-5 110 M
-(`scheme) s
-5 99 M
+5 176 M
 (\(define \(generate-nonce\)) s
-5 88 M
+5 165 M
 (  \(random-bytes \(secretbox-noncebytes\)\)\)  ;; 24 bytes) s
-5 77 M
-(`) s
-5 55 M
+5 143 M
 (For XSalsa20-Poly1305 with 24-byte nonces, random nonces are safe:) s
-5 44 M
+5 132 M
 (- 2^192 possible nonces) s
-5 33 M
+5 121 M
 (- Birthday collision after ~2^96 messages) s
-5 22 M
+5 110 M
 (- Practical limit: ~2^64 messages per key \(still astronomical\)) s
+5 88 M
+(Salt Generation) s
+5 66 M
+(For Argon2id key derivation:) s
+5 44 M
+(\(define \(generate-salt\)) s
+5 33 M
+(  \(random-bytes 16\)\)  ;; cryptopwhashSALTBYTES) s
+5 11 M
+(Salts prevent rainbow table attacks. Each salt MUST be unique per derived key.) s
 _R
 S
 %%Page: (3) 3
@@ -666,134 +660,124 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(Salt Generation) s
-5 759 M
-(For Argon2id key derivation:) s
-5 737 M
-(`scheme) s
-5 726 M
-(\(define \(generate-salt\)) s
-5 715 M
-(  \(random-bytes 16\)\)  ;; cryptopwhashSALTBYTES) s
-5 704 M
-(`) s
-5 682 M
-(Salts prevent rainbow table attacks. Each salt MUST be unique per derived key.) s
-5 660 M
+5 770 M
 (Deep Dive: Entropy Sources) s
-5 638 M
+5 748 M
 (Randomness is the foundation of all cryptography. This section explores the physics and e) s
-5 627 M
+5 737 M
 (ngineering of true randomness.) s
-5 605 M
+5 715 M
 (The Entropy Hierarchy) s
+5 693 M
+(+-------------------------------------------------------------+) s
+5 682 M
+(|                    Entropy Quality Pyramid                   |) s
+5 671 M
+(+-------------------------------------------------------------+) s
+5 660 M
+(|                                                              |) s
+5 649 M
+(|                    +---------------+                         |) s
+5 638 M
+(|           \342\\230\\205\342\\230\\205\342\\230\\205     |  Quantum RNG  |  \342\\206\\220 TRUE RANDOMNESS ) s
+5 627 M
+(     |) s
+5 616 M
+(|                    +---------------+    \(required for        |) s
+5 605 M
+(|                         ^                cryptographic       |) s
+5 594 M
+(|                         |                security\)           |) s
 5 583 M
-(`) s
+(|                    -----+-----                               |) s
 5 572 M
-(\342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|                    SECURITY BOUNDARY                         |) s
 5 561 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|                    ---------------                           |) s
 5 550 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(|                         |                                    |) s
 5 539 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|                         v                                    |) s
 5 528 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|                  +-------------------+                       |) s
 5 517 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(|                  |  Hardware TRNG    |  \342\\206\\220 Best effort       |) s
 5 506 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
+(|                  +-------------------+    \(should feed       |) s
 5 495 M
-(\342\\224\\202                    Entropy Quality Pyramid                   \342\\224\\202) s
+(|                +-----------------------+   quantum source\)   |) s
 5 484 M
-(\342\\224\\234\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|                |  Environmental/Analog |                     |) s
 5 473 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|                +-----------------------+                     |) s
 5 462 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(|              +---------------------------+                   |) s
 5 451 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|              |  Public Beacons \(NIST\)    |  \342\\206\\220 Verifiable     |) s
 5 440 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|              +---------------------------+                   |) s
 5 429 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(|            +-------------------------------+                 |) s
 5 418 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\244) s
+(|            |  OS Entropy Pool              |  \342\\206\\220 Mixed        |) s
 5 407 M
-(\342\\224\\202                                                              \342\\224\\202) s
+(|            +-------------------------------+                 |) s
 5 396 M
-(\342\\224\\202                    \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|          +-----------------------------------+               |) s
 5 385 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|          |  CSPRNG \(seeded from above\)       |  \342\\206\\220 Expansion  |) s
 5 374 M
-(\\224\\220                         \342\\224\\202) s
+(|          +-----------------------------------+               |) s
 5 363 M
-(\342\\224\\202           \342\\230\\205\342\\230\\205\342\\230\\205     \342\\224\\202  Quantum RNG  \342\\224\\202  \342) s
+(|                                                              |) s
 5 352 M
-(\\206\\220 TRUE RANDOMNESS      \342\\224\\202) s
-5 341 M
-(\342\\224\\202                    \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(+-------------------------------------------------------------+) s
 5 330 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(   \342\\230\\205\342\\230\\205\342\\230\\205 = Cryptographic operations MUST ultimately trace to quantu) s
 5 319 M
-(\\224\\230    \(required for        \342\\224\\202) s
-5 308 M
-(\342\\224\\202                         \342\\226\262                cryptographic       \342\\224\\202) s
+(m sources) s
 5 297 M
-(\342\\224\\202                         \342\\224\\202                security\)           \342\\224\\202) s
+(Critical distinction: Everything below the security boundary is computationally secure \(h) s
 5 286 M
-(\342\\224\\202                    \342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\264\342\\224\\200) s
+(ard to predict\), not information-theoretically secure \(impossible to predict\). For operat) s
 5 275 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200                               \342\\224\\202) s
+(ions like key generation that must withstand future advances in computation and modeling,) s
 5 264 M
-(\342\\224\\202                    SECURITY BOUNDARY                         \342\\224\\202) s
-5 253 M
-(\342\\224\\202                    \342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+( only quantum sources provide provable security.) s
 5 242 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200             ) s
-5 231 M
-(              \342\\224\\202) s
+(Practical Access to Quantum Randomness) s
 5 220 M
-(\342\\224\\202                         \342\\224\\202                                    \342\\224\\202) s
-5 209 M
-(\342\\224\\202                         \342\\226\274                                    \342\\224\\202) s
+(The ideal: Every cryptographic operation sources entropy from a local quantum RNG.) s
 5 198 M
-(\342\\224\\202                  \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(Current reality: Most systems rely on:) s
 5 187 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(1. Hardware RNG \(thermal noise, ring oscillators\) - classical, but unpredictable at human) s
 5 176 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220                       \342\\224\\202) s
+( scales) s
 5 165 M
-(\342\\224\\202                  \342\\224\\202  Hardware TRNG    \342\\224\\202  \342\\206\\220 Best effort  ) s
+(2. OS mixing of multiple sources - defense in depth) s
 5 154 M
-(     \342\\224\\202) s
-5 143 M
-(\342\\224\\202                  \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(3. NIST beacon - quantum-sourced, publicly verifiable, but network-dependent) s
 5 132 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(Path forward for Cyberspace:) s
 5 121 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230    \(should feed       \342\\224\\202) s
+(- Phase 1 \(Now\): libsodium with OS entropy \(relies on hardware quality\)) s
 5 110 M
-(\342\\224\\202                \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(- Phase 2: Optional quantum RNG hardware support \(USB devices, PCIe cards\)) s
 5 99 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(- Phase 3: Attestation of entropy source in realm metadata) s
 5 88 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220   quantum source) s
-5 77 M
-(\)   \342\\224\\202) s
+(- Phase 4: Quantum RNG as standard infrastructure \(as quantum internet develops\)) s
 5 66 M
-(\342\\224\\202                \342\\224\\202  Environmental/Analog \342\\224\\202                     \342) s
+(Minimum acceptable: Modern Intel/AMD RDSEED instruction, which samples thermal noise at t) s
 5 55 M
-(\\224\\202) s
+(he silicon level. While not provably quantum, it has no known exploits and is mixed with ) s
 5 44 M
-(\342\\224\\202                \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 33 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(other sources.) s
 5 22 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230                 ) s
+(Goal: True quantum randomness as the foundation. The math requires it; the engineering wi) s
 5 11 M
-(    \342\\224\\202) s
+(ll catch up.) s
 _R
 S
 %%Page: (4) 4
@@ -807,132 +791,104 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(\342\\224\\202              \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
 5 770 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 759 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(Cyberspace as Entropy Provider) s
 5 748 M
-(\\200\342\\224\\200\342\\224\\220                   \342\\224\\202) s
+(We will provide all the randomness that our users need - on demand, for whatever their cr) s
 5 737 M
-(\342\\224\\202              \342\\224\\202  Public Beacons \(NIST\)    \342\\224\\202  \342\\206\\220 Verifiabl) s
-5 726 M
-(e     \342\\224\\202) s
+(yptographic desires.) s
 5 715 M
-(\342\\224\\202              \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 704 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(Cyberspace realms can serve as entropy sources for their users:) s
 5 693 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(;; Request entropy from the realm) s
 5 682 M
-(\\200\342\\224\\200\342\\224\\230                   \342\\224\\202) s
+(\(realm-entropy-request) s
 5 671 M
-(\342\\224\\202            \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(  \(bytes 32\)) s
 5 660 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(  \(purpose "key-generation"\)) s
 5 649 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 638 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220                 \342\\224\\202) s
+(  \(attestation-required #t\)\)) s
 5 627 M
-(\342\\224\\202            \342\\224\\202  OS Entropy Pool              \342\\224\\202  \342\\206\\220 Mixed  ) s
+(;; Response includes attestation of entropy source) s
 5 616 M
-(      \342\\224\\202) s
+(\(realm-entropy-response) s
 5 605 M
-(\342\\224\\202            \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(  \(value #${...32 bytes...}\)) s
 5 594 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(  \(source "quantum-rng"\)) s
 5 583 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(  \(attestation \(signed-by realm-principal\)) s
 5 572 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230                 \342\\224\\202) s
+(               \(hardware "ID-Quantique-QUANTIS"\)) s
 5 561 M
-(\342\\224\\202          \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 550 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(               \(timestamp 1736344800\)\)\)) s
 5 539 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(Entropy services:) s
 5 528 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(1. Local generation - Realm uses its best available source) s
 5 517 M
-(\\220               \342\\224\\202) s
+(2. Federated entropy - Request quantum entropy from realms with quantum hardware) s
 5 506 M
-(\342\\224\\202          \342\\224\\202  CSPRNG \(seeded from above\)       \342\\224\\202  \342\\206\\220 Expan) s
+(3. Beacon aggregation - Mix NIST + drand + realm sources) s
 5 495 M
-(sion  \342\\224\\202) s
-5 484 M
-(\342\\224\\202          \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(4. Attestation chain - Prove the entropy source for audit) s
 5 473 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(Long-term vision: A network of realms with quantum RNG hardware providing verifiable, qua) s
 5 462 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(ntum-sourced entropy to all participants. The soup carries randomness as naturally as it ) s
 5 451 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 440 M
-(\\230               \342\\224\\202) s
+(carries data.) s
 5 429 M
-(\342\\224\\202                                                              \342\\224\\202) s
-5 418 M
-(\342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(True Random Number Generators \(TRNG\)) s
 5 407 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 396 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(True randomness comes from physical processes that are fundamentally unpredictable:) s
 5 385 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 374 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(Quantum Sources \(Required for Provable Security\)) s
 5 363 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(The only sources that satisfy cryptographic assumptions. Quantum mechanics guarantees unp) s
 5 352 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230) s
+(redictability:) s
 5 330 M
-(   \342\\230\\205\342\\230\\205\342\\230\\205 = Cryptographic operations MUST ultimately trace to quantu) s
+(- Photon beam splitters - Single photon hits 50/50 beam splitter, detection is truly rand) s
 5 319 M
-(m sources) s
+(om) s
 5 308 M
-(`) s
+(- Vacuum fluctuations - Measuring quantum vacuum state) s
+5 297 M
+(- Quantum tunneling - Electron tunneling through barriers) s
 5 286 M
-(Critical distinction: Everything below the security boundary is computationally secure \(h) s
-5 275 M
-(ard to predict\), not information-theoretically secure \(impossible to predict\). For operat) s
+(- Nuclear decay - Timing of radioactive decay events) s
 5 264 M
-(ions like key generation that must withstand future advances in computation and modeling,) s
-5 253 M
-( only quantum sources provide provable security.) s
-5 231 M
-(Practical Access to Quantum Randomness) s
-5 209 M
-(The ideal: Every cryptographic operation sources entropy from a local quantum RNG.) s
+(Commercial quantum RNGs: ID Quantique \(QUANTIS\), Quintessence Labs, Crypta Labs) s
+5 242 M
+(Silicon-Based TRNG) s
+5 220 M
+(Modern CPUs include hardware random number generators:) s
+5 198 M
+(| CPU | Instruction | Mechanism |) s
 5 187 M
-(Current reality: Most systems rely on:) s
+(|-----|-------------|-----------|) s
 5 176 M
-(1. Hardware RNG \(thermal noise, ring oscillators\) - classical, but unpredictable at human) s
+(| Intel | RDRAND/RDSEED | Thermal noise + AES-CBC-MAC |) s
 5 165 M
-( scales) s
+(| AMD | RDRAND/RDSEED | Ring oscillator jitter |) s
 5 154 M
-(2. OS mixing of multiple sources - defense in depth) s
+(| ARM | TRNG | Metastable flip-flops |) s
 5 143 M
-(3. NIST beacon - quantum-sourced, publicly verifiable, but network-dependent) s
+(| RISC-V | Zkr extension | Implementation-defined |) s
 5 121 M
-(Path forward for Cyberspace:) s
-5 110 M
-(- Phase 1 \(Now\): libsodium with OS entropy \(relies on hardware quality\)) s
+(Security note: Intel's RDRAND has faced scrutiny. Mix with other sources.) s
 5 99 M
-(- Phase 2: Optional quantum RNG hardware support \(USB devices, PCIe cards\)) s
-5 88 M
-(- Phase 3: Attestation of entropy source in realm metadata) s
+(Environmental Entropy: Lavarand) s
 5 77 M
-(- Phase 4: Quantum RNG as standard infrastructure \(as quantum internet develops\)) s
+(The most famous entropy source in computing.) s
 5 55 M
-(Minimum acceptable: Modern Intel/AMD RDSEED instruction, which samples thermal noise at t) s
+(Silicon Graphics \(SGI\) invented Lavarand in 1996. Cloudflare operates the modern successo) s
 5 44 M
-(he silicon level. While not provably quantum, it has no known exploits and is mixed with ) s
-5 33 M
-(other sources.) s
-5 11 M
-(Goal: True quantum randomness as the foundation. The math requires it; the engineering wi) s
+(r.) s
+5 22 M
+(How It Works) s
 _R
 S
 %%Page: (5) 5
@@ -947,107 +903,125 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(ll catch up.) s
+(+-------------------------------------------------------------+) s
+5 770 M
+(|                     LAVARAND SYSTEM                          |) s
 5 759 M
-(Cyberspace as Entropy Provider) s
+(+-------------------------------------------------------------+) s
+5 748 M
+(|                                                              |) s
 5 737 M
-(We will provide all the randomness that our users need - on demand, for whatever their cr) s
+(|   +---------+    +---------+    +---------------------+     |) s
 5 726 M
-(yptographic desires.) s
+(|   |  Lava   |    | Camera  |    |  Image \342\\206\\222 Hash       |     |) s
+5 715 M
+(|   |  Lamp   |---\342\\226\266|  Feed   |---\342\\226\266|  SHA-256 per frame  |     |) s
 5 704 M
-(Cyberspace realms can serve as entropy sources for their users:) s
+(|   |  Wall   |    |         |    |                     |     |) s
+5 693 M
+(|   +---------+    +---------+    +----------+----------+     |) s
 5 682 M
-(`scheme) s
+(|                                            |                 |) s
 5 671 M
-(;; Request entropy from the realm) s
+(|                                            v                 |) s
 5 660 M
-(\(realm-entropy-request) s
+(|                                  +---------------------+     |) s
 5 649 M
-(  \(bytes 32\)) s
+(|                                  |  Entropy Pool       |     |) s
 5 638 M
-(  \(purpose "key-generation"\)) s
+(|                                  |  \(mix with CSPRNG\)  |     |) s
 5 627 M
-(  \(attestation-required #t\)\)) s
+(|                                  +---------------------+     |) s
+5 616 M
+(|                                                              |) s
 5 605 M
-(;; Response includes attestation of entropy source) s
-5 594 M
-(\(realm-entropy-response) s
+(+-------------------------------------------------------------+) s
 5 583 M
-(  \(value #${...32 bytes...}\)) s
-5 572 M
-(  \(source "quantum-rng"\)) s
+(Why Lava Lamps?) s
 5 561 M
-(  \(attestation \(signed-by realm-principal\)) s
+(1. Chaotic fluid dynamics - Wax movement is unpredictable) s
 5 550 M
-(               \(hardware "ID-Quantique-QUANTIS"\)) s
+(2. Thermal convection - Heat creates complex flow patterns) s
 5 539 M
-(               \(timestamp 1736344800\)\)\)) s
+(3. High bandwidth - Each video frame yields fresh entropy) s
 5 528 M
-(`) s
-5 506 M
-(Entropy services:) s
+(4. Tamper-evident - Physical installation is visible) s
+5 517 M
+(5. Independent source - Not correlated with CPU state) s
 5 495 M
-(1. Local generation - Realm uses its best available source) s
-5 484 M
-(2. Federated entropy - Request quantum entropy from realms with quantum hardware) s
+(Cloudflare's wall of 100 lava lamps generates entropy for ~10% of internet HTTPS traffic.) s
 5 473 M
-(3. Beacon aggregation - Mix NIST + drand + realm sources) s
-5 462 M
-(4. Attestation chain - Prove the entropy source for audit) s
+(Other Environmental Sources) s
+5 451 M
+(| Source | Mechanism | Bandwidth |) s
 5 440 M
-(Long-term vision: A network of realms with quantum RNG hardware providing verifiable, qua) s
+(|--------|-----------|-----------|) s
 5 429 M
-(ntum-sourced entropy to all participants. The soup carries randomness as naturally as it ) s
+(| Lava lamps | Fluid dynamics | ~100 Kbit/s |) s
 5 418 M
-(carries data.) s
+(| Radioactive decay | Nuclear physics | ~1-10 Kbit/s |) s
+5 407 M
+(| Atmospheric noise | RF antenna | ~1 Mbit/s |) s
 5 396 M
-(True Random Number Generators \(TRNG\)) s
+(| Thermal camera | Johnson-Nyquist noise | ~10 Kbit/s |) s
+5 385 M
+(| Double pendulum | Chaotic motion | ~100 bit/s |) s
 5 374 M
-(True randomness comes from physical processes that are fundamentally unpredictable:) s
+(| Keyboard timing | Human unpredictability | ~1-10 bit/keystroke |) s
 5 352 M
-(Quantum Sources \(Required for Provable Security\)) s
+(Public Randomness Beacons) s
 5 330 M
-(The only sources that satisfy cryptographic assumptions. Quantum mechanics guarantees unp) s
+(Beacons provide verifiable public randomness - useful for:) s
 5 319 M
-(redictability:) s
+(- Lottery systems) s
+5 308 M
+(- Audit sampling) s
 5 297 M
-(- Photon beam splitters - Single photon hits 50/50 beam splitter, detection is truly rand) s
+(- Distributed protocols) s
 5 286 M
-(om) s
-5 275 M
-(- Vacuum fluctuations - Measuring quantum vacuum state) s
+(- Zero-knowledge proofs) s
 5 264 M
-(- Quantum tunneling - Electron tunneling through barriers) s
-5 253 M
-(- Nuclear decay - Timing of radioactive decay events) s
+(NIST Randomness Beacon) s
+5 242 M
+(The National Institute of Standards and Technology operates a public randomness beacon si) s
 5 231 M
-(Commercial quantum RNGs: ID Quantique \(QUANTIS\), Quintessence Labs, Crypta Labs) s
+(nce 2013.) s
 5 209 M
-(Silicon-Based TRNG) s
+(https://beacon.nist.gov/beacon/2.0/pulse/last) s
 5 187 M
-(Modern CPUs include hardware random number generators:) s
+(Architecture:) s
+5 176 M
+(+-------------------------------------------------------------+) s
 5 165 M
-(| CPU | Instruction | Mechanism |) s
+(|                   NIST BEACON 2.0                            |) s
 5 154 M
-(|-----|-------------|-----------|) s
+(+-------------------------------------------------------------+) s
 5 143 M
-(| Intel | RDRAND/RDSEED | Thermal noise + AES-CBC-MAC |) s
+(|                                                              |) s
 5 132 M
-(| AMD | RDRAND/RDSEED | Ring oscillator jitter |) s
+(|  Sources:           Processing:         Output:              |) s
 5 121 M
-(| ARM | TRNG | Metastable flip-flops |) s
+(|  +---------+       +-----------+      +--------------+      |) s
 5 110 M
-(| RISC-V | Zkr extension | Implementation-defined |) s
+(|  | Quantum |--+    |           |      | Pulse Record |      |) s
+5 99 M
+(|  |   RNG   |  |    |  SHA-512  |      +--------------+      |) s
 5 88 M
-(Security note: Intel's RDRAND has faced scrutiny. Mix with other sources.) s
+(|  +---------+  |    |  mixing   |      | timestamp    |      |) s
+5 77 M
+(|  +---------+  +---\342\\226\266|     +     |-----\342\\226\266| localRandom  |      |) s
 5 66 M
-(Environmental Entropy: Lavarand) s
+(|  |Photonic |  |    |  signing  |      | outputValue  |      |) s
+5 55 M
+(|  |  Noise  |--+    |           |      | signatureVal |      |) s
 5 44 M
-(The most famous entropy source in computing.) s
+(|  +---------+       +-----------+      +--------------+      |) s
+5 33 M
+(|                                                              |) s
 5 22 M
-(Silicon Graphics \(SGI\) invented Lavarand in 1996. Cloudflare operates the modern successo) s
+(|  Pulse interval: 60 seconds                                  |) s
 5 11 M
-(r.) s
+(|  Hash chain: Each pulse includes hash of previous            |) s
 _R
 S
 %%Page: (6) 6
@@ -1061,134 +1035,126 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
+5 781 M
+(|  Signature: RSA-2048 \(Beacon 2.0\)                           |) s
 5 770 M
-(How It Works) s
-5 748 M
-(`) s
+(|                                                              |) s
+5 759 M
+(+-------------------------------------------------------------+) s
 5 737 M
-(\342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(Pulse Record Contents:) s
 5 726 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(- uri - Unique pulse identifier) s
 5 715 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(- version - Beacon protocol version) s
 5 704 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(- timeStamp - Unix timestamp) s
 5 693 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(- localRandomValue - 512 bits from quantum sources) s
 5 682 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(- outputValue - SHA-512 hash \(the public random value\)) s
 5 671 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
+(- statusCode - Health indicator) s
 5 660 M
-(\342\\224\\202                     LAVARAND SYSTEM                          \342\\224\\202) s
-5 649 M
-(\342\\224\\234\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(- signatureValue - Digital signature) s
 5 638 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(Properties:) s
 5 627 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(- Unpredictable - Cannot be known before publication) s
 5 616 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(- Verifiable - Anyone can verify the signature chain) s
 5 605 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(- Non-manipulable - NIST cannot control output) s
 5 594 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 583 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\244) s
+(- Archived - Full history publicly available) s
 5 572 M
-(\342\\224\\202                                                              \342\\224\\202) s
+(Use in Cyberspace:) s
 5 561 M
-(\342\\224\\202   \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(;; For ceremonies, audits, public verifiability) s
 5 550 M
-(\\200\342\\224\\200\342\\224\\220    \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(\(define \(fetch-nist-beacon\)) s
 5 539 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220    \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(  \(let* \(\(response \(http-get "https://beacon.nist.gov/beacon/2.0/pulse/last"\)\)) s
 5 528 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(         \(pulse \(json-parse response\)\)) s
 5 517 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220     \342\\224\\202) s
+(         \(output \(assoc-ref pulse "outputValue"\)\)\)) s
 5 506 M
-(\342\\224\\202   \342\\224\\202  Lava   \342\\224\\202    \342\\224\\202 Camera  \342\\224\\202    \342\\224\\202  Imag) s
-5 495 M
-(e \342\\206\\222 Hash       \342\\224\\202     \342\\224\\202) s
+(    \(hex->blob output\)\)\)) s
 5 484 M
-(\342\\224\\202   \342\\224\\202  Lamp   \342\\224\\202\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\266\342\\224\\202  Feed  ) s
-5 473 M
-( \342\\224\\202\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\266\342\\224\\202  SHA-256 per frame  \342\\224\\202     \342) s
+(Other Public Beacons) s
 5 462 M
-(\\224\\202) s
+(| Beacon | Operator | Source | Interval |) s
 5 451 M
-(\342\\224\\202   \342\\224\\202  Wall   \342\\224\\202    \342\\224\\202         \342\\224\\202    \342\\224\\202      ) s
+(|--------|----------|--------|----------|) s
 5 440 M
-(               \342\\224\\202     \342\\224\\202) s
+(| NIST Beacon | US NIST | Quantum + photonic | 60 seconds |) s
 5 429 M
-(\342\\224\\202   \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(| Chile UChile | University of Chile | Seismic + radio | 60 seconds |) s
 5 418 M
-(\\200\342\\224\\200\342\\224\\230    \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(| Cloudflare drand | League of Entropy | Distributed threshold | 30 seconds |) s
 5 407 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230    \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 396 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\254\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(| IRISA | French research | Multiple physical | 60 seconds |) s
 5 385 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230     \342\\224\\202) s
-5 374 M
-(\342\\224\\202                                            \342\\224\\202                 \342\\224\\202) s
+(League of Entropy \(drand\)) s
 5 363 M
-(\342\\224\\202                                            \342\\226\274                 \342\\224\\202) s
-5 352 M
-(\342\\224\\202                                  \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(Distributed randomness beacon - no single party controls the output:) s
 5 341 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(+-------------------------------------------------------------+) s
 5 330 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220     \342\\224\\202) s
+(|              DRAND DISTRIBUTED BEACON                        |) s
 5 319 M
-(\342\\224\\202                                  \342\\224\\202  Entropy Pool       \342\\224\\202     \342) s
+(+-------------------------------------------------------------+) s
 5 308 M
-(\\224\\202) s
+(|                                                              |) s
 5 297 M
-(\342\\224\\202                                  \342\\224\\202  \(mix with CSPRNG\)  \342\\224\\202     \342) s
+(|   Cloudflare --+                                            |) s
 5 286 M
-(\\224\\202) s
+(|                |                                             |) s
 5 275 M
-(\342\\224\\202                                  \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|   EPFL --------+--- Threshold ---\342\\226\266 Public Random           |) s
 5 264 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(|                |    BLS Sig          \(t-of-n nodes          |) s
 5 253 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230     \342\\224\\202) s
+(|   Protocol ----+    \(t-of-n\)          must participate\)     |) s
 5 242 M
-(\342\\224\\202                                                              \342\\224\\202) s
+(|   Labs         |                                             |) s
 5 231 M
-(\342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|                |                                             |) s
 5 220 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|   Kudelski ----+                                            |) s
 5 209 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(|                                                              |) s
 5 198 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|   Endpoint: https://api.drand.sh/public/latest              |) s
 5 187 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(|   Chain: 8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce |) s
 5 176 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(|                                                              |) s
 5 165 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230) s
-5 154 M
-(`) s
-5 132 M
-(Why Lava Lamps?) s
-5 110 M
-(1. Chaotic fluid dynamics - Wax movement is unpredictable) s
+(+-------------------------------------------------------------+) s
+5 143 M
+(Entropy Mixing) s
+5 121 M
+(Real systems mix multiple sources for defense in depth:) s
 5 99 M
-(2. Thermal convection - Heat creates complex flow patterns) s
+(;; Conceptual entropy mixer) s
 5 88 M
-(3. High bandwidth - Each video frame yields fresh entropy) s
+(\(define \(mix-entropy-sources\)) s
 5 77 M
-(4. Tamper-evident - Physical installation is visible) s
+(  \(let \(\(hw \(hardware-random-bytes 32\)\)      ;; RDRAND) s
 5 66 M
-(5. Independent source - Not correlated with CPU state) s
+(        \(os \(os-entropy-pool-bytes 32\)\)       ;; /dev/urandom) s
+5 55 M
+(        \(env \(environmental-entropy 32\)\)      ;; If available) s
 5 44 M
-(Cloudflare's wall of 100 lava lamps generates entropy for ~10% of internet HTTPS traffic.) s
+(        \(beacon \(cached-nist-beacon\)\)\)        ;; Public verifiability) s
+5 33 M
+(    ;; Mix with HKDF or similar) s
 5 22 M
-(Other Environmental Sources) s
+(    \(hkdf-sha512) s
+5 11 M
+(      \(blob-append hw os env beacon\)) s
 _R
 S
 %%Page: (7) 7
@@ -1203,135 +1169,105 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(| Source | Mechanism | Bandwidth |) s
+(      "cyberspace-entropy-v1") s
 5 770 M
-(|--------|-----------|-----------|) s
-5 759 M
-(| Lava lamps | Fluid dynamics | ~100 Kbit/s |) s
+(      64\)\)\)) s
 5 748 M
-(| Radioactive decay | Nuclear physics | ~1-10 Kbit/s |) s
-5 737 M
-(| Atmospheric noise | RF antenna | ~1 Mbit/s |) s
+(Historical Entropy Failures) s
 5 726 M
-(| Thermal camera | Johnson-Nyquist noise | ~10 Kbit/s |) s
-5 715 M
-(| Double pendulum | Chaotic motion | ~100 bit/s |) s
+(Learning from disasters:) s
 5 704 M
-(| Keyboard timing | Human unpredictability | ~1-10 bit/keystroke |) s
+(| Incident | Year | Cause | Impact |) s
+5 693 M
+(|----------|------|-------|--------|) s
 5 682 M
-(Public Randomness Beacons) s
+(| Netscape SSL | 1995 | PID + timestamp = predictable | All SSL broken |) s
+5 671 M
+(| Debian OpenSSL | 2006-2008 | Valgrind "fix" removed entropy | 32,767 possible keys |) s
 5 660 M
-(Beacons provide verifiable public randomness - useful for:) s
+(| Android SecureRandom | 2013 | PRNG state reuse | Bitcoin wallets drained |) s
 5 649 M
-(- Lottery systems) s
+(| DualECDRBG | 2013 | NSA backdoor in constants | Unknown surveillance |) s
 5 638 M
-(- Audit sampling) s
-5 627 M
-(- Distributed protocols) s
+(| Taiwan smart cards | 2013 | Shared PRNG state | Factored RSA keys |) s
 5 616 M
-(- Zero-knowledge proofs) s
+(Lesson: Defense in depth. Mix multiple independent sources.) s
 5 594 M
-(NIST Randomness Beacon) s
+(Entropy Requirements by Operation) s
 5 572 M
-(The National Institute of Standards and Technology operates a public randomness beacon si) s
+(| Operation | Entropy Needed | Notes |) s
 5 561 M
-(nce 2013.) s
+(|-----------|---------------|-------|) s
+5 550 M
+(| Ed25519 keypair | 32 bytes | Full key security |) s
 5 539 M
-(`) s
+(| X25519 keypair | 32 bytes | Full key security |) s
 5 528 M
-(https://beacon.nist.gov/beacon/2.0/pulse/last) s
+(| XSalsa20 nonce | 24 bytes | Random OK \(large space\) |) s
 5 517 M
-(`) s
+(| AES-GCM nonce | 12 bytes | Counter preferred \(small space\) |) s
+5 506 M
+(| Argon2id salt | 16 bytes | Unique per derivation |) s
 5 495 M
-(Architecture:) s
+(| Session ID | 16-32 bytes | Unpredictable |) s
 5 484 M
-(`) s
-5 473 M
-(\342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(| ECDSA k-value | 32 bytes | CRITICAL - must not repeat |) s
 5 462 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 451 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(Security Considerations) s
 5 440 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 429 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(Entropy Exhaustion) s
 5 418 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(libsodium's randombytes_buf\(\) never blocks on modern systems:) s
 5 407 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
+(- Uses ChaCha20 CSPRNG seeded from OS entropy) s
 5 396 M
-(\342\\224\\202                   NIST BEACON 2.0                            \342\\224\\202) s
+(- OS entropy pools are continuously replenished) s
 5 385 M
-(\342\\224\\234\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 374 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(- Hardware RNG \(RDRAND/RDSEED\) available on modern CPUs) s
 5 363 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 352 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(VM/Container Considerations) s
 5 341 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(Virtual machines may have limited entropy at boot:) s
 5 330 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(- Use virtio-rng to pass host entropy to guests) s
 5 319 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\244) s
+(- Ensure haveged or rng-tools if entropy-limited) s
 5 308 M
-(\342\\224\\202                                                              \342\\224\\202) s
-5 297 M
-(\342\\224\\202  Sources:           Processing:         Output:              \342\\224\\202) s
+(- libsodium will block until sufficient entropy available) s
 5 286 M
-(\342\\224\\202  \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 275 M
-(\\200\342\\224\\200\342\\224\\220       \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(Fork Safety) s
 5 264 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220      \342\\224\\214\342\\224\\200\342\\224) s
+(libsodium handles fork correctly:) s
 5 253 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(- Automatic re-seeding after fork\(\)) s
 5 242 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220      \342\\224\\202) s
-5 231 M
-(\342\\224\\202  \342\\224\\202 Quantum \342\\224\\202\342\\224\\200\342\\224\\200\342\\224\\220    \342\\224\\202           ) s
+(- No duplicate random sequences in child processes) s
 5 220 M
-(\342\\224\\202      \342\\224\\202 Pulse Record \342\\224\\202      \342\\224\\202) s
-5 209 M
-(\342\\224\\202  \342\\224\\202   RNG   \342\\224\\202  \342\\224\\202    \342\\224\\202  SHA-512  \342\\224\\202      \342) s
+(Deterministic Testing) s
 5 198 M
-(\\224\\234\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 187 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\244      \342\\224\\202) s
+(For reproducible tests ONLY \(never production\):) s
 5 176 M
-(\342\\224\\202  \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(\(define \(set-test-seed seed\)) s
 5 165 M
-(\\200\342\\224\\200\342\\224\\230  \342\\224\\202    \342\\224\\202  mixing   \342\\224\\202      \342\\224\\202 timesta) s
+(  "WARNING: Deterministic mode - testing only") s
 5 154 M
-(mp    \342\\224\\202      \342\\224\\202) s
-5 143 M
-(\342\\224\\202  \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(  \(\(foreign-lambda void "randombytes_stir"\)\)\)) s
 5 132 M
-(\\200\342\\224\\200\342\\224\\220  \342\\224\\234\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\266\342\\224\\202     +     \342) s
-5 121 M
-(\\224\\202\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\266\342\\224\\202 localRandom  \342\\224) s
+(Production code MUST use true entropy.) s
 5 110 M
-(\\202      \342\\224\\202) s
-5 99 M
-(\342\\224\\202  \342\\224\\202Photonic \342\\224\\202  \342\\224\\202    \342\\224\\202  signing  \342\\224\\202      \342) s
+(Implementation Notes) s
 5 88 M
-(\\224\\202 outputValue  \342\\224\\202      \342\\224\\202) s
-5 77 M
-(\342\\224\\202  \342\\224\\202  Noise  \342\\224\\202\342\\224\\200\342\\224\\200\342\\224\\230    \342\\224\\202           ) s
+(Current Status) s
 5 66 M
-(\342\\224\\202      \342\\224\\202 signatureVal \342\\224\\202      \342\\224\\202) s
+(| Component | Entropy Source | Status |) s
 5 55 M
-(\342\\224\\202  \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(|-----------|---------------|--------|) s
 5 44 M
-(\\200\342\\224\\200\342\\224\\230       \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(| crypto-ffi.scm | randombytes_buf\(\) | Implemented |) s
 5 33 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230      \342\\224\\224\342\\224\\200\342\\224) s
+(| vault.scm \(keystore\) | random-bytes | Implemented |) s
 5 22 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 11 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230      \342\\224\\202) s
+(| OCaml core | TBD | Open Issue |) s
 _R
 S
 %%Page: (8) 8
@@ -1346,443 +1282,92 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(\342\\224\\202                                                              \342\\224\\202) s
-5 770 M
-(\342\\224\\202  Pulse interval: 60 seconds                                  \342\\224\\202) s
-5 759 M
-(\342\\224\\202  Hash chain: Each pulse includes hash of previous            \342\\224\\202) s
-5 748 M
-(\342\\224\\202  Signature: RSA-2048 \(Beacon 2.0\)                           \342\\224\\202) s
-5 737 M
-(\342\\224\\202                                                              \342\\224\\202) s
-5 726 M
-(\342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 715 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 704 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 693 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 682 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 671 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 660 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230) s
-5 649 M
-(`) s
-5 627 M
-(Pulse Record Contents:) s
-5 616 M
-(- uri - Unique pulse identifier) s
-5 605 M
-(- version - Beacon protocol version) s
-5 594 M
-(- timeStamp - Unix timestamp) s
-5 583 M
-(- localRandomValue - 512 bits from quantum sources) s
-5 572 M
-(- outputValue - SHA-512 hash \(the public random value\)) s
-5 561 M
-(- statusCode - Health indicator) s
-5 550 M
-(- signatureValue - Digital signature) s
-5 528 M
-(Properties:) s
-5 517 M
-(- Unpredictable - Cannot be known before publication) s
-5 506 M
-(- Verifiable - Anyone can verify the signature chain) s
-5 495 M
-(- Non-manipulable - NIST cannot control output) s
-5 484 M
-(- Archived - Full history publicly available) s
-5 462 M
-(Use in Cyberspace:) s
-5 451 M
-(`scheme) s
-5 440 M
-(;; For ceremonies, audits, public verifiability) s
-5 429 M
-(\(define \(fetch-nist-beacon\)) s
-5 418 M
-(  \(let* \(\(response \(http-get "https://beacon.nist.gov/beacon/2.0/pulse/last"\)\)) s
-5 407 M
-(         \(pulse \(json-parse response\)\)) s
-5 396 M
-(         \(output \(assoc-ref pulse "outputValue"\)\)\)) s
-5 385 M
-(    \(hex->blob output\)\)\)) s
-5 374 M
-(`) s
-5 352 M
-(Other Public Beacons) s
-5 330 M
-(| Beacon | Operator | Source | Interval |) s
-5 319 M
-(|--------|----------|--------|----------|) s
-5 308 M
-(| NIST Beacon | US NIST | Quantum + photonic | 60 seconds |) s
-5 297 M
-(| Chile UChile | University of Chile | Seismic + radio | 60 seconds |) s
-5 286 M
-(| Cloudflare drand | League of Entropy | Distributed threshold | 30 seconds |) s
-5 275 M
-(| IRISA | French research | Multiple physical | 60 seconds |) s
-5 253 M
-(League of Entropy \(drand\)) s
-5 231 M
-(Distributed randomness beacon - no single party controls the output:) s
-5 209 M
-(`) s
-5 198 M
-(\342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 187 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 176 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 165 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 154 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 143 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 132 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
-5 121 M
-(\342\\224\\202              DRAND DISTRIBUTED BEACON                        \342\\224\\202) s
-5 110 M
-(\342\\224\\234\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 99 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 88 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 77 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 66 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 55 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 44 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\244) s
-5 33 M
-(\342\\224\\202                                                              \342\\224\\202) s
-5 22 M
-(\342\\224\\202   Cloudflare \342\\224\\200\342\\224\\200\342\\224\\220                                       ) s
-5 11 M
-(     \342\\224\\202) s
-_R
-S
-%%Page: (9) 9
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 9 def
-/fname (rfc-044-cryptographic-entropy.txt) def
-/fdir (.) def
-/ftail (rfc-044-cryptographic-entropy.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(\342\\224\\202                \342\\224\\202                                             \342\\224\\202) s
-5 770 M
-(\342\\224\\202   EPFL \342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 759 M
-(\342\\224\274\342\\224\\200\342\\224\\200\342\\224\\200 Threshold \342\\224\\200\342\\224\\200\342\\224\\200\342\\226\266 Public Rand) s
-5 748 M
-(om           \342\\224\\202) s
-5 737 M
-(\342\\224\\202                \342\\224\\202    BLS Sig          \(t-of-n nodes          \342\\224\\202) s
-5 726 M
-(\342\\224\\202   Protocol \342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\244    \(t-of-n\)          must) s
-5 715 M
-( participate\)     \342\\224\\202) s
-5 704 M
-(\342\\224\\202   Labs         \342\\224\\202                                             \342\\224\\202) s
-5 693 M
-(\342\\224\\202                \342\\224\\202                                             \342\\224\\202) s
-5 682 M
-(\342\\224\\202   Kudelski \342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230                       ) s
-5 671 M
-(                     \342\\224\\202) s
-5 660 M
-(\342\\224\\202                                                              \342\\224\\202) s
-5 649 M
-(\342\\224\\202   Endpoint: https://api.drand.sh/public/latest              \342\\224\\202) s
-5 638 M
-(\342\\224\\202   Chain: 8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce \342\\224) s
-5 627 M
-(\\202) s
-5 616 M
-(\342\\224\\202                                                              \342\\224\\202) s
-5 605 M
-(\342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 594 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 583 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 572 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 561 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 550 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 539 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230) s
-5 528 M
-(`) s
-5 506 M
-(Entropy Mixing) s
-5 484 M
-(Real systems mix multiple sources for defense in depth:) s
-5 462 M
-(`scheme) s
-5 451 M
-(;; Conceptual entropy mixer) s
-5 440 M
-(\(define \(mix-entropy-sources\)) s
-5 429 M
-(  \(let \(\(hw \(hardware-random-bytes 32\)\)      ;; RDRAND) s
-5 418 M
-(        \(os \(os-entropy-pool-bytes 32\)\)       ;; /dev/urandom) s
-5 407 M
-(        \(env \(environmental-entropy 32\)\)      ;; If available) s
-5 396 M
-(        \(beacon \(cached-nist-beacon\)\)\)        ;; Public verifiability) s
-5 385 M
-(    ;; Mix with HKDF or similar) s
-5 374 M
-(    \(hkdf-sha512) s
-5 363 M
-(      \(blob-append hw os env beacon\)) s
-5 352 M
-(      "cyberspace-entropy-v1") s
-5 341 M
-(      64\)\)\)) s
-5 330 M
-(`) s
-5 308 M
-(Historical Entropy Failures) s
-5 286 M
-(Learning from disasters:) s
-5 264 M
-(| Incident | Year | Cause | Impact |) s
-5 253 M
-(|----------|------|-------|--------|) s
-5 242 M
-(| Netscape SSL | 1995 | PID + timestamp = predictable | All SSL broken |) s
-5 231 M
-(| Debian OpenSSL | 2006-2008 | Valgrind "fix" removed entropy | 32,767 possible keys |) s
-5 220 M
-(| Android SecureRandom | 2013 | PRNG state reuse | Bitcoin wallets drained |) s
-5 209 M
-(| DualECDRBG | 2013 | NSA backdoor in constants | Unknown surveillance |) s
-5 198 M
-(| Taiwan smart cards | 2013 | Shared PRNG state | Factored RSA keys |) s
-5 176 M
-(Lesson: Defense in depth. Mix multiple independent sources.) s
-5 154 M
-(Entropy Requirements by Operation) s
-5 132 M
-(| Operation | Entropy Needed | Notes |) s
-5 121 M
-(|-----------|---------------|-------|) s
-5 110 M
-(| Ed25519 keypair | 32 bytes | Full key security |) s
-5 99 M
-(| X25519 keypair | 32 bytes | Full key security |) s
-5 88 M
-(| XSalsa20 nonce | 24 bytes | Random OK \(large space\) |) s
-5 77 M
-(| AES-GCM nonce | 12 bytes | Counter preferred \(small space\) |) s
-5 66 M
-(| Argon2id salt | 16 bytes | Unique per derivation |) s
-5 55 M
-(| Session ID | 16-32 bytes | Unpredictable |) s
-5 44 M
-(| ECDSA k-value | 32 bytes | CRITICAL - must not repeat |) s
-5 22 M
-(Security Considerations) s
-_R
-S
-%%Page: (10) 10
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 10 def
-/fname (rfc-044-cryptographic-entropy.txt) def
-/fdir (.) def
-/ftail (rfc-044-cryptographic-entropy.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(Entropy Exhaustion) s
-5 759 M
-(libsodium's randombytes_buf\(\) never blocks on modern systems:) s
-5 748 M
-(- Uses ChaCha20 CSPRNG seeded from OS entropy) s
-5 737 M
-(- OS entropy pools are continuously replenished) s
-5 726 M
-(- Hardware RNG \(RDRAND/RDSEED\) available on modern CPUs) s
-5 704 M
-(VM/Container Considerations) s
-5 682 M
-(Virtual machines may have limited entropy at boot:) s
-5 671 M
-(- Use virtio-rng to pass host entropy to guests) s
-5 660 M
-(- Ensure haveged or rng-tools if entropy-limited) s
-5 649 M
-(- libsodium will block until sufficient entropy available) s
-5 627 M
-(Fork Safety) s
-5 605 M
-(libsodium handles fork correctly:) s
-5 594 M
-(- Automatic re-seeding after fork\(\)) s
-5 583 M
-(- No duplicate random sequences in child processes) s
-5 561 M
-(Deterministic Testing) s
-5 539 M
-(For reproducible tests ONLY \(never production\):) s
-5 517 M
-(`scheme) s
-5 506 M
-(\(define \(set-test-seed seed\)) s
-5 495 M
-(  "WARNING: Deterministic mode - testing only") s
-5 484 M
-(  \(\(foreign-lambda void "randombytes_stir"\)\)\)) s
-5 473 M
-(`) s
-5 451 M
-(Production code MUST use true entropy.) s
-5 429 M
-(Implementation Notes) s
-5 407 M
-(Current Status) s
-5 385 M
-(| Component | Entropy Source | Status |) s
-5 374 M
-(|-----------|---------------|--------|) s
-5 363 M
-(| crypto-ffi.scm | randombytes_buf\(\) | Implemented |) s
-5 352 M
-(| vault.scm \(keystore\) | random-bytes | Implemented |) s
-5 341 M
-(| OCaml core | TBD | Open Issue |) s
-5 319 M
 (Audit Trail) s
-5 297 M
-(All key generation events should be logged \(not the keys themselves\):) s
-5 275 M
-(`scheme) s
-5 264 M
-(\(seal-commit #f) s
-5 253 M
-(  `\(entropy-event) s
-5 242 M
-(    \(type "key-generation"\)) s
-5 231 M
-(    \(algorithm "ed25519"\)) s
-5 220 M
-(    \(timestamp ,\(current-seconds\)\)) s
-5 209 M
-(    \(entropy-source "libsodium"\)\)\)) s
-5 198 M
-(`) s
-5 176 M
-(Hardware Entropy) s
-5 154 M
-(When available, hardware entropy sources enhance security:) s
-5 132 M
-(| Platform | Hardware RNG |) s
-5 121 M
-(|----------|-------------|) s
-5 110 M
-(| Intel/AMD | RDRAND, RDSEED instructions |) s
-5 99 M
-(| ARM | TRNG \(True Random Number Generator\) |) s
-5 88 M
-(| Apple Silicon | Secure Enclave entropy |) s
-5 66 M
-(libsodium automatically uses hardware entropy when available.) s
-5 44 M
-(Migration) s
-5 22 M
-(Phase 1: Audit \(Current\)) s
-5 11 M
-(- Identify all randomness usage in codebase) s
-_R
-S
-%%Page: (11) 11
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 11 def
-/fname (rfc-044-cryptographic-entropy.txt) def
-/fdir (.) def
-/ftail (rfc-044-cryptographic-entropy.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(- Replace non-libsodium sources) s
 5 759 M
-(Phase 2: Standardize) s
-5 748 M
-(- All Scheme uses random-bytes from crypto-ffi) s
+(All key generation events should be logged \(not the keys themselves\):) s
 5 737 M
-(- Document OCaml approach) s
+(\(seal-commit #f) s
+5 726 M
+(  `\(entropy-event) s
 5 715 M
-(Phase 3: Verify) s
+(    \(type "key-generation"\)) s
 5 704 M
-(- Entropy quality testing) s
+(    \(algorithm "ed25519"\)) s
 5 693 M
-(- Audit logging for key generation) s
-5 671 M
-(References) s
-5 649 M
-(- libsodium documentation: https://doc.libsodium.org/) s
+(    \(timestamp ,\(current-seconds\)\)) s
+5 682 M
+(    \(entropy-source "libsodium"\)\)\)) s
+5 660 M
+(Hardware Entropy) s
 5 638 M
-(- NIST SP 800-90A: Recommendations for Random Number Generation) s
-5 627 M
-(- RFC 4086: Randomness Requirements for Security) s
+(When available, hardware entropy sources enhance security:) s
 5 616 M
-(- ChaCha20: https://cr.yp.to/chacha.html) s
+(| Platform | Hardware RNG |) s
+5 605 M
+(|----------|-------------|) s
 5 594 M
-(Appendix: Entropy Quality Testing) s
+(| Intel/AMD | RDRAND, RDSEED instructions |) s
+5 583 M
+(| ARM | TRNG \(True Random Number Generator\) |) s
 5 572 M
-(For paranoid verification:) s
+(| Apple Silicon | Secure Enclave entropy |) s
 5 550 M
-(`bash) s
-5 539 M
-(Generate random data) s
+(libsodium automatically uses hardware entropy when available.) s
 5 528 M
-(csi -e "\(import crypto-ffi\) \(display \(random-bytes 1000000\)\)" > random.bin) s
+(Migration) s
 5 506 M
-(Run NIST statistical tests) s
+(Phase 1: Audit \(Current\)) s
 5 495 M
-(ent random.bin) s
+(- Identify all randomness usage in codebase) s
 5 484 M
-(dieharder -a -f random.bin) s
-5 473 M
-(`) s
+(- Replace non-libsodium sources) s
+5 462 M
+(Phase 2: Standardize) s
 5 451 M
-(Expected results:) s
+(- All Scheme uses random-bytes from crypto-ffi) s
 5 440 M
-(- Entropy: ~7.9999 bits per byte) s
-5 429 M
-(- Chi-square: p-value 0.01-0.99) s
+(- Document OCaml approach) s
 5 418 M
+(Phase 3: Verify) s
+5 407 M
+(- Entropy quality testing) s
+5 396 M
+(- Audit logging for key generation) s
+5 374 M
+(References) s
+5 352 M
+(- libsodium documentation: https://doc.libsodium.org/) s
+5 341 M
+(- NIST SP 800-90A: Recommendations for Random Number Generation) s
+5 330 M
+(- RFC 4086: Randomness Requirements for Security) s
+5 319 M
+(- ChaCha20: https://cr.yp.to/chacha.html) s
+5 297 M
+(Appendix: Entropy Quality Testing) s
+5 275 M
+(For paranoid verification:) s
+5 253 M
+(Generate random data) s
+5 242 M
+(csi -e "\(import crypto-ffi\) \(display \(random-bytes 1000000\)\)" > random.bin) s
+5 220 M
+(Run NIST statistical tests) s
+5 209 M
+(ent random.bin) s
+5 198 M
+(dieharder -a -f random.bin) s
+5 176 M
+(Expected results:) s
+5 165 M
+(- Entropy: ~7.9999 bits per byte) s
+5 154 M
+(- Chi-square: p-value 0.01-0.99) s
+5 143 M
 (- All dieharder tests: PASSED) s
 _R
 S
 %%Trailer
-%%Pages: 11
+%%Pages: 8
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

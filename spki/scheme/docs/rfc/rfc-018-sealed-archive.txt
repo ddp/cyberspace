@@ -39,24 +39,17 @@ Specification
 
 Archive Creation Pipeline
 
-`
 git archive | tar --zstd | age -r <recipients> > archive.tar.zst.age
-`
 
 Or equivalently:
-`
 tar --zstd -cf - <files> | age -r <recipient1> -r <recipient2> > archive.tar.zst.age
-`
 
 Archive Restoration Pipeline
 
-`
 age -d -i <identity> < archive.tar.zst.age | zstd -d | tar -xf -
-`
 
 Manifest Format
 
-`scheme
 (sealed-archive
   (version "1.0.0")
   (format zstd-age)
@@ -66,7 +59,6 @@ Manifest Format
   (recipients ("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"))
   (hash "sha512:...")
   (signature "ed25519:..."))
-`
 
 File Extensions
 
@@ -77,7 +69,6 @@ File Extensions
 
 Configuration
 
-`scheme
 ;; Set age recipients for encryption
 (vault-config 'age-recipients
   '("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
@@ -88,7 +79,6 @@ Configuration
 
 ;; Set default archive format
 (vault-config 'archive-format 'zstd-age)
-`
 
 ------------------------------------------------------------------------------
 
@@ -96,7 +86,6 @@ Performance Characteristics
 
 Compression
 
-`
 Zstd default (-3):
   Compression:   ~400 MB/s
   Decompression: ~800 MB/s
@@ -110,11 +99,9 @@ Gzip comparison:
   Compression:   ~30 MB/s
   Decompression: ~200 MB/s
   Ratio:         ~2.5:1
-`
 
 Encryption
 
-`
 Age X25519:
   Encrypt:  ~1 GB/s (ChaCha20-Poly1305)
   Decrypt:  ~1 GB/s
@@ -123,20 +110,16 @@ Age X25519:
 Age overhead:
   Header:   ~200 bytes per recipient
   MAC:      16 bytes
-`
 
 Signature
 
-`
 Ed25519:
   Sign:     ~10 μs
   Verify:   ~10 μs
   Signature: 64 bytes
-`
 
 Total Pipeline
 
-`
 10 MB archive:
   Compress (zstd -T0): ~25 ms
   Encrypt (age):       ~10 ms
@@ -151,7 +134,6 @@ vs gzip legacy:
   Total:               ~301 ms
 
 Speedup: ~8x
-`
 
 ------------------------------------------------------------------------------
 
@@ -193,7 +175,6 @@ Compatibility
 
 Age Identity Types
 
-`
 Native age key
 age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
 
@@ -202,7 +183,6 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...
 
 GitHub key (via age-plugin-github or ssh)
 github:username
-`
 
 Platform Support
 
@@ -216,11 +196,9 @@ Platform Support
 Fallback
 
 If zstd or age unavailable, fall back to cryptographic format:
-`scheme
 (if (and (command-exists? "zstd") (command-exists? "age"))
     (seal-archive version format: 'zstd-age)
     (seal-archive version format: 'cryptographic))
-`
 
 ------------------------------------------------------------------------------
 
@@ -228,7 +206,6 @@ Implementation
 
 seal-archive-zstd-age
 
-`scheme
 (define (seal-archive-zstd-age version output)
   "Create zstd-compressed, age-encrypted archive with SPKI signature"
 
@@ -270,11 +247,9 @@ seal-archive-zstd-age
                        (recipients ,recipients)
                        (hash ,(blob->hex archive-hash))
                        (signature ,(blob->hex signature)))))))))))
-`
 
 seal-restore-zstd-age
 
-`scheme
 (define (seal-restore-zstd-age manifest verify-key target-dir identity)
   "Restore zstd+age encrypted archive"
 
@@ -305,7 +280,6 @@ seal-restore-zstd-age
     ;; Decrypt and extract: age -d | zstd -d | tar -x
     (system (sprintf "age -d -i ~a < ~a | zstd -d | tar -xf - -C ~a"
                     id-file archive-file target-dir))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -313,7 +287,6 @@ Usage Examples
 
 Create Encrypted Archive
 
-`scheme
 ;; Configure recipients
 (vault-config 'age-recipients
   '("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"))
@@ -322,11 +295,9 @@ Create Encrypted Archive
 (seal-archive "1.0.0" format: 'zstd-age)
 ;; => vault-1.0.0.archive
 ;; => vault-1.0.0.archive.tar.zst.age
-`
 
 Restore Encrypted Archive
 
-`scheme
 ;; Configure identity
 (vault-config 'age-identity "~/.config/age/identity.txt")
 
@@ -334,11 +305,9 @@ Restore Encrypted Archive
 (seal-restore "vault-1.0.0.archive"
               verify-key: "publisher.public"
               target: "./restored")
-`
 
 Command Line Equivalents
 
-`bash
 Create
 git archive --prefix=vault/ 1.0.0 | \
   zstd -T0 | \
@@ -349,7 +318,6 @@ Restore
 age -d -i ~/.config/age/identity.txt < vault-1.0.0.tar.zst.age | \
   zstd -d | \
   tar -xf -
-`
 
 ------------------------------------------------------------------------------
 
@@ -357,13 +325,11 @@ Migration
 
 From Cryptographic to Zstd-Age
 
-`scheme
 ;; Re-archive existing releases with new format
 (for-each
   (lambda (version)
     (seal-archive version format: 'zstd-age))
   (get-local-releases))
-`
 
 Backward Compatibility
 

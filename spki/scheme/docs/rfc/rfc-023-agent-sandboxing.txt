@@ -53,7 +53,6 @@ What is a Daemon?
 
 A daemon is a helpful spirit—an autonomous agent that serves its principal:
 
-`scheme
 (agent
   (id "agent-2026-001")
   (spawned-by user-principal)
@@ -68,40 +67,37 @@ A daemon is a helpful spirit—an autonomous agent that serves its principal:
     (max-storage (* 1 1024 1024 1024)))  ; 1GB
   (sandbox posix-sandbox)
   (status running))
-`
 
 Agent Lifecycle
 
-`
-    ┌─────────┐
-    │ DEFINED │ Agent specification created
-    └────┬────┘
-         │ spawn
-         ▼
-    ┌─────────┐
-    │ SPAWNED │ Process created, sandbox initialized
-    └────┬────┘
-         │ activate
-         ▼
-    ┌─────────┐
-    │ RUNNING │ Agent executing with capabilities
-    └────┬────┘
-         │ pause/resume/terminate
-         ▼
-    ┌─────────┐
-    │ PAUSED  │ Execution suspended, state preserved
-    └────┬────┘
-         │ terminate/timeout/error
-         ▼
-    ┌─────────┐
-    │ FINISHED│ Execution complete, cleanup pending
-    └────┬────┘
-         │ cleanup
-         ▼
-    ┌─────────┐
-    │ ARCHIVED│ Audit log preserved, resources released
-    └─────────┘
-`
+    +---------+
+    | DEFINED | Agent specification created
+    +----+----+
+         | spawn
+         v
+    +---------+
+    | SPAWNED | Process created, sandbox initialized
+    +----+----+
+         | activate
+         v
+    +---------+
+    | RUNNING | Agent executing with capabilities
+    +----+----+
+         | pause/resume/terminate
+         v
+    +---------+
+    | PAUSED  | Execution suspended, state preserved
+    +----+----+
+         | terminate/timeout/error
+         v
+    +---------+
+    | FINISHED| Execution complete, cleanup pending
+    +----+----+
+         | cleanup
+         v
+    +---------+
+    | ARCHIVED| Audit log preserved, resources released
+    +---------+
 
 ------------------------------------------------------------------------------
 
@@ -109,7 +105,6 @@ Spawning Agents
 
 Spawn Request
 
-`scheme
 (define (spawn-agent spec)
   "Spawn new agent from specification"
   (let* ((agent-id (generate-agent-id))
@@ -140,11 +135,9 @@ Spawn Request
 
     ;; Return agent handle
     agent))
-`
 
 Capability Verification
 
-`scheme
 (define (verify-spawn-authority spawner requested-caps)
   "Verify spawner can grant requested capabilities"
   (for-each
@@ -152,11 +145,9 @@ Capability Verification
       (unless (authorized? spawner 'delegate cap)
         (error "Cannot delegate capability" cap)))
     requested-caps))
-`
 
 Agent Code Loading
 
-`scheme
 (define (load-agent-code spec)
   "Load and verify agent code"
   (let* ((code-hash (spec-code-hash spec))
@@ -172,7 +163,6 @@ Agent Code Loading
         (error "Code signature invalid")))
 
     code))
-`
 
 ------------------------------------------------------------------------------
 
@@ -182,7 +172,6 @@ POSIX Sandbox
 
 Process isolation using OS primitives:
 
-`scheme
 (define (create-posix-sandbox constraints)
   "Create POSIX-based sandbox"
   (sandbox
@@ -211,13 +200,11 @@ Process isolation using OS primitives:
     (network
       (allowed-hosts ,(constraints-network-hosts constraints))
       (allowed-ports ,(constraints-network-ports constraints)))))
-`
 
 Scheme Sandbox
 
 Language-level isolation for Scheme agents:
 
-`scheme
 (define (create-scheme-sandbox constraints)
   "Create Scheme-level sandbox"
   (sandbox
@@ -240,13 +227,11 @@ Language-level isolation for Scheme agents:
 
     ;; Capability-restricted I/O
     (io-capabilities ,(constraints-io constraints))))
-`
 
 Container Sandbox
 
 OCI container isolation:
 
-`scheme
 (define (create-container-sandbox constraints image)
   "Create container-based sandbox"
   (sandbox
@@ -270,13 +255,11 @@ OCI container isolation:
     (network
       (mode bridge)
       (egress-policy ,(network-policy constraints)))))
-`
 
 WASM Sandbox
 
 WebAssembly isolation:
 
-`scheme
 (define (create-wasm-sandbox constraints)
   "Create WebAssembly sandbox"
   (sandbox
@@ -299,7 +282,6 @@ WebAssembly isolation:
       (log "library:log")
       (cas-get "library:cas_get")
       (cas-put "library:cas_put"))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -309,7 +291,6 @@ Capability Proxy
 
 All agent I/O goes through capability-checking proxies:
 
-`scheme
 (define (make-capability-proxy agent capabilities)
   "Create proxy that enforces capability checks"
 
@@ -340,11 +321,9 @@ All agent I/O goes through capability-checking proxies:
      `(read (hash ,(car args))))
     (else
      (error "Unknown operation" op))))
-`
 
 Attenuation on Delegation
 
-`scheme
 (define (agent-spawn-child parent-agent child-spec)
   "Agent spawning child agent with attenuated capabilities"
   (let* ((parent-caps (agent-capabilities parent-agent))
@@ -357,7 +336,6 @@ Attenuation on Delegation
       (warn "Child capabilities attenuated"))
 
     (spawn-agent (spec-with-capabilities child-spec child-caps))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -367,7 +345,6 @@ Message Passing
 
 Agents communicate via typed, capability-checked messages:
 
-`scheme
 (define (agent-send from-agent to-agent message)
   "Send message between agents"
 
@@ -396,13 +373,11 @@ Agents communicate via typed, capability-checked messages:
       ;; Verify signature
       (verify-message-signature msg)
       msg)))
-`
 
 Shared State
 
 Agents can share state through CAS:
 
-`scheme
 (define (agent-share agent hash recipients)
   "Share CAS object with other agents"
 
@@ -420,7 +395,6 @@ Agents can share state through CAS:
   ;; Audit sharing
   (audit-append
     action: `(agent-share ,hash ,recipients)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -428,7 +402,6 @@ Monitoring and Control
 
 Agent Status
 
-`scheme
 (define (agent-status agent)
   "Get current agent status"
   `(agent-status
@@ -442,11 +415,9 @@ Agent Status
     (actions ,(agent-action-count agent))
     (messages-sent ,(agent-messages-sent agent))
     (messages-received ,(agent-messages-received agent))))
-`
 
 Agent Control
 
-`scheme
 (define (agent-pause agent #!key reason)
   "Pause agent execution"
   (unless (authorized? (current-principal) 'control agent)
@@ -474,13 +445,11 @@ Agent Control
     motivation: reason
     priority: 'high)
   (cleanup-agent agent))
-`
 
 Watchdog Daemon
 
 The watchdog daemon tends the flock of agents—a daemon watching daemons:
 
-`scheme
 (define (agent-watchdog)
   "Monitor all agents, enforce constraints"
   (for-each
@@ -500,7 +469,6 @@ The watchdog daemon tends the flock of agents—a daemon watching daemons:
                  agent-heartbeat-timeout)
           (agent-terminate agent reason: "Heartbeat timeout"))))
     (all-agents)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -508,7 +476,6 @@ Soup Integration
 
 Agents in the Soup
 
-`scheme
 (soup-object
   (name "agent/2026-001")
   (type agent)
@@ -519,11 +486,9 @@ Agents in the Soup
   (runtime "4h 23m")
   (resources (memory "234MB") (storage "890MB"))
   (capabilities (read "arxiv.org/*") (write "/vault/papers/")))
-`
 
 Querying Agents
 
-`scheme
 ;; All running agents
 (soup-query type: 'agent status: 'running)
 
@@ -535,11 +500,9 @@ Querying Agents
 
 ;; Resource hogs
 (soup-query type: 'agent min-memory: (* 256 1024 1024))
-`
 
 Agent Introspection
 
-`scheme
 ;; Agent can query itself
 (define (agent-self-inspect)
   `(self
@@ -549,7 +512,6 @@ Agent Introspection
       (memory ,(- max-memory (current-memory)))
       (runtime ,(- max-runtime (current-uptime)))
       (fuel ,(remaining-fuel)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -557,7 +519,6 @@ Agent Patterns
 
 Pattern 1: Periodic Task Agent
 
-`scheme
 (spawn-agent
   (code '(lambda ()
            (let loop ()
@@ -571,11 +532,9 @@ Pattern 1: Periodic Task Agent
   (constraints
     (max-runtime (* 30 24 3600))  ; 30 days
     (max-memory (* 128 1024 1024))))
-`
 
 Pattern 2: One-Shot Processing Agent
 
-`scheme
 (spawn-agent
   (code '(lambda ()
            (let ((input (cas-get input-hash)))
@@ -587,11 +546,9 @@ Pattern 2: One-Shot Processing Agent
   (constraints
     (max-runtime 3600)
     (max-memory (* 1024 1024 1024))))
-`
 
 Pattern 3: Reactive Agent
 
-`scheme
 (spawn-agent
   (code '(lambda ()
            (let loop ()
@@ -607,11 +564,9 @@ Pattern 3: Reactive Agent
   (constraints
     (max-runtime #f)  ; runs until terminated
     (max-memory (* 256 1024 1024))))
-`
 
 Pattern 4: Mobile Agent
 
-`scheme
 ;; Agent that migrates between vaults
 (spawn-agent
   (code '(lambda ()
@@ -625,7 +580,6 @@ Pattern 4: Mobile Agent
   (constraints
     (max-migrations 10)
     (max-runtime (* 24 3600))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -633,7 +587,6 @@ Security Considerations
 
 Escape Prevention
 
-`scheme
 ;; Sandbox escape mitigations
 (define sandbox-security
   '((seccomp "restrict system calls")
@@ -642,11 +595,9 @@ Escape Prevention
     (no-setuid "prevent privilege escalation")
     (read-only-root "immutable rootfs")
     (no-raw-sockets "prevent network attacks")))
-`
 
 Resource Exhaustion
 
-`scheme
 ;; Prevent denial of service
 (define resource-limits
   '((memory "hard limit, OOM killer")
@@ -655,11 +606,9 @@ Resource Exhaustion
     (network "bandwidth limiting")
     (processes "prevent fork bombs")
     (file-descriptors "prevent fd exhaustion")))
-`
 
 Information Leakage
 
-`scheme
 ;; Prevent covert channels
 (define isolation-measures
   '((timing "fuel-based execution, no precise timers")
@@ -667,11 +616,9 @@ Information Leakage
     (network "egress filtering")
     (ipc "message passing only, no shared memory")
     (environment "sanitized env vars")))
-`
 
 Malicious Agents
 
-`scheme
 (define (detect-malicious-behavior agent)
   "Heuristics for detecting malicious agents"
   (or
@@ -683,7 +630,6 @@ Malicious Agents
     (> (agent-violation-count agent) max-violations)
     ;; Anomalous message patterns
     (anomalous-messaging? agent)))
-`
 
 ------------------------------------------------------------------------------
 

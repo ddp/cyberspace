@@ -30,7 +30,6 @@ Query Model
 
 Basic Queries
 
-`scheme
 ;; Find by type
 (soup-query type: 'document)
 
@@ -44,11 +43,9 @@ Basic Queries
 
 ;; Find by content hash
 (soup-query hash: "sha256:7f83b1657ff1fc...")
-`
 
 Query Results
 
-`scheme
 ;; Results are lazy cursors
 (define results (soup-query type: 'document))
 
@@ -60,11 +57,9 @@ Query Results
 ;; Collect (careful with large result sets)
 (soup-cursor->list results)   ; => list of soup-objects
 (soup-cursor-count results)   ; => total count
-`
 
 Predicates
 
-`scheme
 ;; Comparison operators
 (soup-query size: (> 1000000))           ; larger than 1MB
 (soup-query created: (< "2025-01-01"))   ; before 2025
@@ -82,7 +77,6 @@ Predicates
 ;; Existence
 (soup-query (exists 'encryption-key))    ; has attribute
 (soup-query (missing 'expires))          ; lacks attribute
-`
 
 ------------------------------------------------------------------------------
 
@@ -90,7 +84,6 @@ Advanced Queries
 
 Range Queries
 
-`scheme
 ;; Numeric ranges
 (soup-query size: (between 1000 10000))
 
@@ -99,11 +92,9 @@ Range Queries
 
 ;; Lexicographic ranges
 (soup-query name: (between "rfc-010" "rfc-020"))
-`
 
 Full-Text Search
 
-`scheme
 ;; Search indexed content
 (soup-query (text-search "capability delegation"))
 
@@ -116,11 +107,9 @@ Full-Text Search
 
 ;; Fuzzy search
 (soup-query (text-search "delgation~"))  ; typo-tolerant
-`
 
 Reference Traversal
 
-`scheme
 ;; Objects referencing this hash
 (soup-query references: "sha256:target...")
 
@@ -130,11 +119,9 @@ Reference Traversal
 ;; Transitive closure (careful - can be huge)
 (soup-query (transitive-references "sha256:root...")
             max-depth: 3)
-`
 
 Temporal Queries
 
-`scheme
 ;; Objects as they existed at a point in time
 (soup-query type: 'document
             as-of: "2026-01-01T00:00:00Z")
@@ -144,7 +131,6 @@ Temporal Queries
 
 ;; Version history
 (soup-query (versions-of "sha256:current..."))
-`
 
 ------------------------------------------------------------------------------
 
@@ -152,7 +138,6 @@ Query Composition
 
 Subqueries
 
-`scheme
 ;; Objects authored by members of a group
 (soup-query author: (soup-query type: 'principal
                                 member-of: "engineering"))
@@ -160,11 +145,9 @@ Subqueries
 ;; Documents referencing any RFC
 (soup-query type: 'document
             references: (soup-query name: (like "rfc-*")))
-`
 
 Aggregation
 
-`scheme
 ;; Count by type
 (soup-aggregate
   group-by: 'type
@@ -183,11 +166,9 @@ Aggregation
 ;; Distinct values
 (soup-aggregate
   aggregate: (distinct 'content-type))
-`
 
 Ordering and Pagination
 
-`scheme
 ;; Sort by creation date, newest first
 (soup-query type: 'document
             order-by: '((created desc)))
@@ -206,7 +187,6 @@ Ordering and Pagination
 (soup-query type: 'document
             order-by: '((created desc))
             after: "sha256:last-seen...")
-`
 
 ------------------------------------------------------------------------------
 
@@ -216,7 +196,6 @@ Query Filtering
 
 Queries automatically filter results based on the querying principal's capabilities:
 
-`scheme
 (define (soup-query-with-caps query principal)
   "Execute query filtered by principal's capabilities"
   (let* ((raw-results (execute-query query))
@@ -224,11 +203,9 @@ Queries automatically filter results based on the querying principal's capabilit
     (filter (lambda (obj)
               (can-read? principal obj caps))
             raw-results)))
-`
 
 Capability Queries
 
-`scheme
 ;; What can I access?
 (soup-query (accessible-by (current-principal)))
 
@@ -239,11 +216,9 @@ Capability Queries
 ;; Find my capabilities
 (soup-query type: 'certificate
             subject: (current-principal))
-`
 
 Query Authorization
 
-`scheme
 ;; Some queries require explicit capability
 (soup-query type: 'audit-log)  ; requires audit-read capability
 
@@ -255,7 +230,6 @@ Query Authorization
     (action query)
     (object (type 'audit-log)))
   (validity (not-after "2027-01-01")))
-`
 
 ------------------------------------------------------------------------------
 
@@ -263,7 +237,6 @@ Indexes
 
 Index Types
 
-`scheme
 ;; B-tree index (ordered, range queries)
 (define-index 'created-idx
   type: 'btree
@@ -290,22 +263,18 @@ Index Types
   type: 'bloom
   on: 'tags
   false-positive-rate: 0.01)
-`
 
 Index Selection
 
-`scheme
 (define (plan-query query indexes)
   "Select best index for query"
   (let ((predicates (query-predicates query)))
     (find (lambda (idx)
             (index-covers? idx predicates))
           (sort indexes index-selectivity>))))
-`
 
 Index Maintenance
 
-`scheme
 ;; Indexes are updated on soup-put
 (define (soup-put-indexed obj)
   (let ((hash (soup-put obj)))
@@ -317,7 +286,6 @@ Index Maintenance
 ;; Periodic index optimization
 (define (optimize-indexes)
   (for-each index-compact! (all-indexes)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -325,7 +293,6 @@ Query Execution
 
 Query Planning
 
-`scheme
 (define (execute-query query)
   "Plan and execute query"
   (let* ((plan (plan-query query))
@@ -342,11 +309,9 @@ Query Planning
     (filter ,(remaining-predicates query))
     (order ,(query-order query))
     (limit ,(query-limit query))))
-`
 
 Execution Strategies
 
-`scheme
 ;; Index scan
 (define (index-scan index predicate)
   (index-range-query index
@@ -362,11 +327,9 @@ Execution Strategies
   (set-intersection
     (index-scan idx1 pred1)
     (index-scan idx2 pred2)))
-`
 
 Query Caching
 
-`scheme
 ;; Query results can be cached
 (define query-cache (make-lru-cache 1000))
 
@@ -383,7 +346,6 @@ Query Caching
     (for-each (lambda (q)
                 (lru-remove! query-cache (query->hash q)))
               affected)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -391,7 +353,6 @@ Distributed Queries
 
 Federated Query
 
-`scheme
 ;; Query across multiple vaults
 (soup-query type: 'document
             federation: '(vault-a vault-b vault-c))
@@ -399,11 +360,9 @@ Federated Query
 ;; Query with locality preference
 (soup-query type: 'document
             prefer-local: #t)
-`
 
 Query Routing
 
-`scheme
 (define (route-query query vaults)
   "Route query to appropriate vaults"
   (let ((partitions (query-partitions query)))
@@ -412,16 +371,13 @@ Query Routing
          (filter (lambda (v)
                    (vault-has-partition? v partitions))
                  vaults))))
-`
 
 Result Merging
 
-`scheme
 (define (merge-results results order)
   "Merge sorted results from multiple vaults"
   (let ((streams (map result->stream results)))
     (merge-sorted-streams streams (order->comparator order))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -429,7 +385,6 @@ Query Audit
 
 Audit Trail
 
-`scheme
 ;; All queries are logged
 (define (audited-query query principal)
   (let ((start (current-time))
@@ -441,11 +396,9 @@ Audit Trail
       result-count: (soup-cursor-count result)
       duration: (- (current-time) start))
     result))
-`
 
 Query Analysis
 
-`scheme
 ;; Analyze query patterns
 (soup-query type: 'audit-entry
             action: 'query
@@ -461,13 +414,11 @@ Query Analysis
   where: (and (type: 'audit-entry) (action: 'query))
   group-by: 'principal
   aggregate: (count))
-`
 
 ------------------------------------------------------------------------------
 
 Query Language Grammar
 
-`
 query       ::= (soup-query clause*)
 clause      ::= attribute-clause | predicate-clause | option-clause
 attribute   ::= symbol ':' value
@@ -480,7 +431,6 @@ op          ::= '>' | '<' | '>=' | '<=' | '=' | '!='
 option      ::= 'order-by' | 'limit' | 'offset' | 'after'
               | 'as-of' | 'highlight' | 'federation'
 value       ::= string | number | boolean | hash | query
-`
 
 ------------------------------------------------------------------------------
 
@@ -488,7 +438,6 @@ Security Considerations
 
 Query Injection
 
-`scheme
 ;; Never interpolate user input into queries
 ;; BAD:
 (soup-query name: (string-append "rfc-" user-input))
@@ -502,11 +451,9 @@ Query Injection
                     #\\
                     c))
               s))
-`
 
 Query Cost Limits
 
-`scheme
 ;; Prevent denial of service via expensive queries
 (define query-cost-limit 10000)
 (define query-timeout 30)  ; seconds
@@ -517,11 +464,9 @@ Query Cost Limits
       (when (> cost query-cost-limit)
         (error "Query exceeds cost limit"))
       (execute-query query))))
-`
 
 Information Leakage
 
-`scheme
 ;; Query existence can leak information
 ;; Even "not found" reveals something
 
@@ -531,7 +476,6 @@ Information Leakage
     (if (authorized? (current-principal) result)
         result
         (constant-time-not-found))))
-`
 
 ------------------------------------------------------------------------------
 

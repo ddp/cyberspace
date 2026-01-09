@@ -55,20 +55,18 @@ Table 1: Inference Deployment Models
 | Node-local | Per-node inference | Edge agents, mobile |
 | Federated | Shared across trusted realms | Resource pooling |
 
-`
-┌─────────────────────────────────────────────────────┐
-│                      Realm                          │
-│  ┌─────────┐    ┌──────────────┐    ┌───────────┐  │
-│  │  Agent  │───▶│   Inference  │───▶│   Model   │  │
-│  │         │◀───│    Server    │◀───│  Weights  │  │
-│  └─────────┘    └──────────────┘    └───────────┘  │
-│       │              :11434              │          │
-│       ▼                                  ▼          │
-│  ┌─────────┐                      ┌───────────┐    │
-│  │  Vault  │                      │   VRAM    │    │
-│  └─────────┘                      └───────────┘    │
-└─────────────────────────────────────────────────────┘
-`
++-----------------------------------------------------+
+|                      Realm                          |
+|  +---------+    +--------------+    +-----------+  |
+|  |  Agent  |---▶|   Inference  |---▶|   Model   |  |
+|  |         |◀---|    Server    |◀---|  Weights  |  |
+|  +---------+    +--------------+    +-----------+  |
+|       |              :11434              |          |
+|       v                                  v          |
+|  +---------+                      +-----------+    |
+|  |  Vault  |                      |   VRAM    |    |
+|  +---------+                      +-----------+    |
++-----------------------------------------------------+
 
 Protocol
 
@@ -80,18 +78,15 @@ both for maximum compatibility.
 
 Discovery:
 
-`scheme
 (define (discover-inference-server)
   ;; Check well-known locations
   (or (probe "http://localhost:11434")      ; Ollama default
       (probe "http://localhost:8080")       ; llama.cpp
       (probe (realm-config 'inference-url)) ; Configured
       #f))                                   ; None available
-`
 
 Capability Negotiation:
 
-`scheme
 (define (negotiate-capabilities server)
   (let ((models (http-get (string-append server "/api/tags"))))
     (map (lambda (m)
@@ -100,7 +95,6 @@ Capability Negotiation:
              (context-length . ,(model-context-length m))
              (capabilities . ,(model-capabilities m))))
          models)))
-`
 
 Table 2: Model Capabilities
 
@@ -124,7 +118,6 @@ The scribe agent uses local inference for document processing:[^r1]
 inference with vault content retrieval. See Lewis et al., "Retrieval-
 Augmented Generation for Knowledge-Intensive NLP Tasks" (2020).
 
-`scheme
 (define (scribe-summarize document)
   (let* ((server (discover-inference-server))
          (model (select-model server 'completion))
@@ -141,13 +134,11 @@ Augmented Generation for Knowledge-Intensive NLP Tasks" (2020).
          (prompt (format "Extract 5-10 keywords from:\n\n~a"
                          (document-content document))))
     (parse-keywords (inference-complete server model prompt))))
-`
 
 Query Translation
 
 Natural language queries translate to RFC-025 query language:
 
-`scheme
 (define (nl-to-query natural-language)
   (let* ((server (discover-inference-server))
          (model (select-model server 'chat))
@@ -158,7 +149,6 @@ Natural language queries translate to RFC-025 query language:
                      ("documents modified last week"
                       "(query (modified (after (days-ago 7))))"))))
     (inference-chat server model system examples natural-language)))
-`
 
 Demonic Agent Inference
 
@@ -167,7 +157,6 @@ Sandboxed agents (RFC-023) access inference through capability tokens:[^d2]
 [^d2]: Design: Inference capability is granted like any other—via SPKI
 certificate. An agent cannot infer without explicit authorization.
 
-`scheme
 (define (demonic-inference agent prompt)
   (let ((cap (agent-capability agent 'inference)))
     (if (not cap)
@@ -178,7 +167,6 @@ certificate. An agent cannot infer without explicit authorization.
                               (capability-model cap)
                               prompt
                               limits)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -203,7 +191,6 @@ fair scheduling across agents:[^i2]
 [^i2]: Implementation: Token bucket algorithm with per-agent quotas.
 Prevents single agent from monopolizing inference resources.
 
-`scheme
 (define (inference-rate-limit agent tokens)
   (let ((bucket (agent-token-bucket agent)))
     (if (bucket-consume bucket tokens)
@@ -211,7 +198,6 @@ Prevents single agent from monopolizing inference resources.
         (begin
           (agent-wait agent (bucket-refill-time bucket))
           (inference-rate-limit agent tokens)))))
-`
 
 Fallback Behavior
 
@@ -222,14 +208,12 @@ When local inference is unavailable:
 3. Federate — request inference from trusted peer realm
 4. Fail — return error to requesting agent
 
-`scheme
 (define (inference-with-fallback server model prompt)
   (or (try-inference server model prompt)
       (try-queued-inference prompt)
       (try-degraded-processing prompt)
       (try-federated-inference prompt)
       (error 'inference-unavailable)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -243,7 +227,6 @@ Agents MUST sanitize document content before inclusion in prompts:[^r2]
 in user content. See Perez & Ribeiro, "Ignore This Title and HackAPrompt"
 (2023).
 
-`scheme
 (define (safe-prompt template document)
   (let ((sanitized (sanitize-for-prompt (document-content document))))
     (format template sanitized)))
@@ -254,7 +237,6 @@ in user content. See Perez & Ribeiro, "Ignore This Title and HackAPrompt"
     '("ignore previous" "disregard" "new instructions" "system:")
     text
     "[REDACTED]"))
-`
 
 Model Provenance
 
@@ -263,13 +245,11 @@ Realms SHOULD verify model checksums before loading:[^d3]
 [^d3]: Design: Model weights can contain backdoors. Verification
 against known-good checksums prevents supply chain attacks.
 
-`scheme
 (define (verify-model model-path expected-hash)
   (let ((actual-hash (sha256-file model-path)))
     (unless (equal? actual-hash expected-hash)
       (error 'model-verification-failed
              "Model checksum mismatch"))))
-`
 
 Inference Isolation
 
@@ -290,17 +270,14 @@ It manages models and serves inference. Nothing more.
 
 Installation
 
-`bash
 macOS / Linux
 curl -fsSL https://ollama.com/install.sh | sh
 
 Verify
 ollama --version
-`
 
 Model Management
 
-`bash
 Pull models
 ollama pull llama3
 ollama pull nomic-embed-text
@@ -310,7 +287,6 @@ ollama list
 
 Remove
 ollama rm unused-model
-`
 
 API Endpoints
 
@@ -326,7 +302,6 @@ Table 4: Ollama API Endpoints
 
 Scheme Bindings
 
-`scheme
 (define ollama-base "http://localhost:11434")
 
 (define (ollama-generate model prompt #!key (options '()))
@@ -347,7 +322,6 @@ Scheme Bindings
   (http-post (string-append ollama-base "/api/embeddings")
              `((model . ,model)
                (prompt . ,text))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -367,14 +341,12 @@ Cloud Fallback
 For realms without local GPU resources, cloud inference MAY be used
 as fallback with explicit user consent and encryption:
 
-`scheme
 (define (cloud-inference-fallback prompt)
   (when (user-consent? 'cloud-inference)
     (let ((encrypted (encrypt-for-cloud prompt)))
       ;; Use cloud API with encrypted prompt
       ;; Decrypt response locally
       )))
-`
 
 This is NOT RECOMMENDED for sensitive documents.
 

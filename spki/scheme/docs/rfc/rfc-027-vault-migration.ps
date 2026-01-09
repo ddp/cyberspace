@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 11:58:09 2026
+%%CreationDate: Fri Jan  9 12:12:49 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -491,53 +491,51 @@ _S
 5 330 M
 (Move entire vault to new location:) s
 5 308 M
-(`scheme) s
-5 297 M
 (\(define \(full-migration source-vault target-host\)) s
-5 286 M
+5 297 M
 (  "Migrate entire vault to new host") s
-5 275 M
+5 286 M
 (  \(let \(\(migration-id \(generate-migration-id\)\)\)) s
-5 264 M
+5 275 M
 (    \(audit-append action: `\(migration-start ,migration-id\)) s
-5 253 M
+5 264 M
 (                  type: 'full) s
-5 242 M
+5 253 M
 (                  source: source-vault) s
-5 231 M
+5 242 M
 (                  target: target-host\)) s
-5 209 M
+5 220 M
 (    ;; Phase 1: Snapshot) s
-5 198 M
+5 209 M
 (    \(let \(\(snapshot \(vault-snapshot source-vault\)\)\)) s
-5 187 M
+5 198 M
 (      ;; Phase 2: Transfer) s
-5 176 M
+5 187 M
 (      \(transfer-snapshot snapshot target-host\)) s
-5 165 M
+5 176 M
 (      ;; Phase 3: Verify) s
-5 154 M
+5 165 M
 (      \(verify-transfer snapshot target-host\)) s
-5 143 M
+5 154 M
 (      ;; Phase 4: Cutover) s
-5 132 M
+5 143 M
 (      \(cutover source-vault target-host migration-id\)\)\)\)) s
 5 121 M
-(`) s
-5 99 M
 (Partial Migration) s
-5 77 M
+5 99 M
 (Move subset of objects:) s
-5 55 M
-(`scheme) s
-5 44 M
+5 77 M
 (\(define \(partial-migration source-vault target-host predicate\)) s
-5 33 M
+5 66 M
 (  "Migrate objects matching predicate") s
-5 22 M
+5 55 M
 (  \(let \(\(objects \(soup-query source-vault predicate\)\)\)) s
-5 11 M
+5 44 M
 (    \(for-each \(lambda \(obj\)) s
+5 33 M
+(                \(migrate-object obj target-host\)\)) s
+5 22 M
+(              objects\)\)\)) s
 _R
 S
 %%Page: (2) 2
@@ -552,123 +550,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(                \(migrate-object obj target-host\)\)) s
-5 770 M
-(              objects\)\)\)) s
-5 759 M
-(`) s
-5 737 M
 (Live Migration) s
-5 715 M
+5 759 M
 (Migrate while vault remains active:) s
-5 693 M
-(`scheme) s
-5 682 M
+5 737 M
 (\(define \(live-migration source-vault target-host\)) s
-5 671 M
+5 726 M
 (  "Migrate without downtime") s
-5 660 M
+5 715 M
 (  ;; Phase 1: Initial sync) s
-5 649 M
+5 704 M
 (  \(let \(\(checkpoint \(initial-sync source-vault target-host\)\)\)) s
-5 638 M
+5 693 M
 (    ;; Phase 2: Catch up changes) s
-5 627 M
+5 682 M
 (    \(let loop \(\(last-checkpoint checkpoint\)\)) s
-5 616 M
+5 671 M
 (      \(let \(\(changes \(changes-since source-vault last-checkpoint\)\)\)) s
-5 605 M
+5 660 M
 (        \(if \(< \(length changes\) catchup-threshold\)) s
-5 594 M
+5 649 M
 (            ;; Phase 3: Final cutover \(brief pause\)) s
-5 583 M
+5 638 M
 (            \(atomic-cutover source-vault target-host changes\)) s
-5 572 M
+5 627 M
 (            \(loop \(sync-changes changes target-host\)\)\)\)\)\)\)) s
-5 561 M
-(`) s
-5 539 M
+5 605 M
 (------------------------------------------------------------------------------) s
-5 517 M
+5 583 M
 (Object Transfer) s
-5 495 M
+5 561 M
 (Export Format) s
-5 473 M
-(`scheme) s
-5 462 M
+5 539 M
 (;; Sealed archive format \(RFC-018\)) s
-5 451 M
+5 528 M
 (\(define \(export-object hash\)) s
-5 440 M
+5 517 M
 (  `\(vault-object) s
-5 429 M
+5 506 M
 (    \(hash ,hash\)) s
-5 418 M
+5 495 M
 (    \(content ,\(cas-get hash\)\)) s
-5 407 M
+5 484 M
 (    \(soup-entry ,\(soup-get hash\)\)) s
-5 396 M
+5 473 M
 (    \(references ,\(object-references hash\)\)) s
-5 385 M
+5 462 M
 (    \(signatures ,\(object-signatures hash\)\)\)\)) s
-5 363 M
+5 440 M
 (\(define \(export-batch hashes\)) s
-5 352 M
+5 429 M
 (  \(let \(\(objects \(map export-object hashes\)\)\)) s
-5 341 M
+5 418 M
 (    \(seal-archive objects) s
-5 330 M
+5 407 M
 (      compression: 'zstd) s
-5 319 M
+5 396 M
 (      encryption: target-vault-key\)\)\)) s
-5 308 M
-(`) s
-5 286 M
+5 374 M
 (Transfer Protocol) s
-5 264 M
-(`scheme) s
-5 253 M
+5 352 M
 (\(define \(transfer-object obj source target\)) s
-5 242 M
+5 341 M
 (  "Transfer single object with verification") s
-5 231 M
+5 330 M
 (  \(let* \(\(hash \(object-hash obj\)\)) s
-5 220 M
+5 319 M
 (         \(data \(export-object hash\)\)\)) s
-5 209 M
+5 308 M
 (    ;; Send to target) s
-5 198 M
+5 297 M
 (    \(vault-send target data\)) s
-5 187 M
+5 286 M
 (    ;; Get acknowledgment with hash) s
-5 176 M
+5 275 M
 (    \(let \(\(ack \(vault-receive target\)\)\)) s
-5 165 M
+5 264 M
 (      \(unless \(equal? \(ack-hash ack\) hash\)) s
-5 154 M
+5 253 M
 (        \(error "Transfer verification failed" hash\)\)) s
-5 143 M
+5 242 M
 (      \(audit-append action: `\(object-transferred ,hash\)) s
-5 132 M
+5 231 M
 (                    source: source) s
-5 121 M
+5 220 M
 (                    target: target\)\)\)\)) s
-5 110 M
-(`) s
-5 88 M
+5 198 M
 (Streaming Transfer) s
-5 66 M
-(`scheme) s
-5 55 M
+5 176 M
 (\(define \(stream-transfer source target\)) s
-5 44 M
+5 165 M
 (  "Stream objects for efficient bulk transfer") s
-5 33 M
+5 154 M
 (  \(let \(\(stream \(open-transfer-stream source target\)\)\)) s
-5 22 M
+5 143 M
 (    \(for-each \(lambda \(hash\)) s
-5 11 M
+5 132 M
 (                \(let \(\(obj \(export-object hash\)\)\)) s
+5 121 M
+(                  \(stream-write stream obj\)) s
+5 110 M
+(                  \(when \(stream-buffer-full? stream\)) s
+5 99 M
+(                    \(stream-flush stream\)\)\)\)) s
+5 88 M
+(              \(vault-all-hashes source\)\)) s
+5 77 M
+(    \(stream-close stream\)\)\)) s
+5 55 M
+(------------------------------------------------------------------------------) s
+5 33 M
+(Metadata Migration) s
+5 11 M
+(Soup Entries) s
 _R
 S
 %%Page: (3) 3
@@ -682,122 +676,124 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(                  \(stream-write stream obj\)) s
 5 770 M
-(                  \(when \(stream-buffer-full? stream\)) s
-5 759 M
-(                    \(stream-flush stream\)\)\)\)) s
-5 748 M
-(              \(vault-all-hashes source\)\)) s
-5 737 M
-(    \(stream-close stream\)\)\)) s
-5 726 M
-(`) s
-5 704 M
-(------------------------------------------------------------------------------) s
-5 682 M
-(Metadata Migration) s
-5 660 M
-(Soup Entries) s
-5 638 M
-(`scheme) s
-5 627 M
 (\(define \(migrate-soup-entry hash source target\)) s
-5 616 M
+5 759 M
 (  "Migrate soup metadata for object") s
-5 605 M
+5 748 M
 (  \(let \(\(entry \(soup-get source hash\)\)\)) s
-5 594 M
+5 737 M
 (    \(when entry) s
-5 583 M
+5 726 M
 (      \(soup-put target hash entry\)) s
-5 572 M
+5 715 M
 (      ;; Verify) s
-5 561 M
+5 704 M
 (      \(unless \(equal? \(soup-get target hash\) entry\)) s
-5 550 M
+5 693 M
 (        \(error "Soup entry migration failed" hash\)\)\)\)\)) s
-5 539 M
-(`) s
-5 517 M
+5 671 M
 (Index Migration) s
-5 495 M
-(`scheme) s
-5 484 M
+5 649 M
 (\(define \(migrate-indexes source target\)) s
-5 473 M
+5 638 M
 (  "Rebuild indexes on target") s
-5 462 M
+5 627 M
 (  ;; Option 1: Export and import index data) s
-5 451 M
+5 616 M
 (  \(let \(\(index-data \(export-indexes source\)\)\)) s
-5 440 M
+5 605 M
 (    \(import-indexes target index-data\)\)) s
-5 418 M
+5 583 M
 (  ;; Option 2: Rebuild from soup \(slower but guaranteed correct\)) s
-5 407 M
+5 572 M
 (  \(rebuild-indexes target\)\)) s
-5 396 M
-(`) s
-5 374 M
+5 550 M
 (Audit Trail) s
-5 352 M
-(`scheme) s
-5 341 M
+5 528 M
 (\(define \(migrate-audit source target\)) s
-5 330 M
+5 517 M
 (  "Migrate audit trail \(critical for provenance\)") s
-5 319 M
+5 506 M
 (  \(let \(\(audit-entries \(audit-export source\)\)\)) s
-5 308 M
+5 495 M
 (    ;; Audit entries are append-only, transfer in order) s
-5 297 M
+5 484 M
 (    \(for-each \(lambda \(entry\)) s
-5 286 M
+5 473 M
 (                \(audit-import target entry\)\)) s
-5 275 M
+5 462 M
 (              audit-entries\)) s
-5 264 M
+5 451 M
 (    ;; Add migration event to both) s
-5 253 M
+5 440 M
 (    \(let \(\(migration-entry) s
-5 242 M
+5 429 M
 (           `\(migration-audit) s
-5 231 M
+5 418 M
 (             \(source ,source\)) s
-5 220 M
+5 407 M
 (             \(target ,target\)) s
-5 209 M
+5 396 M
 (             \(entries ,\(length audit-entries\)\)) s
-5 198 M
+5 385 M
 (             \(timestamp ,\(current-time\)\)\)\)\)) s
-5 187 M
+5 374 M
 (      \(audit-append source migration-entry\)) s
-5 176 M
+5 363 M
 (      \(audit-append target migration-entry\)\)\)\)) s
-5 165 M
-(`) s
-5 143 M
+5 341 M
 (------------------------------------------------------------------------------) s
-5 121 M
+5 319 M
 (Capability Migration) s
-5 99 M
+5 297 M
 (Certificate Transfer) s
-5 77 M
-(`scheme) s
-5 66 M
+5 275 M
 (\(define \(migrate-capabilities source target\)) s
-5 55 M
+5 264 M
 (  "Migrate SPKI certificates") s
-5 44 M
+5 253 M
 (  \(let \(\(certs \(soup-query source type: 'certificate\)\)\)) s
-5 33 M
+5 242 M
 (    \(for-each \(lambda \(cert\)) s
-5 22 M
+5 231 M
 (                ;; Certificates are content-addressed, transfer directly) s
-5 11 M
+5 220 M
 (                \(let \(\(hash \(cert-hash cert\)\)\)) s
+5 209 M
+(                  \(migrate-object hash source target\)\)\)) s
+5 198 M
+(              certs\)\)\)) s
+5 176 M
+(Key Migration) s
+5 154 M
+(;; Private keys require special handling) s
+5 143 M
+(\(define \(migrate-vault-keys source target ceremony-witnesses\)) s
+5 132 M
+(  "Migrate vault keys via key ceremony") s
+5 121 M
+(  ;; Never transfer private keys directly!) s
+5 110 M
+(  ;; Use threshold re-sharing or key ceremony) s
+5 99 M
+(  \(let* \(\(old-shares \(gather-key-shares source\)\)) s
+5 88 M
+(         \(new-key \(generate-new-key target\)\)) s
+5 77 M
+(         \(transition-cert \(create-key-transition-cert) s
+5 66 M
+(                           old-key: \(vault-public-key source\)) s
+5 55 M
+(                           new-key: new-key) s
+5 44 M
+(                           witnesses: ceremony-witnesses\)\)\)) s
+5 33 M
+(    ;; Sign transition with old key) s
+5 22 M
+(    \(sign-transition old-shares transition-cert\)) s
+5 11 M
+(    ;; Record in both vaults) s
 _R
 S
 %%Page: (4) 4
@@ -812,123 +808,115 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(                  \(migrate-object hash source target\)\)\)) s
-5 770 M
-(              certs\)\)\)) s
-5 759 M
-(`) s
-5 737 M
-(Key Migration) s
-5 715 M
-(`scheme) s
-5 704 M
-(;; Private keys require special handling) s
-5 693 M
-(\(define \(migrate-vault-keys source target ceremony-witnesses\)) s
-5 682 M
-(  "Migrate vault keys via key ceremony") s
-5 671 M
-(  ;; Never transfer private keys directly!) s
-5 660 M
-(  ;; Use threshold re-sharing or key ceremony) s
-5 649 M
-(  \(let* \(\(old-shares \(gather-key-shares source\)\)) s
-5 638 M
-(         \(new-key \(generate-new-key target\)\)) s
-5 627 M
-(         \(transition-cert \(create-key-transition-cert) s
-5 616 M
-(                           old-key: \(vault-public-key source\)) s
-5 605 M
-(                           new-key: new-key) s
-5 594 M
-(                           witnesses: ceremony-witnesses\)\)\)) s
-5 583 M
-(    ;; Sign transition with old key) s
-5 572 M
-(    \(sign-transition old-shares transition-cert\)) s
-5 561 M
-(    ;; Record in both vaults) s
-5 550 M
 (    \(audit-append source action: `\(key-transition ,transition-cert\)\)) s
-5 539 M
+5 770 M
 (    \(audit-append target action: `\(key-transition ,transition-cert\)\)\)\)) s
-5 528 M
-(`) s
-5 506 M
+5 748 M
 (Delegation Chain Continuity) s
-5 484 M
-(`scheme) s
-5 473 M
+5 726 M
 (\(define \(verify-delegation-chains target\)) s
-5 462 M
+5 715 M
 (  "Verify all delegation chains remain valid after migration") s
-5 451 M
+5 704 M
 (  \(let \(\(certs \(soup-query target type: 'certificate\)\)\)) s
-5 440 M
+5 693 M
 (    \(for-each \(lambda \(cert\)) s
-5 429 M
+5 682 M
 (                \(let \(\(chain \(build-chain cert\)\)\)) s
-5 418 M
+5 671 M
 (                  \(unless \(valid-chain? chain\)) s
-5 407 M
+5 660 M
 (                    \(warn "Broken delegation chain" cert\)\)\)\)) s
-5 396 M
+5 649 M
 (              certs\)\)\)) s
-5 385 M
-(`) s
-5 363 M
+5 627 M
 (------------------------------------------------------------------------------) s
-5 341 M
+5 605 M
 (Verification) s
-5 319 M
+5 583 M
 (Content Verification) s
-5 297 M
-(`scheme) s
-5 286 M
+5 561 M
 (\(define \(verify-migration source target\)) s
-5 275 M
+5 550 M
 (  "Verify all content transferred correctly") s
-5 264 M
+5 539 M
 (  \(let \(\(source-hashes \(vault-all-hashes source\)\)) s
-5 253 M
+5 528 M
 (        \(target-hashes \(vault-all-hashes target\)\)\)) s
-5 231 M
+5 506 M
 (    ;; Check completeness) s
-5 220 M
+5 495 M
 (    \(let \(\(missing \(set-difference source-hashes target-hashes\)\)\)) s
-5 209 M
+5 484 M
 (      \(unless \(null? missing\)) s
-5 198 M
+5 473 M
 (        \(error "Missing objects after migration" missing\)\)\)) s
-5 176 M
+5 451 M
 (    ;; Check integrity \(sample verification for large vaults\)) s
-5 165 M
+5 440 M
 (    \(let \(\(sample \(random-sample source-hashes 1000\)\)\)) s
-5 154 M
+5 429 M
 (      \(for-each \(lambda \(hash\)) s
-5 143 M
+5 418 M
 (                  \(unless \(equal? \(cas-get source hash\)) s
-5 132 M
+5 407 M
 (                                  \(cas-get target hash\)\)) s
-5 121 M
+5 396 M
 (                    \(error "Content mismatch" hash\)\)\)) s
-5 110 M
+5 385 M
 (                sample\)\)) s
-5 88 M
+5 363 M
 (    ;; Check soup metadata) s
-5 77 M
+5 352 M
 (    \(for-each \(lambda \(hash\)) s
-5 66 M
+5 341 M
 (                \(unless \(equal? \(soup-get source hash\)) s
-5 55 M
+5 330 M
 (                                \(soup-get target hash\)\)) s
-5 44 M
+5 319 M
 (                  \(error "Soup mismatch" hash\)\)\)) s
-5 33 M
+5 308 M
 (              \(random-sample source-hashes 1000\)\)\)\)) s
-5 22 M
-(`) s
+5 286 M
+(Merkle Verification) s
+5 264 M
+(\(define \(merkle-verify-migration source target\)) s
+5 253 M
+(  "Verify migration via Merkle root comparison") s
+5 242 M
+(  \(let \(\(source-root \(vault-merkle-root source\)\)) s
+5 231 M
+(        \(target-root \(vault-merkle-root target\)\)\)) s
+5 220 M
+(    \(unless \(equal? source-root target-root\)) s
+5 209 M
+(      ;; Find divergence) s
+5 198 M
+(      \(let \(\(divergence \(find-merkle-divergence source target\)\)\)) s
+5 187 M
+(        \(error "Merkle verification failed" divergence\)\)\)\)\)) s
+5 165 M
+(Audit Verification) s
+5 143 M
+(\(define \(verify-audit-continuity source target\)) s
+5 132 M
+(  "Verify audit trail continuity") s
+5 121 M
+(  \(let \(\(source-audit \(audit-export source\)\)) s
+5 110 M
+(        \(target-audit \(audit-export target\)\)\)) s
+5 99 M
+(    ;; Target should have all source entries plus migration events) s
+5 88 M
+(    \(unless \(subsequence? source-audit target-audit\)) s
+5 77 M
+(      \(error "Audit trail discontinuity"\)\)\)\)) s
+5 55 M
+(------------------------------------------------------------------------------) s
+5 33 M
+(Cutover) s
+5 11 M
+(Atomic Cutover) s
 _R
 S
 %%Page: (5) 5
@@ -942,120 +930,118 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(Merkle Verification) s
-5 759 M
-(`scheme) s
-5 748 M
-(\(define \(merkle-verify-migration source target\)) s
-5 737 M
-(  "Verify migration via Merkle root comparison") s
-5 726 M
-(  \(let \(\(source-root \(vault-merkle-root source\)\)) s
-5 715 M
-(        \(target-root \(vault-merkle-root target\)\)\)) s
-5 704 M
-(    \(unless \(equal? source-root target-root\)) s
-5 693 M
-(      ;; Find divergence) s
-5 682 M
-(      \(let \(\(divergence \(find-merkle-divergence source target\)\)\)) s
-5 671 M
-(        \(error "Merkle verification failed" divergence\)\)\)\)\)) s
-5 660 M
-(`) s
-5 638 M
-(Audit Verification) s
-5 616 M
-(`scheme) s
-5 605 M
-(\(define \(verify-audit-continuity source target\)) s
-5 594 M
-(  "Verify audit trail continuity") s
-5 583 M
-(  \(let \(\(source-audit \(audit-export source\)\)) s
-5 572 M
-(        \(target-audit \(audit-export target\)\)\)) s
-5 561 M
-(    ;; Target should have all source entries plus migration events) s
-5 550 M
-(    \(unless \(subsequence? source-audit target-audit\)) s
-5 539 M
-(      \(error "Audit trail discontinuity"\)\)\)\)) s
-5 528 M
-(`) s
-5 506 M
-(------------------------------------------------------------------------------) s
-5 484 M
-(Cutover) s
-5 462 M
-(Atomic Cutover) s
-5 440 M
-(`scheme) s
-5 429 M
+5 770 M
 (\(define \(atomic-cutover source target migration-id\)) s
-5 418 M
+5 759 M
 (  "Atomically switch from source to target") s
-5 407 M
+5 748 M
 (  ;; Phase 1: Quiesce source) s
-5 396 M
+5 737 M
 (  \(vault-readonly! source\)) s
-5 374 M
+5 715 M
 (  ;; Phase 2: Final sync) s
-5 363 M
+5 704 M
 (  \(let \(\(final-changes \(changes-since source \(last-sync-point\)\)\)\)) s
-5 352 M
+5 693 M
 (    \(sync-changes final-changes target\)\)) s
-5 330 M
+5 671 M
 (  ;; Phase 3: Verify) s
-5 319 M
+5 660 M
 (  \(verify-migration source target\)) s
-5 297 M
+5 638 M
 (  ;; Phase 4: Update DNS/routing) s
-5 286 M
+5 627 M
 (  \(update-vault-routing source target\)) s
-5 264 M
+5 605 M
 (  ;; Phase 5: Activate target) s
-5 253 M
+5 594 M
 (  \(vault-activate! target\)) s
-5 231 M
+5 572 M
 (  ;; Phase 6: Record completion) s
-5 220 M
+5 561 M
 (  \(audit-append target action: `\(migration-complete ,migration-id\)\)\)) s
-5 209 M
-(`) s
-5 187 M
+5 539 M
 (Rollback) s
-5 165 M
-(`scheme) s
-5 154 M
+5 517 M
 (\(define \(migration-rollback migration-id\)) s
-5 143 M
+5 506 M
 (  "Rollback failed migration") s
-5 132 M
+5 495 M
 (  \(let \(\(migration \(get-migration migration-id\)\)\)) s
-5 121 M
+5 484 M
 (    \(case \(migration-phase migration\)) s
-5 110 M
+5 473 M
 (      \(\(transfer\)) s
-5 99 M
+5 462 M
 (       ;; Just abandon target) s
-5 88 M
+5 451 M
 (       \(vault-delete! \(migration-target migration\)\)\)) s
-5 77 M
+5 440 M
 (      \(\(cutover\)) s
-5 66 M
+5 429 M
 (       ;; Restore routing to source) s
-5 55 M
+5 418 M
 (       \(update-vault-routing \(migration-target migration\)) s
-5 44 M
+5 407 M
 (                             \(migration-source migration\)\)) s
-5 33 M
+5 396 M
 (       \(vault-readonly! \(migration-target migration\)\)) s
-5 22 M
+5 385 M
 (       \(vault-activate! \(migration-source migration\)\)\)) s
-5 11 M
+5 374 M
 (      \(\(complete\)) s
+5 363 M
+(       \(error "Cannot rollback completed migration"\)\)\)\)\)) s
+5 341 M
+(------------------------------------------------------------------------------) s
+5 319 M
+(Incremental Migration) s
+5 297 M
+(Checkpoint System) s
+5 275 M
+(\(define \(migration-checkpoint migration-id progress\)) s
+5 264 M
+(  "Save migration progress for resumption") s
+5 253 M
+(  \(let \(\(checkpoint) s
+5 242 M
+(         `\(checkpoint) s
+5 231 M
+(           \(migration-id ,migration-id\)) s
+5 220 M
+(           \(timestamp ,\(current-time\)\)) s
+5 209 M
+(           \(transferred ,\(progress-transferred progress\)\)) s
+5 198 M
+(           \(remaining ,\(progress-remaining progress\)\)) s
+5 187 M
+(           \(last-hash ,\(progress-last-hash progress\)\)\)\)\)) s
+5 176 M
+(    \(cas-put \(serialize checkpoint\)\)\)\)) s
+5 154 M
+(\(define \(resume-migration migration-id\)) s
+5 143 M
+(  "Resume interrupted migration") s
+5 132 M
+(  \(let \(\(checkpoint \(latest-checkpoint migration-id\)\)\)) s
+5 121 M
+(    \(if checkpoint) s
+5 110 M
+(        \(continue-from-checkpoint checkpoint\)) s
+5 99 M
+(        \(error "No checkpoint found" migration-id\)\)\)\)) s
+5 77 M
+(Change Tracking) s
+5 55 M
+(;; Track changes during migration) s
+5 44 M
+(\(define \(changes-since vault timestamp\)) s
+5 33 M
+(  "Get all changes since timestamp") s
+5 22 M
+(  \(soup-query vault) s
+5 11 M
+(              modified: \(> timestamp\)) s
 _R
 S
 %%Page: (6) 6
@@ -1070,121 +1056,113 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(       \(error "Cannot rollback completed migration"\)\)\)\)\)) s
-5 770 M
-(`) s
-5 748 M
-(------------------------------------------------------------------------------) s
-5 726 M
-(Incremental Migration) s
-5 704 M
-(Checkpoint System) s
-5 682 M
-(`scheme) s
-5 671 M
-(\(define \(migration-checkpoint migration-id progress\)) s
-5 660 M
-(  "Save migration progress for resumption") s
-5 649 M
-(  \(let \(\(checkpoint) s
-5 638 M
-(         `\(checkpoint) s
-5 627 M
-(           \(migration-id ,migration-id\)) s
-5 616 M
-(           \(timestamp ,\(current-time\)\)) s
-5 605 M
-(           \(transferred ,\(progress-transferred progress\)\)) s
-5 594 M
-(           \(remaining ,\(progress-remaining progress\)\)) s
-5 583 M
-(           \(last-hash ,\(progress-last-hash progress\)\)\)\)\)) s
-5 572 M
-(    \(cas-put \(serialize checkpoint\)\)\)\)) s
-5 550 M
-(\(define \(resume-migration migration-id\)) s
-5 539 M
-(  "Resume interrupted migration") s
-5 528 M
-(  \(let \(\(checkpoint \(latest-checkpoint migration-id\)\)\)) s
-5 517 M
-(    \(if checkpoint) s
-5 506 M
-(        \(continue-from-checkpoint checkpoint\)) s
-5 495 M
-(        \(error "No checkpoint found" migration-id\)\)\)\)) s
-5 484 M
-(`) s
-5 462 M
-(Change Tracking) s
-5 440 M
-(`scheme) s
-5 429 M
-(;; Track changes during migration) s
-5 418 M
-(\(define \(changes-since vault timestamp\)) s
-5 407 M
-(  "Get all changes since timestamp") s
-5 396 M
-(  \(soup-query vault) s
-5 385 M
-(              modified: \(> timestamp\)) s
-5 374 M
 (              order-by: '\(\(modified asc\)\)\)\)) s
-5 352 M
+5 759 M
 (\(define \(sync-changes changes target\)) s
-5 341 M
+5 748 M
 (  "Apply changes to target") s
-5 330 M
+5 737 M
 (  \(for-each \(lambda \(change\)) s
-5 319 M
+5 726 M
 (              \(case \(change-type change\)) s
-5 308 M
+5 715 M
 (                \(\(create modify\)) s
-5 297 M
+5 704 M
 (                 \(migrate-object \(change-hash change\) target\)\)) s
-5 286 M
+5 693 M
 (                \(\(delete\)) s
-5 275 M
+5 682 M
 (                 \(cas-delete target \(change-hash change\)\)\)\)\)) s
-5 264 M
+5 671 M
 (            changes\)\)) s
-5 253 M
-(`) s
-5 231 M
+5 649 M
 (------------------------------------------------------------------------------) s
-5 209 M
+5 627 M
 (Storage Backend Migration) s
-5 187 M
+5 605 M
 (Backend Abstraction) s
-5 165 M
-(`scheme) s
-5 154 M
+5 583 M
 (;; Migrate between storage backends) s
-5 143 M
+5 572 M
 (\(define \(backend-migration vault old-backend new-backend\)) s
-5 132 M
+5 561 M
 (  "Migrate vault to different storage backend") s
-5 121 M
+5 550 M
 (  \(for-each \(lambda \(hash\)) s
-5 110 M
+5 539 M
 (              \(let \(\(data \(backend-get old-backend hash\)\)\)) s
-5 99 M
+5 528 M
 (                \(backend-put new-backend hash data\)) s
-5 88 M
+5 517 M
 (                \(verify-backend-transfer hash old-backend new-backend\)\)\)) s
-5 77 M
+5 506 M
 (            \(backend-all-hashes old-backend\)\)\)) s
-5 55 M
+5 484 M
 (;; Example: S3 to local filesystem) s
-5 44 M
+5 473 M
 (\(define \(s3-to-local vault bucket path\)) s
-5 33 M
+5 462 M
 (  \(backend-migration vault) s
-5 22 M
+5 451 M
 (                     \(make-s3-backend bucket\)) s
-5 11 M
+5 440 M
 (                     \(make-fs-backend path\)\)\)) s
+5 418 M
+(Format Conversion) s
+5 396 M
+(;; Migrate between storage formats) s
+5 385 M
+(\(define \(format-migration vault old-format new-format\)) s
+5 374 M
+(  "Convert storage format during migration") s
+5 363 M
+(  \(for-each \(lambda \(hash\)) s
+5 352 M
+(              \(let* \(\(old-data \(read-format old-format hash\)\)) s
+5 341 M
+(                     \(new-data \(convert-format old-data new-format\)\)\)) s
+5 330 M
+(                \(write-format new-format hash new-data\)\)\)) s
+5 319 M
+(            \(vault-all-hashes vault\)\)\)) s
+5 297 M
+(------------------------------------------------------------------------------) s
+5 275 M
+(Federation Migration) s
+5 253 M
+(Vault Federation Changes) s
+5 231 M
+(\(define \(federation-migrate vault old-federation new-federation\)) s
+5 220 M
+(  "Migrate vault between federations") s
+5 209 M
+(  ;; Leave old federation) s
+5 198 M
+(  \(federation-leave old-federation vault\)) s
+5 176 M
+(  ;; Update vault metadata) s
+5 165 M
+(  \(vault-set-federation! vault new-federation\)) s
+5 143 M
+(  ;; Join new federation) s
+5 132 M
+(  \(federation-join new-federation vault\)) s
+5 110 M
+(  ;; Announce to peers) s
+5 99 M
+(  \(federation-announce new-federation vault\)\)) s
+5 77 M
+(Cross-Federation Transfer) s
+5 55 M
+(\(define \(cross-federation-transfer hash source-fed target-fed\)) s
+5 44 M
+(  "Transfer object between federations") s
+5 33 M
+(  \(let* \(\(source-vault \(federation-locate source-fed hash\)\)) s
+5 22 M
+(         \(target-vault \(federation-select target-fed\)\)) s
+5 11 M
+(         \(obj \(vault-get source-vault hash\)\)\)) s
 _R
 S
 %%Page: (7) 7
@@ -1199,207 +1177,112 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(`) s
-5 759 M
-(Format Conversion) s
-5 737 M
-(`scheme) s
-5 726 M
-(;; Migrate between storage formats) s
-5 715 M
-(\(define \(format-migration vault old-format new-format\)) s
-5 704 M
-(  "Convert storage format during migration") s
-5 693 M
-(  \(for-each \(lambda \(hash\)) s
-5 682 M
-(              \(let* \(\(old-data \(read-format old-format hash\)\)) s
-5 671 M
-(                     \(new-data \(convert-format old-data new-format\)\)\)) s
-5 660 M
-(                \(write-format new-format hash new-data\)\)\)) s
-5 649 M
-(            \(vault-all-hashes vault\)\)\)) s
-5 638 M
-(`) s
-5 616 M
-(------------------------------------------------------------------------------) s
-5 594 M
-(Federation Migration) s
-5 572 M
-(Vault Federation Changes) s
-5 550 M
-(`scheme) s
-5 539 M
-(\(define \(federation-migrate vault old-federation new-federation\)) s
-5 528 M
-(  "Migrate vault between federations") s
-5 517 M
-(  ;; Leave old federation) s
-5 506 M
-(  \(federation-leave old-federation vault\)) s
-5 484 M
-(  ;; Update vault metadata) s
-5 473 M
-(  \(vault-set-federation! vault new-federation\)) s
-5 451 M
-(  ;; Join new federation) s
-5 440 M
-(  \(federation-join new-federation vault\)) s
-5 418 M
-(  ;; Announce to peers) s
-5 407 M
-(  \(federation-announce new-federation vault\)\)) s
-5 396 M
-(`) s
-5 374 M
-(Cross-Federation Transfer) s
-5 352 M
-(`scheme) s
-5 341 M
-(\(define \(cross-federation-transfer hash source-fed target-fed\)) s
-5 330 M
-(  "Transfer object between federations") s
-5 319 M
-(  \(let* \(\(source-vault \(federation-locate source-fed hash\)\)) s
-5 308 M
-(         \(target-vault \(federation-select target-fed\)\)) s
-5 297 M
-(         \(obj \(vault-get source-vault hash\)\)\)) s
-5 286 M
 (    \(vault-put target-vault obj\)) s
-5 275 M
+5 770 M
 (    \(federation-announce target-fed hash target-vault\)\)\)) s
+5 748 M
+(------------------------------------------------------------------------------) s
+5 726 M
+(Security Considerations) s
+5 704 M
+(Migration Authorization) s
+5 682 M
+(;; Migration requires appropriate capability) s
+5 671 M
+(\(spki-cert) s
+5 660 M
+(  \(issuer vault-admin\)) s
+5 649 M
+(  \(subject migration-operator\)) s
+5 638 M
+(  \(capability) s
+5 627 M
+(    \(action migrate\)) s
+5 616 M
+(    \(object vault-id\)\)) s
+5 605 M
+(  \(validity \(not-after "2026-02-01"\)\)\)) s
+5 583 M
+(\(define \(authorized-migration? operator source target\)) s
+5 572 M
+(  \(and \(has-capability? operator 'migrate source\)) s
+5 561 M
+(       \(has-capability? operator 'write target\)\)\)) s
+5 539 M
+(Encryption in Transit) s
+5 517 M
+(\(define \(secure-transfer source target\)) s
+5 506 M
+(  "Transfer with encryption") s
+5 495 M
+(  \(let \(\(session-key \(establish-session-key source target\)\)\)) s
+5 484 M
+(    \(for-each \(lambda \(hash\)) s
+5 473 M
+(                \(let* \(\(data \(cas-get source hash\)\)) s
+5 462 M
+(                       \(encrypted \(encrypt session-key data\)\)\)) s
+5 451 M
+(                  \(send-encrypted target encrypted\)\)\)) s
+5 440 M
+(              \(vault-all-hashes source\)\)\)\)) s
+5 418 M
+(Migration Audit) s
+5 396 M
+(;; All migrations are fully audited) s
+5 385 M
+(\(define \(audited-migration source target\)) s
+5 374 M
+(  \(let \(\(migration-id \(generate-migration-id\)\)\)) s
+5 363 M
+(    \(audit-append action: 'migration-authorized) s
+5 352 M
+(                  migration-id: migration-id) s
+5 341 M
+(                  operator: \(current-principal\)) s
+5 330 M
+(                  source: source) s
+5 319 M
+(                  target: target\)) s
+5 308 M
+(    ;; ... perform migration ...) s
+5 297 M
+(    \(audit-append action: 'migration-complete) s
+5 286 M
+(                  migration-id: migration-id) s
+5 275 M
+(                  objects: \(count-migrated\)) s
 5 264 M
-(`) s
+(                  verification: \(verification-result\)\)\)\)) s
 5 242 M
 (------------------------------------------------------------------------------) s
 5 220 M
-(Security Considerations) s
-5 198 M
-(Migration Authorization) s
-5 176 M
-(`scheme) s
-5 165 M
-(;; Migration requires appropriate capability) s
-5 154 M
-(\(spki-cert) s
-5 143 M
-(  \(issuer vault-admin\)) s
-5 132 M
-(  \(subject migration-operator\)) s
-5 121 M
-(  \(capability) s
-5 110 M
-(    \(action migrate\)) s
-5 99 M
-(    \(object vault-id\)\)) s
-5 88 M
-(  \(validity \(not-after "2026-02-01"\)\)\)) s
-5 66 M
-(\(define \(authorized-migration? operator source target\)) s
-5 55 M
-(  \(and \(has-capability? operator 'migrate source\)) s
-5 44 M
-(       \(has-capability? operator 'write target\)\)\)) s
-5 33 M
-(`) s
-5 11 M
-(Encryption in Transit) s
-_R
-S
-%%Page: (8) 8
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 8 def
-/fname (rfc-027-vault-migration.txt) def
-/fdir (.) def
-/ftail (rfc-027-vault-migration.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 770 M
-(`scheme) s
-5 759 M
-(\(define \(secure-transfer source target\)) s
-5 748 M
-(  "Transfer with encryption") s
-5 737 M
-(  \(let \(\(session-key \(establish-session-key source target\)\)\)) s
-5 726 M
-(    \(for-each \(lambda \(hash\)) s
-5 715 M
-(                \(let* \(\(data \(cas-get source hash\)\)) s
-5 704 M
-(                       \(encrypted \(encrypt session-key data\)\)\)) s
-5 693 M
-(                  \(send-encrypted target encrypted\)\)\)) s
-5 682 M
-(              \(vault-all-hashes source\)\)\)\)) s
-5 671 M
-(`) s
-5 649 M
-(Migration Audit) s
-5 627 M
-(`scheme) s
-5 616 M
-(;; All migrations are fully audited) s
-5 605 M
-(\(define \(audited-migration source target\)) s
-5 594 M
-(  \(let \(\(migration-id \(generate-migration-id\)\)\)) s
-5 583 M
-(    \(audit-append action: 'migration-authorized) s
-5 572 M
-(                  migration-id: migration-id) s
-5 561 M
-(                  operator: \(current-principal\)) s
-5 550 M
-(                  source: source) s
-5 539 M
-(                  target: target\)) s
-5 528 M
-(    ;; ... perform migration ...) s
-5 517 M
-(    \(audit-append action: 'migration-complete) s
-5 506 M
-(                  migration-id: migration-id) s
-5 495 M
-(                  objects: \(count-migrated\)) s
-5 484 M
-(                  verification: \(verification-result\)\)\)\)) s
-5 473 M
-(`) s
-5 451 M
-(------------------------------------------------------------------------------) s
-5 429 M
 (References) s
-5 407 M
+5 198 M
 (1. Live Migration of Virtual Machines - Clark et al.) s
-5 396 M
+5 187 M
 (2. RFC-018: Sealed Archive Format) s
-5 385 M
+5 176 M
 (3. RFC-022: Key Ceremony Protocol) s
-5 374 M
+5 165 M
 (4. RFC-024: Network Protocol) s
-5 352 M
+5 143 M
 (------------------------------------------------------------------------------) s
-5 330 M
+5 121 M
 (Changelog) s
-5 308 M
+5 99 M
 (- 2026-01-07 - Initial draft) s
-5 286 M
+5 77 M
 (------------------------------------------------------------------------------) s
-5 264 M
+5 55 M
 (Implementation Status: Draft) s
-5 253 M
+5 44 M
 (Dependencies: vault, cas, soup, federation) s
-5 242 M
+5 33 M
 (Integration: Vault operations, federation, disaster recovery) s
 _R
 S
 %%Trailer
-%%Pages: 8
+%%Pages: 7
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

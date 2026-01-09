@@ -38,7 +38,6 @@ Specification
 
 Share Record
 
-`scheme
 (define-record-type <shamir-share>
   (make-shamir-share id threshold x y)
   shamir-share?
@@ -46,13 +45,10 @@ Share Record
   (threshold share-threshold)  ; K value
   (x share-x)              ; X-coordinate (1 to N)
   (y share-y))             ; Y-coordinate (blob, same size as secret)
-`
 
 Splitting a Secret
 
-`scheme
 (shamir-split secret #!key (threshold 3) (total 5))
-`
 
 Parameters:
 - secret - Blob to split (any size, typically 32 or 64 bytes)
@@ -71,9 +67,7 @@ Algorithm:
 
 Reconstructing a Secret
 
-`scheme
 (shamir-reconstruct shares)
-`
 
 Parameters:
 - shares - List of at least K shamir-share records
@@ -93,7 +87,6 @@ Galois Field Arithmetic
 
 Operations performed in GF(2⁸) with irreducible polynomial x⁸ + x⁴ + x³ + x + 1:
 
-`scheme
 (define gf256-primitive #x11b)  ; x^8 + x^4 + x^3 + x + 1
 
 (define (gf256-mul a b)
@@ -107,7 +100,6 @@ Operations performed in GF(2⁸) with irreducible polynomial x⁸ + x⁴ + x³ +
 (define (gf256-poly-eval coeffs x)
   "Evaluate polynomial at x using Horner's method"
   ...)
-`
 
 GF(2⁸) ensures:
 - All operations stay within byte range
@@ -120,7 +112,6 @@ Usage Examples
 
 Basic Secret Splitting
 
-`scheme
 (import crypto-ffi)
 
 (sodium-init)
@@ -135,11 +126,9 @@ Basic Secret Splitting
 ;; Distribute shares to custodians
 (print "Created " (length shares) " shares")
 (print "Threshold: " (share-threshold (car shares)))
-`
 
 Reconstruction from K Shares
 
-`scheme
 ;; Collect any 3 shares
 (define collected (list share-1 share-3 share-5))
 
@@ -150,11 +139,9 @@ Reconstruction from K Shares
 (if (equal? (blob->hex secret) (blob->hex reconstructed))
     (print "✓ Reconstruction successful!")
     (print "✗ Reconstruction failed"))
-`
 
 Ed25519 Key Backup
 
-`scheme
 ;; Generate keypair
 (define keypair (ed25519-keypair))
 (define public-key (car keypair))
@@ -174,7 +161,6 @@ Ed25519 Key Backup
 (if valid?
     (print "✓ Recovered key produces valid signatures!")
     (print "✗ Key recovery failed"))
-`
 
 ------------------------------------------------------------------------------
 
@@ -228,23 +214,19 @@ Share Distribution
 
 Physical Security
 
-`
 Share 1: Safe deposit box (Bank A)
 Share 2: Home safe
 Share 3: Attorney's vault
 Share 4: Trusted family member
 Share 5: Offshore location
-`
 
 Digital Storage
 
-`
 Share 1: Hardware security module
 Share 2: Air-gapped laptop
 Share 3: Encrypted USB (passphrase protected)
 Share 4: Paper printout (secure location)
 Share 5: Tattoo (not recommended)
-`
 
 Geographic Distribution
 
@@ -258,13 +240,11 @@ Verification Without Reconstruction
 
 For periodic verification that shares are intact:
 
-`scheme
 ;; Each custodian verifies their share
 (define (verify-share share expected-id expected-threshold)
   (and (eq? (share-id share) expected-id)
        (= (share-threshold share) expected-threshold)
        (= (blob-size (share-y share)) expected-length)))
-`
 
 Full reconstruction should be rare:
 - Key rotation ceremonies
@@ -278,16 +258,12 @@ Integration with Threshold Signatures
 Two complementary approaches:
 
 Shamir for Key Backup (This RFC)
-`
 Private key → split → N shares
 Recovery: K shares → reconstruct → use key
-`
 
 Multi-Signature for Governance (RFC-007)
-`
 N parties → N keys → N signatures
 Verification: count valid ≥ K
-`
 
 Use Shamir when:
 - Backing up existing keys

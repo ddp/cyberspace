@@ -39,7 +39,6 @@ Principals
 
 A principal is anything that can hold authority:
 
-`scheme
 ;; Key principal - most common
 (make-principal
   (type key)
@@ -63,13 +62,11 @@ A principal is anything that can hold authority:
   (type name)
   (issuer parent-key)
   (name "alice"))
-`
 
 Capabilities
 
 A capability is a transferable right to perform an action:
 
-`scheme
 (capability
   (action read)
   (object (hash sha256 "content-hash...")))
@@ -85,13 +82,11 @@ A capability is a transferable right to perform an action:
 (capability
   (action delegate)
   (object (capability ...)))  ; Meta-capability
-`
 
 Certificates
 
 SPKI certificates bind capabilities to principals:
 
-`scheme
 (spki-cert
   (issuer vault-master-key)
   (subject alice-key)
@@ -102,7 +97,6 @@ SPKI certificates bind capabilities to principals:
     (not-before "2026-01-01")
     (not-after "2027-01-01"))
   (delegation #t))  ; Alice can re-delegate
-`
 
 ------------------------------------------------------------------------------
 
@@ -112,22 +106,19 @@ Chain Structure
 
 Authority flows through certificate chains:
 
-`
 Master Key
-    │
-    ▼ (cert: full access to vault)
+    |
+    v (cert: full access to vault)
 Admin Key
-    │
-    ▼ (cert: read/write to docs/, can delegate)
+    |
+    v (cert: read/write to docs/, can delegate)
 Developer Key
-    │
-    ▼ (cert: read-only to docs/public/, cannot delegate)
+    |
+    v (cert: read-only to docs/public/, cannot delegate)
 Contractor Key
-`
 
 Chain Validation
 
-`scheme
 (define (validate-chain chain target-capability)
   "Validate delegation chain grants capability"
   (let loop ((certs chain)
@@ -144,13 +135,11 @@ Chain Validation
                    (and (null? (cdr certs))
                         (capability-subset? target-capability
                                            (cert-capability cert)))))))))
-`
 
 Monotonic Attenuation
 
 Delegated capabilities can only decrease:
 
-`scheme
 ;; Alice has read/write to entire vault
 (spki-cert
   (issuer master)
@@ -178,7 +167,6 @@ Delegated capabilities can only decrease:
   (subject carol)
   (capability (action read) (object docs-subtree))
   (delegation #f))
-`
 
 ------------------------------------------------------------------------------
 
@@ -188,7 +176,6 @@ Pattern 1: Direct Delegation
 
 Simplest form - one hop:
 
-`scheme
 (define (delegate-direct issuer-key subject-key capability
                          #!key validity can-delegate)
   (sign-cert issuer-key
@@ -198,13 +185,11 @@ Simplest form - one hop:
       (capability ,capability)
       (validity ,validity)
       (delegation ,can-delegate))))
-`
 
 Pattern 2: Role-Based Delegation
 
 Delegate to roles, bind keys to roles:
 
-`scheme
 ;; Define role
 (spki-cert
   (issuer vault-admin)
@@ -220,13 +205,11 @@ Delegate to roles, bind keys to roles:
   (validity (not-after "2026-06-01")))
 
 ;; Alice now has reviewer capability via role binding
-`
 
 Pattern 3: Threshold Delegation
 
 Require multiple parties:
 
-`scheme
 ;; Critical operation requires 3-of-5
 (spki-cert
   (issuer root-key)
@@ -240,13 +223,11 @@ Require multiple parties:
     (if (>= (length signatures) 3)
         (execute-capability capability signatures)
         (error "Insufficient signatures"))))
-`
 
 Pattern 4: Time-Bounded Delegation
 
 Temporary access:
 
-`scheme
 ;; Conference access - 3 days only
 (spki-cert
   (issuer organizer-key)
@@ -256,13 +237,11 @@ Temporary access:
     (not-before "2026-03-15T09:00:00Z")
     (not-after "2026-03-17T18:00:00Z"))
   (delegation #f))
-`
 
 Pattern 5: Conditional Delegation
 
 Capability with restrictions:
 
-`scheme
 ;; Can read, but only from specific IP range
 (spki-cert
   (issuer admin-key)
@@ -280,13 +259,11 @@ Capability with restrictions:
   (condition
     (max-size 1048576))
   (delegation #f))
-`
 
 Pattern 6: Proxy Delegation
 
 Delegate through intermediary:
 
-`scheme
 ;; Alice delegates to proxy service
 (spki-cert
   (issuer alice-key)
@@ -297,7 +274,6 @@ Delegate through intermediary:
 
 ;; Proxy can act on Alice's behalf
 ;; but chain shows Alice as original authority
-`
 
 ------------------------------------------------------------------------------
 
@@ -307,7 +283,6 @@ Hash as Capability
 
 Knowledge of a content hash is itself a capability (RFC-020):
 
-`scheme
 ;; Possessing this hash grants read access
 (define secret-doc-hash "sha256:7f83b1657ff1fc...")
 
@@ -315,13 +290,11 @@ Knowledge of a content hash is itself a capability (RFC-020):
 ;; Sharing the hash = sharing the capability
 (define (share-capability recipient hash)
   (encrypted-send recipient hash))
-`
 
 Capability Certificates for Hashes
 
 Formalize hash-based access:
 
-`scheme
 (spki-cert
   (issuer vault-key)
   (subject reader-key)
@@ -329,13 +302,11 @@ Formalize hash-based access:
     (action read)
     (object (hash sha256 "specific-doc...")))
   (validity (not-after "2027-01-01")))
-`
 
 Tree Capabilities
 
 Grant access to Merkle subtree:
 
-`scheme
 (spki-cert
   (issuer vault-key)
   (subject team-key)
@@ -344,13 +315,11 @@ Grant access to Merkle subtree:
     (object (tree sha256 "project-root..."))
     (propagate #t))  ; Includes all referenced objects
   (delegation #t))
-`
 
 Sealed Capabilities
 
 Encrypt capability for specific recipient:
 
-`scheme
 (define (seal-capability cap recipient-pubkey)
   "Encrypt capability so only recipient can use it"
   (let* ((serialized (serialize cap))
@@ -363,7 +332,6 @@ Encrypt capability for specific recipient:
          (decrypted (age-decrypt encrypted identity))
          (cap (deserialize decrypted)))
     cap))
-`
 
 ------------------------------------------------------------------------------
 
@@ -371,7 +339,6 @@ Revocation
 
 Revocation Lists
 
-`scheme
 (spki-crl
   (issuer vault-admin)
   (revoked
@@ -381,36 +348,30 @@ Revocation Lists
     ((cert-hash "sha256:revoked2...")
      (reason superseded)
      (revoked-at 1767700100))))
-`
 
 Online Revocation Check
 
-`scheme
 (define (check-revocation cert)
   "Check if certificate is revoked"
   (let* ((cert-hash (sha256 (serialize cert)))
          (issuer (cert-issuer cert))
          (crl (fetch-crl issuer)))
     (not (member cert-hash (crl-revoked-hashes crl)))))
-`
 
 Tombstone Revocation
 
 Using CAS tombstones (RFC-020):
 
-`scheme
 (define (revoke-capability-tombstone cert-hash reason)
   "Revoke by tombstoning the certificate"
   (cas-tombstone cert-hash
     reason: reason
     actor: (current-principal)))
-`
 
 Short-Lived Certificates
 
 Avoid revocation by using short validity:
 
-`scheme
 ;; 1-hour certificate, no revocation needed
 (spki-cert
   (issuer service-key)
@@ -420,7 +381,6 @@ Avoid revocation by using short validity:
     (not-before ,(current-time))
     (not-after ,(+ (current-time) 3600)))
   (delegation #f))
-`
 
 ------------------------------------------------------------------------------
 
@@ -430,7 +390,6 @@ Certificates in the Soup
 
 All certificates are soup objects:
 
-`scheme
 (soup-object
   (name "cert/alice-read-docs")
   (type certificate)
@@ -440,11 +399,9 @@ All certificates are soup objects:
   (subject "alice")
   (capability "read docs/*")
   (expires "2027-01-01"))
-`
 
 Querying Capabilities
 
-`scheme
 ;; Find all certificates for a subject
 (soup-query type: 'certificate subject: alice-key)
 
@@ -457,11 +414,9 @@ Querying Capabilities
 
 ;; Find certificates from specific issuer
 (soup-query type: 'certificate issuer: vault-admin)
-`
 
 Capability Introspection
 
-`scheme
 ;; What can Alice do?
 (define (principal-capabilities principal)
   (let ((certs (soup-query type: 'certificate subject: principal)))
@@ -480,7 +435,6 @@ Capability Introspection
            (cons (cert-subject cert)
                  (delegation-graph (cert-subject cert))))
          certs)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -488,16 +442,13 @@ Authorization Decisions
 
 Simple Check
 
-`scheme
 (define (authorized? principal action object)
   "Check if principal can perform action on object"
   (let ((chains (find-authorization-chains principal action object)))
     (any valid-chain? chains)))
-`
 
 Chain Discovery
 
-`scheme
 (define (find-authorization-chains principal action object)
   "Find all certificate chains granting capability"
   (let ((target-cap (capability action object)))
@@ -511,11 +462,9 @@ Chain Discovery
                     (search (cert-issuer cert) (cons cert chain))
                     '())))
           certs)))))
-`
 
 Cached Authorization
 
-`scheme
 (define auth-cache (make-lru-cache 10000))
 
 (define (authorized?/cached principal action object)
@@ -524,7 +473,6 @@ Cached Authorization
         (let ((result (authorized? principal action object)))
           (lru-put! auth-cache key result)
           result))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -534,7 +482,6 @@ Key Ceremony
 
 For critical delegations:
 
-`scheme
 (define (key-ceremony capability threshold witnesses)
   "Conduct witnessed delegation ceremony"
   (let* ((ceremony-id (generate-ceremony-id))
@@ -558,11 +505,9 @@ For critical delegations:
           (begin
             (audit-append action: `(ceremony-failed ,ceremony-id))
             (error "Insufficient witnesses"))))))
-`
 
 Emergency Revocation
 
-`scheme
 (define (emergency-revoke cert-hash reason)
   "Emergency revocation with audit trail"
   (let ((revocation
@@ -586,7 +531,6 @@ Emergency Revocation
 
     ;; Notify affected parties
     (notify-revocation cert-hash)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -594,7 +538,6 @@ Security Considerations
 
 Capability Leakage
 
-`scheme
 ;; Capabilities can leak through:
 ;; 1. Logging - don't log capability tokens
 ;; 2. URLs - don't put capabilities in query strings
@@ -602,21 +545,17 @@ Capability Leakage
 
 (define (safe-log message capability)
   (log (string-append message " [capability:REDACTED]")))
-`
 
 Confused Deputy
 
-`scheme
 ;; Always verify capability matches intended action
 (define (execute-action action object capability)
   (unless (capability-grants? capability action object)
     (error "Capability does not grant this action"))
   (perform-action action object))
-`
 
 Time-of-Check vs Time-of-Use
 
-`scheme
 ;; Validate immediately before use, not before
 (define (safe-execute capability action)
   (let ((validated (validate-capability capability)))
@@ -625,18 +564,15 @@ Time-of-Check vs Time-of-Use
       (unless validated
         (error "Invalid capability"))
       (perform-action action))))
-`
 
 Delegation Depth Limits
 
-`scheme
 ;; Prevent infinite delegation chains
 (define max-delegation-depth 10)
 
 (define (validate-chain-depth chain)
   (when (> (length chain) max-delegation-depth)
     (error "Delegation chain too deep")))
-`
 
 ------------------------------------------------------------------------------
 
@@ -644,7 +580,6 @@ Implementation Notes
 
 Certificate Storage
 
-`scheme
 ;; Certificates stored in CAS
 (define (store-cert cert)
   (let ((signed (sign-cert cert)))
@@ -653,7 +588,6 @@ Certificate Storage
 ;; Indexed by issuer and subject for fast lookup
 (define cert-by-issuer (make-hash-table))
 (define cert-by-subject (make-hash-table))
-`
 
 Performance
 

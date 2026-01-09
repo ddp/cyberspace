@@ -42,28 +42,26 @@ Specification
 
 Trusted Computing Base
 
-`
-┌─────────────────────────────────────────────────────────────┐
-│                    CYBERSPACE TCB                           │
-│                                                             │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│   │   Ed25519   │  │   SHA-512   │  │   Verify    │        │
-│   │   Proven    │  │   Proven    │  │   Proven    │        │
-│   └──────┬──────┘  └──────┬──────┘  └──────┬──────┘        │
-│          │                │                │                │
-│          └────────────────┼────────────────┘                │
-│                           │                                 │
-│                    Coq Extraction                           │
-│                           │                                 │
-│                    ┌──────▼──────┐                          │
-│                    │    OCaml    │                          │
-│                    │   ~1000 LOC │                          │
-│                    └─────────────┘                          │
-│                                                             │
-│   Proven in Coq. Extracted to OCaml. Called from Scheme.   │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-`
++-------------------------------------------------------------+
+|                    CYBERSPACE TCB                           |
+|                                                             |
+|   +-------------+  +-------------+  +-------------+        |
+|   |   Ed25519   |  |   SHA-512   |  |   Verify    |        |
+|   |   Proven    |  |   Proven    |  |   Proven    |        |
+|   +------+------+  +------+------+  +------+------+        |
+|          |                |                |                |
+|          +----------------+----------------+                |
+|                           |                                 |
+|                    Coq Extraction                           |
+|                           |                                 |
+|                    +------v------+                          |
+|                    |    OCaml    |                          |
+|                    |   ~1000 LOC |                          |
+|                    +-------------+                          |
+|                                                             |
+|   Proven in Coq. Extracted to OCaml. Called from Scheme.   |
+|                                                             |
++-------------------------------------------------------------+
 
 ------------------------------------------------------------------------------
 
@@ -71,7 +69,6 @@ Coq Specifications
 
 Types
 
-`coq
 ( Byte arrays )
 Definition bytes := list byte.
 
@@ -97,11 +94,9 @@ Record sha512_hash := {
   hash_bytes : bytes;
   hashlength : length hashbytes = 64
 }.
-`
 
 Signature Specification
 
-`coq
 ( Abstract signature scheme )
 Module Type ED25519_SPEC.
   Parameter sign : ed25519privatekey -> bytes -> ed25519_signature.
@@ -119,11 +114,9 @@ Module Type ED25519_SPEC.
       verify pk msg sig = true ->
       exists sk, pk = derive_public sk /\ sig = sign sk msg.
 End ED25519_SPEC.
-`
 
 Hash Specification
 
-`coq
 Module Type SHA512_SPEC.
   Parameter hash : bytes -> sha512_hash.
 
@@ -135,11 +128,9 @@ Module Type SHA512_SPEC.
   Axiom collision_resistant :
     forall x y, hash x = hash y -> x = y. ( Idealized )
 End SHA512_SPEC.
-`
 
 Chain Verification
 
-`coq
 ( Certificate chain verification )
 Fixpoint verify_chain
   (root : ed25519publickey)
@@ -173,7 +164,6 @@ Proof.
   ( Proof by induction on chain length )
   ...
 Qed.
-`
 
 ------------------------------------------------------------------------------
 
@@ -181,7 +171,6 @@ Extraction to OCaml
 
 Extraction Directives
 
-`coq
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
 
@@ -196,11 +185,9 @@ Extract Constant sha512_hash => "Sodium.SHA512.hash".
 
 ( Generate OCaml )
 Extraction "tcb.ml" verify_chain sign verify hash.
-`
 
 Generated OCaml
 
-`ocaml
 ( tcb.ml - Extracted from Coq )
 
 let rec verifychain root certs targettag =
@@ -215,7 +202,6 @@ let rec verifychain root certs targettag =
       (match rest with
        | [] -> true
        |  -> verifychain subjectkey rest targettag)
-`
 
 ------------------------------------------------------------------------------
 
@@ -223,18 +209,15 @@ Integration with Scheme
 
 FFI Layer
 
-`ocaml
 ( tcb_ffi.ml - FFI bindings for Chicken Scheme )
 
 let () = Callback.register "tcbverifychain" verify_chain
 let () = Callback.register "tcb_sign" sign
 let () = Callback.register "tcb_verify" verify
 let () = Callback.register "tcb_hash" hash
-`
 
 Scheme Bindings
 
-`scheme
 ;; crypto-ffi.scm
 (module crypto-ffi
   (ed25519-sign ed25519-verify sha512-hash verify-chain)
@@ -251,7 +234,6 @@ Scheme Bindings
       "return tcbverifychain(root, certs, tag);"))
 
   ...)
-`
 
 ------------------------------------------------------------------------------
 
@@ -273,7 +255,6 @@ What We Assume
 
 Trust Chain
 
-`
 Mathematical proof (Coq)
     ↓
 Extraction (verified by Coq)
@@ -283,7 +264,6 @@ OCaml code (typed, memory-safe)
 libsodium (audited, widely deployed)
     ↓
 CPU instructions (trust hardware)
-`
 
 ------------------------------------------------------------------------------
 
@@ -291,40 +271,30 @@ Development Workflow
 
 1. Specify in Coq
 
-`coq
 ( Define types and operations )
 ( State properties and theorems )
-`
 
 2. Prove Correctness
 
-`coq
 ( Prove theorems )
 ( Coq checks proofs mechanically )
-`
 
 3. Extract to OCaml
 
-`bash
 $ coqc -R . Cyberspace tcb.v
 $ coqc -R . Cyberspace extract.v
 $ ls *.ml
 tcb.ml tcb_types.ml
-`
 
 4. Compile and Link
 
-`bash
 $ ocamlfind ocamlopt -package sodium -linkpkg \
     tcb.ml tcb_ffi.ml -o tcb.cmxa
-`
 
 5. Call from Scheme
 
-`scheme
 (import crypto-ffi)
 (ed25519-sign key message)  ; Calls verified code
-`
 
 ------------------------------------------------------------------------------
 
@@ -344,10 +314,8 @@ HACL*
 
 Potential Use
 
-`coq
 Require Import Fiat.Crypto.Ed25519.
 ( Use pre-verified Ed25519 implementation )
-`
 
 ------------------------------------------------------------------------------
 
@@ -367,11 +335,9 @@ Unverified (Trusted)
 
 Audit Surface
 
-`
 Total TCB:     ~1000 lines OCaml
 Verified:      ~800 lines (extracted from ~2000 lines Coq)
 Trusted:       ~200 lines (FFI, bindings)
-`
 
 ------------------------------------------------------------------------------
 

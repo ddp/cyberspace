@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:50 2026
+%%CreationDate: Fri Jan  9 12:12:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -509,27 +509,27 @@ _S
 5 187 M
 (Paillier Properties) s
 5 165 M
-(`scheme) s
-5 154 M
 (;; Additive homomorphism) s
-5 143 M
+5 154 M
 (\(= \(decrypt \(he-add \(encrypt a\) \(encrypt b\)\)\)) s
-5 132 M
+5 143 M
 (   \(+ a b\)\)) s
-5 110 M
+5 121 M
 (;; Scalar multiplication via repeated addition) s
-5 99 M
+5 110 M
 (\(= \(decrypt \(he-scalar-mult \(encrypt a\) k\)\)) s
-5 88 M
+5 99 M
 (   \(* a k\)\)) s
-5 66 M
+5 77 M
 (;; Semantic security - ciphertexts indistinguishable) s
-5 55 M
+5 66 M
 (\(not \(distinguishable? \(encrypt 0\) \(encrypt 1\)\)\)) s
 5 44 M
-(`) s
-5 22 M
 (Key Generation) s
+5 22 M
+(\(define-record-type <quorum-keys>) s
+5 11 M
+(  \(make-quorum-keys public private threshold shares\)) s
 _R
 S
 %%Page: (2) 2
@@ -544,125 +544,121 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(`scheme) s
-5 770 M
-(\(define-record-type <quorum-keys>) s
-5 759 M
-(  \(make-quorum-keys public private threshold shares\)) s
-5 748 M
 (  quorum-keys?) s
-5 737 M
+5 770 M
 (  \(public qk-public\)           ; Public encryption key) s
-5 726 M
+5 759 M
 (  \(private qk-private\)         ; Private decryption key \(or #f if distributed\)) s
-5 715 M
+5 748 M
 (  \(threshold qk-threshold\)     ; M-of-N threshold) s
-5 704 M
+5 737 M
 (  \(shares qk-shares\)\)          ; Distributed key shares) s
-5 682 M
+5 715 M
 (\(define \(generate-quorum-keys bit-length threshold trustees\)) s
-5 671 M
+5 704 M
 (  "Generate threshold Paillier keys") s
-5 660 M
+5 693 M
 (  \(let* \(\(keys \(paillier-keygen bit-length\)\)) s
-5 649 M
+5 682 M
 (         \(shares \(shamir-split \(paillier-private keys\)) s
-5 638 M
+5 671 M
 (                               threshold) s
-5 627 M
+5 660 M
 (                               \(length trustees\)\)\)\)) s
-5 616 M
+5 649 M
 (    \(make-quorum-keys) s
-5 605 M
+5 638 M
 (      \(paillier-public keys\)) s
-5 594 M
+5 627 M
 (      #f  ; No single party holds private key) s
-5 583 M
+5 616 M
 (      threshold) s
-5 572 M
+5 605 M
 (      \(map cons trustees shares\)\)\)\)) s
-5 561 M
-(`) s
-5 539 M
+5 583 M
 (------------------------------------------------------------------------------) s
-5 517 M
+5 561 M
 (Ballot Structure) s
-5 495 M
+5 539 M
 (Ballot Definition) s
-5 473 M
-(`scheme) s
-5 462 M
+5 517 M
 (\(define-record-type <ballot>) s
-5 451 M
+5 506 M
 (  \(make-ballot id question options threshold deadline\)) s
-5 440 M
+5 495 M
 (  ballot?) s
-5 429 M
+5 484 M
 (  \(id ballot-id\)                 ; Content hash) s
-5 418 M
+5 473 M
 (  \(question ballot-question\)     ; Human-readable question) s
-5 407 M
+5 462 M
 (  \(options ballot-options\)       ; List of choices) s
-5 396 M
+5 451 M
 (  \(threshold ballot-threshold\)   ; Votes needed to pass) s
-5 385 M
+5 440 M
 (  \(deadline ballot-deadline\)\)    ; Voting closes) s
-5 363 M
+5 418 M
 (;; Example ballot) s
-5 352 M
+5 407 M
 (\(make-ballot) s
-5 341 M
+5 396 M
 (  id: "sha256:ballot...") s
-5 330 M
+5 385 M
 (  question: "Accept RFC-042 into standard?") s
-5 319 M
+5 374 M
 (  options: '\(accept reject abstain\)) s
-5 308 M
+5 363 M
 (  threshold: '\(majority members\)  ; >50% of members) s
-5 297 M
+5 352 M
 (  deadline: 1767786000\)) s
-5 286 M
-(`) s
-5 264 M
+5 330 M
 (Encrypted Vote) s
-5 242 M
-(`scheme) s
-5 231 M
+5 308 M
 (\(define-record-type <encrypted-vote>) s
-5 220 M
+5 297 M
 (  \(make-encrypted-vote ballot-id voter ciphertext proof timestamp signature\)) s
-5 209 M
+5 286 M
 (  encrypted-vote?) s
-5 198 M
+5 275 M
 (  \(ballot-id vote-ballot-id\)     ; Which ballot) s
-5 187 M
+5 264 M
 (  \(voter vote-voter\)             ; Voter's public key \(or anonymous token\)) s
-5 176 M
+5 253 M
 (  \(ciphertext vote-ciphertext\)   ; HE-encrypted choice) s
-5 165 M
+5 242 M
 (  \(proof vote-proof\)             ; Zero-knowledge proof of validity) s
-5 154 M
+5 231 M
 (  \(timestamp vote-timestamp\)) s
-5 143 M
+5 220 M
 (  \(signature vote-signature\)\)) s
-5 132 M
-(`) s
-5 110 M
+5 198 M
 (Vote Encoding) s
-5 88 M
-(`scheme) s
-5 77 M
+5 176 M
 (;; One-hot encoding for multiple choices) s
-5 66 M
+5 165 M
 (;; accept=1, reject=0, abstain=0 \342\\206\\222 \(1, 0, 0\)) s
-5 44 M
+5 143 M
 (\(define \(encode-vote choice options\)) s
-5 33 M
+5 132 M
 (  "Encode choice as one-hot vector") s
-5 22 M
+5 121 M
 (  \(map \(lambda \(opt\)) s
-5 11 M
+5 110 M
 (         \(if \(eq? opt choice\) 1 0\)\)) s
+5 99 M
+(       options\)\)) s
+5 77 M
+(\(define \(encrypt-vote choice options public-key\)) s
+5 66 M
+(  "Encrypt one-hot encoded vote") s
+5 55 M
+(  \(map \(lambda \(v\)) s
+5 44 M
+(         \(paillier-encrypt public-key v\)\)) s
+5 33 M
+(       \(encode-vote choice options\)\)\)) s
+5 11 M
+(;; Vote for "accept") s
 _R
 S
 %%Page: (3) 3
@@ -677,129 +673,131 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(       options\)\)) s
-5 759 M
-(\(define \(encrypt-vote choice options public-key\)) s
-5 748 M
-(  "Encrypt one-hot encoded vote") s
-5 737 M
-(  \(map \(lambda \(v\)) s
-5 726 M
-(         \(paillier-encrypt public-key v\)\)) s
-5 715 M
-(       \(encode-vote choice options\)\)\)) s
-5 693 M
-(;; Vote for "accept") s
-5 682 M
 (\(encrypt-vote 'accept '\(accept reject abstain\) pub-key\)) s
-5 671 M
+5 770 M
 (;; => \(Enc\(1\), Enc\(0\), Enc\(0\)\)) s
-5 660 M
-(`) s
-5 638 M
+5 748 M
 (------------------------------------------------------------------------------) s
-5 616 M
+5 726 M
 (Voting Protocol) s
-5 594 M
+5 704 M
 (Phase 1: Ballot Creation) s
-5 572 M
-(`scheme) s
-5 561 M
+5 682 M
 (\(define \(create-ballot question options threshold deadline trustees\)) s
-5 550 M
+5 671 M
 (  "Create new ballot with threshold decryption") s
-5 539 M
+5 660 M
 (  \(let* \(\(keys \(generate-quorum-keys 2048) s
-5 528 M
+5 649 M
 (                                     \(ceiling \(/ \(length trustees\) 2\)\)) s
-5 517 M
+5 638 M
 (                                     trustees\)\)) s
-5 506 M
+5 627 M
 (         \(ballot \(make-ballot) s
-5 495 M
+5 616 M
 (                   question: question) s
-5 484 M
+5 605 M
 (                   options: options) s
-5 473 M
+5 594 M
 (                   threshold: threshold) s
-5 462 M
+5 583 M
 (                   deadline: deadline\)\)\)) s
-5 451 M
+5 572 M
 (    ;; Distribute key shares to trustees) s
-5 440 M
+5 561 M
 (    \(for-each \(lambda \(trustee share\)) s
-5 429 M
+5 550 M
 (                \(secure-send trustee) s
-5 418 M
+5 539 M
 (                  `\(key-share) s
-5 407 M
+5 528 M
 (                    \(ballot-id ,\(ballot-id ballot\)\)) s
-5 396 M
+5 517 M
 (                    \(share ,share\)\)\)\)) s
-5 385 M
+5 506 M
 (              trustees) s
-5 374 M
+5 495 M
 (              \(qk-shares keys\)\)) s
-5 363 M
+5 484 M
 (    ;; Publish ballot) s
-5 352 M
+5 473 M
 (    \(soup-put ballot type: 'ballot\)) s
-5 341 M
+5 462 M
 (    \(audit-append action: 'ballot-created) s
-5 330 M
+5 451 M
 (                  ballot: \(ballot-id ballot\)\)) s
-5 319 M
+5 440 M
 (    ballot\)\)) s
-5 308 M
-(`) s
-5 286 M
+5 418 M
 (Phase 2: Vote Casting) s
-5 264 M
-(`scheme) s
-5 253 M
+5 396 M
 (\(define \(cast-vote ballot choice voter-key\)) s
-5 242 M
+5 385 M
 (  "Cast encrypted vote with validity proof") s
-5 231 M
+5 374 M
 (  \(let* \(\(pub-key \(ballot-public-key ballot\)\)) s
-5 220 M
+5 363 M
 (         \(encrypted \(encrypt-vote choice \(ballot-options ballot\) pub-key\)\)) s
-5 209 M
+5 352 M
 (         \(proof \(generate-validity-proof encrypted choice pub-key\)\)) s
-5 198 M
+5 341 M
 (         \(vote \(make-encrypted-vote) s
-5 187 M
+5 330 M
 (                 ballot-id: \(ballot-id ballot\)) s
-5 176 M
+5 319 M
 (                 voter: \(key->principal voter-key\)) s
-5 165 M
+5 308 M
 (                 ciphertext: encrypted) s
-5 154 M
+5 297 M
 (                 proof: proof) s
-5 143 M
+5 286 M
 (                 timestamp: \(current-time\)\)\)\)) s
-5 132 M
+5 275 M
 (    ;; Sign the vote) s
-5 121 M
+5 264 M
 (    \(set-encrypted-vote-signature! vote) s
-5 110 M
+5 253 M
 (      \(sign-vote voter-key vote\)\)) s
-5 99 M
+5 242 M
 (    ;; Submit) s
-5 88 M
+5 231 M
 (    \(submit-vote vote\)) s
-5 77 M
+5 220 M
 (    vote\)\)) s
-5 55 M
+5 198 M
 (\(define \(submit-vote vote\)) s
-5 44 M
+5 187 M
 (  "Submit vote to ballot coordinator") s
-5 33 M
+5 176 M
 (  ;; Verify eligibility) s
-5 22 M
+5 165 M
 (  \(unless \(eligible-voter? \(vote-voter vote\) \(vote-ballot-id vote\)\)) s
-5 11 M
+5 154 M
 (    \(error 'not-eligible\)\)) s
+5 143 M
+(  ;; Verify validity proof) s
+5 132 M
+(  \(unless \(verify-validity-proof vote\)) s
+5 121 M
+(    \(error 'invalid-vote-proof\)\)) s
+5 110 M
+(  ;; Verify not already voted) s
+5 99 M
+(  \(when \(already-voted? \(vote-voter vote\) \(vote-ballot-id vote\)\)) s
+5 88 M
+(    \(error 'already-voted\)\)) s
+5 77 M
+(  ;; Record vote) s
+5 66 M
+(  \(soup-put vote type: 'encrypted-vote\)) s
+5 55 M
+(  \(audit-append action: 'vote-cast) s
+5 44 M
+(                ballot: \(vote-ballot-id vote\)) s
+5 33 M
+(                voter: \(vote-voter vote\)\)\)) s
+5 11 M
+(Phase 3: Homomorphic Tallying) s
 _R
 S
 %%Page: (4) 4
@@ -813,136 +811,134 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(  ;; Verify validity proof) s
 5 770 M
-(  \(unless \(verify-validity-proof vote\)) s
-5 759 M
-(    \(error 'invalid-vote-proof\)\)) s
-5 748 M
-(  ;; Verify not already voted) s
-5 737 M
-(  \(when \(already-voted? \(vote-voter vote\) \(vote-ballot-id vote\)\)) s
-5 726 M
-(    \(error 'already-voted\)\)) s
-5 715 M
-(  ;; Record vote) s
-5 704 M
-(  \(soup-put vote type: 'encrypted-vote\)) s
-5 693 M
-(  \(audit-append action: 'vote-cast) s
-5 682 M
-(                ballot: \(vote-ballot-id vote\)) s
-5 671 M
-(                voter: \(vote-voter vote\)\)\)) s
-5 660 M
-(`) s
-5 638 M
-(Phase 3: Homomorphic Tallying) s
-5 616 M
-(`scheme) s
-5 605 M
 (\(define \(tally-votes ballot\)) s
-5 594 M
+5 759 M
 (  "Homomorphically sum all votes") s
-5 583 M
+5 748 M
 (  \(let* \(\(votes \(soup-query type: 'encrypted-vote) s
-5 572 M
+5 737 M
 (                            ballot-id: \(ballot-id ballot\)\)\)) s
-5 561 M
+5 726 M
 (         \(num-options \(length \(ballot-options ballot\)\)\)) s
-5 550 M
+5 715 M
 (         \(zero-tally \(make-list num-options \(paillier-encrypt-zero\)\)\)\)) s
-5 539 M
+5 704 M
 (    ;; Sum encrypted votes) s
-5 528 M
+5 693 M
 (    \(fold \(lambda \(vote tally\)) s
-5 517 M
+5 682 M
 (            \(map paillier-add) s
-5 506 M
+5 671 M
 (                 \(vote-ciphertext vote\)) s
-5 495 M
+5 660 M
 (                 tally\)\)) s
-5 484 M
+5 649 M
 (          zero-tally) s
-5 473 M
+5 638 M
 (          votes\)\)\)) s
-5 451 M
+5 616 M
 (;; After tallying 100 votes:) s
-5 440 M
+5 605 M
 (;; \(Enc\(47\), Enc\(41\), Enc\(12\)\)) s
-5 429 M
+5 594 M
 (;; Still encrypted - no one knows the result yet) s
-5 418 M
-(`) s
-5 396 M
+5 572 M
 (Phase 4: Threshold Decryption) s
-5 374 M
-(`scheme) s
-5 363 M
+5 550 M
 (\(define \(decrypt-tally ballot encrypted-tally\)) s
-5 352 M
+5 539 M
 (  "Threshold decrypt the tally") s
-5 341 M
+5 528 M
 (  \(let* \(\(trustees \(ballot-trustees ballot\)\)) s
-5 330 M
+5 517 M
 (         \(threshold \(ballot-key-threshold ballot\)\)) s
-5 319 M
+5 506 M
 (         \(shares '\(\)\)\)) s
-5 308 M
+5 495 M
 (    ;; Collect decryption shares) s
-5 297 M
+5 484 M
 (    \(for-each \(lambda \(trustee\)) s
-5 286 M
+5 473 M
 (                \(let \(\(share \(request-decryption-share trustee) s
-5 275 M
+5 462 M
 (                               \(ballot-id ballot\)) s
-5 264 M
+5 451 M
 (                               encrypted-tally\)\)\)) s
-5 253 M
+5 440 M
 (                  \(when share) s
-5 242 M
+5 429 M
 (                    \(set! shares \(cons share shares\)\)\)\)\)) s
-5 231 M
+5 418 M
 (              trustees\)) s
-5 220 M
+5 407 M
 (    ;; Need threshold shares) s
-5 209 M
+5 396 M
 (    \(unless \(>= \(length shares\) threshold\)) s
-5 198 M
+5 385 M
 (      \(error 'insufficient-decryption-shares\)\)) s
-5 187 M
+5 374 M
 (    ;; Combine shares to decrypt) s
-5 176 M
+5 363 M
 (    \(let \(\(plaintext-tally) s
-5 165 M
+5 352 M
 (           \(map \(lambda \(ct\)) s
-5 154 M
+5 341 M
 (                  \(threshold-decrypt ct shares\)\)) s
-5 143 M
+5 330 M
 (                encrypted-tally\)\)\)) s
-5 132 M
+5 319 M
 (      ;; Publish result) s
-5 121 M
+5 308 M
 (      \(publish-result ballot plaintext-tally\)) s
-5 110 M
+5 297 M
 (      plaintext-tally\)\)\)) s
-5 88 M
+5 275 M
 (\(define \(request-decryption-share trustee ballot-id encrypted-tally\)) s
-5 77 M
+5 264 M
 (  "Request trustee's decryption share") s
-5 66 M
+5 253 M
 (  \(let \(\(response \(tunnel trustee) s
-5 55 M
+5 242 M
 (                    `\(decryption-share-request) s
-5 44 M
+5 231 M
 (                      \(ballot-id ,ballot-id\)) s
-5 33 M
+5 220 M
 (                      \(tally ,encrypted-tally\)\)\)\)\)) s
-5 22 M
+5 209 M
 (    \(and \(valid-share? response\)) s
-5 11 M
+5 198 M
 (         response\)\)\)) s
+5 176 M
+(Phase 5: Result Publication) s
+5 154 M
+(\(define \(publish-result ballot tally\)) s
+5 143 M
+(  "Publish verified result") s
+5 132 M
+(  \(let* \(\(options \(ballot-options ballot\)\)) s
+5 121 M
+(         \(result \(map cons options tally\)\)) s
+5 110 M
+(         \(winner \(determine-winner result \(ballot-threshold ballot\)\)\)\)) s
+5 99 M
+(    \(soup-put) s
+5 88 M
+(      `\(ballot-result) s
+5 77 M
+(        \(ballot-id ,\(ballot-id ballot\)\)) s
+5 66 M
+(        \(tally ,result\)) s
+5 55 M
+(        \(winner ,winner\)) s
+5 44 M
+(        \(timestamp ,\(current-time\)\)) s
+5 33 M
+(        \(total-votes ,\(apply + tally\)\)\)) s
+5 22 M
+(      type: 'ballot-result\)) s
+5 11 M
+(    \(audit-append action: 'ballot-result) s
 _R
 S
 %%Page: (5) 5
@@ -957,123 +953,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(`) s
-5 759 M
-(Phase 5: Result Publication) s
-5 737 M
-(`scheme) s
-5 726 M
-(\(define \(publish-result ballot tally\)) s
-5 715 M
-(  "Publish verified result") s
-5 704 M
-(  \(let* \(\(options \(ballot-options ballot\)\)) s
-5 693 M
-(         \(result \(map cons options tally\)\)) s
-5 682 M
-(         \(winner \(determine-winner result \(ballot-threshold ballot\)\)\)\)) s
-5 671 M
-(    \(soup-put) s
-5 660 M
-(      `\(ballot-result) s
-5 649 M
-(        \(ballot-id ,\(ballot-id ballot\)\)) s
-5 638 M
-(        \(tally ,result\)) s
-5 627 M
-(        \(winner ,winner\)) s
-5 616 M
-(        \(timestamp ,\(current-time\)\)) s
-5 605 M
-(        \(total-votes ,\(apply + tally\)\)\)) s
-5 594 M
-(      type: 'ballot-result\)) s
-5 583 M
-(    \(audit-append action: 'ballot-result) s
-5 572 M
 (                  ballot: \(ballot-id ballot\)) s
-5 561 M
+5 770 M
 (                  result: result) s
-5 550 M
+5 759 M
 (                  winner: winner\)\)\)) s
-5 539 M
-(`) s
-5 517 M
+5 737 M
 (------------------------------------------------------------------------------) s
-5 495 M
+5 715 M
 (Zero-Knowledge Proofs) s
-5 473 M
+5 693 M
 (Vote Validity Proof) s
-5 451 M
+5 671 M
 (Prove vote is valid \(exactly one 1, rest 0s\) without revealing which:) s
-5 429 M
-(`scheme) s
-5 418 M
+5 649 M
 (\(define \(generate-validity-proof encrypted-vote choice public-key\)) s
-5 407 M
+5 638 M
 (  "ZK proof that vote encodes valid choice") s
-5 396 M
+5 627 M
 (  ;; Disjunctive proof: prove one of N possibilities) s
-5 385 M
+5 616 M
 (  ;; Without revealing which) s
-5 374 M
+5 605 M
 (  \(let \(\(n \(length encrypted-vote\)\)\)) s
-5 363 M
+5 594 M
 (    \(make-or-proof) s
-5 352 M
+5 583 M
 (      \(map \(lambda \(i\)) s
-5 341 M
+5 572 M
 (             \(if \(= i \(choice-index choice\)\)) s
-5 330 M
+5 561 M
 (                 ;; Real proof for actual choice) s
-5 319 M
+5 550 M
 (                 \(make-encryption-proof \(list-ref encrypted-vote i\) 1 public-key\)) s
-5 308 M
+5 539 M
 (                 ;; Simulated proof for other choices) s
-5 297 M
+5 528 M
 (                 \(simulate-encryption-proof \(list-ref encrypted-vote i\) 1 public-key\)\)\)) s
-5 286 M
+5 517 M
 (           \(iota n\)\)\)\)\)) s
-5 264 M
+5 495 M
 (\(define \(verify-validity-proof vote\)) s
-5 253 M
+5 484 M
 (  "Verify vote validity without learning choice") s
-5 242 M
+5 473 M
 (  \(let \(\(proof \(vote-proof vote\)\)) s
-5 231 M
+5 462 M
 (        \(ciphertext \(vote-ciphertext vote\)\)) s
-5 220 M
+5 451 M
 (        \(pub-key \(ballot-public-key \(vote-ballot-id vote\)\)\)\)) s
-5 209 M
+5 440 M
 (    ;; Verify OR proof) s
-5 198 M
+5 429 M
 (    \(and \(verify-or-proof proof ciphertext pub-key\)) s
-5 187 M
+5 418 M
 (         ;; Verify sum of encrypted values equals Enc\(1\)) s
-5 176 M
+5 407 M
 (         \(verify-sum-equals-one ciphertext pub-key\)\)\)\)) s
-5 165 M
-(`) s
-5 143 M
+5 385 M
 (Decryption Share Proof) s
-5 121 M
+5 363 M
 (Prove decryption share is correct:) s
-5 99 M
-(`scheme) s
-5 88 M
+5 341 M
 (\(define \(generate-share-proof share ciphertext trustee-key\)) s
-5 77 M
+5 330 M
 (  "ZK proof that decryption share is correct") s
-5 66 M
+5 319 M
 (  \(make-dlog-proof) s
-5 55 M
+5 308 M
 (    \(share-value share\)) s
-5 44 M
+5 297 M
 (    trustee-key) s
-5 33 M
+5 286 M
 (    ciphertext\)\)) s
-5 11 M
+5 264 M
 (\(define \(verify-share-proof share ciphertext trustee-pubkey\)) s
+5 253 M
+(  "Verify decryption share correctness") s
+5 242 M
+(  \(verify-dlog-proof) s
+5 231 M
+(    \(share-proof share\)) s
+5 220 M
+(    \(share-value share\)) s
+5 209 M
+(    trustee-pubkey) s
+5 198 M
+(    ciphertext\)\)) s
+5 176 M
+(------------------------------------------------------------------------------) s
+5 154 M
+(Voter Privacy) s
+5 132 M
+(Anonymous Voting Tokens) s
+5 110 M
+(\(define \(issue-voting-token voter-key ballot-id issuer-key\)) s
+5 99 M
+(  "Issue blind voting token") s
+5 88 M
+(  ;; Voter blinds their key) s
+5 77 M
+(  \(let* \(\(blinding-factor \(random-scalar\)\)) s
+5 66 M
+(         \(blinded-key \(blind-key voter-key blinding-factor\)\)\)) s
+5 55 M
+(    ;; Issuer signs blinded key) s
+5 44 M
+(    \(let \(\(blind-signature \(sign issuer-key blinded-key\)\)\)) s
+5 33 M
+(      ;; Voter unblinds signature) s
+5 22 M
+(      \(let \(\(token \(unblind-signature blind-signature blinding-factor\)\)\)) s
+5 11 M
+(        ;; Token proves eligibility without linking to voter) s
 _R
 S
 %%Page: (6) 6
@@ -1088,119 +1080,111 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  "Verify decryption share correctness") s
-5 770 M
-(  \(verify-dlog-proof) s
-5 759 M
-(    \(share-proof share\)) s
-5 748 M
-(    \(share-value share\)) s
-5 737 M
-(    trustee-pubkey) s
-5 726 M
-(    ciphertext\)\)) s
-5 715 M
-(`) s
-5 693 M
-(------------------------------------------------------------------------------) s
-5 671 M
-(Voter Privacy) s
-5 649 M
-(Anonymous Voting Tokens) s
-5 627 M
-(`scheme) s
-5 616 M
-(\(define \(issue-voting-token voter-key ballot-id issuer-key\)) s
-5 605 M
-(  "Issue blind voting token") s
-5 594 M
-(  ;; Voter blinds their key) s
-5 583 M
-(  \(let* \(\(blinding-factor \(random-scalar\)\)) s
-5 572 M
-(         \(blinded-key \(blind-key voter-key blinding-factor\)\)\)) s
-5 561 M
-(    ;; Issuer signs blinded key) s
-5 550 M
-(    \(let \(\(blind-signature \(sign issuer-key blinded-key\)\)\)) s
-5 539 M
-(      ;; Voter unblinds signature) s
-5 528 M
-(      \(let \(\(token \(unblind-signature blind-signature blinding-factor\)\)\)) s
-5 517 M
-(        ;; Token proves eligibility without linking to voter) s
-5 506 M
 (        \(make-voting-token) s
-5 495 M
+5 770 M
 (          ballot-id: ballot-id) s
-5 484 M
+5 759 M
 (          token: token) s
-5 473 M
+5 748 M
 (          ;; Cannot be linked to voter-key) s
-5 462 M
+5 737 M
 (          \)\)\)\)\)) s
-5 440 M
+5 715 M
 (\(define \(vote-anonymously ballot choice token\)) s
-5 429 M
+5 704 M
 (  "Cast vote using anonymous token") s
-5 418 M
+5 693 M
 (  \(let \(\(vote \(cast-vote ballot choice token\)\)\)) s
-5 407 M
+5 682 M
 (    ;; Vote linked to token, not voter identity) s
-5 396 M
+5 671 M
 (    vote\)\)) s
-5 385 M
-(`) s
-5 363 M
+5 649 M
 (Receipt-Freeness) s
-5 341 M
+5 627 M
 (Voters cannot prove how they voted \(prevents vote buying/coercion\):) s
-5 319 M
-(`scheme) s
-5 308 M
+5 605 M
 (;; Re-encryption mixnet for receipt-freeness) s
-5 297 M
+5 594 M
 (\(define \(submit-through-mixnet vote mixnet-nodes\)) s
-5 286 M
+5 583 M
 (  "Submit vote through re-encryption mixnet") s
-5 275 M
+5 572 M
 (  \(fold \(lambda \(node encrypted-vote\)) s
-5 264 M
+5 561 M
 (          ;; Each node re-encrypts) s
-5 253 M
+5 550 M
 (          \(let \(\(re-encrypted \(paillier-rerandomize encrypted-vote\)\)\)) s
-5 242 M
+5 539 M
 (            ;; Shuffle with other votes) s
-5 231 M
+5 528 M
 (            \(mixnet-shuffle node re-encrypted\)\)\)) s
-5 220 M
+5 517 M
 (        vote) s
-5 209 M
+5 506 M
 (        mixnet-nodes\)\)) s
-5 198 M
-(`) s
-5 176 M
+5 484 M
 (------------------------------------------------------------------------------) s
-5 154 M
+5 462 M
 (Quorum Types) s
-5 132 M
+5 440 M
 (Simple Majority) s
-5 110 M
-(`scheme) s
-5 99 M
+5 418 M
 (\(define \(simple-majority tally total-eligible\)) s
-5 88 M
+5 407 M
 (  "More than half of voters") s
-5 77 M
+5 396 M
 (  \(let \(\(total-votes \(apply + tally\)\)) s
-5 66 M
+5 385 M
 (        \(winning-votes \(apply max tally\)\)\)) s
-5 55 M
+5 374 M
 (    \(> winning-votes \(/ total-votes 2\)\)\)\)) s
-5 44 M
-(`) s
-5 22 M
+5 352 M
 (Supermajority) s
+5 330 M
+(\(define \(supermajority tally fraction\)) s
+5 319 M
+(  "Require fraction \(e.g., 2/3\) agreement") s
+5 308 M
+(  \(let \(\(total-votes \(apply + tally\)\)) s
+5 297 M
+(        \(winning-votes \(apply max tally\)\)\)) s
+5 286 M
+(    \(>= winning-votes \(* fraction total-votes\)\)\)\)) s
+5 264 M
+(Threshold of Eligible) s
+5 242 M
+(\(define \(threshold-of-eligible tally total-eligible threshold\)) s
+5 231 M
+(  "Require threshold of all eligible voters") s
+5 220 M
+(  \(let \(\(winning-votes \(apply max tally\)\)\)) s
+5 209 M
+(    \(>= winning-votes \(* threshold total-eligible\)\)\)\)) s
+5 187 M
+(Weighted Voting) s
+5 165 M
+(\(define \(weighted-vote voter-key weight choice ballot\)) s
+5 154 M
+(  "Cast vote with weight") s
+5 143 M
+(  ;; Encode weight in vote) s
+5 132 M
+(  \(let \(\(encoded \(map \(lambda \(v\) \(* v weight\)\)) s
+5 121 M
+(                      \(encode-vote choice \(ballot-options ballot\)\)\)\)\)) s
+5 110 M
+(    \(encrypt-vote-vector encoded \(ballot-public-key ballot\)\)\)\)) s
+5 88 M
+(------------------------------------------------------------------------------) s
+5 66 M
+(Integration with Governance) s
+5 44 M
+(RFC-007 Threshold Governance) s
+5 22 M
+(;; Quorum voting for threshold operations) s
+5 11 M
+(\(define \(threshold-operation-vote operation trustees\)) s
 _R
 S
 %%Page: (7) 7
@@ -1215,121 +1199,121 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(`scheme) s
-5 770 M
-(\(define \(supermajority tally fraction\)) s
-5 759 M
-(  "Require fraction \(e.g., 2/3\) agreement") s
-5 748 M
-(  \(let \(\(total-votes \(apply + tally\)\)) s
-5 737 M
-(        \(winning-votes \(apply max tally\)\)\)) s
-5 726 M
-(    \(>= winning-votes \(* fraction total-votes\)\)\)\)) s
-5 715 M
-(`) s
-5 693 M
-(Threshold of Eligible) s
-5 671 M
-(`scheme) s
-5 660 M
-(\(define \(threshold-of-eligible tally total-eligible threshold\)) s
-5 649 M
-(  "Require threshold of all eligible voters") s
-5 638 M
-(  \(let \(\(winning-votes \(apply max tally\)\)\)) s
-5 627 M
-(    \(>= winning-votes \(* threshold total-eligible\)\)\)\)) s
-5 616 M
-(`) s
-5 594 M
-(Weighted Voting) s
-5 572 M
-(`scheme) s
-5 561 M
-(\(define \(weighted-vote voter-key weight choice ballot\)) s
-5 550 M
-(  "Cast vote with weight") s
-5 539 M
-(  ;; Encode weight in vote) s
-5 528 M
-(  \(let \(\(encoded \(map \(lambda \(v\) \(* v weight\)\)) s
-5 517 M
-(                      \(encode-vote choice \(ballot-options ballot\)\)\)\)\)) s
-5 506 M
-(    \(encrypt-vote-vector encoded \(ballot-public-key ballot\)\)\)\)) s
-5 495 M
-(`) s
-5 473 M
-(------------------------------------------------------------------------------) s
-5 451 M
-(Integration with Governance) s
-5 429 M
-(RFC-007 Threshold Governance) s
-5 407 M
-(`scheme) s
-5 396 M
-(;; Quorum voting for threshold operations) s
-5 385 M
-(\(define \(threshold-operation-vote operation trustees\)) s
-5 374 M
 (  "Vote on threshold operation") s
-5 363 M
+5 770 M
 (  \(let \(\(ballot \(create-ballot) s
-5 352 M
+5 759 M
 (                  question: \(format "Approve ~a?" operation\)) s
-5 341 M
+5 748 M
 (                  options: '\(approve reject\)) s
-5 330 M
+5 737 M
 (                  threshold: '\(supermajority 2/3\)) s
-5 319 M
+5 726 M
 (                  deadline: \(+ \(current-time\) 86400\)) s
-5 308 M
+5 715 M
 (                  trustees: trustees\)\)\)) s
-5 297 M
+5 704 M
 (    ;; Wait for voting) s
-5 286 M
+5 693 M
 (    \(await-ballot-result ballot\)\)\)) s
-5 275 M
-(`) s
-5 253 M
+5 671 M
 (RFC-011 Byzantine Consensus) s
-5 231 M
-(`scheme) s
-5 220 M
+5 649 M
 (;; Use quorum voting within Byzantine protocol) s
-5 209 M
+5 638 M
 (\(define \(byzantine-propose-vote proposal validators\)) s
-5 198 M
+5 627 M
 (  "Propose via encrypted voting") s
-5 187 M
+5 616 M
 (  \(let \(\(ballot \(create-ballot) s
-5 176 M
+5 605 M
 (                  question: proposal) s
-5 165 M
+5 594 M
 (                  options: '\(commit abort\)) s
-5 154 M
+5 583 M
 (                  threshold: '\(byzantine-quorum \(length validators\)\)) s
-5 143 M
+5 572 M
 (                  trustees: validators\)\)\)) s
-5 132 M
+5 561 M
 (    ballot\)\)) s
-5 110 M
+5 539 M
 (\(define \(byzantine-quorum n\)) s
-5 99 M
+5 528 M
 (  "2f+1 for n=3f+1 validators") s
-5 88 M
+5 517 M
 (  \(+ \(* 2 \(floor \(/ \(- n 1\) 3\)\)\) 1\)\)) s
-5 77 M
-(`) s
-5 55 M
+5 495 M
 (Key Ceremony Voting) s
-5 33 M
-(`scheme) s
-5 22 M
+5 473 M
 (;; Vote to approve key ceremony) s
-5 11 M
+5 462 M
 (\(define \(key-ceremony-approval ceremony guardians\)) s
+5 451 M
+(  "Guardians vote to approve ceremony") s
+5 440 M
+(  \(let \(\(ballot \(create-ballot) s
+5 429 M
+(                  question: \(format "Approve key ceremony ~a?" \(ceremony-id ceremony\)\)) s
+5 418 M
+(                  options: '\(approve reject\)) s
+5 407 M
+(                  threshold: '\(unanimous\)) s
+5 396 M
+(                  deadline: \(+ \(current-time\) 3600\)) s
+5 385 M
+(                  trustees: guardians\)\)\)) s
+5 374 M
+(    \(let \(\(result \(await-ballot-result ballot\)\)\)) s
+5 363 M
+(      \(if \(eq? \(result-winner result\) 'approve\)) s
+5 352 M
+(          \(proceed-ceremony ceremony\)) s
+5 341 M
+(          \(abort-ceremony ceremony\)\)\)\)\)) s
+5 319 M
+(------------------------------------------------------------------------------) s
+5 297 M
+(Security Considerations) s
+5 275 M
+(Cryptographic Assumptions) s
+5 253 M
+(| Assumption | Primitive | Consequence if Broken |) s
+5 242 M
+(|------------|-----------|----------------------|) s
+5 231 M
+(| Decisional Composite Residuosity | Paillier | Vote privacy lost |) s
+5 220 M
+(| Discrete Log | ZK proofs | Validity unverifiable |) s
+5 209 M
+(| Random Oracle | Hash functions | Proof forgery |) s
+5 187 M
+(Attack Mitigations) s
+5 165 M
+(| Attack | Mitigation |) s
+5 154 M
+(|--------|------------|) s
+5 143 M
+(| Vote buying | Receipt-freeness via re-encryption |) s
+5 132 M
+(| Coercion | Deniable voting tokens |) s
+5 121 M
+(| Ballot stuffing | Eligibility proofs, audit trail |) s
+5 110 M
+(| Tally manipulation | Threshold decryption, ZK proofs |) s
+5 99 M
+(| Denial of service | Rate limiting, deadlines |) s
+5 77 M
+(Audit Trail) s
+5 55 M
+(;; All voting actions audited) s
+5 44 M
+(\(audit-append action: 'ballot-created ...\)) s
+5 33 M
+(\(audit-append action: 'vote-cast ...\)      ; Voter ID, not choice) s
+5 22 M
+(\(audit-append action: 'tally-computed ...\)) s
+5 11 M
+(\(audit-append action: 'share-provided ...\)) s
 _R
 S
 %%Page: (8) 8
@@ -1344,195 +1328,106 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  "Guardians vote to approve ceremony") s
-5 770 M
-(  \(let \(\(ballot \(create-ballot) s
-5 759 M
-(                  question: \(format "Approve key ceremony ~a?" \(ceremony-id ceremony\)\)) s
-5 748 M
-(                  options: '\(approve reject\)) s
-5 737 M
-(                  threshold: '\(unanimous\)) s
-5 726 M
-(                  deadline: \(+ \(current-time\) 3600\)) s
-5 715 M
-(                  trustees: guardians\)\)\)) s
-5 704 M
-(    \(let \(\(result \(await-ballot-result ballot\)\)\)) s
-5 693 M
-(      \(if \(eq? \(result-winner result\) 'approve\)) s
-5 682 M
-(          \(proceed-ceremony ceremony\)) s
-5 671 M
-(          \(abort-ceremony ceremony\)\)\)\)\)) s
-5 660 M
-(`) s
-5 638 M
-(------------------------------------------------------------------------------) s
-5 616 M
-(Security Considerations) s
-5 594 M
-(Cryptographic Assumptions) s
-5 572 M
-(| Assumption | Primitive | Consequence if Broken |) s
-5 561 M
-(|------------|-----------|----------------------|) s
-5 550 M
-(| Decisional Composite Residuosity | Paillier | Vote privacy lost |) s
-5 539 M
-(| Discrete Log | ZK proofs | Validity unverifiable |) s
-5 528 M
-(| Random Oracle | Hash functions | Proof forgery |) s
-5 506 M
-(Attack Mitigations) s
-5 484 M
-(| Attack | Mitigation |) s
-5 473 M
-(|--------|------------|) s
-5 462 M
-(| Vote buying | Receipt-freeness via re-encryption |) s
-5 451 M
-(| Coercion | Deniable voting tokens |) s
-5 440 M
-(| Ballot stuffing | Eligibility proofs, audit trail |) s
-5 429 M
-(| Tally manipulation | Threshold decryption, ZK proofs |) s
-5 418 M
-(| Denial of service | Rate limiting, deadlines |) s
-5 396 M
-(Audit Trail) s
-5 374 M
-(`scheme) s
-5 363 M
-(;; All voting actions audited) s
-5 352 M
-(\(audit-append action: 'ballot-created ...\)) s
-5 341 M
-(\(audit-append action: 'vote-cast ...\)      ; Voter ID, not choice) s
-5 330 M
-(\(audit-append action: 'tally-computed ...\)) s
-5 319 M
-(\(audit-append action: 'share-provided ...\)) s
-5 308 M
 (\(audit-append action: 'result-published ...\)) s
+5 759 M
+(------------------------------------------------------------------------------) s
+5 737 M
+(Performance Considerations) s
+5 715 M
+(Paillier Costs) s
+5 693 M
+(| Operation | Time \(2048-bit\) |) s
+5 682 M
+(|-----------|-----------------|) s
+5 671 M
+(| Key generation | ~100ms |) s
+5 660 M
+(| Encrypt | ~5ms |) s
+5 649 M
+(| Homomorphic add | ~0.1ms |) s
+5 638 M
+(| Decrypt | ~5ms |) s
+5 627 M
+(| Threshold decrypt | ~10ms per share |) s
+5 605 M
+(Scalability) s
+5 583 M
+(;; For N voters, M options:) s
+5 572 M
+(;; - Encryption: O\(N * M\) operations) s
+5 561 M
+(;; - Tallying: O\(N * M\) additions \(fast\)) s
+5 550 M
+(;; - Decryption: O\(M * threshold\) operations) s
+5 528 M
+(;; 10,000 voters, 3 options, 5 trustees:) s
+5 517 M
+(;; ~50,000 encryptions \(parallel\)) s
+5 506 M
+(;; ~30,000 additions \(<1 second\)) s
+5 495 M
+(;; ~15 decryptions \(~150ms\)) s
+5 473 M
+(------------------------------------------------------------------------------) s
+5 451 M
+(Implementation Notes) s
+5 429 M
+(Dependencies) s
+5 407 M
+(- paillier - Paillier cryptosystem) s
+5 396 M
+(- shamir - Secret sharing for threshold keys) s
+5 385 M
+(- zkp - Zero-knowledge proof primitives) s
+5 374 M
+(- srfi-27 - Random number generation) s
+5 352 M
+(Libraries) s
+5 330 M
+(Recommended implementations:) s
+5 319 M
+(- OpenFHE \(C++\) - Full HE library) s
+5 308 M
+(- python-paillier - Reference implementation) s
 5 297 M
-(`) s
+(- threshold-paillier - Distributed key generation) s
 5 275 M
 (------------------------------------------------------------------------------) s
 5 253 M
-(Performance Considerations) s
-5 231 M
-(Paillier Costs) s
-5 209 M
-(| Operation | Time \(2048-bit\) |) s
-5 198 M
-(|-----------|-----------------|) s
-5 187 M
-(| Key generation | ~100ms |) s
-5 176 M
-(| Encrypt | ~5ms |) s
-5 165 M
-(| Homomorphic add | ~0.1ms |) s
-5 154 M
-(| Decrypt | ~5ms |) s
-5 143 M
-(| Threshold decrypt | ~10ms per share |) s
-5 121 M
-(Scalability) s
-5 99 M
-(`scheme) s
-5 88 M
-(;; For N voters, M options:) s
-5 77 M
-(;; - Encryption: O\(N * M\) operations) s
-5 66 M
-(;; - Tallying: O\(N * M\) additions \(fast\)) s
-5 55 M
-(;; - Decryption: O\(M * threshold\) operations) s
-5 33 M
-(;; 10,000 voters, 3 options, 5 trustees:) s
-5 22 M
-(;; ~50,000 encryptions \(parallel\)) s
-5 11 M
-(;; ~30,000 additions \(<1 second\)) s
-_R
-S
-%%Page: (9) 9
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 9 def
-/fname (rfc-036-quorum-voting.txt) def
-/fdir (.) def
-/ftail (rfc-036-quorum-voting.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(;; ~15 decryptions \(~150ms\)) s
-5 770 M
-(`) s
-5 748 M
-(------------------------------------------------------------------------------) s
-5 726 M
-(Implementation Notes) s
-5 704 M
-(Dependencies) s
-5 682 M
-(- paillier - Paillier cryptosystem) s
-5 671 M
-(- shamir - Secret sharing for threshold keys) s
-5 660 M
-(- zkp - Zero-knowledge proof primitives) s
-5 649 M
-(- srfi-27 - Random number generation) s
-5 627 M
-(Libraries) s
-5 605 M
-(Recommended implementations:) s
-5 594 M
-(- OpenFHE \(C++\) - Full HE library) s
-5 583 M
-(- python-paillier - Reference implementation) s
-5 572 M
-(- threshold-paillier - Distributed key generation) s
-5 550 M
-(------------------------------------------------------------------------------) s
-5 528 M
 (References) s
-5 506 M
+5 231 M
 (1. Paillier, P. \(1999\). Public-Key Cryptosystems Based on Composite Degree Residuosity Cl) s
-5 495 M
+5 220 M
 (asses) s
-5 484 M
+5 209 M
 (2. Benaloh, J. \(1994\). Dense Probabilistic Encryption) s
-5 473 M
+5 198 M
 (3. Cramer, R., Gennaro, R., Schoenmakers, B. \(1997\). A Secure and Optimally Efficient Mul) s
-5 462 M
+5 187 M
 (ti-Authority Election Scheme) s
-5 451 M
+5 176 M
 (4. RFC-007: Threshold Signature Governance) s
-5 440 M
+5 165 M
 (5. RFC-011: Byzantine Consensus) s
-5 429 M
+5 154 M
 (6. RFC-022: Key Ceremony Protocol) s
-5 407 M
+5 132 M
 (------------------------------------------------------------------------------) s
-5 385 M
+5 110 M
 (Changelog) s
-5 363 M
+5 88 M
 (- 2026-01-07 - Initial draft) s
-5 341 M
+5 66 M
 (------------------------------------------------------------------------------) s
-5 319 M
+5 44 M
 (Implementation Status: Proposed) s
-5 308 M
+5 33 M
 (Dependencies: paillier, shamir, zkp, spki) s
-5 297 M
+5 22 M
 (Integration: Threshold governance, Byzantine consensus, key ceremonies) s
 _R
 S
 %%Trailer
-%%Pages: 9
+%%Pages: 8
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

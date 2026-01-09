@@ -35,7 +35,6 @@ Schema Model
 
 Schema Definition
 
-`scheme
 (define-schema 'document
   (version 1)
   (fields
@@ -47,11 +46,9 @@ Schema Definition
     (modified (type timestamp) (required #f))
     (author (type principal) (required #f))
     (tags (type (list string)) (required #f) (default '()))))
-`
 
 Schema as Content-Addressed Object
 
-`scheme
 ;; Schemas are soup objects
 (soup-object
   (hash "sha256:schema-hash...")
@@ -65,11 +62,9 @@ Schema as Content-Addressed Object
 (define (validate-against-schema obj schema-hash)
   (let ((schema (soup-get schema-hash)))
     (validate-object obj schema)))
-`
 
 Schema Registry
 
-`scheme
 (define schema-registry (make-hash-table))
 
 (define (register-schema! schema)
@@ -88,7 +83,6 @@ Schema Registry
   (if version
       (soup-get (hash-table-ref schema-registry (cons name version)))
       (get-latest-schema name)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -96,7 +90,6 @@ Evolution Rules
 
 Compatible Changes
 
-`scheme
 ;; These changes are backward compatible
 (define compatible-changes
   '(add-optional-field      ; New field with default
@@ -109,11 +102,9 @@ Compatible Changes
   "Check if schema change is backward compatible"
   (let ((changes (diff-schemas old-schema new-schema)))
     (every compatible-change? changes)))
-`
 
 Breaking Changes
 
-`scheme
 ;; These changes require migration
 (define breaking-changes
   '(remove-field            ; Field no longer exists
@@ -127,7 +118,6 @@ Breaking Changes
   "Check if migration needed"
   (let ((changes (diff-schemas old-schema new-schema)))
     (any breaking-change? changes)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -135,7 +125,6 @@ Version Management
 
 Semantic Versioning
 
-`scheme
 ;; Schema versions follow semver
 (define (schema-version-compare v1 v2)
   (let ((major1 (version-major v1)) (major2 (version-major v2))
@@ -149,11 +138,9 @@ Semantic Versioning
 ;; Major: breaking changes
 ;; Minor: compatible additions
 ;; Patch: documentation/fixes
-`
 
 Version History
 
-`scheme
 (define (schema-history name)
   "Get all versions of a schema"
   (soup-query type: 'schema
@@ -166,7 +153,6 @@ Version History
     (if (schema-parent schema)
         (cons schema (schema-lineage name (schema-parent-version schema)))
         (list schema))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -174,7 +160,6 @@ Migration
 
 Migration Definition
 
-`scheme
 (define-migration 'document-v1-to-v2
   (from-schema 'document (version 1))
   (to-schema 'document (version 2))
@@ -184,11 +169,9 @@ Migration Definition
   (down (lambda (obj)
           ;; Remove new field
           (assoc-remove obj 'visibility))))
-`
 
 Migration Execution
 
-`scheme
 (define (migrate-object obj from-version to-version)
   "Migrate object between schema versions"
   (let ((migrations (find-migration-path from-version to-version)))
@@ -204,11 +187,9 @@ Migration Execution
               (and (eq? (migration-direction m) direction)
                    (version-in-range? (migration-from m) from to)))
             (all-migrations))))
-`
 
 Lazy Migration
 
-`scheme
 ;; Migrate on read, not on upgrade
 (define (soup-get-migrated hash)
   "Get object, migrating if necessary"
@@ -222,11 +203,9 @@ Lazy Migration
           (when persist-migrations
             (soup-put-raw migrated))
           migrated))))
-`
 
 Batch Migration
 
-`scheme
 (define (batch-migrate schema-name from-version to-version)
   "Migrate all objects of a schema"
   (let ((objects (soup-query type: schema-name
@@ -239,7 +218,6 @@ Batch Migration
                                 from: from-version
                                 to: to-version)))
               objects)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -247,7 +225,6 @@ Validation
 
 Schema Validation
 
-`scheme
 (define (validate-object obj schema)
   "Validate object against schema"
   (let ((errors '()))
@@ -271,11 +248,9 @@ Schema Validation
     (if (null? errors)
         (result-ok obj)
         (result-err errors))))
-`
 
 Validation Modes
 
-`scheme
 (define validation-mode (make-parameter 'strict))
 
 (define (validate-with-mode obj schema)
@@ -292,7 +267,6 @@ Validation Modes
        (when (result-err? result)
          (log-warn "Validation errors" errors: (result-error result)))
        (result-ok obj)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -300,7 +274,6 @@ Federation Compatibility
 
 Schema Negotiation
 
-`scheme
 (define (negotiate-schema peer schema-name)
   "Negotiate compatible schema version with peer"
   (let* ((local-versions (local-schema-versions schema-name))
@@ -316,11 +289,9 @@ Schema Negotiation
               (let ((converted (convert-to-version obj version)))
                 (send-object peer converted)))
             (objects-to-sync schema-name)))
-`
 
 Cross-Version Queries
 
-`scheme
 (define (query-with-version-tolerance query)
   "Query that handles mixed schema versions"
   (let* ((results (soup-query-raw query))
@@ -330,7 +301,6 @@ Cross-Version Queries
                obj
                (migrate-object obj (object-schema-version obj) current-version)))
          results)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -338,7 +308,6 @@ Schema Introspection
 
 Schema Queries
 
-`scheme
 ;; What schemas exist?
 (soup-query type: 'schema)
 
@@ -354,11 +323,9 @@ Schema Queries
                 (when (schema-reference? (field-type field))
                   (field-type-target field)))
               (schema-fields schema)))
-`
 
 Schema Documentation
 
-`scheme
 (define-schema 'document
   (version 2)
   (description "A document stored in the vault")
@@ -373,7 +340,6 @@ Schema Documentation
       (required #t)
       (description "Human-readable document name")
       (example "RFC-033-schema-evolution.md"))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -381,7 +347,6 @@ Default Values
 
 Static Defaults
 
-`scheme
 (define-schema 'document
   (version 2)
   (fields
@@ -392,11 +357,9 @@ Static Defaults
     (tags
       (type (list string))
       (default '()))))
-`
 
 Computed Defaults
 
-`scheme
 (define-schema 'document
   (version 2)
   (fields
@@ -406,11 +369,9 @@ Computed Defaults
     (id
       (type string)
       (default (generate-uuid)))))
-`
 
 Migration Defaults
 
-`scheme
 ;; Default for objects migrated from v1 to v2
 (define-migration 'document-v1-to-v2
   (defaults
@@ -419,7 +380,6 @@ Migration Defaults
                   (if (assoc-ref obj 'public)
                       'public
                       'private)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -427,17 +387,14 @@ Security Considerations
 
 Schema Tampering
 
-`scheme
 ;; Schemas are content-addressed - tampering detectable
 (define (verify-schema-integrity schema-hash)
   (let* ((schema (soup-get schema-hash))
          (computed-hash (content-hash (serialize schema))))
     (equal? schema-hash computed-hash)))
-`
 
 Migration Authorization
 
-`scheme
 ;; Migrations require capability
 (spki-cert
   (issuer vault-admin)
@@ -446,7 +403,6 @@ Migration Authorization
     (action migrate-schema)
     (object (schema 'document)))
   (validity (not-after "2027-01-01")))
-`
 
 ------------------------------------------------------------------------------
 

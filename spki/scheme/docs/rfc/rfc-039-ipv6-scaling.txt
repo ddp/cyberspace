@@ -45,13 +45,11 @@ The internet has 2^128 addresses. Cyberspace should use them.
 
 Design Principles
 
-`
 1. Objects, not repositories
 2. Pull, not push
 3. Lazy, not eager
 4. Local-first, federate-second
 5. Trust math, not infrastructure
-`
 
 ------------------------------------------------------------------------------
 
@@ -59,7 +57,6 @@ Content-Addressed Object Store
 
 Storage Model
 
-`
 .vault/
   objects/
     sha512-a1b2c3.../    # First 8 chars as directory
@@ -75,11 +72,9 @@ Storage Model
   audit/
     head.sexp            # Current audit chain head
     chain/               # Audit entries (hash-addressed)
-`
 
 Object Format
 
-`scheme
 (cyberspace-object
   (version 1)
   (type blob|tree|manifest|cert|audit)
@@ -89,13 +84,11 @@ Object Format
   (chunks ("sha512:..." "sha512:..." ...))  ; If chunked
   (signature "ed25519:...")
   (timestamp 1736300000))
-`
 
 Chunking Strategy
 
 Large objects split at content-defined boundaries (Rabin fingerprinting):
 
-`
 Target chunk: 64 KB (Starlink-optimized)
 Min chunk:    16 KB
 Max chunk:   256 KB
@@ -105,11 +98,9 @@ Benefits:
   - Partial sync (fetch only missing chunks)
   - Resumable transfers
   - Efficient diff
-`
 
 Hash Function
 
-`
 SHA-512 everywhere.
 
 Not SHA-256: We have the bits, use them.
@@ -121,7 +112,6 @@ SHA-512 is:
   - 50 years of cryptanalysis
   - Hardware accelerated
   - Already in use (audit trail, signatures)
-`
 
 ------------------------------------------------------------------------------
 
@@ -131,7 +121,6 @@ The soup IS the catalog. No SQL. Objects are S-expressions, queries are pattern 
 
 The Soup Query Model
 
-`scheme
 ;; Find objects by pattern
 (soup-query
   '(cyberspace-object
@@ -155,13 +144,11 @@ The Soup Query Model
 (soup-cursor
   '(cyberspace-object (type ?) ?rest)
   batch: 100)
-`
 
 Object Catalog
 
 The catalog is itself an object in the soup - a manifest of what the vault contains:
 
-`scheme
 (vault-catalog
   (version 1)
   (realm "ed25519:principal...")
@@ -173,13 +160,11 @@ The catalog is itself an object in the soup - a manifest of what the vault conta
     (audit 5000))
   (bloom-filter #${...})           ; Fast existence check
   (updated 1736400000))
-`
 
 Bloom Filter
 
 Fast existence check before network round-trip:
 
-`scheme
 (define (soup-maybe-contains? hash)
   "Check bloom filter - false means definitely not, true means maybe"
   (let ((catalog (soup-fetch-catalog)))
@@ -190,13 +175,11 @@ Fast existence check before network round-trip:
   (capacity 10000000)              ; 10M objects
   (false-positive 0.001)           ; 0.1% FP rate
   (bits #${...}))
-`
 
 Audit Trail
 
 The audit trail is a hash-chain of objects in the soup:
 
-`scheme
 (audit-entry
   (sequence 12345)
   (timestamp 1736300000)
@@ -214,13 +197,11 @@ The audit trail is a hash-chain of objects in the soup:
     filter: (lambda (entry)
               (equal? (entry-actor entry) actor))
     from: from-seq))
-`
 
 Secondary Indices
 
 For queries that can't use content-addressing, the soup maintains lightweight indices as objects:
 
-`scheme
 (soup-index
   (name "by-signer")
   (key-type principal)
@@ -235,7 +216,6 @@ For queries that can't use content-addressing, the soup maintains lightweight in
     ((blob ("sha512:..." "sha512:..." ...))
      (cert ("sha512:..." "sha512:..." ...))
      (audit ("sha512:..." "sha512:..." ...)))))
-`
 
 Indices are rebuilt on demand, not authoritative - the soup is truth.
 
@@ -247,7 +227,6 @@ Realm Identity
 
 Each realm has a principal (Ed25519 public key). This IS its identity:
 
-`scheme
 (realm-identity
   (principal "ed25519:a1b2c3...")
   (addresses                          ; Where to reach this realm
@@ -257,38 +236,30 @@ Each realm has a principal (Ed25519 public key). This IS its identity:
   (role witness)
   (capabilities (storage-gb 1000) (bandwidth-mbps 100))
   (signature "ed25519:..."))
-`
 
 Peer Discovery
 
 Bootstrap:
-`scheme
 (bootstrap-peers
   ("ed25519:official1..." "bootstrap.cyberspace.org")
   ("ed25519:official2..." "bootstrap2.cyberspace.org"))
-`
 
 Gossip Protocol:
-`
 1. Realm joins, contacts bootstrap peer
 2. Receives partial peer list (random subset)
 3. Contacts those peers, exchanges lists
 4. Epidemic spread: O(log n) rounds to reach all realms
 5. Periodic refresh (every 5 min on Starlink-friendly schedule)
-`
 
 Distributed Hash Table (Future):
-`
 Kademlia-style routing:
   - XOR distance metric on principal hashes
   - O(log n) lookups
   - Realms responsible for nearby hash ranges
   - Natural load balancing
-`
 
 Content Discovery
 
-`scheme
 ;; "Who has this hash?"
 (content-locate "sha512:a1b2c3...")
 
@@ -299,7 +270,6 @@ Content Discovery
 
 ;; Fetch from best candidate
 (content-fetch "sha512:a1b2c3..." from: "ed25519:peer1...")
-`
 
 ------------------------------------------------------------------------------
 
@@ -309,7 +279,6 @@ End-to-End Encryption
 
 All network traffic is encrypted. The OS and network are not trusted.
 
-`scheme
 (cyberspace-message
   (version 1)
   (from "ed25519:sender...")
@@ -318,7 +287,6 @@ All network traffic is encrypted. The OS and network are not trusted.
   (nonce #${24-bytes})               ; Random nonce
   (ciphertext #${...})               ; NaCl box: X25519 + XSalsa20-Poly1305
   (signature "ed25519:..."))         ; Sign the ciphertext
-`
 
 Encryption scheme: NaCl crypto_box (libsodium)
 - Key agreement: X25519 (Curve25519 ECDH)
@@ -327,19 +295,16 @@ Encryption scheme: NaCl crypto_box (libsodium)
 
 Decrypted payload:
 
-`scheme
 (plaintext-payload
   (type request|response|announce|gossip)
   (nonce 12345678)                   ; Replay protection
   (timestamp 1736300000)
   (body ...))
-`
 
 Broadcast messages use a shared group key or are signed-only (announcements of public objects).
 
 Wire Format (Encrypted)
 
-`scheme
 ;; Sender encrypts
 (define (seal-message payload recipient-pubkey sender-keypair)
   (let* ((ephemeral (x25519-keypair))
@@ -364,11 +329,9 @@ Wire Format (Encrypted)
                                      shared)))
     (and (verify-signature msg (message-from msg))
          plaintext)))
-`
 
 Request Types
 
-`scheme
 ;; Existence check
 (have? ("sha512:..." "sha512:..." ...))
 ;; Response: (have ("sha512:..." "sha512:...") missing ("sha512:..."))
@@ -388,22 +351,18 @@ Request Types
 ;; Announce new content
 (announce ("sha512:..." "sha512:..."))
 ;; Response: (ack)
-`
 
 Transport Bindings
 
-`
 Native:     UDP/IPv6, port 7777 (primary)
 Fallback:   TCP/IPv6, port 7777 (firewalls)
 Legacy:     TCP/IPv4, port 7777 (transition)
 Stealth:    Tor onion service (censorship resistance)
 Offline:    USB drive, file copy (sneakernet)
 Export:     Git bundle (GitHub compatibility)
-`
 
 Starlink Optimization
 
-`scheme
 (transport-config
   (mode satellite)
   (batch-window-ms 500)        ; Aggregate small messages
@@ -411,7 +370,6 @@ Starlink Optimization
   (retry-strategy exponential)
   (max-in-flight 10)           ; Parallelism
   (keepalive-sec 300))         ; 5 min, not 30 sec
-`
 
 ------------------------------------------------------------------------------
 
@@ -419,7 +377,6 @@ Synchronization Protocol
 
 Lazy Sync (Default)
 
-`
 Node A                              Node B
    |                                   |
    |----(have? [h1, h2, h3])---------->|
@@ -429,7 +386,6 @@ Node A                              Node B
    |                                   |
 
 No coordination. No locks. No leader.
-`
 
 Crdt-Style Convergence
 
@@ -440,7 +396,6 @@ Manifests (collections of objects) use:
 - Last-writer-wins with principal tiebreaker
 - Or: union (add-only sets)
 
-`scheme
 (manifest
   (name "library")
   (version (lamport 42) (principal "ed25519:..."))
@@ -448,13 +403,11 @@ Manifests (collections of objects) use:
     ("rfc-001" "sha512:...")
     ("rfc-002" "sha512:...")
     ...))
-`
 
 Merkle Sync
 
 Efficient diff for large manifests:
 
-`
          root
         /    \
       h1      h2
@@ -464,7 +417,6 @@ Efficient diff for large manifests:
 Exchange root hash.
 If different, recurse on children.
 O(log n) round trips to find diff.
-`
 
 ------------------------------------------------------------------------------
 
@@ -472,42 +424,38 @@ Federation at Scale
 
 Cluster Topology
 
-`
-                    ┌─────────────────────────────────────┐
-                    │         COORDINATOR CLUSTER         │
-                    │  (3-7 nodes, Byzantine consensus)   │
-                    └────────────────┬────────────────────┘
-                                     │
-          ┌──────────────────────────┼──────────────────────────┐
-          │                          │                          │
-    ┌─────▼─────┐             ┌──────▼─────┐             ┌──────▼─────┐
-    │   FULL    │             │   FULL     │             │    FULL    │
-    │  NODES    │             │   NODES    │             │   NODES    │
-    └─────┬─────┘             └─────┬──────┘             └─────┬──────┘
-          │                         │                          │
-    ┌─────▼─────┐             ┌─────▼──────┐             ┌─────▼──────┐
-    │ WITNESSES │             │ WITNESSES  │             │ WITNESSES  │
-    │ ARCHIVERS │             │ ARCHIVERS  │             │ ARCHIVERS  │
-    │   EDGES   │             │   EDGES    │             │   EDGES    │
-    └───────────┘             └────────────┘             └────────────┘
+                    +-------------------------------------+
+                    |         COORDINATOR CLUSTER         |
+                    |  (3-7 nodes, Byzantine consensus)   |
+                    +----------------+--------------------+
+                                     |
+          +--------------------------+--------------------------+
+          |                          |                          |
+    +-----v-----+             +------v-----+             +------v-----+
+    |   FULL    |             |   FULL     |             |    FULL    |
+    |  NODES    |             |   NODES    |             |   NODES    |
+    +-----+-----+             +-----+------+             +-----+------+
+          |                         |                          |
+    +-----v-----+             +-----v------+             +-----v------+
+    | WITNESSES |             | WITNESSES  |             | WITNESSES  |
+    | ARCHIVERS |             | ARCHIVERS  |             | ARCHIVERS  |
+    |   EDGES   |             |   EDGES    |             |   EDGES    |
+    +-----------+             +------------+             +------------+
 
 Coordinators: Rare, high-capability realms, run consensus
 Full: Common realms, replicate everything, serve content
 Witnesses: Abundant realms, verify and store, passive sync
 Archivers: Cold storage realms, batch sync
 Edges: Read-only realms, intermittent, mobile
-`
 
 Partition Tolerance
 
-`
 Network splits → clusters diverge → clusters converge on reconnect
 
 No data loss (content-addressed)
 No conflicts (immutable objects)
 Audit trails merge (union of entries, Lamport ordering)
 Manifests resolve (LWW or union based on type)
-`
 
 ------------------------------------------------------------------------------
 
@@ -515,15 +463,12 @@ Git as Export Format
 
 The Transition
 
-`
 Phase 1 (Now):      Git is source of truth, vault is cache
 Phase 2 (Next):     Vault is source of truth, git is export
 Phase 3 (Future):   Git optional, purely for GitHub presence
-`
 
 Export Process
 
-`scheme
 (git-export
   from: ".vault"
   to: "/tmp/cyberspace-export"
@@ -531,18 +476,15 @@ Export Process
 
 ;; Creates standard git repo from vault contents
 ;; For publishing to GitHub, GitLab, etc.
-`
 
 Import Process
 
-`scheme
 (git-import
   from: "https://github.com/ddp/cyberspace.git"
   to: ".vault")
 
 ;; Extracts objects from git, stores in vault
 ;; Discards git history, keeps content
-`
 
 ------------------------------------------------------------------------------
 
@@ -612,7 +554,6 @@ Phase 5: Git Deprecation
 
 Metrics and Monitoring
 
-`scheme
 (node-metrics)
 ;; Returns:
 ((objects-stored 150000)
@@ -624,7 +565,6 @@ Metrics and Monitoring
  (bandwidth-out-mbps 5)
  (requests-per-second 100)
  (errors-per-second 0.1))
-`
 
 ------------------------------------------------------------------------------
 

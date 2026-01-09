@@ -16,9 +16,7 @@ SHA-512 won't survive. Grover's algorithm halves the effective security - 256 bi
 The Problem
 
 Current cyberspace object identity:
-`
 sha512(content) → 64 bytes → object address
-`
 
 Against a quantum computer with Grover's algorithm:
 - Classical security: 256 bits
@@ -32,25 +30,23 @@ The Solution: Merkle Trees
 
 Instead of hashing content as a flat blob, structure it as a tree:
 
-`
-                    ┌─────────────────┐
-                    │   Merkle Root   │  ← Object identity
-                    │  shake256(...)  │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-         ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
-         │ Node 0  │    │ Node 1  │    │ Node 2  │
-         └────┬────┘    └────┬────┘    └────┬────┘
-              │              │              │
-        ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
-        │           │  │           │  │           │
-    ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ...
-    │Chunk 0│ │Chunk 1│ │Chunk 2│ │Chunk 3│ │Chunk 4│
-    │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │
-    └───────┘ └───────┘ └───────┘ └───────┘ └───────┘
-`
+                    +-----------------+
+                    |   Merkle Root   |  ← Object identity
+                    |  shake256(...)  |
+                    +--------+--------+
+                             |
+              +--------------+--------------+
+              |              |              |
+         +----v----+    +----v----+    +----v----+
+         | Node 0  |    | Node 1  |    | Node 2  |
+         +----+----+    +----+----+    +----+----+
+              |              |              |
+        +-----+-----+  +-----+-----+  +-----+-----+
+        |           |  |           |  |           |
+    +---v---+ +---v---+ +---v---+ +---v---+ +---v---+ ...
+    |Chunk 0| |Chunk 1| |Chunk 2| |Chunk 3| |Chunk 4|
+    | 4 KB  | | 4 KB  | | 4 KB  | | 4 KB  | | 4 KB  |
+    +-------+ +-------+ +-------+ +-------+ +-------+
 
 Benefits:
 
@@ -95,16 +91,13 @@ Object Format
 
 Current (Legacy)
 
-`scheme
 (object
   (hash "sha512:3a7bd3e2c4f8...")
   (size 1048576)
   (content ...))
-`
 
 Quantum-Resistant
 
-`scheme
 (object
   (merkle-root "shake256:7f4a2b9c...")
   (hash-algorithm "shake256")          ; or "blake3"
@@ -114,11 +107,9 @@ Quantum-Resistant
     (depth 4))                         ; Tree depth
   (size 1048576)
   (content ...))
-`
 
 Transition Period (Dual Hash)
 
-`scheme
 (object
   (hash "sha512:3a7bd3e2c4f8...")           ; Legacy - for old clients
   (merkle-root "shake256:7f4a2b9c...")      ; Quantum-resistant
@@ -129,7 +120,6 @@ Transition Period (Dual Hash)
     (depth 4))
   (size 1048576)
   (content ...))
-`
 
 Old clients use hash. New clients use merkle-root. Both verify the same content.
 
@@ -139,7 +129,6 @@ Tree Construction
 
 Algorithm
 
-`scheme
 (define (merkle-hash content algorithm chunk-size fanout)
   "Build Merkle tree, return root hash"
 
@@ -164,20 +153,15 @@ Algorithm
                             (hash algorithm (apply append group)))
                           (partition nodes fanout))))
         (build-tree parents fanout algorithm))))
-`
 
 Node Hashing
 
 Each internal node hashes the concatenation of its children:
 
-`
 nodehash = shake256(child0 || child1 || ... || childn)
-`
 
 For leaves:
-`
 leafhash = shake256(chunkdata)
-`
 
 Canonical Parameters
 
@@ -196,7 +180,6 @@ Inclusion Proof
 
 Prove a chunk is part of an object without revealing other chunks:
 
-`scheme
 (inclusion-proof
   (merkle-root "shake256:7f4a2b9c...")
   (chunk-index 42)
@@ -205,25 +188,20 @@ Prove a chunk is part of an object without revealing other chunks:
     ((sibling "shake256:def456..." position left)
      (sibling "shake256:789abc..." position right)
      (sibling "shake256:012def..." position left))))
-`
 
 Verifier reconstructs path to root:
-`
 chunk_hash → combine with sibling → ... → must equal merkle-root
-`
 
 Exclusion Proof
 
 Prove a chunk does NOT exist (for sparse objects):
 
-`scheme
 (exclusion-proof
   (merkle-root "shake256:7f4a2b9c...")
   (chunk-index 999)
   (boundary-left 998 "shake256:left...")
   (boundary-right 1000 "shake256:right...")
   (path ...))
-`
 
 ------------------------------------------------------------------------------
 
@@ -231,7 +209,6 @@ Streaming Verification
 
 Large objects can be verified chunk-by-chunk as they stream:
 
-`scheme
 (define (verify-stream merkle-root chunk-size)
   "Return a verifier that checks chunks as they arrive"
   (let ((received-chunks '())
@@ -245,7 +222,6 @@ Large objects can be verified chunk-by-chunk as they stream:
               (cache-verified-node! verified-nodes chunk-index chunk-hash)
               #t)
             #f)))))
-`
 
 You don't need the whole object to start verifying. Each chunk carries its own proof.
 
@@ -255,20 +231,18 @@ The Forest
 
 The soup becomes a forest of Merkle trees:
 
-`
-┌─────────────────────────────────────────────────────────────────┐
-│                    THE FOREST (formerly soup)                    │
-│                                                                  │
-│     🌲 obj    🌲 obj       ┌─────────────────┐      🌲 obj       │
-│          🌲 obj           │░░░░░░░░░░░░░░░░░│           🌲 obj  │
-│    🌲 obj          🌲 obj │░░░  REALM  ░░░░░│    🌲 obj         │
-│         🌲 obj            │░░░ (island) ░░░░│         🌲 obj    │
-│   🌲 obj       🌲 obj     │░░░░░░░░░░░░░░░░░│  🌲 obj           │
-│        🌲 obj             └─────────────────┘       🌲 obj      │
-│                                                                  │
-│   Each object a tree. Each tree quantum-hardened.               │
-└─────────────────────────────────────────────────────────────────┘
-`
++-----------------------------------------------------------------+
+|                    THE FOREST (formerly soup)                    |
+|                                                                  |
+|     🌲 obj    🌲 obj       +-----------------+      🌲 obj       |
+|          🌲 obj           |░░░░░░░░░░░░░░░░░|           🌲 obj  |
+|    🌲 obj          🌲 obj |░░░  REALM  ░░░░░|    🌲 obj         |
+|         🌲 obj            |░░░ (island) ░░░░|         🌲 obj    |
+|   🌲 obj       🌲 obj     |░░░░░░░░░░░░░░░░░|  🌲 obj           |
+|        🌲 obj             +-----------------+       🌲 obj      |
+|                                                                  |
+|   Each object a tree. Each tree quantum-hardened.               |
++-----------------------------------------------------------------+
 
 Objects are trees. The wilderness of mirrors becomes a forest. Agents navigate between trees, climbing branches, verifying paths. The capability chain is still their thread - but now the mirrors are structured.
 
@@ -280,7 +254,6 @@ Phase 1: Dual Hash (Now → Q-Day - 5 years)
 
 All new objects get both hashes. Old objects rehashed on access.
 
-`scheme
 (define (store-object content)
   (let ((legacy-hash (sha512 content))
         (merkle-root (merkle-hash content 'shake256 4096 16)))
@@ -289,7 +262,6 @@ All new objects get both hashes. Old objects rehashed on access.
         (hash ,(string-append "sha512:" legacy-hash))
         (merkle-root ,(string-append "shake256:" merkle-root))
         ...))))
-`
 
 Phase 2: Merkle Primary (Q-Day - 5 years → Q-Day)
 
@@ -344,14 +316,12 @@ The Merkle tree structure must prevent:
 
 Implementation
 
-`scheme
 ;; Domain separation for nodes vs leaves
 (define (hash-leaf algorithm chunk)
   (hash algorithm (bytevector-append #u8(0) chunk)))
 
 (define (hash-node algorithm children)
   (hash algorithm (bytevector-append #u8(1) (apply bytevector-append children))))
-`
 
 The 0x00 prefix for leaves and 0x01 for nodes prevents a leaf from being interpreted as a node.
 
@@ -359,7 +329,6 @@ The 0x00 prefix for leaves and 0x01 for nodes prevents a leaf from being interpr
 
 Invariants
 
-`
 M1. Object identity is Merkle root
     id(o) = merkle-root(shake256, chunks(o))
 
@@ -374,7 +343,6 @@ M4. Dual hashes are consistent
 
 M5. Migration preserves identity
     old-objects retain verifiable legacy hashes
-`
 
 ------------------------------------------------------------------------------
 

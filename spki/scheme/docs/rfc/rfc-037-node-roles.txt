@@ -44,24 +44,22 @@ Node Roles
 
 Role Hierarchy
 
-`
-                    ┌─────────────┐
-                    │ COORDINATOR │  Byzantine consensus, threshold signing
-                    │   (rare)    │  Always-on, high compute
-                    └──────┬──────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-       ┌───────────┐ ┌───────────┐ ┌───────────┐
-       │   FULL    │ │  WITNESS  │ │ ARCHIVER  │
-       │   NODE    │ │           │ │           │
-       └─────┬─────┘ └───────────┘ └───────────┘
-             │
-             ▼
-       ┌───────────┐
-       │   EDGE    │  Read-only, mobile, intermittent
-       └───────────┘
-`
+                    +-------------+
+                    | COORDINATOR |  Byzantine consensus, threshold signing
+                    |   (rare)    |  Always-on, high compute
+                    +------+------+
+                           |
+              +------------+------------+
+              v            v            v
+       +-----------+ +-----------+ +-----------+
+       |   FULL    | |  WITNESS  | | ARCHIVER  |
+       |   NODE    | |           | |           |
+       +-----+-----+ +-----------+ +-----------+
+             |
+             v
+       +-----------+
+       |   EDGE    |  Read-only, mobile, intermittent
+       +-----------+
 
 Role Definitions
 
@@ -75,7 +73,6 @@ Role Definitions
 
 Capability Requirements
 
-`scheme
 (node-role-capabilities
   (coordinator
     (compute    (min-cores 4) (min-ram-gb 8))
@@ -106,7 +103,6 @@ Capability Requirements
     (storage    (min-gb 1) (type any))
     (network    (uptime 0.01) (latency-ms 5000))
     (security   (read-only #t))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -114,7 +110,6 @@ Role Detection
 
 Automatic Probing
 
-`scheme
 (define (node-probe-capabilities)
   "Probe local system capabilities"
   `((compute
@@ -132,11 +127,9 @@ Automatic Probing
      (signing-key ,(has-signing-key?))
      (verify-key ,(has-verify-key?))
      (hsm ,(has-hsm?)))))
-`
 
 Role Assignment
 
-`scheme
 (define (node-assign-role capabilities)
   "Assign role based on probed capabilities"
   (let ((compute (assq 'compute capabilities))
@@ -165,7 +158,6 @@ Role Assignment
 
      ;; Edge: everything else
      (else 'edge))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -173,7 +165,6 @@ Role Declaration
 
 Local Configuration
 
-`scheme
 ;; ~/.cyberspace/node-role
 (node-config
   (role witness)                    ; Declared role
@@ -182,11 +173,9 @@ Local Configuration
     (network (type satellite)
              (latency-ms 600)
              (bandwidth-mbps 100))))
-`
 
 Role Announcement
 
-`scheme
 (define (node-announce-role)
   "Announce role to federation peers"
   (let ((role (node-current-role))
@@ -202,7 +191,6 @@ Role Announcement
         ;; Sign and broadcast
         (federation-broadcast
          (sign-announcement announcement key))))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -228,7 +216,6 @@ Operation Matrix
 
 Graceful Degradation
 
-`scheme
 (define (node-can-perform? operation)
   "Check if current role permits operation"
   (let ((role (node-current-role))
@@ -240,7 +227,6 @@ Graceful Degradation
   (let ((hierarchy '(coordinator full witness archiver edge)))
     (<= (list-index hierarchy actual)
         (list-index hierarchy required))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -248,7 +234,6 @@ Starlink Considerations
 
 Per RFC-016, the system is optimized for satellite links:
 
-`scheme
 (node-config
   (role witness)
   (network
@@ -268,7 +253,6 @@ Per RFC-016, the system is optimized for satellite links:
     (compress-always #t)           ; Minimize transfer
     (retry-aggressive #t)          ; Handle drops
     (heartbeat-interval 300)))     ; 5 min, not seconds
-`
 
 Role Implications for Satellite Nodes
 
@@ -284,7 +268,6 @@ Implementation
 
 REPL Commands
 
-`scheme
 ;; Probe and display capabilities
 (node-probe)
 
@@ -299,23 +282,19 @@ REPL Commands
 
 ;; Announce role to peers
 (node-announce)
-`
 
 Persistence
 
 Role configuration stored in the realm:
-`
 ~/.cyberspace/node-role      ; User override (global)
 .vault/node-role             ; Realm-specific role
 .vault/node-hardware         ; Hardware manifest (auto-refreshed)
-`
 
 The hardware manifest is automatically updated on REPL startup, declaring the realm's capabilities to federated peers.
 
 Audit Trail
 
 Role changes are auditable events:
-`scheme
 (audit-entry
   (type node-role-change)
   (timestamp 1736280000)
@@ -323,7 +302,6 @@ Role changes are auditable events:
   (to witness)
   (reason "Storage expanded")
   (actor #${principal}))
-`
 
 ------------------------------------------------------------------------------
 

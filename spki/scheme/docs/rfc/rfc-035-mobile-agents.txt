@@ -37,7 +37,6 @@ An agent is:
 3. Accountable - Every action recorded in audit trail
 4. Supervised - Realm coordinator can inspect, suspend, terminate
 
-`scheme
 (define-record-type <agent>
   (make-agent id principal code state credentials realm)
   agent?
@@ -47,17 +46,14 @@ An agent is:
   (state agent-state)              ; Mutable state (content-addressed)
   (credentials agent-credentials)  ; SPKI certificate chain
   (realm agent-realm))             ; Current realm location
-`
 
 Agent Lifecycle
 
-`
 entangle → running → [teleport] → running → ... → decohere
              ↓                       ↓
           suspend               superpose
              ↓                       ↓
           resume                  collapse
-`
 
 Telescript Parallels
 
@@ -100,7 +96,6 @@ entangle (spawn)
 
 Create a new agent in the current realm:
 
-`scheme
 (entangle
   code: (lambda (self msg) ...)
   state: initial-state
@@ -108,7 +103,6 @@ Create a new agent in the current realm:
   #!key name timeout)
 
 ;; Returns agent-id (content hash)
-`
 
 The spawning principal's key signs the agent, establishing provenance. The new agent is entangled with its creator - correlated through shared lineage.
 
@@ -116,10 +110,8 @@ teleport (migrate)
 
 Move agent to another realm:
 
-`scheme
 (teleport agent-id target-realm
   #!key superpose)  ; checkpoint before teleport
-`
 
 Process:
 1. Serialize agent code + state
@@ -129,22 +121,18 @@ Process:
 5. Resume execution
 
 Migration Certificate:
-`scheme
 (spki-cert
   (issuer source-realm-key)
   (subject agent-id)
   (capability (action execute) (object target-realm))
   (validity (not-after migration-timeout)))
-`
 
 decohere (terminate)
 
 End agent execution:
 
-`scheme
 (decohere agent-id
   #!key reason superpose-final)
-`
 
 Decoherence can be:
 - Self-initiated - Agent calls (decohere)
@@ -156,7 +144,6 @@ superpose / collapse (checkpoint / restore)
 
 Save and restore agent state:
 
-`scheme
 (superpose agent-id)
 ;; Returns content hash of serialized state
 ;; Agent exists in multiple potential states
@@ -164,7 +151,6 @@ Save and restore agent state:
 (collapse checkpoint-hash realm)
 ;; Resurrects agent from superposition
 ;; Wave function collapses to specific state
-`
 
 Checkpoints are content-addressed, enabling:
 - Fault recovery
@@ -179,18 +165,15 @@ Topics (Observation Points)
 
 Topics are hierarchical, content-addressed channels where agents observe:
 
-`scheme
 (define-record-type <topic>
   (make-topic name realm observers)
   topic?
   (name topic-name)           ; Hierarchical name "realm/category/subject"
   (realm topic-realm)         ; Owning realm
   (observers topic-observers)); Set of observing agent-ids
-`
 
 observe (subscribe)
 
-`scheme
 (observe topic-pattern handler
   #!key filter replay-from)
 
@@ -198,26 +181,22 @@ observe (subscribe)
 ;; handler: (lambda (topic message) ...)
 ;; filter: Predicate for message selection
 ;; replay-from: Sequence number for replay
-`
 
 When you observe, you collapse potential messages into actual received values.
 
 tunnel (publish/send)
 
-`scheme
 (tunnel topic message
   #!key ttl priority)
 
 ;; message: Any serializable Scheme value
 ;; ttl: Time-to-live in seconds
 ;; priority: 'normal | 'high | 'critical
-`
 
 Messages tunnel through the fabric of cyberspace, passing barriers that would block classical communication.
 
 Message Structure
 
-`scheme
 (quantum-message
   (id "sha256:msg-hash...")
   (topic "realm/agents/status")
@@ -226,7 +205,6 @@ Message Structure
   (sequence 42)
   (payload (status running) (progress 0.73))
   (signature #${ed25519-sig}))
-`
 
 All messages are signed by the source agent.
 
@@ -251,7 +229,6 @@ A realm is an execution domain with:
 - Resources - CPU, memory, network quotas
 - Pub/sub broker - Message routing
 
-`scheme
 (define-record-type <realm>
   (make-realm id coordinator policy agents topics)
   realm?
@@ -260,13 +237,11 @@ A realm is an execution domain with:
   (policy realm-policy)            ; SPKI authorization policy
   (agents realm-agents)            ; Hash table of active agents
   (topics realm-topics))           ; Hash table of topics
-`
 
 Quiescent Coordinator
 
 Coordinators are event-driven, not polling. Zero CPU when idle:
 
-`scheme
 (define (coordinator-loop realm)
   (let loop ()
     ;; Block until message arrives (no busy-wait)
@@ -279,13 +254,11 @@ Coordinators are event-driven, not polling. Zero CPU when idle:
         ((lock-req)  (handle-lock-request realm msg))
         ((signal)    (handle-signal realm msg)))
       (loop))))
-`
 
 Agent Heartbeat
 
 Agents must heartbeat to their coordinator:
 
-`scheme
 (agent-heartbeat
   (agent-id "sha256:...")
   (realm "sha256:realm...")
@@ -295,36 +268,29 @@ Agents must heartbeat to their coordinator:
     (cpu-ms 1234)
     (memory-kb 5678)
     (messages-sent 42)))
-`
 
 Missing heartbeats trigger investigation:
 
-`
 0s    - heartbeat expected
 30s   - grace period
 60s   - coordinator pings agent
 90s   - agent marked unhealthy
 120s  - agent decohered (or superposed)
-`
 
 Remote Termination (Kill Signal)
 
 Coordinators can terminate agents remotely:
 
-`scheme
 (coordinator-kill agent-id
   #!key reason grace-period)
-`
 
 Kill Signal:
-`scheme
 (kill-signal
   (target agent-id)
   (issuer coordinator-key)
   (reason (policy-violation "exceeded-cpu-quota"))
   (grace-period 5)  ; seconds to superpose
   (signature #${ed25519-sig}))
-`
 
 Agents MUST honor kill signals. Failure to terminate results in:
 1. Resource revocation (network, storage access removed)
@@ -339,18 +305,15 @@ Lock Manager
 
 Each realm has a lock manager for coordination:
 
-`scheme
 (define-record-type <lock-manager>
   (make-lock-manager realm locks waiters)
   lock-manager?
   (realm lm-realm)
   (locks lm-locks)      ; Hash table: resource → holder
   (waiters lm-waiters)) ; Hash table: resource → queue
-`
 
 Lock Operations
 
-`scheme
 (lock-acquire resource
   #!key timeout mode)
 ;; mode: 'exclusive | 'shared
@@ -360,16 +323,13 @@ Lock Operations
 (lock-upgrade resource)  ; shared → exclusive
 
 (lock-downgrade resource)  ; exclusive → shared
-`
 
 Distributed Locks (Cross-Realm)
 
 For resources spanning realms:
 
-`scheme
 (distributed-lock resource realms
   #!key timeout coordinator)
-`
 
 Uses two-phase locking:
 1. Prepare - All realms vote to grant lock
@@ -380,12 +340,10 @@ Deadlock Detection
 
 Lock manager maintains wait-for graph:
 
-`scheme
 (define (detect-deadlock lock-manager)
   "Find cycles in wait-for graph"
   (let ((graph (build-wait-for-graph lock-manager)))
     (find-cycles graph)))
-`
 
 Resolution: Youngest agent in cycle is aborted.
 
@@ -413,24 +371,20 @@ On every operation:
 
 Migration Security
 
-`scheme
 (define (validate-migration agent target-realm)
   (and (valid-credentials? (agent-credentials agent))
        (realm-admits? target-realm agent)
        (not-revoked? (agent-credentials agent))
        (within-quota? target-realm agent)))
-`
 
 Audit Trail
 
 All agent actions recorded:
 
-`scheme
 (audit-append
   actor: (agent-principal agent)
   action: `(teleport ,agent-id ,target-realm)
   motivation: "data locality optimization")
-`
 
 ------------------------------------------------------------------------------
 
@@ -452,7 +406,6 @@ Encrypted Agent State
 
 Agents can carry encrypted state they cannot read:
 
-`scheme
 (entangle
   code: aggregation-circuit  ; Pre-compiled HE circuit
   state: (encrypted-state
@@ -460,7 +413,6 @@ Agents can carry encrypted state they cannot read:
            (scheme 'bfv)
            (operations '(add multiply)))
   credentials: cert-chain)
-`
 
 The agent computes on encrypted data, returns encrypted result. Only the principal with the decryption key can read the result.
 

@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:50 2026
+%%CreationDate: Fri Jan  9 12:12:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -485,61 +485,57 @@ _S
 5 374 M
 (Schema Definition) s
 5 352 M
-(`scheme) s
-5 341 M
 (\(define-schema 'document) s
-5 330 M
+5 341 M
 (  \(version 1\)) s
-5 319 M
+5 330 M
 (  \(fields) s
-5 308 M
+5 319 M
 (    \(hash \(type string\) \(required #t\) \(indexed #t\)\)) s
-5 297 M
+5 308 M
 (    \(name \(type string\) \(required #t\)\)) s
-5 286 M
+5 297 M
 (    \(content-type \(type string\) \(required #t\)\)) s
-5 275 M
+5 286 M
 (    \(size \(type integer\) \(required #t\)\)) s
-5 264 M
+5 275 M
 (    \(created \(type timestamp\) \(required #t\)\)) s
-5 253 M
+5 264 M
 (    \(modified \(type timestamp\) \(required #f\)\)) s
-5 242 M
+5 253 M
 (    \(author \(type principal\) \(required #f\)\)) s
-5 231 M
+5 242 M
 (    \(tags \(type \(list string\)\) \(required #f\) \(default '\(\)\)\)\)\)) s
 5 220 M
-(`) s
-5 198 M
 (Schema as Content-Addressed Object) s
-5 176 M
-(`scheme) s
-5 165 M
+5 198 M
 (;; Schemas are soup objects) s
-5 154 M
+5 187 M
 (\(soup-object) s
-5 143 M
+5 176 M
 (  \(hash "sha256:schema-hash..."\)) s
-5 132 M
+5 165 M
 (  \(type schema\)) s
-5 121 M
+5 154 M
 (  \(name document\)) s
-5 110 M
+5 143 M
 (  \(version 1\)) s
-5 99 M
+5 132 M
 (  \(fields ...\)) s
-5 88 M
+5 121 M
 (  \(created "2026-01-01"\)\)) s
-5 66 M
+5 99 M
 (;; Reference schema by hash for reproducibility) s
-5 55 M
+5 88 M
 (\(define \(validate-against-schema obj schema-hash\)) s
-5 44 M
+5 77 M
 (  \(let \(\(schema \(soup-get schema-hash\)\)\)) s
-5 33 M
+5 66 M
 (    \(validate-object obj schema\)\)\)) s
+5 44 M
+(Schema Registry) s
 5 22 M
-(`) s
+(\(define schema-registry \(make-hash-table\)\)) s
 _R
 S
 %%Page: (2) 2
@@ -554,117 +550,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(Schema Registry) s
-5 759 M
-(`scheme) s
-5 748 M
-(\(define schema-registry \(make-hash-table\)\)) s
-5 726 M
 (\(define \(register-schema! schema\)) s
-5 715 M
+5 770 M
 (  \(let* \(\(name \(schema-name schema\)\)) s
-5 704 M
+5 759 M
 (         \(version \(schema-version schema\)\)) s
-5 693 M
+5 748 M
 (         \(hash \(soup-put schema type: 'schema\)\)\)) s
-5 682 M
+5 737 M
 (    \(hash-table-set! schema-registry \(cons name version\) hash\)) s
-5 671 M
+5 726 M
 (    \(audit-append action: 'schema-registered) s
-5 660 M
+5 715 M
 (                  name: name) s
-5 649 M
+5 704 M
 (                  version: version) s
-5 638 M
+5 693 M
 (                  hash: hash\)) s
-5 627 M
+5 682 M
 (    hash\)\)) s
-5 605 M
+5 660 M
 (\(define \(get-schema name #!optional version\)) s
-5 594 M
+5 649 M
 (  "Get schema by name and optional version") s
-5 583 M
+5 638 M
 (  \(if version) s
-5 572 M
+5 627 M
 (      \(soup-get \(hash-table-ref schema-registry \(cons name version\)\)\)) s
-5 561 M
+5 616 M
 (      \(get-latest-schema name\)\)\)) s
-5 550 M
-(`) s
-5 528 M
+5 594 M
 (------------------------------------------------------------------------------) s
-5 506 M
+5 572 M
 (Evolution Rules) s
-5 484 M
+5 550 M
 (Compatible Changes) s
-5 462 M
-(`scheme) s
-5 451 M
+5 528 M
 (;; These changes are backward compatible) s
-5 440 M
+5 517 M
 (\(define compatible-changes) s
-5 429 M
+5 506 M
 (  '\(add-optional-field      ; New field with default) s
-5 418 M
+5 495 M
 (    add-index               ; New index on existing field) s
-5 407 M
+5 484 M
 (    widen-type              ; integer -> number) s
-5 396 M
+5 473 M
 (    relax-constraint        ; required -> optional) s
-5 385 M
+5 462 M
 (    add-enum-value\)\)        ; Extend enumeration) s
-5 363 M
+5 440 M
 (\(define \(change-compatible? old-schema new-schema\)) s
-5 352 M
+5 429 M
 (  "Check if schema change is backward compatible") s
-5 341 M
+5 418 M
 (  \(let \(\(changes \(diff-schemas old-schema new-schema\)\)\)) s
-5 330 M
+5 407 M
 (    \(every compatible-change? changes\)\)\)) s
-5 319 M
-(`) s
-5 297 M
+5 385 M
 (Breaking Changes) s
-5 275 M
-(`scheme) s
-5 264 M
+5 363 M
 (;; These changes require migration) s
-5 253 M
+5 352 M
 (\(define breaking-changes) s
-5 242 M
+5 341 M
 (  '\(remove-field            ; Field no longer exists) s
-5 231 M
+5 330 M
 (    add-required-field      ; New required field without default) s
-5 220 M
+5 319 M
 (    narrow-type             ; number -> integer) s
-5 209 M
+5 308 M
 (    tighten-constraint      ; optional -> required) s
-5 198 M
+5 297 M
 (    remove-enum-value       ; Shrink enumeration) s
-5 187 M
+5 286 M
 (    rename-field\)\)          ; Field name changed) s
-5 165 M
+5 264 M
 (\(define \(requires-migration? old-schema new-schema\)) s
-5 154 M
+5 253 M
 (  "Check if migration needed") s
-5 143 M
+5 242 M
 (  \(let \(\(changes \(diff-schemas old-schema new-schema\)\)\)) s
-5 132 M
+5 231 M
 (    \(any breaking-change? changes\)\)\)) s
-5 121 M
-(`) s
-5 99 M
+5 209 M
 (------------------------------------------------------------------------------) s
-5 77 M
+5 187 M
 (Version Management) s
-5 55 M
+5 165 M
 (Semantic Versioning) s
-5 33 M
-(`scheme) s
-5 22 M
+5 143 M
 (;; Schema versions follow semver) s
-5 11 M
+5 132 M
 (\(define \(schema-version-compare v1 v2\)) s
+5 121 M
+(  \(let \(\(major1 \(version-major v1\)\) \(major2 \(version-major v2\)\)) s
+5 110 M
+(        \(minor1 \(version-minor v1\)\) \(minor2 \(version-minor v2\)\)) s
+5 99 M
+(        \(patch1 \(version-patch v1\)\) \(patch2 \(version-patch v2\)\)\)) s
+5 88 M
+(    \(cond) s
+5 77 M
+(      \(\(not \(= major1 major2\)\) \(- major1 major2\)\)) s
+5 66 M
+(      \(\(not \(= minor1 minor2\)\) \(- minor1 minor2\)\)) s
+5 55 M
+(      \(else \(- patch1 patch2\)\)\)\)\)) s
+5 33 M
+(;; Major: breaking changes) s
+5 22 M
+(;; Minor: compatible additions) s
+5 11 M
+(;; Patch: documentation/fixes) s
 _R
 S
 %%Page: (3) 3
@@ -678,122 +676,120 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(  \(let \(\(major1 \(version-major v1\)\) \(major2 \(version-major v2\)\)) s
 5 770 M
-(        \(minor1 \(version-minor v1\)\) \(minor2 \(version-minor v2\)\)) s
-5 759 M
-(        \(patch1 \(version-patch v1\)\) \(patch2 \(version-patch v2\)\)\)) s
-5 748 M
-(    \(cond) s
-5 737 M
-(      \(\(not \(= major1 major2\)\) \(- major1 major2\)\)) s
-5 726 M
-(      \(\(not \(= minor1 minor2\)\) \(- minor1 minor2\)\)) s
-5 715 M
-(      \(else \(- patch1 patch2\)\)\)\)\)) s
-5 693 M
-(;; Major: breaking changes) s
-5 682 M
-(;; Minor: compatible additions) s
-5 671 M
-(;; Patch: documentation/fixes) s
-5 660 M
-(`) s
-5 638 M
 (Version History) s
-5 616 M
-(`scheme) s
-5 605 M
+5 748 M
 (\(define \(schema-history name\)) s
-5 594 M
+5 737 M
 (  "Get all versions of a schema") s
-5 583 M
+5 726 M
 (  \(soup-query type: 'schema) s
-5 572 M
+5 715 M
 (              name: name) s
-5 561 M
+5 704 M
 (              order-by: '\(\(version desc\)\)\)\)) s
-5 539 M
+5 682 M
 (\(define \(schema-lineage name version\)) s
-5 528 M
+5 671 M
 (  "Get evolution path to current version") s
-5 517 M
+5 660 M
 (  \(let \(\(schema \(get-schema name version\)\)\)) s
-5 506 M
+5 649 M
 (    \(if \(schema-parent schema\)) s
-5 495 M
+5 638 M
 (        \(cons schema \(schema-lineage name \(schema-parent-version schema\)\)\)) s
-5 484 M
+5 627 M
 (        \(list schema\)\)\)\)) s
-5 473 M
-(`) s
-5 451 M
+5 605 M
 (------------------------------------------------------------------------------) s
-5 429 M
+5 583 M
 (Migration) s
-5 407 M
+5 561 M
 (Migration Definition) s
-5 385 M
-(`scheme) s
-5 374 M
+5 539 M
 (\(define-migration 'document-v1-to-v2) s
-5 363 M
+5 528 M
 (  \(from-schema 'document \(version 1\)\)) s
-5 352 M
+5 517 M
 (  \(to-schema 'document \(version 2\)\)) s
-5 341 M
+5 506 M
 (  \(up \(lambda \(obj\)) s
-5 330 M
+5 495 M
 (        ;; Add new field with default) s
-5 319 M
+5 484 M
 (        \(assoc-set obj 'visibility 'private\)\)\)) s
-5 308 M
+5 473 M
 (  \(down \(lambda \(obj\)) s
-5 297 M
+5 462 M
 (          ;; Remove new field) s
-5 286 M
+5 451 M
 (          \(assoc-remove obj 'visibility\)\)\)\)) s
-5 275 M
-(`) s
-5 253 M
+5 429 M
 (Migration Execution) s
-5 231 M
-(`scheme) s
-5 220 M
+5 407 M
 (\(define \(migrate-object obj from-version to-version\)) s
-5 209 M
+5 396 M
 (  "Migrate object between schema versions") s
-5 198 M
+5 385 M
 (  \(let \(\(migrations \(find-migration-path from-version to-version\)\)\)) s
-5 187 M
+5 374 M
 (    \(fold \(lambda \(migration obj\)) s
-5 176 M
+5 363 M
 (            \(\(migration-up migration\) obj\)\)) s
-5 165 M
+5 352 M
 (          obj) s
-5 154 M
+5 341 M
 (          migrations\)\)\)) s
-5 132 M
+5 319 M
 (\(define \(find-migration-path from to\)) s
-5 121 M
+5 308 M
 (  "Find sequence of migrations between versions") s
-5 110 M
+5 297 M
 (  \(let \(\(direction \(if \(> to from\) 'up 'down\)\)\)) s
-5 99 M
+5 286 M
 (    \(filter \(lambda \(m\)) s
-5 88 M
+5 275 M
 (              \(and \(eq? \(migration-direction m\) direction\)) s
-5 77 M
+5 264 M
 (                   \(version-in-range? \(migration-from m\) from to\)\)\)) s
-5 66 M
+5 253 M
 (            \(all-migrations\)\)\)\)) s
-5 55 M
-(`) s
-5 33 M
+5 231 M
 (Lazy Migration) s
+5 209 M
+(;; Migrate on read, not on upgrade) s
+5 198 M
+(\(define \(soup-get-migrated hash\)) s
+5 187 M
+(  "Get object, migrating if necessary") s
+5 176 M
+(  \(let* \(\(obj \(soup-get-raw hash\)\)) s
+5 165 M
+(         \(obj-version \(object-schema-version obj\)\)) s
+5 154 M
+(         \(current-version \(current-schema-version \(object-type obj\)\)\)\)) s
+5 143 M
+(    \(if \(= obj-version current-version\)) s
+5 132 M
+(        obj) s
+5 121 M
+(        \(let \(\(migrated \(migrate-object obj obj-version current-version\)\)\)) s
+5 110 M
+(          ;; Optionally persist migrated version) s
+5 99 M
+(          \(when persist-migrations) s
+5 88 M
+(            \(soup-put-raw migrated\)\)) s
+5 77 M
+(          migrated\)\)\)\)) s
+5 55 M
+(Batch Migration) s
+5 33 M
+(\(define \(batch-migrate schema-name from-version to-version\)) s
+5 22 M
+(  "Migrate all objects of a schema") s
 5 11 M
-(`scheme) s
+(  \(let \(\(objects \(soup-query type: schema-name) s
 _R
 S
 %%Page: (4) 4
@@ -808,125 +804,121 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(;; Migrate on read, not on upgrade) s
-5 770 M
-(\(define \(soup-get-migrated hash\)) s
-5 759 M
-(  "Get object, migrating if necessary") s
-5 748 M
-(  \(let* \(\(obj \(soup-get-raw hash\)\)) s
-5 737 M
-(         \(obj-version \(object-schema-version obj\)\)) s
-5 726 M
-(         \(current-version \(current-schema-version \(object-type obj\)\)\)\)) s
-5 715 M
-(    \(if \(= obj-version current-version\)) s
-5 704 M
-(        obj) s
-5 693 M
-(        \(let \(\(migrated \(migrate-object obj obj-version current-version\)\)\)) s
-5 682 M
-(          ;; Optionally persist migrated version) s
-5 671 M
-(          \(when persist-migrations) s
-5 660 M
-(            \(soup-put-raw migrated\)\)) s
-5 649 M
-(          migrated\)\)\)\)) s
-5 638 M
-(`) s
-5 616 M
-(Batch Migration) s
-5 594 M
-(`scheme) s
-5 583 M
-(\(define \(batch-migrate schema-name from-version to-version\)) s
-5 572 M
-(  "Migrate all objects of a schema") s
-5 561 M
-(  \(let \(\(objects \(soup-query type: schema-name) s
-5 550 M
 (                             schema-version: from-version\)\)\)) s
-5 539 M
+5 770 M
 (    \(for-each \(lambda \(obj\)) s
-5 528 M
+5 759 M
 (                \(let \(\(migrated \(migrate-object obj from-version to-version\)\)\)) s
-5 517 M
+5 748 M
 (                  \(soup-update \(object-hash obj\) migrated\)) s
-5 506 M
+5 737 M
 (                  \(audit-append action: 'object-migrated) s
-5 495 M
+5 726 M
 (                                hash: \(object-hash obj\)) s
-5 484 M
+5 715 M
 (                                from: from-version) s
-5 473 M
+5 704 M
 (                                to: to-version\)\)\)) s
-5 462 M
+5 693 M
 (              objects\)\)\)) s
-5 451 M
-(`) s
-5 429 M
+5 671 M
 (------------------------------------------------------------------------------) s
-5 407 M
+5 649 M
 (Validation) s
-5 385 M
+5 627 M
 (Schema Validation) s
-5 363 M
-(`scheme) s
-5 352 M
+5 605 M
 (\(define \(validate-object obj schema\)) s
-5 341 M
+5 594 M
 (  "Validate object against schema") s
-5 330 M
+5 583 M
 (  \(let \(\(errors '\(\)\)\)) s
-5 319 M
+5 572 M
 (    ;; Check required fields) s
-5 308 M
+5 561 M
 (    \(for-each \(lambda \(field\)) s
-5 297 M
+5 550 M
 (                \(when \(and \(field-required? field\)) s
-5 286 M
+5 539 M
 (                           \(not \(assoc-ref obj \(field-name field\)\)\)\)) s
-5 275 M
+5 528 M
 (                  \(set! errors \(cons `\(missing-required ,\(field-name field\)\)) s
-5 264 M
+5 517 M
 (                                    errors\)\)\)\)) s
-5 253 M
+5 506 M
 (              \(schema-fields schema\)\)) s
-5 231 M
+5 484 M
 (    ;; Check field types) s
-5 220 M
+5 473 M
 (    \(for-each \(lambda \(pair\)) s
-5 209 M
+5 462 M
 (                \(let* \(\(name \(car pair\)\)) s
-5 198 M
+5 451 M
 (                       \(value \(cdr pair\)\)) s
-5 187 M
+5 440 M
 (                       \(field \(schema-field schema name\)\)\)) s
-5 176 M
+5 429 M
 (                  \(when \(and field \(not \(type-matches? value \(field-type field\)\)\)\)) s
-5 165 M
+5 418 M
 (                    \(set! errors \(cons `\(type-mismatch ,name\) errors\)\)\)\)\)) s
-5 154 M
+5 407 M
 (              obj\)) s
-5 132 M
+5 385 M
 (    \(if \(null? errors\)) s
-5 121 M
+5 374 M
 (        \(result-ok obj\)) s
-5 110 M
+5 363 M
 (        \(result-err errors\)\)\)\)) s
-5 99 M
-(`) s
-5 77 M
+5 341 M
 (Validation Modes) s
-5 55 M
-(`scheme) s
-5 44 M
+5 319 M
 (\(define validation-mode \(make-parameter 'strict\)\)) s
-5 22 M
+5 297 M
 (\(define \(validate-with-mode obj schema\)) s
-5 11 M
+5 286 M
 (  \(case \(validation-mode\)) s
+5 275 M
+(    \(\(strict\)) s
+5 264 M
+(     ;; All fields must match schema) s
+5 253 M
+(     \(validate-object obj schema\)\)) s
+5 242 M
+(    \(\(permissive\)) s
+5 231 M
+(     ;; Extra fields allowed) s
+5 220 M
+(     \(validate-required-fields obj schema\)\)) s
+5 209 M
+(    \(\(warn\)) s
+5 198 M
+(     ;; Log warnings but don't fail) s
+5 187 M
+(     \(let \(\(result \(validate-object obj schema\)\)\)) s
+5 176 M
+(       \(when \(result-err? result\)) s
+5 165 M
+(         \(log-warn "Validation errors" errors: \(result-error result\)\)\)) s
+5 154 M
+(       \(result-ok obj\)\)\)\)\)) s
+5 132 M
+(------------------------------------------------------------------------------) s
+5 110 M
+(Federation Compatibility) s
+5 88 M
+(Schema Negotiation) s
+5 66 M
+(\(define \(negotiate-schema peer schema-name\)) s
+5 55 M
+(  "Negotiate compatible schema version with peer") s
+5 44 M
+(  \(let* \(\(local-versions \(local-schema-versions schema-name\)\)) s
+5 33 M
+(         \(peer-versions \(request-schema-versions peer schema-name\)\)) s
+5 22 M
+(         \(compatible \(intersection local-versions peer-versions\)\)\)) s
+5 11 M
+(    \(if \(null? compatible\)) s
 _R
 S
 %%Page: (5) 5
@@ -941,119 +933,115 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(\(strict\)) s
-5 770 M
-(     ;; All fields must match schema) s
-5 759 M
-(     \(validate-object obj schema\)\)) s
-5 748 M
-(    \(\(permissive\)) s
-5 737 M
-(     ;; Extra fields allowed) s
-5 726 M
-(     \(validate-required-fields obj schema\)\)) s
-5 715 M
-(    \(\(warn\)) s
-5 704 M
-(     ;; Log warnings but don't fail) s
-5 693 M
-(     \(let \(\(result \(validate-object obj schema\)\)\)) s
-5 682 M
-(       \(when \(result-err? result\)) s
-5 671 M
-(         \(log-warn "Validation errors" errors: \(result-error result\)\)\)) s
-5 660 M
-(       \(result-ok obj\)\)\)\)\)) s
-5 649 M
-(`) s
-5 627 M
-(------------------------------------------------------------------------------) s
-5 605 M
-(Federation Compatibility) s
-5 583 M
-(Schema Negotiation) s
-5 561 M
-(`scheme) s
-5 550 M
-(\(define \(negotiate-schema peer schema-name\)) s
-5 539 M
-(  "Negotiate compatible schema version with peer") s
-5 528 M
-(  \(let* \(\(local-versions \(local-schema-versions schema-name\)\)) s
-5 517 M
-(         \(peer-versions \(request-schema-versions peer schema-name\)\)) s
-5 506 M
-(         \(compatible \(intersection local-versions peer-versions\)\)\)) s
-5 495 M
-(    \(if \(null? compatible\)) s
-5 484 M
 (        \(error 'no-compatible-schema\)) s
-5 473 M
+5 770 M
 (        \(max compatible\)\)\)\)) s
-5 451 M
+5 748 M
 (\(define \(sync-with-schema-version peer schema-name version\)) s
-5 440 M
+5 737 M
 (  "Sync objects using negotiated schema version") s
-5 429 M
+5 726 M
 (  \(for-each \(lambda \(obj\)) s
-5 418 M
+5 715 M
 (              \(let \(\(converted \(convert-to-version obj version\)\)\)) s
-5 407 M
+5 704 M
 (                \(send-object peer converted\)\)\)) s
-5 396 M
+5 693 M
 (            \(objects-to-sync schema-name\)\)\)) s
-5 385 M
-(`) s
-5 363 M
+5 671 M
 (Cross-Version Queries) s
-5 341 M
-(`scheme) s
-5 330 M
+5 649 M
 (\(define \(query-with-version-tolerance query\)) s
-5 319 M
+5 638 M
 (  "Query that handles mixed schema versions") s
-5 308 M
+5 627 M
 (  \(let* \(\(results \(soup-query-raw query\)\)) s
-5 297 M
+5 616 M
 (         \(current-version \(current-schema-version \(query-type query\)\)\)\)) s
-5 286 M
+5 605 M
 (    \(map \(lambda \(obj\)) s
-5 275 M
+5 594 M
 (           \(if \(= \(object-schema-version obj\) current-version\)) s
-5 264 M
+5 583 M
 (               obj) s
-5 253 M
+5 572 M
 (               \(migrate-object obj \(object-schema-version obj\) current-version\)\)\)) s
-5 242 M
+5 561 M
 (         results\)\)\)) s
-5 231 M
-(`) s
-5 209 M
+5 539 M
 (------------------------------------------------------------------------------) s
-5 187 M
+5 517 M
 (Schema Introspection) s
-5 165 M
+5 495 M
 (Schema Queries) s
-5 143 M
-(`scheme) s
-5 132 M
+5 473 M
 (;; What schemas exist?) s
-5 121 M
+5 462 M
 (\(soup-query type: 'schema\)) s
-5 99 M
+5 440 M
 (;; What versions of a schema?) s
-5 88 M
+5 429 M
 (\(soup-query type: 'schema name: 'document\)) s
-5 66 M
+5 407 M
 (;; What fields in a schema?) s
-5 55 M
+5 396 M
 (\(schema-fields \(get-schema 'document 2\)\)) s
-5 33 M
+5 374 M
 (;; Schema dependency graph) s
-5 22 M
+5 363 M
 (\(define \(schema-dependencies schema\)) s
-5 11 M
+5 352 M
 (  \(filter-map \(lambda \(field\)) s
+5 341 M
+(                \(when \(schema-reference? \(field-type field\)\)) s
+5 330 M
+(                  \(field-type-target field\)\)\)) s
+5 319 M
+(              \(schema-fields schema\)\)\)) s
+5 297 M
+(Schema Documentation) s
+5 275 M
+(\(define-schema 'document) s
+5 264 M
+(  \(version 2\)) s
+5 253 M
+(  \(description "A document stored in the vault"\)) s
+5 242 M
+(  \(fields) s
+5 231 M
+(    \(hash) s
+5 220 M
+(      \(type string\)) s
+5 209 M
+(      \(required #t\)) s
+5 198 M
+(      \(indexed #t\)) s
+5 187 M
+(      \(description "Content-addressed hash of document"\)\)) s
+5 176 M
+(    \(name) s
+5 165 M
+(      \(type string\)) s
+5 154 M
+(      \(required #t\)) s
+5 143 M
+(      \(description "Human-readable document name"\)) s
+5 132 M
+(      \(example "RFC-033-schema-evolution.md"\)\)\)\)) s
+5 110 M
+(------------------------------------------------------------------------------) s
+5 88 M
+(Default Values) s
+5 66 M
+(Static Defaults) s
+5 44 M
+(\(define-schema 'document) s
+5 33 M
+(  \(version 2\)) s
+5 22 M
+(  \(fields) s
+5 11 M
+(    \(visibility) s
 _R
 S
 %%Page: (6) 6
@@ -1068,125 +1056,111 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(                \(when \(schema-reference? \(field-type field\)\)) s
+(      \(type enum\)) s
 5 770 M
-(                  \(field-type-target field\)\)\)) s
+(      \(values \(public private restricted\)\)) s
 5 759 M
-(              \(schema-fields schema\)\)\)) s
+(      \(default 'private\)\)) s
 5 748 M
-(`) s
+(    \(tags) s
+5 737 M
+(      \(type \(list string\)\)) s
 5 726 M
-(Schema Documentation) s
+(      \(default '\(\)\)\)\)\)) s
 5 704 M
-(`scheme) s
-5 693 M
-(\(define-schema 'document) s
+(Computed Defaults) s
 5 682 M
-(  \(version 2\)) s
+(\(define-schema 'document) s
 5 671 M
-(  \(description "A document stored in the vault"\)) s
+(  \(version 2\)) s
 5 660 M
 (  \(fields) s
 5 649 M
-(    \(hash) s
-5 638 M
-(      \(type string\)) s
-5 627 M
-(      \(required #t\)) s
-5 616 M
-(      \(indexed #t\)) s
-5 605 M
-(      \(description "Content-addressed hash of document"\)\)) s
-5 594 M
-(    \(name) s
-5 583 M
-(      \(type string\)) s
-5 572 M
-(      \(required #t\)) s
-5 561 M
-(      \(description "Human-readable document name"\)) s
-5 550 M
-(      \(example "RFC-033-schema-evolution.md"\)\)\)\)) s
-5 539 M
-(`) s
-5 517 M
-(------------------------------------------------------------------------------) s
-5 495 M
-(Default Values) s
-5 473 M
-(Static Defaults) s
-5 451 M
-(`scheme) s
-5 440 M
-(\(define-schema 'document) s
-5 429 M
-(  \(version 2\)) s
-5 418 M
-(  \(fields) s
-5 407 M
-(    \(visibility) s
-5 396 M
-(      \(type enum\)) s
-5 385 M
-(      \(values \(public private restricted\)\)) s
-5 374 M
-(      \(default 'private\)\)) s
-5 363 M
-(    \(tags) s
-5 352 M
-(      \(type \(list string\)\)) s
-5 341 M
-(      \(default '\(\)\)\)\)\)) s
-5 330 M
-(`) s
-5 308 M
-(Computed Defaults) s
-5 286 M
-(`scheme) s
-5 275 M
-(\(define-schema 'document) s
-5 264 M
-(  \(version 2\)) s
-5 253 M
-(  \(fields) s
-5 242 M
 (    \(created) s
-5 231 M
+5 638 M
 (      \(type timestamp\)) s
-5 220 M
+5 627 M
 (      \(default \(current-time\)\)\)) s
-5 209 M
+5 616 M
 (    \(id) s
-5 198 M
+5 605 M
 (      \(type string\)) s
-5 187 M
+5 594 M
 (      \(default \(generate-uuid\)\)\)\)\)) s
-5 176 M
-(`) s
-5 154 M
+5 572 M
 (Migration Defaults) s
-5 132 M
-(`scheme) s
-5 121 M
+5 550 M
 (;; Default for objects migrated from v1 to v2) s
-5 110 M
+5 539 M
 (\(define-migration 'document-v1-to-v2) s
-5 99 M
+5 528 M
 (  \(defaults) s
-5 88 M
+5 517 M
 (    \(visibility \(lambda \(obj\)) s
-5 77 M
+5 506 M
 (                  ;; Infer from existing data) s
-5 66 M
+5 495 M
 (                  \(if \(assoc-ref obj 'public\)) s
-5 55 M
+5 484 M
 (                      'public) s
-5 44 M
+5 473 M
 (                      'private\)\)\)\)\)) s
-5 33 M
-(`) s
-5 11 M
+5 451 M
 (------------------------------------------------------------------------------) s
+5 429 M
+(Security Considerations) s
+5 407 M
+(Schema Tampering) s
+5 385 M
+(;; Schemas are content-addressed - tampering detectable) s
+5 374 M
+(\(define \(verify-schema-integrity schema-hash\)) s
+5 363 M
+(  \(let* \(\(schema \(soup-get schema-hash\)\)) s
+5 352 M
+(         \(computed-hash \(content-hash \(serialize schema\)\)\)\)) s
+5 341 M
+(    \(equal? schema-hash computed-hash\)\)\)) s
+5 319 M
+(Migration Authorization) s
+5 297 M
+(;; Migrations require capability) s
+5 286 M
+(\(spki-cert) s
+5 275 M
+(  \(issuer vault-admin\)) s
+5 264 M
+(  \(subject schema-admin\)) s
+5 253 M
+(  \(capability) s
+5 242 M
+(    \(action migrate-schema\)) s
+5 231 M
+(    \(object \(schema 'document\)\)\)) s
+5 220 M
+(  \(validity \(not-after "2027-01-01"\)\)\)) s
+5 198 M
+(------------------------------------------------------------------------------) s
+5 176 M
+(References) s
+5 154 M
+(1. Protocol Buffers - Updating A Message Type) s
+5 143 M
+(2. Avro Schema Evolution) s
+5 132 M
+(3. RFC-020: Content-Addressed Storage) s
+5 121 M
+(4. RFC-025: Query Language) s
+5 99 M
+(------------------------------------------------------------------------------) s
+5 77 M
+(Changelog) s
+5 55 M
+(- 2026-01-07 - Initial draft) s
+5 33 M
+(------------------------------------------------------------------------------) s
+5 11 M
+(Implementation Status: Draft) s
 _R
 S
 %%Page: (7) 7
@@ -1200,71 +1174,9 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(Security Considerations) s
-5 748 M
-(Schema Tampering) s
-5 726 M
-(`scheme) s
-5 715 M
-(;; Schemas are content-addressed - tampering detectable) s
-5 704 M
-(\(define \(verify-schema-integrity schema-hash\)) s
-5 693 M
-(  \(let* \(\(schema \(soup-get schema-hash\)\)) s
-5 682 M
-(         \(computed-hash \(content-hash \(serialize schema\)\)\)\)) s
-5 671 M
-(    \(equal? schema-hash computed-hash\)\)\)) s
-5 660 M
-(`) s
-5 638 M
-(Migration Authorization) s
-5 616 M
-(`scheme) s
-5 605 M
-(;; Migrations require capability) s
-5 594 M
-(\(spki-cert) s
-5 583 M
-(  \(issuer vault-admin\)) s
-5 572 M
-(  \(subject schema-admin\)) s
-5 561 M
-(  \(capability) s
-5 550 M
-(    \(action migrate-schema\)) s
-5 539 M
-(    \(object \(schema 'document\)\)\)) s
-5 528 M
-(  \(validity \(not-after "2027-01-01"\)\)\)) s
-5 517 M
-(`) s
-5 495 M
-(------------------------------------------------------------------------------) s
-5 473 M
-(References) s
-5 451 M
-(1. Protocol Buffers - Updating A Message Type) s
-5 440 M
-(2. Avro Schema Evolution) s
-5 429 M
-(3. RFC-020: Content-Addressed Storage) s
-5 418 M
-(4. RFC-025: Query Language) s
-5 396 M
-(------------------------------------------------------------------------------) s
-5 374 M
-(Changelog) s
-5 352 M
-(- 2026-01-07 - Initial draft) s
-5 330 M
-(------------------------------------------------------------------------------) s
-5 308 M
-(Implementation Status: Draft) s
-5 297 M
+5 781 M
 (Dependencies: soup, cas) s
-5 286 M
+5 770 M
 (Integration: Soup queries, federation, long-term preservation) s
 _R
 S

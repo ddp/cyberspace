@@ -15,12 +15,10 @@ This RFC specifies the Library Directory System for the Library of Cyberspace: a
 
 E Pluribus Unum
 
-`
 ╔═══════════════════════════════════════════════════════════════╗
 ║  📚 Cyberspace Library Directory                               ║
 ║  Finding knowledge should be joyful                            ║
 ╚═══════════════════════════════════════════════════════════════╝
-`
 
 ------------------------------------------------------------------------------
 
@@ -46,7 +44,6 @@ Data Model
 
 Document Record
 
-`scheme
 (define-record-type <document>
   (make-document title authors year topics file-path
                  collection source-url description)
@@ -59,11 +56,9 @@ Document Record
   (collection document-collection)
   (source-url document-source-url)
   (description document-description))
-`
 
 Collection Record
 
-`scheme
 (define-record-type <collection>
   (make-collection name path documents description)
   collection?
@@ -71,11 +66,9 @@ Collection Record
   (path collection-path)
   (documents collection-documents)  ; List of documents
   (description collection-description))
-`
 
 Library Record
 
-`scheme
 (define-record-type <library>
   (make-library collections documents
                 author-index topic-index year-index collection-index)
@@ -86,7 +79,6 @@ Library Record
   (topic-index library-topic-index)       ; Hash table
   (year-index library-year-index)         ; Hash table
   (collection-index library-collection-index))
-`
 
 ------------------------------------------------------------------------------
 
@@ -94,16 +86,13 @@ Index System
 
 Four hash table indexes for O(1) lookup:
 
-`
 author-index:     "Lamport" → [doc1, doc2, doc5, ...]
 topic-index:      "cryptography" → [doc3, doc7, doc12, ...]
 year-index:       1978 → [doc1, doc4, ...]
 collection-index: "lampson" → <collection>
-`
 
 Building Indexes
 
-`scheme
 (define (build-author-index documents)
   (let ((index (make-hash-table equal?)))
     (for-each
@@ -118,7 +107,6 @@ Building Indexes
           (document-authors doc)))
       documents)
     index))
-`
 
 ------------------------------------------------------------------------------
 
@@ -126,7 +114,6 @@ Query Interface
 
 Natural Language Parsing
 
-`scheme
 (parse-query "papers by Lampson about protection")
 ;; => (query (author "Lampson") (topic "protection"))
 
@@ -135,7 +122,6 @@ Natural Language Parsing
 
 (parse-query "SPKI certificates")
 ;; => (query (topic "SPKI") (topic "certificates"))
-`
 
 Recognized Patterns:
 - by <name> → author search
@@ -146,13 +132,11 @@ Recognized Patterns:
 
 Fuzzy Matching
 
-`scheme
 (fuzzy-match "Lamp" author-list)
 ;; => ("Lampson" "Lamport")
 
 (fuzzy-match "crypto" topic-list)
 ;; => ("cryptography" "cryptographic" "encryption")
-`
 
 Matching strategies:
 1. Exact match (highest priority)
@@ -162,13 +146,11 @@ Matching strategies:
 
 Query Functions
 
-`scheme
 (find-by-author library "Lampson")
 (find-by-topic library "SPKI")
 (find-by-year library 1978)
 (find-by-collection library "lampson")
 (find-related library document)
-`
 
 ------------------------------------------------------------------------------
 
@@ -176,7 +158,6 @@ REPL Interface
 
 Interactive Session
 
-`
 $ csi -s directory-repl.scm
 
 ╔═══════════════════════════════════════════════════════════════╗
@@ -215,7 +196,6 @@ Library Statistics:
 
 📖 > quit
 Happy exploring! 📚✨
-`
 
 Commands
 
@@ -235,7 +215,6 @@ INDEX.md Parser
 
 Each collection contains an INDEX.md with paper listings:
 
-`markdown
 Lampson Collection
 
 Butler Lampson's papers on protection, capability systems, and distributed computing.
@@ -251,11 +230,9 @@ Papers
    - Author: Butler Lampson
    - Topics: systems design, engineering
    - Source: ACM Operating Systems Review
-`
 
 Parser Output
 
-`scheme
 (parse-index-file "lampson/INDEX.md")
 ;; =>
 (collection
@@ -267,7 +244,6 @@ Parser Output
      (year 1971)
      (topics "capability" "protection" "access control"))
     ...))
-`
 
 ------------------------------------------------------------------------------
 
@@ -275,12 +251,9 @@ Export Formats
 
 S-expression Export
 
-`scheme
 (export-to-sexp library "catalog.sexp")
-`
 
 Output:
-`scheme
 (library
   (metadata
     (document-count 312)
@@ -297,13 +270,10 @@ Output:
           (topics ("capability" "protection")))
         ...))
     ...))
-`
 
 HTML Export
 
-`scheme
 (export-to-html library "catalog.html")
-`
 
 Generates browsable web catalog with:
 - Alphabetical author index
@@ -313,9 +283,7 @@ Generates browsable web catalog with:
 
 Markdown Export
 
-`scheme
 (export-to-markdown library "catalog.md")
-`
 
 Documentation-friendly format for README files.
 

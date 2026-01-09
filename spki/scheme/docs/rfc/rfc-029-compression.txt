@@ -35,25 +35,22 @@ Compression Model
 
 Layered Architecture
 
-`
-┌─────────────────────────────────────┐
-│         Application Layer           │
-│     (sees uncompressed data)        │
-├─────────────────────────────────────┤
-│        Content-Addressing           │
-│    (hash of uncompressed data)      │
-├─────────────────────────────────────┤
-│        Compression Layer            │
-│      (transparent compression)      │
-├─────────────────────────────────────┤
-│         Storage Layer               │
-│     (stores compressed data)        │
-└─────────────────────────────────────┘
-`
++-------------------------------------+
+|         Application Layer           |
+|     (sees uncompressed data)        |
++-------------------------------------+
+|        Content-Addressing           |
+|    (hash of uncompressed data)      |
++-------------------------------------+
+|        Compression Layer            |
+|      (transparent compression)      |
++-------------------------------------+
+|         Storage Layer               |
+|     (stores compressed data)        |
++-------------------------------------+
 
 Compression Metadata
 
-`scheme
 (define (compress-object data algorithm)
   (let* ((compressed (compress algorithm data))
          (ratio (/ (bytevector-length compressed)
@@ -74,7 +71,6 @@ Compression Metadata
     (original-size 1048576)
     (compressed-size 524288)
     (ratio 0.5)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -82,7 +78,6 @@ Compression Algorithms
 
 Supported Algorithms
 
-`scheme
 (define compression-algorithms
   `((zstd . ((extension . "zst")
              (levels . (1 3 9 19))
@@ -100,11 +95,9 @@ Supported Algorithms
              (levels . ())
              (default-level . #f)
              (dictionary . #f)))))
-`
 
 Algorithm Selection
 
-`scheme
 (define (select-compression-algorithm content-type size)
   "Select best algorithm for content"
   (cond
@@ -124,11 +117,9 @@ Algorithm Selection
      'lz4)
     ;; Default
     (else 'zstd)))
-`
 
 Zstd Dictionaries
 
-`scheme
 ;; Train dictionary on sample data
 (define (train-dictionary samples dict-size)
   "Train zstd dictionary from sample data"
@@ -145,7 +136,6 @@ Zstd Dictionaries
     (if dict
         (zstd-compress-with-dict data dict)
         (zstd-compress data))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -153,7 +143,6 @@ Compression Operations
 
 Transparent Compression
 
-`scheme
 (define (cas-put-compressed data)
   "Store data with transparent compression"
   (let* ((hash (content-hash data))  ; Hash uncompressed
@@ -180,11 +169,9 @@ Transparent Compression
     (if (or (not algorithm) (eq? algorithm 'none))
         stored
         (decompress algorithm stored))))
-`
 
 Batch Compression
 
-`scheme
 (define (compress-batch objects)
   "Compress multiple objects efficiently"
   ;; Group by content type for dictionary efficiency
@@ -197,11 +184,9 @@ Batch Compression
                  (compress-with-dictionary obj content-type))
                items)))
       groups)))
-`
 
 Recompression
 
-`scheme
 (define (recompress-object hash new-algorithm new-level)
   "Recompress object with different settings"
   (let* ((data (cas-get-decompressed hash))
@@ -215,7 +200,6 @@ Recompression
     (audit-append action: 'recompressed
                   hash: hash
                   algorithm: new-algorithm)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -223,7 +207,6 @@ Deduplication
 
 Content-Based Deduplication
 
-`scheme
 ;; Content addressing provides automatic deduplication
 (define (store-deduplicated data)
   (let ((hash (content-hash data)))
@@ -234,11 +217,9 @@ Content-Based Deduplication
           (audit-append action: 'deduplicated hash: hash)
           hash)
         (cas-put data))))
-`
 
 Block-Level Deduplication
 
-`scheme
 ;; Split large objects into blocks
 (define block-size 65536)  ; 64KB
 
@@ -265,11 +246,9 @@ Block-Level Deduplication
         ((= (bitwise-and (rabin-hash data pos) mask) 0)
          pos)
         (else (loop (+ pos 1)))))))
-`
 
 Chunk Storage
 
-`scheme
 (define (store-chunked data)
   "Store large object as deduplicated chunks"
   (let* ((chunks (chunk-object data))
@@ -288,11 +267,9 @@ Chunk Storage
   (let* ((manifest (deserialize (cas-get manifest-hash)))
          (chunks (map cas-get (assoc-ref manifest 'chunks))))
     (bytevector-concatenate chunks)))
-`
 
 Deduplication Statistics
 
-`scheme
 (define (deduplication-stats)
   "Calculate deduplication effectiveness"
   (let* ((objects (soup-query type: 'any))
@@ -303,7 +280,6 @@ Deduplication Statistics
       (physical-size . ,physical-size)
       (dedup-ratio . ,(/ logical-size physical-size))
       (space-saved . ,(- logical-size physical-size)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -311,7 +287,6 @@ Delta Compression
 
 Version Deltas
 
-`scheme
 (define (store-delta base-hash new-data)
   "Store object as delta from base"
   (let* ((base-data (cas-get base-hash))
@@ -338,11 +313,9 @@ Version Deltas
                (delta (storage-get hash)))
           (apply-delta base-data delta))
         (storage-get hash))))
-`
 
 Delta Chains
 
-`scheme
 ;; Limit delta chain depth
 (define max-delta-depth 10
 
@@ -356,7 +329,6 @@ Delta Chains
 (define (should-store-delta? base-hash)
   "Check if delta storage is appropriate"
   (< (delta-chain-depth base-hash) max-delta-depth))
-`
 
 ------------------------------------------------------------------------------
 
@@ -364,7 +336,6 @@ Archive Compression
 
 Sealed Archive Format
 
-`scheme
 ;; RFC-018 integration
 (define (create-compressed-archive objects)
   "Create compressed sealed archive"
@@ -372,11 +343,9 @@ Sealed Archive Format
          (compressed (zstd-compress serialized 19))  ; Max compression
          (encrypted (age-encrypt compressed recipients)))
     (cas-put encrypted)))
-`
 
 Streaming Compression
 
-`scheme
 (define (stream-compress input-port output-port algorithm)
   "Stream compression for large files"
   (let ((ctx (compression-context-create algorithm)))
@@ -386,7 +355,6 @@ Streaming Compression
           (write-bytevector (compress-chunk ctx chunk) output-port)
           (loop))))
     (write-bytevector (compress-finish ctx) output-port)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -394,7 +362,6 @@ Performance Optimization
 
 Compression Cache
 
-`scheme
 (define compression-cache (make-lru-cache 1000))
 
 (define (cached-decompress hash)
@@ -403,11 +370,9 @@ Compression Cache
       (let ((data (cas-get-decompressed hash)))
         (lru-put! compression-cache hash data)
         data)))
-`
 
 Parallel Compression
 
-`scheme
 (define (parallel-compress objects num-threads)
   "Compress multiple objects in parallel"
   (let ((work-queue (make-channel))
@@ -427,11 +392,9 @@ Parallel Compression
     (for-each (lambda (obj) (channel-put! work-queue obj)) objects)
     ;; Collect results
     (map (lambda (_) (channel-get! results)) objects)))
-`
 
 Adaptive Compression
 
-`scheme
 (define (adaptive-compress data)
   "Select compression based on content analysis"
   (let* ((sample (subbytevector data 0 (min 4096 (bytevector-length data))))
@@ -443,7 +406,6 @@ Adaptive Compression
       ((< entropy 4.0) (values 'zstd 19))
       ;; Medium entropy - balanced
       (else (values 'zstd 3)))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -451,7 +413,6 @@ Integrity
 
 Verification
 
-`scheme
 (define (verify-compressed-object hash)
   "Verify compressed object integrity"
   (let* ((stored (storage-get hash))
@@ -459,11 +420,9 @@ Verification
          (decompressed (decompress (assoc-ref meta 'algorithm) stored))
          (computed-hash (content-hash decompressed)))
     (equal? hash computed-hash)))
-`
 
 Corruption Recovery
 
-`scheme
 (define (recover-compressed hash)
   "Attempt to recover corrupted compressed object"
   ;; Try partial decompression
@@ -477,7 +436,6 @@ Corruption Recovery
     (when replica-data
       (storage-put hash replica-data)
       replica-data)))
-`
 
 ------------------------------------------------------------------------------
 

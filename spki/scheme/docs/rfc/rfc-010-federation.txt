@@ -17,20 +17,18 @@ E Pluribus Unum
 
 Out of many, one.
 
-`
-    ┌─────────┐         ┌─────────┐         ┌─────────┐
-    │  Alice  │◄───────►│   Bob   │◄───────►│  Carol  │
-    │  Vault  │         │  Vault  │         │  Vault  │
-    └────┬────┘         └────┬────┘         └────┬────┘
-         │                   │                   │
-         │    ┌──────────────┴──────────────┐    │
-         │    │                             │    │
-         └────►    No Central Authority    ◄────┘
-              │                             │
-              │   Just keys, seals, trust   │
-              │                             │
-              └─────────────────────────────┘
-`
+    +---------+         +---------+         +---------+
+    |  Alice  |<------->|   Bob   |<------->|  Carol  |
+    |  Vault  |         |  Vault  |         |  Vault  |
+    +----+----+         +----+----+         +----+----+
+         |                   |                   |
+         |    +--------------+--------------+    |
+         |    |                             |    |
+         +---->    No Central Authority    <----+
+              |                             |
+              |   Just keys, seals, trust   |
+              |                             |
+              +-----------------------------+
 
 ------------------------------------------------------------------------------
 
@@ -57,18 +55,15 @@ Federation Model
 
 Peer Relationships
 
-`
 Peer: A vault instance with identity (SPKI principal)
 
 Relationships:
   - Publisher:  I push releases to you
   - Subscriber: I pull releases from you
   - Peer:       Bidirectional sync
-`
 
 Trust Model
 
-`scheme
 (federation-trust
   (peer alice-pubkey
     (role publisher)
@@ -79,7 +74,6 @@ Trust Model
     (role subscriber)
     (trust-level known)        ; Key known, not verified
     (sync-policy manual)))
-`
 
 Trust levels:
 - unknown: Never seen, reject
@@ -93,10 +87,8 @@ Protocol Operations
 
 Peer Discovery
 
-`scheme
 (federation-discover)
 ;; Returns: List of known peers and their status
-`
 
 Discovery mechanisms:
 1. Explicit configuration: Known peer list
@@ -106,10 +98,8 @@ Discovery mechanisms:
 
 Peer Registration
 
-`scheme
 (federation-register peer-uri
   #!key public-key trust-level)
-`
 
 Registers a new peer with:
 - URI (git remote, HTTP endpoint, filesystem path)
@@ -118,10 +108,8 @@ Registers a new peer with:
 
 Release Announcement
 
-`scheme
 (federation-announce version
   #!key peers message)
-`
 
 Pushes release notification to peers:
 1. Create signed announcement
@@ -131,10 +119,8 @@ Pushes release notification to peers:
 
 Release Request
 
-`scheme
 (federation-request version peer
   #!key verify-key)
-`
 
 Pulls specific release from peer:
 1. Request release metadata
@@ -145,10 +131,8 @@ Pulls specific release from peer:
 
 Synchronization
 
-`scheme
 (federation-sync peer
   #!key direction verify-key)
-`
 
 Bidirectional sync (from RFC-001):
 1. Exchange release lists
@@ -163,7 +147,6 @@ Message Format
 
 Announcement Message
 
-`scheme
 (federation-message
   (type announcement)
   (from #${alice-pubkey})
@@ -174,11 +157,9 @@ Announcement Message
     (archive-size 1048576)
     (notes "Major release"))
   (signature #${ed25519-sig}))
-`
 
 Request Message
 
-`scheme
 (federation-message
   (type request)
   (from #${bob-pubkey})
@@ -187,11 +168,9 @@ Request Message
     (release "2.0.0")
     (format cryptographic))
   (signature #${ed25519-sig}))
-`
 
 Response Message
 
-`scheme
 (federation-message
   (type response)
   (from #${alice-pubkey})
@@ -203,7 +182,6 @@ Response Message
     (hash "sha512:...")
     (signature "ed25519:..."))
   (signature #${ed25519-sig}))
-`
 
 ------------------------------------------------------------------------------
 
@@ -211,34 +189,28 @@ Transport Bindings
 
 Git Transport
 
-`
 Origin: git@github.com:alice/vault.git
 Mechanism: Tags + release assets
 
 Announce: git push origin v2.0.0
 Request:  git fetch origin --tags
 Sync:     git fetch origin && git push origin
-`
 
 HTTP Transport
 
-`
 Endpoint: https://alice.example.com/federation
 
 Announce: POST /federation/announce
 Request:  GET /federation/releases/2.0.0
 Sync:     POST /federation/sync
-`
 
 Filesystem Transport
 
-`
 Path: /shared/federation/alice
 
 Announce: Copy to /shared/federation/alice/announce/
 Request:  Read from /shared/federation/alice/releases/
 Sync:     rsync --update
-`
 
 ------------------------------------------------------------------------------
 
@@ -247,13 +219,11 @@ Conflict Resolution
 Version Conflicts
 
 Same version, different content:
-`scheme
 (federation-conflict
   (version "2.0.0")
   (local-hash "sha512:abc...")
   (remote-hash "sha512:def...")
   (resolution reject))  ; Or: prefer-local, prefer-remote, rename
-`
 
 Default: Reject conflicts, require human decision.
 
@@ -309,22 +279,18 @@ Not protected:
 
 Trust Verification
 
-`scheme
 (define (verify-peer-message msg peer-key)
   (and (verify-signature msg peer-key)
        (verify-timestamp msg (current-seconds))
        (verify-not-replayed msg)))
-`
 
 Rate Limiting
 
-`scheme
 (federation-config
   (rate-limit
     (announcements-per-hour 10)
     (requests-per-minute 60)
     (sync-interval-minimum 300)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -332,13 +298,11 @@ Gossip Protocol (Future)
 
 For larger networks:
 
-`
 Alice announces to Bob and Carol
 Bob announces to Dave and Eve
 Eve announces to Frank
 
 Result: Epidemic spread without central broadcast
-`
 
 Properties:
 - Logarithmic propagation time
@@ -367,7 +331,6 @@ Network Partitions
 
 Configuration
 
-`scheme
 (federation-config
   ;; Identity
   (identity my-private-key)
@@ -389,7 +352,6 @@ Configuration
   ;; Security
   (require-signature #t)
   (trust-on-first-use #f))
-`
 
 ------------------------------------------------------------------------------
 

@@ -33,7 +33,6 @@ CCP resurrects these ideas with modern primitives.
 
 Protocol Overview
 
-`
 Initiator                          Responder
     |                                   |
     |-------- KNOCK (version) -------->|  Stateless
@@ -56,7 +55,6 @@ Initiator                          Responder
     |========= CHANNEL OPEN ===========|
     |                                   |
     |<----------- DATA -------------->|
-`
 
 10 messages to establish. Unlimited encrypted DATA after.
 
@@ -66,12 +64,10 @@ Message Format
 
 All messages use TLV encoding:
 
-`
 +------+--------+------------------+
 | Type | Length | Payload          |
 | 1B   | 4B BE  | variable         |
 +------+--------+------------------+
-`
 
 Message Types
 
@@ -92,12 +88,10 @@ Phase 1: KNOCK
 
 Initiator announces intent and protocol version.
 
-`
 KNOCK payload:
   "CCP/" VERSIONMAJOR "." VERSIONMINOR
 
 Example: "CCP/1.0"
-`
 
 Responder checks version compatibility:
 - Major mismatch: reject (incompatible suites)
@@ -111,7 +105,6 @@ Phase 2: COOKIE
 
 Responder returns stateless cookie.
 
-`scheme
 (define (make-cookie remote-addr remote-port)
   (let* ((data (string-append
                 (blob->string cookie-secret)
@@ -120,7 +113,6 @@ Responder returns stateless cookie.
                 (number->string cookie-epoch)))
          (hash (blake2b-hash (string->blob data))))
     (substring hash 0 16)))
-`
 
 Cookie properties:
 - Stateless: Responder doesn't store it
@@ -137,10 +129,8 @@ Phase 3: EXCHANGE
 Both parties exchange ephemeral public keys.
 
 Initiator sends:
-`
 EXCHANGE payload:
   cookie-r "|" cookie-i "|" ephemeral-public-hex
-`
 
 - cookie-r: Echo of responder's cookie (proves receipt)
 - cookie-i: Initiator's random cookie (for key derivation)
@@ -152,7 +142,6 @@ State now committed. Keys derived.
 
 Key Derivation
 
-`scheme
 (define (derive-session-keys shared-secret cookie-i cookie-r)
   (let* ((ikm (blob-append shared-secret
                            (string->blob cookie-i)
@@ -161,7 +150,6 @@ Key Derivation
          (k-ir (blake2b-hash (blob-append prk "initiator->responder")))
          (k-ri (blake2b-hash (blob-append prk "responder->initiator"))))
     (values (take k-ir 32) (take k-ri 32))))
-`
 
 Directional keys prevent reflection attacks.
 
@@ -173,10 +161,8 @@ All subsequent messages encrypted.
 
 Both parties prove identity using SPKI principals.
 
-`
 ATTEST payload (encrypted):
   principal-hash "|" signature
-`
 
 - principal-hash: SPKI principal (hex-encoded public key hash)
 - signature: Ed25519 signature over transcript
@@ -184,19 +170,15 @@ ATTEST payload (encrypted):
 Identity is cryptographic, not nominal. A principal is identified solely by its public key hash, never by a human-readable name. This is a prime directive.
 
 Transcript for signing:
-`
 cookie-i || cookie-r || ephemeral-public
-`
 
 Anonymous Attestation (Optional)
 
 For privacy, use Chaum-style blind signatures:
 
-`scheme
 (define (blind-attest capability-hash)
   ;; Prove authorization without revealing identity
   (blind-sign capability-hash (blind-factor)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -204,12 +186,10 @@ Phase 5: OFFER
 
 Exchange authorized capabilities as SPKI tags.
 
-`
 OFFER payload (encrypted):
   (tag (* set capability ...))
 
 Example: "(tag (* set read write replicate))"
-`
 
 Capabilities follow RFC-021 (Capability Delegation):
 - Only offer what you hold
@@ -225,10 +205,8 @@ Phase 6: CONFIRM
 
 Bind entire transcript.
 
-`
 CONFIRM payload (encrypted):
   BLAKE2b(cookie-i || cookie-r || their-principal)
-`
 
 Both parties must produce matching hashes. Any tampering detected.
 
@@ -238,15 +216,11 @@ DATA Phase
 
 Channel open. Encrypted messaging.
 
-`
 DATA payload:
   ChaCha20-Poly1305(key, nonce, plaintext)
-`
 
 Nonce construction:
-`
 nonce = sequence-number (8 bytes) || 0x00000000 (4 bytes)
-`
 
 Sequence numbers:
 - Start at 0
@@ -339,7 +313,6 @@ CCP trades fewer round-trips for simplicity and capability integration.
 
 Implementation
 
-`scheme
 ;; Initiator
 (define ch (node-connect "remote.host" 4433))
 (channel-send ch '(request object-hash))
@@ -350,7 +323,6 @@ Implementation
 (define ch (node-accept))
 (let ((msg (channel-recv ch)))
   (channel-send ch (process msg)))
-`
 
 ------------------------------------------------------------------------------
 

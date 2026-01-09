@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:49 2026
+%%CreationDate: Fri Jan  9 12:12:49 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -487,53 +487,51 @@ _S
 5 363 M
 (Error Types) s
 5 341 M
-(`scheme) s
-5 330 M
 (\(define-error-type 'storage-error) s
-5 319 M
+5 330 M
 (  \(subtypes corruption missing full readonly\)\)) s
-5 297 M
+5 308 M
 (\(define-error-type 'network-error) s
-5 286 M
+5 297 M
 (  \(subtypes timeout unreachable protocol-violation\)\)) s
-5 264 M
+5 275 M
 (\(define-error-type 'crypto-error) s
-5 253 M
+5 264 M
 (  \(subtypes signature-invalid key-expired capability-denied\)\)) s
-5 231 M
+5 242 M
 (\(define-error-type 'consistency-error) s
-5 220 M
+5 231 M
 (  \(subtypes hash-mismatch merkle-divergence conflict\)\)) s
-5 198 M
+5 209 M
 (\(define-error-type 'resource-error) s
-5 187 M
+5 198 M
 (  \(subtypes memory-exhausted connections-exhausted rate-limited\)\)) s
-5 165 M
+5 176 M
 (\(define-error-type 'protocol-error) s
-5 154 M
+5 165 M
 (  \(subtypes invalid-message invalid-state version-mismatch\)\)) s
 5 143 M
-(`) s
-5 121 M
 (Error Structure) s
-5 99 M
-(`scheme) s
-5 88 M
+5 121 M
 (\(define \(make-error type message context\)) s
-5 77 M
+5 110 M
 (  `\(error) s
-5 66 M
+5 99 M
 (    \(id ,\(generate-error-id\)\)) s
-5 55 M
+5 88 M
 (    \(type ,type\)) s
-5 44 M
+5 77 M
 (    \(message ,message\)) s
-5 33 M
+5 66 M
 (    \(context ,context\)) s
-5 22 M
+5 55 M
 (    \(timestamp ,\(current-time\)\)) s
-5 11 M
+5 44 M
 (    \(vault ,\(current-vault-id\)\)) s
+5 33 M
+(    \(principal ,\(current-principal\)\)) s
+5 22 M
+(    \(stack ,\(capture-stack-trace\)\)\)\)) s
 _R
 S
 %%Page: (2) 2
@@ -548,121 +546,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(principal ,\(current-principal\)\)) s
-5 770 M
-(    \(stack ,\(capture-stack-trace\)\)\)\)) s
-5 748 M
 (;; Errors are soup objects) s
-5 737 M
+5 770 M
 (\(define \(record-error! err\)) s
-5 726 M
+5 759 M
 (  \(let \(\(hash \(soup-put err type: 'error\)\)\)) s
-5 715 M
+5 748 M
 (    \(audit-append action: 'error-recorded error-hash: hash\)) s
-5 704 M
+5 737 M
 (    hash\)\)) s
-5 693 M
-(`) s
-5 671 M
+5 715 M
 (Error Context) s
-5 649 M
-(`scheme) s
-5 638 M
+5 693 M
 (;; Capture rich context for debugging) s
-5 627 M
+5 682 M
 (\(define \(error-context operation\)) s
-5 616 M
+5 671 M
 (  `\(\(operation . ,operation\)) s
-5 605 M
+5 660 M
 (    \(request-id . ,\(current-request-id\)\)) s
-5 594 M
+5 649 M
 (    \(correlation-id . ,\(current-correlation-id\)\)) s
-5 583 M
+5 638 M
 (    \(peer . ,\(current-peer\)\)) s
-5 572 M
+5 627 M
 (    \(attempt . ,\(current-retry-count\)\)) s
-5 561 M
+5 616 M
 (    \(duration . ,\(operation-duration\)\)) s
-5 550 M
+5 605 M
 (    \(inputs . ,\(sanitize-inputs \(operation-inputs\)\)\)\)\)) s
-5 539 M
-(`) s
-5 517 M
+5 583 M
 (------------------------------------------------------------------------------) s
-5 495 M
+5 561 M
 (Error Handling Patterns) s
-5 473 M
+5 539 M
 (Result Type) s
-5 451 M
-(`scheme) s
-5 440 M
+5 517 M
 (;; Operations return \(ok value\) or \(err error\)) s
-5 429 M
+5 506 M
 (\(define \(result-ok value\) `\(ok ,value\)\)) s
-5 418 M
+5 495 M
 (\(define \(result-err error\) `\(err ,error\)\)) s
-5 396 M
+5 473 M
 (\(define \(result-ok? r\) \(eq? \(car r\) 'ok\)\)) s
-5 385 M
+5 462 M
 (\(define \(result-err? r\) \(eq? \(car r\) 'err\)\)) s
-5 374 M
+5 451 M
 (\(define \(result-value r\) \(cadr r\)\)) s
-5 363 M
+5 440 M
 (\(define \(result-error r\) \(cadr r\)\)) s
-5 341 M
+5 418 M
 (;; Chain operations) s
-5 330 M
+5 407 M
 (\(define \(result-bind r f\)) s
-5 319 M
+5 396 M
 (  \(if \(result-ok? r\)) s
-5 308 M
+5 385 M
 (      \(f \(result-value r\)\)) s
-5 297 M
+5 374 M
 (      r\)\)) s
-5 275 M
+5 352 M
 (;; Example) s
-5 264 M
+5 341 M
 (\(define \(safe-read hash\)) s
-5 253 M
+5 330 M
 (  \(result-bind \(cas-get-safe hash\)) s
-5 242 M
+5 319 M
 (    \(lambda \(data\)) s
-5 231 M
+5 308 M
 (      \(result-bind \(verify-signature data\)) s
-5 220 M
+5 297 M
 (        \(lambda \(verified\)) s
-5 209 M
+5 286 M
 (          \(result-ok verified\)\)\)\)\)\)) s
-5 198 M
-(`) s
-5 176 M
+5 264 M
 (Error Recovery) s
-5 154 M
-(`scheme) s
-5 143 M
+5 242 M
 (\(define \(with-recovery operation recovery\)) s
-5 132 M
+5 231 M
 (  "Execute operation with recovery on failure") s
-5 121 M
+5 220 M
 (  \(let \(\(result \(guard \(ex \(else \(result-err ex\)\)\)) s
-5 110 M
+5 209 M
 (                  \(result-ok \(operation\)\)\)\)\)) s
-5 99 M
+5 198 M
 (    \(if \(result-ok? result\)) s
-5 88 M
+5 187 M
 (        \(result-value result\)) s
-5 77 M
+5 176 M
 (        \(recovery \(result-error result\)\)\)\)\)) s
-5 55 M
+5 154 M
 (;; Example: read with fallback to replica) s
-5 44 M
+5 143 M
 (\(define \(read-with-fallback hash\)) s
-5 33 M
+5 132 M
 (  \(with-recovery) s
-5 22 M
+5 121 M
 (    \(lambda \(\) \(cas-get hash\)\)) s
-5 11 M
+5 110 M
 (    \(lambda \(err\)) s
+5 99 M
+(      \(audit-append action: 'read-fallback error: err\)) s
+5 88 M
+(      \(cas-get-from-replica hash\)\)\)\)) s
+5 66 M
+(Retry Logic) s
+5 44 M
+(\(define \(with-retry operation max-retries backoff\)) s
+5 33 M
+(  "Retry operation with exponential backoff") s
+5 22 M
+(  \(let loop \(\(attempt 1\)\)) s
+5 11 M
+(    \(let \(\(result \(guard \(ex \(else \(result-err ex\)\)\)) s
 _R
 S
 %%Page: (3) 3
@@ -677,129 +673,129 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(      \(audit-append action: 'read-fallback error: err\)) s
-5 770 M
-(      \(cas-get-from-replica hash\)\)\)\)) s
-5 759 M
-(`) s
-5 737 M
-(Retry Logic) s
-5 715 M
-(`scheme) s
-5 704 M
-(\(define \(with-retry operation max-retries backoff\)) s
-5 693 M
-(  "Retry operation with exponential backoff") s
-5 682 M
-(  \(let loop \(\(attempt 1\)\)) s
-5 671 M
-(    \(let \(\(result \(guard \(ex \(else \(result-err ex\)\)\)) s
-5 660 M
 (                    \(result-ok \(operation\)\)\)\)\)) s
-5 649 M
+5 770 M
 (      \(cond) s
-5 638 M
+5 759 M
 (        \(\(result-ok? result\)) s
-5 627 M
+5 748 M
 (         \(result-value result\)\)) s
-5 616 M
+5 737 M
 (        \(\(>= attempt max-retries\)) s
-5 605 M
+5 726 M
 (         \(error "Max retries exceeded" \(result-error result\)\)\)) s
-5 594 M
+5 715 M
 (        \(else) s
-5 583 M
+5 704 M
 (         \(let \(\(delay \(* backoff \(expt 2 \(- attempt 1\)\)\)\)\)) s
-5 572 M
+5 693 M
 (           \(audit-append action: 'retry attempt: attempt delay: delay\)) s
-5 561 M
+5 682 M
 (           \(thread-sleep! delay\)) s
-5 550 M
+5 671 M
 (           \(loop \(+ attempt 1\)\)\)\)\)\)\)\)) s
-5 528 M
+5 649 M
 (;; Retry configuration) s
-5 517 M
+5 638 M
 (\(define default-retry-config) s
-5 506 M
+5 627 M
 (  `\(\(max-retries . 3\)) s
-5 495 M
+5 616 M
 (    \(initial-backoff . 100\)    ; ms) s
-5 484 M
+5 605 M
 (    \(max-backoff . 30000\)      ; ms) s
-5 473 M
+5 594 M
 (    \(jitter . 0.1\)\)\)           ; 10% randomization) s
-5 462 M
-(`) s
-5 440 M
+5 572 M
 (Circuit Breaker) s
-5 418 M
-(`scheme) s
-5 407 M
+5 550 M
 (\(define \(make-circuit-breaker threshold timeout\)) s
-5 396 M
+5 539 M
 (  \(let \(\(failures 0\)) s
-5 385 M
+5 528 M
 (        \(state 'closed\)) s
-5 374 M
+5 517 M
 (        \(last-failure #f\)\)) s
-5 352 M
+5 495 M
 (    \(lambda \(operation\)) s
-5 341 M
+5 484 M
 (      \(case state) s
-5 330 M
+5 473 M
 (        \(\(open\)) s
-5 319 M
+5 462 M
 (         \(if \(> \(- \(current-time\) last-failure\) timeout\)) s
-5 308 M
+5 451 M
 (             \(begin) s
-5 297 M
+5 440 M
 (               \(set! state 'half-open\)) s
-5 286 M
+5 429 M
 (               \(try-operation operation\)\)) s
-5 275 M
+5 418 M
 (             \(error "Circuit open"\)\)\)) s
-5 264 M
+5 407 M
 (        \(\(half-open\)) s
-5 253 M
+5 396 M
 (         \(let \(\(result \(try-operation operation\)\)\)) s
-5 242 M
+5 385 M
 (           \(if \(result-ok? result\)) s
-5 231 M
+5 374 M
 (               \(begin) s
-5 220 M
+5 363 M
 (                 \(set! state 'closed\)) s
-5 209 M
+5 352 M
 (                 \(set! failures 0\)) s
-5 198 M
+5 341 M
 (                 \(result-value result\)\)) s
-5 187 M
+5 330 M
 (               \(begin) s
-5 176 M
+5 319 M
 (                 \(set! state 'open\)) s
-5 165 M
+5 308 M
 (                 \(error "Circuit reopened"\)\)\)\)\)) s
-5 154 M
+5 297 M
 (        \(\(closed\)) s
-5 143 M
+5 286 M
 (         \(try-operation operation\)\)\)\)\)\)) s
-5 121 M
+5 264 M
 (\(define \(try-operation cb operation\)) s
-5 110 M
+5 253 M
 (  \(guard \(ex) s
-5 99 M
+5 242 M
 (          \(else) s
-5 88 M
+5 231 M
 (           \(cb-record-failure! cb\)) s
-5 77 M
+5 220 M
 (           \(result-err ex\)\)\)) s
-5 66 M
+5 209 M
 (    \(result-ok \(operation\)\)\)\)) s
-5 55 M
-(`) s
-5 33 M
+5 187 M
 (------------------------------------------------------------------------------) s
-5 11 M
+5 165 M
 (Storage Errors) s
+5 143 M
+(Corruption Detection) s
+5 121 M
+(\(define \(detect-corruption hash\)) s
+5 110 M
+(  "Verify object integrity") s
+5 99 M
+(  \(let* \(\(data \(storage-read-raw hash\)\)) s
+5 88 M
+(         \(computed-hash \(content-hash data\)\)\)) s
+5 77 M
+(    \(unless \(equal? hash computed-hash\)) s
+5 66 M
+(      \(record-error!) s
+5 55 M
+(        \(make-error 'corruption) s
+5 44 M
+(          "Hash mismatch detected") s
+5 33 M
+(          `\(\(expected . ,hash\)) s
+5 22 M
+(            \(computed . ,computed-hash\)) s
+5 11 M
+(            \(size . ,\(bytevector-length data\)\)\)\)\)\)\)\)) s
 _R
 S
 %%Page: (4) 4
@@ -814,125 +810,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 770 M
-(Corruption Detection) s
-5 748 M
-(`scheme) s
-5 737 M
-(\(define \(detect-corruption hash\)) s
-5 726 M
-(  "Verify object integrity") s
-5 715 M
-(  \(let* \(\(data \(storage-read-raw hash\)\)) s
-5 704 M
-(         \(computed-hash \(content-hash data\)\)\)) s
-5 693 M
-(    \(unless \(equal? hash computed-hash\)) s
-5 682 M
-(      \(record-error!) s
-5 671 M
-(        \(make-error 'corruption) s
-5 660 M
-(          "Hash mismatch detected") s
-5 649 M
-(          `\(\(expected . ,hash\)) s
-5 638 M
-(            \(computed . ,computed-hash\)) s
-5 627 M
-(            \(size . ,\(bytevector-length data\)\)\)\)\)\)\)\)) s
-5 605 M
 (\(define \(scan-for-corruption\)) s
-5 594 M
+5 759 M
 (  "Full vault integrity scan") s
-5 583 M
+5 748 M
 (  \(let \(\(corrupted '\(\)\)\)) s
-5 572 M
+5 737 M
 (    \(for-each \(lambda \(hash\)) s
-5 561 M
+5 726 M
 (                \(unless \(verify-integrity hash\)) s
-5 550 M
+5 715 M
 (                  \(set! corrupted \(cons hash corrupted\)\)\)\)) s
-5 539 M
+5 704 M
 (              \(all-object-hashes\)\)) s
-5 528 M
+5 693 M
 (    \(when \(not \(null? corrupted\)\)) s
-5 517 M
+5 682 M
 (      \(audit-append action: 'corruption-scan) s
-5 506 M
+5 671 M
 (                    corrupted: \(length corrupted\)\)\)) s
-5 495 M
+5 660 M
 (    corrupted\)\)) s
-5 484 M
-(`) s
-5 462 M
+5 638 M
 (Corruption Recovery) s
-5 440 M
-(`scheme) s
-5 429 M
+5 616 M
 (\(define \(recover-corrupted hash\)) s
-5 418 M
+5 605 M
 (  "Attempt to recover corrupted object") s
-5 407 M
+5 594 M
 (  ;; Strategy 1: Fetch from replica) s
-5 396 M
+5 583 M
 (  \(let \(\(replicas \(find-replicas hash\)\)\)) s
-5 385 M
+5 572 M
 (    \(for-each \(lambda \(replica\)) s
-5 374 M
+5 561 M
 (                \(let \(\(data \(fetch-from-replica replica hash\)\)\)) s
-5 363 M
+5 550 M
 (                  \(when \(and data \(verify-hash data hash\)\)) s
-5 352 M
+5 539 M
 (                    \(storage-write hash data\)) s
-5 341 M
+5 528 M
 (                    \(audit-append action: 'corruption-recovered) s
-5 330 M
+5 517 M
 (                                  source: replica\)) s
-5 319 M
+5 506 M
 (                    \(return data\)\)\)\)) s
-5 308 M
+5 495 M
 (              replicas\)\)) s
-5 286 M
+5 473 M
 (  ;; Strategy 2: Reconstruct from erasure coding) s
-5 275 M
+5 462 M
 (  \(when \(erasure-coded? hash\)) s
-5 264 M
+5 451 M
 (    \(let \(\(data \(reconstruct-from-shards hash\)\)\)) s
-5 253 M
+5 440 M
 (      \(when data) s
-5 242 M
+5 429 M
 (        \(storage-write hash data\)) s
-5 231 M
+5 418 M
 (        \(audit-append action: 'erasure-recovery\)) s
-5 220 M
+5 407 M
 (        \(return data\)\)\)\)) s
-5 198 M
+5 385 M
 (  ;; Strategy 3: Mark as lost) s
-5 187 M
+5 374 M
 (  \(mark-object-lost hash\)) s
-5 176 M
+5 363 M
 (  \(audit-append action: 'object-lost hash: hash\)) s
-5 165 M
+5 352 M
 (  #f\)) s
-5 154 M
-(`) s
-5 132 M
+5 330 M
 (Disk Full Handling) s
-5 110 M
-(`scheme) s
-5 99 M
+5 308 M
 (\(define \(handle-disk-full\)) s
-5 88 M
+5 297 M
 (  "Emergency disk space recovery") s
-5 77 M
+5 286 M
 (  ;; Phase 1: Emergency GC) s
-5 66 M
+5 275 M
 (  \(gc-emergency\)) s
-5 44 M
+5 253 M
 (  ;; Phase 2: Clear caches) s
-5 33 M
+5 242 M
 (  \(clear-all-caches\)) s
-5 11 M
+5 220 M
 (  ;; Phase 3: Compress compressible objects) s
+5 209 M
+(  \(compress-uncompressed-objects\)) s
+5 187 M
+(  ;; Phase 4: Alert and degrade) s
+5 176 M
+(  \(when \(< \(available-space\) critical-threshold\)) s
+5 165 M
+(    \(alert-disk-critical\)) s
+5 154 M
+(    \(vault-readonly!\)\)\)) s
+5 132 M
+(------------------------------------------------------------------------------) s
+5 110 M
+(Network Errors) s
+5 88 M
+(Timeout Handling) s
+5 66 M
+(\(define \(with-timeout duration operation\)) s
+5 55 M
+(  "Execute operation with timeout") s
+5 44 M
+(  \(let \(\(result \(make-channel\)\)\)) s
+5 33 M
+(    \(thread-start!) s
+5 22 M
+(      \(make-thread) s
+5 11 M
+(        \(lambda \(\)) s
 _R
 S
 %%Page: (5) 5
@@ -947,119 +937,123 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  \(compress-uncompressed-objects\)) s
-5 759 M
-(  ;; Phase 4: Alert and degrade) s
-5 748 M
-(  \(when \(< \(available-space\) critical-threshold\)) s
-5 737 M
-(    \(alert-disk-critical\)) s
-5 726 M
-(    \(vault-readonly!\)\)\)) s
-5 715 M
-(`) s
-5 693 M
-(------------------------------------------------------------------------------) s
-5 671 M
-(Network Errors) s
-5 649 M
-(Timeout Handling) s
-5 627 M
-(`scheme) s
-5 616 M
-(\(define \(with-timeout duration operation\)) s
-5 605 M
-(  "Execute operation with timeout") s
-5 594 M
-(  \(let \(\(result \(make-channel\)\)\)) s
-5 583 M
-(    \(thread-start!) s
-5 572 M
-(      \(make-thread) s
-5 561 M
-(        \(lambda \(\)) s
-5 550 M
 (          \(channel-put! result) s
-5 539 M
+5 770 M
 (            \(guard \(ex \(else \(result-err ex\)\)\)) s
-5 528 M
+5 759 M
 (              \(result-ok \(operation\)\)\)\)\)\)\)) s
-5 517 M
+5 748 M
 (    \(let \(\(r \(channel-get! result duration\)\)\)) s
-5 506 M
+5 737 M
 (      \(if r) s
-5 495 M
+5 726 M
 (          \(if \(result-ok? r\)) s
-5 484 M
+5 715 M
 (              \(result-value r\)) s
-5 473 M
+5 704 M
 (              \(error \(result-error r\)\)\)) s
-5 462 M
+5 693 M
 (          \(error \(make-error 'timeout) s
-5 451 M
+5 682 M
 (                   "Operation timed out") s
-5 440 M
+5 671 M
 (                   `\(\(duration . ,duration\)\)\)\)\)\)\)\)) s
-5 429 M
-(`) s
-5 407 M
+5 649 M
 (Partition Detection) s
-5 385 M
-(`scheme) s
-5 374 M
+5 627 M
 (\(define \(detect-partition peers\)) s
-5 363 M
+5 616 M
 (  "Detect network partition") s
-5 352 M
+5 605 M
 (  \(let* \(\(reachable \(filter peer-reachable? peers\)\)) s
-5 341 M
+5 594 M
 (         \(unreachable \(filter \(lambda \(p\) \(not \(peer-reachable? p\)\)\) peers\)\)\)) s
-5 330 M
+5 583 M
 (    \(when \(> \(length unreachable\) 0\)) s
-5 319 M
+5 572 M
 (      \(audit-append action: 'partition-detected) s
-5 308 M
+5 561 M
 (                    reachable: \(length reachable\)) s
-5 297 M
+5 550 M
 (                    unreachable: \(length unreachable\)\)) s
-5 286 M
+5 539 M
 (      \(if \(> \(length reachable\) \(/ \(length peers\) 2\)\)) s
-5 275 M
+5 528 M
 (          \(continue-with-majority reachable\)) s
-5 264 M
+5 517 M
 (          \(enter-read-only-mode\)\)\)\)\)) s
-5 253 M
-(`) s
-5 231 M
+5 495 M
 (Connection Pool Recovery) s
-5 209 M
-(`scheme) s
-5 198 M
+5 473 M
 (\(define \(recover-connection-pool pool\)) s
-5 187 M
+5 462 M
 (  "Recover from connection pool exhaustion") s
-5 176 M
+5 451 M
 (  ;; Close idle connections) s
-5 165 M
+5 440 M
 (  \(pool-close-idle! pool\)) s
-5 143 M
+5 418 M
 (  ;; Close long-running connections) s
-5 132 M
+5 407 M
 (  \(pool-close-stale! pool max-connection-age\)) s
-5 110 M
+5 385 M
 (  ;; If still exhausted, reject new requests) s
-5 99 M
+5 374 M
 (  \(when \(pool-exhausted? pool\)) s
-5 88 M
+5 363 M
 (    \(audit-append action: 'pool-exhausted\)) s
-5 77 M
+5 352 M
 (    \(enable-request-shedding\)\)\)) s
-5 66 M
-(`) s
-5 44 M
+5 330 M
 (------------------------------------------------------------------------------) s
-5 22 M
+5 308 M
 (Consistency Errors) s
+5 286 M
+(Conflict Detection) s
+5 264 M
+(\(define \(detect-conflict hash versions\)) s
+5 253 M
+(  "Detect conflicting versions of object") s
+5 242 M
+(  \(let \(\(unique-contents \(delete-duplicates) s
+5 231 M
+(                          \(map version-content versions\)\)\)\)) s
+5 220 M
+(    \(when \(> \(length unique-contents\) 1\)) s
+5 209 M
+(      \(record-error!) s
+5 198 M
+(        \(make-error 'conflict) s
+5 187 M
+(          "Conflicting versions detected") s
+5 176 M
+(          `\(\(hash . ,hash\)) s
+5 165 M
+(            \(versions . ,\(length unique-contents\)\)) s
+5 154 M
+(            \(sources . ,\(map version-source versions\)\)\)\)\)\)\)\)) s
+5 132 M
+(Conflict Resolution) s
+5 110 M
+(\(define \(resolve-conflict hash versions strategy\)) s
+5 99 M
+(  "Resolve conflicting versions") s
+5 88 M
+(  \(let \(\(resolved) s
+5 77 M
+(         \(case strategy) s
+5 66 M
+(           \(\(latest\)) s
+5 55 M
+(            \(max-by version-timestamp versions\)\)) s
+5 44 M
+(           \(\(merge\)) s
+5 33 M
+(            \(merge-versions versions\)\)) s
+5 22 M
+(           \(\(manual\)) s
+5 11 M
+(            \(queue-for-manual-resolution hash versions\)\)) s
 _R
 S
 %%Page: (6) 6
@@ -1074,127 +1068,123 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(Conflict Detection) s
-5 759 M
-(`scheme) s
-5 748 M
-(\(define \(detect-conflict hash versions\)) s
-5 737 M
-(  "Detect conflicting versions of object") s
-5 726 M
-(  \(let \(\(unique-contents \(delete-duplicates) s
-5 715 M
-(                          \(map version-content versions\)\)\)\)) s
-5 704 M
-(    \(when \(> \(length unique-contents\) 1\)) s
-5 693 M
-(      \(record-error!) s
-5 682 M
-(        \(make-error 'conflict) s
-5 671 M
-(          "Conflicting versions detected") s
-5 660 M
-(          `\(\(hash . ,hash\)) s
-5 649 M
-(            \(versions . ,\(length unique-contents\)\)) s
-5 638 M
-(            \(sources . ,\(map version-source versions\)\)\)\)\)\)\)\)) s
-5 627 M
-(`) s
-5 605 M
-(Conflict Resolution) s
-5 583 M
-(`scheme) s
-5 572 M
-(\(define \(resolve-conflict hash versions strategy\)) s
-5 561 M
-(  "Resolve conflicting versions") s
-5 550 M
-(  \(let \(\(resolved) s
-5 539 M
-(         \(case strategy) s
-5 528 M
-(           \(\(latest\)) s
-5 517 M
-(            \(max-by version-timestamp versions\)\)) s
-5 506 M
-(           \(\(merge\)) s
-5 495 M
-(            \(merge-versions versions\)\)) s
-5 484 M
-(           \(\(manual\)) s
-5 473 M
-(            \(queue-for-manual-resolution hash versions\)\)) s
-5 462 M
 (           \(\(tombstone\)) s
-5 451 M
+5 770 M
 (            \(create-conflict-tombstone hash versions\)\)\)\)\)) s
-5 440 M
+5 759 M
 (    \(audit-append action: 'conflict-resolved) s
-5 429 M
+5 748 M
 (                  hash: hash) s
-5 418 M
+5 737 M
 (                  strategy: strategy\)) s
-5 407 M
+5 726 M
 (    resolved\)\)) s
-5 396 M
-(`) s
-5 374 M
+5 704 M
 (Merkle Divergence) s
-5 352 M
-(`scheme) s
-5 341 M
+5 682 M
 (\(define \(handle-merkle-divergence local-root remote-root peer\)) s
-5 330 M
+5 671 M
 (  "Handle diverged Merkle trees") s
-5 319 M
+5 660 M
 (  \(let \(\(divergence \(find-divergence-point local-root remote-root\)\)\)) s
-5 308 M
+5 649 M
 (    \(audit-append action: 'merkle-divergence) s
-5 297 M
+5 638 M
 (                  local: local-root) s
-5 286 M
+5 627 M
 (                  remote: remote-root) s
-5 275 M
+5 616 M
 (                  divergence: divergence\)) s
-5 264 M
+5 605 M
 (    ;; Sync diverged subtrees) s
-5 253 M
+5 594 M
 (    \(for-each \(lambda \(subtree\)) s
-5 242 M
+5 583 M
 (                \(sync-subtree subtree peer\)\)) s
-5 231 M
+5 572 M
 (              \(divergent-subtrees divergence\)\)\)\)) s
-5 220 M
-(`) s
-5 198 M
+5 550 M
 (------------------------------------------------------------------------------) s
-5 176 M
+5 528 M
 (Recovery Procedures) s
-5 154 M
+5 506 M
 (Automatic Recovery) s
-5 132 M
-(`scheme) s
-5 121 M
+5 484 M
 (\(define recovery-handlers) s
-5 110 M
+5 473 M
 (  `\(\(corruption . ,recover-corrupted\)) s
-5 99 M
+5 462 M
 (    \(missing . ,fetch-from-replica\)) s
-5 88 M
+5 451 M
 (    \(timeout . ,retry-with-backoff\)) s
-5 77 M
+5 440 M
 (    \(partition . ,wait-for-reconnection\)) s
-5 66 M
+5 429 M
 (    \(conflict . ,resolve-with-default-strategy\)\)\)) s
-5 44 M
+5 407 M
 (\(define \(auto-recover error\)) s
-5 33 M
+5 396 M
 (  "Attempt automatic recovery") s
-5 22 M
+5 385 M
 (  \(let \(\(handler \(assoc-ref recovery-handlers \(error-type error\)\)\)\)) s
-5 11 M
+5 374 M
 (    \(if handler) s
+5 363 M
+(        \(begin) s
+5 352 M
+(          \(audit-append action: 'auto-recovery-attempt) s
+5 341 M
+(                        error: \(error-id error\)\)) s
+5 330 M
+(          \(handler error\)\)) s
+5 319 M
+(        \(escalate-error error\)\)\)\)) s
+5 297 M
+(Manual Recovery) s
+5 275 M
+(\(define \(queue-manual-recovery error\)) s
+5 264 M
+(  "Queue error for manual intervention") s
+5 253 M
+(  \(soup-put) s
+5 242 M
+(    `\(recovery-ticket) s
+5 231 M
+(      \(error ,\(error-id error\)\)) s
+5 220 M
+(      \(status pending\)) s
+5 209 M
+(      \(created ,\(current-time\)\)) s
+5 198 M
+(      \(assigned #f\)\)) s
+5 187 M
+(    type: 'recovery-ticket\)\)) s
+5 165 M
+(\(define \(process-recovery-ticket ticket-hash\)) s
+5 154 M
+(  "Process manual recovery ticket") s
+5 143 M
+(  \(let \(\(ticket \(soup-get ticket-hash\)\)\)) s
+5 132 M
+(    ;; Mark in progress) s
+5 121 M
+(    \(soup-update ticket-hash status: 'in-progress\)) s
+5 110 M
+(    ;; ... manual recovery steps ...) s
+5 99 M
+(    ;; Mark resolved) s
+5 88 M
+(    \(soup-update ticket-hash) s
+5 77 M
+(                 status: 'resolved) s
+5 66 M
+(                 resolved-at: \(current-time\)) s
+5 55 M
+(                 resolved-by: \(current-principal\)\)\)\)) s
+5 33 M
+(Disaster Recovery) s
+5 11 M
+(\(define \(disaster-recovery backup-location\)) s
 _R
 S
 %%Page: (7) 7
@@ -1209,117 +1199,109 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(        \(begin) s
-5 770 M
-(          \(audit-append action: 'auto-recovery-attempt) s
-5 759 M
-(                        error: \(error-id error\)\)) s
-5 748 M
-(          \(handler error\)\)) s
-5 737 M
-(        \(escalate-error error\)\)\)\)) s
-5 726 M
-(`) s
-5 704 M
-(Manual Recovery) s
-5 682 M
-(`scheme) s
-5 671 M
-(\(define \(queue-manual-recovery error\)) s
-5 660 M
-(  "Queue error for manual intervention") s
-5 649 M
-(  \(soup-put) s
-5 638 M
-(    `\(recovery-ticket) s
-5 627 M
-(      \(error ,\(error-id error\)\)) s
-5 616 M
-(      \(status pending\)) s
-5 605 M
-(      \(created ,\(current-time\)\)) s
-5 594 M
-(      \(assigned #f\)\)) s
-5 583 M
-(    type: 'recovery-ticket\)\)) s
-5 561 M
-(\(define \(process-recovery-ticket ticket-hash\)) s
-5 550 M
-(  "Process manual recovery ticket") s
-5 539 M
-(  \(let \(\(ticket \(soup-get ticket-hash\)\)\)) s
-5 528 M
-(    ;; Mark in progress) s
-5 517 M
-(    \(soup-update ticket-hash status: 'in-progress\)) s
-5 506 M
-(    ;; ... manual recovery steps ...) s
-5 495 M
-(    ;; Mark resolved) s
-5 484 M
-(    \(soup-update ticket-hash) s
-5 473 M
-(                 status: 'resolved) s
-5 462 M
-(                 resolved-at: \(current-time\)) s
-5 451 M
-(                 resolved-by: \(current-principal\)\)\)\)) s
-5 440 M
-(`) s
-5 418 M
-(Disaster Recovery) s
-5 396 M
-(`scheme) s
-5 385 M
-(\(define \(disaster-recovery backup-location\)) s
-5 374 M
 (  "Full vault recovery from backup") s
-5 363 M
+5 770 M
 (  \(audit-append action: 'disaster-recovery-start) s
-5 352 M
+5 759 M
 (                backup: backup-location\)) s
-5 330 M
+5 737 M
 (  ;; Phase 1: Verify backup integrity) s
-5 319 M
+5 726 M
 (  \(unless \(verify-backup-integrity backup-location\)) s
-5 308 M
+5 715 M
 (    \(error "Backup integrity check failed"\)\)) s
-5 286 M
+5 693 M
 (  ;; Phase 2: Restore CAS) s
-5 275 M
+5 682 M
 (  \(restore-cas-from-backup backup-location\)) s
-5 253 M
+5 660 M
 (  ;; Phase 3: Restore soup) s
-5 242 M
+5 649 M
 (  \(restore-soup-from-backup backup-location\)) s
-5 220 M
+5 627 M
 (  ;; Phase 4: Restore indexes) s
-5 209 M
+5 616 M
 (  \(rebuild-indexes\)) s
-5 187 M
+5 594 M
 (  ;; Phase 5: Verify restoration) s
-5 176 M
+5 583 M
 (  \(verify-restoration\)) s
-5 154 M
+5 561 M
 (  \(audit-append action: 'disaster-recovery-complete\)\)) s
-5 143 M
-(`) s
-5 121 M
+5 539 M
 (------------------------------------------------------------------------------) s
-5 99 M
+5 517 M
 (Error Reporting) s
-5 77 M
+5 495 M
 (Error Aggregation) s
-5 55 M
-(`scheme) s
-5 44 M
+5 473 M
 (\(define \(aggregate-errors window\)) s
-5 33 M
+5 462 M
 (  "Aggregate errors over time window") s
-5 22 M
+5 451 M
 (  \(let \(\(errors \(soup-query type: 'error) s
-5 11 M
+5 440 M
 (                            timestamp: \(> \(- \(current-time\) window\)\)\)\)\)) s
+5 429 M
+(    \(group-by error-type errors\)\)\)) s
+5 407 M
+(\(define \(error-rate error-type window\)) s
+5 396 M
+(  "Calculate error rate") s
+5 385 M
+(  \(let \(\(count \(length \(soup-query type: 'error) s
+5 374 M
+(                                   error-type: error-type) s
+5 363 M
+(                                   timestamp: \(> \(- \(current-time\) window\)\)\)\)\)\)) s
+5 352 M
+(    \(/ count window\)\)\)) s
+5 330 M
+(Alerting) s
+5 308 M
+(\(define alert-thresholds) s
+5 297 M
+(  `\(\(corruption . 1\)        ; Any corruption is critical) s
+5 286 M
+(    \(timeout . 100\)         ; 100 timeouts per minute) s
+5 275 M
+(    \(conflict . 10\)         ; 10 conflicts per minute) s
+5 264 M
+(    \(resource . 5\)\)\)        ; 5 resource errors per minute) s
+5 242 M
+(\(define \(check-alert-thresholds\)) s
+5 231 M
+(  "Check if error rates exceed thresholds") s
+5 220 M
+(  \(for-each \(lambda \(threshold\)) s
+5 209 M
+(              \(let \(\(type \(car threshold\)\)) s
+5 198 M
+(                    \(limit \(cdr threshold\)\)\)) s
+5 187 M
+(                \(when \(> \(error-rate type 60\) limit\)) s
+5 176 M
+(                  \(send-alert type \(error-rate type 60\) limit\)\)\)\)) s
+5 165 M
+(            alert-thresholds\)\)) s
+5 143 M
+(------------------------------------------------------------------------------) s
+5 121 M
+(Security Considerations) s
+5 99 M
+(Error Information Leakage) s
+5 77 M
+(;; Don't expose internal details in user-facing errors) s
+5 66 M
+(\(define \(sanitize-error-for-user error\)) s
+5 55 M
+(  `\(error) s
+5 44 M
+(    \(type ,\(error-type error\)\)) s
+5 33 M
+(    \(message ,\(user-safe-message \(error-type error\)\)\)) s
+5 22 M
+(    \(request-id ,\(error-request-id error\)\)\)\)) s
 _R
 S
 %%Page: (8) 8
@@ -1334,145 +1316,58 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(group-by error-type errors\)\)\)) s
-5 759 M
-(\(define \(error-rate error-type window\)) s
-5 748 M
-(  "Calculate error rate") s
-5 737 M
-(  \(let \(\(count \(length \(soup-query type: 'error) s
-5 726 M
-(                                   error-type: error-type) s
-5 715 M
-(                                   timestamp: \(> \(- \(current-time\) window\)\)\)\)\)\)) s
-5 704 M
-(    \(/ count window\)\)\)) s
-5 693 M
-(`) s
-5 671 M
-(Alerting) s
-5 649 M
-(`scheme) s
-5 638 M
-(\(define alert-thresholds) s
-5 627 M
-(  `\(\(corruption . 1\)        ; Any corruption is critical) s
-5 616 M
-(    \(timeout . 100\)         ; 100 timeouts per minute) s
-5 605 M
-(    \(conflict . 10\)         ; 10 conflicts per minute) s
-5 594 M
-(    \(resource . 5\)\)\)        ; 5 resource errors per minute) s
-5 572 M
-(\(define \(check-alert-thresholds\)) s
-5 561 M
-(  "Check if error rates exceed thresholds") s
-5 550 M
-(  \(for-each \(lambda \(threshold\)) s
-5 539 M
-(              \(let \(\(type \(car threshold\)\)) s
-5 528 M
-(                    \(limit \(cdr threshold\)\)\)) s
-5 517 M
-(                \(when \(> \(error-rate type 60\) limit\)) s
-5 506 M
-(                  \(send-alert type \(error-rate type 60\) limit\)\)\)\)) s
-5 495 M
-(            alert-thresholds\)\)) s
-5 484 M
-(`) s
-5 462 M
-(------------------------------------------------------------------------------) s
-5 440 M
-(Security Considerations) s
-5 418 M
-(Error Information Leakage) s
-5 396 M
-(`scheme) s
-5 385 M
-(;; Don't expose internal details in user-facing errors) s
-5 374 M
-(\(define \(sanitize-error-for-user error\)) s
-5 363 M
-(  `\(error) s
-5 352 M
-(    \(type ,\(error-type error\)\)) s
-5 341 M
-(    \(message ,\(user-safe-message \(error-type error\)\)\)) s
-5 330 M
-(    \(request-id ,\(error-request-id error\)\)\)\)) s
-5 308 M
 (;; Full details only in audit log) s
-5 297 M
+5 770 M
 (\(define \(log-full-error error\)) s
-5 286 M
-(  \(audit-append action: 'error) s
-5 275 M
-(                error: error\)\)  ; Full context preserved) s
-5 264 M
-(`) s
-5 242 M
-(Error-Based Attacks) s
-5 220 M
-(`scheme) s
-5 209 M
-(;; Rate limit error generation to prevent DoS) s
-5 198 M
-(\(define error-rate-limiter) s
-5 187 M
-(  \(make-rate-limiter 1000 60\)\)  ; 1000 errors per minute max) s
-5 165 M
-(\(define \(rate-limited-record-error! err\)) s
-5 154 M
-(  \(if \(rate-limiter-allow? error-rate-limiter\)) s
-5 143 M
-(      \(record-error! err\)) s
-5 132 M
-(      \(audit-append action: 'error-rate-limited\)\)\)) s
-5 121 M
-(`) s
-5 99 M
-(------------------------------------------------------------------------------) s
-5 77 M
-(References) s
-5 55 M
-(1. Release It! - Nygard) s
-5 44 M
-(2. Hystrix - Netflix Circuit Breaker) s
-5 33 M
-(3. RFC-003: Cryptographic Audit Trail) s
-5 22 M
-(4. RFC-026: Garbage Collection) s
-_R
-S
-%%Page: (9) 9
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 9 def
-/fname (rfc-028-error-handling.txt) def
-/fdir (.) def
-/ftail (rfc-028-error-handling.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(------------------------------------------------------------------------------) s
 5 759 M
-(Changelog) s
-5 737 M
-(- 2026-01-07 - Initial draft) s
-5 715 M
-(------------------------------------------------------------------------------) s
+(  \(audit-append action: 'error) s
+5 748 M
+(                error: error\)\)  ; Full context preserved) s
+5 726 M
+(Error-Based Attacks) s
+5 704 M
+(;; Rate limit error generation to prevent DoS) s
 5 693 M
-(Implementation Status: Draft) s
+(\(define error-rate-limiter) s
 5 682 M
+(  \(make-rate-limiter 1000 60\)\)  ; 1000 errors per minute max) s
+5 660 M
+(\(define \(rate-limited-record-error! err\)) s
+5 649 M
+(  \(if \(rate-limiter-allow? error-rate-limiter\)) s
+5 638 M
+(      \(record-error! err\)) s
+5 627 M
+(      \(audit-append action: 'error-rate-limited\)\)\)) s
+5 605 M
+(------------------------------------------------------------------------------) s
+5 583 M
+(References) s
+5 561 M
+(1. Release It! - Nygard) s
+5 550 M
+(2. Hystrix - Netflix Circuit Breaker) s
+5 539 M
+(3. RFC-003: Cryptographic Audit Trail) s
+5 528 M
+(4. RFC-026: Garbage Collection) s
+5 506 M
+(------------------------------------------------------------------------------) s
+5 484 M
+(Changelog) s
+5 462 M
+(- 2026-01-07 - Initial draft) s
+5 440 M
+(------------------------------------------------------------------------------) s
+5 418 M
+(Implementation Status: Draft) s
+5 407 M
 (Dependencies: soup, audit, storage) s
-5 671 M
+5 396 M
 (Integration: All vault operations, monitoring, alerting) s
 _R
 S
 %%Trailer
-%%Pages: 9
+%%Pages: 8
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

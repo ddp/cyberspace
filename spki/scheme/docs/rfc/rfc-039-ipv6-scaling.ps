@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:50 2026
+%%CreationDate: Fri Jan  9 12:12:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -509,29 +509,29 @@ _S
 5 198 M
 (Design Principles) s
 5 176 M
-(`) s
-5 165 M
 (1. Objects, not repositories) s
-5 154 M
+5 165 M
 (2. Pull, not push) s
-5 143 M
+5 154 M
 (3. Lazy, not eager) s
-5 132 M
+5 143 M
 (4. Local-first, federate-second) s
-5 121 M
+5 132 M
 (5. Trust math, not infrastructure) s
 5 110 M
-(`) s
-5 88 M
 (------------------------------------------------------------------------------) s
-5 66 M
+5 88 M
 (Content-Addressed Object Store) s
-5 44 M
+5 66 M
 (Storage Model) s
-5 22 M
-(`) s
-5 11 M
+5 44 M
 (.vault/) s
+5 33 M
+(  objects/) s
+5 22 M
+(    sha512-a1b2c3.../    # First 8 chars as directory) s
+5 11 M
+(      a1b2c3d4e5f6...    # Full hash as filename \(S-expression\)) s
 _R
 S
 %%Page: (2) 2
@@ -546,117 +546,113 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  objects/) s
-5 770 M
-(    sha512-a1b2c3.../    # First 8 chars as directory) s
-5 759 M
-(      a1b2c3d4e5f6...    # Full hash as filename \(S-expression\)) s
-5 748 M
 (  catalog/) s
-5 737 M
+5 770 M
 (    manifest.sexp        # Vault catalog object) s
-5 726 M
+5 759 M
 (    bloom.sexp           # Bloom filter object) s
-5 715 M
+5 748 M
 (    indices/             # Secondary index objects) s
-5 704 M
+5 737 M
 (      by-signer.sexp) s
-5 693 M
+5 726 M
 (      by-type.sexp) s
-5 682 M
+5 715 M
 (  chunks/) s
-5 671 M
+5 704 M
 (    sha512-xxxx/         # Chunked large objects) s
-5 660 M
+5 693 M
 (  audit/) s
-5 649 M
+5 682 M
 (    head.sexp            # Current audit chain head) s
-5 638 M
+5 671 M
 (    chain/               # Audit entries \(hash-addressed\)) s
-5 627 M
-(`) s
-5 605 M
+5 649 M
 (Object Format) s
-5 583 M
-(`scheme) s
-5 572 M
+5 627 M
 (\(cyberspace-object) s
-5 561 M
+5 616 M
 (  \(version 1\)) s
-5 550 M
+5 605 M
 (  \(type blob|tree|manifest|cert|audit\)) s
-5 539 M
+5 594 M
 (  \(size 1048576\)) s
-5 528 M
+5 583 M
 (  \(compression zstd|none\)) s
-5 517 M
+5 572 M
 (  \(hash "sha512:a1b2c3..."\)) s
-5 506 M
+5 561 M
 (  \(chunks \("sha512:..." "sha512:..." ...\)\)  ; If chunked) s
-5 495 M
+5 550 M
 (  \(signature "ed25519:..."\)) s
-5 484 M
+5 539 M
 (  \(timestamp 1736300000\)\)) s
-5 473 M
-(`) s
-5 451 M
+5 517 M
 (Chunking Strategy) s
-5 429 M
+5 495 M
 (Large objects split at content-defined boundaries \(Rabin fingerprinting\):) s
-5 407 M
-(`) s
-5 396 M
+5 473 M
 (Target chunk: 64 KB \(Starlink-optimized\)) s
-5 385 M
+5 462 M
 (Min chunk:    16 KB) s
-5 374 M
+5 451 M
 (Max chunk:   256 KB) s
-5 352 M
+5 429 M
 (Benefits:) s
-5 341 M
+5 418 M
 (  - Deduplication across objects) s
-5 330 M
+5 407 M
 (  - Partial sync \(fetch only missing chunks\)) s
-5 319 M
+5 396 M
 (  - Resumable transfers) s
-5 308 M
+5 385 M
 (  - Efficient diff) s
-5 297 M
-(`) s
-5 275 M
+5 363 M
 (Hash Function) s
-5 253 M
-(`) s
-5 242 M
+5 341 M
 (SHA-512 everywhere.) s
-5 220 M
+5 319 M
 (Not SHA-256: We have the bits, use them.) s
-5 209 M
+5 308 M
 (Not SHA-1: Broken.) s
-5 198 M
+5 297 M
 (Not BLAKE3: Less analyzed, marginal speed gain irrelevant at network latency.) s
-5 176 M
+5 275 M
 (SHA-512 is:) s
-5 165 M
+5 264 M
 (  - FIPS certified \(GovCloud path\)) s
-5 154 M
+5 253 M
 (  - 50 years of cryptanalysis) s
-5 143 M
+5 242 M
 (  - Hardware accelerated) s
-5 132 M
+5 231 M
 (  - Already in use \(audit trail, signatures\)) s
-5 121 M
-(`) s
-5 99 M
+5 209 M
 (------------------------------------------------------------------------------) s
-5 77 M
+5 187 M
 (Catalog and Query) s
-5 55 M
+5 165 M
 (The soup IS the catalog. No SQL. Objects are S-expressions, queries are pattern matching.) s
-5 33 M
+5 143 M
 (The Soup Query Model) s
+5 121 M
+(;; Find objects by pattern) s
+5 110 M
+(\(soup-query) s
+5 99 M
+(  '\(cyberspace-object) s
+5 88 M
+(    \(type blob\)) s
+5 77 M
+(    \(signer "ed25519:alice..."\)) s
+5 66 M
+(    ?rest\)\)                        ; Match any object signed by Alice) s
+5 44 M
+(;; Find by hash \(direct lookup\)) s
+5 33 M
+(\(soup-fetch "sha512:a1b2c3..."\)    ; O\(1\) content-addressed) s
 5 11 M
-(`scheme) s
+(;; Find by type) s
 _R
 S
 %%Page: (3) 3
@@ -671,119 +667,115 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(;; Find objects by pattern) s
-5 770 M
-(\(soup-query) s
-5 759 M
-(  '\(cyberspace-object) s
-5 748 M
-(    \(type blob\)) s
-5 737 M
-(    \(signer "ed25519:alice..."\)) s
-5 726 M
-(    ?rest\)\)                        ; Match any object signed by Alice) s
-5 704 M
-(;; Find by hash \(direct lookup\)) s
-5 693 M
-(\(soup-fetch "sha512:a1b2c3..."\)    ; O\(1\) content-addressed) s
-5 671 M
-(;; Find by type) s
-5 660 M
 (\(soup-query '\(cyberspace-object \(type cert\) ?rest\)\)) s
-5 638 M
+5 759 M
 (;; Find by time range) s
-5 627 M
+5 748 M
 (\(soup-query-range) s
-5 616 M
+5 737 M
 (  type: 'audit) s
-5 605 M
+5 726 M
 (  from: 1736000000) s
-5 594 M
+5 715 M
 (  to:   1736100000\)) s
-5 572 M
+5 693 M
 (;; Cursor-based iteration for large result sets) s
-5 561 M
+5 682 M
 (\(soup-cursor) s
-5 550 M
+5 671 M
 (  '\(cyberspace-object \(type ?\) ?rest\)) s
-5 539 M
+5 660 M
 (  batch: 100\)) s
-5 528 M
-(`) s
-5 506 M
+5 638 M
 (Object Catalog) s
-5 484 M
+5 616 M
 (The catalog is itself an object in the soup - a manifest of what the vault contains:) s
-5 462 M
-(`scheme) s
-5 451 M
+5 594 M
 (\(vault-catalog) s
-5 440 M
+5 583 M
 (  \(version 1\)) s
-5 429 M
+5 572 M
 (  \(realm "ed25519:principal..."\)) s
-5 418 M
+5 561 M
 (  \(object-count 150000\)) s
-5 407 M
+5 550 M
 (  \(types) s
-5 396 M
+5 539 M
 (    \(blob 100000\)) s
-5 385 M
+5 528 M
 (    \(tree 30000\)) s
-5 374 M
+5 517 M
 (    \(cert 15000\)) s
-5 363 M
+5 506 M
 (    \(audit 5000\)\)) s
-5 352 M
+5 495 M
 (  \(bloom-filter #${...}\)           ; Fast existence check) s
-5 341 M
+5 484 M
 (  \(updated 1736400000\)\)) s
-5 330 M
-(`) s
-5 308 M
+5 462 M
 (Bloom Filter) s
-5 286 M
+5 440 M
 (Fast existence check before network round-trip:) s
-5 264 M
-(`scheme) s
-5 253 M
+5 418 M
 (\(define \(soup-maybe-contains? hash\)) s
-5 242 M
+5 407 M
 (  "Check bloom filter - false means definitely not, true means maybe") s
-5 231 M
+5 396 M
 (  \(let \(\(catalog \(soup-fetch-catalog\)\)\)) s
-5 220 M
+5 385 M
 (    \(bloom-test \(catalog-bloom catalog\) hash\)\)\)) s
-5 198 M
+5 363 M
 (;; Bloom parameters) s
-5 187 M
+5 352 M
 (\(bloom-filter) s
-5 176 M
+5 341 M
 (  \(capacity 10000000\)              ; 10M objects) s
-5 165 M
+5 330 M
 (  \(false-positive 0.001\)           ; 0.1% FP rate) s
-5 154 M
+5 319 M
 (  \(bits #${...}\)\)) s
-5 143 M
-(`) s
-5 121 M
+5 297 M
 (Audit Trail) s
-5 99 M
+5 275 M
 (The audit trail is a hash-chain of objects in the soup:) s
-5 77 M
-(`scheme) s
-5 66 M
+5 253 M
 (\(audit-entry) s
-5 55 M
+5 242 M
 (  \(sequence 12345\)) s
-5 44 M
+5 231 M
 (  \(timestamp 1736300000\)) s
-5 33 M
+5 220 M
 (  \(lamport 67890\)) s
-5 22 M
+5 209 M
 (  \(actor "ed25519:subject..."\)) s
-5 11 M
+5 198 M
 (  \(action \(read "sha512:object..."\)\)) s
+5 187 M
+(  \(previous "sha512:prev-entry..."\)  ; Chain link) s
+5 176 M
+(  \(signature "ed25519:auditor..."\)\)) s
+5 154 M
+(;; Query audit by walking the chain) s
+5 143 M
+(\(define \(audit-query actor from-seq\)) s
+5 132 M
+(  "Walk audit chain, filter by actor") s
+5 121 M
+(  \(soup-chain-walk) s
+5 110 M
+(    start: \(audit-head\)) s
+5 99 M
+(    filter: \(lambda \(entry\)) s
+5 88 M
+(              \(equal? \(entry-actor entry\) actor\)\)) s
+5 77 M
+(    from: from-seq\)\)) s
+5 55 M
+(Secondary Indices) s
+5 33 M
+(For queries that can't use content-addressing, the soup maintains lightweight indices as ) s
+5 22 M
+(objects:) s
 _R
 S
 %%Page: (4) 4
@@ -798,119 +790,113 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  \(previous "sha512:prev-entry..."\)  ; Chain link) s
+(\(soup-index) s
 5 770 M
-(  \(signature "ed25519:auditor..."\)\)) s
-5 748 M
-(;; Query audit by walking the chain) s
-5 737 M
-(\(define \(audit-query actor from-seq\)) s
-5 726 M
-(  "Walk audit chain, filter by actor") s
-5 715 M
-(  \(soup-chain-walk) s
-5 704 M
-(    start: \(audit-head\)) s
-5 693 M
-(    filter: \(lambda \(entry\)) s
-5 682 M
-(              \(equal? \(entry-actor entry\) actor\)\)) s
-5 671 M
-(    from: from-seq\)\)) s
-5 660 M
-(`) s
-5 638 M
-(Secondary Indices) s
-5 616 M
-(For queries that can't use content-addressing, the soup maintains lightweight indices as ) s
-5 605 M
-(objects:) s
-5 583 M
-(`scheme) s
-5 572 M
-(\(soup-index) s
-5 561 M
 (  \(name "by-signer"\)) s
-5 550 M
+5 759 M
 (  \(key-type principal\)) s
-5 539 M
+5 748 M
 (  \(entries) s
-5 528 M
+5 737 M
 (    \(\("ed25519:alice..." \("sha512:obj1" "sha512:obj2" ...\)\)) s
-5 517 M
+5 726 M
 (     \("ed25519:bob..." \("sha512:obj3" "sha512:obj4" ...\)\)\)\)\)) s
-5 495 M
+5 704 M
 (\(soup-index) s
-5 484 M
+5 693 M
 (  \(name "by-type"\)) s
-5 473 M
+5 682 M
 (  \(key-type symbol\)) s
-5 462 M
+5 671 M
 (  \(entries) s
-5 451 M
+5 660 M
 (    \(\(blob \("sha512:..." "sha512:..." ...\)\)) s
-5 440 M
+5 649 M
 (     \(cert \("sha512:..." "sha512:..." ...\)\)) s
-5 429 M
+5 638 M
 (     \(audit \("sha512:..." "sha512:..." ...\)\)\)\)\)) s
-5 418 M
-(`) s
-5 396 M
+5 616 M
 (Indices are rebuilt on demand, not authoritative - the soup is truth.) s
-5 374 M
+5 594 M
 (------------------------------------------------------------------------------) s
-5 352 M
+5 572 M
 (Discovery and Routing) s
-5 330 M
+5 550 M
 (Realm Identity) s
-5 308 M
+5 528 M
 (Each realm has a principal \(Ed25519 public key\). This IS its identity:) s
-5 286 M
-(`scheme) s
-5 275 M
+5 506 M
 (\(realm-identity) s
-5 264 M
+5 495 M
 (  \(principal "ed25519:a1b2c3..."\)) s
-5 253 M
+5 484 M
 (  \(addresses                          ; Where to reach this realm) s
-5 242 M
+5 473 M
 (    \(ipv6 "2001:db8::1" port: 7777\)) s
-5 231 M
+5 462 M
 (    \(ipv4 "192.0.2.1" port: 7777\)     ; Legacy) s
-5 220 M
+5 451 M
 (    \(onion "xxxx.onion" port: 7777\)\)  ; Tor) s
-5 209 M
+5 440 M
 (  \(role witness\)) s
-5 198 M
+5 429 M
 (  \(capabilities \(storage-gb 1000\) \(bandwidth-mbps 100\)\)) s
-5 187 M
+5 418 M
 (  \(signature "ed25519:..."\)\)) s
-5 176 M
-(`) s
-5 154 M
+5 396 M
 (Peer Discovery) s
-5 132 M
+5 374 M
 (Bootstrap:) s
-5 121 M
-(`scheme) s
-5 110 M
+5 363 M
 (\(bootstrap-peers) s
-5 99 M
+5 352 M
 (  \("ed25519:official1..." "bootstrap.cyberspace.org"\)) s
-5 88 M
+5 341 M
 (  \("ed25519:official2..." "bootstrap2.cyberspace.org"\)\)) s
-5 77 M
-(`) s
-5 55 M
+5 319 M
 (Gossip Protocol:) s
-5 44 M
-(`) s
-5 33 M
+5 308 M
 (1. Realm joins, contacts bootstrap peer) s
-5 22 M
+5 297 M
 (2. Receives partial peer list \(random subset\)) s
-5 11 M
+5 286 M
 (3. Contacts those peers, exchanges lists) s
+5 275 M
+(4. Epidemic spread: O\(log n\) rounds to reach all realms) s
+5 264 M
+(5. Periodic refresh \(every 5 min on Starlink-friendly schedule\)) s
+5 242 M
+(Distributed Hash Table \(Future\):) s
+5 231 M
+(Kademlia-style routing:) s
+5 220 M
+(  - XOR distance metric on principal hashes) s
+5 209 M
+(  - O\(log n\) lookups) s
+5 198 M
+(  - Realms responsible for nearby hash ranges) s
+5 187 M
+(  - Natural load balancing) s
+5 165 M
+(Content Discovery) s
+5 143 M
+(;; "Who has this hash?") s
+5 132 M
+(\(content-locate "sha512:a1b2c3..."\)) s
+5 110 M
+(;; Returns list of peers claiming to have it:) s
+5 99 M
+(\(\("ed25519:peer1..." \(latency-ms 50\) \(role full\)\)) s
+5 88 M
+( \("ed25519:peer2..." \(latency-ms 200\) \(role witness\)\)) s
+5 77 M
+( \("ed25519:peer3..." \(latency-ms 600\) \(role archiver\)\)\)) s
+5 55 M
+(;; Fetch from best candidate) s
+5 44 M
+(\(content-fetch "sha512:a1b2c3..." from: "ed25519:peer1..."\)) s
+5 22 M
+(------------------------------------------------------------------------------) s
 _R
 S
 %%Page: (5) 5
@@ -925,115 +911,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(4. Epidemic spread: O\(log n\) rounds to reach all realms) s
-5 770 M
-(5. Periodic refresh \(every 5 min on Starlink-friendly schedule\)) s
-5 759 M
-(`) s
-5 737 M
-(Distributed Hash Table \(Future\):) s
-5 726 M
-(`) s
-5 715 M
-(Kademlia-style routing:) s
-5 704 M
-(  - XOR distance metric on principal hashes) s
-5 693 M
-(  - O\(log n\) lookups) s
-5 682 M
-(  - Realms responsible for nearby hash ranges) s
-5 671 M
-(  - Natural load balancing) s
-5 660 M
-(`) s
-5 638 M
-(Content Discovery) s
-5 616 M
-(`scheme) s
-5 605 M
-(;; "Who has this hash?") s
-5 594 M
-(\(content-locate "sha512:a1b2c3..."\)) s
-5 572 M
-(;; Returns list of peers claiming to have it:) s
-5 561 M
-(\(\("ed25519:peer1..." \(latency-ms 50\) \(role full\)\)) s
-5 550 M
-( \("ed25519:peer2..." \(latency-ms 200\) \(role witness\)\)) s
-5 539 M
-( \("ed25519:peer3..." \(latency-ms 600\) \(role archiver\)\)\)) s
-5 517 M
-(;; Fetch from best candidate) s
-5 506 M
-(\(content-fetch "sha512:a1b2c3..." from: "ed25519:peer1..."\)) s
-5 495 M
-(`) s
-5 473 M
-(------------------------------------------------------------------------------) s
-5 451 M
 (Transport Protocol) s
-5 429 M
+5 759 M
 (End-to-End Encryption) s
-5 407 M
+5 737 M
 (All network traffic is encrypted. The OS and network are not trusted.) s
-5 385 M
-(`scheme) s
-5 374 M
+5 715 M
 (\(cyberspace-message) s
-5 363 M
+5 704 M
 (  \(version 1\)) s
-5 352 M
+5 693 M
 (  \(from "ed25519:sender..."\)) s
-5 341 M
+5 682 M
 (  \(to "ed25519:recipient..."\)        ; Or broadcast key) s
-5 330 M
+5 671 M
 (  \(ephemeral "x25519:..."\)           ; One-time key \(PFS\)) s
-5 319 M
+5 660 M
 (  \(nonce #${24-bytes}\)               ; Random nonce) s
-5 308 M
+5 649 M
 (  \(ciphertext #${...}\)               ; NaCl box: X25519 + XSalsa20-Poly1305) s
-5 297 M
+5 638 M
 (  \(signature "ed25519:..."\)\)         ; Sign the ciphertext) s
-5 286 M
-(`) s
-5 264 M
+5 616 M
 (Encryption scheme: NaCl crypto_box \(libsodium\)) s
-5 253 M
+5 605 M
 (- Key agreement: X25519 \(Curve25519 ECDH\)) s
-5 242 M
+5 594 M
 (- Cipher: XSalsa20-Poly1305) s
-5 231 M
+5 583 M
 (- Perfect forward secrecy: ephemeral keys per message) s
-5 209 M
+5 561 M
 (Decrypted payload:) s
-5 187 M
-(`scheme) s
-5 176 M
+5 539 M
 (\(plaintext-payload) s
-5 165 M
+5 528 M
 (  \(type request|response|announce|gossip\)) s
-5 154 M
+5 517 M
 (  \(nonce 12345678\)                   ; Replay protection) s
-5 143 M
+5 506 M
 (  \(timestamp 1736300000\)) s
-5 132 M
+5 495 M
 (  \(body ...\)\)) s
-5 121 M
-(`) s
-5 99 M
+5 473 M
 (Broadcast messages use a shared group key or are signed-only \(announcements of public obj) s
-5 88 M
+5 462 M
 (ects\).) s
-5 66 M
+5 440 M
 (Wire Format \(Encrypted\)) s
-5 44 M
-(`scheme) s
-5 33 M
+5 418 M
 (;; Sender encrypts) s
-5 22 M
+5 407 M
 (\(define \(seal-message payload recipient-pubkey sender-keypair\)) s
-5 11 M
+5 396 M
 (  \(let* \(\(ephemeral \(x25519-keypair\)\)) s
+5 385 M
+(         \(shared \(x25519-shared \(ephemeral-secret ephemeral\) recipient-pubkey\)\)) s
+5 374 M
+(         \(nonce \(random-bytes 24\)\)) s
+5 363 M
+(         \(ciphertext \(crypto-box payload nonce shared\)\)\)) s
+5 352 M
+(    `\(cyberspace-message) s
+5 341 M
+(      \(version 1\)) s
+5 330 M
+(      \(from ,\(keypair-public sender-keypair\)\)) s
+5 319 M
+(      \(to ,recipient-pubkey\)) s
+5 308 M
+(      \(ephemeral ,\(ephemeral-public ephemeral\)\)) s
+5 297 M
+(      \(nonce ,nonce\)) s
+5 286 M
+(      \(ciphertext ,ciphertext\)) s
+5 275 M
+(      \(signature ,\(sign-message ciphertext sender-keypair\)\)\)\)\)) s
+5 253 M
+(;; Recipient decrypts) s
+5 242 M
+(\(define \(open-message msg recipient-keypair\)) s
+5 231 M
+(  \(let* \(\(shared \(x25519-shared \(keypair-secret recipient-keypair\)) s
+5 220 M
+(                                \(message-ephemeral msg\)\)\)) s
+5 209 M
+(         \(plaintext \(crypto-box-open \(message-ciphertext msg\)) s
+5 198 M
+(                                     \(message-nonce msg\)) s
+5 187 M
+(                                     shared\)\)\)) s
+5 176 M
+(    \(and \(verify-signature msg \(message-from msg\)\)) s
+5 165 M
+(         plaintext\)\)\)) s
+5 143 M
+(Request Types) s
+5 121 M
+(;; Existence check) s
+5 110 M
+(\(have? \("sha512:..." "sha512:..." ...\)\)) s
+5 99 M
+(;; Response: \(have \("sha512:..." "sha512:..."\) missing \("sha512:..."\)\)) s
+5 77 M
+(;; Fetch object) s
+5 66 M
+(\(fetch "sha512:..."\)) s
+5 55 M
+(;; Response: \(object ...\)) s
+5 33 M
+(;; Fetch chunk range) s
+5 22 M
+(\(fetch-chunks "sha512:..." start: 5 count: 10\)) s
+5 11 M
+(;; Response: \(chunks ...\)) s
 _R
 S
 %%Page: (6) 6
@@ -1047,124 +1037,110 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(         \(shared \(x25519-shared \(ephemeral-secret ephemeral\) recipient-pubkey\)\)) s
 5 770 M
-(         \(nonce \(random-bytes 24\)\)) s
-5 759 M
-(         \(ciphertext \(crypto-box payload nonce shared\)\)\)) s
-5 748 M
-(    `\(cyberspace-message) s
-5 737 M
-(      \(version 1\)) s
-5 726 M
-(      \(from ,\(keypair-public sender-keypair\)\)) s
-5 715 M
-(      \(to ,recipient-pubkey\)) s
-5 704 M
-(      \(ephemeral ,\(ephemeral-public ephemeral\)\)) s
-5 693 M
-(      \(nonce ,nonce\)) s
-5 682 M
-(      \(ciphertext ,ciphertext\)) s
-5 671 M
-(      \(signature ,\(sign-message ciphertext sender-keypair\)\)\)\)\)) s
-5 649 M
-(;; Recipient decrypts) s
-5 638 M
-(\(define \(open-message msg recipient-keypair\)) s
-5 627 M
-(  \(let* \(\(shared \(x25519-shared \(keypair-secret recipient-keypair\)) s
-5 616 M
-(                                \(message-ephemeral msg\)\)\)) s
-5 605 M
-(         \(plaintext \(crypto-box-open \(message-ciphertext msg\)) s
-5 594 M
-(                                     \(message-nonce msg\)) s
-5 583 M
-(                                     shared\)\)\)) s
-5 572 M
-(    \(and \(verify-signature msg \(message-from msg\)\)) s
-5 561 M
-(         plaintext\)\)\)) s
-5 550 M
-(`) s
-5 528 M
-(Request Types) s
-5 506 M
-(`scheme) s
-5 495 M
-(;; Existence check) s
-5 484 M
-(\(have? \("sha512:..." "sha512:..." ...\)\)) s
-5 473 M
-(;; Response: \(have \("sha512:..." "sha512:..."\) missing \("sha512:..."\)\)) s
-5 451 M
-(;; Fetch object) s
-5 440 M
-(\(fetch "sha512:..."\)) s
-5 429 M
-(;; Response: \(object ...\)) s
-5 407 M
-(;; Fetch chunk range) s
-5 396 M
-(\(fetch-chunks "sha512:..." start: 5 count: 10\)) s
-5 385 M
-(;; Response: \(chunks ...\)) s
-5 363 M
 (;; Peer list exchange) s
-5 352 M
+5 759 M
 (\(peers? limit: 50\)) s
-5 341 M
+5 748 M
 (;; Response: \(peers ...\)) s
-5 319 M
+5 726 M
 (;; Announce new content) s
-5 308 M
+5 715 M
 (\(announce \("sha512:..." "sha512:..."\)\)) s
-5 297 M
+5 704 M
 (;; Response: \(ack\)) s
-5 286 M
-(`) s
-5 264 M
+5 682 M
 (Transport Bindings) s
-5 242 M
-(`) s
-5 231 M
+5 660 M
 (Native:     UDP/IPv6, port 7777 \(primary\)) s
-5 220 M
+5 649 M
 (Fallback:   TCP/IPv6, port 7777 \(firewalls\)) s
-5 209 M
+5 638 M
 (Legacy:     TCP/IPv4, port 7777 \(transition\)) s
-5 198 M
+5 627 M
 (Stealth:    Tor onion service \(censorship resistance\)) s
-5 187 M
+5 616 M
 (Offline:    USB drive, file copy \(sneakernet\)) s
-5 176 M
+5 605 M
 (Export:     Git bundle \(GitHub compatibility\)) s
-5 165 M
-(`) s
-5 143 M
+5 583 M
 (Starlink Optimization) s
-5 121 M
-(`scheme) s
-5 110 M
+5 561 M
 (\(transport-config) s
-5 99 M
+5 550 M
 (  \(mode satellite\)) s
-5 88 M
+5 539 M
 (  \(batch-window-ms 500\)        ; Aggregate small messages) s
-5 77 M
+5 528 M
 (  \(chunk-size-kb 64\)           ; Match MTU) s
-5 66 M
+5 517 M
 (  \(retry-strategy exponential\)) s
-5 55 M
+5 506 M
 (  \(max-in-flight 10\)           ; Parallelism) s
-5 44 M
+5 495 M
 (  \(keepalive-sec 300\)\)         ; 5 min, not 30 sec) s
-5 33 M
-(`) s
-5 11 M
+5 473 M
 (------------------------------------------------------------------------------) s
+5 451 M
+(Synchronization Protocol) s
+5 429 M
+(Lazy Sync \(Default\)) s
+5 407 M
+(Node A                              Node B) s
+5 396 M
+(   |                                   |) s
+5 385 M
+(   |----\(have? [h1, h2, h3]\)---------->|) s
+5 374 M
+(   |<---\(have [h1, h3] missing [h2]\)---|) s
+5 363 M
+(   |----\(fetch h2\)-------------------->|) s
+5 352 M
+(   |<---\(object h2 ...\)----------------|) s
+5 341 M
+(   |                                   |) s
+5 319 M
+(No coordination. No locks. No leader.) s
+5 297 M
+(Crdt-Style Convergence) s
+5 275 M
+(Objects are immutable and content-addressed. No conflicts possible at object level.) s
+5 253 M
+(Manifests \(collections of objects\) use:) s
+5 242 M
+(- Lamport timestamps for ordering) s
+5 231 M
+(- Last-writer-wins with principal tiebreaker) s
+5 220 M
+(- Or: union \(add-only sets\)) s
+5 198 M
+(\(manifest) s
+5 187 M
+(  \(name "library"\)) s
+5 176 M
+(  \(version \(lamport 42\) \(principal "ed25519:..."\)\)) s
+5 165 M
+(  \(entries) s
+5 154 M
+(    \("rfc-001" "sha512:..."\)) s
+5 143 M
+(    \("rfc-002" "sha512:..."\)) s
+5 132 M
+(    ...\)\)) s
+5 110 M
+(Merkle Sync) s
+5 88 M
+(Efficient diff for large manifests:) s
+5 66 M
+(         root) s
+5 55 M
+(        /    \\) s
+5 44 M
+(      h1      h2) s
+5 33 M
+(     /  \\    /  \\) s
+5 22 M
+(    a    b  c    d) s
 _R
 S
 %%Page: (7) 7
@@ -1178,116 +1154,112 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(Synchronization Protocol) s
-5 748 M
-(Lazy Sync \(Default\)) s
-5 726 M
-(`) s
-5 715 M
-(Node A                              Node B) s
-5 704 M
-(   |                                   |) s
-5 693 M
-(   |----\(have? [h1, h2, h3]\)---------->|) s
-5 682 M
-(   |<---\(have [h1, h3] missing [h2]\)---|) s
-5 671 M
-(   |----\(fetch h2\)-------------------->|) s
-5 660 M
-(   |<---\(object h2 ...\)----------------|) s
-5 649 M
-(   |                                   |) s
-5 627 M
-(No coordination. No locks. No leader.) s
-5 616 M
-(`) s
-5 594 M
-(Crdt-Style Convergence) s
-5 572 M
-(Objects are immutable and content-addressed. No conflicts possible at object level.) s
-5 550 M
-(Manifests \(collections of objects\) use:) s
-5 539 M
-(- Lamport timestamps for ordering) s
-5 528 M
-(- Last-writer-wins with principal tiebreaker) s
-5 517 M
-(- Or: union \(add-only sets\)) s
-5 495 M
-(`scheme) s
-5 484 M
-(\(manifest) s
-5 473 M
-(  \(name "library"\)) s
-5 462 M
-(  \(version \(lamport 42\) \(principal "ed25519:..."\)\)) s
-5 451 M
-(  \(entries) s
-5 440 M
-(    \("rfc-001" "sha512:..."\)) s
-5 429 M
-(    \("rfc-002" "sha512:..."\)) s
-5 418 M
-(    ...\)\)) s
-5 407 M
-(`) s
-5 385 M
-(Merkle Sync) s
-5 363 M
-(Efficient diff for large manifests:) s
-5 341 M
-(`) s
-5 330 M
-(         root) s
-5 319 M
-(        /    \\) s
-5 308 M
-(      h1      h2) s
-5 297 M
-(     /  \\    /  \\) s
-5 286 M
-(    a    b  c    d) s
-5 264 M
+5 781 M
 (Exchange root hash.) s
-5 253 M
+5 770 M
 (If different, recurse on children.) s
-5 242 M
+5 759 M
 (O\(log n\) round trips to find diff.) s
-5 231 M
-(`) s
-5 209 M
+5 737 M
 (------------------------------------------------------------------------------) s
-5 187 M
+5 715 M
 (Federation at Scale) s
-5 165 M
+5 693 M
 (Cluster Topology) s
+5 671 M
+(                    +-------------------------------------+) s
+5 660 M
+(                    |         COORDINATOR CLUSTER         |) s
+5 649 M
+(                    |  \(3-7 nodes, Byzantine consensus\)   |) s
+5 638 M
+(                    +----------------+--------------------+) s
+5 627 M
+(                                     |) s
+5 616 M
+(          +--------------------------+--------------------------+) s
+5 605 M
+(          |                          |                          |) s
+5 594 M
+(    +-----v-----+             +------v-----+             +------v-----+) s
+5 583 M
+(    |   FULL    |             |   FULL     |             |    FULL    |) s
+5 572 M
+(    |  NODES    |             |   NODES    |             |   NODES    |) s
+5 561 M
+(    +-----+-----+             +-----+------+             +-----+------+) s
+5 550 M
+(          |                         |                          |) s
+5 539 M
+(    +-----v-----+             +-----v------+             +-----v------+) s
+5 528 M
+(    | WITNESSES |             | WITNESSES  |             | WITNESSES  |) s
+5 517 M
+(    | ARCHIVERS |             | ARCHIVERS  |             | ARCHIVERS  |) s
+5 506 M
+(    |   EDGES   |             |   EDGES    |             |   EDGES    |) s
+5 495 M
+(    +-----------+             +------------+             +------------+) s
+5 473 M
+(Coordinators: Rare, high-capability realms, run consensus) s
+5 462 M
+(Full: Common realms, replicate everything, serve content) s
+5 451 M
+(Witnesses: Abundant realms, verify and store, passive sync) s
+5 440 M
+(Archivers: Cold storage realms, batch sync) s
+5 429 M
+(Edges: Read-only realms, intermittent, mobile) s
+5 407 M
+(Partition Tolerance) s
+5 385 M
+(Network splits \342\\206\\222 clusters diverge \342\\206\\222 clusters converge on reconnect) s
+5 363 M
+(No data loss \(content-addressed\)) s
+5 352 M
+(No conflicts \(immutable objects\)) s
+5 341 M
+(Audit trails merge \(union of entries, Lamport ordering\)) s
+5 330 M
+(Manifests resolve \(LWW or union based on type\)) s
+5 308 M
+(------------------------------------------------------------------------------) s
+5 286 M
+(Git as Export Format) s
+5 264 M
+(The Transition) s
+5 242 M
+(Phase 1 \(Now\):      Git is source of truth, vault is cache) s
+5 231 M
+(Phase 2 \(Next\):     Vault is source of truth, git is export) s
+5 220 M
+(Phase 3 \(Future\):   Git optional, purely for GitHub presence) s
+5 198 M
+(Export Process) s
+5 176 M
+(\(git-export) s
+5 165 M
+(  from: ".vault") s
+5 154 M
+(  to: "/tmp/cyberspace-export") s
 5 143 M
-(`) s
-5 132 M
-(                    \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(  format: 'git-repo\)) s
 5 121 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(;; Creates standard git repo from vault contents) s
 5 110 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 99 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(;; For publishing to GitHub, GitLab, etc.) s
 5 88 M
-(\\200\342\\224\\200\342\\224\\220) s
-5 77 M
-(                    \342\\224\\202         COORDINATOR CLUSTER         \342\\224\\202) s
+(Import Process) s
 5 66 M
-(                    \342\\224\\202  \(3-7 nodes, Byzantine consensus\)   \342\\224\\202) s
+(\(git-import) s
 5 55 M
-(                    \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+(  from: "https://github.com/ddp/cyberspace.git") s
 5 44 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 33 M
-(\\224\254\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+(  to: ".vault"\)) s
 5 22 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+(;; Extracts objects from git, stores in vault) s
 5 11 M
-(\342\\224\\200\342\\224\\230) s
+(;; Discards git history, keeps content) s
 _R
 S
 %%Page: (8) 8
@@ -1301,130 +1273,106 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(                                     \342\\224\\202) s
 5 770 M
-(          \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 759 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 748 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\274\342) s
-5 737 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 726 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 715 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
-5 704 M
-(          \342\\224\\202                          \342\\224\\202                          \342\\224\\202) s
-5 693 M
-(    \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\274\342\\224\\200\342\\224\\200\342\\224) s
-5 682 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\220             \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 671 M
-(\342\\224\\200\342\\224\\200\342\\226\274\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220           ) s
-5 660 M
-(  \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\274\342\\224\\200\342\\224\\200) s
-5 649 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
-5 638 M
-(    \342\\224\\202   FULL    \342\\224\\202             \342\\224\\202   FULL     \342\\224\\202             ) s
-5 627 M
-(\342\\224\\202    FULL    \342\\224\\202) s
-5 616 M
-(    \342\\224\\202  NODES    \342\\224\\202             \342\\224\\202   NODES    \342\\224\\202             ) s
-5 605 M
-(\342\\224\\202   NODES    \342\\224\\202) s
-5 594 M
-(    \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\254\342\\224\\200\342\\224\\200\342\\224) s
-5 583 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\230             \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 572 M
-(\342\\224\\200\342\\224\254\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230           ) s
-5 561 M
-(  \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\254\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 550 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230) s
-5 539 M
-(          \342\\224\\202                         \342\\224\\202                          \342\\224\\202) s
-5 528 M
-(    \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\274\342\\224\\200\342\\224\\200\342\\224) s
-5 517 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\220             \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 506 M
-(\342\\224\\200\342\\226\274\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220           ) s
-5 495 M
-(  \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\226\274\342\\224\\200\342\\224\\200\342\\224\\200) s
-5 484 M
-(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
-5 473 M
-(    \342\\224\\202 WITNESSES \342\\224\\202             \342\\224\\202 WITNESSES  \342\\224\\202             ) s
-5 462 M
-(\342\\224\\202 WITNESSES  \342\\224\\202) s
-5 451 M
-(    \342\\224\\202 ARCHIVERS \342\\224\\202             \342\\224\\202 ARCHIVERS  \342\\224\\202             ) s
-5 440 M
-(\342\\224\\202 ARCHIVERS  \342\\224\\202) s
-5 429 M
-(    \342\\224\\202   EDGES   \342\\224\\202             \342\\224\\202   EDGES    \342\\224\\202             ) s
-5 418 M
-(\342\\224\\202   EDGES    \342\\224\\202) s
-5 407 M
-(    \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
-5 396 M
-(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230             \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 385 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230    ) s
-5 374 M
-(         \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
-5 363 M
-(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230) s
-5 341 M
-(Coordinators: Rare, high-capability realms, run consensus) s
-5 330 M
-(Full: Common realms, replicate everything, serve content) s
-5 319 M
-(Witnesses: Abundant realms, verify and store, passive sync) s
-5 308 M
-(Archivers: Cold storage realms, batch sync) s
-5 297 M
-(Edges: Read-only realms, intermittent, mobile) s
-5 286 M
-(`) s
-5 264 M
-(Partition Tolerance) s
-5 242 M
-(`) s
-5 231 M
-(Network splits \342\\206\\222 clusters diverge \342\\206\\222 clusters converge on reconnect) s
-5 209 M
-(No data loss \(content-addressed\)) s
-5 198 M
-(No conflicts \(immutable objects\)) s
-5 187 M
-(Audit trails merge \(union of entries, Lamport ordering\)) s
-5 176 M
-(Manifests resolve \(LWW or union based on type\)) s
-5 165 M
-(`) s
-5 143 M
 (------------------------------------------------------------------------------) s
+5 748 M
+(Security at Scale) s
+5 726 M
+(Sybil Resistance) s
+5 704 M
+(Problem: Attacker creates many fake nodes to dominate network.) s
+5 682 M
+(Mitigations:) s
+5 671 M
+(1. Stake-weighted voting \(not proof-of-work, just reputation\)) s
+5 660 M
+(2. Web of trust - new nodes introduced by existing trusted nodes) s
+5 649 M
+(3. Rate limiting - bound resources per principal) s
+5 638 M
+(4. Coordinator consensus - Byzantine-resistant core) s
+5 616 M
+(Eclipse Attack Resistance) s
+5 594 M
+(Problem: Attacker isolates a node by controlling all its peers.) s
+5 572 M
+(Mitigations:) s
+5 561 M
+(1. Diverse bootstrap - multiple independent entry points) s
+5 550 M
+(2. Random peer selection - can't predict who you'll connect to) s
+5 539 M
+(3. Peer rotation - periodically reconnect to new peers) s
+5 528 M
+(4. Out-of-band verification - publish peer lists via DNS, blockchain, etc.) s
+5 506 M
+(Denial of Service) s
+5 484 M
+(Problem: Attacker floods network with junk.) s
+5 462 M
+(Mitigations:) s
+5 451 M
+(1. Proof of work on announcements \(small, CPU cost\)) s
+5 440 M
+(2. Rate limiting per principal) s
+5 429 M
+(3. Reputation scoring - misbehaving peers deprioritized) s
+5 418 M
+(4. Content validation - reject malformed objects immediately) s
+5 396 M
+(------------------------------------------------------------------------------) s
+5 374 M
+(Implementation Phases) s
+5 352 M
+(Phase 1: Native Object Store) s
+5 341 M
+(- Implement .vault/objects/ storage) s
+5 330 M
+(- Soup catalog and query) s
+5 319 M
+(- Keep git for development workflow) s
+5 297 M
+(Phase 2: Local-First Sync) s
+5 286 M
+(- Direct node-to-node protocol) s
+5 275 M
+(- have?/fetch message types) s
+5 264 M
+(- UDP transport with TCP fallback) s
+5 242 M
+(Phase 3: Discovery) s
+5 231 M
+(- Gossip peer exchange) s
+5 220 M
+(- Bootstrap nodes) s
+5 209 M
+(- Bloom filters for content location) s
+5 187 M
+(Phase 4: Scale Testing) s
+5 176 M
+(- 100 nodes) s
+5 165 M
+(- 1000 nodes) s
+5 154 M
+(- 10000 nodes) s
+5 143 M
+(- Measure: latency, convergence time, bandwidth) s
 5 121 M
-(Git as Export Format) s
+(Phase 5: Git Deprecation) s
+5 110 M
+(- Vault as source of truth) s
 5 99 M
-(The Transition) s
-5 77 M
-(`) s
+(- Git export for compatibility) s
+5 88 M
+(- Remove git dependency from core operations) s
 5 66 M
-(Phase 1 \(Now\):      Git is source of truth, vault is cache) s
-5 55 M
-(Phase 2 \(Next\):     Vault is source of truth, git is export) s
+(------------------------------------------------------------------------------) s
 5 44 M
-(Phase 3 \(Future\):   Git optional, purely for GitHub presence) s
-5 33 M
-(`) s
+(Metrics and Monitoring) s
+5 22 M
+(\(node-metrics\)) s
 5 11 M
-(Export Process) s
+(;; Returns:) s
 _R
 S
 %%Page: (9) 9
@@ -1438,200 +1386,51 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(`scheme) s
-5 759 M
-(\(git-export) s
-5 748 M
-(  from: ".vault") s
-5 737 M
-(  to: "/tmp/cyberspace-export") s
-5 726 M
-(  format: 'git-repo\)) s
-5 704 M
-(;; Creates standard git repo from vault contents) s
-5 693 M
-(;; For publishing to GitHub, GitLab, etc.) s
-5 682 M
-(`) s
-5 660 M
-(Import Process) s
-5 638 M
-(`scheme) s
-5 627 M
-(\(git-import) s
-5 616 M
-(  from: "https://github.com/ddp/cyberspace.git") s
-5 605 M
-(  to: ".vault"\)) s
-5 583 M
-(;; Extracts objects from git, stores in vault) s
-5 572 M
-(;; Discards git history, keeps content) s
-5 561 M
-(`) s
-5 539 M
-(------------------------------------------------------------------------------) s
-5 517 M
-(Security at Scale) s
-5 495 M
-(Sybil Resistance) s
-5 473 M
-(Problem: Attacker creates many fake nodes to dominate network.) s
-5 451 M
-(Mitigations:) s
-5 440 M
-(1. Stake-weighted voting \(not proof-of-work, just reputation\)) s
-5 429 M
-(2. Web of trust - new nodes introduced by existing trusted nodes) s
-5 418 M
-(3. Rate limiting - bound resources per principal) s
-5 407 M
-(4. Coordinator consensus - Byzantine-resistant core) s
-5 385 M
-(Eclipse Attack Resistance) s
-5 363 M
-(Problem: Attacker isolates a node by controlling all its peers.) s
-5 341 M
-(Mitigations:) s
-5 330 M
-(1. Diverse bootstrap - multiple independent entry points) s
-5 319 M
-(2. Random peer selection - can't predict who you'll connect to) s
-5 308 M
-(3. Peer rotation - periodically reconnect to new peers) s
-5 297 M
-(4. Out-of-band verification - publish peer lists via DNS, blockchain, etc.) s
-5 275 M
-(Denial of Service) s
-5 253 M
-(Problem: Attacker floods network with junk.) s
-5 231 M
-(Mitigations:) s
-5 220 M
-(1. Proof of work on announcements \(small, CPU cost\)) s
-5 209 M
-(2. Rate limiting per principal) s
-5 198 M
-(3. Reputation scoring - misbehaving peers deprioritized) s
-5 187 M
-(4. Content validation - reject malformed objects immediately) s
-5 165 M
-(------------------------------------------------------------------------------) s
-5 143 M
-(Implementation Phases) s
-5 121 M
-(Phase 1: Native Object Store) s
-5 110 M
-(- Implement .vault/objects/ storage) s
-5 99 M
-(- Soup catalog and query) s
-5 88 M
-(- Keep git for development workflow) s
-5 66 M
-(Phase 2: Local-First Sync) s
-5 55 M
-(- Direct node-to-node protocol) s
-5 44 M
-(- have?/fetch message types) s
-5 33 M
-(- UDP transport with TCP fallback) s
-5 11 M
-(Phase 3: Discovery) s
-_R
-S
-%%Page: (10) 10
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 10 def
-/fname (rfc-039-ipv6-scaling.txt) def
-/fdir (.) def
-/ftail (rfc-039-ipv6-scaling.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
 5 781 M
-(- Gossip peer exchange) s
-5 770 M
-(- Bootstrap nodes) s
-5 759 M
-(- Bloom filters for content location) s
-5 737 M
-(Phase 4: Scale Testing) s
-5 726 M
-(- 100 nodes) s
-5 715 M
-(- 1000 nodes) s
-5 704 M
-(- 10000 nodes) s
-5 693 M
-(- Measure: latency, convergence time, bandwidth) s
-5 671 M
-(Phase 5: Git Deprecation) s
-5 660 M
-(- Vault as source of truth) s
-5 649 M
-(- Git export for compatibility) s
-5 638 M
-(- Remove git dependency from core operations) s
-5 616 M
-(------------------------------------------------------------------------------) s
-5 594 M
-(Metrics and Monitoring) s
-5 572 M
-(`scheme) s
-5 561 M
-(\(node-metrics\)) s
-5 550 M
-(;; Returns:) s
-5 539 M
 (\(\(objects-stored 150000\)) s
-5 528 M
+5 770 M
 ( \(objects-size-gb 50\)) s
-5 517 M
+5 759 M
 ( \(peers-known 500\)) s
-5 506 M
+5 748 M
 ( \(peers-connected 20\)) s
-5 495 M
+5 737 M
 ( \(sync-lag-seconds 30\)) s
-5 484 M
+5 726 M
 ( \(bandwidth-in-mbps 10\)) s
-5 473 M
+5 715 M
 ( \(bandwidth-out-mbps 5\)) s
-5 462 M
+5 704 M
 ( \(requests-per-second 100\)) s
-5 451 M
+5 693 M
 ( \(errors-per-second 0.1\)\)) s
-5 440 M
-(`) s
-5 418 M
+5 671 M
 (------------------------------------------------------------------------------) s
-5 396 M
+5 649 M
 (References) s
-5 374 M
+5 627 M
 (1. RFC-010: Federation Protocol) s
-5 363 M
+5 616 M
 (2. RFC-016: Lazy Clustering) s
-5 352 M
+5 605 M
 (3. RFC-037: Node Roles and Capabilities) s
-5 341 M
+5 594 M
 (4. Maymounkov, P. \(2002\). Kademlia: A Peer-to-peer Information System) s
-5 330 M
+5 583 M
 (5. Rabin, M. \(1981\). Fingerprinting by Random Polynomials) s
-5 319 M
+5 572 M
 (6. IPFS Whitepaper \(2014\)) s
-5 308 M
+5 561 M
 (7. Shapiro, M. \(2011\). Conflict-Free Replicated Data Types) s
-5 286 M
+5 539 M
 (------------------------------------------------------------------------------) s
-5 264 M
+5 517 M
 (Changelog) s
-5 242 M
+5 495 M
 (- 2026-01-07 - Initial draft) s
 _R
 S
 %%Trailer
-%%Pages: 10
+%%Pages: 9
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

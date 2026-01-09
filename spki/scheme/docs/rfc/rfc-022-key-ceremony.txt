@@ -44,57 +44,49 @@ Type 1: Single Key Generation
 
 For individual vault keys:
 
-`
-┌─────────────────────────────────────────┐
-│          SINGLE KEY CEREMONY            │
-├─────────────────────────────────────────┤
-│ Participants: 1 generator, 2+ witnesses │
-│ Duration: ~30 minutes                   │
-│ Output: 1 keypair                       │
-└─────────────────────────────────────────┘
-`
++-----------------------------------------+
+|          SINGLE KEY CEREMONY            |
++-----------------------------------------+
+| Participants: 1 generator, 2+ witnesses |
+| Duration: ~30 minutes                   |
+| Output: 1 keypair                       |
++-----------------------------------------+
 
 Type 2: Threshold Key Generation
 
 For M-of-N shared keys (RFC-007, RFC-008):
 
-`
-┌─────────────────────────────────────────┐
-│        THRESHOLD KEY CEREMONY           │
-├─────────────────────────────────────────┤
-│ Participants: N shareholders, 2+ witnesses │
-│ Duration: ~2 hours                      │
-│ Output: N shares, 1 public key          │
-└─────────────────────────────────────────┘
-`
++-----------------------------------------+
+|        THRESHOLD KEY CEREMONY           |
++-----------------------------------------+
+| Participants: N shareholders, 2+ witnesses |
+| Duration: ~2 hours                      |
+| Output: N shares, 1 public key          |
++-----------------------------------------+
 
 Type 3: Root Certificate Ceremony
 
 For establishing certificate authority:
 
-`
-┌─────────────────────────────────────────┐
-│       ROOT CERTIFICATE CEREMONY         │
-├─────────────────────────────────────────┤
-│ Participants: 3-5 officers, auditor     │
-│ Duration: ~4 hours                      │
-│ Output: Root cert, subordinate certs    │
-└─────────────────────────────────────────┘
-`
++-----------------------------------------+
+|       ROOT CERTIFICATE CEREMONY         |
++-----------------------------------------+
+| Participants: 3-5 officers, auditor     |
+| Duration: ~4 hours                      |
+| Output: Root cert, subordinate certs    |
++-----------------------------------------+
 
 Type 4: Recovery Key Ceremony
 
 For generating disaster recovery keys:
 
-`
-┌─────────────────────────────────────────┐
-│        RECOVERY KEY CEREMONY            │
-├─────────────────────────────────────────┤
-│ Participants: Board members, escrow     │
-│ Duration: ~3 hours                      │
-│ Output: Recovery shares in escrow       │
-└─────────────────────────────────────────┘
-`
++-----------------------------------------+
+|        RECOVERY KEY CEREMONY            |
++-----------------------------------------+
+| Participants: Board members, escrow     |
+| Duration: ~3 hours                      |
+| Output: Recovery shares in escrow       |
++-----------------------------------------+
 
 ------------------------------------------------------------------------------
 
@@ -102,7 +94,6 @@ Ceremony Environment
 
 Physical Requirements
 
-`
 SECURE ROOM CHECKLIST:
 [ ] No network connectivity
 [ ] No wireless devices
@@ -111,11 +102,9 @@ SECURE ROOM CHECKLIST:
 [ ] Video recording (optional)
 [ ] Tamper-evident bags for media
 [ ] Multiple witnesses present
-`
 
 Equipment
 
-`scheme
 (ceremony-equipment
   (primary
     (air-gapped-computer "dedicated ceremony machine")
@@ -129,18 +118,15 @@ Equipment
     (camera "photograph key steps")
     (ceremony-log "paper record")
     (witness-signatures "attestation forms")))
-`
 
 Software
 
-`scheme
 (ceremony-software
   (os "minimal Linux, verified hash")
   (key-generator "library keygen or gpg")
   (shamir-split "ssss or library implementation")
   (hash-tool "sha256sum")
   (encryption "age for share protection"))
-`
 
 ------------------------------------------------------------------------------
 
@@ -148,7 +134,6 @@ Single Key Ceremony
 
 Pre-Ceremony
 
-`scheme
 (define (pre-ceremony-checklist ceremony-id)
   '((verify-room "Secure room confirmed")
     (verify-equipment "All equipment present and functional")
@@ -156,11 +141,9 @@ Pre-Ceremony
     (verify-software "Software hashes match expected")
     (document-start "Record ceremony start time")
     (collect-devices "All phones/devices collected")))
-`
 
 Entropy Generation
 
-`scheme
 (define (generate-entropy witnesses)
   "Generate verifiable randomness"
   (let* (;; Hardware RNG contribution
@@ -191,11 +174,9 @@ Entropy Generation
         (let ((roll (read-dice-roll witness)))
           (announce (format "Witness ~a roll ~a: ~a" witness i roll))
           (loop (+ i 1) (cons roll rolls))))))
-`
 
 Key Generation
 
-`scheme
 (define (generate-ceremony-key entropy purpose)
   "Generate key from ceremony entropy"
   (let* (;; Derive key material
@@ -215,11 +196,9 @@ Key Generation
 
     ;; Return both (secret handled carefully)
     keypair))
-`
 
 Verification
 
-`scheme
 (define (verify-key-generation keypair witnesses)
   "Witnesses verify key was generated correctly"
 
@@ -240,11 +219,9 @@ Verification
           (unless verified
             (error "Verification failed - abort ceremony"))))
       witnesses)))
-`
 
 Key Storage
 
-`scheme
 (define (store-ceremony-key keypair ceremony-id storage-method)
   "Securely store generated key"
   (case storage-method
@@ -270,11 +247,9 @@ Key Storage
     ((shamir)
      ;; Split into shares (see threshold ceremony)
      (shamir-split-key keypair ceremony-id))))
-`
 
 Ceremony Record
 
-`scheme
 (define (create-ceremony-record ceremony-id keypair witnesses)
   "Create signed ceremony record"
   (let ((record
@@ -308,7 +283,6 @@ Ceremony Record
         motivation: "Key generation ceremony completed")
 
       signed)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -316,7 +290,6 @@ Threshold Key Ceremony
 
 Share Distribution
 
-`scheme
 (define (threshold-ceremony n k ceremony-id)
   "Generate threshold key with N shares, K required"
 
@@ -345,11 +318,9 @@ Share Distribution
                                       n k
                                       shareholders
                                       witnesses)))
-`
 
 Share Protection
 
-`scheme
 (define (distribute-share share shareholder ceremony-id)
   "Encrypt share for specific shareholder"
   (let* (;; Encrypt share to shareholder's key
@@ -366,11 +337,9 @@ Share Protection
 
     ;; Print or store
     (deliver-share-package package shareholder)))
-`
 
 Reconstruction Test
 
-`scheme
 (define (verify-threshold-reconstruction shares k expected-keypair)
   "Verify shares reconstruct correctly"
 
@@ -393,7 +362,6 @@ Reconstruction Test
 
     ;; Securely clear reconstructed secret from memory
     (secure-clear reconstructed)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -401,7 +369,6 @@ Root Certificate Ceremony
 
 Certificate Generation
 
-`scheme
 (define (root-certificate-ceremony ceremony-id validity-years)
   "Generate root certificate authority"
 
@@ -436,11 +403,9 @@ Certificate Generation
                                   signed-root
                                   subordinates
                                   witnesses))))
-`
 
 Trust Anchor Publication
 
-`scheme
 (define (publish-trust-anchor root-cert ceremony-record)
   "Publish root certificate as trust anchor"
 
@@ -454,7 +419,6 @@ Trust Anchor Publication
     (announce "Root certificate fingerprint:")
     (announce (fingerprint->words fingerprint))
     (announce (fingerprint->hex fingerprint))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -462,7 +426,6 @@ Recovery Key Ceremony
 
 Escrow Protocol
 
-`scheme
 (define (recovery-key-ceremony n k escrow-agents)
   "Generate recovery keys with escrow"
 
@@ -492,11 +455,9 @@ Escrow Protocol
     (encrypted ,(age-encrypt share (agent-pubkey agent)))
     (verification ,(sha256 share))
     (escrow-date ,(current-time))))
-`
 
 Recovery Execution
 
-`scheme
 (define (execute-recovery escrowed-shares agents)
   "Execute recovery using escrowed shares"
 
@@ -524,7 +485,6 @@ Recovery Execution
       priority: 'critical)
 
     recovered-secret))
-`
 
 ------------------------------------------------------------------------------
 
@@ -532,7 +492,6 @@ Ceremony Audit Trail
 
 Ceremony Log Format
 
-`scheme
 (ceremony-log
   (ceremony-id "KC-2026-001")
   (type root-certificate)
@@ -568,11 +527,9 @@ Ceremony Log Format
     (signed-by "Carol White" "sha256:sig3...")
     (signed-by "David Brown" "sha256:sig4...")
     (signed-by "Eve Green" "sha256:sig5...")))
-`
 
 Soup Integration
 
-`scheme
 (soup-object
   (name "ceremony/KC-2026-001")
   (type key-ceremony)
@@ -583,7 +540,6 @@ Soup Integration
   (date "2026-01-07")
   (status completed)
   (public-key "sha256:abc123..."))
-`
 
 ------------------------------------------------------------------------------
 
@@ -591,7 +547,6 @@ Security Considerations
 
 Entropy Quality
 
-`scheme
 ;; Multiple entropy sources required
 (define (verify-entropy-quality entropy-sources)
   (unless (>= (length entropy-sources) 3)
@@ -600,22 +555,18 @@ Entropy Quality
     (warn "No hardware RNG - ceremony quality reduced"))
   (unless (member 'dice entropy-sources)
     (warn "No dice rolls - verifiability reduced")))
-`
 
 Side Channel Protection
 
-`scheme
 ;; Constant-time operations during key generation
 (define (secure-key-operations)
   '((constant-time-comparison "for all secret comparisons")
     (memory-clearing "zero secrets after use")
     (no-branching-on-secrets "avoid timing leaks")
     (power-analysis-resistance "for HSM operations")))
-`
 
 Witness Collusion
 
-`scheme
 ;; Mitigations for witness collusion
 (define witness-requirements
   '((minimum-witnesses 2)
@@ -623,11 +574,9 @@ Witness Collusion
     (no-communication "witnesses cannot confer during ceremony")
     (video-recording "optional but recommended")
     (external-auditor "for high-value ceremonies")))
-`
 
 Ceremony Compromise Recovery
 
-`scheme
 (define (ceremony-compromise-response ceremony-id)
   "Response if ceremony is compromised"
   (let ((cert (get-ceremony-certificate ceremony-id)))
@@ -642,7 +591,6 @@ Ceremony Compromise Recovery
 
     ;; Forensic preservation
     (preserve-ceremony-artifacts ceremony-id)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -650,7 +598,6 @@ Implementation
 
 Ceremony Script
 
-`scheme
 (define (run-ceremony type)
   "Main ceremony execution script"
   (let ((ceremony-id (generate-ceremony-id)))
@@ -676,11 +623,9 @@ Ceremony Script
 
     (announce "Ceremony complete.")
     ceremony-id))
-`
 
 Offline Tool
 
-`bash
 Ceremony tool - runs air-gapped
 $ seal-ceremony --type threshold --shares 5 --threshold 3
 
@@ -699,7 +644,6 @@ Pre-ceremony checklist:
 Generating entropy...
   Hardware RNG: 32 bytes collected
   Dice rolls: Witness 1, roll 1: _
-`
 
 ------------------------------------------------------------------------------
 

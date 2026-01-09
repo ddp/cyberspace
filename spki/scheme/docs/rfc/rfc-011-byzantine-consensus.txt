@@ -37,11 +37,9 @@ Specification
 
 System Model
 
-`
 Nodes:        N = 3f + 1 (tolerates f Byzantine faults)
 Network:      Asynchronous with eventual delivery
 Cryptography: Ed25519 signatures (authenticated channels)
-`
 
 Consensus Properties
 
@@ -53,7 +51,6 @@ Termination: All honest nodes eventually decide.
 
 Protocol: Practical Byzantine Fault Tolerance (PBFT)
 
-`
 Phase 1: PRE-PREPARE
   Primary broadcasts ⟨PRE-PREPARE, v, n, sig⟩
 
@@ -67,11 +64,9 @@ Phase 3: COMMIT
 
 Decision:
   On 2f+1 COMMIT, decide v
-`
 
 Message Formats
 
-`scheme
 (consensus-message
   (type pre-prepare)
   (view 0)
@@ -94,7 +89,6 @@ Message Formats
   (sequence 42)
   (from #${replica-pubkey})
   (signature #${ed25519-sig}))
-`
 
 ------------------------------------------------------------------------------
 
@@ -102,13 +96,11 @@ View Change
 
 When primary fails or is Byzantine:
 
-`
 1. Replica timeout on PRE-PREPARE
 2. Broadcast ⟨VIEW-CHANGE, v+1, prepared-proofs⟩
 3. New primary collects 2f+1 VIEW-CHANGE
 4. New primary broadcasts ⟨NEW-VIEW, v+1, proofs⟩
 5. Resume protocol in new view
-`
 
 ------------------------------------------------------------------------------
 
@@ -116,7 +108,6 @@ Application to Cyberspace
 
 Federation Ordering
 
-`scheme
 (consensus-propose
   (action release-publish)
   (version "2.0.0")
@@ -128,7 +119,6 @@ Federation Ordering
   (action release-publish)
   (version "2.0.0")
   (decided-by (quorum ...)))
-`
 
 Threshold Governance Integration
 
@@ -136,13 +126,11 @@ Combine with RFC-007:
 - Consensus on what to do
 - Threshold signatures on authorization
 
-`scheme
 (governance-decision
   (consensus-sequence 42)
   (action deploy-production)
   (threshold-met 3-of-5)
   (signers (alice carol dave)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -151,30 +139,24 @@ Optimizations
 Speculation
 
 Execute optimistically before commit:
-`
 Tentative execution after 2f+1 PREPARE
 Rollback if COMMIT fails
-`
 
 Batching
 
 Amortize consensus over multiple operations:
-`
 (consensus-batch
   (sequence 42)
   (operations
     (release-publish "2.0.0")
     (release-publish "2.0.1")
     (config-update ...)))
-`
 
 Fast Path
 
 When all replicas agree initially:
-`
 Skip PREPARE phase
 Direct to COMMIT with 3f+1 matching responses
-`
 
 ------------------------------------------------------------------------------
 
@@ -217,7 +199,6 @@ Implementation Notes
 
 State Machine
 
-`scheme
 (define-record-type <pbft-state>
   (make-pbft-state view sequence log prepared committed)
   pbft-state?
@@ -226,7 +207,6 @@ State Machine
   (log pbft-log)              ; sequence → messages
   (prepared pbft-prepared)    ; sequence → value
   (committed pbft-committed)) ; sequence → value
-`
 
 Dependencies
 

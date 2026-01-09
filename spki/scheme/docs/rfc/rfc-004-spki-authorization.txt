@@ -56,48 +56,37 @@ Key Principal
 
 Direct identification by public key:
 
-`scheme
 (define-record-type <key-principal>
   (make-key-principal public-key)
   key-principal?
   (public-key principal-public-key))
-`
 
 S-expression: bare bytes
-`scheme
 #${32-byte-ed25519-public-key}
-`
 
 Key Hash Principal
 
 Identification by hash of public key:
 
-`scheme
 (define-record-type <keyhash-principal>
   (make-keyhash-principal hash-alg hash)
   keyhash-principal?
   (hash-alg principal-hash-alg)
   (hash principal-hash))
-`
 
 S-expression:
-`scheme
 (hash sha512 #${64-byte-hash})
-`
 
 Authorization Tags
 
 Tags define what permissions are granted:
 
-`scheme
 (define-record-type <tag>
   (make-tag sexp)
   tag?
   (sexp tag-sexp))
-`
 
 Example tags:
-`scheme
 ;; Read access to library
 (read (path /library/lamport-papers))
 
@@ -109,23 +98,19 @@ Example tags:
 
 ;; All permissions (wildcard)
 (*)
-`
 
 Validity Period
 
 Optional time constraints:
 
-`scheme
 (define-record-type <validity>
   (make-validity not-before not-after)
   validity?
   (not-before validity-not-before)   ; ISO 8601 string
   (not-after validity-not-after))    ; ISO 8601 string
-`
 
 Certificate Structure
 
-`scheme
 (define-record-type <cert>
   (make-cert issuer subject tag validity propagate)
   cert?
@@ -134,10 +119,8 @@ Certificate Structure
   (tag cert-tag)               ; What is being granted
   (validity cert-validity)     ; When valid (optional)
   (propagate cert-propagate))  ; Can subject re-delegate?
-`
 
 S-expression format:
-`scheme
 (cert
   (issuer #${alice-public-key})
   (subject #${bob-public-key})
@@ -146,11 +129,9 @@ S-expression format:
     (not-before "2026-01-01")
     (not-after "2026-12-31"))
   (propagate))
-`
 
 Signed Certificate
 
-`scheme
 (define-record-type <signed-cert>
   (make-signed-cert cert signature)
   signed-cert?
@@ -163,7 +144,6 @@ Signed Certificate
   (hash-alg signature-hash-alg)
   (cert-hash signature-cert-hash)
   (sig-bytes signature-sig-bytes))
-`
 
 ------------------------------------------------------------------------------
 
@@ -171,7 +151,6 @@ Operations
 
 Creating Certificates
 
-`scheme
 (define cert
   (create-cert
     (make-key-principal alice-public)
@@ -179,14 +158,11 @@ Creating Certificates
     (make-tag '(read (path /library/*)))
     validity: (make-validity "2026-01-01" "2026-12-31")
     propagate: #t))
-`
 
 Signing Certificates
 
-`scheme
 (define signed-cert
   (sign-cert cert alice-private))
-`
 
 Process:
 1. Convert certificate to canonical S-expression
@@ -197,9 +173,7 @@ Process:
 
 Verifying Certificates
 
-`scheme
 (verify-signed-cert signed-cert alice-public)
-`
 
 Verification:
 1. Recompute canonical S-expression
@@ -209,9 +183,7 @@ Verification:
 
 Verifying Delegation Chains
 
-`scheme
 (verify-chain root-key cert-list target-tag)
-`
 
 Chain verification ensures:
 1. Each certificate is validly signed
@@ -228,18 +200,15 @@ spki-keygen
 
 Generate Ed25519 keypair:
 
-`bash
 $ ./spki-keygen alice
 Generated keypair:
   Public:  alice.public
   Private: alice.private
-`
 
 spki-cert
 
 Create and sign certificate:
 
-`bash
 $ ./spki-cert \
     --issuer alice.private \
     --subject bob.public \
@@ -247,22 +216,18 @@ $ ./spki-cert \
     --propagate \
     --not-after "2026-12-31" \
     --output alice-to-bob.cert
-`
 
 spki-verify
 
 Verify certificate signature:
 
-`bash
 $ ./spki-verify alice.public alice-to-bob.cert
 ✓ Certificate signature valid
-`
 
 spki-show
 
 Display certificate in human-readable form:
 
-`bash
 $ ./spki-show alice-to-bob.cert
 Certificate:
   Issuer:  ed25519:cbc9b260da65f6a7...
@@ -270,7 +235,6 @@ Certificate:
   Tag:     (read (path /library/*))
   Valid:   until 2026-12-31
   Propagate: yes
-`
 
 ------------------------------------------------------------------------------
 
@@ -280,13 +244,11 @@ Tag Implication
 
 Tag A implies Tag B if A grants at least all permissions of B.
 
-`scheme
 (define (tag-implies tag1 tag2)
   (cond
     ((all-perms? tag1) #t)    ; (*) implies everything
     ((all-perms? tag2) #f)    ; Only () implies ()
     (else (equal? tag1 tag2)))) ; Simple equality (extensible)
-`
 
 Standard Tag Vocabulary
 
@@ -306,12 +268,9 @@ Delegation Chains
 
 Example: Three-Level Delegation
 
-`
 Alice (root) → Bob (admin) → Carol (operator)
-`
 
 Certificates:
-`scheme
 ;; Alice grants admin to Bob
 (cert
   (issuer #${alice-key})
@@ -324,15 +283,12 @@ Certificates:
   (issuer #${bob-key})
   (subject #${carol-key})
   (tag (seal-publish (remote origin))))
-`
 
 Verification:
-`scheme
 (verify-chain alice-public
               (list alice-to-bob bob-to-carol)
               (make-tag '(seal-publish (remote origin))))
 ;; => #t if Carol can publish
-`
 
 ------------------------------------------------------------------------------
 
@@ -372,27 +328,21 @@ Integration Points
 
 Vault Authorization
 
-`scheme
 (vault-init signing-key: alice-private)
 (seal-release "1.0.0")  ; Requires seal-release tag
-`
 
 Audit Trail Attribution
 
-`scheme
 (audit-append
   actor: bob-public
   action: '(seal-commit "abc123")
   authorization-chain: (list alice-to-bob-cert))
-`
 
 Replication Access Control
 
-`scheme
 (seal-publish "1.0.0"
   remote: "origin"
   authorization: bob-to-carol-cert)
-`
 
 ------------------------------------------------------------------------------
 

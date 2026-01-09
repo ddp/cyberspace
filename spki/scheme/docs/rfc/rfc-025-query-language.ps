@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 11:58:09 2026
+%%CreationDate: Fri Jan  9 12:12:49 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -477,61 +477,59 @@ _S
 5 429 M
 (Basic Queries) s
 5 407 M
-(`scheme) s
-5 396 M
 (;; Find by type) s
-5 385 M
+5 396 M
 (\(soup-query type: 'document\)) s
-5 363 M
+5 374 M
 (;; Find by attribute) s
-5 352 M
+5 363 M
 (\(soup-query author: "alice@example.com"\)) s
-5 330 M
+5 341 M
 (;; Find by multiple attributes \(AND\)) s
-5 319 M
+5 330 M
 (\(soup-query type: 'document) s
-5 308 M
+5 319 M
 (            author: "alice@example.com") s
-5 297 M
+5 308 M
 (            created-after: "2026-01-01"\)) s
-5 275 M
+5 286 M
 (;; Find by content hash) s
-5 264 M
+5 275 M
 (\(soup-query hash: "sha256:7f83b1657ff1fc..."\)) s
 5 253 M
-(`) s
-5 231 M
 (Query Results) s
-5 209 M
-(`scheme) s
-5 198 M
+5 231 M
 (;; Results are lazy cursors) s
-5 187 M
+5 220 M
 (\(define results \(soup-query type: 'document\)\)) s
-5 165 M
+5 198 M
 (;; Iterate) s
-5 154 M
+5 187 M
 (\(soup-cursor-next results\)    ; => soup-object or #f) s
-5 143 M
+5 176 M
 (\(soup-cursor-peek results\)    ; => next without advancing) s
-5 132 M
+5 165 M
 (\(soup-cursor-reset results\)   ; => back to beginning) s
-5 110 M
+5 143 M
 (;; Collect \(careful with large result sets\)) s
-5 99 M
+5 132 M
 (\(soup-cursor->list results\)   ; => list of soup-objects) s
-5 88 M
+5 121 M
 (\(soup-cursor-count results\)   ; => total count) s
-5 77 M
-(`) s
-5 55 M
+5 99 M
 (Predicates) s
-5 33 M
-(`scheme) s
-5 22 M
+5 77 M
 (;; Comparison operators) s
-5 11 M
+5 66 M
 (\(soup-query size: \(> 1000000\)\)           ; larger than 1MB) s
+5 55 M
+(\(soup-query created: \(< "2025-01-01"\)\)   ; before 2025) s
+5 44 M
+(\(soup-query name: \(like "rfc-*"\)\)        ; glob pattern) s
+5 33 M
+(\(soup-query tags: \(contains "urgent"\)\)   ; list membership) s
+5 11 M
+(;; Logical operators) s
 _R
 S
 %%Page: (2) 2
@@ -546,107 +544,97 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(\(soup-query created: \(< "2025-01-01"\)\)   ; before 2025) s
-5 770 M
-(\(soup-query name: \(like "rfc-*"\)\)        ; glob pattern) s
-5 759 M
-(\(soup-query tags: \(contains "urgent"\)\)   ; list membership) s
-5 737 M
-(;; Logical operators) s
-5 726 M
 (\(soup-query \(and \(type: 'document\)) s
-5 715 M
+5 770 M
 (                 \(or \(author: "alice"\)) s
-5 704 M
+5 759 M
 (                     \(author: "bob"\)\)\)\)) s
-5 682 M
+5 737 M
 (;; Negation) s
-5 671 M
+5 726 M
 (\(soup-query \(not \(type: 'tombstone\)\)\)) s
-5 649 M
+5 704 M
 (;; Existence) s
-5 638 M
+5 693 M
 (\(soup-query \(exists 'encryption-key\)\)    ; has attribute) s
-5 627 M
+5 682 M
 (\(soup-query \(missing 'expires\)\)          ; lacks attribute) s
-5 616 M
-(`) s
-5 594 M
+5 660 M
 (------------------------------------------------------------------------------) s
-5 572 M
+5 638 M
 (Advanced Queries) s
-5 550 M
+5 616 M
 (Range Queries) s
-5 528 M
-(`scheme) s
-5 517 M
+5 594 M
 (;; Numeric ranges) s
-5 506 M
+5 583 M
 (\(soup-query size: \(between 1000 10000\)\)) s
-5 484 M
+5 561 M
 (;; Date ranges) s
-5 473 M
+5 550 M
 (\(soup-query created: \(between "2026-01-01" "2026-12-31"\)\)) s
-5 451 M
+5 528 M
 (;; Lexicographic ranges) s
-5 440 M
+5 517 M
 (\(soup-query name: \(between "rfc-010" "rfc-020"\)\)) s
-5 429 M
-(`) s
-5 407 M
+5 495 M
 (Full-Text Search) s
-5 385 M
-(`scheme) s
-5 374 M
+5 473 M
 (;; Search indexed content) s
-5 363 M
+5 462 M
 (\(soup-query \(text-search "capability delegation"\)\)) s
-5 341 M
+5 440 M
 (;; With highlighting) s
-5 330 M
+5 429 M
 (\(soup-query \(text-search "SPKI certificate"\)) s
-5 319 M
+5 418 M
 (            highlight: #t\)) s
-5 297 M
+5 396 M
 (;; Phrase search) s
-5 286 M
+5 385 M
 (\(soup-query \(text-search "\\"monotonic attenuation\\""\)\)) s
-5 264 M
+5 363 M
 (;; Fuzzy search) s
-5 253 M
+5 352 M
 (\(soup-query \(text-search "delgation~"\)\)  ; typo-tolerant) s
-5 242 M
-(`) s
-5 220 M
+5 330 M
 (Reference Traversal) s
-5 198 M
-(`scheme) s
-5 187 M
+5 308 M
 (;; Objects referencing this hash) s
-5 176 M
+5 297 M
 (\(soup-query references: "sha256:target..."\)) s
-5 154 M
+5 275 M
 (;; Objects referenced by this hash) s
-5 143 M
+5 264 M
 (\(soup-query referenced-by: "sha256:source..."\)) s
-5 121 M
+5 242 M
 (;; Transitive closure \(careful - can be huge\)) s
-5 110 M
+5 231 M
 (\(soup-query \(transitive-references "sha256:root..."\)) s
-5 99 M
+5 220 M
 (            max-depth: 3\)) s
-5 88 M
-(`) s
-5 66 M
+5 198 M
 (Temporal Queries) s
-5 44 M
-(`scheme) s
-5 33 M
+5 176 M
 (;; Objects as they existed at a point in time) s
-5 22 M
+5 165 M
 (\(soup-query type: 'document) s
-5 11 M
+5 154 M
 (            as-of: "2026-01-01T00:00:00Z"\)) s
+5 132 M
+(;; Objects modified in time window) s
+5 121 M
+(\(soup-query modified: \(between "2026-01-01" "2026-01-07"\)\)) s
+5 99 M
+(;; Version history) s
+5 88 M
+(\(soup-query \(versions-of "sha256:current..."\)\)) s
+5 66 M
+(------------------------------------------------------------------------------) s
+5 44 M
+(Query Composition) s
+5 22 M
+(Subqueries) s
 _R
 S
 %%Page: (3) 3
@@ -660,112 +648,110 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(;; Objects modified in time window) s
-5 759 M
-(\(soup-query modified: \(between "2026-01-01" "2026-01-07"\)\)) s
-5 737 M
-(;; Version history) s
-5 726 M
-(\(soup-query \(versions-of "sha256:current..."\)\)) s
-5 715 M
-(`) s
-5 693 M
-(------------------------------------------------------------------------------) s
-5 671 M
-(Query Composition) s
-5 649 M
-(Subqueries) s
-5 627 M
-(`scheme) s
-5 616 M
+5 781 M
 (;; Objects authored by members of a group) s
-5 605 M
+5 770 M
 (\(soup-query author: \(soup-query type: 'principal) s
-5 594 M
+5 759 M
 (                                member-of: "engineering"\)\)) s
-5 572 M
+5 737 M
 (;; Documents referencing any RFC) s
-5 561 M
+5 726 M
 (\(soup-query type: 'document) s
-5 550 M
+5 715 M
 (            references: \(soup-query name: \(like "rfc-*"\)\)\)) s
-5 539 M
-(`) s
-5 517 M
+5 693 M
 (Aggregation) s
-5 495 M
-(`scheme) s
-5 484 M
+5 671 M
 (;; Count by type) s
-5 473 M
+5 660 M
 (\(soup-aggregate) s
-5 462 M
+5 649 M
 (  group-by: 'type) s
-5 451 M
+5 638 M
 (  aggregate: \(count\)\)) s
-5 429 M
+5 616 M
 (;; Total size by author) s
-5 418 M
+5 605 M
 (\(soup-aggregate) s
-5 407 M
+5 594 M
 (  group-by: 'author) s
-5 396 M
+5 583 M
 (  aggregate: \(sum 'size\)\)) s
-5 374 M
+5 561 M
 (;; Average document size) s
-5 363 M
+5 550 M
 (\(soup-aggregate) s
-5 352 M
+5 539 M
 (  where: \(type: 'document\)) s
-5 341 M
+5 528 M
 (  aggregate: \(avg 'size\)\)) s
-5 319 M
+5 506 M
 (;; Distinct values) s
-5 308 M
+5 495 M
 (\(soup-aggregate) s
-5 297 M
+5 484 M
 (  aggregate: \(distinct 'content-type\)\)) s
-5 286 M
-(`) s
-5 264 M
+5 462 M
 (Ordering and Pagination) s
-5 242 M
-(`scheme) s
-5 231 M
+5 440 M
 (;; Sort by creation date, newest first) s
-5 220 M
+5 429 M
 (\(soup-query type: 'document) s
-5 209 M
+5 418 M
 (            order-by: '\(\(created desc\)\)\)) s
-5 187 M
+5 396 M
 (;; Multi-column sort) s
-5 176 M
+5 385 M
 (\(soup-query type: 'document) s
-5 165 M
+5 374 M
 (            order-by: '\(\(author asc\) \(created desc\)\)\)) s
-5 143 M
+5 352 M
 (;; Pagination) s
-5 132 M
+5 341 M
 (\(soup-query type: 'document) s
-5 121 M
+5 330 M
 (            order-by: '\(\(created desc\)\)) s
-5 110 M
+5 319 M
 (            limit: 20) s
-5 99 M
+5 308 M
 (            offset: 40\)) s
-5 77 M
+5 286 M
 (;; Cursor-based pagination \(more efficient\)) s
-5 66 M
+5 275 M
 (\(soup-query type: 'document) s
-5 55 M
+5 264 M
 (            order-by: '\(\(created desc\)\)) s
-5 44 M
+5 253 M
 (            after: "sha256:last-seen..."\)) s
-5 33 M
-(`) s
-5 11 M
+5 231 M
 (------------------------------------------------------------------------------) s
+5 209 M
+(Capability-Aware Queries) s
+5 187 M
+(Query Filtering) s
+5 165 M
+(Queries automatically filter results based on the querying principal's capabilities:) s
+5 143 M
+(\(define \(soup-query-with-caps query principal\)) s
+5 132 M
+(  "Execute query filtered by principal's capabilities") s
+5 121 M
+(  \(let* \(\(raw-results \(execute-query query\)\)) s
+5 110 M
+(         \(caps \(principal-capabilities principal\)\)\)) s
+5 99 M
+(    \(filter \(lambda \(obj\)) s
+5 88 M
+(              \(can-read? principal obj caps\)\)) s
+5 77 M
+(            raw-results\)\)\)) s
+5 55 M
+(Capability Queries) s
+5 33 M
+(;; What can I access?) s
+5 22 M
+(\(soup-query \(accessible-by \(current-principal\)\)\)) s
 _R
 S
 %%Page: (4) 4
@@ -779,112 +765,116 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(Capability-Aware Queries) s
-5 748 M
-(Query Filtering) s
-5 726 M
-(Queries automatically filter results based on the querying principal's capabilities:) s
-5 704 M
-(`scheme) s
-5 693 M
-(\(define \(soup-query-with-caps query principal\)) s
-5 682 M
-(  "Execute query filtered by principal's capabilities") s
-5 671 M
-(  \(let* \(\(raw-results \(execute-query query\)\)) s
-5 660 M
-(         \(caps \(principal-capabilities principal\)\)\)) s
-5 649 M
-(    \(filter \(lambda \(obj\)) s
-5 638 M
-(              \(can-read? principal obj caps\)\)) s
-5 627 M
-(            raw-results\)\)\)) s
-5 616 M
-(`) s
-5 594 M
-(Capability Queries) s
-5 572 M
-(`scheme) s
-5 561 M
-(;; What can I access?) s
-5 550 M
-(\(soup-query \(accessible-by \(current-principal\)\)\)) s
-5 528 M
+5 781 M
 (;; Who can access this?) s
-5 517 M
+5 770 M
 (\(soup-query type: 'certificate) s
-5 506 M
+5 759 M
 (            grants-access-to: "sha256:target..."\)) s
-5 484 M
+5 737 M
 (;; Find my capabilities) s
-5 473 M
+5 726 M
 (\(soup-query type: 'certificate) s
-5 462 M
+5 715 M
 (            subject: \(current-principal\)\)) s
-5 451 M
-(`) s
-5 429 M
+5 693 M
 (Query Authorization) s
-5 407 M
-(`scheme) s
-5 396 M
+5 671 M
 (;; Some queries require explicit capability) s
-5 385 M
+5 660 M
 (\(soup-query type: 'audit-log\)  ; requires audit-read capability) s
-5 363 M
+5 638 M
 (;; Query capability certificate) s
-5 352 M
+5 627 M
 (\(spki-cert) s
-5 341 M
+5 616 M
 (  \(issuer vault-admin\)) s
-5 330 M
+5 605 M
 (  \(subject auditor-key\)) s
-5 319 M
+5 594 M
 (  \(capability) s
-5 308 M
+5 583 M
 (    \(action query\)) s
-5 297 M
+5 572 M
 (    \(object \(type 'audit-log\)\)\)) s
-5 286 M
+5 561 M
 (  \(validity \(not-after "2027-01-01"\)\)\)) s
-5 275 M
-(`) s
-5 253 M
+5 539 M
 (------------------------------------------------------------------------------) s
-5 231 M
+5 517 M
 (Indexes) s
-5 209 M
+5 495 M
 (Index Types) s
-5 187 M
-(`scheme) s
-5 176 M
+5 473 M
 (;; B-tree index \(ordered, range queries\)) s
-5 165 M
+5 462 M
 (\(define-index 'created-idx) s
-5 154 M
+5 451 M
 (  type: 'btree) s
-5 143 M
+5 440 M
 (  on: 'created\)) s
-5 121 M
+5 418 M
 (;; Hash index \(equality only, faster\)) s
-5 110 M
+5 407 M
 (\(define-index 'hash-idx) s
-5 99 M
+5 396 M
 (  type: 'hash) s
-5 88 M
+5 385 M
 (  on: 'content-hash\)) s
-5 66 M
+5 363 M
 (;; Full-text index \(search\)) s
-5 55 M
+5 352 M
 (\(define-index 'content-idx) s
-5 44 M
+5 341 M
 (  type: 'fulltext) s
-5 33 M
+5 330 M
 (  on: 'content) s
-5 22 M
+5 319 M
 (  language: 'english\)) s
+5 297 M
+(;; Composite index) s
+5 286 M
+(\(define-index 'author-date-idx) s
+5 275 M
+(  type: 'btree) s
+5 264 M
+(  on: '\(author created\)\)) s
+5 242 M
+(;; Bloom filter index \(membership testing\)) s
+5 231 M
+(\(define-index 'tags-bloom) s
+5 220 M
+(  type: 'bloom) s
+5 209 M
+(  on: 'tags) s
+5 198 M
+(  false-positive-rate: 0.01\)) s
+5 176 M
+(Index Selection) s
+5 154 M
+(\(define \(plan-query query indexes\)) s
+5 143 M
+(  "Select best index for query") s
+5 132 M
+(  \(let \(\(predicates \(query-predicates query\)\)\)) s
+5 121 M
+(    \(find \(lambda \(idx\)) s
+5 110 M
+(            \(index-covers? idx predicates\)\)) s
+5 99 M
+(          \(sort indexes index-selectivity>\)\)\)\)) s
+5 77 M
+(Index Maintenance) s
+5 55 M
+(;; Indexes are updated on soup-put) s
+5 44 M
+(\(define \(soup-put-indexed obj\)) s
+5 33 M
+(  \(let \(\(hash \(soup-put obj\)\)\)) s
+5 22 M
+(    \(for-each \(lambda \(idx\)) s
+5 11 M
+(                \(index-insert! idx obj hash\)\)) s
 _R
 S
 %%Page: (5) 5
@@ -899,121 +889,113 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(;; Composite index) s
-5 770 M
-(\(define-index 'author-date-idx) s
-5 759 M
-(  type: 'btree) s
-5 748 M
-(  on: '\(author created\)\)) s
-5 726 M
-(;; Bloom filter index \(membership testing\)) s
-5 715 M
-(\(define-index 'tags-bloom) s
-5 704 M
-(  type: 'bloom) s
-5 693 M
-(  on: 'tags) s
-5 682 M
-(  false-positive-rate: 0.01\)) s
-5 671 M
-(`) s
-5 649 M
-(Index Selection) s
-5 627 M
-(`scheme) s
-5 616 M
-(\(define \(plan-query query indexes\)) s
-5 605 M
-(  "Select best index for query") s
-5 594 M
-(  \(let \(\(predicates \(query-predicates query\)\)\)) s
-5 583 M
-(    \(find \(lambda \(idx\)) s
-5 572 M
-(            \(index-covers? idx predicates\)\)) s
-5 561 M
-(          \(sort indexes index-selectivity>\)\)\)\)) s
-5 550 M
-(`) s
-5 528 M
-(Index Maintenance) s
-5 506 M
-(`scheme) s
-5 495 M
-(;; Indexes are updated on soup-put) s
-5 484 M
-(\(define \(soup-put-indexed obj\)) s
-5 473 M
-(  \(let \(\(hash \(soup-put obj\)\)\)) s
-5 462 M
-(    \(for-each \(lambda \(idx\)) s
-5 451 M
-(                \(index-insert! idx obj hash\)\)) s
-5 440 M
 (              \(applicable-indexes obj\)\)) s
-5 429 M
+5 770 M
 (    hash\)\)) s
-5 407 M
+5 748 M
 (;; Periodic index optimization) s
-5 396 M
+5 737 M
 (\(define \(optimize-indexes\)) s
-5 385 M
+5 726 M
 (  \(for-each index-compact! \(all-indexes\)\)\)) s
-5 374 M
-(`) s
-5 352 M
+5 704 M
 (------------------------------------------------------------------------------) s
-5 330 M
+5 682 M
 (Query Execution) s
-5 308 M
+5 660 M
 (Query Planning) s
-5 286 M
-(`scheme) s
-5 275 M
+5 638 M
 (\(define \(execute-query query\)) s
-5 264 M
+5 627 M
 (  "Plan and execute query") s
-5 253 M
+5 616 M
 (  \(let* \(\(plan \(plan-query query\)\)) s
-5 242 M
+5 605 M
 (         \(cost \(estimate-cost plan\)\)\)) s
-5 231 M
+5 594 M
 (    \(when \(> cost query-cost-limit\)) s
-5 220 M
+5 583 M
 (      \(error "Query too expensive" cost\)\)) s
-5 209 M
+5 572 M
 (    \(execute-plan plan\)\)\)) s
-5 187 M
+5 550 M
 (\(define \(plan-query query\)) s
-5 176 M
+5 539 M
 (  "Generate query execution plan") s
-5 165 M
+5 528 M
 (  `\(query-plan) s
-5 154 M
+5 517 M
 (    \(predicates ,\(query-predicates query\)\)) s
-5 143 M
+5 506 M
 (    \(index ,\(select-index query\)\)) s
-5 132 M
+5 495 M
 (    \(filter ,\(remaining-predicates query\)\)) s
-5 121 M
+5 484 M
 (    \(order ,\(query-order query\)\)) s
-5 110 M
+5 473 M
 (    \(limit ,\(query-limit query\)\)\)\)) s
-5 99 M
-(`) s
-5 77 M
+5 451 M
 (Execution Strategies) s
-5 55 M
-(`scheme) s
-5 44 M
+5 429 M
 (;; Index scan) s
-5 33 M
+5 418 M
 (\(define \(index-scan index predicate\)) s
-5 22 M
+5 407 M
 (  \(index-range-query index) s
-5 11 M
+5 396 M
 (                     \(predicate-lower-bound predicate\)) s
+5 385 M
+(                     \(predicate-upper-bound predicate\)\)\)) s
+5 363 M
+(;; Full scan \(last resort\)) s
+5 352 M
+(\(define \(full-scan predicate\)) s
+5 341 M
+(  \(filter predicate \(all-soup-objects\)\)\)) s
+5 319 M
+(;; Index intersection) s
+5 308 M
+(\(define \(index-intersect idx1 idx2 pred1 pred2\)) s
+5 297 M
+(  \(set-intersection) s
+5 286 M
+(    \(index-scan idx1 pred1\)) s
+5 275 M
+(    \(index-scan idx2 pred2\)\)\)) s
+5 253 M
+(Query Caching) s
+5 231 M
+(;; Query results can be cached) s
+5 220 M
+(\(define query-cache \(make-lru-cache 1000\)\)) s
+5 198 M
+(\(define \(cached-query query\)) s
+5 187 M
+(  \(let \(\(key \(query->hash query\)\)\)) s
+5 176 M
+(    \(or \(lru-get query-cache key\)) s
+5 165 M
+(        \(let \(\(result \(execute-query query\)\)\)) s
+5 154 M
+(          \(lru-put! query-cache key result\)) s
+5 143 M
+(          result\)\)\)\)) s
+5 121 M
+(;; Cache invalidation on soup changes) s
+5 110 M
+(\(define \(invalidate-query-cache obj\)) s
+5 99 M
+(  \(let \(\(affected \(queries-affected-by obj\)\)\)) s
+5 88 M
+(    \(for-each \(lambda \(q\)) s
+5 77 M
+(                \(lru-remove! query-cache \(query->hash q\)\)\)) s
+5 66 M
+(              affected\)\)\)) s
+5 44 M
+(------------------------------------------------------------------------------) s
+5 22 M
+(Distributed Queries) s
 _R
 S
 %%Page: (6) 6
@@ -1028,117 +1010,113 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(                     \(predicate-upper-bound predicate\)\)\)) s
-5 759 M
-(;; Full scan \(last resort\)) s
-5 748 M
-(\(define \(full-scan predicate\)) s
-5 737 M
-(  \(filter predicate \(all-soup-objects\)\)\)) s
-5 715 M
-(;; Index intersection) s
-5 704 M
-(\(define \(index-intersect idx1 idx2 pred1 pred2\)) s
-5 693 M
-(  \(set-intersection) s
-5 682 M
-(    \(index-scan idx1 pred1\)) s
-5 671 M
-(    \(index-scan idx2 pred2\)\)\)) s
-5 660 M
-(`) s
-5 638 M
-(Query Caching) s
-5 616 M
-(`scheme) s
-5 605 M
-(;; Query results can be cached) s
-5 594 M
-(\(define query-cache \(make-lru-cache 1000\)\)) s
-5 572 M
-(\(define \(cached-query query\)) s
-5 561 M
-(  \(let \(\(key \(query->hash query\)\)\)) s
-5 550 M
-(    \(or \(lru-get query-cache key\)) s
-5 539 M
-(        \(let \(\(result \(execute-query query\)\)\)) s
-5 528 M
-(          \(lru-put! query-cache key result\)) s
-5 517 M
-(          result\)\)\)\)) s
-5 495 M
-(;; Cache invalidation on soup changes) s
-5 484 M
-(\(define \(invalidate-query-cache obj\)) s
-5 473 M
-(  \(let \(\(affected \(queries-affected-by obj\)\)\)) s
-5 462 M
-(    \(for-each \(lambda \(q\)) s
-5 451 M
-(                \(lru-remove! query-cache \(query->hash q\)\)\)) s
-5 440 M
-(              affected\)\)\)) s
-5 429 M
-(`) s
-5 407 M
-(------------------------------------------------------------------------------) s
-5 385 M
-(Distributed Queries) s
-5 363 M
 (Federated Query) s
-5 341 M
-(`scheme) s
-5 330 M
+5 759 M
 (;; Query across multiple vaults) s
-5 319 M
+5 748 M
 (\(soup-query type: 'document) s
-5 308 M
+5 737 M
 (            federation: '\(vault-a vault-b vault-c\)\)) s
-5 286 M
+5 715 M
 (;; Query with locality preference) s
-5 275 M
+5 704 M
 (\(soup-query type: 'document) s
-5 264 M
+5 693 M
 (            prefer-local: #t\)) s
-5 253 M
-(`) s
-5 231 M
+5 671 M
 (Query Routing) s
-5 209 M
-(`scheme) s
-5 198 M
+5 649 M
 (\(define \(route-query query vaults\)) s
-5 187 M
+5 638 M
 (  "Route query to appropriate vaults") s
-5 176 M
+5 627 M
 (  \(let \(\(partitions \(query-partitions query\)\)\)) s
-5 165 M
+5 616 M
 (    \(map \(lambda \(vault\)) s
-5 154 M
+5 605 M
 (           \(list vault \(subquery-for-vault query vault\)\)\)) s
-5 143 M
+5 594 M
 (         \(filter \(lambda \(v\)) s
-5 132 M
+5 583 M
 (                   \(vault-has-partition? v partitions\)\)) s
-5 121 M
+5 572 M
 (                 vaults\)\)\)\)) s
-5 110 M
-(`) s
-5 88 M
+5 550 M
 (Result Merging) s
-5 66 M
-(`scheme) s
-5 55 M
+5 528 M
 (\(define \(merge-results results order\)) s
-5 44 M
+5 517 M
 (  "Merge sorted results from multiple vaults") s
-5 33 M
+5 506 M
 (  \(let \(\(streams \(map result->stream results\)\)\)) s
-5 22 M
+5 495 M
 (    \(merge-sorted-streams streams \(order->comparator order\)\)\)\)) s
+5 473 M
+(------------------------------------------------------------------------------) s
+5 451 M
+(Query Audit) s
+5 429 M
+(Audit Trail) s
+5 407 M
+(;; All queries are logged) s
+5 396 M
+(\(define \(audited-query query principal\)) s
+5 385 M
+(  \(let \(\(start \(current-time\)\)) s
+5 374 M
+(        \(result \(soup-query-with-caps query principal\)\)\)) s
+5 363 M
+(    \(audit-append) s
+5 352 M
+(      action: 'query) s
+5 341 M
+(      principal: principal) s
+5 330 M
+(      query: \(query->sexp query\)) s
+5 319 M
+(      result-count: \(soup-cursor-count result\)) s
+5 308 M
+(      duration: \(- \(current-time\) start\)\)) s
+5 297 M
+(    result\)\)) s
+5 275 M
+(Query Analysis) s
+5 253 M
+(;; Analyze query patterns) s
+5 242 M
+(\(soup-query type: 'audit-entry) s
+5 231 M
+(            action: 'query) s
+5 220 M
+(            principal: "alice"\)) s
+5 198 M
+(;; Find expensive queries) s
+5 187 M
+(\(soup-query type: 'audit-entry) s
+5 176 M
+(            action: 'query) s
+5 165 M
+(            duration: \(> 1000\)\)  ; > 1 second) s
+5 143 M
+(;; Access pattern analysis) s
+5 132 M
+(\(soup-aggregate) s
+5 121 M
+(  where: \(and \(type: 'audit-entry\) \(action: 'query\)\)) s
+5 110 M
+(  group-by: 'principal) s
+5 99 M
+(  aggregate: \(count\)\)) s
+5 77 M
+(------------------------------------------------------------------------------) s
+5 55 M
+(Query Language Grammar) s
+5 33 M
+(query       ::= \(soup-query clause*\)) s
+5 22 M
+(clause      ::= attribute-clause | predicate-clause | option-clause) s
 5 11 M
-(`) s
+(attribute   ::= symbol ':' value) s
 _R
 S
 %%Page: (7) 7
@@ -1152,116 +1130,112 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(------------------------------------------------------------------------------) s
-5 748 M
-(Query Audit) s
-5 726 M
-(Audit Trail) s
-5 704 M
-(`scheme) s
-5 693 M
-(;; All queries are logged) s
-5 682 M
-(\(define \(audited-query query principal\)) s
-5 671 M
-(  \(let \(\(start \(current-time\)\)) s
-5 660 M
-(        \(result \(soup-query-with-caps query principal\)\)\)) s
-5 649 M
-(    \(audit-append) s
-5 638 M
-(      action: 'query) s
-5 627 M
-(      principal: principal) s
-5 616 M
-(      query: \(query->sexp query\)) s
-5 605 M
-(      result-count: \(soup-cursor-count result\)) s
-5 594 M
-(      duration: \(- \(current-time\) start\)\)) s
-5 583 M
-(    result\)\)) s
-5 572 M
-(`) s
-5 550 M
-(Query Analysis) s
-5 528 M
-(`scheme) s
-5 517 M
-(;; Analyze query patterns) s
-5 506 M
-(\(soup-query type: 'audit-entry) s
-5 495 M
-(            action: 'query) s
-5 484 M
-(            principal: "alice"\)) s
-5 462 M
-(;; Find expensive queries) s
-5 451 M
-(\(soup-query type: 'audit-entry) s
-5 440 M
-(            action: 'query) s
-5 429 M
-(            duration: \(> 1000\)\)  ; > 1 second) s
-5 407 M
-(;; Access pattern analysis) s
-5 396 M
-(\(soup-aggregate) s
-5 385 M
-(  where: \(and \(type: 'audit-entry\) \(action: 'query\)\)) s
-5 374 M
-(  group-by: 'principal) s
-5 363 M
-(  aggregate: \(count\)\)) s
-5 352 M
-(`) s
-5 330 M
-(------------------------------------------------------------------------------) s
-5 308 M
-(Query Language Grammar) s
-5 286 M
-(`) s
-5 275 M
-(query       ::= \(soup-query clause*\)) s
-5 264 M
-(clause      ::= attribute-clause | predicate-clause | option-clause) s
-5 253 M
-(attribute   ::= symbol ':' value) s
-5 242 M
+5 781 M
 (predicate   ::= '\(' op value* '\)') s
-5 231 M
+5 770 M
 (op          ::= '>' | '<' | '>=' | '<=' | '=' | '!=') s
-5 220 M
+5 759 M
 (              | 'like' | 'between' | 'contains') s
-5 209 M
+5 748 M
 (              | 'and' | 'or' | 'not') s
-5 198 M
+5 737 M
 (              | 'exists' | 'missing') s
-5 187 M
+5 726 M
 (              | 'text-search' | 'references' | 'referenced-by') s
-5 176 M
+5 715 M
 (option      ::= 'order-by' | 'limit' | 'offset' | 'after') s
-5 165 M
+5 704 M
 (              | 'as-of' | 'highlight' | 'federation') s
-5 154 M
+5 693 M
 (value       ::= string | number | boolean | hash | query) s
-5 143 M
-(`) s
-5 121 M
+5 671 M
 (------------------------------------------------------------------------------) s
-5 99 M
+5 649 M
 (Security Considerations) s
-5 77 M
+5 627 M
 (Query Injection) s
-5 55 M
-(`scheme) s
-5 44 M
+5 605 M
 (;; Never interpolate user input into queries) s
-5 33 M
+5 594 M
 (;; BAD:) s
-5 22 M
+5 583 M
 (\(soup-query name: \(string-append "rfc-" user-input\)\)) s
+5 561 M
+(;; GOOD:) s
+5 550 M
+(\(soup-query name: \(like \(sanitize-pattern user-input\)\)\)) s
+5 528 M
+(\(define \(sanitize-pattern s\)) s
+5 517 M
+(  \(string-map \(lambda \(c\)) s
+5 506 M
+(                \(if \(member c '\(#\\* #\\? #\\[ #\\]\)\)) s
+5 495 M
+(                    #\\\\) s
+5 484 M
+(                    c\)\)) s
+5 473 M
+(              s\)\)) s
+5 451 M
+(Query Cost Limits) s
+5 429 M
+(;; Prevent denial of service via expensive queries) s
+5 418 M
+(\(define query-cost-limit 10000\)) s
+5 407 M
+(\(define query-timeout 30\)  ; seconds) s
+5 385 M
+(\(define \(safe-query query\)) s
+5 374 M
+(  \(with-timeout query-timeout) s
+5 363 M
+(    \(let \(\(cost \(estimate-cost query\)\)\)) s
+5 352 M
+(      \(when \(> cost query-cost-limit\)) s
+5 341 M
+(        \(error "Query exceeds cost limit"\)\)) s
+5 330 M
+(      \(execute-query query\)\)\)\)) s
+5 308 M
+(Information Leakage) s
+5 286 M
+(;; Query existence can leak information) s
+5 275 M
+(;; Even "not found" reveals something) s
+5 253 M
+(;; Use constant-time responses for sensitive queries) s
+5 242 M
+(\(define \(private-query query\)) s
+5 231 M
+(  \(let \(\(result \(soup-query query\)\)\)) s
+5 220 M
+(    \(if \(authorized? \(current-principal\) result\)) s
+5 209 M
+(        result) s
+5 198 M
+(        \(constant-time-not-found\)\)\)\)) s
+5 176 M
+(------------------------------------------------------------------------------) s
+5 154 M
+(Implementation Notes) s
+5 132 M
+(Performance) s
+5 110 M
+(- Index selection is critical for large soups) s
+5 99 M
+(- Bloom filters for fast negative lookups) s
+5 88 M
+(- Query result streaming to avoid memory exhaustion) s
+5 77 M
+(- Connection pooling for federated queries) s
+5 55 M
+(Compatibility) s
+5 33 M
+(- Query language inspired by Newton's soup cursors) s
+5 22 M
+(- SQL-like semantics where applicable) s
+5 11 M
+(- S-expression syntax for Scheme integration) s
 _R
 S
 %%Page: (8) 8
@@ -1275,134 +1249,35 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(;; GOOD:) s
 5 770 M
-(\(soup-query name: \(like \(sanitize-pattern user-input\)\)\)) s
+(------------------------------------------------------------------------------) s
 5 748 M
-(\(define \(sanitize-pattern s\)) s
-5 737 M
-(  \(string-map \(lambda \(c\)) s
-5 726 M
-(                \(if \(member c '\(#\\* #\\? #\\[ #\\]\)\)) s
-5 715 M
-(                    #\\\\) s
-5 704 M
-(                    c\)\)) s
-5 693 M
-(              s\)\)) s
-5 682 M
-(`) s
-5 660 M
-(Query Cost Limits) s
-5 638 M
-(`scheme) s
-5 627 M
-(;; Prevent denial of service via expensive queries) s
-5 616 M
-(\(define query-cost-limit 10000\)) s
-5 605 M
-(\(define query-timeout 30\)  ; seconds) s
-5 583 M
-(\(define \(safe-query query\)) s
-5 572 M
-(  \(with-timeout query-timeout) s
-5 561 M
-(    \(let \(\(cost \(estimate-cost query\)\)\)) s
-5 550 M
-(      \(when \(> cost query-cost-limit\)) s
-5 539 M
-(        \(error "Query exceeds cost limit"\)\)) s
-5 528 M
-(      \(execute-query query\)\)\)\)) s
-5 517 M
-(`) s
-5 495 M
-(Information Leakage) s
-5 473 M
-(`scheme) s
-5 462 M
-(;; Query existence can leak information) s
-5 451 M
-(;; Even "not found" reveals something) s
-5 429 M
-(;; Use constant-time responses for sensitive queries) s
-5 418 M
-(\(define \(private-query query\)) s
-5 407 M
-(  \(let \(\(result \(soup-query query\)\)\)) s
-5 396 M
-(    \(if \(authorized? \(current-principal\) result\)) s
-5 385 M
-(        result) s
-5 374 M
-(        \(constant-time-not-found\)\)\)\)) s
-5 363 M
-(`) s
-5 341 M
-(------------------------------------------------------------------------------) s
-5 319 M
-(Implementation Notes) s
-5 297 M
-(Performance) s
-5 275 M
-(- Index selection is critical for large soups) s
-5 264 M
-(- Bloom filters for fast negative lookups) s
-5 253 M
-(- Query result streaming to avoid memory exhaustion) s
-5 242 M
-(- Connection pooling for federated queries) s
-5 220 M
-(Compatibility) s
-5 198 M
-(- Query language inspired by Newton's soup cursors) s
-5 187 M
-(- SQL-like semantics where applicable) s
-5 176 M
-(- S-expression syntax for Scheme integration) s
-5 154 M
-(------------------------------------------------------------------------------) s
-5 132 M
 (References) s
-5 110 M
-(1. Newton Programmer's Guide - Soup and cursor APIs) s
-5 99 M
-(2. SQLite Query Planner - Query optimization) s
-5 88 M
-(3. RFC-020: Content-Addressed Storage) s
-5 77 M
-(4. RFC-021: Capability Delegation) s
-5 55 M
-(------------------------------------------------------------------------------) s
-5 33 M
-(Changelog) s
-5 11 M
-(- 2026-01-07 - Initial draft) s
-_R
-S
-%%Page: (9) 9
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 9 def
-/fname (rfc-025-query-language.txt) def
-/fdir (.) def
-/ftail (rfc-025-query-language.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 770 M
-(------------------------------------------------------------------------------) s
-5 748 M
-(Implementation Status: Draft) s
-5 737 M
-(Dependencies: soup, cas, spki) s
 5 726 M
+(1. Newton Programmer's Guide - Soup and cursor APIs) s
+5 715 M
+(2. SQLite Query Planner - Query optimization) s
+5 704 M
+(3. RFC-020: Content-Addressed Storage) s
+5 693 M
+(4. RFC-021: Capability Delegation) s
+5 671 M
+(------------------------------------------------------------------------------) s
+5 649 M
+(Changelog) s
+5 627 M
+(- 2026-01-07 - Initial draft) s
+5 605 M
+(------------------------------------------------------------------------------) s
+5 583 M
+(Implementation Status: Draft) s
+5 572 M
+(Dependencies: soup, cas, spki) s
+5 561 M
 (Integration: Vault queries, federation, audit trail) s
 _R
 S
 %%Trailer
-%%Pages: 9
+%%Pages: 8
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

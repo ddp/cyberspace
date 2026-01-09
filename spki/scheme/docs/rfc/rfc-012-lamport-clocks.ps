@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 11:58:08 2026
+%%CreationDate: Fri Jan  9 12:12:48 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -497,31 +497,29 @@ _S
 5 242 M
 (Each process P maintains counter C\(P\):) s
 5 220 M
-(`) s
-5 209 M
 (Rule 1: Before each event, increment C\(P\)) s
-5 198 M
+5 209 M
 (         C\(P\) := C\(P\) + 1) s
-5 176 M
+5 187 M
 (Rule 2: When sending message m, attach C\(P\)) s
-5 165 M
+5 176 M
 (         send\(m, C\(P\)\)) s
-5 143 M
+5 154 M
 (Rule 3: When receiving message \(m, T\), update clock) s
-5 132 M
+5 143 M
 (         C\(P\) := max\(C\(P\), T\) + 1) s
 5 121 M
-(`) s
-5 99 M
 (Clock Condition) s
-5 77 M
+5 99 M
 (If a \342\\206\\222 b then C\(a\) < C\(b\).) s
-5 55 M
+5 77 M
 (Note: Converse is not guaranteed. C\(a\) < C\(b\) does not imply a \342\\206\\222 b.) s
-5 33 M
+5 55 M
 (------------------------------------------------------------------------------) s
-5 11 M
+5 33 M
 (Data Structures) s
+5 11 M
+(Logical Timestamp) s
 _R
 S
 %%Page: (2) 2
@@ -536,115 +534,109 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 770 M
-(Logical Timestamp) s
-5 748 M
-(`scheme) s
-5 737 M
 (\(define-record-type <lamport-clock>) s
-5 726 M
+5 759 M
 (  \(make-lamport-clock counter node-id\)) s
-5 715 M
+5 748 M
 (  lamport-clock?) s
-5 704 M
+5 737 M
 (  \(counter clock-counter\)) s
-5 693 M
+5 726 M
 (  \(node-id clock-node-id\)\)) s
-5 682 M
-(`) s
-5 660 M
+5 704 M
 (Timestamped Event) s
-5 638 M
-(`scheme) s
-5 627 M
+5 682 M
 (\(define-record-type <timestamped-event>) s
-5 616 M
+5 671 M
 (  \(make-timestamped-event clock event\)) s
-5 605 M
+5 660 M
 (  timestamped-event?) s
-5 594 M
+5 649 M
 (  \(clock event-clock\)) s
-5 583 M
+5 638 M
 (  \(event event-data\)\)) s
-5 572 M
-(`) s
-5 550 M
+5 616 M
 (------------------------------------------------------------------------------) s
-5 528 M
+5 594 M
 (Operations) s
-5 506 M
+5 572 M
 (Increment \(Local Event\)) s
-5 484 M
-(`scheme) s
-5 473 M
+5 550 M
 (\(define \(clock-tick! clock\)) s
-5 462 M
+5 539 M
 (  "Increment clock for local event") s
-5 451 M
+5 528 M
 (  \(set! \(clock-counter clock\)) s
-5 440 M
+5 517 M
 (        \(+ 1 \(clock-counter clock\)\)\)) s
-5 429 M
+5 506 M
 (  clock\)) s
-5 418 M
-(`) s
-5 396 M
+5 484 M
 (Send \(Message Departure\)) s
-5 374 M
-(`scheme) s
-5 363 M
+5 462 M
 (\(define \(clock-send clock message\)) s
-5 352 M
+5 451 M
 (  "Attach timestamp to outgoing message") s
-5 341 M
+5 440 M
 (  \(clock-tick! clock\)) s
-5 330 M
+5 429 M
 (  \(make-timestamped-message) s
-5 319 M
+5 418 M
 (    \(clock-counter clock\)) s
-5 308 M
+5 407 M
 (    \(clock-node-id clock\)) s
-5 297 M
+5 396 M
 (    message\)\)) s
-5 286 M
-(`) s
-5 264 M
+5 374 M
 (Receive \(Message Arrival\)) s
-5 242 M
-(`scheme) s
-5 231 M
+5 352 M
 (\(define \(clock-receive! clock timestamped-message\)) s
-5 220 M
+5 341 M
 (  "Update clock on message receipt") s
-5 209 M
+5 330 M
 (  \(let \(\(remote-time \(message-timestamp timestamped-message\)\)\)) s
-5 198 M
+5 319 M
 (    \(set! \(clock-counter clock\)) s
-5 187 M
+5 308 M
 (          \(+ 1 \(max \(clock-counter clock\) remote-time\)\)\)) s
-5 176 M
+5 297 M
 (    \(message-payload timestamped-message\)\)\)) s
-5 165 M
-(`) s
-5 143 M
+5 275 M
 (------------------------------------------------------------------------------) s
-5 121 M
+5 253 M
 (Total Ordering) s
-5 99 M
+5 231 M
 (Lamport clocks give partial order. For total order, break ties with node ID:) s
-5 77 M
-(`scheme) s
-5 66 M
+5 209 M
 (\(define \(lamport-compare a b\)) s
-5 55 M
+5 198 M
 (  "Total order: compare by timestamp, then by node-id") s
-5 44 M
+5 187 M
 (  \(let \(\(ta \(clock-counter \(event-clock a\)\)\)) s
-5 33 M
+5 176 M
 (        \(tb \(clock-counter \(event-clock b\)\)\)) s
-5 22 M
+5 165 M
 (        \(na \(clock-node-id \(event-clock a\)\)\)) s
-5 11 M
+5 154 M
 (        \(nb \(clock-node-id \(event-clock b\)\)\)\)) s
+5 143 M
+(    \(cond) s
+5 132 M
+(      \(\(< ta tb\) -1\)) s
+5 121 M
+(      \(\(> ta tb\) 1\)) s
+5 110 M
+(      \(\(string<? na nb\) -1\)) s
+5 99 M
+(      \(\(string>? na nb\) 1\)) s
+5 88 M
+(      \(else 0\)\)\)\)) s
+5 66 M
+(------------------------------------------------------------------------------) s
+5 44 M
+(Application to Cyberspace) s
+5 22 M
+(Audit Trail Ordering) s
 _R
 S
 %%Page: (3) 3
@@ -659,111 +651,105 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(cond) s
-5 770 M
-(      \(\(< ta tb\) -1\)) s
-5 759 M
-(      \(\(> ta tb\) 1\)) s
-5 748 M
-(      \(\(string<? na nb\) -1\)) s
-5 737 M
-(      \(\(string>? na nb\) 1\)) s
-5 726 M
-(      \(else 0\)\)\)\)) s
-5 715 M
-(`) s
-5 693 M
-(------------------------------------------------------------------------------) s
-5 671 M
-(Application to Cyberspace) s
-5 649 M
-(Audit Trail Ordering) s
-5 627 M
-(`scheme) s
-5 616 M
 (\(audit-entry) s
-5 605 M
+5 770 M
 (  \(lamport-clock 1042 "alice-vault"\)) s
-5 594 M
+5 759 M
 (  \(timestamp "2026-01-06T15:30:00Z"\)  ; Physical \(advisory\)) s
-5 583 M
+5 748 M
 (  \(action \(seal-commit "abc123"\)\)) s
-5 572 M
+5 737 M
 (  ...\)) s
-5 561 M
-(`) s
-5 539 M
+5 715 M
 (Logical clock provides causal ordering even if physical clocks differ.) s
-5 517 M
+5 693 M
 (Federation Message Ordering) s
-5 495 M
-(`scheme) s
-5 484 M
+5 671 M
 (\(federation-message) s
-5 473 M
+5 660 M
 (  \(logical-time 573\)) s
-5 462 M
+5 649 M
 (  \(from "bob-vault"\)) s
-5 451 M
+5 638 M
 (  \(type announcement\)) s
-5 440 M
+5 627 M
 (  \(payload ...\)\)) s
-5 429 M
-(`) s
-5 407 M
+5 605 M
 (Receivers update their clocks, ensuring consistent view of causality.) s
-5 385 M
+5 583 M
 (Conflict Detection) s
-5 363 M
+5 561 M
 (If events are concurrent \(neither a \342\\206\\222 b nor b \342\\206\\222 a\):) s
-5 341 M
-(`scheme) s
-5 330 M
+5 539 M
 (\(define \(concurrent? a b\)) s
-5 319 M
+5 528 M
 (  "True if neither event happened before the other") s
-5 308 M
+5 517 M
 (  \(let \(\(ta \(clock-counter \(event-clock a\)\)\)) s
-5 297 M
+5 506 M
 (        \(tb \(clock-counter \(event-clock b\)\)\)\)) s
-5 286 M
+5 495 M
 (    ;; If timestamps equal and different nodes, concurrent) s
-5 275 M
+5 484 M
 (    ;; More sophisticated: use vector clocks for accurate detection) s
-5 264 M
+5 473 M
 (    \(and \(= ta tb\)) s
-5 253 M
+5 462 M
 (         \(not \(equal? \(clock-node-id \(event-clock a\)\)) s
-5 242 M
+5 451 M
 (                      \(clock-node-id \(event-clock b\)\)\)\)\)\)\)) s
-5 231 M
-(`) s
-5 209 M
+5 429 M
 (------------------------------------------------------------------------------) s
-5 187 M
+5 407 M
 (Vector Clocks \(Extension\)) s
-5 165 M
+5 385 M
 (For precise concurrency detection, use vector clocks:) s
-5 143 M
-(`scheme) s
-5 132 M
+5 363 M
 (\(define-record-type <vector-clock>) s
-5 121 M
+5 352 M
 (  \(make-vector-clock entries\)) s
-5 110 M
+5 341 M
 (  vector-clock?) s
-5 99 M
+5 330 M
 (  \(entries vc-entries\)\)  ; Hash: node-id \342\\206\\222 counter) s
-5 77 M
+5 308 M
 (;; a \342\\206\\222 b iff VC\(a\) < VC\(b\) \(component-wise\)) s
-5 66 M
+5 297 M
 (;; a || b \(concurrent\) iff neither VC\(a\) < VC\(b\) nor VC\(b\) < VC\(a\)) s
-5 55 M
-(`) s
-5 33 M
+5 275 M
 (Trade-off: O\(N\) space vs O\(1\) for Lamport clocks.) s
-5 11 M
+5 253 M
 (------------------------------------------------------------------------------) s
+5 231 M
+(Integration Points) s
+5 209 M
+(With Audit Trail \(RFC-003\)) s
+5 187 M
+(\(audit-entry) s
+5 176 M
+(  \(sequence 42\)           ; Local sequence) s
+5 165 M
+(  \(lamport-clock 1042\)    ; Logical timestamp) s
+5 154 M
+(  \(physical-time "..."\)   ; Advisory only) s
+5 143 M
+(  ...\)) s
+5 121 M
+(With Consensus \(RFC-011\)) s
+5 99 M
+(\(consensus-message) s
+5 88 M
+(  \(sequence 573\)          ; Consensus sequence) s
+5 77 M
+(  \(lamport-clock 2891\)    ; Causal context) s
+5 66 M
+(  ...\)) s
+5 44 M
+(With Replication \(RFC-001\)) s
+5 22 M
+(\(seal-publish "2.0.0") s
+5 11 M
+(  \(logical-time 892\)) s
 _R
 S
 %%Page: (4) 4
@@ -777,160 +763,97 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(Integration Points) s
-5 748 M
-(With Audit Trail \(RFC-003\)) s
-5 726 M
-(`scheme) s
-5 715 M
-(\(audit-entry) s
-5 704 M
-(  \(sequence 42\)           ; Local sequence) s
-5 693 M
-(  \(lamport-clock 1042\)    ; Logical timestamp) s
-5 682 M
-(  \(physical-time "..."\)   ; Advisory only) s
-5 671 M
-(  ...\)) s
-5 660 M
-(`) s
-5 638 M
-(With Consensus \(RFC-011\)) s
-5 616 M
-(`scheme) s
-5 605 M
-(\(consensus-message) s
-5 594 M
-(  \(sequence 573\)          ; Consensus sequence) s
-5 583 M
-(  \(lamport-clock 2891\)    ; Causal context) s
-5 572 M
-(  ...\)) s
-5 561 M
-(`) s
-5 539 M
-(With Replication \(RFC-001\)) s
-5 517 M
-(`scheme) s
-5 506 M
-(\(seal-publish "2.0.0") s
-5 495 M
-(  \(logical-time 892\)) s
-5 484 M
-(  ...\)) s
-5 473 M
-(`) s
-5 451 M
-(------------------------------------------------------------------------------) s
-5 429 M
-(Security Considerations) s
-5 407 M
-(Clock Manipulation) s
-5 385 M
-(A Byzantine node could:) s
-5 374 M
-(- Report artificially high clock values) s
-5 363 M
-(- Attempt to order events incorrectly) s
-5 341 M
-(Mitigations:) s
-5 330 M
-(- Clock values bounded by received values + margin) s
-5 319 M
-(- Signatures prevent retroactive tampering) s
-5 308 M
-(- Audit trails detect anomalies) s
-5 286 M
-(Denial of Service) s
-5 264 M
-(Flooding with high-timestamped messages forces clock advancement.) s
-5 242 M
-(Mitigation: Rate limiting, reputation systems.) s
-5 220 M
-(------------------------------------------------------------------------------) s
-5 198 M
-(Implementation Notes) s
-5 176 M
-(Thread Safety) s
-5 154 M
-(Clock updates must be atomic:) s
-5 132 M
-(`scheme) s
-5 121 M
-(\(define \(atomic-tick! clock\)) s
-5 110 M
-(  \(mutex-lock! clock-mutex\)) s
-5 99 M
-(  \(clock-tick! clock\)) s
-5 88 M
-(  \(mutex-unlock! clock-mutex\)\)) s
-5 77 M
-(`) s
-5 55 M
-(Persistence) s
-5 33 M
-(Clock state survives restarts:) s
-5 11 M
-(`scheme) s
-_R
-S
-%%Page: (5) 5
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 5 def
-/fname (rfc-012-lamport-clocks.txt) def
-/fdir (.) def
-/ftail (rfc-012-lamport-clocks.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
 5 781 M
-(\(define \(save-clock clock path\)) s
-5 770 M
-(  \(with-output-to-file path) s
+(  ...\)) s
 5 759 M
-(    \(lambda \(\)) s
-5 748 M
-(      \(write `\(lamport-clock) s
+(------------------------------------------------------------------------------) s
 5 737 M
-(                \(counter ,\(clock-counter clock\)\)) s
-5 726 M
-(                \(node-id ,\(clock-node-id clock\)\)\)\)\)\)\)) s
+(Security Considerations) s
 5 715 M
-(`) s
+(Clock Manipulation) s
 5 693 M
-(------------------------------------------------------------------------------) s
+(A Byzantine node could:) s
+5 682 M
+(- Report artificially high clock values) s
 5 671 M
-(References) s
+(- Attempt to order events incorrectly) s
 5 649 M
-(1. Lamport, L. \(1978\). Time, Clocks, and the Ordering of Events in a Distributed System.) s
+(Mitigations:) s
 5 638 M
-(2. Fidge, C. J. \(1988\). Timestamps in Message-Passing Systems.) s
+(- Clock values bounded by received values + margin) s
 5 627 M
-(3. Mattern, F. \(1989\). Virtual Time and Global States of Distributed Systems.) s
+(- Signatures prevent retroactive tampering) s
 5 616 M
-(4. RFC-003: Cryptographic Audit Trail) s
-5 605 M
-(5. RFC-010: Federation Protocol) s
-5 583 M
+(- Audit trails detect anomalies) s
+5 594 M
+(Denial of Service) s
+5 572 M
+(Flooding with high-timestamped messages forces clock advancement.) s
+5 550 M
+(Mitigation: Rate limiting, reputation systems.) s
+5 528 M
 (------------------------------------------------------------------------------) s
-5 561 M
-(Changelog) s
-5 539 M
-(- 2026-01-06 - Initial specification) s
-5 517 M
-(------------------------------------------------------------------------------) s
-5 495 M
-(Implementation Status: Proposed) s
+5 506 M
+(Implementation Notes) s
 5 484 M
+(Thread Safety) s
+5 462 M
+(Clock updates must be atomic:) s
+5 440 M
+(\(define \(atomic-tick! clock\)) s
+5 429 M
+(  \(mutex-lock! clock-mutex\)) s
+5 418 M
+(  \(clock-tick! clock\)) s
+5 407 M
+(  \(mutex-unlock! clock-mutex\)\)) s
+5 385 M
+(Persistence) s
+5 363 M
+(Clock state survives restarts:) s
+5 341 M
+(\(define \(save-clock clock path\)) s
+5 330 M
+(  \(with-output-to-file path) s
+5 319 M
+(    \(lambda \(\)) s
+5 308 M
+(      \(write `\(lamport-clock) s
+5 297 M
+(                \(counter ,\(clock-counter clock\)\)) s
+5 286 M
+(                \(node-id ,\(clock-node-id clock\)\)\)\)\)\)\)) s
+5 264 M
+(------------------------------------------------------------------------------) s
+5 242 M
+(References) s
+5 220 M
+(1. Lamport, L. \(1978\). Time, Clocks, and the Ordering of Events in a Distributed System.) s
+5 209 M
+(2. Fidge, C. J. \(1988\). Timestamps in Message-Passing Systems.) s
+5 198 M
+(3. Mattern, F. \(1989\). Virtual Time and Global States of Distributed Systems.) s
+5 187 M
+(4. RFC-003: Cryptographic Audit Trail) s
+5 176 M
+(5. RFC-010: Federation Protocol) s
+5 154 M
+(------------------------------------------------------------------------------) s
+5 132 M
+(Changelog) s
+5 110 M
+(- 2026-01-06 - Initial specification) s
+5 88 M
+(------------------------------------------------------------------------------) s
+5 66 M
+(Implementation Status: Proposed) s
+5 55 M
 (Clock Type: Lamport scalar, vector clock extension) s
-5 473 M
+5 44 M
 (Ordering: Partial \(causal\), total with tie-breaking) s
 _R
 S
 %%Trailer
-%%Pages: 5
+%%Pages: 4
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

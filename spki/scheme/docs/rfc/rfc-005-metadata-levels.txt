@@ -35,17 +35,13 @@ Level 1: Minimal (Default)
 
 Every commit includes:
 
-`scheme
 (commit-metadata
   (hash "abc123...")
   (timestamp 1767685100)
   (message "Fix typo in README"))
-`
 
 Usage:
-`scheme
 (seal-commit "Fix typo in README")
-`
 
 This is the default. No extra flags needed. Git handles storage.
 
@@ -53,7 +49,6 @@ Level 2: Catalog
 
 Adds discovery metadata:
 
-`scheme
 (commit-metadata
   (hash "def456...")
   (timestamp 1767685200)
@@ -62,16 +57,13 @@ Adds discovery metadata:
     (subjects "authentication" "security")
     (keywords "login" "oauth" "jwt")
     (description "Added OAuth2 authentication flow with JWT tokens")))
-`
 
 Usage:
-`scheme
 (seal-commit "Implement user authentication"
   catalog: #t
   subjects: '("authentication" "security")
   keywords: '("login" "oauth" "jwt")
   description: "Added OAuth2 authentication flow with JWT tokens")
-`
 
 Purpose: Enable search and categorization without full environmental capture.
 
@@ -79,7 +71,6 @@ Level 3: Preserve
 
 Adds archival metadata:
 
-`scheme
 (commit-metadata
   (hash "789abc...")
   (timestamp 1767685300)
@@ -96,13 +87,10 @@ Adds archival metadata:
     (git-state
       (branch "main")
       (remote "git@github.com:ddp/cyberspace.git"))))
-`
 
 Usage:
-`scheme
 (seal-commit "Release v2.0.0"
   preserve: #t)
-`
 
 Purpose: Capture everything needed to understand and reproduce the commit environment.
 
@@ -136,21 +124,17 @@ Storage
 
 Metadata stored in .vault/metadata/:
 
-`
 .vault/
   metadata/
     abc123.sexp
     def456.sexp
     789abc.sexp
-`
 
 Filename is commit hash. Content is S-expression metadata.
 
 Optional Git Tracking
 
-`scheme
 (vault-config 'track-metadata #t)
-`
 
 When enabled, metadata files are staged for the next commit, creating a self-documenting archive.
 
@@ -160,7 +144,6 @@ Implementation
 
 save-commit-metadata
 
-`scheme
 (define (save-commit-metadata commit-hash
           #!key message catalog subjects keywords description preserve)
   "Save optional metadata for a commit"
@@ -187,11 +170,9 @@ save-commit-metadata
         (lambda ()
           (write metadata)
           (newline))))))
-`
 
 Environment Capture
 
-`scheme
 (define (get-environment-snapshot)
   "Capture current build environment"
   `((platform ,(or (get-environment-variable "OSTYPE") "unknown"))
@@ -210,7 +191,6 @@ Environment Capture
         (remote (with-input-from-pipe "git remote -v" read-line)))
     `((branch ,branch)
       (remote ,remote))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -218,32 +198,26 @@ Use Cases
 
 Daily Development (Minimal)
 
-`scheme
 (seal-commit "WIP: refactoring auth module")
 (seal-commit "Fix off-by-one error")
 (seal-commit "Update dependencies")
-`
 
 Fast, lightweight, no overhead.
 
 Feature Completion (Catalog)
 
-`scheme
 (seal-commit "Add two-factor authentication"
   catalog: #t
   subjects: '("authentication" "security" "2FA")
   keywords: '("totp" "authenticator" "login")
   description: "Implements TOTP-based 2FA per RFC 6238")
-`
 
 Enables later discovery: "find all commits about authentication"
 
 Release Snapshot (Preserve)
 
-`scheme
 (seal-commit "Release v2.0.0"
   preserve: #t)
-`
 
 Captures full environment for reproducibility and forensics.
 
@@ -253,7 +227,6 @@ Query Support
 
 Future enhancement: query interface for metadata.
 
-`scheme
 ;; Find by subject
 (vault-search subjects: '("authentication"))
 
@@ -265,7 +238,6 @@ Future enhancement: query interface for metadata.
 
 ;; Find with preservation data
 (vault-search has-preservation: #t)
-`
 
 ------------------------------------------------------------------------------
 

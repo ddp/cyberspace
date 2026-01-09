@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:50 2026
+%%CreationDate: Fri Jan  9 12:12:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -487,57 +487,57 @@ _S
 5 363 M
 (Core Metrics) s
 5 341 M
-(`scheme) s
-5 330 M
 (\(define vault-metrics) s
-5 319 M
+5 330 M
 (  '\(;; Storage) s
-5 308 M
+5 319 M
 (    \(storage.used.bytes gauge "Total bytes used"\)) s
-5 297 M
+5 308 M
 (    \(storage.available.bytes gauge "Bytes available"\)) s
-5 286 M
+5 297 M
 (    \(storage.objects.count gauge "Number of objects"\)) s
-5 264 M
+5 275 M
 (    ;; Operations) s
-5 253 M
+5 264 M
 (    \(cas.put.count counter "CAS put operations"\)) s
-5 242 M
+5 253 M
 (    \(cas.put.bytes counter "Bytes written"\)) s
-5 231 M
+5 242 M
 (    \(cas.put.duration histogram "Put latency"\)) s
-5 220 M
+5 231 M
 (    \(cas.get.count counter "CAS get operations"\)) s
-5 209 M
+5 220 M
 (    \(cas.get.bytes counter "Bytes read"\)) s
-5 198 M
+5 209 M
 (    \(cas.get.duration histogram "Get latency"\)) s
-5 176 M
+5 187 M
 (    ;; Soup) s
-5 165 M
+5 176 M
 (    \(soup.queries.count counter "Soup queries"\)) s
-5 154 M
+5 165 M
 (    \(soup.queries.duration histogram "Query latency"\)) s
-5 143 M
+5 154 M
 (    \(soup.index.size.bytes gauge "Index size"\)) s
-5 121 M
+5 132 M
 (    ;; Network) s
-5 110 M
+5 121 M
 (    \(network.connections.active gauge "Active connections"\)) s
-5 99 M
+5 110 M
 (    \(network.bytes.sent counter "Bytes sent"\)) s
-5 88 M
+5 99 M
 (    \(network.bytes.received counter "Bytes received"\)) s
-5 66 M
+5 77 M
 (    ;; Replication) s
-5 55 M
+5 66 M
 (    \(replication.lag.seconds gauge "Replication lag"\)) s
-5 44 M
+5 55 M
 (    \(replication.objects.pending gauge "Objects pending sync"\)) s
-5 22 M
+5 33 M
 (    ;; Errors) s
-5 11 M
+5 22 M
 (    \(errors.total counter "Total errors" labels: \(type\)\)) s
+5 11 M
+(    \(errors.rate gauge "Error rate per second"\)\)\)) s
 _R
 S
 %%Page: (2) 2
@@ -551,120 +551,116 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(    \(errors.rate gauge "Error rate per second"\)\)\)) s
 5 770 M
-(`) s
-5 748 M
 (Metric Collection) s
-5 726 M
-(`scheme) s
-5 715 M
+5 748 M
 (\(define metrics-registry \(make-hash-table\)\)) s
-5 693 M
+5 726 M
 (\(define \(register-metric name type help #!key labels\)) s
-5 682 M
+5 715 M
 (  \(hash-table-set! metrics-registry name) s
-5 671 M
+5 704 M
 (    `\(\(type . ,type\)) s
-5 660 M
+5 693 M
 (      \(help . ,help\)) s
-5 649 M
+5 682 M
 (      \(labels . ,labels\)) s
-5 638 M
+5 671 M
 (      \(value . ,\(case type) s
-5 627 M
+5 660 M
 (                  \(\(counter\) 0\)) s
-5 616 M
+5 649 M
 (                  \(\(gauge\) 0\)) s
-5 605 M
+5 638 M
 (                  \(\(histogram\) \(make-histogram-buckets\)\)\)\)\)\)\)) s
-5 583 M
+5 616 M
 (\(define \(metric-inc! name #!key \(delta 1\) labels\)) s
-5 572 M
+5 605 M
 (  \(let \(\(metric \(hash-table-ref metrics-registry name\)\)\)) s
-5 561 M
+5 594 M
 (    \(case \(assoc-ref metric 'type\)) s
-5 550 M
+5 583 M
 (      \(\(counter gauge\)) s
-5 539 M
+5 572 M
 (       \(set! \(assoc-ref metric 'value\)) s
-5 528 M
+5 561 M
 (             \(+ \(assoc-ref metric 'value\) delta\)\)\)\)\)\)) s
-5 506 M
+5 539 M
 (\(define \(metric-set! name value #!key labels\)) s
-5 495 M
+5 528 M
 (  \(let \(\(metric \(hash-table-ref metrics-registry name\)\)\)) s
-5 484 M
+5 517 M
 (    \(set! \(assoc-ref metric 'value\) value\)\)\)) s
-5 462 M
+5 495 M
 (\(define \(metric-observe! name value #!key labels\)) s
-5 451 M
+5 484 M
 (  \(let \(\(metric \(hash-table-ref metrics-registry name\)\)\)) s
-5 440 M
+5 473 M
 (    \(histogram-observe! \(assoc-ref metric 'value\) value\)\)\)) s
-5 429 M
-(`) s
-5 407 M
+5 451 M
 (Histogram Buckets) s
-5 385 M
-(`scheme) s
-5 374 M
+5 429 M
 (\(define \(make-histogram-buckets\)) s
-5 363 M
+5 418 M
 (  "Default latency buckets in milliseconds") s
-5 352 M
+5 407 M
 (  \(let \(\(buckets '\(1 5 10 25 50 100 250 500 1000 2500 5000 10000\)\)\)) s
-5 341 M
+5 396 M
 (    \(map \(lambda \(b\) \(cons b 0\)\) buckets\)\)\)) s
-5 319 M
+5 374 M
 (\(define \(histogram-observe! histogram value\)) s
-5 308 M
+5 363 M
 (  \(for-each \(lambda \(bucket\)) s
-5 297 M
+5 352 M
 (              \(when \(<= value \(car bucket\)\)) s
-5 286 M
+5 341 M
 (                \(set-cdr! bucket \(+ \(cdr bucket\) 1\)\)\)\)) s
-5 275 M
+5 330 M
 (            histogram\)\)) s
-5 264 M
-(`) s
-5 242 M
+5 308 M
 (------------------------------------------------------------------------------) s
-5 220 M
+5 286 M
 (Tracing) s
-5 198 M
+5 264 M
 (Trace Structure) s
-5 176 M
-(`scheme) s
-5 165 M
+5 242 M
 (\(define \(make-trace operation\)) s
-5 154 M
+5 231 M
 (  `\(trace) s
-5 143 M
+5 220 M
 (    \(trace-id ,\(generate-trace-id\)\)) s
-5 132 M
+5 209 M
 (    \(span-id ,\(generate-span-id\)\)) s
-5 121 M
+5 198 M
 (    \(parent-span-id #f\)) s
-5 110 M
+5 187 M
 (    \(operation ,operation\)) s
-5 99 M
+5 176 M
 (    \(start-time ,\(current-time-ns\)\)) s
-5 88 M
+5 165 M
 (    \(end-time #f\)) s
-5 77 M
+5 154 M
 (    \(status pending\)) s
-5 66 M
+5 143 M
 (    \(attributes \(\)\)) s
-5 55 M
+5 132 M
 (    \(events \(\)\)\)\)) s
-5 33 M
+5 110 M
 (\(define \(trace-start! trace\)) s
-5 22 M
+5 99 M
 (  \(set! \(assoc-ref trace 'start-time\) \(current-time-ns\)\)) s
-5 11 M
+5 88 M
 (  trace\)) s
+5 66 M
+(\(define \(trace-end! trace status\)) s
+5 55 M
+(  \(set! \(assoc-ref trace 'end-time\) \(current-time-ns\)\)) s
+5 44 M
+(  \(set! \(assoc-ref trace 'status\) status\)) s
+5 33 M
+(  \(record-trace! trace\)\)) s
+5 11 M
+(Span Context) s
 _R
 S
 %%Page: (3) 3
@@ -679,123 +675,121 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 770 M
-(\(define \(trace-end! trace status\)) s
-5 759 M
-(  \(set! \(assoc-ref trace 'end-time\) \(current-time-ns\)\)) s
-5 748 M
-(  \(set! \(assoc-ref trace 'status\) status\)) s
-5 737 M
-(  \(record-trace! trace\)\)) s
-5 726 M
-(`) s
-5 704 M
-(Span Context) s
-5 682 M
-(`scheme) s
-5 671 M
 (\(define current-trace \(make-parameter #f\)\)) s
-5 660 M
+5 759 M
 (\(define current-span \(make-parameter #f\)\)) s
-5 638 M
+5 737 M
 (\(define \(with-span operation proc\)) s
-5 627 M
+5 726 M
 (  "Execute proc within a traced span") s
-5 616 M
+5 715 M
 (  \(let* \(\(parent \(current-span\)\)) s
-5 605 M
+5 704 M
 (         \(span \(make-span operation \(and parent \(span-id parent\)\)\)\)\)) s
-5 594 M
+5 693 M
 (    \(parameterize \(\(current-span span\)\)) s
-5 583 M
+5 682 M
 (      \(span-start! span\)) s
-5 572 M
+5 671 M
 (      \(guard \(ex) s
-5 561 M
+5 660 M
 (              \(else) s
-5 550 M
+5 649 M
 (               \(span-error! span ex\)) s
-5 539 M
+5 638 M
 (               \(span-end! span 'error\)) s
-5 528 M
+5 627 M
 (               \(raise ex\)\)\)) s
-5 517 M
+5 616 M
 (        \(let \(\(result \(proc\)\)\)) s
-5 506 M
+5 605 M
 (          \(span-end! span 'ok\)) s
-5 495 M
+5 594 M
 (          result\)\)\)\)\)) s
-5 473 M
+5 572 M
 (;; Example usage) s
-5 462 M
+5 561 M
 (\(define \(traced-cas-get hash\)) s
-5 451 M
+5 550 M
 (  \(with-span "cas.get") s
-5 440 M
+5 539 M
 (    \(lambda \(\)) s
-5 429 M
+5 528 M
 (      \(span-set-attribute! "hash" hash\)) s
-5 418 M
+5 517 M
 (      \(cas-get hash\)\)\)\)) s
-5 407 M
-(`) s
-5 385 M
+5 495 M
 (Distributed Tracing) s
-5 363 M
-(`scheme) s
-5 352 M
+5 473 M
 (;; Propagate trace context across vault boundaries) s
-5 341 M
+5 462 M
 (\(define \(inject-trace-context headers\)) s
-5 330 M
+5 451 M
 (  "Inject trace context into outgoing request") s
-5 319 M
+5 440 M
 (  \(let \(\(span \(current-span\)\)\)) s
-5 308 M
+5 429 M
 (    \(when span) s
-5 297 M
+5 418 M
 (      \(hash-table-set! headers "X-Trace-Id" \(span-trace-id span\)\)) s
-5 286 M
+5 407 M
 (      \(hash-table-set! headers "X-Span-Id" \(span-id span\)\)\)\)\)) s
-5 264 M
+5 385 M
 (\(define \(extract-trace-context headers\)) s
-5 253 M
+5 374 M
 (  "Extract trace context from incoming request") s
-5 242 M
+5 363 M
 (  \(let \(\(trace-id \(hash-table-ref headers "X-Trace-Id" #f\)\)) s
-5 231 M
+5 352 M
 (        \(parent-span-id \(hash-table-ref headers "X-Span-Id" #f\)\)\)) s
-5 220 M
+5 341 M
 (    \(when trace-id) s
-5 209 M
+5 330 M
 (      \(current-trace trace-id\)) s
-5 198 M
+5 319 M
 (      \(make-span-with-parent parent-span-id\)\)\)\)) s
-5 187 M
-(`) s
-5 165 M
+5 297 M
 (------------------------------------------------------------------------------) s
-5 143 M
+5 275 M
 (Logging) s
-5 121 M
+5 253 M
 (Structured Logging) s
-5 99 M
-(`scheme) s
-5 88 M
+5 231 M
 (\(define \(log level message #!rest attributes\)) s
-5 77 M
+5 220 M
 (  "Emit structured log entry") s
-5 66 M
+5 209 M
 (  \(let \(\(entry `\(\(timestamp . ,\(current-time-iso8601\)\)) s
-5 55 M
+5 198 M
 (                 \(level . ,level\)) s
-5 44 M
+5 187 M
 (                 \(message . ,message\)) s
-5 33 M
+5 176 M
 (                 \(vault . ,\(vault-id\)\)) s
-5 22 M
+5 165 M
 (                 \(trace-id . ,\(and \(current-span\) \(span-trace-id \(current-span\)\)\)\)) s
-5 11 M
+5 154 M
 (                 ,@\(plist->alist attributes\)\)\)\)) s
+5 143 M
+(    \(emit-log entry\)\)\)) s
+5 121 M
+(\(define \(log-debug message . attrs\) \(apply log 'debug message attrs\)\)) s
+5 110 M
+(\(define \(log-info message . attrs\) \(apply log 'info message attrs\)\)) s
+5 99 M
+(\(define \(log-warn message . attrs\) \(apply log 'warn message attrs\)\)) s
+5 88 M
+(\(define \(log-error message . attrs\) \(apply log 'error message attrs\)\)) s
+5 66 M
+(;; Example) s
+5 55 M
+(\(log-info "Object stored") s
+5 44 M
+(          'hash hash) s
+5 33 M
+(          'size \(bytevector-length data\)) s
+5 22 M
+(          'duration-ms elapsed\)) s
 _R
 S
 %%Page: (4) 4
@@ -810,113 +804,111 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(emit-log entry\)\)\)) s
-5 759 M
-(\(define \(log-debug message . attrs\) \(apply log 'debug message attrs\)\)) s
-5 748 M
-(\(define \(log-info message . attrs\) \(apply log 'info message attrs\)\)) s
-5 737 M
-(\(define \(log-warn message . attrs\) \(apply log 'warn message attrs\)\)) s
-5 726 M
-(\(define \(log-error message . attrs\) \(apply log 'error message attrs\)\)) s
-5 704 M
-(;; Example) s
-5 693 M
-(\(log-info "Object stored") s
-5 682 M
-(          'hash hash) s
-5 671 M
-(          'size \(bytevector-length data\)) s
-5 660 M
-(          'duration-ms elapsed\)) s
-5 649 M
-(`) s
-5 627 M
 (Log Levels) s
-5 605 M
-(`scheme) s
-5 594 M
+5 759 M
 (\(define log-levels '\(\(trace . 0\) \(debug . 1\) \(info . 2\)) s
-5 583 M
+5 748 M
 (                     \(warn . 3\) \(error . 4\) \(fatal . 5\)\)\)) s
-5 561 M
+5 726 M
 (\(define current-log-level \(make-parameter 'info\)\)) s
-5 539 M
+5 704 M
 (\(define \(log-enabled? level\)) s
-5 528 M
+5 693 M
 (  \(>= \(assoc-ref log-levels level\)) s
-5 517 M
+5 682 M
 (      \(assoc-ref log-levels \(current-log-level\)\)\)\)) s
-5 506 M
-(`) s
-5 484 M
+5 660 M
 (Log Sinks) s
-5 462 M
-(`scheme) s
-5 451 M
+5 638 M
 (;; Multiple output destinations) s
-5 440 M
+5 627 M
 (\(define log-sinks '\(\)\)) s
-5 418 M
+5 605 M
 (\(define \(add-log-sink! sink\)) s
-5 407 M
+5 594 M
 (  \(set! log-sinks \(cons sink log-sinks\)\)\)) s
-5 385 M
+5 572 M
 (\(define \(emit-log entry\)) s
-5 374 M
+5 561 M
 (  \(when \(log-enabled? \(assoc-ref entry 'level\)\)) s
-5 363 M
+5 550 M
 (    \(for-each \(lambda \(sink\)) s
-5 352 M
+5 539 M
 (                \(sink-write sink entry\)\)) s
-5 341 M
+5 528 M
 (              log-sinks\)\)\)) s
-5 319 M
+5 506 M
 (;; Sink implementations) s
-5 308 M
+5 495 M
 (\(define \(make-file-sink path\)) s
-5 297 M
+5 484 M
 (  \(lambda \(entry\)) s
-5 286 M
+5 473 M
 (    \(with-output-to-file path) s
-5 275 M
+5 462 M
 (      \(lambda \(\) \(write-json entry\) \(newline\)\)) s
-5 264 M
+5 451 M
 (      'append\)\)\)) s
-5 242 M
+5 429 M
 (\(define \(make-soup-sink\)) s
-5 231 M
+5 418 M
 (  \(lambda \(entry\)) s
-5 220 M
+5 407 M
 (    \(soup-put entry type: 'log-entry\)\)\)) s
-5 209 M
-(`) s
-5 187 M
+5 385 M
 (------------------------------------------------------------------------------) s
-5 165 M
+5 363 M
 (Health Checks) s
-5 143 M
+5 341 M
 (Health Endpoints) s
-5 121 M
-(`scheme) s
-5 110 M
+5 319 M
 (\(define \(health-check\)) s
-5 99 M
+5 308 M
 (  "Comprehensive health check") s
-5 88 M
+5 297 M
 (  `\(\(status . ,\(if \(all-healthy?\) 'healthy 'unhealthy\)\)) s
-5 77 M
+5 286 M
 (    \(checks . \(\(storage . ,\(check-storage\)\)) s
-5 66 M
+5 275 M
 (               \(network . ,\(check-network\)\)) s
-5 55 M
+5 264 M
 (               \(replication . ,\(check-replication\)\)) s
-5 44 M
+5 253 M
 (               \(keys . ,\(check-keys\)\)\)\)\)\)) s
-5 22 M
+5 231 M
 (\(define \(check-storage\)) s
-5 11 M
+5 220 M
 (  `\(\(status . ,\(if \(storage-accessible?\) 'healthy 'unhealthy\)\)) s
+5 209 M
+(    \(used . ,\(storage-used\)\)) s
+5 198 M
+(    \(available . ,\(storage-available\)\)) s
+5 187 M
+(    \(percent . ,\(storage-percent-used\)\)\)\)) s
+5 165 M
+(\(define \(check-network\)) s
+5 154 M
+(  `\(\(status . ,\(if \(network-healthy?\) 'healthy 'unhealthy\)\)) s
+5 143 M
+(    \(peers . ,\(connected-peer-count\)\)) s
+5 132 M
+(    \(latency-ms . ,\(average-peer-latency\)\)\)\)) s
+5 110 M
+(\(define \(check-replication\)) s
+5 99 M
+(  `\(\(status . ,\(if \(replication-healthy?\) 'healthy 'unhealthy\)\)) s
+5 88 M
+(    \(lag-seconds . ,\(replication-lag\)\)) s
+5 77 M
+(    \(pending . ,\(pending-replication-count\)\)\)\)) s
+5 55 M
+(Readiness vs Liveness) s
+5 33 M
+(;; Liveness: is the process running?) s
+5 22 M
+(\(define \(liveness-check\)) s
+5 11 M
+(  '\(\(status . alive\)\)\)) s
 _R
 S
 %%Page: (5) 5
@@ -930,118 +922,116 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(    \(used . ,\(storage-used\)\)) s
 5 770 M
-(    \(available . ,\(storage-available\)\)) s
-5 759 M
-(    \(percent . ,\(storage-percent-used\)\)\)\)) s
-5 737 M
-(\(define \(check-network\)) s
-5 726 M
-(  `\(\(status . ,\(if \(network-healthy?\) 'healthy 'unhealthy\)\)) s
-5 715 M
-(    \(peers . ,\(connected-peer-count\)\)) s
-5 704 M
-(    \(latency-ms . ,\(average-peer-latency\)\)\)\)) s
-5 682 M
-(\(define \(check-replication\)) s
-5 671 M
-(  `\(\(status . ,\(if \(replication-healthy?\) 'healthy 'unhealthy\)\)) s
-5 660 M
-(    \(lag-seconds . ,\(replication-lag\)\)) s
-5 649 M
-(    \(pending . ,\(pending-replication-count\)\)\)\)) s
-5 638 M
-(`) s
-5 616 M
-(Readiness vs Liveness) s
-5 594 M
-(`scheme) s
-5 583 M
-(;; Liveness: is the process running?) s
-5 572 M
-(\(define \(liveness-check\)) s
-5 561 M
-(  '\(\(status . alive\)\)\)) s
-5 539 M
 (;; Readiness: can we serve requests?) s
-5 528 M
+5 759 M
 (\(define \(readiness-check\)) s
-5 517 M
+5 748 M
 (  \(if \(and \(storage-accessible?\)) s
-5 506 M
+5 737 M
 (           \(keys-available?\)) s
-5 495 M
+5 726 M
 (           \(not \(vault-readonly?\)\)\)) s
-5 484 M
+5 715 M
 (      '\(\(status . ready\)\)) s
-5 473 M
+5 704 M
 (      '\(\(status . not-ready\)\)\)\)) s
-5 462 M
-(`) s
-5 440 M
+5 682 M
 (------------------------------------------------------------------------------) s
-5 418 M
+5 660 M
 (Alerting) s
-5 396 M
+5 638 M
 (Alert Rules) s
-5 374 M
-(`scheme) s
-5 363 M
+5 616 M
 (\(define alert-rules) s
-5 352 M
+5 605 M
 (  `\(\(storage-critical) s
-5 341 M
+5 594 M
 (     \(condition \(> \(metric-value 'storage.percent.used\) 95\)\)) s
-5 330 M
+5 583 M
 (     \(severity critical\)) s
-5 319 M
+5 572 M
 (     \(message "Storage critically low"\)\)) s
-5 297 M
+5 550 M
 (    \(storage-warning) s
-5 286 M
+5 539 M
 (     \(condition \(> \(metric-value 'storage.percent.used\) 80\)\)) s
-5 275 M
+5 528 M
 (     \(severity warning\)) s
-5 264 M
+5 517 M
 (     \(message "Storage running low"\)\)) s
-5 242 M
+5 495 M
 (    \(error-rate-high) s
-5 231 M
+5 484 M
 (     \(condition \(> \(metric-value 'errors.rate\) 10\)\)) s
-5 220 M
+5 473 M
 (     \(severity warning\)) s
-5 209 M
+5 462 M
 (     \(message "High error rate detected"\)\)) s
-5 187 M
+5 440 M
 (    \(replication-lag) s
-5 176 M
+5 429 M
 (     \(condition \(> \(metric-value 'replication.lag.seconds\) 300\)\)) s
-5 165 M
+5 418 M
 (     \(severity warning\)) s
-5 154 M
+5 407 M
 (     \(message "Replication lag exceeds 5 minutes"\)\)) s
-5 132 M
+5 385 M
 (    \(peer-disconnected) s
-5 121 M
+5 374 M
 (     \(condition \(< \(metric-value 'network.peers.connected\) 1\)\)) s
-5 110 M
+5 363 M
 (     \(severity critical\)) s
-5 99 M
+5 352 M
 (     \(message "No peers connected"\)\)\)\)) s
-5 88 M
-(`) s
-5 66 M
+5 330 M
 (Alert Evaluation) s
-5 44 M
-(`scheme) s
-5 33 M
+5 308 M
 (\(define \(evaluate-alerts\)) s
-5 22 M
+5 297 M
 (  "Check all alert conditions") s
-5 11 M
+5 286 M
 (  \(filter-map) s
+5 275 M
+(    \(lambda \(rule\)) s
+5 264 M
+(      \(when \(eval-condition \(assoc-ref rule 'condition\)\)) s
+5 253 M
+(        \(fire-alert rule\)\)\)) s
+5 242 M
+(    alert-rules\)\)) s
+5 220 M
+(\(define \(fire-alert rule\)) s
+5 209 M
+(  \(let \(\(alert `\(\(name . ,\(car rule\)\)) s
+5 198 M
+(                 \(severity . ,\(assoc-ref \(cdr rule\) 'severity\)\)) s
+5 187 M
+(                 \(message . ,\(assoc-ref \(cdr rule\) 'message\)\)) s
+5 176 M
+(                 \(timestamp . ,\(current-time\)\)\)\)\)) s
+5 165 M
+(    \(audit-append action: 'alert-fired alert: alert\)) s
+5 154 M
+(    \(notify-alert alert\)) s
+5 143 M
+(    alert\)\)) s
+5 121 M
+(------------------------------------------------------------------------------) s
+5 99 M
+(Dashboards) s
+5 77 M
+(Metric Export) s
+5 55 M
+(;; Prometheus format) s
+5 44 M
+(\(define \(export-prometheus\)) s
+5 33 M
+(  \(with-output-to-string) s
+5 22 M
+(    \(lambda \(\)) s
+5 11 M
+(      \(for-each) s
 _R
 S
 %%Page: (6) 6
@@ -1056,121 +1046,115 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(lambda \(rule\)) s
-5 770 M
-(      \(when \(eval-condition \(assoc-ref rule 'condition\)\)) s
-5 759 M
-(        \(fire-alert rule\)\)\)) s
-5 748 M
-(    alert-rules\)\)) s
-5 726 M
-(\(define \(fire-alert rule\)) s
-5 715 M
-(  \(let \(\(alert `\(\(name . ,\(car rule\)\)) s
-5 704 M
-(                 \(severity . ,\(assoc-ref \(cdr rule\) 'severity\)\)) s
-5 693 M
-(                 \(message . ,\(assoc-ref \(cdr rule\) 'message\)\)) s
-5 682 M
-(                 \(timestamp . ,\(current-time\)\)\)\)\)) s
-5 671 M
-(    \(audit-append action: 'alert-fired alert: alert\)) s
-5 660 M
-(    \(notify-alert alert\)) s
-5 649 M
-(    alert\)\)) s
-5 638 M
-(`) s
-5 616 M
-(------------------------------------------------------------------------------) s
-5 594 M
-(Dashboards) s
-5 572 M
-(Metric Export) s
-5 550 M
-(`scheme) s
-5 539 M
-(;; Prometheus format) s
-5 528 M
-(\(define \(export-prometheus\)) s
-5 517 M
-(  \(with-output-to-string) s
-5 506 M
-(    \(lambda \(\)) s
-5 495 M
-(      \(for-each) s
-5 484 M
 (        \(lambda \(metric\)) s
-5 473 M
+5 770 M
 (          \(let \(\(name \(car metric\)\)) s
-5 462 M
+5 759 M
 (                \(data \(cdr metric\)\)\)) s
-5 451 M
+5 748 M
 (            \(format #t "# HELP ~a ~a~%" name \(assoc-ref data 'help\)\)) s
-5 440 M
+5 737 M
 (            \(format #t "# TYPE ~a ~a~%" name \(assoc-ref data 'type\)\)) s
-5 429 M
+5 726 M
 (            \(format #t "~a ~a~%" name \(assoc-ref data 'value\)\)\)\)) s
-5 418 M
+5 715 M
 (        \(hash-table->alist metrics-registry\)\)\)\)\)) s
-5 407 M
-(`) s
-5 385 M
+5 693 M
 (Status Page) s
-5 363 M
-(`scheme) s
-5 352 M
+5 671 M
 (\(define \(status-page\)) s
-5 341 M
+5 660 M
 (  "Generate human-readable status") s
-5 330 M
+5 649 M
 (  `\(vault-status) s
-5 319 M
+5 638 M
 (    \(health . ,\(health-check\)\)) s
-5 308 M
+5 627 M
 (    \(uptime . ,\(vault-uptime\)\)) s
-5 297 M
+5 616 M
 (    \(version . ,\(vault-version\)\)) s
-5 286 M
+5 605 M
 (    \(metrics . \(\(storage . ,\(storage-metrics\)\)) s
-5 275 M
+5 594 M
 (                \(operations . ,\(operation-metrics\)\)) s
-5 264 M
+5 583 M
 (                \(network . ,\(network-metrics\)\)\)\)) s
-5 253 M
+5 572 M
 (    \(recent-errors . ,\(recent-errors 10\)\)\)\)) s
-5 242 M
-(`) s
-5 220 M
+5 550 M
 (------------------------------------------------------------------------------) s
-5 198 M
+5 528 M
 (Privacy) s
-5 176 M
+5 506 M
 (Metric Sanitization) s
-5 154 M
-(`scheme) s
-5 143 M
+5 484 M
 (;; Never expose sensitive data in metrics) s
-5 132 M
+5 473 M
 (\(define \(sanitize-metric-labels labels\)) s
-5 121 M
+5 462 M
 (  \(map \(lambda \(label\)) s
-5 110 M
+5 451 M
 (         \(case \(car label\)) s
-5 99 M
+5 440 M
 (           \(\(hash\) \(cons 'hash "[REDACTED]"\)\)) s
-5 88 M
+5 429 M
 (           \(\(principal\) \(cons 'principal \(hash-principal \(cdr label\)\)\)\)) s
-5 77 M
+5 418 M
 (           \(else label\)\)\)) s
-5 66 M
+5 407 M
 (       labels\)\)) s
-5 44 M
+5 385 M
 (\(define \(safe-metric name value #!key labels\)) s
-5 33 M
+5 374 M
 (  \(metric-set! name value labels: \(sanitize-metric-labels labels\)\)\)) s
+5 352 M
+(Aggregate Metrics Only) s
+5 330 M
+(;; Expose only aggregates, not individual operations) s
+5 319 M
+(\(define \(operation-metrics\)) s
+5 308 M
+(  `\(\(total-operations . ,\(metric-value 'cas.operations.total\)\)) s
+5 297 M
+(    \(operations-per-second . ,\(metric-value 'cas.operations.rate\)\)) s
+5 286 M
+(    \(average-latency-ms . ,\(metric-value 'cas.latency.average\)\)) s
+5 275 M
+(    \(p99-latency-ms . ,\(metric-value 'cas.latency.p99\)\)\)\)) s
+5 253 M
+(------------------------------------------------------------------------------) s
+5 231 M
+(Storage) s
+5 209 M
+(Metric Retention) s
+5 187 M
+(;; Metrics stored in soup with TTL) s
+5 176 M
+(\(define metric-retention \(* 30 24 3600\)\)  ; 30 days) s
+5 154 M
+(\(define \(store-metric-snapshot\)) s
+5 143 M
+(  "Periodic metric snapshot") s
+5 132 M
+(  \(let \(\(snapshot `\(\(timestamp . ,\(current-time\)\)) s
+5 121 M
+(                    \(metrics . ,\(export-all-metrics\)\)\)\)\)) s
+5 110 M
+(    \(soup-put snapshot) s
+5 99 M
+(      type: 'metric-snapshot) s
+5 88 M
+(      ttl: metric-retention\)\)\)) s
+5 66 M
+(\(define \(gc-old-metrics\)) s
+5 55 M
+(  "Remove expired metric snapshots") s
+5 44 M
+(  \(let \(\(expired \(soup-query type: 'metric-snapshot) s
+5 33 M
+(                             timestamp: \(< \(- \(current-time\) metric-retention\)\)\)\)\)) s
 5 22 M
-(`) s
+(    \(for-each soup-delete! expired\)\)\)) s
 _R
 S
 %%Page: (7) 7
@@ -1185,108 +1169,48 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(Aggregate Metrics Only) s
-5 759 M
-(`scheme) s
-5 748 M
-(;; Expose only aggregates, not individual operations) s
-5 737 M
-(\(define \(operation-metrics\)) s
-5 726 M
-(  `\(\(total-operations . ,\(metric-value 'cas.operations.total\)\)) s
-5 715 M
-(    \(operations-per-second . ,\(metric-value 'cas.operations.rate\)\)) s
-5 704 M
-(    \(average-latency-ms . ,\(metric-value 'cas.latency.average\)\)) s
-5 693 M
-(    \(p99-latency-ms . ,\(metric-value 'cas.latency.p99\)\)\)\)) s
-5 682 M
-(`) s
-5 660 M
-(------------------------------------------------------------------------------) s
-5 638 M
-(Storage) s
-5 616 M
-(Metric Retention) s
-5 594 M
-(`scheme) s
-5 583 M
-(;; Metrics stored in soup with TTL) s
-5 572 M
-(\(define metric-retention \(* 30 24 3600\)\)  ; 30 days) s
-5 550 M
-(\(define \(store-metric-snapshot\)) s
-5 539 M
-(  "Periodic metric snapshot") s
-5 528 M
-(  \(let \(\(snapshot `\(\(timestamp . ,\(current-time\)\)) s
-5 517 M
-(                    \(metrics . ,\(export-all-metrics\)\)\)\)\)) s
-5 506 M
-(    \(soup-put snapshot) s
-5 495 M
-(      type: 'metric-snapshot) s
-5 484 M
-(      ttl: metric-retention\)\)\)) s
-5 462 M
-(\(define \(gc-old-metrics\)) s
-5 451 M
-(  "Remove expired metric snapshots") s
-5 440 M
-(  \(let \(\(expired \(soup-query type: 'metric-snapshot) s
-5 429 M
-(                             timestamp: \(< \(- \(current-time\) metric-retention\)\)\)\)\)) s
-5 418 M
-(    \(for-each soup-delete! expired\)\)\)) s
-5 407 M
-(`) s
-5 385 M
 (Trace Sampling) s
-5 363 M
-(`scheme) s
-5 352 M
+5 759 M
 (;; Sample traces to control storage) s
-5 341 M
+5 748 M
 (\(define trace-sample-rate 0.1\)  ; 10%) s
-5 319 M
+5 726 M
 (\(define \(should-sample-trace?\)) s
-5 308 M
+5 715 M
 (  \(< \(random 1.0\) trace-sample-rate\)\)) s
-5 286 M
+5 693 M
 (\(define \(record-trace! trace\)) s
-5 275 M
+5 682 M
 (  \(when \(or \(trace-has-error? trace\)) s
-5 264 M
+5 671 M
 (            \(should-sample-trace?\)\)) s
-5 253 M
+5 660 M
 (    \(soup-put trace type: 'trace\)\)\)) s
-5 242 M
-(`) s
-5 220 M
+5 638 M
 (------------------------------------------------------------------------------) s
-5 198 M
+5 616 M
 (References) s
-5 176 M
+5 594 M
 (1. OpenTelemetry - Observability framework) s
-5 165 M
+5 583 M
 (2. Prometheus - Monitoring system) s
-5 154 M
+5 572 M
 (3. RFC-003: Cryptographic Audit Trail) s
-5 143 M
+5 561 M
 (4. RFC-028: Error Handling) s
-5 121 M
+5 539 M
 (------------------------------------------------------------------------------) s
-5 99 M
+5 517 M
 (Changelog) s
-5 77 M
+5 495 M
 (- 2026-01-07 - Initial draft) s
-5 55 M
+5 473 M
 (------------------------------------------------------------------------------) s
-5 33 M
+5 451 M
 (Implementation Status: Draft) s
-5 22 M
+5 440 M
 (Dependencies: soup, audit) s
-5 11 M
+5 429 M
 (Integration: Operations, alerting, dashboards) s
 _R
 S

@@ -37,30 +37,27 @@ Object Lifecycle
 
 States
 
-`
-                    ┌─────────┐
-          write     │         │
-        ─────────►  │  LIVE   │
-                    │         │
-                    └────┬────┘
-                         │
-              ┌──────────┼──────────┐
-              │          │          │
-              ▼          ▼          ▼
-         ┌────────┐ ┌────────┐ ┌────────┐
-         │PINNED  │ │TOMBSTONE│ │ORPHANED│
-         └────────┘ └────────┘ └───┬────┘
-                                   │
-                                   │ GC
-                                   ▼
-                              ┌────────┐
-                              │COLLECTED│
-                              └────────┘
-`
+                    +---------+
+          write     |         |
+        --------->  |  LIVE   |
+                    |         |
+                    +----+----+
+                         |
+              +----------+----------+
+              |          |          |
+              v          v          v
+         +--------+ +--------+ +--------+
+         |PINNED  | |TOMBSTONE| |ORPHANED|
+         +--------+ +--------+ +---+----+
+                                   |
+                                   | GC
+                                   v
+                              +--------+
+                              |COLLECTED|
+                              +--------+
 
 State Transitions
 
-`scheme
 (define (object-state hash)
   (cond
     ((pinned? hash) 'pinned)
@@ -72,7 +69,6 @@ State Transitions
   (and (eq? (object-state hash) 'orphaned)
        (not (in-grace-period? hash))
        (not (pending-replication? hash))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -80,7 +76,6 @@ Reference Counting
 
 Direct References
 
-`scheme
 ;; Track incoming references
 (define ref-counts (make-hash-table))
 
@@ -96,11 +91,9 @@ Direct References
 
 (define (reference-count hash)
   (hash-table-ref ref-counts hash 0))
-`
 
 Root References
 
-`scheme
 ;; GC roots - objects that are always reachable
 (define gc-roots (make-hash-set))
 
@@ -114,18 +107,15 @@ Root References
 
 (define (gc-root? hash)
   (hash-set-member? gc-roots hash))
-`
 
 Implicit Roots
 
-`scheme
 ;; Some objects are implicitly rooted
 (define (implicit-root? hash)
   (or (pinned? hash)
       (soup-object-type? hash 'certificate)  ; Certs are roots
       (soup-object-type? hash 'audit-entry)  ; Audit is sacred
       (recent-write? hash)))                 ; Grace period
-`
 
 ------------------------------------------------------------------------------
 
@@ -133,7 +123,6 @@ Mark and Sweep
 
 Mark Phase
 
-`scheme
 (define (mark-reachable)
   "Mark all objects reachable from roots"
   (let ((marked (make-hash-set)))
@@ -152,11 +141,9 @@ Mark Phase
               (all-object-hashes))
 
     marked))
-`
 
 Sweep Phase
 
-`scheme
 (define (sweep marked)
   "Collect unmarked objects"
   (let ((collected '()))
@@ -178,11 +165,9 @@ Sweep Phase
       size: (object-size obj)
       age: (object-age obj))
     (cas-delete! hash)))
-`
 
 Full GC
 
-`scheme
 (define (gc-full)
   "Perform full garbage collection"
   (let ((start (current-time)))
@@ -200,7 +185,6 @@ Full GC
         bytes-freed: (sum (map object-size collected)))
 
       collected)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -208,7 +192,6 @@ Incremental GC
 
 Generational Collection
 
-`scheme
 ;; Objects partitioned by age
 (define generations
   '((young . 86400)      ; < 1 day
@@ -228,11 +211,9 @@ Generational Collection
                               (eq? (object-generation h) gen))
                             (all-object-hashes))))
     (gc-candidates candidates)))
-`
 
 Write Barrier
 
-`scheme
 ;; Track modified objects for incremental GC
 (define modified-set (make-hash-set))
 
@@ -246,11 +227,9 @@ Write Barrier
   (let ((candidates (hash-set->list modified-set)))
     (hash-set-clear! modified-set)
     (gc-candidates candidates)))
-`
 
 Concurrent GC
 
-`scheme
 ;; GC runs concurrently with mutations
 (define gc-lock (make-mutex))
 (define gc-running? #f)
@@ -266,7 +245,6 @@ Concurrent GC
         (sweep-conservative marked)))
     (set! gc-running? #f)
     (mutex-unlock! gc-lock)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -274,7 +252,6 @@ Pinning
 
 Pin Management
 
-`scheme
 (define pins (make-hash-table))
 
 (define (pin! hash reason #!key duration)
@@ -296,11 +273,9 @@ Pin Management
     (and pin
          (or (not (assoc-ref pin 'expires))
              (> (assoc-ref pin 'expires) (current-time))))))
-`
 
 Transitive Pinning
 
-`scheme
 (define (pin-tree! root-hash reason)
   "Pin object and all objects it references"
   (let ((visited (make-hash-set)))
@@ -310,7 +285,6 @@ Transitive Pinning
         (pin! hash reason)
         (for-each pin-recursive (object-references hash))))
     (pin-recursive root-hash)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -318,7 +292,6 @@ Tombstones
 
 Tombstone Handling
 
-`scheme
 ;; Tombstones are never collected
 (define (tombstoned? hash)
   (let ((obj (soup-get hash)))
@@ -330,11 +303,9 @@ Tombstone Handling
     (when (tombstoned? hash)
       (error "Cannot resurrect tombstoned object" hash))
     (cas-put data)))
-`
 
 Tombstone Expiry
 
-`scheme
 ;; Optional: tombstones can expire
 (define (tombstone-expired? hash)
   (let ((tomb (soup-get hash)))
@@ -350,7 +321,6 @@ Tombstone Expiry
       (when (and (tombstoned? hash) (tombstone-expired? hash))
         (collect-object! hash)))
     (all-object-hashes)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -358,7 +328,6 @@ Grace Periods
 
 Write Grace Period
 
-`scheme
 ;; Recently written objects are protected
 (define write-grace-period 86400)  ; 24 hours
 
@@ -367,11 +336,9 @@ Write Grace Period
     (and obj
          (< (- (current-time) (soup-object-created obj))
             write-grace-period))))
-`
 
 Replication Grace Period
 
-`scheme
 ;; Objects pending replication are protected
 (define pending-replication (make-hash-set))
 
@@ -384,7 +351,6 @@ Replication Grace Period
 
 (define (pending-replication? hash)
   (hash-set-member? pending-replication hash))
-`
 
 ------------------------------------------------------------------------------
 
@@ -392,7 +358,6 @@ Distributed GC
 
 Coordinated Collection
 
-`scheme
 ;; Multi-vault GC requires coordination
 (define (distributed-gc vaults)
   "Coordinate GC across vault federation"
@@ -404,11 +369,9 @@ Coordinated Collection
       (for-each (lambda (vault)
                   (vault-sweep vault global-marked))
                 vaults))))
-`
 
 Remote Reference Tracking
 
-`scheme
 ;; Track references from remote vaults
 (define remote-refs (make-hash-table))
 
@@ -422,11 +385,9 @@ Remote Reference Tracking
 
 (define (has-remote-references? hash)
   (not (null? (hash-table-ref remote-refs hash '()))))
-`
 
 Lease-Based Collection
 
-`scheme
 ;; Remote vaults lease objects
 (define leases (make-hash-table))
 
@@ -441,7 +402,6 @@ Lease-Based Collection
     (any (lambda (lease)
            (> (cdr lease) (current-time)))
          hash-leases)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -449,7 +409,6 @@ GC Scheduling
 
 Triggers
 
-`scheme
 ;; GC triggered by various conditions
 (define (should-gc?)
   (or (> (storage-usage-percent) 80)      ; Disk pressure
@@ -465,11 +424,9 @@ Triggers
       (gc-generation 'young))             ; Pressure: young gen
     (else
       (gc-incremental))))                 ; Normal: incremental
-`
 
 Background GC
 
-`scheme
 (define gc-thread #f)
 
 (define (start-gc-daemon interval)
@@ -482,7 +439,6 @@ Background GC
             (when (should-gc?)
               (gc-schedule))
             (loop)))))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -490,7 +446,6 @@ Safety Mechanisms
 
 Dry Run
 
-`scheme
 (define (gc-dry-run)
   "Report what would be collected without collecting"
   (let* ((marked (mark-reachable))
@@ -500,11 +455,9 @@ Dry Run
     `((would-collect . ,(length would-collect))
       (bytes . ,(sum (map object-size would-collect)))
       (samples . ,(take would-collect 10)))))
-`
 
 Collection Log
 
-`scheme
 ;; Every collection is logged with recovery info
 (define (collect-with-log! hash)
   (let ((obj (cas-get hash)))
@@ -517,11 +470,9 @@ Collection Log
       references: (object-references hash)
       metadata: (soup-object-metadata obj))
     (cas-delete! hash)))
-`
 
 Recovery
 
-`scheme
 ;; Recover recently collected object from audit log
 (define (gc-recover hash)
   "Attempt to recover collected object"
@@ -533,7 +484,6 @@ Recovery
         (error "Object collected, metadata preserved in audit"
                (audit-metadata entry))
         (error "Object not found in recent collections"))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -541,7 +491,6 @@ Metrics
 
 GC Statistics
 
-`scheme
 (define gc-stats
   `((collections . 0)
     (bytes-freed . 0)
@@ -558,11 +507,9 @@ GC Statistics
                            (assoc-ref gc-stats 'objects-freed)))
       (total-time . ,(+ duration (assoc-ref gc-stats 'total-time)))
       (last-gc . ,(current-time)))))
-`
 
 Monitoring
 
-`scheme
 ;; Expose GC metrics
 (define (gc-metrics)
   `((storage-used . ,(storage-used))
@@ -571,7 +518,6 @@ Monitoring
     (orphan-estimate . ,(orphan-estimate))
     (pinned-count . ,(hash-table-size pins))
     (gc-stats . ,gc-stats)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -579,18 +525,15 @@ Security Considerations
 
 GC as Side Channel
 
-`scheme
 ;; GC timing can leak information about object references
 ;; Use constant-time operations where possible
 (define (constant-time-mark hash)
   (let ((refs (object-references hash)))
     ;; Always process same number of refs
     (for-each mark (pad-list refs max-refs))))
-`
 
 Denial of Service
 
-`scheme
 ;; Prevent GC starvation attacks
 (define max-pins-per-principal 10000)
 
@@ -599,7 +542,6 @@ Denial of Service
     (when (> count max-pins-per-principal)
       (error "Pin limit exceeded"))
     (pin! hash reason)))
-`
 
 ------------------------------------------------------------------------------
 

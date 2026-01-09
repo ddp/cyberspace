@@ -48,7 +48,6 @@ Lamport Clock Rules
 
 Each process P maintains counter C(P):
 
-`
 Rule 1: Before each event, increment C(P)
          C(P) := C(P) + 1
 
@@ -57,7 +56,6 @@ Rule 2: When sending message m, attach C(P)
 
 Rule 3: When receiving message (m, T), update clock
          C(P) := max(C(P), T) + 1
-`
 
 Clock Condition
 
@@ -71,23 +69,19 @@ Data Structures
 
 Logical Timestamp
 
-`scheme
 (define-record-type <lamport-clock>
   (make-lamport-clock counter node-id)
   lamport-clock?
   (counter clock-counter)
   (node-id clock-node-id))
-`
 
 Timestamped Event
 
-`scheme
 (define-record-type <timestamped-event>
   (make-timestamped-event clock event)
   timestamped-event?
   (clock event-clock)
   (event event-data))
-`
 
 ------------------------------------------------------------------------------
 
@@ -95,17 +89,14 @@ Operations
 
 Increment (Local Event)
 
-`scheme
 (define (clock-tick! clock)
   "Increment clock for local event"
   (set! (clock-counter clock)
         (+ 1 (clock-counter clock)))
   clock)
-`
 
 Send (Message Departure)
 
-`scheme
 (define (clock-send clock message)
   "Attach timestamp to outgoing message"
   (clock-tick! clock)
@@ -113,18 +104,15 @@ Send (Message Departure)
     (clock-counter clock)
     (clock-node-id clock)
     message))
-`
 
 Receive (Message Arrival)
 
-`scheme
 (define (clock-receive! clock timestamped-message)
   "Update clock on message receipt"
   (let ((remote-time (message-timestamp timestamped-message)))
     (set! (clock-counter clock)
           (+ 1 (max (clock-counter clock) remote-time)))
     (message-payload timestamped-message)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -132,7 +120,6 @@ Total Ordering
 
 Lamport clocks give partial order. For total order, break ties with node ID:
 
-`scheme
 (define (lamport-compare a b)
   "Total order: compare by timestamp, then by node-id"
   (let ((ta (clock-counter (event-clock a)))
@@ -145,7 +132,6 @@ Lamport clocks give partial order. For total order, break ties with node ID:
       ((string<? na nb) -1)
       ((string>? na nb) 1)
       (else 0))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -153,25 +139,21 @@ Application to Cyberspace
 
 Audit Trail Ordering
 
-`scheme
 (audit-entry
   (lamport-clock 1042 "alice-vault")
   (timestamp "2026-01-06T15:30:00Z")  ; Physical (advisory)
   (action (seal-commit "abc123"))
   ...)
-`
 
 Logical clock provides causal ordering even if physical clocks differ.
 
 Federation Message Ordering
 
-`scheme
 (federation-message
   (logical-time 573)
   (from "bob-vault")
   (type announcement)
   (payload ...))
-`
 
 Receivers update their clocks, ensuring consistent view of causality.
 
@@ -179,7 +161,6 @@ Conflict Detection
 
 If events are concurrent (neither a → b nor b → a):
 
-`scheme
 (define (concurrent? a b)
   "True if neither event happened before the other"
   (let ((ta (clock-counter (event-clock a)))
@@ -189,7 +170,6 @@ If events are concurrent (neither a → b nor b → a):
     (and (= ta tb)
          (not (equal? (clock-node-id (event-clock a))
                       (clock-node-id (event-clock b)))))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -197,7 +177,6 @@ Vector Clocks (Extension)
 
 For precise concurrency detection, use vector clocks:
 
-`scheme
 (define-record-type <vector-clock>
   (make-vector-clock entries)
   vector-clock?
@@ -205,7 +184,6 @@ For precise concurrency detection, use vector clocks:
 
 ;; a → b iff VC(a) < VC(b) (component-wise)
 ;; a || b (concurrent) iff neither VC(a) < VC(b) nor VC(b) < VC(a)
-`
 
 Trade-off: O(N) space vs O(1) for Lamport clocks.
 
@@ -215,30 +193,24 @@ Integration Points
 
 With Audit Trail (RFC-003)
 
-`scheme
 (audit-entry
   (sequence 42)           ; Local sequence
   (lamport-clock 1042)    ; Logical timestamp
   (physical-time "...")   ; Advisory only
   ...)
-`
 
 With Consensus (RFC-011)
 
-`scheme
 (consensus-message
   (sequence 573)          ; Consensus sequence
   (lamport-clock 2891)    ; Causal context
   ...)
-`
 
 With Replication (RFC-001)
 
-`scheme
 (seal-publish "2.0.0"
   (logical-time 892)
   ...)
-`
 
 ------------------------------------------------------------------------------
 
@@ -269,25 +241,21 @@ Thread Safety
 
 Clock updates must be atomic:
 
-`scheme
 (define (atomic-tick! clock)
   (mutex-lock! clock-mutex)
   (clock-tick! clock)
   (mutex-unlock! clock-mutex))
-`
 
 Persistence
 
 Clock state survives restarts:
 
-`scheme
 (define (save-clock clock path)
   (with-output-to-file path
     (lambda ()
       (write `(lamport-clock
                 (counter ,(clock-counter clock))
                 (node-id ,(clock-node-id clock)))))))
-`
 
 ------------------------------------------------------------------------------
 

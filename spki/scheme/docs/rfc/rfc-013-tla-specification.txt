@@ -39,7 +39,6 @@ TLA+ Overview
 
 TLA+ describes systems as state machines:
 
-`tla
 VARIABLES state, messages, decisions
 
 Init ==
@@ -54,13 +53,11 @@ Next ==
   \/ Decide(...)
 
 Spec == Init /\ [][Next]_<<state, messages, decisions>>
-`
 
 Safety Properties
 
 Invariants that must always hold:
 
-`tla
 TypeOK ==
   /\ state \in [Nodes -> {"idle", "prepared", "committed"}]
   /\ messages \subseteq Message
@@ -70,19 +67,16 @@ Agreement ==
   \A n1, n2 \in Nodes:
     (decisions[n1] # {} /\ decisions[n2] # {}) =>
       decisions[n1] = decisions[n2]
-`
 
 Liveness Properties
 
 Temporal properties about progress:
 
-`tla
 Termination ==
   <>(\A n \in Nodes: decisions[n] # {})
 
 EventualConsistency ==
   []<>(\A n1, n2 \in Nodes: state[n1] = state[n2])
-`
 
 ------------------------------------------------------------------------------
 
@@ -90,7 +84,6 @@ Cyberspace Protocol Specifications
 
 Threshold Signatures (RFC-007)
 
-`tla
 --------------------------- MODULE ThresholdSig ---------------------------
 EXTENDS Integers, FiniteSets
 
@@ -127,11 +120,9 @@ Liveness ==
   (Cardinality(Signers) >= Threshold) => <>(verified)
 
 =============================================================================
-`
 
 Audit Trail (RFC-003)
 
-`tla
 --------------------------- MODULE AuditTrail ---------------------------
 EXTENDS Integers, Sequences
 
@@ -165,11 +156,9 @@ MonotonicSequence ==
     log[i+1].seq = log[i].seq + 1
 
 =============================================================================
-`
 
 Byzantine Consensus (RFC-011)
 
-`tla
 --------------------------- MODULE PBFT ---------------------------
 EXTENDS Integers, FiniteSets
 
@@ -215,7 +204,6 @@ Agreement ==
       decisions[n1] = decisions[n2]
 
 =============================================================================
-`
 
 ------------------------------------------------------------------------------
 
@@ -227,29 +215,24 @@ Define state machine and properties.
 
 2. Configure Model
 
-`tla
 CONSTANTS
   Nodes = {n1, n2, n3, n4}
   f = 1
   Values = {v1, v2}
-`
 
 3. Run TLC Model Checker
 
-`bash
 $ tlc PBFT.tla
 TLC2 Version 2.18
 ...
 Model checking completed. No errors found.
   States explored: 847293
   Distinct states: 12847
-`
 
 4. Analyze Counterexamples
 
 If property violated, TLC shows trace:
 
-`
 Error: Invariant Agreement is violated.
 Trace:
   State 1: <Initial>
@@ -257,7 +240,6 @@ Trace:
   State 3: Prepare(n2, v1)
   ...
   State 12: decisions = [n1 |-> {v1}, n2 |-> {v2}]  << VIOLATION
-`
 
 ------------------------------------------------------------------------------
 
@@ -265,18 +247,15 @@ Integration with Implementation
 
 Specification → Implementation
 
-`
 TLA+ Spec          Scheme Implementation
 -----------        ---------------------
 VARIABLES state    (define-record-type <state> ...)
 Init ==            (define (init) ...)
 Action(x) ==       (define (action x) ...)
 Invariant          (assert (invariant? state))
-`
 
 Runtime Assertions
 
-`scheme
 (define (append-audit! entry)
   ;; TLA+ invariant: MonotonicSequence
   (assert (> (entry-sequence entry)
@@ -286,7 +265,6 @@ Runtime Assertions
                   (entry-hash (last-entry))))
   ;; Proceed with append
   ...)
-`
 
 ------------------------------------------------------------------------------
 
@@ -294,7 +272,6 @@ PlusCal (Algorithmic TLA+)
 
 Higher-level syntax that compiles to TLA+:
 
-`tla
 --algorithm ThresholdSign {
   variables signatures = {}, verified = FALSE;
 
@@ -311,7 +288,6 @@ Higher-level syntax that compiles to TLA+:
       verified := TRUE;
   }
 }
-`
 
 ------------------------------------------------------------------------------
 

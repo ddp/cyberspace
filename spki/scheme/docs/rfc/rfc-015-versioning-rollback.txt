@@ -23,12 +23,10 @@ Users need simple answers to simple questions:
 
 Git provides mechanisms. Cyberspace provides semantics:
 
-`
 seal-version         → "2.1.0"
 seal-versions        → [1.0.0, 1.1.0, 2.0.0, 2.1.0]
 seal-rollback 2.0.0  → Done. Now at 2.0.0.
 seal-recover         → Here's what you can recover.
-`
 
 ------------------------------------------------------------------------------
 
@@ -36,15 +34,13 @@ Specification
 
 Version Model
 
-`
                          HEAD
                           ↓
-    1.0.0 ──→ 1.1.0 ──→ 2.0.0 ──→ 2.1.0
-      │                   │
-      │                   └── seal-rollback target
-      │
-      └── seal-archive snapshots
-`
+    1.0.0 --→ 1.1.0 --→ 2.0.0 --→ 2.1.0
+      |                   |
+      |                   +-- seal-rollback target
+      |
+      +-- seal-archive snapshots
 
 Versions are semantic (X.Y.Z), immutable, signed.
 
@@ -58,10 +54,8 @@ seal-version
 
 Report current version.
 
-`scheme
 (seal-version)
 ;; => "2.1.0" or "2.1.0+3" (3 commits past release)
-`
 
 Output format:
 - X.Y.Z - Exactly at release
@@ -73,7 +67,6 @@ seal-versions
 
 List all versions.
 
-`scheme
 (seal-versions)
 ;; => ("1.0.0" "1.1.0" "2.0.0" "2.1.0")
 
@@ -83,15 +76,12 @@ List all versions.
 ;; 1.1.0  2026-01-05  "Bug fixes"
 ;; 2.0.0  2026-01-10  "New governance model"
 ;; 2.1.0  2026-01-15  "Performance improvements"
-`
 
 seal-rollback
 
 Roll back to specific version.
 
-`scheme
 (seal-rollback "2.0.0")
-`
 
 Process:
 1. Verify version exists
@@ -101,14 +91,12 @@ Process:
 5. Optionally create rollback tag
 
 Rollback commit message:
-`
 Rollback to 2.0.0
 
 Restored vault state to version 2.0.0.
 Previous HEAD was 2.1.0+3.
 
 Reason: [user-provided or "Manual rollback"]
-`
 
 NOT a git reset. History preserved. Rollback is a forward operation.
 
@@ -116,19 +104,16 @@ seal-diff
 
 Compare versions.
 
-`scheme
 (seal-diff "2.0.0" "2.1.0")
 ;; Shows what changed between versions
 
 (seal-diff "2.0.0")
 ;; Shows what changed since 2.0.0
-`
 
 seal-recover
 
 Recovery options for mistakes.
 
-`scheme
 (seal-recover)
 ;; =>
 ;; Recovery options:
@@ -136,7 +121,6 @@ Recovery options for mistakes.
 ;;   2. Last commit (seal-undo)
 ;;   3. Version 2.1.0 (seal-rollback "2.1.0")
 ;;   4. Archive vault-2.0.0.archive (seal-restore)
-`
 
 ------------------------------------------------------------------------------
 
@@ -144,25 +128,21 @@ Rollback Semantics
 
 Forward Rollback (Default)
 
-`
 Before:  1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → HEAD
                           ↑
                      rollback target
 
 After:   1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → [rollback commit]
-                          │                      │
-                          └──────────────────────┘
+                          |                      |
+                          +----------------------+
                               contents match
 
-`
 
 History preserved. Audit trail shows rollback.
 
 Hard Rollback (Dangerous)
 
-`scheme
 (seal-rollback "2.0.0" hard: #t)
-`
 
 Actually resets to version. Destroys history.
 
@@ -173,15 +153,11 @@ Requires:
 
 Rollback with Stash
 
-`scheme
 (seal-rollback "2.0.0" stash: #t)
-`
 
 Stashes uncommitted changes before rollback. Can recover with:
 
-`scheme
 (seal-stash-pop)
-`
 
 ------------------------------------------------------------------------------
 
@@ -189,24 +165,19 @@ Version Tags
 
 Automatic Tagging
 
-`scheme
 (seal-release "2.1.0")
 ;; Creates:
 ;;   - Git tag: 2.1.0
 ;;   - Signature: .vault/releases/2.1.0.sig
 ;;   - Audit entry
-`
 
 Rollback Tags
 
-`scheme
 (seal-rollback "2.0.0" tag: "rollback-2026-01-15")
 ;; Creates additional tag marking rollback point
-`
 
 Tag Listing
 
-`scheme
 (seal-tags)
 ;; =>
 ;; 1.0.0              2026-01-01  release
@@ -214,7 +185,6 @@ Tag Listing
 ;; 2.0.0              2026-01-10  release
 ;; 2.1.0              2026-01-15  release
 ;; rollback-2026-01-15 2026-01-15  rollback
-`
 
 ------------------------------------------------------------------------------
 
@@ -222,37 +192,29 @@ Recovery Scenarios
 
 Scenario 1: Bad Commit
 
-`scheme
 ;; Oops, committed broken code
 (seal-undo)                    ; Undo last commit
 ;; or
 (seal-rollback "2.1.0")        ; Back to last release
-`
 
 Scenario 2: Bad Release
 
-`scheme
 ;; Released 2.2.0 but it's broken
 (seal-rollback "2.1.0")        ; Back to good version
 (seal-release "2.2.1")         ; Patch release
-`
 
 Scenario 3: Lost Changes
 
-`scheme
 ;; Accidentally discarded work
 (seal-recover)                 ; See options
 (seal-stash-pop)               ; If stashed
 ;; or
 (seal-reflog)                  ; Find lost commits
-`
 
 Scenario 4: Corrupted Vault
 
-`scheme
 ;; Something went very wrong
 (seal-restore "vault-2.0.0.archive" verify-key: "alice.pub")
-`
 
 ------------------------------------------------------------------------------
 
@@ -260,7 +222,6 @@ Audit Integration
 
 Every version operation recorded:
 
-`scheme
 (audit-entry
   (action
     (verb seal-rollback)
@@ -270,7 +231,6 @@ Every version operation recorded:
       (method forward)
       (reason "Production incident")))
   (seal ...))
-`
 
 Audit trail answers:
 - Who rolled back?
@@ -282,7 +242,6 @@ Audit trail answers:
 
 CLI Interface
 
-`bash
 Current version
 $ seal version
 2.1.0+3
@@ -314,7 +273,6 @@ Recovery options:
   1. seal undo          - Undo last commit
   2. seal rollback 2.1.0 - Return to last release
   3. seal stash pop     - Recover stashed changes
-`
 
 ------------------------------------------------------------------------------
 
@@ -322,31 +280,25 @@ Safety Mechanisms
 
 Uncommitted Changes
 
-`scheme
 (seal-rollback "2.0.0")
 ;; Error: Uncommitted changes detected.
 ;; Use --stash to save changes, or --force to discard.
-`
 
 Protected Versions
 
-`scheme
 (vault-config 'protected-versions '("1.0.0" "2.0.0"))
 
 (seal-rollback "0.9.0")
 ;; Warning: Rolling back past protected version 1.0.0
 ;; This may break compatibility. Continue? [y/N]
-`
 
 Rollback Limits
 
-`scheme
 (vault-config 'max-rollback-distance 10)
 
 (seal-rollback "0.1.0")
 ;; Error: Rollback distance (20 versions) exceeds limit (10).
 ;; Use --force to override.
-`
 
 ------------------------------------------------------------------------------
 
@@ -354,7 +306,6 @@ Implementation
 
 seal-rollback Implementation
 
-`scheme
 (define (seal-rollback version #!key hard stash force reason tag)
   "Roll back vault to specified version"
 
@@ -399,7 +350,6 @@ seal-rollback Implementation
   "Reset to version (destroys history)"
   (print "WARNING: Hard rollback destroys history")
   (run-command "git" "reset" "--hard" version))
-`
 
 ------------------------------------------------------------------------------
 

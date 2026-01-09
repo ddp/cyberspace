@@ -37,35 +37,29 @@ Specification
 
 Tiered Signing Model
 
-`
-┌─────────────────────────────────────────────────────────────┐
-│                    SIGNING TIERS                            │
-├─────────────────────────────────────────────────────────────┤
-│  Development     1-of-1    Single developer can iterate    │
-│  Staging         2-of-2    Peer review required             │
-│  Production      3-of-5    Governance council quorum        │
-│  Emergency       5-of-7    Full council for critical ops    │
-└─────────────────────────────────────────────────────────────┘
-`
++-------------------------------------------------------------+
+|                    SIGNING TIERS                            |
++-------------------------------------------------------------+
+|  Development     1-of-1    Single developer can iterate    |
+|  Staging         2-of-2    Peer review required             |
+|  Production      3-of-5    Governance council quorum        |
+|  Emergency       5-of-7    Full council for critical ops    |
++-------------------------------------------------------------+
 
 Script Signature Record
 
-`scheme
 (define-record-type <script-signature>
   (make-script-signature signer signature timestamp)
   script-signature?
   (signer signature-signer)        ; Ed25519 public key (32 bytes)
   (signature signature-value)      ; Ed25519 signature (64 bytes)
   (timestamp signature-timestamp)) ; Unix epoch seconds
-`
 
 Signing a Script
 
-`scheme
 (define (sign-script script-content private-key #!optional public-key)
   "Sign script content with a private key"
   ...)
-`
 
 Process:
 1. Convert content to blob if string
@@ -76,17 +70,14 @@ Process:
 
 Verifying Single Signature
 
-`scheme
 (define (verify-script script-content signature-record)
   "Verify a script signature"
   (ed25519-verify (signature-signer signature-record)
                   content-blob
                   (signature-value signature-record)))
-`
 
 Threshold Verification
 
-`scheme
 (define (verify-threshold-script script-content signature-records threshold)
   "Verify threshold signatures on a script
    Returns: #t if at least K signatures are valid"
@@ -95,18 +86,15 @@ Threshold Verification
                              signature-records))
          (valid-count (length valid-sigs)))
     (>= valid-count threshold)))
-`
 
 ------------------------------------------------------------------------------
 
 Signature File Format
 
-`scheme
 ;; deploy.sig
 ((signature "hex-signature" "hex-pubkey" 1767685100)
  (signature "hex-signature" "hex-pubkey" 1767685200)
  (signature "hex-signature" "hex-pubkey" 1767685300))
-`
 
 Each entry contains:
 - Signature bytes (hex-encoded)
@@ -119,7 +107,6 @@ CLI Interface
 
 cyberspace verify
 
-`bash
 $ cyberspace verify deploy.scm deploy.sig \
     --threshold 3 \
     --keys alice.pub bob.pub carol.pub dave.pub eve.pub
@@ -137,11 +124,9 @@ Found 3 signature(s) in file
   Signature 3: ✓ VALID (signer: 7d3e8b2c1a0f5e4d...)
 
 ✓ SUCCESS: Script verified with 3-of-3 threshold
-`
 
 cyberspace run
 
-`bash
 $ cyberspace run deploy.scm deploy.sig \
     --threshold 3 \
     --keys alice.pub bob.pub carol.pub dave.pub eve.pub
@@ -154,7 +139,6 @@ $ cyberspace run deploy.scm deploy.sig \
 (seal-release "2.0.0"
   message: "Major release with new governance model"
   preserve: #t)
-`
 
 ------------------------------------------------------------------------------
 
@@ -162,7 +146,6 @@ Governance Scenarios
 
 Production Deployment (3-of-5)
 
-`scheme
 ;; Governance Council: Alice, Bob, Carol, Dave, Eve
 ;; Threshold: 3 signatures required
 
@@ -188,22 +171,18 @@ Production Deployment (3-of-5)
                         (list sig-alice sig-carol sig-dave)
                         3)
 ;; => #t
-`
 
 Insufficient Signatures
 
-`scheme
 ;; Only 2 signatures
 (define insufficient-sigs
   (list sig-alice sig-carol))
 
 (verify-threshold-script deployment-script insufficient-sigs 3)
 ;; => #f (rejected: need 3, got 2)
-`
 
 Tampered Script Detection
 
-`scheme
 ;; Attacker modifies script
 (define tampered-script
   "(seal-release \"2.0.0\"
@@ -212,7 +191,6 @@ Tampered Script Detection
 
 (verify-threshold-script tampered-script sufficient-sigs 3)
 ;; => #f (signatures don't match modified content)
-`
 
 ------------------------------------------------------------------------------
 
@@ -222,12 +200,10 @@ Two threshold approaches exist:
 
 Multi-Signature (This RFC)
 
-`
 Each party: own keypair
 Signing:    each signs independently
 Verify:     count valid signatures ≥ K
 Use case:   governance, approvals
-`
 
 Advantages:
 - Each party maintains own key
@@ -237,12 +213,10 @@ Advantages:
 
 Shamir Splitting (RFC-008)
 
-`
 Single key: split into N shares
 Signing:    K parties reconstruct, sign once
 Verify:     single signature
 Use case:   key backup, recovery
-`
 
 Advantages:
 - Single signature output
@@ -294,13 +268,11 @@ Audit Integration
 
 Every verified execution records:
 
-`scheme
 (audit-append
   actor: (threshold-verifier-list)
   action: (list 'script-execute script-hash)
   motivation: "Production deployment authorized"
   context: (list 'threshold 3 'signatures 3))
-`
 
 Audit trail shows:
 - Which signers authorized

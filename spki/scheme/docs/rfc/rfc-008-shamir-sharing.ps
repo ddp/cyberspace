@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 11:58:08 2026
+%%CreationDate: Fri Jan  9 12:12:48 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -489,51 +489,49 @@ _S
 5 330 M
 (Share Record) s
 5 308 M
-(`scheme) s
-5 297 M
 (\(define-record-type <shamir-share>) s
-5 286 M
+5 297 M
 (  \(make-shamir-share id threshold x y\)) s
-5 275 M
+5 286 M
 (  shamir-share?) s
-5 264 M
+5 275 M
 (  \(id share-id\)            ; Symbol: share-1, share-2, etc.) s
-5 253 M
+5 264 M
 (  \(threshold share-threshold\)  ; K value) s
-5 242 M
+5 253 M
 (  \(x share-x\)              ; X-coordinate \(1 to N\)) s
-5 231 M
+5 242 M
 (  \(y share-y\)\)             ; Y-coordinate \(blob, same size as secret\)) s
 5 220 M
-(`) s
-5 198 M
 (Splitting a Secret) s
-5 176 M
-(`scheme) s
-5 165 M
+5 198 M
 (\(shamir-split secret #!key \(threshold 3\) \(total 5\)\)) s
-5 154 M
-(`) s
-5 132 M
+5 176 M
 (Parameters:) s
-5 121 M
+5 165 M
 (- secret - Blob to split \(any size, typically 32 or 64 bytes\)) s
-5 110 M
+5 154 M
 (- threshold - Minimum shares to reconstruct \(K\)) s
-5 99 M
+5 143 M
 (- total - Total shares to create \(N\)) s
-5 77 M
+5 121 M
 (Returns: List of N shamir-share records) s
-5 55 M
+5 99 M
 (Algorithm:) s
-5 44 M
+5 88 M
 (1. For each byte of secret:) s
-5 33 M
+5 77 M
 (   - Generate K-1 random coefficients) s
-5 22 M
+5 66 M
 (   - Coefficient[0] = secret byte) s
-5 11 M
+5 55 M
 (   - Polynomial: f\(x\) = a\342\\202\\200 + a\342\\202\\201x + a\342\\202\\202x\302\262 + ... + a\342\\202\\226\342\\202) s
+5 44 M
+(\\213\342\\202\\201x\341\265\\217\342\\201\273\302\271) s
+5 33 M
+(2. Evaluate polynomial at x = 1, 2, ..., N) s
+5 22 M
+(3. Package \(x, f\(x\)\) pairs as shares) s
 _R
 S
 %%Page: (2) 2
@@ -548,105 +546,99 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(\\213\342\\202\\201x\341\265\\217\342\\201\273\302\271) s
-5 770 M
-(2. Evaluate polynomial at x = 1, 2, ..., N) s
-5 759 M
-(3. Package \(x, f\(x\)\) pairs as shares) s
-5 737 M
 (Reconstructing a Secret) s
-5 715 M
-(`scheme) s
-5 704 M
+5 759 M
 (\(shamir-reconstruct shares\)) s
-5 693 M
-(`) s
-5 671 M
+5 737 M
 (Parameters:) s
-5 660 M
+5 726 M
 (- shares - List of at least K shamir-share records) s
-5 638 M
+5 704 M
 (Returns: Reconstructed secret blob) s
-5 616 M
+5 682 M
 (Algorithm:) s
-5 605 M
+5 671 M
 (1. Take first K shares) s
-5 594 M
+5 660 M
 (2. For each byte position:) s
-5 583 M
+5 649 M
 (   - Use Lagrange interpolation) s
-5 572 M
+5 638 M
 (   - Compute f\(0\) = secret byte) s
-5 561 M
+5 627 M
 (3. Assemble reconstructed secret) s
-5 539 M
+5 605 M
 (------------------------------------------------------------------------------) s
-5 517 M
+5 583 M
 (Galois Field Arithmetic) s
-5 495 M
+5 561 M
 (Operations performed in GF\(2\342\\201\270\) with irreducible polynomial x\342\\201\270 + x\342\\201\264 + x\302\263 +) s
-5 484 M
+5 550 M
 ( x + 1:) s
-5 462 M
-(`scheme) s
-5 451 M
+5 528 M
 (\(define gf256-primitive #x11b\)  ; x^8 + x^4 + x^3 + x + 1) s
-5 429 M
+5 506 M
 (\(define \(gf256-mul a b\)) s
-5 418 M
+5 495 M
 (  "Multiply in GF\(2^8\)") s
-5 407 M
+5 484 M
 (  ...\)) s
-5 385 M
+5 462 M
 (\(define \(gf256-inv a\)) s
-5 374 M
+5 451 M
 (  "Multiplicative inverse in GF\(2^8\)") s
-5 363 M
+5 440 M
 (  ...\)) s
-5 341 M
+5 418 M
 (\(define \(gf256-poly-eval coeffs x\)) s
-5 330 M
+5 407 M
 (  "Evaluate polynomial at x using Horner's method") s
-5 319 M
+5 396 M
 (  ...\)) s
-5 308 M
-(`) s
-5 286 M
+5 374 M
 (GF\(2\342\\201\270\) ensures:) s
-5 275 M
+5 363 M
 (- All operations stay within byte range) s
-5 264 M
+5 352 M
 (- No overflow issues) s
-5 253 M
+5 341 M
 (- Proper field properties \(every non-zero element has inverse\)) s
-5 231 M
+5 319 M
 (------------------------------------------------------------------------------) s
-5 209 M
+5 297 M
 (Usage Examples) s
-5 187 M
+5 275 M
 (Basic Secret Splitting) s
-5 165 M
-(`scheme) s
-5 154 M
+5 253 M
 (\(import crypto-ffi\)) s
-5 132 M
+5 231 M
 (\(sodium-init\)) s
-5 110 M
+5 209 M
 (;; Create a 32-byte secret) s
-5 99 M
+5 198 M
 (\(define secret \(make-blob 32\)\)) s
-5 88 M
+5 187 M
 (;; ... fill with secret data ...) s
-5 66 M
+5 165 M
 (;; Split into 5 shares, threshold 3) s
-5 55 M
+5 154 M
 (\(define shares \(shamir-split secret threshold: 3 total: 5\)\)) s
-5 33 M
+5 132 M
 (;; Distribute shares to custodians) s
-5 22 M
+5 121 M
 (\(print "Created " \(length shares\) " shares"\)) s
-5 11 M
+5 110 M
 (\(print "Threshold: " \(share-threshold \(car shares\)\)\)) s
+5 88 M
+(Reconstruction from K Shares) s
+5 66 M
+(;; Collect any 3 shares) s
+5 55 M
+(\(define collected \(list share-1 share-3 share-5\)\)) s
+5 33 M
+(;; Reconstruct) s
+5 22 M
+(\(define reconstructed \(shamir-reconstruct collected\)\)) s
 _R
 S
 %%Page: (3) 3
@@ -661,105 +653,107 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(`) s
-5 759 M
-(Reconstruction from K Shares) s
-5 737 M
-(`scheme) s
-5 726 M
-(;; Collect any 3 shares) s
-5 715 M
-(\(define collected \(list share-1 share-3 share-5\)\)) s
-5 693 M
-(;; Reconstruct) s
-5 682 M
-(\(define reconstructed \(shamir-reconstruct collected\)\)) s
-5 660 M
 (;; Verify) s
-5 649 M
+5 770 M
 (\(if \(equal? \(blob->hex secret\) \(blob->hex reconstructed\)\)) s
-5 638 M
+5 759 M
 (    \(print "\342\\234\\223 Reconstruction successful!"\)) s
-5 627 M
+5 748 M
 (    \(print "\342\\234\\227 Reconstruction failed"\)\)) s
-5 616 M
-(`) s
-5 594 M
+5 726 M
 (Ed25519 Key Backup) s
-5 572 M
-(`scheme) s
-5 561 M
+5 704 M
 (;; Generate keypair) s
-5 550 M
+5 693 M
 (\(define keypair \(ed25519-keypair\)\)) s
-5 539 M
+5 682 M
 (\(define public-key \(car keypair\)\)) s
-5 528 M
+5 671 M
 (\(define private-key \(cadr keypair\)\)) s
-5 506 M
+5 649 M
 (;; Split private key \(5-of-7 for production\)) s
-5 495 M
+5 638 M
 (\(define key-shares \(shamir-split private-key threshold: 5 total: 7\)\)) s
-5 473 M
+5 616 M
 (;; Later: reconstruct and verify) s
-5 462 M
+5 605 M
 (\(define recovered-key \(shamir-reconstruct \(take key-shares 5\)\)\)) s
-5 440 M
+5 583 M
 (;; Test: sign with recovered key) s
-5 429 M
+5 572 M
 (\(define message "Test message"\)) s
-5 418 M
+5 561 M
 (\(define signature \(ed25519-sign recovered-key message\)\)) s
-5 407 M
+5 550 M
 (\(define valid? \(ed25519-verify public-key message signature\)\)) s
-5 385 M
+5 528 M
 (\(if valid?) s
-5 374 M
+5 517 M
 (    \(print "\342\\234\\223 Recovered key produces valid signatures!"\)) s
-5 363 M
+5 506 M
 (    \(print "\342\\234\\227 Key recovery failed"\)\)) s
-5 352 M
-(`) s
-5 330 M
+5 484 M
 (------------------------------------------------------------------------------) s
-5 308 M
+5 462 M
 (Security Properties) s
-5 286 M
+5 440 M
 (Information-Theoretic Security) s
-5 264 M
+5 418 M
 (With K-1 shares:) s
-5 253 M
+5 407 M
 (- No information about secret is revealed) s
-5 242 M
+5 396 M
 (- Not computationally hard - literally impossible) s
-5 231 M
+5 385 M
 (- Even infinite compute power cannot break) s
-5 209 M
+5 363 M
 (This is because K-1 points determine infinitely many degree-\(K-1\) polynomials.) s
-5 187 M
+5 341 M
 (Share Independence) s
-5 165 M
+5 319 M
 (Each share is uniformly random:) s
-5 154 M
+5 308 M
 (- Looks like random bytes) s
-5 143 M
+5 297 M
 (- No correlation between shares) s
-5 132 M
+5 286 M
 (- Safe to store on untrusted media) s
-5 110 M
+5 264 M
 (Threshold Guarantee) s
-5 88 M
+5 242 M
 (Exactly K shares required:) s
-5 77 M
+5 231 M
 (- K shares: reconstruction succeeds) s
-5 66 M
+5 220 M
 (- K-1 shares: no information) s
-5 55 M
+5 209 M
 (- K+1 shares: still works \(overdetermined\)) s
-5 33 M
+5 187 M
 (------------------------------------------------------------------------------) s
-5 11 M
+5 165 M
 (Threshold Selection Guidelines) s
+5 143 M
+(| Use Case | Threshold | Total | Rationale |) s
+5 132 M
+(|----------|-----------|-------|-----------|) s
+5 121 M
+(| Personal backup | 2-of-3 | Simple recovery |) s
+5 110 M
+(| Team key | 3-of-5 | Majority required |) s
+5 99 M
+(| Organization root | 5-of-7 | Supermajority |) s
+5 88 M
+(| Hardware ceremony | 7-of-11 | High assurance |) s
+5 77 M
+(| Paranoid | 11-of-15 | Maximum distribution |) s
+5 55 M
+(Considerations) s
+5 33 M
+(- Availability: Higher K = harder to recover) s
+5 22 M
+(- Security: Lower K = easier to collude) s
+5 11 M
+(- Geography: Consider time zones for ceremonies) s
 _R
 S
 %%Page: (4) 4
@@ -773,108 +767,104 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(| Use Case | Threshold | Total | Rationale |) s
-5 759 M
-(|----------|-----------|-------|-----------|) s
-5 748 M
-(| Personal backup | 2-of-3 | Simple recovery |) s
-5 737 M
-(| Team key | 3-of-5 | Majority required |) s
-5 726 M
-(| Organization root | 5-of-7 | Supermajority |) s
-5 715 M
-(| Hardware ceremony | 7-of-11 | High assurance |) s
-5 704 M
-(| Paranoid | 11-of-15 | Maximum distribution |) s
-5 682 M
-(Considerations) s
-5 660 M
-(- Availability: Higher K = harder to recover) s
-5 649 M
-(- Security: Lower K = easier to collude) s
-5 638 M
-(- Geography: Consider time zones for ceremonies) s
-5 627 M
+5 781 M
 (- Succession: What if custodians unavailable?) s
-5 605 M
+5 759 M
 (------------------------------------------------------------------------------) s
-5 583 M
+5 737 M
 (Share Distribution) s
-5 561 M
+5 715 M
 (Physical Security) s
-5 539 M
-(`) s
-5 528 M
+5 693 M
 (Share 1: Safe deposit box \(Bank A\)) s
-5 517 M
+5 682 M
 (Share 2: Home safe) s
-5 506 M
+5 671 M
 (Share 3: Attorney's vault) s
-5 495 M
+5 660 M
 (Share 4: Trusted family member) s
-5 484 M
+5 649 M
 (Share 5: Offshore location) s
-5 473 M
-(`) s
-5 451 M
+5 627 M
 (Digital Storage) s
-5 429 M
-(`) s
-5 418 M
+5 605 M
 (Share 1: Hardware security module) s
-5 407 M
+5 594 M
 (Share 2: Air-gapped laptop) s
-5 396 M
+5 583 M
 (Share 3: Encrypted USB \(passphrase protected\)) s
-5 385 M
+5 572 M
 (Share 4: Paper printout \(secure location\)) s
-5 374 M
+5 561 M
 (Share 5: Tattoo \(not recommended\)) s
-5 363 M
-(`) s
-5 341 M
+5 539 M
 (Geographic Distribution) s
-5 319 M
+5 517 M
 (- Different jurisdictions) s
-5 308 M
+5 506 M
 (- Different failure domains) s
-5 297 M
+5 495 M
 (- Different time zones \(for ceremonies\)) s
-5 275 M
+5 473 M
 (------------------------------------------------------------------------------) s
-5 253 M
+5 451 M
 (Verification Without Reconstruction) s
-5 231 M
+5 429 M
 (For periodic verification that shares are intact:) s
-5 209 M
-(`scheme) s
-5 198 M
+5 407 M
 (;; Each custodian verifies their share) s
-5 187 M
+5 396 M
 (\(define \(verify-share share expected-id expected-threshold\)) s
-5 176 M
+5 385 M
 (  \(and \(eq? \(share-id share\) expected-id\)) s
-5 165 M
+5 374 M
 (       \(= \(share-threshold share\) expected-threshold\)) s
-5 154 M
+5 363 M
 (       \(= \(blob-size \(share-y share\)\) expected-length\)\)\)) s
-5 143 M
-(`) s
-5 121 M
+5 341 M
 (Full reconstruction should be rare:) s
-5 110 M
+5 330 M
 (- Key rotation ceremonies) s
-5 99 M
+5 319 M
 (- Emergency recovery) s
-5 88 M
+5 308 M
 (- Succession events) s
-5 66 M
+5 286 M
 (------------------------------------------------------------------------------) s
-5 44 M
+5 264 M
 (Integration with Threshold Signatures) s
-5 22 M
+5 242 M
 (Two complementary approaches:) s
+5 220 M
+(Shamir for Key Backup \(This RFC\)) s
+5 209 M
+(Private key \342\\206\\222 split \342\\206\\222 N shares) s
+5 198 M
+(Recovery: K shares \342\\206\\222 reconstruct \342\\206\\222 use key) s
+5 176 M
+(Multi-Signature for Governance \(RFC-007\)) s
+5 165 M
+(N parties \342\\206\\222 N keys \342\\206\\222 N signatures) s
+5 154 M
+(Verification: count valid \342\\211\245 K) s
+5 132 M
+(Use Shamir when:) s
+5 121 M
+(- Backing up existing keys) s
+5 110 M
+(- Emergency recovery scenarios) s
+5 99 M
+(- Single key must be reconstructable) s
+5 77 M
+(Use Multi-Sig when:) s
+5 66 M
+(- Ongoing governance decisions) s
+5 55 M
+(- Need audit trail of who signed) s
+5 44 M
+(- Asynchronous authorization) s
+5 22 M
+(------------------------------------------------------------------------------) s
 _R
 S
 %%Page: (5) 5
@@ -889,153 +879,102 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(Shamir for Key Backup \(This RFC\)) s
-5 770 M
-(`) s
-5 759 M
-(Private key \342\\206\\222 split \342\\206\\222 N shares) s
-5 748 M
-(Recovery: K shares \342\\206\\222 reconstruct \342\\206\\222 use key) s
-5 737 M
-(`) s
-5 715 M
-(Multi-Signature for Governance \(RFC-007\)) s
-5 704 M
-(`) s
-5 693 M
-(N parties \342\\206\\222 N keys \342\\206\\222 N signatures) s
-5 682 M
-(Verification: count valid \342\\211\245 K) s
-5 671 M
-(`) s
-5 649 M
-(Use Shamir when:) s
-5 638 M
-(- Backing up existing keys) s
-5 627 M
-(- Emergency recovery scenarios) s
-5 616 M
-(- Single key must be reconstructable) s
-5 594 M
-(Use Multi-Sig when:) s
-5 583 M
-(- Ongoing governance decisions) s
-5 572 M
-(- Need audit trail of who signed) s
-5 561 M
-(- Asynchronous authorization) s
-5 539 M
-(------------------------------------------------------------------------------) s
-5 517 M
 (Security Considerations) s
-5 495 M
-(Threats Mitigated) s
-5 473 M
-(| Threat | Mitigation |) s
-5 462 M
-(|--------|------------|) s
-5 451 M
-(| Key loss | Any K shares recover |) s
-5 440 M
-(| Single compromise | Need K colluding |) s
-5 429 M
-(| Insider attack | Distribute to independent parties |) s
-5 418 M
-(| Coercion | Geographic/jurisdictional diversity |) s
-5 396 M
-(Threats Remaining) s
-5 374 M
-(| Threat | Notes |) s
-5 363 M
-(|--------|-------|) s
-5 352 M
-(| K colluding parties | Fundamental limitation |) s
-5 341 M
-(| Poor share storage | Operational security |) s
-5 330 M
-(| Side channels during reconstruction | Use secure environments |) s
-5 319 M
-(| Weak random generation | Use libsodium |) s
-5 297 M
-(Operational Security) s
-5 275 M
-(1. Generation: Air-gapped machine, secure random) s
-5 264 M
-(2. Distribution: Out-of-band verification) s
-5 253 M
-(3. Storage: Encrypted, physically secure) s
-5 242 M
-(4. Reconstruction: Secure room, witnesses) s
-5 231 M
-(5. Destruction: Secure wipe after use) s
-5 209 M
-(------------------------------------------------------------------------------) s
-5 187 M
-(Implementation Notes) s
-5 165 M
-(Dependencies) s
-5 143 M
-(- libsodium - Secure random number generation) s
-5 132 M
-(- srfi-4 - u8vectors for byte manipulation) s
-5 110 M
-(Performance) s
-5 88 M
-(- Split: O\(N \303\\227 K \303\\227 secret_length\)) s
-5 77 M
-(- Reconstruct: O\(K\302\262 \303\\227 secret_length\)) s
-5 66 M
-(- GF\(2\342\\201\270\) operations: O\(1\) per byte) s
-5 44 M
-(Limitations) s
-5 22 M
-(- Secret size: Arbitrary \(but typically \342\\211\244 64 bytes\)) s
-5 11 M
-(- Share count: Practical limit ~255 \(byte x-coordinates\)) s
-_R
-S
-%%Page: (6) 6
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 6 def
-/fname (rfc-008-shamir-sharing.txt) def
-/fdir (.) def
-/ftail (rfc-008-shamir-sharing.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(- Threshold: 2 \342\\211\244 K \342\\211\244 N) s
 5 759 M
-(------------------------------------------------------------------------------) s
+(Threats Mitigated) s
 5 737 M
-(References) s
+(| Threat | Mitigation |) s
+5 726 M
+(|--------|------------|) s
 5 715 M
-(1. Shamir, A. \(1979\). How to share a secret. Communications of the ACM.) s
+(| Key loss | Any K shares recover |) s
 5 704 M
-(2. Blakley, G. R. \(1979\). Safeguarding cryptographic keys.) s
+(| Single compromise | Need K colluding |) s
 5 693 M
-(3. Beimel, A. \(2011\). Secret-Sharing Schemes: A Survey.) s
+(| Insider attack | Distribute to independent parties |) s
 5 682 M
-(4. NIST SP 800-57. Recommendation for Key Management.) s
+(| Coercion | Geographic/jurisdictional diversity |) s
 5 660 M
-(------------------------------------------------------------------------------) s
+(Threats Remaining) s
 5 638 M
-(Changelog) s
+(| Threat | Notes |) s
+5 627 M
+(|--------|-------|) s
 5 616 M
-(- 2026-01-06 - Initial specification) s
+(| K colluding parties | Fundamental limitation |) s
+5 605 M
+(| Poor share storage | Operational security |) s
 5 594 M
-(------------------------------------------------------------------------------) s
-5 572 M
-(Implementation Status: Complete) s
+(| Side channels during reconstruction | Use secure environments |) s
+5 583 M
+(| Weak random generation | Use libsodium |) s
 5 561 M
+(Operational Security) s
+5 539 M
+(1. Generation: Air-gapped machine, secure random) s
+5 528 M
+(2. Distribution: Out-of-band verification) s
+5 517 M
+(3. Storage: Encrypted, physically secure) s
+5 506 M
+(4. Reconstruction: Secure room, witnesses) s
+5 495 M
+(5. Destruction: Secure wipe after use) s
+5 473 M
+(------------------------------------------------------------------------------) s
+5 451 M
+(Implementation Notes) s
+5 429 M
+(Dependencies) s
+5 407 M
+(- libsodium - Secure random number generation) s
+5 396 M
+(- srfi-4 - u8vectors for byte manipulation) s
+5 374 M
+(Performance) s
+5 352 M
+(- Split: O\(N \303\\227 K \303\\227 secret_length\)) s
+5 341 M
+(- Reconstruct: O\(K\302\262 \303\\227 secret_length\)) s
+5 330 M
+(- GF\(2\342\\201\270\) operations: O\(1\) per byte) s
+5 308 M
+(Limitations) s
+5 286 M
+(- Secret size: Arbitrary \(but typically \342\\211\244 64 bytes\)) s
+5 275 M
+(- Share count: Practical limit ~255 \(byte x-coordinates\)) s
+5 264 M
+(- Threshold: 2 \342\\211\244 K \342\\211\244 N) s
+5 242 M
+(------------------------------------------------------------------------------) s
+5 220 M
+(References) s
+5 198 M
+(1. Shamir, A. \(1979\). How to share a secret. Communications of the ACM.) s
+5 187 M
+(2. Blakley, G. R. \(1979\). Safeguarding cryptographic keys.) s
+5 176 M
+(3. Beimel, A. \(2011\). Secret-Sharing Schemes: A Survey.) s
+5 165 M
+(4. NIST SP 800-57. Recommendation for Key Management.) s
+5 143 M
+(------------------------------------------------------------------------------) s
+5 121 M
+(Changelog) s
+5 99 M
+(- 2026-01-06 - Initial specification) s
+5 77 M
+(------------------------------------------------------------------------------) s
+5 55 M
+(Implementation Status: Complete) s
+5 44 M
 (Test Status: Passing \(test-shamir.scm\)) s
-5 550 M
+5 33 M
 (Field Arithmetic: GF\(2\342\\201\270\)) s
 _R
 S
 %%Trailer
-%%Pages: 6
+%%Pages: 5
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:50 2026
+%%CreationDate: Fri Jan  9 12:12:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -485,57 +485,57 @@ _S
 5 374 M
 (Token Bucket Algorithm) s
 5 352 M
-(`scheme) s
-5 341 M
 (\(define \(make-token-bucket capacity fill-rate\)) s
-5 330 M
+5 341 M
 (  "Create token bucket rate limiter") s
-5 319 M
+5 330 M
 (  \(let \(\(tokens capacity\)) s
-5 308 M
+5 319 M
 (        \(last-fill \(current-time-ms\)\)\)) s
-5 286 M
+5 297 M
 (    \(lambda \(cost\)) s
-5 275 M
+5 286 M
 (      ;; Refill tokens based on elapsed time) s
-5 264 M
+5 275 M
 (      \(let* \(\(now \(current-time-ms\)\)) s
-5 253 M
+5 264 M
 (             \(elapsed \(- now last-fill\)\)) s
-5 242 M
+5 253 M
 (             \(new-tokens \(+ tokens \(* fill-rate \(/ elapsed 1000\)\)\)\)\)) s
-5 231 M
+5 242 M
 (        \(set! tokens \(min capacity new-tokens\)\)) s
-5 220 M
+5 231 M
 (        \(set! last-fill now\)) s
-5 198 M
+5 209 M
 (        ;; Try to consume tokens) s
-5 187 M
+5 198 M
 (        \(if \(>= tokens cost\)) s
-5 176 M
+5 187 M
 (            \(begin) s
-5 165 M
+5 176 M
 (              \(set! tokens \(- tokens cost\)\)) s
-5 154 M
+5 165 M
 (              #t\)  ; Allowed) s
-5 143 M
+5 154 M
 (            #f\)\)\)\)\) ; Denied) s
-5 121 M
+5 132 M
 (;; Example: 100 requests per second, burst of 200) s
-5 110 M
+5 121 M
 (\(define request-limiter \(make-token-bucket 200 100\)\)) s
 5 99 M
-(`) s
-5 77 M
 (Sliding Window) s
-5 55 M
-(`scheme) s
-5 44 M
+5 77 M
 (\(define \(make-sliding-window size interval\)) s
-5 33 M
+5 66 M
 (  "Sliding window rate limiter") s
-5 22 M
+5 55 M
 (  \(let \(\(events \(make-deque\)\)\)) s
+5 33 M
+(    \(lambda \(\)) s
+5 22 M
+(      ;; Remove old events) s
+5 11 M
+(      \(let \(\(cutoff \(- \(current-time-ms\) interval\)\)\)) s
 _R
 S
 %%Page: (2) 2
@@ -550,117 +550,115 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(lambda \(\)) s
-5 770 M
-(      ;; Remove old events) s
-5 759 M
-(      \(let \(\(cutoff \(- \(current-time-ms\) interval\)\)\)) s
-5 748 M
 (        \(while \(and \(not \(deque-empty? events\)\)) s
-5 737 M
+5 770 M
 (                    \(< \(deque-front events\) cutoff\)\)) s
-5 726 M
+5 759 M
 (          \(deque-pop-front! events\)\)\)) s
-5 704 M
+5 737 M
 (      ;; Check if under limit) s
-5 693 M
+5 726 M
 (      \(if \(< \(deque-length events\) size\)) s
-5 682 M
+5 715 M
 (          \(begin) s
-5 671 M
+5 704 M
 (            \(deque-push-back! events \(current-time-ms\)\)) s
-5 660 M
+5 693 M
 (            #t\)) s
-5 649 M
+5 682 M
 (          #f\)\)\)\)) s
-5 638 M
-(`) s
-5 616 M
+5 660 M
 (Leaky Bucket) s
-5 594 M
-(`scheme) s
-5 583 M
+5 638 M
 (\(define \(make-leaky-bucket capacity leak-rate\)) s
-5 572 M
+5 627 M
 (  "Leaky bucket for smoothing bursts") s
-5 561 M
+5 616 M
 (  \(let \(\(level 0\)) s
-5 550 M
+5 605 M
 (        \(last-leak \(current-time-ms\)\)\)) s
-5 528 M
+5 583 M
 (    \(lambda \(amount\)) s
-5 517 M
+5 572 M
 (      ;; Leak based on elapsed time) s
-5 506 M
+5 561 M
 (      \(let* \(\(now \(current-time-ms\)\)) s
-5 495 M
+5 550 M
 (             \(elapsed \(- now last-leak\)\)) s
-5 484 M
+5 539 M
 (             \(leaked \(* leak-rate \(/ elapsed 1000\)\)\)\)) s
-5 473 M
+5 528 M
 (        \(set! level \(max 0 \(- level leaked\)\)\)) s
-5 462 M
+5 517 M
 (        \(set! last-leak now\)) s
-5 440 M
+5 495 M
 (        ;; Try to add to bucket) s
-5 429 M
+5 484 M
 (        \(if \(<= \(+ level amount\) capacity\)) s
-5 418 M
+5 473 M
 (            \(begin) s
-5 407 M
+5 462 M
 (              \(set! level \(+ level amount\)\)) s
-5 396 M
+5 451 M
 (              #t\)) s
-5 385 M
+5 440 M
 (            #f\)\)\)\)\)) s
-5 374 M
-(`) s
-5 352 M
+5 418 M
 (------------------------------------------------------------------------------) s
-5 330 M
+5 396 M
 (Quota System) s
-5 308 M
+5 374 M
 (Quota Types) s
-5 286 M
-(`scheme) s
-5 275 M
+5 352 M
 (\(define quota-types) s
-5 264 M
+5 341 M
 (  '\(\(storage . \(\(unit . bytes\)) s
-5 253 M
+5 330 M
 (                \(period . #f\)          ; No reset) s
-5 242 M
+5 319 M
 (                \(default . 10737418240\)\)\) ; 10GB) s
-5 220 M
+5 297 M
 (    \(bandwidth . \(\(unit . bytes\)) s
-5 209 M
+5 286 M
 (                  \(period . monthly\)) s
-5 198 M
+5 275 M
 (                  \(default . 107374182400\)\)\) ; 100GB/month) s
-5 176 M
+5 253 M
 (    \(requests . \(\(unit . count\)) s
-5 165 M
+5 242 M
 (                 \(period . daily\)) s
-5 154 M
+5 231 M
 (                 \(default . 100000\)\)\)    ; 100k/day) s
-5 132 M
+5 209 M
 (    \(objects . \(\(unit . count\)) s
-5 121 M
+5 198 M
 (                \(period . #f\)) s
-5 110 M
+5 187 M
 (                \(default . 1000000\)\)\)\)\)  ; 1M objects) s
-5 99 M
-(`) s
-5 77 M
+5 165 M
 (Quota Tracking) s
-5 55 M
-(`scheme) s
-5 44 M
+5 143 M
 (\(define principal-quotas \(make-hash-table\)\)) s
-5 22 M
+5 121 M
 (\(define \(get-quota principal quota-type\)) s
-5 11 M
+5 110 M
 (  "Get principal's quota for type") s
+5 99 M
+(  \(let \(\(quotas \(hash-table-ref principal-quotas principal '\(\)\)\)\)) s
+5 88 M
+(    \(or \(assoc-ref quotas quota-type\)) s
+5 77 M
+(        \(assoc-ref quota-types quota-type 'default\)\)\)\)) s
+5 55 M
+(\(define \(get-usage principal quota-type\)) s
+5 44 M
+(  "Get principal's current usage") s
+5 33 M
+(  \(let \(\(period \(quota-period quota-type\)\)\)) s
+5 22 M
+(    \(soup-aggregate) s
+5 11 M
+(      where: \(and \(type: 'usage-record\)) s
 _R
 S
 %%Page: (3) 3
@@ -675,125 +673,123 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  \(let \(\(quotas \(hash-table-ref principal-quotas principal '\(\)\)\)\)) s
-5 770 M
-(    \(or \(assoc-ref quotas quota-type\)) s
-5 759 M
-(        \(assoc-ref quota-types quota-type 'default\)\)\)\)) s
-5 737 M
-(\(define \(get-usage principal quota-type\)) s
-5 726 M
-(  "Get principal's current usage") s
-5 715 M
-(  \(let \(\(period \(quota-period quota-type\)\)\)) s
-5 704 M
-(    \(soup-aggregate) s
-5 693 M
-(      where: \(and \(type: 'usage-record\)) s
-5 682 M
 (                  \(principal: principal\)) s
-5 671 M
+5 770 M
 (                  \(quota-type: quota-type\)) s
-5 660 M
+5 759 M
 (                  \(if period) s
-5 649 M
+5 748 M
 (                      \(timestamp: \(> \(period-start period\)\)\)) s
-5 638 M
+5 737 M
 (                      #t\)\)) s
-5 627 M
+5 726 M
 (      aggregate: \(sum 'amount\)\)\)\)) s
-5 605 M
+5 704 M
 (\(define \(check-quota principal quota-type amount\)) s
-5 594 M
+5 693 M
 (  "Check if operation would exceed quota") s
-5 583 M
+5 682 M
 (  \(let \(\(quota \(get-quota principal quota-type\)\)) s
-5 572 M
+5 671 M
 (        \(usage \(get-usage principal quota-type\)\)\)) s
-5 561 M
+5 660 M
 (    \(<= \(+ usage amount\) quota\)\)\)) s
-5 550 M
-(`) s
-5 528 M
+5 638 M
 (Quota Enforcement) s
-5 506 M
-(`scheme) s
-5 495 M
+5 616 M
 (\(define \(enforce-quota principal quota-type amount\)) s
-5 484 M
+5 605 M
 (  "Enforce quota, raise error if exceeded") s
-5 473 M
+5 594 M
 (  \(unless \(check-quota principal quota-type amount\)) s
-5 462 M
+5 583 M
 (    \(let \(\(quota \(get-quota principal quota-type\)\)) s
-5 451 M
+5 572 M
 (          \(usage \(get-usage principal quota-type\)\)\)) s
-5 440 M
+5 561 M
 (      \(audit-append action: 'quota-exceeded) s
-5 429 M
+5 550 M
 (                    principal: principal) s
-5 418 M
+5 539 M
 (                    quota-type: quota-type) s
-5 407 M
+5 528 M
 (                    quota: quota) s
-5 396 M
+5 517 M
 (                    usage: usage) s
-5 385 M
+5 506 M
 (                    requested: amount\)) s
-5 374 M
+5 495 M
 (      \(error 'quota-exceeded) s
-5 363 M
+5 484 M
 (             `\(\(type . ,quota-type\)) s
-5 352 M
+5 473 M
 (               \(quota . ,quota\)) s
-5 341 M
+5 462 M
 (               \(usage . ,usage\)) s
-5 330 M
+5 451 M
 (               \(requested . ,amount\)\)\)\)\)\)) s
-5 308 M
+5 429 M
 (\(define \(record-usage principal quota-type amount\)) s
-5 297 M
+5 418 M
 (  "Record quota usage") s
-5 286 M
+5 407 M
 (  \(soup-put) s
-5 275 M
+5 396 M
 (    `\(\(type . usage-record\)) s
-5 264 M
+5 385 M
 (      \(principal . ,principal\)) s
-5 253 M
+5 374 M
 (      \(quota-type . ,quota-type\)) s
-5 242 M
+5 363 M
 (      \(amount . ,amount\)) s
-5 231 M
+5 352 M
 (      \(timestamp . ,\(current-time\)\)\)\)\)) s
-5 220 M
-(`) s
-5 198 M
+5 330 M
 (------------------------------------------------------------------------------) s
-5 176 M
+5 308 M
 (Principal-Based Limits) s
-5 154 M
+5 286 M
 (Limit Tiers) s
-5 132 M
-(`scheme) s
-5 121 M
+5 264 M
 (\(define limit-tiers) s
-5 110 M
+5 253 M
 (  '\(\(anonymous . \(\(requests-per-second . 10\)) s
-5 99 M
+5 242 M
 (                  \(storage-bytes . 0\)) s
-5 88 M
+5 231 M
 (                  \(bandwidth-bytes . 1073741824\)\)\)) s
-5 66 M
+5 209 M
 (    \(authenticated . \(\(requests-per-second . 100\)) s
-5 55 M
+5 198 M
 (                      \(storage-bytes . 10737418240\)) s
-5 44 M
+5 187 M
 (                      \(bandwidth-bytes . 107374182400\)\)\)) s
-5 22 M
+5 165 M
 (    \(premium . \(\(requests-per-second . 1000\)) s
-5 11 M
+5 154 M
 (                \(storage-bytes . 1099511627776\)) s
+5 143 M
+(                \(bandwidth-bytes . 10995116277760\)\)\)) s
+5 121 M
+(    \(admin . \(\(requests-per-second . #f\)  ; Unlimited) s
+5 110 M
+(              \(storage-bytes . #f\)) s
+5 99 M
+(              \(bandwidth-bytes . #f\)\)\)\)\)) s
+5 77 M
+(\(define \(principal-tier principal\)) s
+5 66 M
+(  "Determine principal's limit tier") s
+5 55 M
+(  \(cond) s
+5 44 M
+(    \(\(admin-principal? principal\) 'admin\)) s
+5 33 M
+(    \(\(premium-principal? principal\) 'premium\)) s
+5 22 M
+(    \(\(authenticated? principal\) 'authenticated\)) s
+5 11 M
+(    \(else 'anonymous\)\)\)) s
 _R
 S
 %%Page: (4) 4
@@ -807,122 +803,120 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(                \(bandwidth-bytes . 10995116277760\)\)\)) s
-5 759 M
-(    \(admin . \(\(requests-per-second . #f\)  ; Unlimited) s
-5 748 M
-(              \(storage-bytes . #f\)) s
-5 737 M
-(              \(bandwidth-bytes . #f\)\)\)\)\)) s
-5 715 M
-(\(define \(principal-tier principal\)) s
-5 704 M
-(  "Determine principal's limit tier") s
-5 693 M
-(  \(cond) s
-5 682 M
-(    \(\(admin-principal? principal\) 'admin\)) s
-5 671 M
-(    \(\(premium-principal? principal\) 'premium\)) s
-5 660 M
-(    \(\(authenticated? principal\) 'authenticated\)) s
-5 649 M
-(    \(else 'anonymous\)\)\)) s
-5 638 M
-(`) s
-5 616 M
+5 770 M
 (Per-Principal Limiters) s
-5 594 M
-(`scheme) s
-5 583 M
+5 748 M
 (\(define principal-limiters \(make-hash-table\)\)) s
-5 561 M
+5 726 M
 (\(define \(get-limiter principal\)) s
-5 550 M
+5 715 M
 (  "Get or create rate limiter for principal") s
-5 539 M
+5 704 M
 (  \(or \(hash-table-ref principal-limiters principal #f\)) s
-5 528 M
+5 693 M
 (      \(let* \(\(tier \(principal-tier principal\)\)) s
-5 517 M
+5 682 M
 (             \(rps \(assoc-ref \(assoc-ref limit-tiers tier\)) s
-5 506 M
+5 671 M
 (                            'requests-per-second\)\)\)) s
-5 495 M
+5 660 M
 (        \(if rps) s
-5 484 M
+5 649 M
 (            \(let \(\(limiter \(make-token-bucket \(* rps 2\) rps\)\)\)) s
-5 473 M
+5 638 M
 (              \(hash-table-set! principal-limiters principal limiter\)) s
-5 462 M
+5 627 M
 (              limiter\)) s
-5 451 M
+5 616 M
 (            \(lambda \(_\) #t\)\)\)\)\)  ; Unlimited) s
-5 429 M
+5 594 M
 (\(define \(rate-limit-principal principal\)) s
-5 418 M
+5 583 M
 (  "Apply rate limit to principal") s
-5 407 M
+5 572 M
 (  \(let \(\(limiter \(get-limiter principal\)\)\)) s
-5 396 M
+5 561 M
 (    \(unless \(limiter 1\)) s
-5 385 M
+5 550 M
 (      \(audit-append action: 'rate-limited principal: principal\)) s
-5 374 M
+5 539 M
 (      \(error 'rate-limited\)\)\)\)) s
-5 363 M
-(`) s
-5 341 M
+5 517 M
 (Capability-Based Limits) s
-5 319 M
-(`scheme) s
-5 308 M
+5 495 M
 (;; Capabilities can include rate limits) s
-5 297 M
+5 484 M
 (\(spki-cert) s
-5 286 M
+5 473 M
 (  \(issuer vault-admin\)) s
-5 275 M
+5 462 M
 (  \(subject api-client\)) s
-5 264 M
+5 451 M
 (  \(capability) s
-5 253 M
+5 440 M
 (    \(action read\)) s
-5 242 M
+5 429 M
 (    \(object vault-content\)) s
-5 231 M
+5 418 M
 (    \(rate-limit) s
-5 220 M
+5 407 M
 (      \(requests-per-second 50\)) s
-5 209 M
+5 396 M
 (      \(burst 100\)\)\)) s
-5 198 M
+5 385 M
 (  \(validity \(not-after "2027-01-01"\)\)\)) s
-5 176 M
+5 363 M
 (\(define \(capability-rate-limit cap\)) s
-5 165 M
+5 352 M
 (  "Extract rate limit from capability") s
-5 154 M
+5 341 M
 (  \(assoc-ref cap 'rate-limit\)\)) s
-5 143 M
-(`) s
-5 121 M
+5 319 M
 (------------------------------------------------------------------------------) s
-5 99 M
+5 297 M
 (Resource-Specific Limits) s
-5 77 M
+5 275 M
 (Storage Limits) s
-5 55 M
-(`scheme) s
-5 44 M
+5 253 M
 (\(define \(enforce-storage-limit principal size\)) s
-5 33 M
+5 242 M
 (  "Enforce storage quota before write") s
-5 22 M
+5 231 M
 (  \(let* \(\(quota \(get-quota principal 'storage\)\)) s
-5 11 M
+5 220 M
 (         \(used \(principal-storage-used principal\)\)\)) s
+5 209 M
+(    \(when \(and quota \(> \(+ used size\) quota\)\)) s
+5 198 M
+(      \(error 'storage-quota-exceeded) s
+5 187 M
+(             `\(\(quota . ,quota\)) s
+5 176 M
+(               \(used . ,used\)) s
+5 165 M
+(               \(requested . ,size\)\)\)\)\)\)) s
+5 143 M
+(\(define \(principal-storage-used principal\)) s
+5 132 M
+(  "Calculate principal's storage usage") s
+5 121 M
+(  \(soup-aggregate) s
+5 110 M
+(    where: \(owner: principal\)) s
+5 99 M
+(    aggregate: \(sum 'size\)\)\)) s
+5 77 M
+(Bandwidth Limits) s
+5 55 M
+(\(define \(enforce-bandwidth-limit principal bytes direction\)) s
+5 44 M
+(  "Enforce bandwidth quota") s
+5 33 M
+(  \(let* \(\(quota \(get-quota principal 'bandwidth\)\)) s
+5 22 M
+(         \(used \(principal-bandwidth-used principal\)\)\)) s
+5 11 M
+(    \(when \(and quota \(> \(+ used bytes\) quota\)\)) s
 _R
 S
 %%Page: (5) 5
@@ -937,119 +931,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(when \(and quota \(> \(+ used size\) quota\)\)) s
-5 770 M
-(      \(error 'storage-quota-exceeded) s
-5 759 M
-(             `\(\(quota . ,quota\)) s
-5 748 M
-(               \(used . ,used\)) s
-5 737 M
-(               \(requested . ,size\)\)\)\)\)\)) s
-5 715 M
-(\(define \(principal-storage-used principal\)) s
-5 704 M
-(  "Calculate principal's storage usage") s
-5 693 M
-(  \(soup-aggregate) s
-5 682 M
-(    where: \(owner: principal\)) s
-5 671 M
-(    aggregate: \(sum 'size\)\)\)) s
-5 660 M
-(`) s
-5 638 M
-(Bandwidth Limits) s
-5 616 M
-(`scheme) s
-5 605 M
-(\(define \(enforce-bandwidth-limit principal bytes direction\)) s
-5 594 M
-(  "Enforce bandwidth quota") s
-5 583 M
-(  \(let* \(\(quota \(get-quota principal 'bandwidth\)\)) s
-5 572 M
-(         \(used \(principal-bandwidth-used principal\)\)\)) s
-5 561 M
-(    \(when \(and quota \(> \(+ used bytes\) quota\)\)) s
-5 550 M
 (      \(error 'bandwidth-quota-exceeded) s
-5 539 M
+5 770 M
 (             `\(\(quota . ,quota\)) s
-5 528 M
+5 759 M
 (               \(used . ,used\)) s
-5 517 M
+5 748 M
 (               \(requested . ,bytes\)) s
-5 506 M
+5 737 M
 (               \(direction . ,direction\)\)\)\)\)\)) s
-5 495 M
-(`) s
-5 473 M
+5 715 M
 (Connection Limits) s
-5 451 M
-(`scheme) s
-5 440 M
+5 693 M
 (\(define max-connections-per-principal 100\)) s
-5 429 M
+5 682 M
 (\(define principal-connections \(make-hash-table\)\)) s
-5 407 M
+5 660 M
 (\(define \(enforce-connection-limit principal\)) s
-5 396 M
+5 649 M
 (  "Limit concurrent connections") s
-5 385 M
+5 638 M
 (  \(let \(\(count \(hash-table-ref principal-connections principal 0\)\)\)) s
-5 374 M
+5 627 M
 (    \(when \(>= count max-connections-per-principal\)) s
-5 363 M
+5 616 M
 (      \(error 'connection-limit-exceeded) s
-5 352 M
+5 605 M
 (             `\(\(limit . ,max-connections-per-principal\)) s
-5 341 M
+5 594 M
 (               \(current . ,count\)\)\)\)\)\)) s
-5 319 M
+5 572 M
 (\(define \(track-connection principal direction\)) s
-5 308 M
+5 561 M
 (  \(let \(\(count \(hash-table-ref principal-connections principal 0\)\)\)) s
-5 297 M
+5 550 M
 (    \(hash-table-set! principal-connections principal) s
-5 286 M
+5 539 M
 (      \(case direction) s
-5 275 M
+5 528 M
 (        \(\(open\) \(+ count 1\)\)) s
-5 264 M
+5 517 M
 (        \(\(close\) \(max 0 \(- count 1\)\)\)\)\)\)\)) s
-5 253 M
-(`) s
-5 231 M
+5 495 M
 (------------------------------------------------------------------------------) s
-5 209 M
+5 473 M
 (Backpressure) s
-5 187 M
+5 451 M
 (Request Queuing) s
-5 165 M
-(`scheme) s
-5 154 M
+5 429 M
 (\(define request-queue \(make-bounded-queue 1000\)\)) s
-5 132 M
+5 407 M
 (\(define \(queue-request request\)) s
-5 121 M
+5 396 M
 (  "Queue request with backpressure") s
-5 110 M
+5 385 M
 (  \(if \(queue-full? request-queue\)) s
-5 99 M
+5 374 M
 (      \(begin) s
-5 88 M
+5 363 M
 (        \(audit-append action: 'request-rejected reason: 'queue-full\)) s
-5 77 M
+5 352 M
 (        \(error 'service-unavailable\)\)) s
-5 66 M
+5 341 M
 (      \(queue-push! request-queue request\)\)\)) s
-5 55 M
-(`) s
-5 33 M
+5 319 M
 (Load Shedding) s
+5 297 M
+(\(define \(should-shed-load?\)) s
+5 286 M
+(  "Determine if load shedding needed") s
+5 275 M
+(  \(or \(> \(cpu-usage\) 0.9\)) s
+5 264 M
+(      \(> \(memory-usage\) 0.9\)) s
+5 253 M
+(      \(> \(queue-length request-queue\) 800\)\)\)) s
+5 231 M
+(\(define \(shed-load request\)) s
+5 220 M
+(  "Selectively reject requests under load") s
+5 209 M
+(  \(cond) s
+5 198 M
+(    ;; Always allow admin requests) s
+5 187 M
+(    \(\(admin-principal? \(request-principal request\)\)) s
+5 176 M
+(     \(process-request request\)\)) s
+5 165 M
+(    ;; Shed low-priority requests) s
+5 154 M
+(    \(\(and \(should-shed-load?\)) s
+5 143 M
+(          \(low-priority-request? request\)\)) s
+5 132 M
+(     \(audit-append action: 'load-shed request: \(request-id request\)\)) s
+5 121 M
+(     \(error 'service-unavailable\)\)) s
+5 110 M
+(    \(else) s
+5 99 M
+(     \(process-request request\)\)\)\)) s
+5 77 M
+(Retry-After) s
+5 55 M
+(\(define \(rate-limit-response retry-after\)) s
+5 44 M
+(  "Generate rate limit response") s
+5 33 M
+(  `\(\(status . 429\)) s
+5 22 M
+(    \(headers . \(\(Retry-After . ,retry-after\)) s
 5 11 M
-(`scheme) s
+(                \(X-RateLimit-Limit . ,\(current-limit\)\)) s
 _R
 S
 %%Page: (6) 6
@@ -1064,119 +1058,115 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(\(define \(should-shed-load?\)) s
-5 770 M
-(  "Determine if load shedding needed") s
-5 759 M
-(  \(or \(> \(cpu-usage\) 0.9\)) s
-5 748 M
-(      \(> \(memory-usage\) 0.9\)) s
-5 737 M
-(      \(> \(queue-length request-queue\) 800\)\)\)) s
-5 715 M
-(\(define \(shed-load request\)) s
-5 704 M
-(  "Selectively reject requests under load") s
-5 693 M
-(  \(cond) s
-5 682 M
-(    ;; Always allow admin requests) s
-5 671 M
-(    \(\(admin-principal? \(request-principal request\)\)) s
-5 660 M
-(     \(process-request request\)\)) s
-5 649 M
-(    ;; Shed low-priority requests) s
-5 638 M
-(    \(\(and \(should-shed-load?\)) s
-5 627 M
-(          \(low-priority-request? request\)\)) s
-5 616 M
-(     \(audit-append action: 'load-shed request: \(request-id request\)\)) s
-5 605 M
-(     \(error 'service-unavailable\)\)) s
-5 594 M
-(    \(else) s
-5 583 M
-(     \(process-request request\)\)\)\)) s
-5 572 M
-(`) s
-5 550 M
-(Retry-After) s
-5 528 M
-(`scheme) s
-5 517 M
-(\(define \(rate-limit-response retry-after\)) s
-5 506 M
-(  "Generate rate limit response") s
-5 495 M
-(  `\(\(status . 429\)) s
-5 484 M
-(    \(headers . \(\(Retry-After . ,retry-after\)) s
-5 473 M
-(                \(X-RateLimit-Limit . ,\(current-limit\)\)) s
-5 462 M
 (                \(X-RateLimit-Remaining . ,\(remaining-tokens\)\)) s
-5 451 M
+5 770 M
 (                \(X-RateLimit-Reset . ,\(reset-time\)\)\)\)\)\)) s
-5 440 M
-(`) s
-5 418 M
+5 748 M
 (------------------------------------------------------------------------------) s
-5 396 M
+5 726 M
 (Monitoring) s
-5 374 M
+5 704 M
 (Limit Metrics) s
-5 352 M
-(`scheme) s
-5 341 M
+5 682 M
 (\(define \(record-limit-metrics\)) s
-5 330 M
+5 671 M
 (  "Record rate limiting metrics") s
-5 319 M
+5 660 M
 (  \(metric-set! 'ratelimit.requests.allowed allowed-count\)) s
-5 308 M
+5 649 M
 (  \(metric-set! 'ratelimit.requests.denied denied-count\)) s
-5 297 M
+5 638 M
 (  \(metric-set! 'ratelimit.requests.queued \(queue-length request-queue\)\)) s
-5 286 M
+5 627 M
 (  \(metric-set! 'quota.storage.used total-storage-used\)) s
-5 275 M
+5 616 M
 (  \(metric-set! 'quota.storage.available total-storage-available\)\)) s
-5 264 M
-(`) s
-5 242 M
+5 594 M
 (Limit Alerts) s
-5 220 M
-(`scheme) s
-5 209 M
+5 572 M
 (\(define limit-alerts) s
-5 198 M
+5 561 M
 (  '\(\(high-rejection-rate) s
-5 187 M
+5 550 M
 (     \(condition \(> \(/ denied-count \(+ allowed-count denied-count\)\) 0.1\)\)) s
-5 176 M
+5 539 M
 (     \(severity warning\)) s
-5 165 M
+5 528 M
 (     \(message "High rate limit rejection rate"\)\)) s
-5 143 M
+5 506 M
 (    \(quota-near-limit) s
-5 132 M
+5 495 M
 (     \(condition \(> \(/ used quota\) 0.9\)\)) s
-5 121 M
+5 484 M
 (     \(severity warning\)) s
-5 110 M
+5 473 M
 (     \(message "Principal approaching quota limit"\)\)\)\)) s
-5 99 M
-(`) s
-5 77 M
+5 451 M
 (------------------------------------------------------------------------------) s
-5 55 M
+5 429 M
 (Configuration) s
-5 33 M
+5 407 M
 (Dynamic Limits) s
+5 385 M
+(;; Limits can be adjusted at runtime) s
+5 374 M
+(\(define \(set-limit principal limit-type value\)) s
+5 363 M
+(  "Set custom limit for principal") s
+5 352 M
+(  \(soup-put) s
+5 341 M
+(    `\(\(type . principal-limit\)) s
+5 330 M
+(      \(principal . ,principal\)) s
+5 319 M
+(      \(limit-type . ,limit-type\)) s
+5 308 M
+(      \(value . ,value\)) s
+5 297 M
+(      \(set-by . ,\(current-principal\)\)) s
+5 286 M
+(      \(set-at . ,\(current-time\)\)\)) s
+5 275 M
+(    type: 'configuration\)\)) s
+5 253 M
+(\(define \(get-effective-limit principal limit-type\)) s
+5 242 M
+(  "Get principal's effective limit") s
+5 231 M
+(  \(or \(soup-query-one type: 'principal-limit) s
+5 220 M
+(                      principal: principal) s
+5 209 M
+(                      limit-type: limit-type\)) s
+5 198 M
+(      \(tier-limit \(principal-tier principal\) limit-type\)\)\)) s
+5 176 M
+(Limit Inheritance) s
+5 154 M
+(;; Groups can have limits that members inherit) s
+5 143 M
+(\(define \(group-limit group limit-type\)) s
+5 132 M
+(  \(soup-query-one type: 'group-limit) s
+5 121 M
+(                  group: group) s
+5 110 M
+(                  limit-type: limit-type\)\)) s
+5 88 M
+(\(define \(effective-limit principal limit-type\)) s
+5 77 M
+(  "Resolve limit with inheritance") s
+5 66 M
+(  \(or \(get-effective-limit principal limit-type\)) s
+5 55 M
+(      \(let \(\(groups \(principal-groups principal\)\)\)) s
+5 44 M
+(        \(find \(lambda \(g\) \(group-limit g limit-type\)\) groups\)\)) s
+5 33 M
+(      \(default-limit limit-type\)\)\)) s
 5 11 M
-(`scheme) s
+(------------------------------------------------------------------------------) s
 _R
 S
 %%Page: (7) 7
@@ -1190,160 +1180,73 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(;; Limits can be adjusted at runtime) s
 5 770 M
-(\(define \(set-limit principal limit-type value\)) s
-5 759 M
-(  "Set custom limit for principal") s
-5 748 M
-(  \(soup-put) s
-5 737 M
-(    `\(\(type . principal-limit\)) s
-5 726 M
-(      \(principal . ,principal\)) s
-5 715 M
-(      \(limit-type . ,limit-type\)) s
-5 704 M
-(      \(value . ,value\)) s
-5 693 M
-(      \(set-by . ,\(current-principal\)\)) s
-5 682 M
-(      \(set-at . ,\(current-time\)\)\)) s
-5 671 M
-(    type: 'configuration\)\)) s
-5 649 M
-(\(define \(get-effective-limit principal limit-type\)) s
-5 638 M
-(  "Get principal's effective limit") s
-5 627 M
-(  \(or \(soup-query-one type: 'principal-limit) s
-5 616 M
-(                      principal: principal) s
-5 605 M
-(                      limit-type: limit-type\)) s
-5 594 M
-(      \(tier-limit \(principal-tier principal\) limit-type\)\)\)) s
-5 583 M
-(`) s
-5 561 M
-(Limit Inheritance) s
-5 539 M
-(`scheme) s
-5 528 M
-(;; Groups can have limits that members inherit) s
-5 517 M
-(\(define \(group-limit group limit-type\)) s
-5 506 M
-(  \(soup-query-one type: 'group-limit) s
-5 495 M
-(                  group: group) s
-5 484 M
-(                  limit-type: limit-type\)\)) s
-5 462 M
-(\(define \(effective-limit principal limit-type\)) s
-5 451 M
-(  "Resolve limit with inheritance") s
-5 440 M
-(  \(or \(get-effective-limit principal limit-type\)) s
-5 429 M
-(      \(let \(\(groups \(principal-groups principal\)\)\)) s
-5 418 M
-(        \(find \(lambda \(g\) \(group-limit g limit-type\)\) groups\)\)) s
-5 407 M
-(      \(default-limit limit-type\)\)\)) s
-5 396 M
-(`) s
-5 374 M
-(------------------------------------------------------------------------------) s
-5 352 M
 (Security) s
-5 330 M
-(Limit Bypass Prevention) s
-5 308 M
-(`scheme) s
-5 297 M
-(;; Prevent limit bypass via identity rotation) s
-5 286 M
-(\(define \(track-ip-limits ip\)) s
-5 275 M
-(  "Track limits by IP in addition to principal") s
-5 264 M
-(  \(let \(\(limiter \(get-ip-limiter ip\)\)\)) s
-5 253 M
-(    \(unless \(limiter 1\)) s
-5 242 M
-(      \(error 'ip-rate-limited\)\)\)\)) s
-5 220 M
-(;; Combine principal and IP limits) s
-5 209 M
-(\(define \(combined-rate-limit principal ip\)) s
-5 198 M
-(  \(and \(rate-limit-principal principal\)) s
-5 187 M
-(       \(track-ip-limits ip\)\)\)) s
-5 176 M
-(`) s
-5 154 M
-(Audit Trail) s
-5 132 M
-(`scheme) s
-5 121 M
-(\(define \(audit-limit-event event-type principal details\)) s
-5 110 M
-(  \(audit-append) s
-5 99 M
-(    action: event-type) s
-5 88 M
-(    principal: principal) s
-5 77 M
-(    details: details) s
-5 66 M
-(    timestamp: \(current-time\)\)\)) s
-5 55 M
-(`) s
-5 33 M
-(------------------------------------------------------------------------------) s
-5 11 M
-(References) s
-_R
-S
-%%Page: (8) 8
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 8 def
-/fname (rfc-032-rate-limiting.txt) def
-/fdir (.) def
-/ftail (rfc-032-rate-limiting.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 770 M
-(1. Token Bucket Algorithm) s
-5 759 M
-(2. Leaky Bucket Algorithm) s
 5 748 M
-(3. RFC-021: Capability Delegation) s
-5 737 M
-(4. RFC-031: Monitoring) s
+(Limit Bypass Prevention) s
+5 726 M
+(;; Prevent limit bypass via identity rotation) s
 5 715 M
-(------------------------------------------------------------------------------) s
+(\(define \(track-ip-limits ip\)) s
+5 704 M
+(  "Track limits by IP in addition to principal") s
 5 693 M
-(Changelog) s
+(  \(let \(\(limiter \(get-ip-limiter ip\)\)\)) s
+5 682 M
+(    \(unless \(limiter 1\)) s
 5 671 M
-(- 2026-01-07 - Initial draft) s
+(      \(error 'ip-rate-limited\)\)\)\)) s
 5 649 M
-(------------------------------------------------------------------------------) s
+(;; Combine principal and IP limits) s
+5 638 M
+(\(define \(combined-rate-limit principal ip\)) s
 5 627 M
-(Implementation Status: Draft) s
+(  \(and \(rate-limit-principal principal\)) s
 5 616 M
+(       \(track-ip-limits ip\)\)\)) s
+5 594 M
+(Audit Trail) s
+5 572 M
+(\(define \(audit-limit-event event-type principal details\)) s
+5 561 M
+(  \(audit-append) s
+5 550 M
+(    action: event-type) s
+5 539 M
+(    principal: principal) s
+5 528 M
+(    details: details) s
+5 517 M
+(    timestamp: \(current-time\)\)\)) s
+5 495 M
+(------------------------------------------------------------------------------) s
+5 473 M
+(References) s
+5 451 M
+(1. Token Bucket Algorithm) s
+5 440 M
+(2. Leaky Bucket Algorithm) s
+5 429 M
+(3. RFC-021: Capability Delegation) s
+5 418 M
+(4. RFC-031: Monitoring) s
+5 396 M
+(------------------------------------------------------------------------------) s
+5 374 M
+(Changelog) s
+5 352 M
+(- 2026-01-07 - Initial draft) s
+5 330 M
+(------------------------------------------------------------------------------) s
+5 308 M
+(Implementation Status: Draft) s
+5 297 M
 (Dependencies: soup, spki, monitoring) s
-5 605 M
+5 286 M
 (Integration: API layer, network protocol, resource management) s
 _R
 S
 %%Trailer
-%%Pages: 8
+%%Pages: 7
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

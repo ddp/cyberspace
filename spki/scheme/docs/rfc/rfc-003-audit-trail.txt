@@ -50,7 +50,6 @@ Specification
 
 Entry Structure
 
-`scheme
 (audit-entry
   (id "sha512:b14471cd57ea557f...")
   (timestamp "Mon Jan 5 23:38:20 2026")
@@ -73,7 +72,6 @@ Entry Structure
     (algorithm "ed25519-sha512")
     (content-hash "...")
     (signature "...")))
-`
 
 Core Fields
 
@@ -91,13 +89,11 @@ Core Fields
 
 Actor Record
 
-`scheme
 (define-record-type <audit-actor>
   (make-audit-actor principal authorization-chain)
   audit-actor?
   (principal actor-principal)              ; Public key blob
   (authorization-chain actor-authorization-chain))  ; SPKI cert chain
-`
 
 The actor is identified by:
 - Principal: Ed25519 public key (32 bytes)
@@ -105,14 +101,12 @@ The actor is identified by:
 
 Action Record
 
-`scheme
 (define-record-type <audit-action>
   (make-audit-action verb object parameters)
   audit-action?
   (verb action-verb)        ; Symbol: seal-commit, seal-publish, etc.
   (object action-object)    ; Primary target
   (parameters action-parameters))  ; Additional arguments
-`
 
 Standard verbs:
 - seal-commit - Version control commit
@@ -123,14 +117,12 @@ Standard verbs:
 
 Context Record
 
-`scheme
 (define-record-type <audit-context>
   (make-audit-context motivation relates-to language)
   audit-context?
   (motivation context-motivation)    ; Human explanation
   (relates-to context-relates-to)    ; Related entries
   (language context-language))       ; ISO 639-1 code
-`
 
 Context provides:
 - Motivation: Why the action was taken (human-readable)
@@ -139,14 +131,12 @@ Context provides:
 
 Seal Record
 
-`scheme
 (define-record-type <audit-seal>
   (make-audit-seal algorithm content-hash signature)
   audit-seal?
   (algorithm seal-algorithm)        ; "ed25519-sha512"
   (content-hash seal-content-hash)  ; SHA-512 of unsealed entry
   (signature seal-signature))       ; Ed25519 signature
-`
 
 ------------------------------------------------------------------------------
 
@@ -156,21 +146,17 @@ audit-init
 
 Initialize audit trail for a vault.
 
-`scheme
 (audit-init signing-key: key audit-dir: ".vault/audit")
-`
 
 audit-append
 
 Create and sign a new audit entry.
 
-`scheme
 (audit-append
   actor: public-key-blob
   action: '(seal-commit "hash123")
   motivation: "Added new feature"
   signing-key: private-key-blob)
-`
 
 Process:
 1. Increment sequence counter
@@ -185,9 +171,7 @@ audit-verify
 
 Verify cryptographic seal on an entry.
 
-`scheme
 (audit-verify entry public-key: key)
-`
 
 Verification steps:
 1. Reconstruct unsealed entry
@@ -199,9 +183,7 @@ audit-chain
 
 Verify entire audit chain.
 
-`scheme
 (audit-chain verify-key: public-key)
-`
 
 Verifies:
 - Each entry's signature is valid
@@ -212,10 +194,8 @@ audit-read
 
 Read specific audit entry.
 
-`scheme
 (audit-read sequence: 42)
 (audit-read id: "sha512:...")
-`
 
 ------------------------------------------------------------------------------
 
@@ -223,13 +203,11 @@ Storage Format
 
 Entries stored as individual S-expression files:
 
-`
 .vault/audit/
   1.sexp
   2.sexp
   3.sexp
   ...
-`
 
 File naming by sequence number enables efficient:
 - Sequential reads
@@ -278,23 +256,19 @@ Vault Operations
 
 All vault operations record audit entries:
 
-`scheme
 (seal-commit "message")     → (action (verb seal-commit) ...)
 (seal-publish "1.0.0" ...)  → (action (verb seal-publish) ...)
 (seal-subscribe remote ...) → (action (verb seal-subscribe) ...)
-`
 
 SPKI Authorization
 
 Audit entries can include authorization chains:
 
-`scheme
 (actor
   (principal #${bob-public-key})
   (authorization-chain
     (signed-cert ...)   ; Alice delegated to Bob
     (signed-cert ...))) ; Root delegated to Alice
-`
 
 This proves not just who acted, but under whose authority.
 
@@ -304,26 +278,19 @@ Export Formats
 
 S-expression Export
 
-`scheme
 (audit-export-sexp output: "audit-export.sexp")
-`
 
 Produces:
-`scheme
 (audit-trail
   (audit-entry ...)
   (audit-entry ...)
   ...)
-`
 
 Human-readable Export
 
-`scheme
 (audit-export-human output: "audit-export.txt")
-`
 
 Produces:
-`
 AUDIT TRAIL - Library of Cyberspace
 ===================================
 
@@ -335,7 +302,6 @@ Entry #1
 
 Entry #2
   ...
-`
 
 ------------------------------------------------------------------------------
 

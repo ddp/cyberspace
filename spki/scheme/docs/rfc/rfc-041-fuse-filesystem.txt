@@ -57,7 +57,6 @@ continuously audited, and rate-limited against abuse.
 
 Wormhole Certificate
 
-`scheme
 (define (wormhole-cert issuer fs-path vault-path permissions)
   "Create SPKI certificate authorizing wormhole"
   (create-cert
@@ -69,7 +68,6 @@ Wormhole Certificate
           (permissions ,@permissions)   ; read, write, delete
           (rate-limit 1000)             ; ops/minute
           (expires ,(+ (current-seconds) 86400))))))
-`
 
 Capability Model
 
@@ -109,7 +107,6 @@ Table 0: Wormhole Capabilities
 
 Capability Composition
 
-`scheme
 ;; Common capability sets (long form for readability)
 (define capability:read-only
   '(read stat readdir xattr-read acl-read))
@@ -130,7 +127,6 @@ Capability Composition
   '(read write create delete rename
     stat chmod readdir mkdir rmdir
     xattr-read xattr-write))
-`
 
 Capability Attenuation
 
@@ -140,7 +136,6 @@ Capabilities can only be reduced, never amplified:[^r1]
 model. See Miller, "Robust Composition" (2006). You cannot grant more authority
 than you possess.
 
-`scheme
 (define (wormhole-delegate wormhole new-caps recipient)
   "Delegate subset of wormhole capabilities"
   (let ((my-caps (wormhole-capabilities wormhole)))
@@ -153,11 +148,9 @@ than you possess.
      (wormhole-vault-path wormhole)
      new-caps
      recipient: recipient)))
-`
 
 Opening a Wormhole
 
-`scheme
 (define (wormhole-open fs-path #!key (vault-path "/")
                                      (capabilities capability:read-write)
                                      (rate-limit 1000)
@@ -175,11 +168,9 @@ Opening a Wormhole
                     (capabilities ,(length capabilities))))
   ;; Proceed with FUSE mount
   ...)
-`
 
 Usage Examples
 
-`scheme
 ;; Basic read-write wormhole
 (wormhole-open "~/Cyberspace")
 
@@ -196,7 +187,6 @@ Usage Examples
   capabilities: capability:full
   locked: #t
   auth-required: '(delete admin))
-`
 
 ------------------------------------------------------------------------------
 
@@ -204,39 +194,35 @@ Architecture
 
 Mount Topology
 
-`
 ~/Cyberspace/                    ← FUSE mount point
-├── documents/
-│   ├── paper.pdf               ← Virtual file (content in vault)
-│   └── notes.txt
-├── projects/
-│   └── cyberspace/
-│       └── ...
-└── .vault/                      ← Hidden, actual storage
-    ├── objects/                 ← Content-addressed blobs
-    │   ├── sha256:abc123...
-    │   └── sha256:def456...
-    ├── manifests/               ← Directory → file mappings
-    └── metadata/                ← Per-file metadata store
-`
++-- documents/
+|   +-- paper.pdf               ← Virtual file (content in vault)
+|   +-- notes.txt
++-- projects/
+|   +-- cyberspace/
+|       +-- ...
++-- .vault/                      ← Hidden, actual storage
+    +-- objects/                 ← Content-addressed blobs
+    |   +-- sha256:abc123...
+    |   +-- sha256:def456...
+    +-- manifests/               ← Directory → file mappings
+    +-- metadata/                ← Per-file metadata store
 
 Component Stack
 
-`
-┌─────────────────────────────────────┐
-│         Applications                │
-│    (Finder, cp, rsync, etc.)        │
-├─────────────────────────────────────┤
-│         VFS (kernel)                │
-├─────────────────────────────────────┤
-│      FUSE-T / macFUSE               │
-├─────────────────────────────────────┤
-│    cyberspace-fuse daemon           │  ← Our code
-├─────────────────────────────────────┤
-│         Vault layer                 │
-│   (content-address, metadata)       │
-└─────────────────────────────────────┘
-`
++-------------------------------------+
+|         Applications                |
+|    (Finder, cp, rsync, etc.)        |
++-------------------------------------+
+|         VFS (kernel)                |
++-------------------------------------+
+|      FUSE-T / macFUSE               |
++-------------------------------------+
+|    cyberspace-fuse daemon           |  ← Our code
++-------------------------------------+
+|         Vault layer                 |
+|   (content-address, metadata)       |
++-------------------------------------+
 
 ------------------------------------------------------------------------------
 
@@ -258,7 +244,6 @@ Table 1: Preserved Metadata
 
 Internal Representation
 
-`scheme
 (define-record-type <vault-file>
   (make-vault-file path content-hash metadata)
   vault-file?
@@ -280,11 +265,9 @@ Internal Representation
     (xattr ,(capture-xattrs path))
     (flags ,(capture-flags path))
     (acl ,(capture-acl path))))
-`
 
 Restoration
 
-`scheme
 (define (restore-metadata path metadata)
   "Restore all metadata to a file"
   (let ((posix (alist-ref 'posix metadata))
@@ -295,7 +278,6 @@ Restoration
     (restore-xattrs path xattr)
     (restore-flags path flags)
     (restore-acl path acl)))
-`
 
 ------------------------------------------------------------------------------
 
@@ -323,7 +305,6 @@ Table 2: FUSE Operations
 
 Implementation Sketch
 
-`scheme
 (define (fuse-getattr path)
   "Return file attributes from vault metadata"
   (let ((entry (manifest-lookup path)))
@@ -357,7 +338,6 @@ Implementation Sketch
   (let ((entry (manifest-lookup path)))
     (metadata-set-xattr! entry name value)
     0))
-`
 
 ------------------------------------------------------------------------------
 
@@ -365,7 +345,6 @@ Content Addressing
 
 Files are stored by content hash (RFC-020):
 
-`scheme
 (define (content-address data)
   "Store data, return hash"
   (let* ((hash (sha256 data))
@@ -377,7 +356,6 @@ Files are stored by content hash (RFC-020):
 (define (vault-fetch hash)
   "Retrieve data by hash"
   (read-blob (vault-object-path hash)))
-`
 
 Benefits:
 - Identical files stored once (deduplication)
@@ -395,14 +373,12 @@ for local changes.
 
 For multi-device sync, the manifest includes version vectors (RFC-012):
 
-`scheme
 (define (manifest-entry path hash metadata)
   `(entry
     (path ,path)
     (hash ,hash)
     (metadata ,metadata)
     (version-vector ,local-node ,lamport-clock)))
-`
 
 Conflict Resolution
 
@@ -412,7 +388,6 @@ When merging manifests from different devices (RFC-016 lazy clustering):
 2. Different hash, one newer → Take newer
 3. Different hash, concurrent → Conflict, apply lazy-resolve
 
-`scheme
 (define (merge-manifests local remote)
   (for-each
    (lambda (path)
@@ -426,7 +401,6 @@ When merging manifests from different devices (RFC-016 lazy clustering):
         ((version-newer? l r) 'keep-local)
         (else (queue-conflict! path l r)))))
    (union (manifest-paths local) (manifest-paths remote))))
-`
 
 ------------------------------------------------------------------------------
 
@@ -434,7 +408,6 @@ Mount Commands
 
 REPL Interface
 
-`scheme
 (define (vault-mount point)
   "Mount vault at filesystem path"
   (fuse-main point
@@ -455,11 +428,9 @@ REPL Interface
 (define (vault-unmount point)
   "Unmount vault filesystem"
   (fuse-unmount point))
-`
 
 Command Line
 
-`bash
 Mount
 cyberspace mount ~/Cyberspace
 
@@ -470,7 +441,6 @@ Or via REPL
 $ ./cyberspace-repl
   (vault-mount "~/Cyberspace")
 Mounted vault at /Users/ddp/Cyberspace
-`
 
 ------------------------------------------------------------------------------
 
@@ -495,13 +465,11 @@ Slightly higher latency but avoids Apple's kernel extension hostility.
 
 Installation
 
-`bash
 FUSE-T (recommended)
 brew install fuse-t
 
 Or macFUSE (if kernel ext acceptable)
 brew install macfuse
-`
 
 Finder Integration
 
@@ -530,12 +498,10 @@ cannot alter file contents (hashes won't match).
 
 Mount Security
 
-`scheme
 (define (vault-mount point #!key (allow-other #f))
   ;; allow-other permits other users to access mount
   ;; Default: owner only
   ...)
-`
 
 ------------------------------------------------------------------------------
 

@@ -47,12 +47,10 @@ Three Core Operations
 
 Publish a sealed release to a remote location.
 
-`scheme
 (seal-publish version
               remote: target
               archive-format: format
               message: notes)
-`
 
 Parameters:
 - version - Semantic version string (e.g., "1.0.0")
@@ -78,7 +76,6 @@ Behavior:
    - Cryptographic seal (signature)
 
 Audit Entry Format:
-`scheme
 (audit-entry
   (id "sha512:...")
   (timestamp "Mon Jan 5 23:38:20 2026")
@@ -100,17 +97,14 @@ Audit Entry Format:
     (algorithm "ed25519-sha512")
     (content-hash "...")
     (signature "...")))
-`
 
 2. seal-subscribe
 
 Subscribe to sealed releases from a remote source.
 
-`scheme
 (seal-subscribe remote
                 target: local-path
                 verify-key: public-key)
-`
 
 Parameters:
 - remote - Source location (git remote, URL, or directory)
@@ -139,11 +133,9 @@ Security Consideration: Without verify-key, subscription downloads archives but 
 
 Bidirectional synchronization of sealed releases.
 
-`scheme
 (seal-synchronize remote
                   direction: 'both
                   verify-key: public-key)
-`
 
 Parameters:
 - remote - Sync target (git remote, URL, or directory)
@@ -168,13 +160,10 @@ Archive Format
 
 Cryptographic Archive Structure
 
-`
 vault-1.0.0.archive          # Manifest file
 vault-1.0.0.archive.tar.gz   # Actual tarball
-`
 
 Manifest S-expression:
-`scheme
 (sealed-archive
   (version "1.0.0")
   (format cryptographic)
@@ -183,7 +172,6 @@ Manifest S-expression:
   (signature "ed25519:...")
   (timestamp 1767685100)
   (sealer #${public-key-blob}))
-`
 
 Verification Steps:
 1. Read manifest
@@ -270,13 +258,11 @@ Implementation Notes
 
 Helper Functions
 
-`scheme
 (tag-exists? tag-name)        ; Check if git tag exists
 (git-remote? str)             ; Detect git remote format
 (http-url? str)               ; Detect HTTP/HTTPS URL
 (publish-filesystem remote version archive)  ; Copy to directory
 (publish-http url version archive)           ; POST to endpoint
-`
 
 Dependencies
 
@@ -307,7 +293,6 @@ Test Coverage
 
 See test-replication.scm:
 
-`scheme
 ;; Test seal-publish to filesystem
 (seal-publish "1.0.0"
               remote: "/tmp/cyberspace-publish-test"
@@ -318,7 +303,6 @@ See test-replication.scm:
 
 ;; Verify audit entry created
 (audit-read sequence: 1)
-`
 
 References
 

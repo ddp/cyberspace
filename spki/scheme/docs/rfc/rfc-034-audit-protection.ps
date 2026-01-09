@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:07:50 2026
+%%CreationDate: Fri Jan  9 12:12:50 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -489,53 +489,51 @@ _S
 5 341 M
 (Attack Vectors) s
 5 319 M
-(`scheme) s
-5 308 M
 (\(define audit-threats) s
-5 297 M
+5 308 M
 (  '\(\(flooding) s
-5 286 M
+5 297 M
 (     \(description "Generate massive log volume"\)) s
-5 275 M
+5 286 M
 (     \(goal "Hide malicious activity in noise"\)) s
-5 264 M
+5 275 M
 (     \(method "Rapid legitimate-looking operations"\)\)) s
-5 242 M
+5 253 M
 (    \(exhaustion) s
-5 231 M
+5 242 M
 (     \(description "Fill audit storage"\)) s
-5 220 M
+5 231 M
 (     \(goal "Halt vault operations"\)) s
-5 209 M
+5 220 M
 (     \(method "Sustained high-volume logging"\)\)) s
-5 187 M
+5 198 M
 (    \(amplification) s
-5 176 M
+5 187 M
 (     \(description "Small input, large log output"\)) s
-5 165 M
+5 176 M
 (     \(goal "Asymmetric resource consumption"\)) s
-5 154 M
+5 165 M
 (     \(method "Operations that log disproportionately"\)\)) s
-5 132 M
+5 143 M
 (    \(corruption) s
-5 121 M
+5 132 M
 (     \(description "Tamper with log entries"\)) s
-5 110 M
+5 121 M
 (     \(goal "Alter historical record"\)) s
-5 99 M
+5 110 M
 (     \(method "Exploit write access to log storage"\)\)) s
-5 77 M
+5 88 M
 (    \(truncation) s
-5 66 M
+5 77 M
 (     \(description "Force log rotation/deletion"\)) s
-5 55 M
+5 66 M
 (     \(goal "Remove evidence"\)) s
-5 44 M
+5 55 M
 (     \(method "Fill logs to trigger cleanup"\)\)\)\)) s
 5 33 M
-(`) s
-5 11 M
 (Attacker Capabilities) s
+5 11 M
+(;; Assume attacker can:) s
 _R
 S
 %%Page: (2) 2
@@ -549,122 +547,120 @@ _S
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 770 M
-(`scheme) s
-5 759 M
-(;; Assume attacker can:) s
-5 748 M
+5 781 M
 (;; - Authenticate as a valid principal) s
-5 737 M
+5 770 M
 (;; - Perform many legitimate operations) s
-5 726 M
+5 759 M
 (;; - Control timing of operations) s
-5 715 M
+5 748 M
 (;; - Observe system behavior) s
-5 693 M
+5 726 M
 (;; Assume attacker cannot:) s
-5 682 M
+5 715 M
 (;; - Directly write to audit storage) s
-5 671 M
+5 704 M
 (;; - Forge signatures on log entries) s
-5 660 M
+5 693 M
 (;; - Break cryptographic primitives) s
-5 649 M
-(`) s
-5 627 M
+5 671 M
 (------------------------------------------------------------------------------) s
-5 605 M
+5 649 M
 (Rate Limiting) s
-5 583 M
+5 627 M
 (Per-Principal Audit Limits) s
-5 561 M
-(`scheme) s
-5 550 M
+5 605 M
 (\(define audit-rate-limits) s
-5 539 M
+5 594 M
 (  `\(\(entries-per-second . 100\)) s
-5 528 M
+5 583 M
 (    \(bytes-per-second . 102400\)      ; 100KB/s) s
-5 517 M
+5 572 M
 (    \(entries-per-minute . 1000\)) s
-5 506 M
+5 561 M
 (    \(bytes-per-minute . 10485760\)\)\)  ; 10MB/min) s
-5 484 M
+5 539 M
 (\(define principal-audit-buckets \(make-hash-table\)\)) s
-5 462 M
+5 517 M
 (\(define \(get-audit-bucket principal\)) s
-5 451 M
+5 506 M
 (  \(or \(hash-table-ref principal-audit-buckets principal #f\)) s
-5 440 M
+5 495 M
 (      \(let \(\(bucket \(make-token-bucket) s
-5 429 M
+5 484 M
 (                     \(assoc-ref audit-rate-limits 'entries-per-second\)) s
-5 418 M
+5 473 M
 (                     \(assoc-ref audit-rate-limits 'entries-per-second\)\)\)\)) s
-5 407 M
+5 462 M
 (        \(hash-table-set! principal-audit-buckets principal bucket\)) s
-5 396 M
+5 451 M
 (        bucket\)\)\)) s
-5 374 M
+5 429 M
 (\(define \(audit-rate-check principal entry-size\)) s
-5 363 M
+5 418 M
 (  "Check if principal can generate audit entry") s
-5 352 M
+5 407 M
 (  \(let \(\(bucket \(get-audit-bucket principal\)\)\)) s
-5 341 M
+5 396 M
 (    \(bucket 1\)\)\)  ; Consume one token) s
-5 330 M
-(`) s
-5 308 M
+5 374 M
 (Audit Entry Costing) s
-5 286 M
-(`scheme) s
-5 275 M
+5 352 M
 (;; Different operations have different audit costs) s
-5 264 M
+5 341 M
 (\(define audit-costs) s
-5 253 M
+5 330 M
 (  `\(\(read . 1\)) s
-5 242 M
+5 319 M
 (    \(write . 2\)) s
-5 231 M
+5 308 M
 (    \(delete . 5\)) s
-5 220 M
+5 297 M
 (    \(query . 1\)) s
-5 209 M
+5 286 M
 (    \(admin . 10\)) s
-5 198 M
+5 275 M
 (    \(key-operation . 50\)) s
-5 187 M
+5 264 M
 (    \(emergency . 0\)\)\)  ; Always allowed) s
-5 165 M
+5 242 M
 (\(define \(audit-cost action\)) s
-5 154 M
+5 231 M
 (  \(or \(assoc-ref audit-costs action\) 1\)\)) s
-5 132 M
+5 209 M
 (\(define \(consume-audit-budget principal action\)) s
-5 121 M
+5 198 M
 (  "Deduct from principal's audit budget") s
-5 110 M
+5 187 M
 (  \(let \(\(cost \(audit-cost action\)\)) s
-5 99 M
+5 176 M
 (        \(bucket \(get-audit-bucket principal\)\)\)) s
-5 88 M
+5 165 M
 (    \(if \(bucket cost\)) s
-5 77 M
+5 154 M
 (        #t) s
-5 66 M
+5 143 M
 (        \(begin) s
-5 55 M
+5 132 M
 (          ;; Log the rate limit event \(always succeeds\)) s
-5 44 M
+5 121 M
 (          \(audit-append-privileged) s
-5 33 M
+5 110 M
 (            action: 'audit-rate-limited) s
-5 22 M
+5 99 M
 (            principal: principal) s
-5 11 M
+5 88 M
 (            attempted-action: action\)) s
+5 77 M
+(          #f\)\)\)\)) s
+5 55 M
+(Burst Handling) s
+5 33 M
+(;; Allow short bursts but limit sustained rate) s
+5 22 M
+(\(define \(make-audit-limiter\)) s
+5 11 M
+(  \(let \(\(short-term \(make-token-bucket 200 100\)\)   ; 100/s, burst 200) s
 _R
 S
 %%Page: (3) 3
@@ -679,119 +675,121 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(          #f\)\)\)\)) s
-5 770 M
-(`) s
-5 748 M
-(Burst Handling) s
-5 726 M
-(`scheme) s
-5 715 M
-(;; Allow short bursts but limit sustained rate) s
-5 704 M
-(\(define \(make-audit-limiter\)) s
-5 693 M
-(  \(let \(\(short-term \(make-token-bucket 200 100\)\)   ; 100/s, burst 200) s
-5 682 M
 (        \(long-term \(make-sliding-window 10000 60\)\)\) ; 10k/min) s
-5 671 M
+5 770 M
 (    \(lambda \(cost\)) s
-5 660 M
+5 759 M
 (      \(and \(short-term cost\)) s
-5 649 M
+5 748 M
 (           \(long-term\)\)\)\)\)) s
-5 638 M
-(`) s
-5 616 M
+5 726 M
 (------------------------------------------------------------------------------) s
-5 594 M
+5 704 M
 (Storage Protection) s
-5 572 M
+5 682 M
 (Reserved Audit Space) s
-5 550 M
-(`scheme) s
-5 539 M
+5 660 M
 (;; Always reserve space for audit) s
-5 528 M
+5 649 M
 (\(define audit-reserved-space \(* 1024 1024 1024\)\)  ; 1GB minimum) s
-5 506 M
+5 627 M
 (\(define \(audit-storage-available\)) s
-5 495 M
+5 616 M
 (  \(let \(\(total \(storage-available\)\)) s
-5 484 M
+5 605 M
 (        \(audit-used \(audit-storage-used\)\)\)) s
-5 473 M
+5 594 M
 (    \(max 0 \(- total audit-reserved-space\)\)\)\)) s
-5 451 M
+5 572 M
 (\(define \(check-audit-storage entry-size\)) s
-5 440 M
+5 561 M
 (  "Ensure space for audit entry") s
-5 429 M
+5 550 M
 (  \(let \(\(available \(audit-storage-available\)\)\)) s
-5 418 M
+5 539 M
 (    \(when \(< available entry-size\)) s
-5 407 M
+5 528 M
 (      ;; Emergency: halt non-audit operations) s
-5 396 M
+5 517 M
 (      \(enter-audit-protection-mode\)) s
-5 385 M
+5 506 M
 (      ;; But always log) s
-5 374 M
+5 495 M
 (      #t\)\)\)) s
-5 363 M
-(`) s
-5 341 M
+5 473 M
 (Audit Protection Mode) s
-5 319 M
-(`scheme) s
-5 308 M
+5 451 M
 (\(define audit-protection-mode? \(make-parameter #f\)\)) s
-5 286 M
+5 429 M
 (\(define \(enter-audit-protection-mode\)) s
-5 275 M
+5 418 M
 (  "Emergency mode: only allow audit writes") s
-5 264 M
+5 407 M
 (  \(audit-protection-mode? #t\)) s
-5 253 M
+5 396 M
 (  \(audit-append-privileged) s
-5 242 M
+5 385 M
 (    action: 'audit-protection-enabled) s
-5 231 M
+5 374 M
 (    reason: 'storage-exhaustion\)) s
-5 220 M
+5 363 M
 (  ;; Reject all non-essential operations) s
-5 209 M
+5 352 M
 (  \(set-vault-mode! 'audit-only\)\)) s
-5 187 M
+5 330 M
 (\(define \(exit-audit-protection-mode\)) s
-5 176 M
+5 319 M
 (  "Resume normal operations") s
-5 165 M
+5 308 M
 (  \(when \(> \(audit-storage-available\) \( 2 audit-reserved-space*\)\)) s
-5 154 M
+5 297 M
 (    \(audit-protection-mode? #f\)) s
-5 143 M
+5 286 M
 (    \(set-vault-mode! 'normal\)) s
-5 132 M
+5 275 M
 (    \(audit-append-privileged) s
-5 121 M
+5 264 M
 (      action: 'audit-protection-disabled\)\)\)) s
-5 110 M
-(`) s
-5 88 M
+5 242 M
 (Tiered Storage) s
-5 66 M
-(`scheme) s
-5 55 M
+5 220 M
 (;; Audit log tiers) s
-5 44 M
+5 209 M
 (\(define audit-tiers) s
-5 33 M
+5 198 M
 (  '\(\(hot . \(\(retention . 86400\)      ; 1 day) s
-5 22 M
+5 187 M
 (            \(storage . ssd\)) s
-5 11 M
+5 176 M
 (            \(compression . none\)\)\)) s
+5 165 M
+(    \(warm . \(\(retention . 604800\)    ; 7 days) s
+5 154 M
+(             \(storage . hdd\)) s
+5 143 M
+(             \(compression . zstd-fast\)\)\)) s
+5 132 M
+(    \(cold . \(\(retention . 31536000\)  ; 1 year) s
+5 121 M
+(             \(storage . archive\)) s
+5 110 M
+(             \(compression . zstd-max\)\)\)) s
+5 99 M
+(    \(glacier . \(\(retention . #f\)     ; Forever) s
+5 88 M
+(                \(storage . offsite\)) s
+5 77 M
+(                \(compression . zstd-max\)\)\)\)\)) s
+5 55 M
+(\(define \(tier-audit-entry entry age\)) s
+5 44 M
+(  "Move entry to appropriate storage tier") s
+5 33 M
+(  \(let \(\(tier \(find \(lambda \(t\)) s
+5 22 M
+(                      \(or \(not \(assoc-ref \(cdr t\) 'retention\)\)) s
+5 11 M
+(                          \(< age \(assoc-ref \(cdr t\) 'retention\)\)\)\)) s
 _R
 S
 %%Page: (4) 4
@@ -806,127 +804,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(    \(warm . \(\(retention . 604800\)    ; 7 days) s
-5 770 M
-(             \(storage . hdd\)) s
-5 759 M
-(             \(compression . zstd-fast\)\)\)) s
-5 748 M
-(    \(cold . \(\(retention . 31536000\)  ; 1 year) s
-5 737 M
-(             \(storage . archive\)) s
-5 726 M
-(             \(compression . zstd-max\)\)\)) s
-5 715 M
-(    \(glacier . \(\(retention . #f\)     ; Forever) s
-5 704 M
-(                \(storage . offsite\)) s
-5 693 M
-(                \(compression . zstd-max\)\)\)\)\)) s
-5 671 M
-(\(define \(tier-audit-entry entry age\)) s
-5 660 M
-(  "Move entry to appropriate storage tier") s
-5 649 M
-(  \(let \(\(tier \(find \(lambda \(t\)) s
-5 638 M
-(                      \(or \(not \(assoc-ref \(cdr t\) 'retention\)\)) s
-5 627 M
-(                          \(< age \(assoc-ref \(cdr t\) 'retention\)\)\)\)) s
-5 616 M
 (                    audit-tiers\)\)\)) s
-5 605 M
+5 770 M
 (    \(migrate-to-tier entry \(car tier\)\)\)\)) s
-5 594 M
-(`) s
-5 572 M
+5 748 M
 (------------------------------------------------------------------------------) s
-5 550 M
+5 726 M
 (Entry Size Limits) s
-5 528 M
+5 704 M
 (Maximum Entry Size) s
-5 506 M
-(`scheme) s
-5 495 M
+5 682 M
 (\(define max-audit-entry-size 65536\)  ; 64KB) s
-5 473 M
+5 660 M
 (\(define \(validate-audit-entry entry\)) s
-5 462 M
+5 649 M
 (  "Validate entry before logging") s
-5 451 M
+5 638 M
 (  \(let \(\(size \(serialized-size entry\)\)\)) s
-5 440 M
+5 627 M
 (    \(when \(> size max-audit-entry-size\)) s
-5 429 M
+5 616 M
 (      \(error 'audit-entry-too-large) s
-5 418 M
+5 605 M
 (             `\(\(size . ,size\)) s
-5 407 M
+5 594 M
 (               \(limit . ,max-audit-entry-size\)\)\)\)\)\)) s
-5 396 M
-(`) s
-5 374 M
+5 572 M
 (Entry Truncation) s
-5 352 M
-(`scheme) s
-5 341 M
+5 550 M
 (\(define \(truncate-audit-entry entry max-size\)) s
-5 330 M
+5 539 M
 (  "Truncate oversized entry while preserving critical fields") s
-5 319 M
+5 528 M
 (  \(let \(\(critical '\(action principal timestamp hash signature\)\)\)) s
-5 308 M
+5 517 M
 (    \(let loop \(\(entry entry\)) s
-5 297 M
+5 506 M
 (               \(fields \(entry-fields entry\)\)\)) s
-5 286 M
+5 495 M
 (      \(if \(<= \(serialized-size entry\) max-size\)) s
-5 275 M
+5 484 M
 (          entry) s
-5 264 M
+5 473 M
 (          \(let \(\(removable \(find \(lambda \(f\)) s
-5 253 M
+5 462 M
 (                                   \(not \(member f critical\)\)\)) s
-5 242 M
+5 451 M
 (                                 fields\)\)\)) s
-5 231 M
+5 440 M
 (            \(if removable) s
-5 220 M
+5 429 M
 (                \(loop \(assoc-remove entry removable\)) s
-5 209 M
+5 418 M
 (                      \(delete removable fields\)\)) s
-5 198 M
+5 407 M
 (                ;; Can't truncate further, log warning) s
-5 187 M
+5 396 M
 (                \(begin) s
-5 176 M
+5 385 M
 (                  \(audit-append-privileged) s
-5 165 M
+5 374 M
 (                    action: 'audit-entry-truncation-failed) s
-5 154 M
+5 363 M
 (                    original-size: \(serialized-size entry\)\)) s
-5 143 M
+5 352 M
 (                  entry\)\)\)\)\)\)\)) s
-5 132 M
-(`) s
-5 110 M
+5 330 M
 (Payload Summarization) s
-5 88 M
-(`scheme) s
-5 77 M
+5 308 M
 (\(define \(summarize-large-payload payload\)) s
-5 66 M
+5 297 M
 (  "Summarize large payloads for audit") s
-5 55 M
+5 286 M
 (  \(if \(> \(bytevector-length payload\) 1024\)) s
-5 44 M
+5 275 M
 (      `\(\(type . summarized\)) s
-5 33 M
+5 264 M
 (        \(original-size . ,\(bytevector-length payload\)\)) s
-5 22 M
+5 253 M
 (        \(hash . ,\(content-hash payload\)\)) s
-5 11 M
+5 242 M
 (        \(preview . ,\(subbytevector payload 0 256\)\)\)) s
+5 231 M
+(      payload\)\)) s
+5 209 M
+(------------------------------------------------------------------------------) s
+5 187 M
+(Aggregation) s
+5 165 M
+(Event Aggregation) s
+5 143 M
+(;; Aggregate similar events to reduce volume) s
+5 132 M
+(\(define aggregation-window 60\)  ; seconds) s
+5 121 M
+(\(define pending-aggregations \(make-hash-table\)\)) s
+5 99 M
+(\(define \(aggregate-audit-event action principal details\)) s
+5 88 M
+(  "Aggregate similar events within window") s
+5 77 M
+(  \(let* \(\(key \(list action principal\)\)) s
+5 66 M
+(         \(existing \(hash-table-ref pending-aggregations key #f\)\)\)) s
+5 55 M
+(    \(if existing) s
+5 44 M
+(        ;; Add to existing aggregation) s
+5 33 M
+(        \(begin) s
+5 22 M
+(          \(set-cdr! \(assoc 'count existing\)) s
+5 11 M
+(                    \(+ 1 \(assoc-ref existing 'count\)\)\)) s
 _R
 S
 %%Page: (5) 5
@@ -941,129 +931,127 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(      payload\)\)) s
-5 770 M
-(`) s
-5 748 M
-(------------------------------------------------------------------------------) s
-5 726 M
-(Aggregation) s
-5 704 M
-(Event Aggregation) s
-5 682 M
-(`scheme) s
-5 671 M
-(;; Aggregate similar events to reduce volume) s
-5 660 M
-(\(define aggregation-window 60\)  ; seconds) s
-5 649 M
-(\(define pending-aggregations \(make-hash-table\)\)) s
-5 627 M
-(\(define \(aggregate-audit-event action principal details\)) s
-5 616 M
-(  "Aggregate similar events within window") s
-5 605 M
-(  \(let* \(\(key \(list action principal\)\)) s
-5 594 M
-(         \(existing \(hash-table-ref pending-aggregations key #f\)\)\)) s
-5 583 M
-(    \(if existing) s
-5 572 M
-(        ;; Add to existing aggregation) s
-5 561 M
-(        \(begin) s
-5 550 M
-(          \(set-cdr! \(assoc 'count existing\)) s
-5 539 M
-(                    \(+ 1 \(assoc-ref existing 'count\)\)\)) s
-5 528 M
 (          \(set-cdr! \(assoc 'last-seen existing\)) s
-5 517 M
+5 770 M
 (                    \(current-time\)\)\)) s
-5 506 M
+5 759 M
 (        ;; Start new aggregation) s
-5 495 M
+5 748 M
 (        \(hash-table-set! pending-aggregations key) s
-5 484 M
+5 737 M
 (          `\(\(action . ,action\)) s
-5 473 M
+5 726 M
 (            \(principal . ,principal\)) s
-5 462 M
+5 715 M
 (            \(count . 1\)) s
-5 451 M
+5 704 M
 (            \(first-seen . ,\(current-time\)\)) s
-5 440 M
+5 693 M
 (            \(last-seen . ,\(current-time\)\)) s
-5 429 M
+5 682 M
 (            \(sample . ,details\)\)\)\)\)\)) s
-5 407 M
+5 660 M
 (\(define \(flush-aggregations\)) s
-5 396 M
+5 649 M
 (  "Flush aggregated events to audit log") s
-5 385 M
+5 638 M
 (  \(hash-table-walk pending-aggregations) s
-5 374 M
+5 627 M
 (    \(lambda \(key agg\)) s
-5 363 M
+5 616 M
 (      \(when \(> \(- \(current-time\) \(assoc-ref agg 'first-seen\)\)) s
-5 352 M
+5 605 M
 (               aggregation-window\)) s
-5 341 M
+5 594 M
 (        \(audit-append-direct) s
-5 330 M
+5 583 M
 (          action: 'aggregated-events) s
-5 319 M
+5 572 M
 (          original-action: \(assoc-ref agg 'action\)) s
-5 308 M
+5 561 M
 (          principal: \(assoc-ref agg 'principal\)) s
-5 297 M
+5 550 M
 (          count: \(assoc-ref agg 'count\)) s
-5 286 M
+5 539 M
 (          window-start: \(assoc-ref agg 'first-seen\)) s
-5 275 M
+5 528 M
 (          window-end: \(assoc-ref agg 'last-seen\)) s
-5 264 M
+5 517 M
 (          sample: \(assoc-ref agg 'sample\)\)) s
-5 253 M
+5 506 M
 (        \(hash-table-delete! pending-aggregations key\)\)\)\)\)) s
-5 242 M
-(`) s
-5 220 M
+5 484 M
 (Sampling) s
-5 198 M
-(`scheme) s
-5 187 M
+5 462 M
 (;; Sample high-volume events) s
-5 176 M
+5 451 M
 (\(define \(should-sample? action principal\)) s
-5 165 M
+5 440 M
 (  \(let \(\(rate \(current-rate action principal\)\)\)) s
-5 154 M
+5 429 M
 (    \(cond) s
-5 143 M
+5 418 M
 (      \(\(< rate 10\) #t\)              ; Always log low-rate) s
-5 132 M
+5 407 M
 (      \(\(< rate 100\) \(< \(random 1.0\) 0.5\)\)  ; 50% sample) s
-5 121 M
+5 396 M
 (      \(\(< rate 1000\) \(< \(random 1.0\) 0.1\)\) ; 10% sample) s
-5 110 M
+5 385 M
 (      \(else \(< \(random 1.0\) 0.01\)\)\)\)\)      ; 1% sample) s
-5 88 M
+5 363 M
 (\(define \(audit-with-sampling action principal details\)) s
-5 77 M
+5 352 M
 (  "Log with sampling for high-volume events") s
-5 66 M
+5 341 M
 (  \(if \(should-sample? action principal\)) s
-5 55 M
+5 330 M
 (      \(audit-append action: action) s
-5 44 M
+5 319 M
 (                    principal: principal) s
-5 33 M
+5 308 M
 (                    details: details) s
-5 22 M
+5 297 M
 (                    sampled: #t\)) s
-5 11 M
+5 286 M
 (      ;; Still count for rate tracking) s
+5 275 M
+(      \(increment-audit-counter action principal\)\)\)) s
+5 253 M
+(------------------------------------------------------------------------------) s
+5 231 M
+(Anomaly Detection) s
+5 209 M
+(Baseline Establishment) s
+5 187 M
+(\(define \(establish-audit-baseline principal duration\)) s
+5 176 M
+(  "Establish normal audit patterns for principal") s
+5 165 M
+(  \(let \(\(events \(soup-query type: 'audit-entry) s
+5 154 M
+(                            principal: principal) s
+5 143 M
+(                            timestamp: \(> \(- \(current-time\) duration\)\)\)\)\)) s
+5 132 M
+(    `\(\(events-per-hour . ,\(/ \(length events\) \(/ duration 3600\)\)\)) s
+5 121 M
+(      \(common-actions . ,\(top-n \(map audit-action events\) 10\)\)) s
+5 110 M
+(      \(typical-hours . ,\(typical-active-hours events\)\)) s
+5 99 M
+(      \(established-at . ,\(current-time\)\)\)\)\)) s
+5 77 M
+(Anomaly Detection) s
+5 55 M
+(\(define \(detect-audit-anomaly principal current-rate baseline\)) s
+5 44 M
+(  "Detect anomalous audit patterns") s
+5 33 M
+(  \(let \(\(expected \(assoc-ref baseline 'events-per-hour\)\)) s
+5 22 M
+(        \(threshold 3.0\)\)  ; 3x normal is anomalous) s
+5 11 M
+(    \(when \(> current-rate \(* threshold expected\)\)) s
 _R
 S
 %%Page: (6) 6
@@ -1078,123 +1066,129 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(      \(increment-audit-counter action principal\)\)\)) s
-5 770 M
-(`) s
-5 748 M
-(------------------------------------------------------------------------------) s
-5 726 M
-(Anomaly Detection) s
-5 704 M
-(Baseline Establishment) s
-5 682 M
-(`scheme) s
-5 671 M
-(\(define \(establish-audit-baseline principal duration\)) s
-5 660 M
-(  "Establish normal audit patterns for principal") s
-5 649 M
-(  \(let \(\(events \(soup-query type: 'audit-entry) s
-5 638 M
-(                            principal: principal) s
-5 627 M
-(                            timestamp: \(> \(- \(current-time\) duration\)\)\)\)\)) s
-5 616 M
-(    `\(\(events-per-hour . ,\(/ \(length events\) \(/ duration 3600\)\)\)) s
-5 605 M
-(      \(common-actions . ,\(top-n \(map audit-action events\) 10\)\)) s
-5 594 M
-(      \(typical-hours . ,\(typical-active-hours events\)\)) s
-5 583 M
-(      \(established-at . ,\(current-time\)\)\)\)\)) s
-5 572 M
-(`) s
-5 550 M
-(Anomaly Detection) s
-5 528 M
-(`scheme) s
-5 517 M
-(\(define \(detect-audit-anomaly principal current-rate baseline\)) s
-5 506 M
-(  "Detect anomalous audit patterns") s
-5 495 M
-(  \(let \(\(expected \(assoc-ref baseline 'events-per-hour\)\)) s
-5 484 M
-(        \(threshold 3.0\)\)  ; 3x normal is anomalous) s
-5 473 M
-(    \(when \(> current-rate \(* threshold expected\)\)) s
-5 462 M
 (      \(audit-append-privileged) s
-5 451 M
+5 770 M
 (        action: 'audit-anomaly-detected) s
-5 440 M
+5 759 M
 (        principal: principal) s
-5 429 M
+5 748 M
 (        current-rate: current-rate) s
-5 418 M
+5 737 M
 (        expected-rate: expected) s
-5 407 M
+5 726 M
 (        severity: \(if \(> current-rate \(* 10 expected\)\)) s
-5 396 M
+5 715 M
 (                      'critical) s
-5 385 M
+5 704 M
 (                      'warning\)\)) s
-5 374 M
+5 693 M
 (      ;; Potentially throttle) s
-5 363 M
+5 682 M
 (      \(when \(> current-rate \(* 10 expected\)\)) s
-5 352 M
+5 671 M
 (        \(throttle-principal principal\)\)\)\)\)) s
-5 341 M
-(`) s
-5 319 M
+5 649 M
 (Flood Detection) s
-5 297 M
-(`scheme) s
-5 286 M
+5 627 M
 (\(define \(detect-audit-flood\)) s
-5 275 M
+5 616 M
 (  "Detect system-wide audit flooding") s
-5 264 M
+5 605 M
 (  \(let \(\(current-rate \(global-audit-rate\)\)) s
-5 253 M
+5 594 M
 (        \(threshold \(* 10 \(baseline-global-rate\)\)\)\)) s
-5 242 M
+5 583 M
 (    \(when \(> current-rate threshold\)) s
-5 231 M
+5 572 M
 (      ;; Identify top contributors) s
-5 220 M
+5 561 M
 (      \(let \(\(top-principals \(top-audit-principals 10\)\)\)) s
-5 209 M
+5 550 M
 (        \(audit-append-privileged) s
-5 198 M
+5 539 M
 (          action: 'audit-flood-detected) s
-5 187 M
+5 528 M
 (          global-rate: current-rate) s
-5 176 M
+5 517 M
 (          threshold: threshold) s
-5 165 M
+5 506 M
 (          top-principals: top-principals\)) s
-5 154 M
+5 495 M
 (        ;; Throttle top contributors) s
-5 143 M
+5 484 M
 (        \(for-each throttle-principal) s
-5 132 M
+5 473 M
 (                  \(map car top-principals\)\)\)\)\)\)) s
-5 121 M
-(`) s
-5 99 M
+5 451 M
 (------------------------------------------------------------------------------) s
-5 77 M
+5 429 M
 (Privileged Logging) s
-5 55 M
+5 407 M
 (System Events) s
-5 33 M
-(`scheme) s
-5 22 M
+5 385 M
 (;; Some events bypass rate limits) s
-5 11 M
+5 374 M
 (\(define privileged-actions) s
+5 363 M
+(  '\(audit-rate-limited) s
+5 352 M
+(    audit-protection-enabled) s
+5 341 M
+(    audit-protection-disabled) s
+5 330 M
+(    audit-anomaly-detected) s
+5 319 M
+(    audit-flood-detected) s
+5 308 M
+(    key-ceremony) s
+5 297 M
+(    emergency-revoke) s
+5 286 M
+(    security-alert\)\)) s
+5 264 M
+(\(define \(audit-append-privileged . args\)) s
+5 253 M
+(  "Log privileged event \(bypasses rate limits\)") s
+5 242 M
+(  \(let \(\(entry \(apply make-audit-entry args\)\)\)) s
+5 231 M
+(    ;; Always log, never rate limit) s
+5 220 M
+(    \(audit-write-direct entry\)) s
+5 209 M
+(    ;; Alert on privileged events) s
+5 198 M
+(    \(when \(member \(assoc-ref entry 'action\) '\(security-alert emergency-revoke\)\)) s
+5 187 M
+(      \(send-security-alert entry\)\)\)\)) s
+5 165 M
+(Guaranteed Delivery) s
+5 143 M
+(\(define \(audit-write-guaranteed entry\)) s
+5 132 M
+(  "Write audit entry with guaranteed delivery") s
+5 121 M
+(  ;; Write to multiple locations) s
+5 110 M
+(  \(let \(\(locations \(list \(primary-audit-log\)) s
+5 99 M
+(                         \(secondary-audit-log\)) s
+5 88 M
+(                         \(remote-audit-log\)\)\)\)) s
+5 77 M
+(    \(let \(\(successes \(filter \(lambda \(loc\)) s
+5 66 M
+(                               \(guard \(ex \(else #f\)\)) s
+5 55 M
+(                                 \(audit-write loc entry\)) s
+5 44 M
+(                                 #t\)\)) s
+5 33 M
+(                             locations\)\)\)) s
+5 22 M
+(      \(when \(< \(length successes\) 2\)) s
+5 11 M
+(        ;; Failed to write to enough locations) s
 _R
 S
 %%Page: (7) 7
@@ -1209,127 +1203,121 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  '\(audit-rate-limited) s
-5 770 M
-(    audit-protection-enabled) s
-5 759 M
-(    audit-protection-disabled) s
-5 748 M
-(    audit-anomaly-detected) s
-5 737 M
-(    audit-flood-detected) s
-5 726 M
-(    key-ceremony) s
-5 715 M
-(    emergency-revoke) s
-5 704 M
-(    security-alert\)\)) s
-5 682 M
-(\(define \(audit-append-privileged . args\)) s
-5 671 M
-(  "Log privileged event \(bypasses rate limits\)") s
-5 660 M
-(  \(let \(\(entry \(apply make-audit-entry args\)\)\)) s
-5 649 M
-(    ;; Always log, never rate limit) s
-5 638 M
-(    \(audit-write-direct entry\)) s
-5 627 M
-(    ;; Alert on privileged events) s
-5 616 M
-(    \(when \(member \(assoc-ref entry 'action\) '\(security-alert emergency-revoke\)\)) s
-5 605 M
-(      \(send-security-alert entry\)\)\)\)) s
-5 594 M
-(`) s
-5 572 M
-(Guaranteed Delivery) s
-5 550 M
-(`scheme) s
-5 539 M
-(\(define \(audit-write-guaranteed entry\)) s
-5 528 M
-(  "Write audit entry with guaranteed delivery") s
-5 517 M
-(  ;; Write to multiple locations) s
-5 506 M
-(  \(let \(\(locations \(list \(primary-audit-log\)) s
-5 495 M
-(                         \(secondary-audit-log\)) s
-5 484 M
-(                         \(remote-audit-log\)\)\)\)) s
-5 473 M
-(    \(let \(\(successes \(filter \(lambda \(loc\)) s
-5 462 M
-(                               \(guard \(ex \(else #f\)\)) s
-5 451 M
-(                                 \(audit-write loc entry\)) s
-5 440 M
-(                                 #t\)\)) s
-5 429 M
-(                             locations\)\)\)) s
-5 418 M
-(      \(when \(< \(length successes\) 2\)) s
-5 407 M
-(        ;; Failed to write to enough locations) s
-5 396 M
 (        \(emergency-audit-alert entry successes\)\)\)\)\)) s
-5 385 M
-(`) s
-5 363 M
+5 759 M
 (------------------------------------------------------------------------------) s
-5 341 M
+5 737 M
 (Integrity Protection) s
-5 319 M
+5 715 M
 (Append-Only Enforcement) s
-5 297 M
-(`scheme) s
-5 286 M
+5 693 M
 (;; Audit log is strictly append-only) s
-5 275 M
+5 682 M
 (\(define \(audit-write entry\)) s
-5 264 M
+5 671 M
 (  "Append entry to audit log") s
-5 253 M
+5 660 M
 (  \(let \(\(log \(current-audit-log\)\)\)) s
-5 242 M
+5 649 M
 (    ;; Verify we're at the end) s
-5 231 M
+5 638 M
 (    \(unless \(at-log-end? log\)) s
-5 220 M
+5 627 M
 (      \(error 'audit-log-not-at-end\)\)) s
-5 209 M
+5 616 M
 (    ;; Append with sequence number) s
-5 198 M
+5 605 M
 (    \(let \(\(seq \(next-sequence-number log\)\)\)) s
-5 187 M
+5 594 M
 (      \(write-entry log \(cons `\(sequence . ,seq\) entry\)\)) s
-5 176 M
+5 583 M
 (      ;; Sign the entry) s
-5 165 M
+5 572 M
 (      \(sign-entry log entry\)\)\)\)) s
-5 154 M
-(`) s
-5 132 M
+5 550 M
 (Chain Integrity) s
-5 110 M
-(`scheme) s
-5 99 M
+5 528 M
 (;; Each entry references previous \(blockchain-style\)) s
-5 88 M
+5 517 M
 (\(define \(chain-entry entry previous-hash\)) s
-5 77 M
+5 506 M
 (  `\(\(previous-hash . ,previous-hash\)) s
-5 66 M
+5 495 M
 (    \(sequence . ,\(+ 1 \(previous-sequence\)\)\)) s
-5 55 M
+5 484 M
 (    \(timestamp . ,\(current-time\)\)) s
-5 44 M
+5 473 M
 (    ,@entry) s
-5 33 M
+5 462 M
 (    \(hash . ,\(compute-entry-hash entry previous-hash\)\)\)\)) s
-5 11 M
+5 440 M
 (\(define \(verify-audit-chain log\)) s
+5 429 M
+(  "Verify audit log chain integrity") s
+5 418 M
+(  \(let loop \(\(entries \(audit-entries log\)\)) s
+5 407 M
+(             \(expected-prev #f\)\)) s
+5 396 M
+(    \(if \(null? entries\)) s
+5 385 M
+(        #t) s
+5 374 M
+(        \(let \(\(entry \(car entries\)\)\)) s
+5 363 M
+(          \(and \(or \(not expected-prev\)) s
+5 352 M
+(                   \(equal? \(assoc-ref entry 'previous-hash\) expected-prev\)\)) s
+5 341 M
+(               \(loop \(cdr entries\)) s
+5 330 M
+(                     \(assoc-ref entry 'hash\)\)\)\)\)\)\)) s
+5 308 M
+(------------------------------------------------------------------------------) s
+5 286 M
+(Recovery) s
+5 264 M
+(Log Reconstruction) s
+5 242 M
+(\(define \(reconstruct-audit-log backups\)) s
+5 231 M
+(  "Reconstruct audit log from multiple backups") s
+5 220 M
+(  \(let \(\(entries \(merge-backup-entries backups\)\)\)) s
+5 209 M
+(    ;; Deduplicate by sequence number) s
+5 198 M
+(    \(let \(\(deduped \(deduplicate-by-sequence entries\)\)\)) s
+5 187 M
+(      ;; Verify chain) s
+5 176 M
+(      \(unless \(verify-audit-chain deduped\)) s
+5 165 M
+(        \(error 'audit-chain-broken\)\)) s
+5 154 M
+(      deduped\)\)\)) s
+5 132 M
+(Gap Detection) s
+5 110 M
+(\(define \(detect-audit-gaps log\)) s
+5 99 M
+(  "Find gaps in audit sequence") s
+5 88 M
+(  \(let loop \(\(entries \(audit-entries log\)\)) s
+5 77 M
+(             \(expected-seq 1\)) s
+5 66 M
+(             \(gaps '\(\)\)\)) s
+5 55 M
+(    \(if \(null? entries\)) s
+5 44 M
+(        gaps) s
+5 33 M
+(        \(let \(\(seq \(assoc-ref \(car entries\) 'sequence\)\)\)) s
+5 22 M
+(          \(if \(= seq expected-seq\)) s
+5 11 M
+(              \(loop \(cdr entries\) \(+ seq 1\) gaps\)) s
 _R
 S
 %%Page: (8) 8
@@ -1344,110 +1332,34 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(  "Verify audit log chain integrity") s
+(              \(loop \(cdr entries\) \(+ seq 1\)) s
 5 770 M
-(  \(let loop \(\(entries \(audit-entries log\)\)) s
-5 759 M
-(             \(expected-prev #f\)\)) s
+(                    \(cons \(list expected-seq \(- seq 1\)\) gaps\)\)\)\)\)\)\)) s
 5 748 M
-(    \(if \(null? entries\)) s
-5 737 M
-(        #t) s
+(------------------------------------------------------------------------------) s
 5 726 M
-(        \(let \(\(entry \(car entries\)\)\)) s
-5 715 M
-(          \(and \(or \(not expected-prev\)) s
+(References) s
 5 704 M
-(                   \(equal? \(assoc-ref entry 'previous-hash\) expected-prev\)\)) s
+(1. NIST SP 800-92: Guide to Computer Security Log Management) s
 5 693 M
-(               \(loop \(cdr entries\)) s
+(2. RFC-003: Cryptographic Audit Trail) s
 5 682 M
-(                     \(assoc-ref entry 'hash\)\)\)\)\)\)\)) s
+(3. RFC-032: Rate Limiting and Quotas) s
 5 671 M
-(`) s
+(4. RFC-028: Error Handling and Recovery) s
 5 649 M
 (------------------------------------------------------------------------------) s
 5 627 M
-(Recovery) s
-5 605 M
-(Log Reconstruction) s
-5 583 M
-(`scheme) s
-5 572 M
-(\(define \(reconstruct-audit-log backups\)) s
-5 561 M
-(  "Reconstruct audit log from multiple backups") s
-5 550 M
-(  \(let \(\(entries \(merge-backup-entries backups\)\)\)) s
-5 539 M
-(    ;; Deduplicate by sequence number) s
-5 528 M
-(    \(let \(\(deduped \(deduplicate-by-sequence entries\)\)\)) s
-5 517 M
-(      ;; Verify chain) s
-5 506 M
-(      \(unless \(verify-audit-chain deduped\)) s
-5 495 M
-(        \(error 'audit-chain-broken\)\)) s
-5 484 M
-(      deduped\)\)\)) s
-5 473 M
-(`) s
-5 451 M
-(Gap Detection) s
-5 429 M
-(`scheme) s
-5 418 M
-(\(define \(detect-audit-gaps log\)) s
-5 407 M
-(  "Find gaps in audit sequence") s
-5 396 M
-(  \(let loop \(\(entries \(audit-entries log\)\)) s
-5 385 M
-(             \(expected-seq 1\)) s
-5 374 M
-(             \(gaps '\(\)\)\)) s
-5 363 M
-(    \(if \(null? entries\)) s
-5 352 M
-(        gaps) s
-5 341 M
-(        \(let \(\(seq \(assoc-ref \(car entries\) 'sequence\)\)\)) s
-5 330 M
-(          \(if \(= seq expected-seq\)) s
-5 319 M
-(              \(loop \(cdr entries\) \(+ seq 1\) gaps\)) s
-5 308 M
-(              \(loop \(cdr entries\) \(+ seq 1\)) s
-5 297 M
-(                    \(cons \(list expected-seq \(- seq 1\)\) gaps\)\)\)\)\)\)\)) s
-5 286 M
-(`) s
-5 264 M
-(------------------------------------------------------------------------------) s
-5 242 M
-(References) s
-5 220 M
-(1. NIST SP 800-92: Guide to Computer Security Log Management) s
-5 209 M
-(2. RFC-003: Cryptographic Audit Trail) s
-5 198 M
-(3. RFC-032: Rate Limiting and Quotas) s
-5 187 M
-(4. RFC-028: Error Handling and Recovery) s
-5 165 M
-(------------------------------------------------------------------------------) s
-5 143 M
 (Changelog) s
-5 121 M
+5 605 M
 (- 2026-01-07 - Initial draft) s
-5 99 M
+5 583 M
 (------------------------------------------------------------------------------) s
-5 77 M
+5 561 M
 (Implementation Status: Draft) s
-5 66 M
+5 550 M
 (Dependencies: audit, storage, monitoring) s
-5 55 M
+5 539 M
 (Integration: All vault operations, security monitoring, forensics) s
 _R
 S
