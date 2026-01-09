@@ -230,55 +230,71 @@ crypto and <em>nothing else</em>.</li>
 </ul>
 <p>A smaller TCB means fewer bugs that can break security. We prove the
 crypto in Coq. Everything else can evolve freely.</p>
+<h3 id="interface-philosophy">2.1 Interface Philosophy</h3>
+<blockquote>
+<p><strong>English on top, Scheme for everything else.</strong></p>
+</blockquote>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  &gt; status                    Command mode: English verbs    │
+│  &gt; commit &quot;message&quot;          No parens needed              │
+│  &gt; soup                      Explore, inspect, act          │
+├─────────────────────────────────────────────────────────────┤
+│  &gt; (define x (keys))         Scheme mode: Full power       │
+│  &gt; (map publish (releases))  Compose, transform, compute   │
+│  &gt; (filter signed? certs)    Lambda is home                │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+<p>The command layer is sugar. The Scheme layer is substrate. Users
+start with English, graduate to Scheme when they need composition. No
+mode switching—parens are the only delimiter.</p>
 <hr />
 <h2 id="core-components">3. Core Components</h2>
 <h3 id="the-vault">3.1 The Vault</h3>
 <p>Sealed version control with cryptographic signatures.</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace vault init</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace vault commit <span class="at">-m</span> <span class="st">&quot;Deploy new API&quot;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace vault verify</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">✓</span> All signatures valid</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace vault init</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace vault commit <span class="at">-m</span> <span class="st">&quot;Deploy new API&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace vault verify</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">✓</span> All signatures valid</span></code></pre></div>
 <p>Every commit is cryptographically sealed. No GPG. No separate signing
 step.</p>
 <h3 id="the-audit-trail">3.2 The Audit Trail</h3>
 <p>Tamper-evident logging with hash chains.</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">1042</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="st">&quot;2026-01-06T15:30:00Z&quot;</span>)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  (action (commit <span class="st">&quot;Deploy v2.1&quot;</span>))</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  (actor (public-key |<span class="op">...</span>|))</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  (previous-hash |<span class="op">...</span>|)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  (signature |<span class="op">...</span>|))</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">1042</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="st">&quot;2026-01-06T15:30:00Z&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (action (commit <span class="st">&quot;Deploy v2.1&quot;</span>))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (actor (public-key |<span class="op">...</span>|))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  (previous-hash |<span class="op">...</span>|)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  (signature |<span class="op">...</span>|))</span></code></pre></div>
 <p>Append-only. Hash-chained. Signed. Export as text.</p>
 <h3 id="spki-certificates">3.3 SPKI Certificates</h3>
 <p>Authorization without identity.</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(cert</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (issuer (public-key ed25519 |base64....|))</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (subject (name alice <span class="st">&quot;deploy-server&quot;</span>))</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (grant (tag (http-api (method POST) (path <span class="st">&quot;/deploy/*&quot;</span>))))</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="st">&quot;2026-12-31&quot;</span>)))</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(cert</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (issuer (public-key ed25519 |base64....|))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (subject (name alice <span class="st">&quot;deploy-server&quot;</span>))</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  (grant (tag (http-api (method POST) (path <span class="st">&quot;/deploy/*&quot;</span>))))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  (valid (not-after <span class="st">&quot;2026-12-31&quot;</span>)))</span></code></pre></div>
 <p>Human-readable security policy. No ASN.1. No X.509.</p>
 <h3 id="threshold-governance">3.4 Threshold Governance</h3>
 <p>Democracy in code.</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace policy set deploy/prod <span class="at">--threshold</span> 3 <span class="at">--signers</span> alice,bob,carol,dave,eve</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace execute proposal-42</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">✓</span> 3/5 signatures verified</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace policy set deploy/prod <span class="at">--threshold</span> 3 <span class="at">--signers</span> alice,bob,carol,dave,eve</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> cyberspace execute proposal-42</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">✓</span> 3/5 signatures verified</span></code></pre></div>
 <p>No single point of failure. No rogue admin.</p>
 <h3 id="secret-sharing">3.5 Secret Sharing</h3>
 <p>Survive key loss with Shamir splitting.</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> shares </span>(shamir-split master-key <span class="dv">5</span> <span class="dv">3</span>))</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Distribute 5 shares. Recover with any 3.</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> shares </span>(shamir-split master-key <span class="dv">5</span> <span class="dv">3</span>))</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Distribute 5 shares. Recover with any 3.</span></span></code></pre></div>
 <h3 id="replication-layer">3.6 Replication Layer</h3>
 <p>Federated distribution without central registry. See RFC-001.</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(seal-publish <span class="st">&quot;1.0.0&quot;</span> remote: <span class="st">&quot;/shared/releases&quot;</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>(seal-subscribe <span class="st">&quot;/shared/releases&quot;</span> verify-key: alice-pub)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>(seal-synchronize peer-remote direction: &#39;both)</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(seal-publish <span class="st">&quot;1.0.0&quot;</span> remote: <span class="st">&quot;/shared/releases&quot;</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(seal-subscribe <span class="st">&quot;/shared/releases&quot;</span> verify-key: alice-pub)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>(seal-synchronize peer-remote direction: &#39;both)</span></code></pre></div>
 <h3 id="the-library-directory">3.7 The Library Directory</h3>
 <p>421 research papers, searchable.</p>
 <pre><code>📖 &gt; papers by Lamport
@@ -424,12 +440,12 @@ sharing</li>
 </ul>
 <hr />
 <h2 id="getting-started">8. Getting Started</h2>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone git@github.com:ddp/cyberspace.git</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> cyberspace/spki/scheme</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./spki-keygen</span> alice</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./seal</span> init <span class="at">--key</span> alice.private</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./seal</span> commit <span class="at">-m</span> <span class="st">&quot;Hello, Cyberspace&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone git@github.com:ddp/cyberspace.git</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> cyberspace/spki/scheme</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./spki-keygen</span> alice</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./seal</span> init <span class="at">--key</span> alice.private</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./seal</span> commit <span class="at">-m</span> <span class="st">&quot;Hello, Cyberspace&quot;</span></span></code></pre></div>
 <hr />
 <h2 id="future-work">9. Future Work</h2>
 <ul>
