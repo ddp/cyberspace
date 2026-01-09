@@ -1,155 +1,197 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>RFC-015: Versioning and Rollback</title>
-<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
-pre{white-space:pre-wrap;}</style>
-</head><body><pre>RFC-015: Versioning and Rollback
-
-Status: Proposed
-Date: January 2026
-Author: Derrell Piper &lt;ddp@eludom.net&gt;
-
-------------------------------------------------------------------------------
-
-Abstract
-
-This RFC specifies user-visible versioning and rollback semantics for Cyberspace vaults, providing clear mental models for version management, safe rollback operations, and recovery from mistakes.
-
-------------------------------------------------------------------------------
-
-Motivation
-
-Users need simple answers to simple questions:
-
-- What version am I on?
-- What versions exist?
-- How do I go back?
-- What if I make a mistake?
-
-Git provides mechanisms. Cyberspace provides semantics:
-
-`
-seal-version         → "2.1.0"
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-015-versioning-rollback</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<h1 id="rfc-015-versioning-and-rollback">RFC-015: Versioning and
+Rollback</h1>
+<p><strong>Status:</strong> Proposed <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a></p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies user-visible versioning and rollback semantics for
+Cyberspace vaults, providing clear mental models for version management,
+safe rollback operations, and recovery from mistakes.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Users need simple answers to simple questions:</p>
+<ul>
+<li><strong>What version am I on?</strong></li>
+<li><strong>What versions exist?</strong></li>
+<li><strong>How do I go back?</strong></li>
+<li><strong>What if I make a mistake?</strong></li>
+</ul>
+<p>Git provides mechanisms. Cyberspace provides semantics:</p>
+<pre><code>seal-version         → &quot;2.1.0&quot;
 seal-versions        → [1.0.0, 1.1.0, 2.0.0, 2.1.0]
 seal-rollback 2.0.0  → Done. Now at 2.0.0.
-seal-recover         → Here's what you can recover.
-`
-
-------------------------------------------------------------------------------
-
-Specification
-
-Version Model
-
-`
-                         HEAD
+seal-recover         → Here&#39;s what you can recover.</code></pre>
+<hr />
+<h2 id="specification">Specification</h2>
+<h3 id="version-model">Version Model</h3>
+<pre><code>                         HEAD
                           ↓
     1.0.0 ──→ 1.1.0 ──→ 2.0.0 ──→ 2.1.0
       │                   │
       │                   └── seal-rollback target
       │
-      └── seal-archive snapshots
-`
-
-Versions are semantic (X.Y.Z), immutable, signed.
-
-HEAD is current working state.
-
-Rollback creates forward commit that restores past state.
-
-Core Operations
-
-seal-version
-
-Report current version.
-
-`scheme
-(seal-version)
-;; =&gt; "2.1.0" or "2.1.0+3" (3 commits past release)
-`
-
-Output format:
-- X.Y.Z - Exactly at release
-- X.Y.Z+N - N commits past release
-- X.Y.Z-dev - Development branch
-- unversioned - No releases yet
-
-seal-versions
-
-List all versions.
-
-`scheme
-(seal-versions)
-;; =&gt; ("1.0.0" "1.1.0" "2.0.0" "2.1.0")
-
-(seal-versions verbose: #t)
-;; =&gt;
-;; 1.0.0  2026-01-01  "Initial release"
-;; 1.1.0  2026-01-05  "Bug fixes"
-;; 2.0.0  2026-01-10  "New governance model"
-;; 2.1.0  2026-01-15  "Performance improvements"
-`
-
-seal-rollback
-
-Roll back to specific version.
-
-`scheme
-(seal-rollback "2.0.0")
-`
-
-Process:
-1. Verify version exists
-2. Check for uncommitted changes (abort or stash)
-3. Create rollback commit with contents of target version
-4. Record in audit trail
-5. Optionally create rollback tag
-
-Rollback commit message:
-`
-Rollback to 2.0.0
+      └── seal-archive snapshots</code></pre>
+<p><strong>Versions</strong> are semantic (X.Y.Z), immutable,
+signed.</p>
+<p><strong>HEAD</strong> is current working state.</p>
+<p><strong>Rollback</strong> creates forward commit that restores past
+state.</p>
+<h3 id="core-operations">Core Operations</h3>
+<h4 id="seal-version">seal-version</h4>
+<p>Report current version.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(seal-version)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; =&gt; &quot;2.1.0&quot; or &quot;2.1.0+3&quot; (3 commits past release)</span></span></code></pre></div>
+<p>Output format: - <code>X.Y.Z</code> - Exactly at release -
+<code>X.Y.Z+N</code> - N commits past release - <code>X.Y.Z-dev</code> -
+Development branch - <code>unversioned</code> - No releases yet</p>
+<h4 id="seal-versions">seal-versions</h4>
+<p>List all versions.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(seal-versions)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; =&gt; (&quot;1.0.0&quot; &quot;1.1.0&quot; &quot;2.0.0&quot; &quot;2.1.0&quot;)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>(seal-versions verbose: <span class="dv">#t</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; =&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; 1.0.0  2026-01-01  &quot;Initial release&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; 1.1.0  2026-01-05  &quot;Bug fixes&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; 2.0.0  2026-01-10  &quot;New governance model&quot;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; 2.1.0  2026-01-15  &quot;Performance improvements&quot;</span></span></code></pre></div>
+<h4 id="seal-rollback">seal-rollback</h4>
+<p>Roll back to specific version.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;2.0.0&quot;</span>)</span></code></pre></div>
+<p><strong>Process:</strong> 1. Verify version exists 2. Check for
+uncommitted changes (abort or stash) 3. Create rollback commit with
+contents of target version 4. Record in audit trail 5. Optionally create
+rollback tag</p>
+<p><strong>Rollback commit message:</strong></p>
+<pre><code>Rollback to 2.0.0
 
 Restored vault state to version 2.0.0.
 Previous HEAD was 2.1.0+3.
 
-Reason: [user-provided or "Manual rollback"]
-`
-
-NOT a git reset. History preserved. Rollback is a forward operation.
-
-seal-diff
-
-Compare versions.
-
-`scheme
-(seal-diff "2.0.0" "2.1.0")
-;; Shows what changed between versions
-
-(seal-diff "2.0.0")
-;; Shows what changed since 2.0.0
-`
-
-seal-recover
-
-Recovery options for mistakes.
-
-`scheme
-(seal-recover)
-;; =&gt;
-;; Recovery options:
-;;   1. Uncommitted changes (stashed 5 minutes ago)
-;;   2. Last commit (seal-undo)
-;;   3. Version 2.1.0 (seal-rollback "2.1.0")
-;;   4. Archive vault-2.0.0.archive (seal-restore)
-`
-
-------------------------------------------------------------------------------
-
-Rollback Semantics
-
-Forward Rollback (Default)
-
-`
-Before:  1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → HEAD
+Reason: [user-provided or &quot;Manual rollback&quot;]</code></pre>
+<p><strong>NOT a git reset.</strong> History preserved. Rollback is a
+forward operation.</p>
+<h4 id="seal-diff">seal-diff</h4>
+<p>Compare versions.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(seal-diff <span class="st">&quot;2.0.0&quot;</span> <span class="st">&quot;2.1.0&quot;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Shows what changed between versions</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>(seal-diff <span class="st">&quot;2.0.0&quot;</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Shows what changed since 2.0.0</span></span></code></pre></div>
+<h4 id="seal-recover">seal-recover</h4>
+<p>Recovery options for mistakes.</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(seal-recover)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; =&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; Recovery options:</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">;;   1. Uncommitted changes (stashed 5 minutes ago)</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co">;;   2. Last commit (seal-undo)</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co">;;   3. Version 2.1.0 (seal-rollback &quot;2.1.0&quot;)</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">;;   4. Archive vault-2.0.0.archive (seal-restore)</span></span></code></pre></div>
+<hr />
+<h2 id="rollback-semantics">Rollback Semantics</h2>
+<h3 id="forward-rollback-default">Forward Rollback (Default)</h3>
+<pre><code>Before:  1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → HEAD
                           ↑
                      rollback target
 
@@ -157,293 +199,211 @@ After:   1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → [rollback commit]
                           │                      │
                           └──────────────────────┘
                               contents match
-
-`
-
-History preserved. Audit trail shows rollback.
-
-Hard Rollback (Dangerous)
-
-`scheme
-(seal-rollback "2.0.0" hard: #t)
-`
-
-Actually resets to version. Destroys history.
-
-Requires:
-- Explicit hard: #t flag
-- Confirmation prompt
-- Audit entry before destruction
-
-Rollback with Stash
-
-`scheme
-(seal-rollback "2.0.0" stash: #t)
-`
-
-Stashes uncommitted changes before rollback. Can recover with:
-
-`scheme
-(seal-stash-pop)
-`
-
-------------------------------------------------------------------------------
-
-Version Tags
-
-Automatic Tagging
-
-`scheme
-(seal-release "2.1.0")
-;; Creates:
-;;   - Git tag: 2.1.0
-;;   - Signature: .vault/releases/2.1.0.sig
-;;   - Audit entry
-`
-
-Rollback Tags
-
-`scheme
-(seal-rollback "2.0.0" tag: "rollback-2026-01-15")
-;; Creates additional tag marking rollback point
-`
-
-Tag Listing
-
-`scheme
-(seal-tags)
-;; =&gt;
-;; 1.0.0              2026-01-01  release
-;; 1.1.0              2026-01-05  release
-;; 2.0.0              2026-01-10  release
-;; 2.1.0              2026-01-15  release
-;; rollback-2026-01-15 2026-01-15  rollback
-`
-
-------------------------------------------------------------------------------
-
-Recovery Scenarios
-
-Scenario 1: Bad Commit
-
-`scheme
-;; Oops, committed broken code
-(seal-undo)                    ; Undo last commit
-;; or
-(seal-rollback "2.1.0")        ; Back to last release
-`
-
-Scenario 2: Bad Release
-
-`scheme
-;; Released 2.2.0 but it's broken
-(seal-rollback "2.1.0")        ; Back to good version
-(seal-release "2.2.1")         ; Patch release
-`
-
-Scenario 3: Lost Changes
-
-`scheme
-;; Accidentally discarded work
-(seal-recover)                 ; See options
-(seal-stash-pop)               ; If stashed
-;; or
-(seal-reflog)                  ; Find lost commits
-`
-
-Scenario 4: Corrupted Vault
-
-`scheme
-;; Something went very wrong
-(seal-restore "vault-2.0.0.archive" verify-key: "alice.pub")
-`
-
-------------------------------------------------------------------------------
-
-Audit Integration
-
-Every version operation recorded:
-
-`scheme
-(audit-entry
-  (action
-    (verb seal-rollback)
-    (object "2.0.0")
-    (parameters
-      (from "2.1.0+3")
-      (method forward)
-      (reason "Production incident")))
-  (seal ...))
-`
-
-Audit trail answers:
-- Who rolled back?
-- When?
-- From what version?
-- Why? (if reason provided)
-
-------------------------------------------------------------------------------
-
-CLI Interface
-
-`bash
-Current version
-$ seal version
-2.1.0+3
-
-List versions
-$ seal versions
-1.0.0   2026-01-01   Initial release
-1.1.0   2026-01-05   Bug fixes
-2.0.0   2026-01-10   New governance model
-2.1.0   2026-01-15   Performance improvements
-
-Rollback
-$ seal rollback 2.0.0
-Rolling back to 2.0.0...
-✓ Rollback complete. Now at 2.0.0.
-
-Rollback with reason
-$ seal rollback 2.0.0 --reason "Production incident #123"
-
-Compare versions
-$ seal diff 2.0.0 2.1.0
- M config.scm
- A new-feature.scm
- D deprecated.scm
-
-Recovery options
-$ seal recover
-Recovery options:
-  1. seal undo          - Undo last commit
-  2. seal rollback 2.1.0 - Return to last release
-  3. seal stash pop     - Recover stashed changes
-`
-
-------------------------------------------------------------------------------
-
-Safety Mechanisms
-
-Uncommitted Changes
-
-`scheme
-(seal-rollback "2.0.0")
-;; Error: Uncommitted changes detected.
-;; Use --stash to save changes, or --force to discard.
-`
-
-Protected Versions
-
-`scheme
-(vault-config 'protected-versions '("1.0.0" "2.0.0"))
-
-(seal-rollback "0.9.0")
-;; Warning: Rolling back past protected version 1.0.0
-;; This may break compatibility. Continue? [y/N]
-`
-
-Rollback Limits
-
-`scheme
-(vault-config 'max-rollback-distance 10)
-
-(seal-rollback "0.1.0")
-;; Error: Rollback distance (20 versions) exceeds limit (10).
-;; Use --force to override.
-`
-
-------------------------------------------------------------------------------
-
-Implementation
-
-seal-rollback Implementation
-
-`scheme
-(define (seal-rollback version #!key hard stash force reason tag)
-  "Roll back vault to specified version"
-
-  ;; Validate version exists
-  (unless (tag-exists? version)
-    (error "Version not found" version))
-
-  ;; Check for uncommitted changes
-  (when (uncommitted-changes?)
-    (cond
-      (stash (seal-stash))
-      (force (void))
-      (else (error "Uncommitted changes. Use stash: or force:"))))
-
-  ;; Record current state
-  (let ((current (seal-version)))
-
-    ;; Perform rollback
-    (if hard
-        (hard-rollback! version)
-        (forward-rollback! version reason))
-
-    ;; Create tag if requested
-    (when tag
-      (run-command "git" "tag" tag))
-
-    ;; Audit
-    (audit-append
-      actor: (get-vault-principal (vault-config 'signing-key))
-      action: (list 'seal-rollback version)
-      motivation: (or reason (sprintf "Rollback from ~a to ~a" current version)))
-
-    (print "✓ Rolled back to " version)))
-
-(define (forward-rollback! version reason)
-  "Create rollback commit (preserves history)"
-  (run-command "git" "checkout" version "--" ".")
-  (run-command "git" "commit" "-m"
-    (sprintf "Rollback to ~a\n\n~a" version (or reason ""))))
-
-(define (hard-rollback! version)
-  "Reset to version (destroys history)"
-  (print "WARNING: Hard rollback destroys history")
-  (run-command "git" "reset" "--hard" version))
-`
-
-------------------------------------------------------------------------------
-
-Security Considerations
-
-Rollback Attacks
-
-Attacker forces rollback to vulnerable version.
-
-Mitigation:
-- Threshold signatures for rollback (RFC-007)
-- Protected version list
-- Audit trail detection
-
-History Manipulation
-
-Hard rollback can hide evidence.
-
-Mitigation:
-- Prefer forward rollback
-- Audit before hard rollback
-- Federation replication preserves history
-
-------------------------------------------------------------------------------
-
-References
-
-1. Semantic Versioning 2.0.0 (semver.org)
-2. Git Reset, Checkout, and Revert (git-scm.com)
-3. RFC-003: Cryptographic Audit Trail
-4. RFC-006: Vault System Architecture
-
-------------------------------------------------------------------------------
-
-Changelog
-
-- 2026-01-06 - Initial specification
-
-------------------------------------------------------------------------------
-
-Implementation Status: Proposed
-Operations: seal-version, seal-versions, seal-rollback, seal-diff, seal-recover
-Rollback Model: Forward commit (history-preserving)</pre></body></html>
+</code></pre>
+<p>History preserved. Audit trail shows rollback.</p>
+<h3 id="hard-rollback-dangerous">Hard Rollback (Dangerous)</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;2.0.0&quot;</span> hard: <span class="dv">#t</span>)</span></code></pre></div>
+<p>Actually resets to version. <strong>Destroys history.</strong></p>
+<p>Requires: - Explicit <code>hard: #t</code> flag - Confirmation prompt
+- Audit entry before destruction</p>
+<h3 id="rollback-with-stash">Rollback with Stash</h3>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;2.0.0&quot;</span> stash: <span class="dv">#t</span>)</span></code></pre></div>
+<p>Stashes uncommitted changes before rollback. Can recover with:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(seal-stash-pop)</span></code></pre></div>
+<hr />
+<h2 id="version-tags">Version Tags</h2>
+<h3 id="automatic-tagging">Automatic Tagging</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(seal-release <span class="st">&quot;2.1.0&quot;</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Creates:</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co">;;   - Git tag: 2.1.0</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">;;   - Signature: .vault/releases/2.1.0.sig</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co">;;   - Audit entry</span></span></code></pre></div>
+<h3 id="rollback-tags">Rollback Tags</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;2.0.0&quot;</span> tag: <span class="st">&quot;rollback-2026-01-15&quot;</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Creates additional tag marking rollback point</span></span></code></pre></div>
+<h3 id="tag-listing">Tag Listing</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(seal-tags)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; =&gt;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; 1.0.0              2026-01-01  release</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; 1.1.0              2026-01-05  release</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; 2.0.0              2026-01-10  release</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; 2.1.0              2026-01-15  release</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; rollback-2026-01-15 2026-01-15  rollback</span></span></code></pre></div>
+<hr />
+<h2 id="recovery-scenarios">Recovery Scenarios</h2>
+<h3 id="scenario-1-bad-commit">Scenario 1: Bad Commit</h3>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Oops, committed broken code</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>(seal-undo)                    <span class="co">; Undo last commit</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; or</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;2.1.0&quot;</span>)        <span class="co">; Back to last release</span></span></code></pre></div>
+<h3 id="scenario-2-bad-release">Scenario 2: Bad Release</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Released 2.2.0 but it&#39;s broken</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;2.1.0&quot;</span>)        <span class="co">; Back to good version</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>(seal-release <span class="st">&quot;2.2.1&quot;</span>)         <span class="co">; Patch release</span></span></code></pre></div>
+<h3 id="scenario-3-lost-changes">Scenario 3: Lost Changes</h3>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Accidentally discarded work</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>(seal-recover)                 <span class="co">; See options</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>(seal-stash-pop)               <span class="co">; If stashed</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; or</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>(seal-reflog)                  <span class="co">; Find lost commits</span></span></code></pre></div>
+<h3 id="scenario-4-corrupted-vault">Scenario 4: Corrupted Vault</h3>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Something went very wrong</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(seal-restore <span class="st">&quot;vault-2.0.0.archive&quot;</span> verify-key: <span class="st">&quot;alice.pub&quot;</span>)</span></code></pre></div>
+<hr />
+<h2 id="audit-integration">Audit Integration</h2>
+<p>Every version operation recorded:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  (action</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    (verb seal-rollback)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    (object <span class="st">&quot;2.0.0&quot;</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    (parameters</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>      (from <span class="st">&quot;2.1.0+3&quot;</span>)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>      (method forward)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>      (reason <span class="st">&quot;Production incident&quot;</span>)))</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  (seal <span class="op">...</span>))</span></code></pre></div>
+<p>Audit trail answers: - Who rolled back? - When? - From what version?
+- Why? (if reason provided)</p>
+<hr />
+<h2 id="cli-interface">CLI Interface</h2>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Current version</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> seal version</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="ex">2.1.0+3</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co"># List versions</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> seal versions</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="ex">1.0.0</span>   2026-01-01   Initial release</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="ex">1.1.0</span>   2026-01-05   Bug fixes</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="ex">2.0.0</span>   2026-01-10   New governance model</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="ex">2.1.0</span>   2026-01-15   Performance improvements</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Rollback</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> seal rollback 2.0.0</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a><span class="ex">Rolling</span> back to 2.0.0...</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a><span class="ex">✓</span> Rollback complete. Now at 2.0.0.</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Rollback with reason</span></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> seal rollback 2.0.0 <span class="at">--reason</span> <span class="st">&quot;Production incident #123&quot;</span></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare versions</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> seal diff 2.0.0 2.1.0</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a> <span class="ex">M</span> config.scm</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a> <span class="ex">A</span> new-feature.scm</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a> <span class="ex">D</span> deprecated.scm</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Recovery options</span></span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> seal recover</span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a><span class="ex">Recovery</span> options:</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>  <span class="ex">1.</span> seal undo          <span class="at">-</span> Undo last commit</span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>  <span class="ex">2.</span> seal rollback 2.1.0 <span class="at">-</span> Return to last release</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>  <span class="ex">3.</span> seal stash pop     <span class="at">-</span> Recover stashed changes</span></code></pre></div>
+<hr />
+<h2 id="safety-mechanisms">Safety Mechanisms</h2>
+<h3 id="uncommitted-changes">Uncommitted Changes</h3>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;2.0.0&quot;</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Error: Uncommitted changes detected.</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; Use --stash to save changes, or --force to discard.</span></span></code></pre></div>
+<h3 id="protected-versions">Protected Versions</h3>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>(vault-config &#39;protected-versions &#39;(<span class="st">&quot;1.0.0&quot;</span> <span class="st">&quot;2.0.0&quot;</span>))</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;0.9.0&quot;</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Warning: Rolling back past protected version 1.0.0</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; This may break compatibility. Continue? [y/N]</span></span></code></pre></div>
+<h3 id="rollback-limits">Rollback Limits</h3>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>(vault-config &#39;max-rollback-distance <span class="dv">10</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>(seal-rollback <span class="st">&quot;0.1.0&quot;</span>)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Error: Rollback distance (20 versions) exceeds limit (10).</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Use --force to override.</span></span></code></pre></div>
+<hr />
+<h2 id="implementation">Implementation</h2>
+<h3 id="seal-rollback-implementation">seal-rollback Implementation</h3>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">seal-rollback </span>version <span class="ex">#!key</span> hard stash <span class="kw">force</span> reason tag)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Roll back vault to specified version&quot;</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Validate version exists</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  (unless (tag-exists? version)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Version not found&quot;</span> version))</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Check for uncommitted changes</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  (when (uncommitted-changes?)</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">cond</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>      (stash (seal-stash))</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">force</span> (void))</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">else</span> (<span class="kw">error</span> <span class="st">&quot;Uncommitted changes. Use stash: or force:&quot;</span>))))</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Record current state</span></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((current (seal-version)))</span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Perform rollback</span></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> hard</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>        (hard-rollback! version)</span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>        (forward-rollback! version reason))</span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Create tag if requested</span></span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>    (when tag</span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>      (run-command <span class="st">&quot;git&quot;</span> <span class="st">&quot;tag&quot;</span> tag))</span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Audit</span></span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>    (audit-append</span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>      actor: (get-vault-principal (vault-config &#39;signing-key))</span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>      action: (<span class="kw">list</span> &#39;seal-rollback version)</span>
+<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>      motivation: (<span class="kw">or</span> reason (sprintf <span class="st">&quot;Rollback from ~a to ~a&quot;</span> current version)))</span>
+<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a>    (print <span class="st">&quot;✓ Rolled back to &quot;</span> version)))</span>
+<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">forward-rollback! </span>version reason)</span>
+<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create rollback commit (preserves history)&quot;</span></span>
+<span id="cb25-37"><a href="#cb25-37" aria-hidden="true" tabindex="-1"></a>  (run-command <span class="st">&quot;git&quot;</span> <span class="st">&quot;checkout&quot;</span> version <span class="st">&quot;--&quot;</span> <span class="st">&quot;.&quot;</span>)</span>
+<span id="cb25-38"><a href="#cb25-38" aria-hidden="true" tabindex="-1"></a>  (run-command <span class="st">&quot;git&quot;</span> <span class="st">&quot;commit&quot;</span> <span class="st">&quot;-m&quot;</span></span>
+<span id="cb25-39"><a href="#cb25-39" aria-hidden="true" tabindex="-1"></a>    (sprintf <span class="st">&quot;Rollback to ~a</span><span class="ch">\n\n</span><span class="st">~a&quot;</span> version (<span class="kw">or</span> reason <span class="st">&quot;&quot;</span>))))</span>
+<span id="cb25-40"><a href="#cb25-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-41"><a href="#cb25-41" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">hard-rollback! </span>version)</span>
+<span id="cb25-42"><a href="#cb25-42" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Reset to version (destroys history)&quot;</span></span>
+<span id="cb25-43"><a href="#cb25-43" aria-hidden="true" tabindex="-1"></a>  (print <span class="st">&quot;WARNING: Hard rollback destroys history&quot;</span>)</span>
+<span id="cb25-44"><a href="#cb25-44" aria-hidden="true" tabindex="-1"></a>  (run-command <span class="st">&quot;git&quot;</span> <span class="st">&quot;reset&quot;</span> <span class="st">&quot;--hard&quot;</span> version))</span></code></pre></div>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="rollback-attacks">Rollback Attacks</h3>
+<p>Attacker forces rollback to vulnerable version.</p>
+<p><strong>Mitigation:</strong> - Threshold signatures for rollback
+(RFC-007) - Protected version list - Audit trail detection</p>
+<h3 id="history-manipulation">History Manipulation</h3>
+<p>Hard rollback can hide evidence.</p>
+<p><strong>Mitigation:</strong> - Prefer forward rollback - Audit before
+hard rollback - Federation replication preserves history</p>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>Semantic Versioning 2.0.0 (semver.org)</li>
+<li>Git Reset, Checkout, and Revert (git-scm.com)</li>
+<li>RFC-003: Cryptographic Audit Trail</li>
+<li>RFC-006: Vault System Architecture</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-06</strong> - Initial specification</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Proposed
+<strong>Operations:</strong> seal-version, seal-versions, seal-rollback,
+seal-diff, seal-recover <strong>Rollback Model:</strong> Forward commit
+(history-preserving)</p>
+</body>
+</html>

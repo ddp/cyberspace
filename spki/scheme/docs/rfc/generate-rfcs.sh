@@ -77,16 +77,26 @@ is_stale() {
   return 1
 }
 
-# Generate HTML from text (simple pre-formatted wrapper)
-generate_html() {
-  local base="$1" source="$2"
-  local title=$(head -1 "$source")
+# Generate HTML from markdown using pandoc
+generate_html_from_md() {
+  local base="$1"
+  pandoc "${base}.md" -o "${base}.html" --standalone \
+    --metadata title="" \
+    --css="" \
+    -V margin-top=2rem -V margin-bottom=2rem \
+    2>/dev/null
+}
+
+# Generate HTML from plain text (pre-formatted, for .txt-only sources)
+generate_html_from_txt() {
+  local base="$1"
+  local title=$(head -1 "${base}.txt")
   cat > "${base}.html" << EOF
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${title}</title>
 <style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
 pre{white-space:pre-wrap;}</style>
-</head><body><pre>$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' "$source")</pre></body></html>
+</head><body><pre>$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' "${base}.txt")</pre></body></html>
 EOF
 }
 
@@ -101,7 +111,7 @@ generate_from_md() {
   local rfc="$1"
   local generated=""
 
-  # First ensure we have .txt (strip markdown to plain text)
+  # Text: strip markdown to plain RFC-style text
   if is_stale "${rfc}.md" "${rfc}.txt"; then
     sed -e 's/^#\{1,6\} //' \
         -e 's/\*\*\([^*]*\)\*\*/\1/g' \
@@ -116,13 +126,13 @@ generate_from_md() {
     generated="txt "
   fi
 
-  # HTML from txt
-  if is_stale "${rfc}.txt" "${rfc}.html"; then
-    generate_html "$rfc" "${rfc}.txt"
+  # Hypertext: pandoc from markdown (proper HTML with markup)
+  if is_stale "${rfc}.md" "${rfc}.html"; then
+    generate_html_from_md "$rfc"
     generated="${generated}html "
   fi
 
-  # PostScript from txt
+  # PostScript: enscript from plain text
   if is_stale "${rfc}.txt" "${rfc}.ps"; then
     generate_ps "$rfc" "${rfc}.txt"
     generated="${generated}ps "
@@ -133,18 +143,18 @@ generate_from_md() {
   fi
 }
 
-# Generate from plain text source (IETF-style RFCs)
+# Generate from plain text source (IETF-style RFCs, no .md)
 generate_from_txt() {
   local rfc="$1"
   local generated=""
 
-  # HTML from txt
+  # Hypertext: wrap plain text in pre (no markdown to convert)
   if is_stale "${rfc}.txt" "${rfc}.html"; then
-    generate_html "$rfc" "${rfc}.txt"
+    generate_html_from_txt "$rfc"
     generated="${generated}html "
   fi
 
-  # PostScript from txt
+  # PostScript: enscript from text
   if is_stale "${rfc}.txt" "${rfc}.ps"; then
     generate_ps "$rfc" "${rfc}.txt"
     generated="${generated}ps "

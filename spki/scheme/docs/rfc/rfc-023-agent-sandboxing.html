@@ -1,83 +1,173 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>RFC-023: Demonic Agents</title>
-<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
-pre{white-space:pre-wrap;}</style>
-</head><body><pre>RFC-023: Demonic Agents
-
-Status: Draft
-Date: January 2026
-Author: Derrell Piper &lt;ddp@eludom.net&gt;
-Implementation: Proposed
-
-------------------------------------------------------------------------------
-
-Abstract
-
-This RFC specifies demonic agents for the Library of Cyberspace: how autonomous agents—daemons in the BSD tradition—are spawned, constrained, monitored, and terminated. Agents are helpful spirits that operate with capability-based authority in isolated sandboxes, enabling safe delegation of tasks while maintaining security boundaries. The vault daemons watch over all.
-
-------------------------------------------------------------------------------
-
-Motivation
-
-The BSD Daemon Tradition
-
-In Unix mythology, a daemon is a helpful spirit—a background process that tends to the system without being asked. The term comes from Maxwell's demon, the thought experiment about a creature that sorts molecules. BSD gave this concept a face: Beastie, the cheerful daemon with a pitchfork, watching over the system.
-
-The Library embraces this tradition. Our agents are daemons—helpful spirits that carry authority, travel between vaults, and do work while their principals sleep.
-
-The General Magic Vision
-
-Telescript, from 1994:
-
-  "Programs that travel from machine to machine, carrying your authority, doing things while you sleep."
-
-That vision failed because:
-
-- No security model - Agents ran with ambient authority
-- No isolation - One agent could corrupt another
-- No accountability - No audit of agent actions
-- No revocation - Once launched, agents were uncontrollable
-
-The Demonic Solution
-
-The Library realizes this vision with proper daemonology:
-
-- Capability-based authority - Daemons have only granted permissions
-- Sandbox isolation - Process, filesystem, network boundaries
-- Full audit trail - The Audit Daemon witnesses every action
-- Remote termination - Daemons can be banished at any time
-
-Daemons don't rule—they serve. They don't watch over—they watch with.
-
-------------------------------------------------------------------------------
-
-Daemon Model
-
-What is a Daemon?
-
-A daemon is a helpful spirit—an autonomous agent that serves its principal:
-
-`scheme
-(agent
-  (id "agent-2026-001")
-  (spawned-by user-principal)
-  (purpose "Monitor RSS feeds and archive new papers")
-  (capabilities
-    (read (url "https://arxiv.org/rss/*"))
-    (write (path "/vault/papers/"))
-    (network (hosts ("arxiv.org" "doi.org"))))
-  (constraints
-    (max-runtime (* 24 3600))  ; 24 hours
-    (max-memory (* 512 1024 1024))  ; 512MB
-    (max-storage (* 1 1024 1024 1024)))  ; 1GB
-  (sandbox posix-sandbox)
-  (status running))
-`
-
-Agent Lifecycle
-
-`
-    ┌─────────┐
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-023-agent-sandboxing</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<h1 id="rfc-023-demonic-agents">RFC-023: Demonic Agents</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
+Proposed</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies demonic agents for the Library of Cyberspace: how
+autonomous agents—daemons in the BSD tradition—are spawned, constrained,
+monitored, and terminated. Agents are helpful spirits that operate with
+capability-based authority in isolated sandboxes, enabling safe
+delegation of tasks while maintaining security boundaries. The vault
+daemons watch over all.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<h3 id="the-bsd-daemon-tradition">The BSD Daemon Tradition</h3>
+<p>In Unix mythology, a daemon is a helpful spirit—a background process
+that tends to the system without being asked. The term comes from
+Maxwell’s demon, the thought experiment about a creature that sorts
+molecules. BSD gave this concept a face: Beastie, the cheerful daemon
+with a pitchfork, watching over the system.</p>
+<p>The Library embraces this tradition. Our agents are daemons—helpful
+spirits that carry authority, travel between vaults, and do work while
+their principals sleep.</p>
+<h3 id="the-general-magic-vision">The General Magic Vision</h3>
+<p>Telescript, from 1994:</p>
+<blockquote>
+<p>“Programs that travel from machine to machine, carrying your
+authority, doing things while you sleep.”</p>
+</blockquote>
+<p>That vision failed because:</p>
+<ul>
+<li><strong>No security model</strong> - Agents ran with ambient
+authority</li>
+<li><strong>No isolation</strong> - One agent could corrupt another</li>
+<li><strong>No accountability</strong> - No audit of agent actions</li>
+<li><strong>No revocation</strong> - Once launched, agents were
+uncontrollable</li>
+</ul>
+<h3 id="the-demonic-solution">The Demonic Solution</h3>
+<p>The Library realizes this vision with proper daemonology:</p>
+<ul>
+<li><strong>Capability-based authority</strong> - Daemons have only
+granted permissions</li>
+<li><strong>Sandbox isolation</strong> - Process, filesystem, network
+boundaries</li>
+<li><strong>Full audit trail</strong> - The Audit Daemon witnesses every
+action</li>
+<li><strong>Remote termination</strong> - Daemons can be banished at any
+time</li>
+</ul>
+<p>Daemons don’t rule—they serve. They don’t watch <em>over</em>—they
+watch <em>with</em>.</p>
+<hr />
+<h2 id="daemon-model">Daemon Model</h2>
+<h3 id="what-is-a-daemon">What is a Daemon?</h3>
+<p>A daemon is a helpful spirit—an autonomous agent that serves its
+principal:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(agent</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  (id <span class="st">&quot;agent-2026-001&quot;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  (spawned-by user-principal)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  (purpose <span class="st">&quot;Monitor RSS feeds and archive new papers&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  (capabilities</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">read</span> (url <span class="st">&quot;https://arxiv.org/rss/*&quot;</span>))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">write</span> (path <span class="st">&quot;/vault/papers/&quot;</span>))</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    (network (hosts (<span class="st">&quot;arxiv.org&quot;</span> <span class="st">&quot;doi.org&quot;</span>))))</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  (constraints</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    (max-runtime (<span class="op">*</span> <span class="dv">24</span> <span class="dv">3600</span>))  <span class="co">; 24 hours</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    (max-memory (<span class="op">*</span> <span class="dv">512</span> <span class="dv">1024</span> <span class="dv">1024</span>))  <span class="co">; 512MB</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    (max-storage (<span class="op">*</span> <span class="dv">1</span> <span class="dv">1024</span> <span class="dv">1024</span> <span class="dv">1024</span>)))  <span class="co">; 1GB</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  (sandbox posix-sandbox)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  (status running))</span></code></pre></div>
+<h3 id="agent-lifecycle">Agent Lifecycle</h3>
+<pre><code>    ┌─────────┐
     │ DEFINED │ Agent specification created
     └────┬────┘
          │ spawn
@@ -104,633 +194,561 @@ Agent Lifecycle
          ▼
     ┌─────────┐
     │ ARCHIVED│ Audit log preserved, resources released
-    └─────────┘
-`
-
-------------------------------------------------------------------------------
-
-Spawning Agents
-
-Spawn Request
-
-`scheme
-(define (spawn-agent spec)
-  "Spawn new agent from specification"
-  (let* ((agent-id (generate-agent-id))
-         (spawner (current-principal))
-
-         ;; Validate spawner has required capabilities
-         (_ (verify-spawn-authority spawner (spec-capabilities spec)))
-
-         ;; Create sandbox
-         (sandbox (create-sandbox (spec-sandbox-type spec)
-                                  (spec-constraints spec)))
-
-         ;; Create agent record
-         (agent (make-agent
-                 id: agent-id
-                 spawned-by: spawner
-                 spec: spec
-                 sandbox: sandbox
-                 status: 'spawned)))
-
-    ;; Audit spawn
-    (audit-append
-      action: `(agent-spawn ,agent-id)
-      motivation: (spec-purpose spec))
-
-    ;; Initialize agent process
-    (sandbox-exec sandbox (spec-code spec))
-
-    ;; Return agent handle
-    agent))
-`
-
-Capability Verification
-
-`scheme
-(define (verify-spawn-authority spawner requested-caps)
-  "Verify spawner can grant requested capabilities"
-  (for-each
-    (lambda (cap)
-      (unless (authorized? spawner 'delegate cap)
-        (error "Cannot delegate capability" cap)))
-    requested-caps))
-`
-
-Agent Code Loading
-
-`scheme
-(define (load-agent-code spec)
-  "Load and verify agent code"
-  (let* ((code-hash (spec-code-hash spec))
-         (code (cas-get code-hash)))
-
-    ;; Verify code hash
-    (unless (equal? code-hash (sha256 code))
-      (error "Code integrity failure"))
-
-    ;; Verify code signature (if required)
-    (when (spec-require-signed? spec)
-      (unless (verify-code-signature code (spec-signer spec))
-        (error "Code signature invalid")))
-
-    code))
-`
-
-------------------------------------------------------------------------------
-
-Sandbox Types
-
-POSIX Sandbox
-
-Process isolation using OS primitives:
-
-`scheme
-(define (create-posix-sandbox constraints)
-  "Create POSIX-based sandbox"
-  (sandbox
-    (type posix)
-
-    ;; Process isolation
-    (process
-      (uid (allocate-sandbox-uid))
-      (gid (allocate-sandbox-gid))
-      (chroot (create-sandbox-root))
-      (rlimits
-        (cpu ,(constraints-max-cpu constraints))
-        (memory ,(constraints-max-memory constraints))
-        (files ,(constraints-max-files constraints))
-        (processes 1)))  ; No forking
-
-    ;; Filesystem isolation
-    (filesystem
-      (root ,(sandbox-root))
-      (mounts
-        (("/lib" read-only)
-         ("/usr/lib" read-only)
-         ,(sandbox-work-dir) read-write)))
-
-    ;; Network isolation
-    (network
-      (allowed-hosts ,(constraints-network-hosts constraints))
-      (allowed-ports ,(constraints-network-ports constraints)))))
-`
-
-Scheme Sandbox
-
-Language-level isolation for Scheme agents:
-
-`scheme
-(define (create-scheme-sandbox constraints)
-  "Create Scheme-level sandbox"
-  (sandbox
-    (type scheme)
-
-    ;; Safe environment - no dangerous primitives
-    (environment
-      (import (scheme base)
-              (scheme write)
-              (library sandbox-io)
-              (library sandbox-net))
-      (exclude system exit eval load
-               file-delete directory-delete
-               process-fork process-exec))
-
-    ;; Resource limits via fuel
-    (fuel
-      (computation ,(constraints-max-steps constraints))
-      (allocation ,(constraints-max-memory constraints)))
-
-    ;; Capability-restricted I/O
-    (io-capabilities ,(constraints-io constraints))))
-`
-
-Container Sandbox
-
-OCI container isolation:
-
-`scheme
-(define (create-container-sandbox constraints image)
-  "Create container-based sandbox"
-  (sandbox
-    (type container)
-
-    ;; Container configuration
-    (container
-      (image ,image)
-      (readonly-rootfs #t)
-      (no-new-privileges #t)
-      (cap-drop ALL)
-      (cap-add ,(minimal-caps constraints)))
-
-    ;; Resource limits
-    (resources
-      (memory ,(constraints-max-memory constraints))
-      (cpu-shares ,(constraints-cpu-shares constraints))
-      (pids-limit 10))
-
-    ;; Network policy
-    (network
-      (mode bridge)
-      (egress-policy ,(network-policy constraints)))))
-`
-
-WASM Sandbox
-
-WebAssembly isolation:
-
-`scheme
-(define (create-wasm-sandbox constraints)
-  "Create WebAssembly sandbox"
-  (sandbox
-    (type wasm)
-
-    ;; WASM runtime configuration
-    (runtime
-      (memory-limit ,(constraints-max-memory constraints))
-      (table-limit 10000)
-      (fuel ,(constraints-max-steps constraints)))
-
-    ;; WASI capabilities
-    (wasi
-      (preopens ,(wasi-preopens constraints))
-      (env ,(wasi-env constraints))
-      (args ,(wasi-args constraints)))
-
-    ;; Host function imports (minimal)
-    (imports
-      (log "library:log")
-      (cas-get "library:cas_get")
-      (cas-put "library:cas_put"))))
-`
-
-------------------------------------------------------------------------------
-
-Capability Enforcement
-
-Capability Proxy
-
-All agent I/O goes through capability-checking proxies:
-
-`scheme
-(define (make-capability-proxy agent capabilities)
-  "Create proxy that enforces capability checks"
-
-  (lambda (operation . args)
-    (let ((required-cap (operation-&gt;capability operation args)))
-
-      ;; Check capability
-      (unless (capability-granted? capabilities required-cap)
-        (audit-violation agent operation required-cap)
-        (error "Capability denied" operation))
-
-      ;; Audit allowed operation
-      (audit-agent-action agent operation args)
-
-      ;; Execute operation
-      (apply (operation-&gt;handler operation) args))))
-
-(define (operation-&gt;capability op args)
-  "Map operation to required capability"
-  (case op
-    ((read-file)
-     `(read (path ,(car args))))
-    ((write-file)
-     `(write (path ,(car args))))
-    ((http-get)
-     `(network (url ,(car args))))
-    ((cas-get)
-     `(read (hash ,(car args))))
-    (else
-     (error "Unknown operation" op))))
-`
-
-Attenuation on Delegation
-
-`scheme
-(define (agent-spawn-child parent-agent child-spec)
-  "Agent spawning child agent with attenuated capabilities"
-  (let* ((parent-caps (agent-capabilities parent-agent))
-         (requested-caps (spec-capabilities child-spec))
-
-         ;; Child can only have subset of parent's capabilities
-         (child-caps (capability-intersect parent-caps requested-caps)))
-
-    (unless (equal? child-caps requested-caps)
-      (warn "Child capabilities attenuated"))
-
-    (spawn-agent (spec-with-capabilities child-spec child-caps))))
-`
-
-------------------------------------------------------------------------------
-
-Agent Communication
-
-Message Passing
-
-Agents communicate via typed, capability-checked messages:
-
-`scheme
-(define (agent-send from-agent to-agent message)
-  "Send message between agents"
-
-  ;; Verify sender has send capability to receiver
-  (unless (capability-granted? (agent-capabilities from-agent)
-                               `(send (agent ,(agent-id to-agent))))
-    (error "Cannot send to agent"))
-
-  ;; Verify message type allowed
-  (unless (message-type-allowed? from-agent to-agent (message-type message))
-    (error "Message type not allowed"))
-
-  ;; Queue message
-  (mailbox-enqueue (agent-mailbox to-agent)
-                   (signed-message from-agent message))
-
-  ;; Audit
-  (audit-append
-    action: `(agent-message ,(agent-id from-agent) ,(agent-id to-agent))
-    motivation: (message-type message)))
-
-(define (agent-receive agent #!key timeout)
-  "Receive message from mailbox"
-  (let ((msg (mailbox-dequeue (agent-mailbox agent) timeout: timeout)))
-    (when msg
-      ;; Verify signature
-      (verify-message-signature msg)
-      msg)))
-`
-
-Shared State
-
-Agents can share state through CAS:
-
-`scheme
-(define (agent-share agent hash recipients)
-  "Share CAS object with other agents"
-
-  ;; Verify agent can read the object
-  (unless (capability-granted? (agent-capabilities agent)
-                               `(read (hash ,hash)))
-    (error "Cannot read object to share"))
-
-  ;; Grant read capability to recipients
-  (for-each
-    (lambda (recipient)
-      (grant-capability agent recipient `(read (hash ,hash))))
-    recipients)
-
-  ;; Audit sharing
-  (audit-append
-    action: `(agent-share ,hash ,recipients)))
-`
-
-------------------------------------------------------------------------------
-
-Monitoring and Control
-
-Agent Status
-
-`scheme
-(define (agent-status agent)
-  "Get current agent status"
-  `(agent-status
-    (id ,(agent-id agent))
-    (status ,(agent-state agent))
-    (uptime ,(- (current-time) (agent-start-time agent)))
-    (resources
-      (memory ,(sandbox-memory-usage (agent-sandbox agent)))
-      (cpu ,(sandbox-cpu-usage (agent-sandbox agent)))
-      (storage ,(sandbox-storage-usage (agent-sandbox agent))))
-    (actions ,(agent-action-count agent))
-    (messages-sent ,(agent-messages-sent agent))
-    (messages-received ,(agent-messages-received agent))))
-`
-
-Agent Control
-
-`scheme
-(define (agent-pause agent #!key reason)
-  "Pause agent execution"
-  (unless (authorized? (current-principal) 'control agent)
-    (error "Not authorized to control agent"))
-  (sandbox-pause (agent-sandbox agent))
-  (set-agent-state! agent 'paused)
-  (audit-append action: `(agent-pause ,(agent-id agent)) motivation: reason))
-
-(define (agent-resume agent)
-  "Resume paused agent"
-  (unless (authorized? (current-principal) 'control agent)
-    (error "Not authorized to control agent"))
-  (sandbox-resume (agent-sandbox agent))
-  (set-agent-state! agent 'running)
-  (audit-append action: `(agent-resume ,(agent-id agent))))
-
-(define (agent-terminate agent #!key reason)
-  "Terminate agent immediately"
-  (unless (authorized? (current-principal) 'control agent)
-    (error "Not authorized to control agent"))
-  (sandbox-kill (agent-sandbox agent))
-  (set-agent-state! agent 'terminated)
-  (audit-append
-    action: `(agent-terminate ,(agent-id agent))
-    motivation: reason
-    priority: 'high)
-  (cleanup-agent agent))
-`
-
-Watchdog Daemon
-
-The watchdog daemon tends the flock of agents—a daemon watching daemons:
-
-`scheme
-(define (agent-watchdog)
-  "Monitor all agents, enforce constraints"
-  (for-each
-    (lambda (agent)
-      (when (eq? (agent-state agent) 'running)
-        ;; Check resource limits
-        (when (&gt; (sandbox-memory-usage (agent-sandbox agent))
-                 (agent-max-memory agent))
-          (agent-terminate agent reason: "Memory limit exceeded"))
-
-        ;; Check runtime limit
-        (when (&gt; (agent-uptime agent) (agent-max-runtime agent))
-          (agent-terminate agent reason: "Runtime limit exceeded"))
-
-        ;; Check heartbeat
-        (when (&gt; (- (current-time) (agent-last-heartbeat agent))
-                 agent-heartbeat-timeout)
-          (agent-terminate agent reason: "Heartbeat timeout"))))
-    (all-agents)))
-`
-
-------------------------------------------------------------------------------
-
-Soup Integration
-
-Agents in the Soup
-
-`scheme
-(soup-object
-  (name "agent/2026-001")
-  (type agent)
-  (size "145KB")
-  (status running)
-  (spawned-by "ddp@eludom.net")
-  (purpose "Archive arxiv papers")
-  (runtime "4h 23m")
-  (resources (memory "234MB") (storage "890MB"))
-  (capabilities (read "arxiv.org/*") (write "/vault/papers/")))
-`
-
-Querying Agents
-
-`scheme
-;; All running agents
-(soup-query type: 'agent status: 'running)
-
-;; Agents spawned by user
-(soup-query type: 'agent spawned-by: user-principal)
-
-;; Agents with network access
-(soup-query type: 'agent has-capability: 'network)
-
-;; Resource hogs
-(soup-query type: 'agent min-memory: (* 256 1024 1024))
-`
-
-Agent Introspection
-
-`scheme
-;; Agent can query itself
-(define (agent-self-inspect)
-  `(self
-    (id ,(current-agent-id))
-    (capabilities ,(current-capabilities))
-    (resources-remaining
-      (memory ,(- max-memory (current-memory)))
-      (runtime ,(- max-runtime (current-uptime)))
-      (fuel ,(remaining-fuel)))))
-`
-
-------------------------------------------------------------------------------
-
-Agent Patterns
-
-Pattern 1: Periodic Task Agent
-
-`scheme
-(spawn-agent
-  (code '(lambda ()
-           (let loop ()
-             (perform-task)
-             (sleep 3600)  ; hourly
-             (loop))))
-  (capabilities
-    (read "/vault/feeds/")
-    (write "/vault/archive/")
-    (network ("rss.example.com")))
-  (constraints
-    (max-runtime (* 30 24 3600))  ; 30 days
-    (max-memory (* 128 1024 1024))))
-`
-
-Pattern 2: One-Shot Processing Agent
-
-`scheme
-(spawn-agent
-  (code '(lambda ()
-           (let ((input (cas-get input-hash)))
-             (let ((result (process input)))
-               (cas-put result)))))
-  (capabilities
-    (read (hash input-hash))
-    (write "/vault/results/"))
-  (constraints
-    (max-runtime 3600)
-    (max-memory (* 1024 1024 1024))))
-`
-
-Pattern 3: Reactive Agent
-
-`scheme
-(spawn-agent
-  (code '(lambda ()
-           (let loop ()
-             (let ((msg (agent-receive timeout: 60000)))
-               (when msg
-                 (handle-message msg))
-               (loop)))))
-  (capabilities
-    (receive (from supervisor-agent))
-    (send (to worker-agents))
-    (read "/vault/tasks/")
-    (write "/vault/results/"))
-  (constraints
-    (max-runtime #f)  ; runs until terminated
-    (max-memory (* 256 1024 1024))))
-`
-
-Pattern 4: Mobile Agent
-
-`scheme
-;; Agent that migrates between vaults
-(spawn-agent
-  (code '(lambda ()
-           (let ((data (gather-local-data)))
-             (migrate-to remote-vault data)
-             (process-remote data)
-             (migrate-home results))))
-  (capabilities
-    (read "/vault/local/")
-    (migrate (vaults (vault-a vault-b vault-c))))
-  (constraints
-    (max-migrations 10)
-    (max-runtime (* 24 3600))))
-`
-
-------------------------------------------------------------------------------
-
-Security Considerations
-
-Escape Prevention
-
-`scheme
-;; Sandbox escape mitigations
-(define sandbox-security
-  '((seccomp "restrict system calls")
-    (namespaces "process/network/mount isolation")
-    (capabilities "drop all Linux capabilities")
-    (no-setuid "prevent privilege escalation")
-    (read-only-root "immutable rootfs")
-    (no-raw-sockets "prevent network attacks")))
-`
-
-Resource Exhaustion
-
-`scheme
-;; Prevent denial of service
-(define resource-limits
-  '((memory "hard limit, OOM killer")
-    (cpu "cgroups CPU quota")
-    (disk "quota or sparse files")
-    (network "bandwidth limiting")
-    (processes "prevent fork bombs")
-    (file-descriptors "prevent fd exhaustion")))
-`
-
-Information Leakage
-
-`scheme
-;; Prevent covert channels
-(define isolation-measures
-  '((timing "fuel-based execution, no precise timers")
-    (filesystem "no access outside sandbox")
-    (network "egress filtering")
-    (ipc "message passing only, no shared memory")
-    (environment "sanitized env vars")))
-`
-
-Malicious Agents
-
-`scheme
-(define (detect-malicious-behavior agent)
-  "Heuristics for detecting malicious agents"
-  (or
-    ;; Excessive resource usage
-    (&gt; (agent-resource-velocity agent) threshold)
-    ;; Unusual network patterns
-    (suspicious-network-activity? agent)
-    ;; Repeated capability violations
-    (&gt; (agent-violation-count agent) max-violations)
-    ;; Anomalous message patterns
-    (anomalous-messaging? agent)))
-`
-
-------------------------------------------------------------------------------
-
-Implementation Notes
-
-Dependencies
-
-| Component | Implementation |
-|-----------|---------------|
-| Process sandbox | pledge/unveil (OpenBSD), seccomp (Linux) |
-| Container sandbox | runc, crun |
-| WASM sandbox | wasmtime, wasmer |
-| Scheme sandbox | custom safe environment |
-
-Performance
-
-- Sandbox creation: ~100ms (container), ~10ms (process), ~1ms (WASM)
-- Message passing: ~10μs (local), ~1ms (cross-sandbox)
-- Capability check: ~100ns (cached), ~10μs (chain validation)
-
-------------------------------------------------------------------------------
-
-References
-
-1. Telescript Technology: Mobile Agents
-2. Capsicum: Practical Capabilities for UNIX
-3. WebAssembly System Interface (WASI)
-4. RFC-021: Capability Delegation
-5. RFC-003: Cryptographic Audit Trail
-6. E Programming Language - Object capabilities
-
-------------------------------------------------------------------------------
-
-Changelog
-
-- 2026-01-07 - Initial draft
-
-------------------------------------------------------------------------------
-
-Implementation Status: Draft
-Dependencies: sandbox (OS-specific), capabilities, audit
-Integration: Vault operations, distributed processing, automation
-
-------------------------------------------------------------------------------
-
-The Library is a distributed conspiracy—con spirare, to breathe together—of helpful daemons tending a federation of enclaves. Not a cult, just people who want the same things: privacy, preservation, persistence.</pre></body></html>
+    └─────────┘</code></pre>
+<hr />
+<h2 id="spawning-agents">Spawning Agents</h2>
+<h3 id="spawn-request">Spawn Request</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">spawn-agent </span>spec)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Spawn new agent from specification&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((agent-id (generate-agent-id))</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>         (spawner (current-principal))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Validate spawner has required capabilities</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>         (<span class="op">_</span> (verify-spawn-authority spawner (spec-capabilities spec)))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Create sandbox</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>         (sandbox (create-sandbox (spec-sandbox-type spec)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                                  (spec-constraints spec)))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Create agent record</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>         (agent (make-agent</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                 id: agent-id</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                 spawned-by: spawner</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>                 spec: spec</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>                 sandbox: sandbox</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>                 status: &#39;spawned)))</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Audit spawn</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    (audit-append</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>      action: `(agent-spawn ,agent-id)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>      motivation: (spec-purpose spec))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Initialize agent process</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    (sandbox-exec sandbox (spec-code spec))</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Return agent handle</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    agent))</span></code></pre></div>
+<h3 id="capability-verification">Capability Verification</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-spawn-authority </span>spawner requested-caps)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Verify spawner can grant requested capabilities&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> (cap)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>      (unless (authorized? spawner &#39;delegate cap)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> <span class="st">&quot;Cannot delegate capability&quot;</span> cap)))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    requested-caps))</span></code></pre></div>
+<h3 id="agent-code-loading">Agent Code Loading</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">load-agent-code </span>spec)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Load and verify agent code&quot;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((code-hash (spec-code-hash spec))</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>         (code (cas-get code-hash)))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Verify code hash</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    (unless (<span class="kw">equal?</span> code-hash (sha256 code))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> <span class="st">&quot;Code integrity failure&quot;</span>))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Verify code signature (if required)</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    (when (spec-require-signed? spec)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      (unless (verify-code-signature code (spec-signer spec))</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> <span class="st">&quot;Code signature invalid&quot;</span>)))</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    code))</span></code></pre></div>
+<hr />
+<h2 id="sandbox-types">Sandbox Types</h2>
+<h3 id="posix-sandbox">POSIX Sandbox</h3>
+<p>Process isolation using OS primitives:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">create-posix-sandbox </span>constraints)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create POSIX-based sandbox&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (sandbox</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    (type posix)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Process isolation</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    (process</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>      (uid (allocate-sandbox-uid))</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      (gid (allocate-sandbox-gid))</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>      (chroot (create-sandbox-root))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>      (rlimits</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        (cpu ,(constraints-max-cpu constraints))</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        (memory ,(constraints-max-memory constraints))</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        (files ,(constraints-max-files constraints))</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        (processes <span class="dv">1</span>)))  <span class="co">; No forking</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Filesystem isolation</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    (filesystem</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>      (root ,(sandbox-root))</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>      (mounts</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>        ((<span class="st">&quot;/lib&quot;</span> read-only)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>         (<span class="st">&quot;/usr/lib&quot;</span> read-only)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>         ,(sandbox-work-dir) read-write)))</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Network isolation</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    (network</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>      (allowed-hosts ,(constraints-network-hosts constraints))</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>      (allowed-ports ,(constraints-network-ports constraints)))))</span></code></pre></div>
+<h3 id="scheme-sandbox">Scheme Sandbox</h3>
+<p>Language-level isolation for Scheme agents:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">create-scheme-sandbox </span>constraints)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create Scheme-level sandbox&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (sandbox</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    (type scheme)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Safe environment - no dangerous primitives</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    (environment</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      (import (scheme base)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>              (scheme <span class="kw">write</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>              (library sandbox-io)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>              (library sandbox-net))</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      (exclude system exit <span class="kw">eval</span> <span class="kw">load</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>               file-delete directory-delete</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>               process-fork process-exec))</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Resource limits via fuel</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    (fuel</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>      (computation ,(constraints-max-steps constraints))</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>      (allocation ,(constraints-max-memory constraints)))</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Capability-restricted I/O</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    (io-capabilities ,(constraints-io constraints))))</span></code></pre></div>
+<h3 id="container-sandbox">Container Sandbox</h3>
+<p>OCI container isolation:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">create-container-sandbox </span>constraints image)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create container-based sandbox&quot;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  (sandbox</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    (type container)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Container configuration</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    (container</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>      (image ,image)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      (readonly-rootfs <span class="dv">#t</span>)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>      (no-new-privileges <span class="dv">#t</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>      (cap-drop ALL)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>      (cap-add ,(minimal-caps constraints)))</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Resource limits</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    (resources</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>      (memory ,(constraints-max-memory constraints))</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>      (cpu-shares ,(constraints-cpu-shares constraints))</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>      (pids-limit <span class="dv">10</span>))</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Network policy</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    (network</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>      (mode bridge)</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>      (egress-policy ,(network-policy constraints)))))</span></code></pre></div>
+<h3 id="wasm-sandbox">WASM Sandbox</h3>
+<p>WebAssembly isolation:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">create-wasm-sandbox </span>constraints)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create WebAssembly sandbox&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (sandbox</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    (type wasm)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; WASM runtime configuration</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    (runtime</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>      (memory-limit ,(constraints-max-memory constraints))</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>      (table-limit <span class="dv">10000</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>      (fuel ,(constraints-max-steps constraints)))</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; WASI capabilities</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    (wasi</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>      (preopens ,(wasi-preopens constraints))</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>      (env ,(wasi-env constraints))</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>      (args ,(wasi-args constraints)))</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Host function imports (minimal)</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    (imports</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">log</span> <span class="st">&quot;library:log&quot;</span>)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>      (cas-get <span class="st">&quot;library:cas_get&quot;</span>)</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>      (cas-put <span class="st">&quot;library:cas_put&quot;</span>))))</span></code></pre></div>
+<hr />
+<h2 id="capability-enforcement">Capability Enforcement</h2>
+<h3 id="capability-proxy">Capability Proxy</h3>
+<p>All agent I/O goes through capability-checking proxies:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">make-capability-proxy </span>agent capabilities)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create proxy that enforces capability checks&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">lambda</span> (operation <span class="op">.</span> args)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((required-cap (operation-&gt;capability operation args)))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Check capability</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>      (unless (capability-granted? capabilities required-cap)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        (audit-violation agent operation required-cap)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> <span class="st">&quot;Capability denied&quot;</span> operation))</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Audit allowed operation</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>      (audit-agent-action agent operation args)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Execute operation</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>      (apply (operation-&gt;handler operation) args))))</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">operation-&gt;capability </span>op args)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Map operation to required capability&quot;</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">case</span> op</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    ((read-file)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>     `(<span class="kw">read</span> (path ,(<span class="kw">car</span> args))))</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    ((write-file)</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>     `(<span class="kw">write</span> (path ,(<span class="kw">car</span> args))))</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    ((http-get)</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>     `(network (url ,(<span class="kw">car</span> args))))</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    ((cas-get)</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>     `(<span class="kw">read</span> (hash ,(<span class="kw">car</span> args))))</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">else</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">error</span> <span class="st">&quot;Unknown operation&quot;</span> op))))</span></code></pre></div>
+<h3 id="attenuation-on-delegation">Attenuation on Delegation</h3>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-spawn-child </span>parent-agent child-spec)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Agent spawning child agent with attenuated capabilities&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((parent-caps (agent-capabilities parent-agent))</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>         (requested-caps (spec-capabilities child-spec))</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Child can only have subset of parent&#39;s capabilities</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>         (child-caps (capability-intersect parent-caps requested-caps)))</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    (unless (<span class="kw">equal?</span> child-caps requested-caps)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>      (warn <span class="st">&quot;Child capabilities attenuated&quot;</span>))</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    (spawn-agent (spec-with-capabilities child-spec child-caps))))</span></code></pre></div>
+<hr />
+<h2 id="agent-communication">Agent Communication</h2>
+<h3 id="message-passing">Message Passing</h3>
+<p>Agents communicate via typed, capability-checked messages:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-send </span>from-agent to-agent message)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Send message between agents&quot;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Verify sender has send capability to receiver</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  (unless (capability-granted? (agent-capabilities from-agent)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>                               `(send (agent ,(agent-id to-agent))))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Cannot send to agent&quot;</span>))</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Verify message type allowed</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  (unless (message-type-allowed? from-agent to-agent (message-type message))</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Message type not allowed&quot;</span>))</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Queue message</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  (mailbox-enqueue (agent-mailbox to-agent)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>                   (signed-message from-agent message))</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Audit</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  (audit-append</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    action: `(agent-message ,(agent-id from-agent) ,(agent-id to-agent))</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    motivation: (message-type message)))</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-receive </span>agent <span class="ex">#!key</span> timeout)</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Receive message from mailbox&quot;</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((msg (mailbox-dequeue (agent-mailbox agent) timeout: timeout)))</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    (when msg</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Verify signature</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>      (verify-message-signature msg)</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>      msg)))</span></code></pre></div>
+<h3 id="shared-state">Shared State</h3>
+<p>Agents can share state through CAS:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-share </span>agent hash recipients)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Share CAS object with other agents&quot;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Verify agent can read the object</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  (unless (capability-granted? (agent-capabilities agent)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>                               `(<span class="kw">read</span> (hash ,hash)))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Cannot read object to share&quot;</span>))</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Grant read capability to recipients</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> (recipient)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>      (grant-capability agent recipient `(<span class="kw">read</span> (hash ,hash))))</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    recipients)</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Audit sharing</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  (audit-append</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    action: `(agent-share ,hash ,recipients)))</span></code></pre></div>
+<hr />
+<h2 id="monitoring-and-control">Monitoring and Control</h2>
+<h3 id="agent-status">Agent Status</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-status </span>agent)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Get current agent status&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  `(agent-status</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    (id ,(agent-id agent))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    (status ,(agent-state agent))</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    (uptime ,(<span class="op">-</span> (current-time) (agent-start-time agent)))</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    (resources</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>      (memory ,(sandbox-memory-usage (agent-sandbox agent)))</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>      (cpu ,(sandbox-cpu-usage (agent-sandbox agent)))</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>      (storage ,(sandbox-storage-usage (agent-sandbox agent))))</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    (actions ,(agent-action-count agent))</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    (messages-sent ,(agent-messages-sent agent))</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    (messages-received ,(agent-messages-received agent))))</span></code></pre></div>
+<h3 id="agent-control">Agent Control</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-pause </span>agent <span class="ex">#!key</span> reason)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Pause agent execution&quot;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (unless (authorized? (current-principal) &#39;control agent)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Not authorized to control agent&quot;</span>))</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  (sandbox-pause (agent-sandbox agent))</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  (set-agent-state! agent &#39;paused)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  (audit-append action: `(agent-pause ,(agent-id agent)) motivation: reason))</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-resume </span>agent)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Resume paused agent&quot;</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  (unless (authorized? (current-principal) &#39;control agent)</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Not authorized to control agent&quot;</span>))</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  (sandbox-resume (agent-sandbox agent))</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  (set-agent-state! agent &#39;running)</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  (audit-append action: `(agent-resume ,(agent-id agent))))</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-terminate </span>agent <span class="ex">#!key</span> reason)</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Terminate agent immediately&quot;</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>  (unless (authorized? (current-principal) &#39;control agent)</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Not authorized to control agent&quot;</span>))</span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>  (sandbox-kill (agent-sandbox agent))</span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  (set-agent-state! agent &#39;terminated)</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  (audit-append</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>    action: `(agent-terminate ,(agent-id agent))</span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>    motivation: reason</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>    priority: &#39;high)</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>  (cleanup-agent agent))</span></code></pre></div>
+<h3 id="watchdog-daemon">Watchdog Daemon</h3>
+<p>The watchdog daemon tends the flock of agents—a daemon watching
+daemons:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-watchdog</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Monitor all agents, enforce constraints&quot;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> (agent)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>      (when (<span class="kw">eq?</span> (agent-state agent) &#39;running)</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Check resource limits</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>        (when (<span class="op">&gt;</span> (sandbox-memory-usage (agent-sandbox agent))</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>                 (agent-max-memory agent))</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>          (agent-terminate agent reason: <span class="st">&quot;Memory limit exceeded&quot;</span>))</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Check runtime limit</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>        (when (<span class="op">&gt;</span> (agent-uptime agent) (agent-max-runtime agent))</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>          (agent-terminate agent reason: <span class="st">&quot;Runtime limit exceeded&quot;</span>))</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Check heartbeat</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>        (when (<span class="op">&gt;</span> (<span class="op">-</span> (current-time) (agent-last-heartbeat agent))</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>                 agent-heartbeat-timeout)</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>          (agent-terminate agent reason: <span class="st">&quot;Heartbeat timeout&quot;</span>))))</span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    (all-agents)))</span></code></pre></div>
+<hr />
+<h2 id="soup-integration">Soup Integration</h2>
+<h3 id="agents-in-the-soup">Agents in the Soup</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(soup-object</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  (name <span class="st">&quot;agent/2026-001&quot;</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  (type agent)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  (size <span class="st">&quot;145KB&quot;</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  (status running)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  (spawned-by <span class="st">&quot;ddp@eludom.net&quot;</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  (purpose <span class="st">&quot;Archive arxiv papers&quot;</span>)</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  (runtime <span class="st">&quot;4h 23m&quot;</span>)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  (resources (memory <span class="st">&quot;234MB&quot;</span>) (storage <span class="st">&quot;890MB&quot;</span>))</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  (capabilities (<span class="kw">read</span> <span class="st">&quot;arxiv.org/*&quot;</span>) (<span class="kw">write</span> <span class="st">&quot;/vault/papers/&quot;</span>)))</span></code></pre></div>
+<h3 id="querying-agents">Querying Agents</h3>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; All running agents</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;agent status: &#39;running)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Agents spawned by user</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;agent spawned-by: user-principal)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Agents with network access</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;agent has-capability: &#39;network)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co">;; Resource hogs</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;agent min-memory: (<span class="op">*</span> <span class="dv">256</span> <span class="dv">1024</span> <span class="dv">1024</span>))</span></code></pre></div>
+<h3 id="agent-introspection">Agent Introspection</h3>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Agent can query itself</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">agent-self-inspect</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  `(self</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    (id ,(current-agent-id))</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    (capabilities ,(current-capabilities))</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    (resources-remaining</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>      (memory ,(<span class="op">-</span> max-memory (current-memory)))</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>      (runtime ,(<span class="op">-</span> max-runtime (current-uptime)))</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>      (fuel ,(remaining-fuel)))))</span></code></pre></div>
+<hr />
+<h2 id="agent-patterns">Agent Patterns</h2>
+<h3 id="pattern-1-periodic-task-agent">Pattern 1: Periodic Task
+Agent</h3>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>(spawn-agent</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  (code &#39;(<span class="kw">lambda</span> ()</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>           (<span class="kw">let</span> loop ()</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>             (perform-task)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>             (sleep <span class="dv">3600</span>)  <span class="co">; hourly</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>             (loop))))</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  (capabilities</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">read</span> <span class="st">&quot;/vault/feeds/&quot;</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">write</span> <span class="st">&quot;/vault/archive/&quot;</span>)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    (network (<span class="st">&quot;rss.example.com&quot;</span>)))</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  (constraints</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    (max-runtime (<span class="op">*</span> <span class="dv">30</span> <span class="dv">24</span> <span class="dv">3600</span>))  <span class="co">; 30 days</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    (max-memory (<span class="op">*</span> <span class="dv">128</span> <span class="dv">1024</span> <span class="dv">1024</span>))))</span></code></pre></div>
+<h3 id="pattern-2-one-shot-processing-agent">Pattern 2: One-Shot
+Processing Agent</h3>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(spawn-agent</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  (code &#39;(<span class="kw">lambda</span> ()</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>           (<span class="kw">let</span> ((input (cas-get input-hash)))</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>             (<span class="kw">let</span> ((result (process input)))</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>               (cas-put result)))))</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  (capabilities</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">read</span> (hash input-hash))</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">write</span> <span class="st">&quot;/vault/results/&quot;</span>))</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  (constraints</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    (max-runtime <span class="dv">3600</span>)</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    (max-memory (<span class="op">*</span> <span class="dv">1024</span> <span class="dv">1024</span> <span class="dv">1024</span>))))</span></code></pre></div>
+<h3 id="pattern-3-reactive-agent">Pattern 3: Reactive Agent</h3>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>(spawn-agent</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  (code &#39;(<span class="kw">lambda</span> ()</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>           (<span class="kw">let</span> loop ()</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>             (<span class="kw">let</span> ((msg (agent-receive timeout: <span class="dv">60000</span>)))</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>               (when msg</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>                 (handle-message msg))</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>               (loop)))))</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  (capabilities</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    (receive (from supervisor-agent))</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    (send (to worker-agents))</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">read</span> <span class="st">&quot;/vault/tasks/&quot;</span>)</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">write</span> <span class="st">&quot;/vault/results/&quot;</span>))</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  (constraints</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    (max-runtime <span class="dv">#f</span>)  <span class="co">; runs until terminated</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    (max-memory (<span class="op">*</span> <span class="dv">256</span> <span class="dv">1024</span> <span class="dv">1024</span>))))</span></code></pre></div>
+<h3 id="pattern-4-mobile-agent">Pattern 4: Mobile Agent</h3>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Agent that migrates between vaults</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>(spawn-agent</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  (code &#39;(<span class="kw">lambda</span> ()</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>           (<span class="kw">let</span> ((data (gather-local-data)))</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>             (migrate-to remote-vault data)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>             (process-remote data)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>             (migrate-home results))))</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  (capabilities</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">read</span> <span class="st">&quot;/vault/local/&quot;</span>)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    (migrate (vaults (vault-a vault-b vault-c))))</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  (constraints</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>    (max-migrations <span class="dv">10</span>)</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    (max-runtime (<span class="op">*</span> <span class="dv">24</span> <span class="dv">3600</span>))))</span></code></pre></div>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="escape-prevention">Escape Prevention</h3>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Sandbox escape mitigations</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> sandbox-security</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  &#39;((seccomp <span class="st">&quot;restrict system calls&quot;</span>)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    (namespaces <span class="st">&quot;process/network/mount isolation&quot;</span>)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    (capabilities <span class="st">&quot;drop all Linux capabilities&quot;</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    (no-setuid <span class="st">&quot;prevent privilege escalation&quot;</span>)</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    (read-only-root <span class="st">&quot;immutable rootfs&quot;</span>)</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    (no-raw-sockets <span class="st">&quot;prevent network attacks&quot;</span>)))</span></code></pre></div>
+<h3 id="resource-exhaustion">Resource Exhaustion</h3>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Prevent denial of service</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> resource-limits</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  &#39;((memory <span class="st">&quot;hard limit, OOM killer&quot;</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    (cpu <span class="st">&quot;cgroups CPU quota&quot;</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    (disk <span class="st">&quot;quota or sparse files&quot;</span>)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    (network <span class="st">&quot;bandwidth limiting&quot;</span>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    (processes <span class="st">&quot;prevent fork bombs&quot;</span>)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    (file-descriptors <span class="st">&quot;prevent fd exhaustion&quot;</span>)))</span></code></pre></div>
+<h3 id="information-leakage">Information Leakage</h3>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Prevent covert channels</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> isolation-measures</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  &#39;((timing <span class="st">&quot;fuel-based execution, no precise timers&quot;</span>)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    (filesystem <span class="st">&quot;no access outside sandbox&quot;</span>)</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    (network <span class="st">&quot;egress filtering&quot;</span>)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    (ipc <span class="st">&quot;message passing only, no shared memory&quot;</span>)</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    (environment <span class="st">&quot;sanitized env vars&quot;</span>)))</span></code></pre></div>
+<h3 id="malicious-agents">Malicious Agents</h3>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">detect-malicious-behavior </span>agent)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Heuristics for detecting malicious agents&quot;</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">or</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Excessive resource usage</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    (<span class="op">&gt;</span> (agent-resource-velocity agent) threshold)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Unusual network patterns</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>    (suspicious-network-activity? agent)</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Repeated capability violations</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    (<span class="op">&gt;</span> (agent-violation-count agent) max-violations)</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Anomalous message patterns</span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>    (anomalous-messaging? agent)))</span></code></pre></div>
+<hr />
+<h2 id="implementation-notes">Implementation Notes</h2>
+<h3 id="dependencies">Dependencies</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Process sandbox</td>
+<td>pledge/unveil (OpenBSD), seccomp (Linux)</td>
+</tr>
+<tr>
+<td>Container sandbox</td>
+<td>runc, crun</td>
+</tr>
+<tr>
+<td>WASM sandbox</td>
+<td>wasmtime, wasmer</td>
+</tr>
+<tr>
+<td>Scheme sandbox</td>
+<td>custom safe environment</td>
+</tr>
+</tbody>
+</table>
+<h3 id="performance">Performance</h3>
+<ul>
+<li>Sandbox creation: ~100ms (container), ~10ms (process), ~1ms
+(WASM)</li>
+<li>Message passing: ~10μs (local), ~1ms (cross-sandbox)</li>
+<li>Capability check: ~100ns (cached), ~10μs (chain validation)</li>
+</ul>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li><a
+href="https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html">Telescript
+Technology: Mobile Agents</a></li>
+<li><a
+href="https://www.cl.cam.ac.uk/research/security/capsicum/">Capsicum:
+Practical Capabilities for UNIX</a></li>
+<li><a href="https://wasi.dev/">WebAssembly System Interface
+(WASI)</a></li>
+<li><a href="rfc-021-capability-delegation.md">RFC-021: Capability
+Delegation</a></li>
+<li><a href="rfc-003-audit-trail.md">RFC-003: Cryptographic Audit
+Trail</a></li>
+<li><a href="http://erights.org/">E Programming Language</a> - Object
+capabilities</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-07</strong> - Initial draft</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Draft
+<strong>Dependencies:</strong> sandbox (OS-specific), capabilities,
+audit <strong>Integration:</strong> Vault operations, distributed
+processing, automation</p>
+<hr />
+<p><em>The Library is a distributed conspiracy—con spirare, to breathe
+together—of helpful daemons tending a federation of enclaves. Not a
+cult, just people who want the same things: privacy, preservation,
+persistence.</em></p>
+</body>
+</html>
