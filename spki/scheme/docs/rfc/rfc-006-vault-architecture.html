@@ -1,274 +1,40 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-006-vault-architecture</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-</head>
-<body>
-<h1 id="rfc-006-vault-system-architecture">RFC-006: Vault System
-Architecture</h1>
-<p><strong>Status:</strong> Implemented <strong>Date:</strong> January
-2026 <strong>Author:</strong> Derrell Piper <a
-href="mailto:ddp@eludom.net" class="email">ddp@eludom.net</a>
-<strong>Implementation:</strong> vault.scm (887 lines)</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This RFC specifies the Vault system for the Library of Cyberspace:
-cryptographically sealed version control with SPKI authorization,
-progressive metadata, archival support, and integrated audit trails.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>Git is powerful but lacks:</p>
-<ol type="1">
-<li><strong>Cryptographic sealing</strong> - GPG signing is optional and
-awkward</li>
-<li><strong>Authorization model</strong> - Anyone with access can
-commit</li>
-<li><strong>Archival features</strong> - No first-class
-backup/restore</li>
-<li><strong>Audit integration</strong> - History is mutable</li>
-</ol>
-<p>The Vault wraps Git with:</p>
-<ul>
-<li><strong>seal-</strong> commands that cryptographically sign
-operations</li>
-<li><strong>SPKI certificates</strong> for authorization</li>
-<li><strong>Three archive formats</strong> for different use cases</li>
-<li><strong>Integrated audit trail</strong> for non-repudiation</li>
-</ul>
-<pre><code>                    ╭────────────────────────────────╮
+<html><head><meta charset="UTF-8"><title>RFC-006: Vault System Architecture</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>RFC-006: Vault System Architecture
+
+**Status:** Implemented
+**Date:** January 2026
+**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
+**Implementation:** vault.scm (887 lines)
+
+---
+
+Abstract
+
+This RFC specifies the Vault system for the Library of Cyberspace: cryptographically sealed version control with SPKI authorization, progressive metadata, archival support, and integrated audit trails.
+
+---
+
+Motivation
+
+Git is powerful but lacks:
+
+1. **Cryptographic sealing** - GPG signing is optional and awkward
+2. **Authorization model** - Anyone with access can commit
+3. **Archival features** - No first-class backup/restore
+4. **Audit integration** - History is mutable
+
+The Vault wraps Git with:
+
+- **seal-** commands that cryptographically sign operations
+- **SPKI certificates** for authorization
+- **Three archive formats** for different use cases
+- **Integrated audit trail** for non-repudiation
+
+```
+                    ╭────────────────────────────────╮
                     │         CYBERSPACE VAULT       │
                     ├────────────────────────────────┤
                     │  seal-commit    seal-release   │
@@ -280,252 +46,319 @@ operations</li>
                     │         SPKI Certs             │
                     ├────────────────────────────────┤
                     │            Git                 │
-                    ╰────────────────────────────────╯</code></pre>
-<hr />
-<h2 id="core-operations">Core Operations</h2>
-<h3 id="seal-commit">seal-commit</h3>
-<p>Stage and commit changes in one operation.</p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(seal-commit message</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> files catalog subjects keywords description preserve)</span></code></pre></div>
-<p><strong>Parameters:</strong> - <code>message</code> - Commit message
-(required) - <code>files</code> - Specific files to stage (optional) -
-<code>catalog</code> - Enable catalog metadata - <code>subjects</code> -
-Subject headings - <code>keywords</code> - Search keywords -
-<code>description</code> - Extended description - <code>preserve</code>
-- Enable preservation metadata</p>
-<p><strong>Process:</strong> 1. Stage specified files (or all modified)
-2. Create git commit 3. Save metadata (if catalog or preserve) 4. Record
-in audit trail (if signing key configured)</p>
-<p><strong>Example:</strong></p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(seal-commit <span class="st">&quot;Add authentication module&quot;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  files: &#39;(<span class="st">&quot;auth.scm&quot;</span> <span class="st">&quot;auth-test.scm&quot;</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  catalog: <span class="dv">#t</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  subjects: &#39;(<span class="st">&quot;security&quot;</span> <span class="st">&quot;authentication&quot;</span>)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  keywords: &#39;(<span class="st">&quot;login&quot;</span> <span class="st">&quot;oauth&quot;</span>))</span></code></pre></div>
-<h3 id="seal-update">seal-update</h3>
-<p>Pull latest changes from remote.</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(seal-update <span class="ex">#!key</span> branch)</span></code></pre></div>
-<p>Like <code>svn update</code> - fetches and fast-forwards.</p>
-<h3 id="seal-undo">seal-undo</h3>
-<p>Undo changes.</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(seal-undo <span class="ex">#!key</span> file hard)</span></code></pre></div>
-<ul>
-<li><code>file</code> - Restore specific file</li>
-<li><code>hard</code> - Discard all uncommitted changes</li>
-</ul>
-<h3 id="seal-history">seal-history</h3>
-<p>Show commit history.</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(seal-history <span class="ex">#!key</span> count)</span></code></pre></div>
-<p>Displays decorated graph log.</p>
-<h3 id="seal-branch-seal-merge">seal-branch / seal-merge</h3>
-<p>Branch and merge operations.</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(seal-branch <span class="st">&quot;feature-auth&quot;</span> <span class="ex">#!key</span> from)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(seal-merge <span class="st">&quot;feature-auth&quot;</span> <span class="ex">#!key</span> strategy)</span></code></pre></div>
-<hr />
-<h2 id="version-management">Version Management</h2>
-<h3 id="seal-release">seal-release</h3>
-<p>Create cryptographically sealed release.</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(seal-release version <span class="ex">#!key</span> message migrate-from)</span></code></pre></div>
-<p><strong>Parameters:</strong> - <code>version</code> - Semantic
-version (X.Y.Z required) - <code>message</code> - Release notes -
-<code>migrate-from</code> - Previous version for migration tracking</p>
-<p><strong>Process:</strong> 1. Validate semantic version format 2. Get
-current commit hash 3. Create annotated git tag 4. Sign with SPKI (if
-configured) 5. Create migration marker (if migrate-from specified)</p>
-<p><strong>Signature Storage:</strong></p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; .vault/releases/1.0.0.sig</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(signature</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (version <span class="st">&quot;1.0.0&quot;</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;abc123...&quot;</span>)</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (manifest <span class="st">&quot;(release </span><span class="ch">\&quot;</span><span class="st">1.0.0</span><span class="ch">\&quot;</span><span class="st"> </span><span class="ch">\&quot;</span><span class="st">abc123</span><span class="ch">\&quot;</span><span class="st"> 1767685100)&quot;</span>)</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  (signature #<span class="op">${</span>ed25519-signature<span class="op">}</span>))</span></code></pre></div>
-<h3 id="seal-verify">seal-verify</h3>
-<p>Verify release signature.</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(seal-verify version <span class="ex">#!key</span> verify-key)</span></code></pre></div>
-<p><strong>Process:</strong> 1. Load signature file 2. Recompute
-manifest hash 3. Verify Ed25519 signature</p>
-<hr />
-<h2 id="archival-system">Archival System</h2>
-<h3 id="seal-archive">seal-archive</h3>
-<p>Create sealed archive of a version.</p>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(seal-archive version <span class="ex">#!key</span> format output)</span></code></pre></div>
-<p><strong>Formats:</strong></p>
-<h4 id="tarball-default">Tarball (default)</h4>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(seal-archive <span class="st">&quot;1.0.0&quot;</span> format: &#39;tarball)</span></code></pre></div>
-<ul>
-<li>Standard gzipped tarball</li>
-<li>No history included</li>
-<li>Smallest size</li>
-</ul>
-<h4 id="git-bundle">Git Bundle</h4>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(seal-archive <span class="st">&quot;1.0.0&quot;</span> format: &#39;bundle)</span></code></pre></div>
-<ul>
-<li>Full git history</li>
-<li>Can clone directly</li>
-<li>Medium size</li>
-</ul>
-<h4 id="cryptographic-legacy">Cryptographic (legacy)</h4>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(seal-archive <span class="st">&quot;1.0.0&quot;</span> format: &#39;cryptographic)</span></code></pre></div>
-<ul>
-<li>Tarball + SHA-512 hash + Ed25519 signature</li>
-<li>Tamper-evident</li>
-<li>Manifest for verification</li>
-</ul>
-<h4 id="zstdage-preferred">Zstd+Age (preferred)</h4>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(seal-archive <span class="st">&quot;1.0.0&quot;</span> format: &#39;zstd-age)</span></code></pre></div>
-<ul>
-<li>Zstd compression (faster, better ratio than gzip)</li>
-<li>Age encryption (X25519/Ed25519 compatible)</li>
-<li>SHA-512 hash + Ed25519 signature</li>
-<li>Encrypted at rest</li>
-<li>See RFC-018: Sealed Archive Format for full specification</li>
-</ul>
-<p><strong>Cryptographic Archive Structure:</strong></p>
-<pre><code>vault-1.0.0.archive        # Manifest
-vault-1.0.0.archive.tar.gz # Tarball (cryptographic)</code></pre>
-<p><strong>Zstd+Age Archive Structure:</strong></p>
-<pre><code>vault-1.0.0.archive            # Manifest
-vault-1.0.0.archive.tar.zst.age # Encrypted archive</code></pre>
-<p><strong>Manifest (cryptographic):</strong></p>
-<div class="sourceCode" id="cb18"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>(sealed-archive</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="st">&quot;1.0.0&quot;</span>)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  (format cryptographic)</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  (tarball <span class="st">&quot;vault-1.0.0.archive.tar.gz&quot;</span>)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;sha512:...&quot;</span>)</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))</span></code></pre></div>
-<p><strong>Manifest (zstd-age):</strong></p>
-<div class="sourceCode" id="cb19"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>(sealed-archive</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="st">&quot;1.0.0&quot;</span>)</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  (format zstd-age)</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  (archive <span class="st">&quot;vault-1.0.0.archive.tar.zst.age&quot;</span>)</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  (compression zstd)</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  (encryption age)</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  (recipients (<span class="st">&quot;age1...&quot;</span>))</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;sha512:...&quot;</span>)</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))</span></code></pre></div>
-<h3 id="seal-restore">seal-restore</h3>
-<p>Restore from sealed archive.</p>
-<div class="sourceCode" id="cb20"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>(seal-restore archive <span class="ex">#!key</span> verify-key target identity)</span></code></pre></div>
-<p><strong>Parameters:</strong> - <code>verify-key</code> - SPKI public
-key for signature verification - <code>target</code> - Extraction
-directory - <code>identity</code> - Age identity file for decryption
-(zstd-age format)</p>
-<p><strong>Process:</strong> 1. Read manifest 2. Verify hash (archive
-integrity) 3. Verify signature (if key provided) 4. Decrypt (zstd-age
-only, requires identity) 5. Extract to target directory</p>
-<hr />
-<h2 id="replication-layer">Replication Layer</h2>
-<p>See RFC-001 for complete specification.</p>
-<h3 id="seal-publish">seal-publish</h3>
-<p>Publish release to remote.</p>
-<div class="sourceCode" id="cb21"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(seal-publish version <span class="ex">#!key</span> remote archive-format message)</span></code></pre></div>
-<p>Supports: - Git remotes (push tags) - HTTP endpoints (POST) -
-Filesystem paths (copy)</p>
-<h3 id="seal-subscribe">seal-subscribe</h3>
-<p>Subscribe to releases from remote.</p>
-<div class="sourceCode" id="cb22"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>(seal-subscribe remote <span class="ex">#!key</span> target verify-key)</span></code></pre></div>
-<p>Downloads and optionally verifies remote releases.</p>
-<h3 id="seal-synchronize">seal-synchronize</h3>
-<p>Bidirectional sync.</p>
-<div class="sourceCode" id="cb23"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>(seal-synchronize remote <span class="ex">#!key</span> direction verify-key)</span></code></pre></div>
-<hr />
-<h2 id="configuration">Configuration</h2>
-<h3 id="vault-init">vault-init</h3>
-<p>Initialize vault for repository.</p>
-<div class="sourceCode" id="cb24"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>(vault-init <span class="ex">#!key</span> signing-key)</span></code></pre></div>
-<p>Sets up: - Signing key configuration - Audit trail directory -
-Metadata directory</p>
-<h3 id="vault-config">vault-config</h3>
-<p>Get/set configuration.</p>
-<div class="sourceCode" id="cb25"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>(vault-config &#39;signing-key)              <span class="co">; Get</span></span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>(vault-config &#39;signing-key some-key)     <span class="co">; Set</span></span></code></pre></div>
-<p><strong>Configuration Options:</strong></p>
-<table>
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 25%" />
-<col style="width: 54%" />
-</colgroup>
-<thead>
-<tr>
-<th>Key</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>signing-key</code></td>
-<td>blob</td>
-<td>Ed25519 private key for signing</td>
-</tr>
-<tr>
-<td><code>verify-key</code></td>
-<td>string</td>
-<td>Path to verification public key</td>
-</tr>
-<tr>
-<td><code>archive-format</code></td>
-<td>symbol</td>
-<td>Default: tarball, bundle, cryptographic, or zstd-age</td>
-</tr>
-<tr>
-<td><code>age-recipients</code></td>
-<td>list</td>
-<td>Age public keys for encryption (zstd-age format)</td>
-</tr>
-<tr>
-<td><code>age-identity</code></td>
-<td>string</td>
-<td>Path to age identity file for decryption</td>
-</tr>
-<tr>
-<td><code>migration-dir</code></td>
-<td>string</td>
-<td>Directory for migration scripts</td>
-</tr>
-<tr>
-<td><code>track-metadata</code></td>
-<td>boolean</td>
-<td>Auto-stage metadata files</td>
-</tr>
-<tr>
-<td><code>publish-remote</code></td>
-<td>string</td>
-<td>Default publication target</td>
-</tr>
-<tr>
-<td><code>subscribe-dir</code></td>
-<td>string</td>
-<td>Directory for subscriptions</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="directory-structure">Directory Structure</h2>
-<pre><code>project/
+                    ╰────────────────────────────────╯
+```
+
+---
+
+Core Operations
+
+seal-commit
+
+Stage and commit changes in one operation.
+
+```scheme
+(seal-commit message
+  #!key files catalog subjects keywords description preserve)
+```
+
+**Parameters:**
+- `message` - Commit message (required)
+- `files` - Specific files to stage (optional)
+- `catalog` - Enable catalog metadata
+- `subjects` - Subject headings
+- `keywords` - Search keywords
+- `description` - Extended description
+- `preserve` - Enable preservation metadata
+
+**Process:**
+1. Stage specified files (or all modified)
+2. Create git commit
+3. Save metadata (if catalog or preserve)
+4. Record in audit trail (if signing key configured)
+
+**Example:**
+```scheme
+(seal-commit "Add authentication module"
+  files: '("auth.scm" "auth-test.scm")
+  catalog: #t
+  subjects: '("security" "authentication")
+  keywords: '("login" "oauth"))
+```
+
+seal-update
+
+Pull latest changes from remote.
+
+```scheme
+(seal-update #!key branch)
+```
+
+Like `svn update` - fetches and fast-forwards.
+
+seal-undo
+
+Undo changes.
+
+```scheme
+(seal-undo #!key file hard)
+```
+
+- `file` - Restore specific file
+- `hard` - Discard all uncommitted changes
+
+seal-history
+
+Show commit history.
+
+```scheme
+(seal-history #!key count)
+```
+
+Displays decorated graph log.
+
+seal-branch / seal-merge
+
+Branch and merge operations.
+
+```scheme
+(seal-branch "feature-auth" #!key from)
+(seal-merge "feature-auth" #!key strategy)
+```
+
+---
+
+Version Management
+
+seal-release
+
+Create cryptographically sealed release.
+
+```scheme
+(seal-release version #!key message migrate-from)
+```
+
+**Parameters:**
+- `version` - Semantic version (X.Y.Z required)
+- `message` - Release notes
+- `migrate-from` - Previous version for migration tracking
+
+**Process:**
+1. Validate semantic version format
+2. Get current commit hash
+3. Create annotated git tag
+4. Sign with SPKI (if configured)
+5. Create migration marker (if migrate-from specified)
+
+**Signature Storage:**
+```scheme
+;; .vault/releases/1.0.0.sig
+(signature
+  (version "1.0.0")
+  (hash "abc123...")
+  (manifest "(release \"1.0.0\" \"abc123\" 1767685100)")
+  (signature #${ed25519-signature}))
+```
+
+seal-verify
+
+Verify release signature.
+
+```scheme
+(seal-verify version #!key verify-key)
+```
+
+**Process:**
+1. Load signature file
+2. Recompute manifest hash
+3. Verify Ed25519 signature
+
+---
+
+Archival System
+
+seal-archive
+
+Create sealed archive of a version.
+
+```scheme
+(seal-archive version #!key format output)
+```
+
+**Formats:**
+
+Tarball (default)
+```scheme
+(seal-archive "1.0.0" format: 'tarball)
+```
+- Standard gzipped tarball
+- No history included
+- Smallest size
+
+Git Bundle
+```scheme
+(seal-archive "1.0.0" format: 'bundle)
+```
+- Full git history
+- Can clone directly
+- Medium size
+
+Cryptographic (legacy)
+```scheme
+(seal-archive "1.0.0" format: 'cryptographic)
+```
+- Tarball + SHA-512 hash + Ed25519 signature
+- Tamper-evident
+- Manifest for verification
+
+Zstd+Age (preferred)
+```scheme
+(seal-archive "1.0.0" format: 'zstd-age)
+```
+- Zstd compression (faster, better ratio than gzip)
+- Age encryption (X25519/Ed25519 compatible)
+- SHA-512 hash + Ed25519 signature
+- Encrypted at rest
+- See RFC-018: Sealed Archive Format for full specification
+
+**Cryptographic Archive Structure:**
+```
+vault-1.0.0.archive        # Manifest
+vault-1.0.0.archive.tar.gz # Tarball (cryptographic)
+```
+
+**Zstd+Age Archive Structure:**
+```
+vault-1.0.0.archive            # Manifest
+vault-1.0.0.archive.tar.zst.age # Encrypted archive
+```
+
+**Manifest (cryptographic):**
+```scheme
+(sealed-archive
+  (version "1.0.0")
+  (format cryptographic)
+  (tarball "vault-1.0.0.archive.tar.gz")
+  (hash "sha512:...")
+  (signature "ed25519:..."))
+```
+
+**Manifest (zstd-age):**
+```scheme
+(sealed-archive
+  (version "1.0.0")
+  (format zstd-age)
+  (archive "vault-1.0.0.archive.tar.zst.age")
+  (compression zstd)
+  (encryption age)
+  (recipients ("age1..."))
+  (hash "sha512:...")
+  (signature "ed25519:..."))
+```
+
+seal-restore
+
+Restore from sealed archive.
+
+```scheme
+(seal-restore archive #!key verify-key target identity)
+```
+
+**Parameters:**
+- `verify-key` - SPKI public key for signature verification
+- `target` - Extraction directory
+- `identity` - Age identity file for decryption (zstd-age format)
+
+**Process:**
+1. Read manifest
+2. Verify hash (archive integrity)
+3. Verify signature (if key provided)
+4. Decrypt (zstd-age only, requires identity)
+5. Extract to target directory
+
+---
+
+Replication Layer
+
+See RFC-001 for complete specification.
+
+seal-publish
+
+Publish release to remote.
+
+```scheme
+(seal-publish version #!key remote archive-format message)
+```
+
+Supports:
+- Git remotes (push tags)
+- HTTP endpoints (POST)
+- Filesystem paths (copy)
+
+seal-subscribe
+
+Subscribe to releases from remote.
+
+```scheme
+(seal-subscribe remote #!key target verify-key)
+```
+
+Downloads and optionally verifies remote releases.
+
+seal-synchronize
+
+Bidirectional sync.
+
+```scheme
+(seal-synchronize remote #!key direction verify-key)
+```
+
+---
+
+Configuration
+
+vault-init
+
+Initialize vault for repository.
+
+```scheme
+(vault-init #!key signing-key)
+```
+
+Sets up:
+- Signing key configuration
+- Audit trail directory
+- Metadata directory
+
+vault-config
+
+Get/set configuration.
+
+```scheme
+(vault-config 'signing-key)              ; Get
+(vault-config 'signing-key some-key)     ; Set
+```
+
+**Configuration Options:**
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `signing-key` | blob | Ed25519 private key for signing |
+| `verify-key` | string | Path to verification public key |
+| `archive-format` | symbol | Default: tarball, bundle, cryptographic, or zstd-age |
+| `age-recipients` | list | Age public keys for encryption (zstd-age format) |
+| `age-identity` | string | Path to age identity file for decryption |
+| `migration-dir` | string | Directory for migration scripts |
+| `track-metadata` | boolean | Auto-stage metadata files |
+| `publish-remote` | string | Default publication target |
+| `subscribe-dir` | string | Directory for subscriptions |
+
+---
+
+Directory Structure
+
+```
+project/
 ├── .vault/
 │   ├── metadata/           # Commit metadata files
 │   │   ├── abc123.sexp
@@ -540,180 +373,187 @@ class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb25-1"><a h
 │       └── vault-1.0.0.archive
 ├── migrations/             # Version migration scripts
 │   └── 1.0.0-to-2.0.0.scm
-└── .git/                   # Git repository</code></pre>
-<hr />
-<h2 id="migration-support">Migration Support</h2>
-<h3 id="creating-migrations">Creating Migrations</h3>
-<div class="sourceCode" id="cb27"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>(seal-release <span class="st">&quot;2.0.0&quot;</span> migrate-from: <span class="st">&quot;1.0.0&quot;</span>)</span></code></pre></div>
-<p>Generates template:</p>
-<div class="sourceCode" id="cb28"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; migrations/1.0.0-to-2.0.0.scm</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="co">;;; Migration: 1.0.0 -&gt; 2.0.0</span></span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="co">;;; Generated: 1767685100</span></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">migrate-1.0.0-to-2.0.0</span>)</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Define migration logic here</span></span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="dv">#t</span>)</span>
-<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>(migrate-1.0.0-to-2.0.0)</span></code></pre></div>
-<h3 id="running-migrations">Running Migrations</h3>
-<div class="sourceCode" id="cb29"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>(seal-migrate <span class="st">&quot;1.0.0&quot;</span> <span class="st">&quot;2.0.0&quot;</span> <span class="ex">#!key</span> script dry-run)</span></code></pre></div>
-<hr />
-<h2 id="integrity-checking">Integrity Checking</h2>
-<h3 id="seal-check">seal-check</h3>
-<p>Verify vault integrity.</p>
-<div class="sourceCode" id="cb30"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>(seal-check <span class="ex">#!key</span> deep)</span></code></pre></div>
-<p>Checks: - Git repository health (<code>git fsck</code>) - Release
-signature validity (if deep) - Audit trail chain (if deep)</p>
-<hr />
-<h2 id="security-model">Security Model</h2>
-<h3 id="signing-key-handling">Signing Key Handling</h3>
-<div class="sourceCode" id="cb31"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Key is 64-byte Ed25519 secret key</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; First 32 bytes: seed</span></span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; Last 32 bytes: public key</span></span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">get-vault-principal </span>signing-key)</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Extract public key from signing key&quot;</span></span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>  (blob-copy signing-key <span class="dv">32</span> <span class="dv">32</span>))</span></code></pre></div>
-<h3 id="authorization-flow">Authorization Flow</h3>
-<ol type="1">
-<li><strong>Configure</strong>:
-<code>(vault-init signing-key: key)</code></li>
-<li><strong>Operate</strong>: <code>(seal-commit ...)</code> signs with
-configured key</li>
-<li><strong>Audit</strong>: Entry includes actor’s public key</li>
-<li><strong>Verify</strong>: <code>(seal-verify ...)</code> checks
-signature</li>
-</ol>
-<h3 id="threat-mitigations">Threat Mitigations</h3>
-<table>
-<thead>
-<tr>
-<th>Threat</th>
-<th>Mitigation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Unauthorized commits</td>
-<td>SPKI certificates required</td>
-</tr>
-<tr>
-<td>Release tampering</td>
-<td>Ed25519 signatures</td>
-</tr>
-<tr>
-<td>History rewriting</td>
-<td>Audit trail non-repudiation</td>
-</tr>
-<tr>
-<td>Archive corruption</td>
-<td>SHA-512 hash verification</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="integration-points">Integration Points</h2>
-<h3 id="with-audit-trail-rfc-003">With Audit Trail (RFC-003)</h3>
-<p>All vault operations create audit entries:</p>
-<div class="sourceCode" id="cb32"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>(audit-append</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  actor: (get-vault-principal signing-key)</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  action: &#39;(seal-commit <span class="st">&quot;hash123&quot;</span>)</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  motivation: message)</span></code></pre></div>
-<h3 id="with-spki-rfc-004">With SPKI (RFC-004)</h3>
-<p>Signing keys are SPKI principals:</p>
-<div class="sourceCode" id="cb33"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>(make-key-principal (get-vault-principal signing-key))</span></code></pre></div>
-<h3 id="with-metadata-rfc-005">With Metadata (RFC-005)</h3>
-<p>Progressive metadata via seal-commit parameters:</p>
-<div class="sourceCode" id="cb34"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>(seal-commit <span class="st">&quot;msg&quot;</span> preserve: <span class="dv">#t</span>)  <span class="co">; Full preservation</span></span></code></pre></div>
-<hr />
-<h2 id="usage-examples">Usage Examples</h2>
-<h3 id="basic-workflow">Basic Workflow</h3>
-<div class="sourceCode" id="cb35"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Initialize</span></span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>(vault-init signing-key: my-key)</span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Daily work</span></span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>(seal-commit <span class="st">&quot;Add feature&quot;</span>)</span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>(seal-commit <span class="st">&quot;Fix bug&quot;</span>)</span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Release</span></span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>(seal-release <span class="st">&quot;1.0.0&quot;</span> message: <span class="st">&quot;Initial release&quot;</span>)</span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Archive</span></span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>(seal-archive <span class="st">&quot;1.0.0&quot;</span> format: &#39;cryptographic)</span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a><span class="co">;; Verify</span></span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>(seal-verify <span class="st">&quot;1.0.0&quot;</span> verify-key: <span class="st">&quot;my.public&quot;</span>)</span></code></pre></div>
-<h3 id="federation-workflow">Federation Workflow</h3>
-<div class="sourceCode" id="cb36"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Publisher</span></span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>(seal-release <span class="st">&quot;1.0.0&quot;</span>)</span>
-<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>(seal-publish <span class="st">&quot;1.0.0&quot;</span> remote: <span class="st">&quot;/shared/releases&quot;</span>)</span>
-<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Subscriber</span></span>
-<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>(seal-subscribe <span class="st">&quot;/shared/releases&quot;</span> verify-key: publisher-pub)</span>
-<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Bidirectional</span></span>
-<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>(seal-synchronize peer-remote direction: &#39;both)</span></code></pre></div>
-<hr />
-<h2 id="document-formats">Document Formats</h2>
-<p>The Vault preserves documents in canonical open formats:</p>
-<table>
-<thead>
-<tr>
-<th>Format</th>
-<th>Extension</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Text</td>
-<td><code>.txt</code></td>
-<td>Universal compatibility, IETF tradition, immortal</td>
-</tr>
-<tr>
-<td>PostScript</td>
-<td><code>.ps</code></td>
-<td>Archival, printing, open since 1984</td>
-</tr>
-<tr>
-<td>Hypertext Markup Language</td>
-<td><code>.html</code></td>
-<td>Web viewing</td>
-</tr>
-</tbody>
-</table>
-<p>All formats are first-class citizens in the Vault. RFCs and
-declarations SHOULD be published in all three formats for maximum
-preservation and accessibility. No proprietary formats.</p>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li>Git Internals - Plumbing and Porcelain</li>
-<li>RFC-001: Replication Layer</li>
-<li>RFC-003: Cryptographic Audit Trail</li>
-<li>RFC-004: SPKI Authorization</li>
-<li>RFC-005: Progressive Metadata Levels</li>
-<li>RFC-018: Sealed Archive Format</li>
-<li>Semantic Versioning 2.0.0</li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li><strong>2026-01-06</strong> - Initial specification</li>
-</ul>
-<hr />
-<p><strong>Implementation Status:</strong> Complete <strong>Test
-Status:</strong> Passing (test-vault-simple.scm,
-test-vault-metadata.scm) <strong>Lines of Code:</strong> 887</p>
-</body>
-</html>
+└── .git/                   # Git repository
+```
+
+---
+
+Migration Support
+
+Creating Migrations
+
+```scheme
+(seal-release "2.0.0" migrate-from: "1.0.0")
+```
+
+Generates template:
+```scheme
+;; migrations/1.0.0-to-2.0.0.scm
+;;; Migration: 1.0.0 -&gt; 2.0.0
+;;; Generated: 1767685100
+
+(define (migrate-1.0.0-to-2.0.0)
+  ;; Define migration logic here
+  #t)
+
+(migrate-1.0.0-to-2.0.0)
+```
+
+Running Migrations
+
+```scheme
+(seal-migrate "1.0.0" "2.0.0" #!key script dry-run)
+```
+
+---
+
+Integrity Checking
+
+seal-check
+
+Verify vault integrity.
+
+```scheme
+(seal-check #!key deep)
+```
+
+Checks:
+- Git repository health (`git fsck`)
+- Release signature validity (if deep)
+- Audit trail chain (if deep)
+
+---
+
+Security Model
+
+Signing Key Handling
+
+```scheme
+;; Key is 64-byte Ed25519 secret key
+;; First 32 bytes: seed
+;; Last 32 bytes: public key
+
+(define (get-vault-principal signing-key)
+  "Extract public key from signing key"
+  (blob-copy signing-key 32 32))
+```
+
+Authorization Flow
+
+1. **Configure**: `(vault-init signing-key: key)`
+2. **Operate**: `(seal-commit ...)` signs with configured key
+3. **Audit**: Entry includes actor's public key
+4. **Verify**: `(seal-verify ...)` checks signature
+
+Threat Mitigations
+
+| Threat | Mitigation |
+|--------|------------|
+| Unauthorized commits | SPKI certificates required |
+| Release tampering | Ed25519 signatures |
+| History rewriting | Audit trail non-repudiation |
+| Archive corruption | SHA-512 hash verification |
+
+---
+
+Integration Points
+
+With Audit Trail (RFC-003)
+
+All vault operations create audit entries:
+```scheme
+(audit-append
+  actor: (get-vault-principal signing-key)
+  action: '(seal-commit "hash123")
+  motivation: message)
+```
+
+With SPKI (RFC-004)
+
+Signing keys are SPKI principals:
+```scheme
+(make-key-principal (get-vault-principal signing-key))
+```
+
+With Metadata (RFC-005)
+
+Progressive metadata via seal-commit parameters:
+```scheme
+(seal-commit "msg" preserve: #t)  ; Full preservation
+```
+
+---
+
+Usage Examples
+
+Basic Workflow
+
+```scheme
+;; Initialize
+(vault-init signing-key: my-key)
+
+;; Daily work
+(seal-commit "Add feature")
+(seal-commit "Fix bug")
+
+;; Release
+(seal-release "1.0.0" message: "Initial release")
+
+;; Archive
+(seal-archive "1.0.0" format: 'cryptographic)
+
+;; Verify
+(seal-verify "1.0.0" verify-key: "my.public")
+```
+
+Federation Workflow
+
+```scheme
+;; Publisher
+(seal-release "1.0.0")
+(seal-publish "1.0.0" remote: "/shared/releases")
+
+;; Subscriber
+(seal-subscribe "/shared/releases" verify-key: publisher-pub)
+
+;; Bidirectional
+(seal-synchronize peer-remote direction: 'both)
+```
+
+---
+
+Document Formats
+
+The Vault preserves documents in canonical open formats:
+
+| Format | Extension | Purpose |
+|--------|-----------|---------|
+| Text | `.txt` | Universal compatibility, IETF tradition, immortal |
+| PostScript | `.ps` | Archival, printing, open since 1984 |
+| Hypertext Markup Language | `.html` | Web viewing |
+
+All formats are first-class citizens in the Vault. RFCs and declarations SHOULD be published in all three formats for maximum preservation and accessibility. No proprietary formats.
+
+---
+
+References
+
+1. Git Internals - Plumbing and Porcelain
+2. RFC-001: Replication Layer
+3. RFC-003: Cryptographic Audit Trail
+4. RFC-004: SPKI Authorization
+5. RFC-005: Progressive Metadata Levels
+6. RFC-018: Sealed Archive Format
+7. Semantic Versioning 2.0.0
+
+---
+
+Changelog
+
+- **2026-01-06** - Initial specification
+
+---
+
+**Implementation Status:** Complete
+**Test Status:** Passing (test-vault-simple.scm, test-vault-metadata.scm)
+**Lines of Code:** 887</pre></body></html>

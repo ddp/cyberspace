@@ -69,56 +69,108 @@ get_title() {
   fi
 }
 
+# Check if target is stale (missing or older than source)
+is_stale() {
+  local source="$1" target="$2"
+  [[ ! -f "$target" ]] && return 0
+  [[ "$source" -nt "$target" ]] && return 0
+  return 1
+}
+
+# Generate HTML from text (simple pre-formatted wrapper)
+generate_html() {
+  local base="$1" source="$2"
+  local title=$(head -1 "$source")
+  cat > "${base}.html" << EOF
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${title}</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' "$source")</pre></body></html>
+EOF
+}
+
+# Generate PostScript from text using groff
+generate_ps() {
+  local base="$1" source="$2"
+  groff -Tps "$source" > "${base}.ps" 2>/dev/null
+}
+
 # Generate from Markdown source (prose, docs, RFCs)
 generate_from_md() {
   local rfc="$1"
-  echo "Processing ${rfc} (markdown)..."
+  local generated=""
 
-  # HTML (standalone)
-  pandoc "${rfc}.md" -o "${rfc}.html" --standalone --metadata title="" 2>/dev/null
-
-  # PostScript via LaTeX -> DVI -> PS
-  pandoc "${rfc}.md" -o "${rfc}.tex" --standalone \
-    -V documentclass=article \
-    -V classoption=oneside \
-    -V geometry:margin=1in \
-    2>/dev/null
-  latex -interaction=nonstopmode "${rfc}.tex" >/dev/null 2>&1 || true
-  latex -interaction=nonstopmode "${rfc}.tex" >/dev/null 2>&1 || true  # twice for refs
-  if [[ -f "${rfc}.dvi" ]]; then
-    dvips -q -o "${rfc}.ps" "${rfc}.dvi" 2>/dev/null
+  # First ensure we have .txt (strip markdown headers)
+  if is_stale "${rfc}.md" "${rfc}.txt"; then
+    sed 's/^#\{1,6\} //' "${rfc}.md" > "${rfc}.txt"
+    generated="txt "
   fi
-  # Clean intermediate files
-  rm -f "${rfc}.tex" "${rfc}.dvi" "${rfc}.aux" "${rfc}.log" "${rfc}.out" "${rfc}.out.ps" 2>/dev/null
 
-  # Plain text (78 columns, IETF style)
-  pandoc "${rfc}.md" -o "${rfc}.txt" --to=plain --wrap=auto --columns=78 2>/dev/null
+  # HTML from txt
+  if is_stale "${rfc}.txt" "${rfc}.html"; then
+    generate_html "$rfc" "${rfc}.txt"
+    generated="${generated}html "
+  fi
 
-  echo "  -> .html .ps .txt"
+  # PostScript from txt
+  if is_stale "${rfc}.txt" "${rfc}.ps"; then
+    generate_ps "$rfc" "${rfc}.txt"
+    generated="${generated}ps "
+  fi
+
+  if [[ -n "$generated" ]]; then
+    echo "  ${rfc}: ${generated}"
+  fi
+}
+
+# Generate from plain text source (IETF-style RFCs)
+generate_from_txt() {
+  local rfc="$1"
+  local generated=""
+
+  # HTML from txt
+  if is_stale "${rfc}.txt" "${rfc}.html"; then
+    generate_html "$rfc" "${rfc}.txt"
+    generated="${generated}html "
+  fi
+
+  # PostScript from txt
+  if is_stale "${rfc}.txt" "${rfc}.ps"; then
+    generate_ps "$rfc" "${rfc}.txt"
+    generated="${generated}ps "
+  fi
+
+  if [[ -n "$generated" ]]; then
+    echo "  ${rfc}: ${generated}"
+  fi
 }
 
 # Generate from LaTeX source (math, proofs, papers)
 generate_from_tex() {
   local paper="$1"
-  echo "Processing ${paper} (latex)..."
+  local generated=""
 
   # PostScript via LaTeX -> DVI -> PS
-  latex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1
-  latex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1  # twice for refs
-  if [[ -f "${paper}.dvi" ]]; then
-    dvips -q -o "${paper}.ps" "${paper}.dvi" 2>/dev/null
+  if is_stale "${paper}.tex" "${paper}.ps"; then
+    latex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1
+    latex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1  # twice for refs
+    if [[ -f "${paper}.dvi" ]]; then
+      dvips -q -o "${paper}.ps" "${paper}.dvi" 2>/dev/null
+      generated="ps "
+    fi
+    rm -f "${paper}.dvi" "${paper}.aux" "${paper}.log" "${paper}.out" 2>/dev/null
   fi
 
-  # HTML (LaTeXML - proper math rendering)
-  if command -v latexmlc &>/dev/null; then
+  # HTML (LaTeXML if available)
+  if is_stale "${paper}.tex" "${paper}.html" && command -v latexmlc &>/dev/null; then
     latexmlc --dest="${paper}.html" "${paper}.tex" 2>/dev/null || true
-    echo "  -> .ps .html"
-  else
-    echo "  -> .ps (latexmlc not installed, skipping HTML)"
+    generated="${generated}html "
   fi
 
-  # Clean aux files
-  rm -f "${paper}.dvi" "${paper}.aux" "${paper}.log" "${paper}.out" 2>/dev/null
+  if [[ -n "$generated" ]]; then
+    echo "  ${paper}: ${generated}"
+  fi
 }
 
 # Generate individual document formats (auto-detect source)
@@ -127,10 +179,10 @@ generate_formats() {
 
   if [[ -f "${doc}.md" ]]; then
     generate_from_md "$doc"
+  elif [[ -f "${doc}.txt" ]]; then
+    generate_from_txt "$doc"
   elif [[ -f "${doc}.tex" ]]; then
     generate_from_tex "$doc"
-  else
-    echo "  [skip] ${doc} - no .md or .tex source"
   fi
 }
 

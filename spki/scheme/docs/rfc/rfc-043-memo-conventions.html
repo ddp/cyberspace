@@ -1,542 +1,266 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-043-memo-conventions</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-</head>
-<body>
-<h1 id="rfc-043-memo-conventions">RFC-043: Memo Conventions</h1>
-<p><strong>Status:</strong> Proposed <strong>Category:</strong>
-Informational <strong>Created:</strong> 2026-01-07
-<strong>Author:</strong> Library of Cyberspace Contributors</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This memo establishes naming conventions, metadata requirements, and
-scope rules for documentation in the Library of Cyberspace. We adopt
-IETF RFC format for technical compatibility while using “memo” as our
-vernacular.</p>
-<hr />
-<h2 id="status-of-this-memo">Status of This Memo</h2>
-<p>This document is an Informational memo for the Library of Cyberspace
-community. It establishes conventions for penning memos.</p>
-<p>Distribution of this memo is unlimited.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>The IETF’s “Request for Comments” name reflects a historical process
-we don’t share.<a href="#fn1" class="footnote-ref" id="fnref1"
-role="doc-noteref"><sup>1</sup></a> We don’t request comments—we record
-decisions. But the RFC format is well-understood and serves our
-needs.</p>
-<p>The compromise: RFC format externally, “memo” internally.</p>
-<pre><code>&quot;I penned a memo on wormholes&quot;     ← what we say
-&quot;See RFC-041&quot;                       ← how we cite</code></pre>
-<hr />
-<h2 id="terminology">Terminology</h2>
-<table>
-<thead>
-<tr>
-<th>Term</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>memo</strong></td>
-<td>Any document in the Library of Cyberspace</td>
-</tr>
-<tr>
-<td><strong>RFC</strong></td>
-<td>A memo published in RFC format with canonical number</td>
-</tr>
-<tr>
-<td><strong>pen</strong></td>
-<td>To author a memo</td>
-</tr>
-<tr>
-<td><strong>promote</strong></td>
-<td>To elevate scope (local → federation → core)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="memo-metadata">Memo Metadata</h2>
-<p>Every memo begins with a standardized header:</p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># RFC-NNN: Title</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>**Status:** Draft | Proposed | Implemented | Historic</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>**Category:** Standards Track | Informational | Experimental | BCP | Historic</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>**Scope:** core | federation | local</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>**Created:** YYYY-MM-DD</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>**Updated:** YYYY-MM-DD</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>**Author:** Name <span class="dt">&lt;</span><span class="kw">email</span><span class="dt">&gt;</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>**Origin:** federation-name | core</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>**Signed:** <span class="dt">&lt;</span><span class="kw">spki-hash</span><span class="dt">&gt;</span> (optional)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>**Updates:** RFC-NNN (if applicable)</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>**Obsoletes:** RFC-NNN (if applicable)</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="fu">## Abstract</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>One paragraph summary.</span></code></pre></div>
-<h3 id="required-fields">Required Fields</h3>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Required</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Status</strong></td>
-<td>Yes</td>
-<td>Document lifecycle stage</td>
-</tr>
-<tr>
-<td><strong>Category</strong></td>
-<td>Yes</td>
-<td>Document type (per RFC-019)</td>
-</tr>
-<tr>
-<td><strong>Scope</strong></td>
-<td>Yes</td>
-<td>Visibility and authority</td>
-</tr>
-<tr>
-<td><strong>Created</strong></td>
-<td>Yes</td>
-<td>Initial authorship date</td>
-</tr>
-<tr>
-<td><strong>Author</strong></td>
-<td>Yes</td>
-<td>Who penned the memo</td>
-</tr>
-</tbody>
-</table>
-<h3 id="optional-fields">Optional Fields</h3>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>When Used</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Updated</strong></td>
-<td>After modifications</td>
-</tr>
-<tr>
-<td><strong>Origin</strong></td>
-<td>For federation-scoped memos</td>
-</tr>
-<tr>
-<td><strong>Signed</strong></td>
-<td>For authenticated memos</td>
-</tr>
-<tr>
-<td><strong>Updates</strong></td>
-<td>When extending prior memo</td>
-</tr>
-<tr>
-<td><strong>Obsoletes</strong></td>
-<td>When replacing prior memo</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="naming-scope">Naming Scope</h2>
-<p>Memos exist at three scopes:</p>
-<p><em>Table 1: Memo Scopes</em></p>
-<table>
-<colgroup>
-<col style="width: 18%" />
-<col style="width: 21%" />
-<col style="width: 28%" />
-<col style="width: 31%" />
-</colgroup>
-<thead>
-<tr>
-<th>Scope</th>
-<th>Format</th>
-<th>Authority</th>
-<th>Visibility</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>core</strong></td>
-<td><code>RFC-NNN</code></td>
-<td>Core maintainers</td>
-<td>Global, canonical</td>
-</tr>
-<tr>
-<td><strong>federation</strong></td>
-<td><code>&lt;fed&gt;:memo-NNN</code></td>
-<td>Federation members</td>
-<td>Federation-wide</td>
-</tr>
-<tr>
-<td><strong>local</strong></td>
-<td><code>local:memo-NNN</code></td>
-<td>Node author</td>
-<td>Single node</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core-scope">Core Scope</h3>
-<p>Core memos use IETF-style sequential numbering:</p>
-<pre><code>RFC-001, RFC-002, ... RFC-043</code></pre>
-<p>These are canonical specifications for the Library of Cyberspace.
-Core maintainer approval required for Standards Track, BCP, and
-Historic. Anyone may pen Informational or Experimental memos with
-maintainer review.</p>
-<h3 id="federation-scope">Federation Scope</h3>
-<p>Federation memos are namespaced by federation identifier:</p>
-<pre><code>yoyodyne:memo-001
-alexandria:memo-042</code></pre>
-<p>Each federation maintains its own numbering sequence. Federation
-memos are visible to all federation members but not globally
-canonical.</p>
-<h3 id="local-scope">Local Scope</h3>
-<p>Local memos exist only on the authoring node:</p>
-<pre><code>local:memo-001</code></pre>
-<p>Local memos are drafts, notes, or node-specific documentation. They
-never leave the node unless explicitly promoted.</p>
-<hr />
-<h2 id="promotion-path">Promotion Path</h2>
-<p>Memos flow upward through scopes:</p>
-<pre><code>local:memo  →  fed:memo  →  RFC
-    ↓            ↓           ↓
-  draft     federation    canonical
-             review       consensus</code></pre>
-<h3 id="local-to-federation">Local to Federation</h3>
-<p>A node author submits a local memo to their federation:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(memo-promote <span class="st">&quot;local:memo-007&quot;</span> &#39;federation)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; → yoyodyne:memo-023</span></span></code></pre></div>
-<p>Federation review and rough consensus required.</p>
-<h3 id="federation-to-core">Federation to Core</h3>
-<p>A federation submits a memo for core adoption:</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(memo-promote <span class="st">&quot;yoyodyne:memo-023&quot;</span> &#39;core)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; → RFC-044 (after consensus)</span></span></code></pre></div>
-<p>Cross-federation review and rough consensus required. Standards Track
-requires core maintainer approval.</p>
-<hr />
-<h2 id="collision-avoidance">Collision Avoidance</h2>
-<h3 id="core-namespace">Core Namespace</h3>
-<p>Sequential allocation by core maintainers. No collisions
-possible.</p>
-<h3 id="federation-namespace">Federation Namespace</h3>
-<p>Federation prefix provides isolation:</p>
-<pre><code>yoyodyne:memo-001  ≠  alexandria:memo-001</code></pre>
-<h3 id="content-addressed-fallback">Content-Addressed Fallback</h3>
-<p>For unambiguous citation across contexts:</p>
-<pre><code>memo:sha256:a7f3b2c1...</code></pre>
-<p>The content hash identifies the exact memo regardless of scope or
-number.</p>
-<hr />
-<h2 id="citation-format">Citation Format</h2>
-<h3 id="within-scope">Within Scope</h3>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>See RFC-041 for wormhole specification.</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>See memo-007 for local notes.</span></code></pre></div>
-<h3 id="cross-federation">Cross-Federation</h3>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>See yoyodyne:memo-023 for their implementation.</span></code></pre></div>
-<h3 id="unambiguous">Unambiguous</h3>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>See memo<span class="sc">:sha256:</span>a7f3b2c1... for the canonical text.</span></code></pre></div>
-<hr />
-<h2 id="vernacular">Vernacular</h2>
-<p>We say:</p>
-<ul>
-<li>“Pen a memo” — author a document</li>
-<li>“The memo specifies…” — referring to content</li>
-<li>“Promote the memo” — elevate scope</li>
-<li>“See the RFC” — cite by number</li>
-</ul>
-<p>We don’t say:</p>
-<ul>
-<li>“Request for comments” — we’re not requesting</li>
-<li>“Submit an RFC” — we pen memos, they become RFCs</li>
-</ul>
-<hr />
-<h2 id="security-considerations">Security Considerations</h2>
-<h3 id="signed-memos">Signed Memos</h3>
-<p>Memos MAY include SPKI signatures for authentication:</p>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>**Signed:** sha256:a7f3b2c1...</span></code></pre></div>
-<p>The signature covers the memo content hash, binding author to
-text.</p>
-<h3 id="scope-escalation">Scope Escalation</h3>
-<p>Promotion from local to federation to core requires appropriate
-authorization. A local memo cannot claim core status without
-consensus.</p>
-<h3 id="metadata-integrity">Metadata Integrity</h3>
-<p>Memo metadata is stored with content in the vault. Tampering with
-metadata (scope, author, date) is detectable via content addressing.</p>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li>RFC-019 — Documentation Pipeline</li>
-<li>RFC-042 — IETF Normative Reference</li>
-<li>RFC-004 — SPKI Authorization</li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li><strong>2026-01-07</strong> — Initial specification</li>
-</ul>
-<hr />
-<p><strong>Implementation Status:</strong> Proposed</p>
-<section id="footnotes" class="footnotes footnotes-end-of-document"
-role="doc-endnotes">
-<hr />
-<ol>
-<li id="fn1"><p>Historical: The first RFC (RFC-1, April 1969) was
-literally a request for comments on host software. The name stuck.
-Fifty-seven years later, nobody requests comments—they publish
-specifications.<a href="#fnref1" class="footnote-back"
-role="doc-backlink">↩︎</a></p></li>
-</ol>
-</section>
-</body>
-</html>
+<html><head><meta charset="UTF-8"><title>RFC-043: Memo Conventions</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>RFC-043: Memo Conventions
+
+Status: Proposed Category: Informational Created: 2026-01-07 Author: Library
+of Cyberspace Contributors
+
+------------------------------------------------------------------------------
+
+Abstract
+
+This memo establishes naming conventions, metadata requirements, and scope
+rules for documentation in the Library of Cyberspace. We adopt IETF RFC format
+for technical compatibility while using “memo” as our vernacular.
+
+------------------------------------------------------------------------------
+
+Status of This Memo
+
+This document is an Informational memo for the Library of Cyberspace
+community. It establishes conventions for penning memos.
+
+Distribution of this memo is unlimited.
+
+------------------------------------------------------------------------------
+
+Motivation
+
+The IETF’s “Request for Comments” name reflects a historical process we don’t
+share.[1] We don’t request comments—we record decisions. But the RFC format is
+well-understood and serves our needs.
+
+The compromise: RFC format externally, “memo” internally.
+
+    "I penned a memo on wormholes"     ← what we say
+    "See RFC-041"                       ← how we cite
+
+------------------------------------------------------------------------------
+
+Terminology
+
+  Term      Meaning
+  --------- ------------------------------------------------------
+  memo      Any document in the Library of Cyberspace
+  RFC       A memo published in RFC format with canonical number
+  pen       To author a memo
+  promote   To elevate scope (local → federation → core)
+
+------------------------------------------------------------------------------
+
+Memo Metadata
+
+Every memo begins with a standardized header:
+
+    # RFC-NNN: Title
+
+    **Status:** Draft | Proposed | Implemented | Historic
+    **Category:** Standards Track | Informational | Experimental | BCP | Historic
+    **Scope:** core | federation | local
+    **Created:** YYYY-MM-DD
+    **Updated:** YYYY-MM-DD
+    **Author:** Name &lt;email&gt;
+    **Origin:** federation-name | core
+    **Signed:** &lt;spki-hash&gt; (optional)
+    **Updates:** RFC-NNN (if applicable)
+    **Obsoletes:** RFC-NNN (if applicable)
+
+    ---
+
+    ## Abstract
+
+    One paragraph summary.
+
+Required Fields
+
+  Field      Required   Description
+  ---------- ---------- -----------------------------
+  Status     Yes        Document lifecycle stage
+  Category   Yes        Document type (per RFC-019)
+  Scope      Yes        Visibility and authority
+  Created    Yes        Initial authorship date
+  Author     Yes        Who penned the memo
+
+Optional Fields
+
+  Field       When Used
+  ----------- -----------------------------
+  Updated     After modifications
+  Origin      For federation-scoped memos
+  Signed      For authenticated memos
+  Updates     When extending prior memo
+  Obsoletes   When replacing prior memo
+
+------------------------------------------------------------------------------
+
+Naming Scope
+
+Memos exist at three scopes:
+
+Table 1: Memo Scopes
+
+  Scope        Format           Authority            Visibility
+  ------------ ---------------- -------------------- -------------------
+  core         RFC-NNN          Core maintainers     Global, canonical
+  federation   &lt;fed&gt;:memo-NNN   Federation members   Federation-wide
+  local        local:memo-NNN   Node author          Single node
+
+Core Scope
+
+Core memos use IETF-style sequential numbering:
+
+    RFC-001, RFC-002, ... RFC-043
+
+These are canonical specifications for the Library of Cyberspace. Core
+maintainer approval required for Standards Track, BCP, and Historic. Anyone
+may pen Informational or Experimental memos with maintainer review.
+
+Federation Scope
+
+Federation memos are namespaced by federation identifier:
+
+    yoyodyne:memo-001
+    alexandria:memo-042
+
+Each federation maintains its own numbering sequence. Federation memos are
+visible to all federation members but not globally canonical.
+
+Local Scope
+
+Local memos exist only on the authoring node:
+
+    local:memo-001
+
+Local memos are drafts, notes, or node-specific documentation. They never
+leave the node unless explicitly promoted.
+
+------------------------------------------------------------------------------
+
+Promotion Path
+
+Memos flow upward through scopes:
+
+    local:memo  →  fed:memo  →  RFC
+        ↓            ↓           ↓
+      draft     federation    canonical
+                 review       consensus
+
+Local to Federation
+
+A node author submits a local memo to their federation:
+
+    (memo-promote "local:memo-007" 'federation)
+    ;; → yoyodyne:memo-023
+
+Federation review and rough consensus required.
+
+Federation to Core
+
+A federation submits a memo for core adoption:
+
+    (memo-promote "yoyodyne:memo-023" 'core)
+    ;; → RFC-044 (after consensus)
+
+Cross-federation review and rough consensus required. Standards Track requires
+core maintainer approval.
+
+------------------------------------------------------------------------------
+
+Collision Avoidance
+
+Core Namespace
+
+Sequential allocation by core maintainers. No collisions possible.
+
+Federation Namespace
+
+Federation prefix provides isolation:
+
+    yoyodyne:memo-001  ≠  alexandria:memo-001
+
+Content-Addressed Fallback
+
+For unambiguous citation across contexts:
+
+    memo:sha256:a7f3b2c1...
+
+The content hash identifies the exact memo regardless of scope or number.
+
+------------------------------------------------------------------------------
+
+Citation Format
+
+Within Scope
+
+    See RFC-041 for wormhole specification.
+    See memo-007 for local notes.
+
+Cross-Federation
+
+    See yoyodyne:memo-023 for their implementation.
+
+Unambiguous
+
+    See memo:sha256:a7f3b2c1... for the canonical text.
+
+------------------------------------------------------------------------------
+
+Vernacular
+
+We say:
+
+- “Pen a memo” — author a document
+- “The memo specifies…” — referring to content
+- “Promote the memo” — elevate scope
+- “See the RFC” — cite by number
+
+We don’t say:
+
+- “Request for comments” — we’re not requesting
+- “Submit an RFC” — we pen memos, they become RFCs
+
+------------------------------------------------------------------------------
+
+Security Considerations
+
+Signed Memos
+
+Memos MAY include SPKI signatures for authentication:
+
+    **Signed:** sha256:a7f3b2c1...
+
+The signature covers the memo content hash, binding author to text.
+
+Scope Escalation
+
+Promotion from local to federation to core requires appropriate authorization.
+A local memo cannot claim core status without consensus.
+
+Metadata Integrity
+
+Memo metadata is stored with content in the vault. Tampering with metadata
+(scope, author, date) is detectable via content addressing.
+
+------------------------------------------------------------------------------
+
+References
+
+1.  RFC-019 — Documentation Pipeline
+2.  RFC-042 — IETF Normative Reference
+3.  RFC-004 — SPKI Authorization
+
+------------------------------------------------------------------------------
+
+Changelog
+
+- 2026-01-07 — Initial specification
+
+------------------------------------------------------------------------------
+
+Implementation Status: Proposed
+
+[1] Historical: The first RFC (RFC-1, April 1969) was literally a request for
+comments on host software. The name stuck. Fifty-seven years later, nobody
+requests comments—they publish specifications.</pre></body></html>

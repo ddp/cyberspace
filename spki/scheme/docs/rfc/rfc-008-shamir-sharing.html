@@ -1,595 +1,376 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-008-shamir-sharing</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-</head>
-<body>
-<h1 id="rfc-008-shamir-secret-sharing">RFC-008: Shamir Secret
-Sharing</h1>
-<p><strong>Status:</strong> Implemented <strong>Date:</strong> January
-2026 <strong>Author:</strong> Derrell Piper <a
-href="mailto:ddp@eludom.net" class="email">ddp@eludom.net</a>
-<strong>Implementation:</strong> crypto-ffi.scm (shamir-split,
-shamir-reconstruct)</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This RFC specifies Shamir’s Secret Sharing implementation for the
-Library of Cyberspace, enabling K-of-N threshold splitting and
-reconstruction of cryptographic keys and other secrets.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>Private keys are single points of failure:</p>
-<ul>
-<li><strong>Key loss</strong>: Funds locked forever</li>
-<li><strong>Key theft</strong>: Complete compromise</li>
-<li><strong>Key escrow</strong>: Trust a third party?</li>
-</ul>
-<p>Shamir’s Secret Sharing provides:</p>
-<ol type="1">
-<li><strong>Threshold recovery</strong>: Any K of N shares
-reconstruct</li>
-<li><strong>Information-theoretic security</strong>: K-1 shares reveal
-nothing</li>
-<li><strong>Distributed custody</strong>: No single holder</li>
-<li><strong>Backup flexibility</strong>: Geographic distribution</li>
-</ol>
-<p>From Adi Shamir’s 1979 paper “How to Share a Secret”:</p>
-<blockquote>
-<p><em>Split a secret into N pieces such that any K pieces suffice to
-reconstruct, but K-1 pieces reveal absolutely nothing.</em></p>
-</blockquote>
-<hr />
-<h2 id="specification">Specification</h2>
-<h3 id="share-record">Share Record</h3>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;shamir-share&gt;</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  (make-shamir-share id threshold x y)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  shamir-share?</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  (id share-id)            <span class="co">; Symbol: share-1, share-2, etc.</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  (threshold share-threshold)  <span class="co">; K value</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  (x share-x)              <span class="co">; X-coordinate (1 to N)</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  (y share-y))             <span class="co">; Y-coordinate (blob, same size as secret)</span></span></code></pre></div>
-<h3 id="splitting-a-secret">Splitting a Secret</h3>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(shamir-split secret <span class="ex">#!key</span> (threshold <span class="dv">3</span>) (total <span class="dv">5</span>))</span></code></pre></div>
-<p><strong>Parameters:</strong> - <code>secret</code> - Blob to split
-(any size, typically 32 or 64 bytes) - <code>threshold</code> - Minimum
-shares to reconstruct (K) - <code>total</code> - Total shares to create
-(N)</p>
-<p><strong>Returns:</strong> List of N shamir-share records</p>
-<p><strong>Algorithm:</strong> 1. For each byte of secret: - Generate
-K-1 random coefficients - Coefficient[0] = secret byte - Polynomial:
-f(x) = a₀ + a₁x + a₂x² + … + aₖ₋₁xᵏ⁻¹ 2. Evaluate polynomial at x = 1,
-2, …, N 3. Package (x, f(x)) pairs as shares</p>
-<h3 id="reconstructing-a-secret">Reconstructing a Secret</h3>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(shamir-reconstruct shares)</span></code></pre></div>
-<p><strong>Parameters:</strong> - <code>shares</code> - List of at least
-K shamir-share records</p>
-<p><strong>Returns:</strong> Reconstructed secret blob</p>
-<p><strong>Algorithm:</strong> 1. Take first K shares 2. For each byte
-position: - Use Lagrange interpolation - Compute f(0) = secret byte 3.
-Assemble reconstructed secret</p>
-<hr />
-<h2 id="galois-field-arithmetic">Galois Field Arithmetic</h2>
-<p>Operations performed in GF(2⁸) with irreducible polynomial x⁸ + x⁴ +
-x³ + x + 1:</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> gf256-primitive </span><span class="sc">#x</span><span class="dv">11b</span>)  <span class="co">; x^8 + x^4 + x^3 + x + 1</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gf256-mul </span>a b)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Multiply in GF(2^8)&quot;</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gf256-inv </span>a)</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Multiplicative inverse in GF(2^8)&quot;</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gf256-poly-eval </span>coeffs x)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Evaluate polynomial at x using Horner&#39;s method&quot;</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
-<p>GF(2⁸) ensures: - All operations stay within byte range - No overflow
-issues - Proper field properties (every non-zero element has
-inverse)</p>
-<hr />
-<h2 id="usage-examples">Usage Examples</h2>
-<h3 id="basic-secret-splitting">Basic Secret Splitting</h3>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(import crypto-ffi)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>(sodium-init)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Create a 32-byte secret</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> secret </span>(make-blob <span class="dv">32</span>))</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; ... fill with secret data ...</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Split into 5 shares, threshold 3</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> shares </span>(shamir-split secret threshold: <span class="dv">3</span> total: <span class="dv">5</span>))</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">;; Distribute shares to custodians</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>(print <span class="st">&quot;Created &quot;</span> (<span class="kw">length</span> shares) <span class="st">&quot; shares&quot;</span>)</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>(print <span class="st">&quot;Threshold: &quot;</span> (share-threshold (<span class="kw">car</span> shares)))</span></code></pre></div>
-<h3 id="reconstruction-from-k-shares">Reconstruction from K Shares</h3>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Collect any 3 shares</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> collected </span>(<span class="kw">list</span> share-1 share-3 share-5))</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Reconstruct</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> reconstructed </span>(shamir-reconstruct collected))</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Verify</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>(<span class="kw">if</span> (<span class="kw">equal?</span> (blob-&gt;hex secret) (blob-&gt;hex reconstructed))</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    (print <span class="st">&quot;✓ Reconstruction successful!&quot;</span>)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    (print <span class="st">&quot;✗ Reconstruction failed&quot;</span>))</span></code></pre></div>
-<h3 id="ed25519-key-backup">Ed25519 Key Backup</h3>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Generate keypair</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> keypair </span>(ed25519-keypair))</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> public-key </span>(<span class="kw">car</span> keypair))</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> private-key </span>(<span class="kw">cadr</span> keypair))</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Split private key (5-of-7 for production)</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> key-shares </span>(shamir-split private-key threshold: <span class="dv">5</span> total: <span class="dv">7</span>))</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Later: reconstruct and verify</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> recovered-key </span>(shamir-reconstruct (take key-shares <span class="dv">5</span>)))</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co">;; Test: sign with recovered key</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> message </span><span class="st">&quot;Test message&quot;</span>)</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> signature </span>(ed25519-sign recovered-key message))</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> valid? </span>(ed25519-verify public-key message signature))</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>(<span class="kw">if</span> valid?</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    (print <span class="st">&quot;✓ Recovered key produces valid signatures!&quot;</span>)</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    (print <span class="st">&quot;✗ Key recovery failed&quot;</span>))</span></code></pre></div>
-<hr />
-<h2 id="security-properties">Security Properties</h2>
-<h3 id="information-theoretic-security">Information-Theoretic
-Security</h3>
-<p>With K-1 shares: - <strong>No information</strong> about secret is
-revealed - <strong>Not computationally hard</strong> - literally
-impossible - Even infinite compute power cannot break</p>
-<p>This is because K-1 points determine infinitely many degree-(K-1)
-polynomials.</p>
-<h3 id="share-independence">Share Independence</h3>
-<p>Each share is uniformly random: - Looks like random bytes - No
-correlation between shares - Safe to store on untrusted media</p>
-<h3 id="threshold-guarantee">Threshold Guarantee</h3>
-<p>Exactly K shares required: - K shares: reconstruction succeeds - K-1
-shares: no information - K+1 shares: still works (overdetermined)</p>
-<hr />
-<h2 id="threshold-selection-guidelines">Threshold Selection
-Guidelines</h2>
-<table>
-<thead>
-<tr>
-<th>Use Case</th>
-<th>Threshold</th>
-<th>Total</th>
-<th>Rationale</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Personal backup</td>
-<td>2-of-3</td>
-<td>Simple recovery</td>
-<td></td>
-</tr>
-<tr>
-<td>Team key</td>
-<td>3-of-5</td>
-<td>Majority required</td>
-<td></td>
-</tr>
-<tr>
-<td>Organization root</td>
-<td>5-of-7</td>
-<td>Supermajority</td>
-<td></td>
-</tr>
-<tr>
-<td>Hardware ceremony</td>
-<td>7-of-11</td>
-<td>High assurance</td>
-<td></td>
-</tr>
-<tr>
-<td>Paranoid</td>
-<td>11-of-15</td>
-<td>Maximum distribution</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h3 id="considerations">Considerations</h3>
-<ul>
-<li><strong>Availability</strong>: Higher K = harder to recover</li>
-<li><strong>Security</strong>: Lower K = easier to collude</li>
-<li><strong>Geography</strong>: Consider time zones for ceremonies</li>
-<li><strong>Succession</strong>: What if custodians unavailable?</li>
-</ul>
-<hr />
-<h2 id="share-distribution">Share Distribution</h2>
-<h3 id="physical-security">Physical Security</h3>
-<pre><code>Share 1: Safe deposit box (Bank A)
+<html><head><meta charset="UTF-8"><title>RFC-008: Shamir Secret Sharing</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>RFC-008: Shamir Secret Sharing
+
+**Status:** Implemented
+**Date:** January 2026
+**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
+**Implementation:** crypto-ffi.scm (shamir-split, shamir-reconstruct)
+
+---
+
+Abstract
+
+This RFC specifies Shamir's Secret Sharing implementation for the Library of Cyberspace, enabling K-of-N threshold splitting and reconstruction of cryptographic keys and other secrets.
+
+---
+
+Motivation
+
+Private keys are single points of failure:
+
+- **Key loss**: Funds locked forever
+- **Key theft**: Complete compromise
+- **Key escrow**: Trust a third party?
+
+Shamir's Secret Sharing provides:
+
+1. **Threshold recovery**: Any K of N shares reconstruct
+2. **Information-theoretic security**: K-1 shares reveal nothing
+3. **Distributed custody**: No single holder
+4. **Backup flexibility**: Geographic distribution
+
+From Adi Shamir's 1979 paper "How to Share a Secret":
+
+&gt; *Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing.*
+
+---
+
+Specification
+
+Share Record
+
+```scheme
+(define-record-type &lt;shamir-share&gt;
+  (make-shamir-share id threshold x y)
+  shamir-share?
+  (id share-id)            ; Symbol: share-1, share-2, etc.
+  (threshold share-threshold)  ; K value
+  (x share-x)              ; X-coordinate (1 to N)
+  (y share-y))             ; Y-coordinate (blob, same size as secret)
+```
+
+Splitting a Secret
+
+```scheme
+(shamir-split secret #!key (threshold 3) (total 5))
+```
+
+**Parameters:**
+- `secret` - Blob to split (any size, typically 32 or 64 bytes)
+- `threshold` - Minimum shares to reconstruct (K)
+- `total` - Total shares to create (N)
+
+**Returns:** List of N shamir-share records
+
+**Algorithm:**
+1. For each byte of secret:
+   - Generate K-1 random coefficients
+   - Coefficient[0] = secret byte
+   - Polynomial: f(x) = a₀ + a₁x + a₂x² + ... + aₖ₋₁xᵏ⁻¹
+2. Evaluate polynomial at x = 1, 2, ..., N
+3. Package (x, f(x)) pairs as shares
+
+Reconstructing a Secret
+
+```scheme
+(shamir-reconstruct shares)
+```
+
+**Parameters:**
+- `shares` - List of at least K shamir-share records
+
+**Returns:** Reconstructed secret blob
+
+**Algorithm:**
+1. Take first K shares
+2. For each byte position:
+   - Use Lagrange interpolation
+   - Compute f(0) = secret byte
+3. Assemble reconstructed secret
+
+---
+
+Galois Field Arithmetic
+
+Operations performed in GF(2⁸) with irreducible polynomial x⁸ + x⁴ + x³ + x + 1:
+
+```scheme
+(define gf256-primitive #x11b)  ; x^8 + x^4 + x^3 + x + 1
+
+(define (gf256-mul a b)
+  "Multiply in GF(2^8)"
+  ...)
+
+(define (gf256-inv a)
+  "Multiplicative inverse in GF(2^8)"
+  ...)
+
+(define (gf256-poly-eval coeffs x)
+  "Evaluate polynomial at x using Horner's method"
+  ...)
+```
+
+GF(2⁸) ensures:
+- All operations stay within byte range
+- No overflow issues
+- Proper field properties (every non-zero element has inverse)
+
+---
+
+Usage Examples
+
+Basic Secret Splitting
+
+```scheme
+(import crypto-ffi)
+
+(sodium-init)
+
+;; Create a 32-byte secret
+(define secret (make-blob 32))
+;; ... fill with secret data ...
+
+;; Split into 5 shares, threshold 3
+(define shares (shamir-split secret threshold: 3 total: 5))
+
+;; Distribute shares to custodians
+(print "Created " (length shares) " shares")
+(print "Threshold: " (share-threshold (car shares)))
+```
+
+Reconstruction from K Shares
+
+```scheme
+;; Collect any 3 shares
+(define collected (list share-1 share-3 share-5))
+
+;; Reconstruct
+(define reconstructed (shamir-reconstruct collected))
+
+;; Verify
+(if (equal? (blob-&gt;hex secret) (blob-&gt;hex reconstructed))
+    (print "✓ Reconstruction successful!")
+    (print "✗ Reconstruction failed"))
+```
+
+Ed25519 Key Backup
+
+```scheme
+;; Generate keypair
+(define keypair (ed25519-keypair))
+(define public-key (car keypair))
+(define private-key (cadr keypair))
+
+;; Split private key (5-of-7 for production)
+(define key-shares (shamir-split private-key threshold: 5 total: 7))
+
+;; Later: reconstruct and verify
+(define recovered-key (shamir-reconstruct (take key-shares 5)))
+
+;; Test: sign with recovered key
+(define message "Test message")
+(define signature (ed25519-sign recovered-key message))
+(define valid? (ed25519-verify public-key message signature))
+
+(if valid?
+    (print "✓ Recovered key produces valid signatures!")
+    (print "✗ Key recovery failed"))
+```
+
+---
+
+Security Properties
+
+Information-Theoretic Security
+
+With K-1 shares:
+- **No information** about secret is revealed
+- **Not computationally hard** - literally impossible
+- Even infinite compute power cannot break
+
+This is because K-1 points determine infinitely many degree-(K-1) polynomials.
+
+Share Independence
+
+Each share is uniformly random:
+- Looks like random bytes
+- No correlation between shares
+- Safe to store on untrusted media
+
+Threshold Guarantee
+
+Exactly K shares required:
+- K shares: reconstruction succeeds
+- K-1 shares: no information
+- K+1 shares: still works (overdetermined)
+
+---
+
+Threshold Selection Guidelines
+
+| Use Case | Threshold | Total | Rationale |
+|----------|-----------|-------|-----------|
+| Personal backup | 2-of-3 | Simple recovery |
+| Team key | 3-of-5 | Majority required |
+| Organization root | 5-of-7 | Supermajority |
+| Hardware ceremony | 7-of-11 | High assurance |
+| Paranoid | 11-of-15 | Maximum distribution |
+
+Considerations
+
+- **Availability**: Higher K = harder to recover
+- **Security**: Lower K = easier to collude
+- **Geography**: Consider time zones for ceremonies
+- **Succession**: What if custodians unavailable?
+
+---
+
+Share Distribution
+
+Physical Security
+
+```
+Share 1: Safe deposit box (Bank A)
 Share 2: Home safe
-Share 3: Attorney&#39;s vault
+Share 3: Attorney's vault
 Share 4: Trusted family member
-Share 5: Offshore location</code></pre>
-<h3 id="digital-storage">Digital Storage</h3>
-<pre><code>Share 1: Hardware security module
+Share 5: Offshore location
+```
+
+Digital Storage
+
+```
+Share 1: Hardware security module
 Share 2: Air-gapped laptop
 Share 3: Encrypted USB (passphrase protected)
 Share 4: Paper printout (secure location)
-Share 5: Tattoo (not recommended)</code></pre>
-<h3 id="geographic-distribution">Geographic Distribution</h3>
-<ul>
-<li>Different jurisdictions</li>
-<li>Different failure domains</li>
-<li>Different time zones (for ceremonies)</li>
-</ul>
-<hr />
-<h2 id="verification-without-reconstruction">Verification Without
-Reconstruction</h2>
-<p>For periodic verification that shares are intact:</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Each custodian verifies their share</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-share </span>share expected-id expected-threshold)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">and</span> (<span class="kw">eq?</span> (share-id share) expected-id)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>       (<span class="op">=</span> (share-threshold share) expected-threshold)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>       (<span class="op">=</span> (blob-size (share-y share)) expected-length)))</span></code></pre></div>
-<p>Full reconstruction should be rare: - Key rotation ceremonies -
-Emergency recovery - Succession events</p>
-<hr />
-<h2 id="integration-with-threshold-signatures">Integration with
-Threshold Signatures</h2>
-<p>Two complementary approaches:</p>
-<h3 id="shamir-for-key-backup-this-rfc">Shamir for Key Backup (This
-RFC)</h3>
-<pre><code>Private key → split → N shares
-Recovery: K shares → reconstruct → use key</code></pre>
-<h3 id="multi-signature-for-governance-rfc-007">Multi-Signature for
-Governance (RFC-007)</h3>
-<pre><code>N parties → N keys → N signatures
-Verification: count valid ≥ K</code></pre>
-<p><strong>Use Shamir when:</strong> - Backing up existing keys -
-Emergency recovery scenarios - Single key must be reconstructable</p>
-<p><strong>Use Multi-Sig when:</strong> - Ongoing governance decisions -
-Need audit trail of who signed - Asynchronous authorization</p>
-<hr />
-<h2 id="security-considerations">Security Considerations</h2>
-<h3 id="threats-mitigated">Threats Mitigated</h3>
-<table>
-<thead>
-<tr>
-<th>Threat</th>
-<th>Mitigation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Key loss</td>
-<td>Any K shares recover</td>
-</tr>
-<tr>
-<td>Single compromise</td>
-<td>Need K colluding</td>
-</tr>
-<tr>
-<td>Insider attack</td>
-<td>Distribute to independent parties</td>
-</tr>
-<tr>
-<td>Coercion</td>
-<td>Geographic/jurisdictional diversity</td>
-</tr>
-</tbody>
-</table>
-<h3 id="threats-remaining">Threats Remaining</h3>
-<table>
-<thead>
-<tr>
-<th>Threat</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>K colluding parties</td>
-<td>Fundamental limitation</td>
-</tr>
-<tr>
-<td>Poor share storage</td>
-<td>Operational security</td>
-</tr>
-<tr>
-<td>Side channels during reconstruction</td>
-<td>Use secure environments</td>
-</tr>
-<tr>
-<td>Weak random generation</td>
-<td>Use libsodium</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operational-security">Operational Security</h3>
-<ol type="1">
-<li><strong>Generation</strong>: Air-gapped machine, secure random</li>
-<li><strong>Distribution</strong>: Out-of-band verification</li>
-<li><strong>Storage</strong>: Encrypted, physically secure</li>
-<li><strong>Reconstruction</strong>: Secure room, witnesses</li>
-<li><strong>Destruction</strong>: Secure wipe after use</li>
-</ol>
-<hr />
-<h2 id="implementation-notes">Implementation Notes</h2>
-<h3 id="dependencies">Dependencies</h3>
-<ul>
-<li><code>libsodium</code> - Secure random number generation</li>
-<li><code>srfi-4</code> - u8vectors for byte manipulation</li>
-</ul>
-<h3 id="performance">Performance</h3>
-<ul>
-<li>Split: O(N × K × secret_length)</li>
-<li>Reconstruct: O(K² × secret_length)</li>
-<li>GF(2⁸) operations: O(1) per byte</li>
-</ul>
-<h3 id="limitations">Limitations</h3>
-<ul>
-<li>Secret size: Arbitrary (but typically ≤ 64 bytes)</li>
-<li>Share count: Practical limit ~255 (byte x-coordinates)</li>
-<li>Threshold: 2 ≤ K ≤ N</li>
-</ul>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li>Shamir, A. (1979). How to share a secret. Communications of the
-ACM.</li>
-<li>Blakley, G. R. (1979). Safeguarding cryptographic keys.</li>
-<li>Beimel, A. (2011). Secret-Sharing Schemes: A Survey.</li>
-<li>NIST SP 800-57. Recommendation for Key Management.</li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li><strong>2026-01-06</strong> - Initial specification</li>
-</ul>
-<hr />
-<p><strong>Implementation Status:</strong> Complete <strong>Test
-Status:</strong> Passing (test-shamir.scm) <strong>Field
-Arithmetic:</strong> GF(2⁸)</p>
-</body>
-</html>
+Share 5: Tattoo (not recommended)
+```
+
+Geographic Distribution
+
+- Different jurisdictions
+- Different failure domains
+- Different time zones (for ceremonies)
+
+---
+
+Verification Without Reconstruction
+
+For periodic verification that shares are intact:
+
+```scheme
+;; Each custodian verifies their share
+(define (verify-share share expected-id expected-threshold)
+  (and (eq? (share-id share) expected-id)
+       (= (share-threshold share) expected-threshold)
+       (= (blob-size (share-y share)) expected-length)))
+```
+
+Full reconstruction should be rare:
+- Key rotation ceremonies
+- Emergency recovery
+- Succession events
+
+---
+
+Integration with Threshold Signatures
+
+Two complementary approaches:
+
+Shamir for Key Backup (This RFC)
+```
+Private key → split → N shares
+Recovery: K shares → reconstruct → use key
+```
+
+Multi-Signature for Governance (RFC-007)
+```
+N parties → N keys → N signatures
+Verification: count valid ≥ K
+```
+
+**Use Shamir when:**
+- Backing up existing keys
+- Emergency recovery scenarios
+- Single key must be reconstructable
+
+**Use Multi-Sig when:**
+- Ongoing governance decisions
+- Need audit trail of who signed
+- Asynchronous authorization
+
+---
+
+Security Considerations
+
+Threats Mitigated
+
+| Threat | Mitigation |
+|--------|------------|
+| Key loss | Any K shares recover |
+| Single compromise | Need K colluding |
+| Insider attack | Distribute to independent parties |
+| Coercion | Geographic/jurisdictional diversity |
+
+Threats Remaining
+
+| Threat | Notes |
+|--------|-------|
+| K colluding parties | Fundamental limitation |
+| Poor share storage | Operational security |
+| Side channels during reconstruction | Use secure environments |
+| Weak random generation | Use libsodium |
+
+Operational Security
+
+1. **Generation**: Air-gapped machine, secure random
+2. **Distribution**: Out-of-band verification
+3. **Storage**: Encrypted, physically secure
+4. **Reconstruction**: Secure room, witnesses
+5. **Destruction**: Secure wipe after use
+
+---
+
+Implementation Notes
+
+Dependencies
+
+- `libsodium` - Secure random number generation
+- `srfi-4` - u8vectors for byte manipulation
+
+Performance
+
+- Split: O(N × K × secret_length)
+- Reconstruct: O(K² × secret_length)
+- GF(2⁸) operations: O(1) per byte
+
+Limitations
+
+- Secret size: Arbitrary (but typically ≤ 64 bytes)
+- Share count: Practical limit ~255 (byte x-coordinates)
+- Threshold: 2 ≤ K ≤ N
+
+---
+
+References
+
+1. Shamir, A. (1979). How to share a secret. Communications of the ACM.
+2. Blakley, G. R. (1979). Safeguarding cryptographic keys.
+3. Beimel, A. (2011). Secret-Sharing Schemes: A Survey.
+4. NIST SP 800-57. Recommendation for Key Management.
+
+---
+
+Changelog
+
+- **2026-01-06** - Initial specification
+
+---
+
+**Implementation Status:** Complete
+**Test Status:** Passing (test-shamir.scm)
+**Field Arithmetic:** GF(2⁸)</pre></body></html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>RFC-044: Cryptographic Entropy Sources</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>RFC-044: Cryptographic Entropy Sources
+
+**Status:** Draft
+**Created:** 2026-01-08
+**Author:** ddp@eludom.net
+
+Abstract
+
+All cryptographic operations in Cyberspace require high-quality entropy. This RFC specifies the canonical entropy sources for each platform, ensuring consistent, auditable, and secure randomness across the entire system.
+
+Motivation
+
+The Fundamental Requirement
+
+**All cryptography requires true quantum randomness. The math doesn't work otherwise.**
+
+Cryptographic proofs assume a source of bits that are:
+1. **Statistically uniform** - Each bit equally likely 0 or 1
+2. **Independent** - No correlations between bits
+3. **Unpredictable in principle** - Not just hard to predict, but impossible
+
+Only quantum mechanical processes satisfy condition 3. Classical chaotic systems (lava lamps, thermal noise, ring oscillators) are *deterministic* - an adversary with sufficient knowledge of initial conditions could, in theory, predict their output. Quantum processes have no "initial conditions" to know - the randomness is fundamental to physics itself.
+
+**Why this matters:**
+- Security proofs assume perfect randomness
+- Key security = min(algorithm_bits, entropy_bits)
+- A 256-bit key from a 32-bit PRNG seed provides only 32 bits of security
+- Nation-state adversaries may have capabilities to model classical entropy sources
+
+Cryptographic Operations Requiring Entropy
+
+- Key generation (Ed25519, X25519)
+- Nonce generation (XSalsa20-Poly1305)
+- Salt generation (Argon2id)
+- Shamir secret sharing
+- Challenge-response protocols
+- Zero-knowledge proofs
+
+Weak or predictable entropy destroys security completely. A realm's sovereignty depends on unpredictable secrets.
+
+Specification
+
+Canonical Source: libsodium
+
+All Cyberspace implementations MUST use libsodium's `randombytes_buf()` as the primary entropy source:
+
+```
+randombytes_buf(buffer, size)
+```
+
+libsodium automatically selects the best available source:
+- Linux: `getrandom(2)` syscall, falls back to `/dev/urandom`
+- macOS/iOS: `arc4random_buf()`
+- Windows: `RtlGenRandom()`
+- OpenBSD: `arc4random_buf()` (ChaCha20-based)
+
+Why libsodium?
+
+1. **Cross-platform consistency** - Same API everywhere
+2. **Automatic best-source selection** - No platform-specific code
+3. **Initialization safety** - Blocks until entropy available
+4. **Fork safety** - Handles process forking correctly
+5. **Audited implementation** - Widely reviewed cryptographic library
+
+Platform Requirements
+
+Scheme (CHICKEN)
+
+```scheme
+;; crypto-ffi.scm provides:
+(define (random-bytes n)
+  "Generate n cryptographically secure random bytes"
+  (let ((buf (make-blob n)))
+    ((foreign-lambda void "randombytes_buf" scheme-pointer unsigned-integer)
+     buf n)
+    buf))
+```
+
+All Scheme code MUST use `random-bytes` from crypto-ffi. NEVER use:
+- `(chicken random)` - Uses PRNG, not cryptographically secure
+- `/dev/random` directly - Platform-specific, may block
+- Custom PRNGs - Unaudited, likely insecure
+
+OCaml
+
+**Status: Open Issue**
+
+OCaml implementations should use one of:
+- `mirage-crypto-rng` with `Nocrypto.Rng.generate`
+- Direct FFI to libsodium via `ctypes`
+
+Decision pending based on:
+- Multicore OCaml compatibility
+- Domain-local PRNG state handling
+- Build system integration (dune vs opam)
+
+Entropy Initialization
+
+Before ANY cryptographic operation, ensure libsodium is initialized:
+
+```scheme
+(define (sodium-init)
+  (let ((result ((foreign-lambda int "sodium_init"))))
+    (when (= result -1)
+      (error "sodium_init failed - entropy source unavailable"))))
+```
+
+`sodium_init()` is idempotent and thread-safe. Call it early in program startup.
+
+Key Generation
+
+All key generation MUST use libsodium's key generation functions, which internally use `randombytes_buf()`:
+
+| Operation | Function |
+|-----------|----------|
+| Ed25519 signing key | `crypto_sign_keypair()` |
+| X25519 key exchange | `crypto_box_keypair()` |
+| Symmetric key | `crypto_secretbox_keygen()` |
+| Generic random | `randombytes_buf()` |
+
+Nonce Generation
+
+Nonces MUST be generated fresh for each encryption:
+
+```scheme
+(define (generate-nonce)
+  (random-bytes (secretbox-noncebytes)))  ;; 24 bytes
+```
+
+For XSalsa20-Poly1305 with 24-byte nonces, random nonces are safe:
+- 2^192 possible nonces
+- Birthday collision after ~2^96 messages
+- Practical limit: ~2^64 messages per key (still astronomical)
+
+Salt Generation
+
+For Argon2id key derivation:
+
+```scheme
+(define (generate-salt)
+  (random-bytes 16))  ;; crypto_pwhash_SALTBYTES
+```
+
+Salts prevent rainbow table attacks. Each salt MUST be unique per derived key.
+
+Deep Dive: Entropy Sources
+
+Randomness is the foundation of all cryptography. This section explores the physics and engineering of true randomness.
+
+The Entropy Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Entropy Quality Pyramid                   │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│                    ┌───────────────┐                         │
+│           ★★★     │  Quantum RNG  │  ← TRUE RANDOMNESS      │
+│                    └───────────────┘    (required for        │
+│                         ▲                cryptographic       │
+│                         │                security)           │
+│                    ─────┴─────                               │
+│                    SECURITY BOUNDARY                         │
+│                    ───────────────                           │
+│                         │                                    │
+│                         ▼                                    │
+│                  ┌───────────────────┐                       │
+│                  │  Hardware TRNG    │  ← Best effort       │
+│                  └───────────────────┘    (should feed       │
+│                ┌───────────────────────┐   quantum source)   │
+│                │  Environmental/Analog │                     │
+│                └───────────────────────┘                     │
+│              ┌───────────────────────────┐                   │
+│              │  Public Beacons (NIST)    │  ← Verifiable     │
+│              └───────────────────────────┘                   │
+│            ┌───────────────────────────────┐                 │
+│            │  OS Entropy Pool              │  ← Mixed        │
+│            └───────────────────────────────┘                 │
+│          ┌───────────────────────────────────┐               │
+│          │  CSPRNG (seeded from above)       │  ← Expansion  │
+│          └───────────────────────────────────┘               │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+
+   ★★★ = Cryptographic operations MUST ultimately trace to quantum sources
+```
+
+**Critical distinction**: Everything below the security boundary is *computationally* secure (hard to predict), not *information-theoretically* secure (impossible to predict). For operations like key generation that must withstand future advances in computation and modeling, only quantum sources provide provable security.
+
+Practical Access to Quantum Randomness
+
+**The ideal**: Every cryptographic operation sources entropy from a local quantum RNG.
+
+**Current reality**: Most systems rely on:
+1. Hardware RNG (thermal noise, ring oscillators) - classical, but unpredictable at human scales
+2. OS mixing of multiple sources - defense in depth
+3. NIST beacon - quantum-sourced, publicly verifiable, but network-dependent
+
+**Path forward for Cyberspace**:
+- Phase 1 (Now): libsodium with OS entropy (relies on hardware quality)
+- Phase 2: Optional quantum RNG hardware support (USB devices, PCIe cards)
+- Phase 3: Attestation of entropy source in realm metadata
+- Phase 4: Quantum RNG as standard infrastructure (as quantum internet develops)
+
+**Minimum acceptable**: Modern Intel/AMD RDSEED instruction, which samples thermal noise at the silicon level. While not provably quantum, it has no known exploits and is mixed with other sources.
+
+**Goal**: True quantum randomness as the foundation. The math requires it; the engineering will catch up.
+
+Cyberspace as Entropy Provider
+
+**We will provide all the randomness that our users need - on demand, for whatever their cryptographic desires.**
+
+Cyberspace realms can serve as entropy sources for their users:
+
+```scheme
+;; Request entropy from the realm
+(realm-entropy-request
+  (bytes 32)
+  (purpose "key-generation")
+  (attestation-required #t))
+
+;; Response includes attestation of entropy source
+(realm-entropy-response
+  (value #${...32 bytes...})
+  (source "quantum-rng")
+  (attestation (signed-by realm-principal)
+               (hardware "ID-Quantique-QUANTIS")
+               (timestamp 1736344800)))
+```
+
+**Entropy services**:
+1. **Local generation** - Realm uses its best available source
+2. **Federated entropy** - Request quantum entropy from realms with quantum hardware
+3. **Beacon aggregation** - Mix NIST + drand + realm sources
+4. **Attestation chain** - Prove the entropy source for audit
+
+**Long-term vision**: A network of realms with quantum RNG hardware providing verifiable, quantum-sourced entropy to all participants. The soup carries randomness as naturally as it carries data.
+
+True Random Number Generators (TRNG)
+
+True randomness comes from physical processes that are fundamentally unpredictable:
+
+Quantum Sources (Required for Provable Security)
+
+The only sources that satisfy cryptographic assumptions. Quantum mechanics guarantees unpredictability:
+
+- **Photon beam splitters** - Single photon hits 50/50 beam splitter, detection is truly random
+- **Vacuum fluctuations** - Measuring quantum vacuum state
+- **Quantum tunneling** - Electron tunneling through barriers
+- **Nuclear decay** - Timing of radioactive decay events
+
+Commercial quantum RNGs: ID Quantique (QUANTIS), Quintessence Labs, Crypta Labs
+
+Silicon-Based TRNG
+
+Modern CPUs include hardware random number generators:
+
+| CPU | Instruction | Mechanism |
+|-----|-------------|-----------|
+| Intel | RDRAND/RDSEED | Thermal noise + AES-CBC-MAC |
+| AMD | RDRAND/RDSEED | Ring oscillator jitter |
+| ARM | TRNG | Metastable flip-flops |
+| RISC-V | Zkr extension | Implementation-defined |
+
+**Security note**: Intel's RDRAND has faced scrutiny. Mix with other sources.
+
+Environmental Entropy: Lavarand
+
+**The most famous entropy source in computing.**
+
+Silicon Graphics (SGI) invented Lavarand in 1996. Cloudflare operates the modern successor.
+
+How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     LAVARAND SYSTEM                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   ┌─────────┐    ┌─────────┐    ┌─────────────────────┐     │
+│   │  Lava   │    │ Camera  │    │  Image → Hash       │     │
+│   │  Lamp   │───▶│  Feed   │───▶│  SHA-256 per frame  │     │
+│   │  Wall   │    │         │    │                     │     │
+│   └─────────┘    └─────────┘    └──────────┬──────────┘     │
+│                                            │                 │
+│                                            ▼                 │
+│                                  ┌─────────────────────┐     │
+│                                  │  Entropy Pool       │     │
+│                                  │  (mix with CSPRNG)  │     │
+│                                  └─────────────────────┘     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Why Lava Lamps?
+
+1. **Chaotic fluid dynamics** - Wax movement is unpredictable
+2. **Thermal convection** - Heat creates complex flow patterns
+3. **High bandwidth** - Each video frame yields fresh entropy
+4. **Tamper-evident** - Physical installation is visible
+5. **Independent source** - Not correlated with CPU state
+
+Cloudflare's wall of 100 lava lamps generates entropy for ~10% of internet HTTPS traffic.
+
+Other Environmental Sources
+
+| Source | Mechanism | Bandwidth |
+|--------|-----------|-----------|
+| **Lava lamps** | Fluid dynamics | ~100 Kbit/s |
+| **Radioactive decay** | Nuclear physics | ~1-10 Kbit/s |
+| **Atmospheric noise** | RF antenna | ~1 Mbit/s |
+| **Thermal camera** | Johnson-Nyquist noise | ~10 Kbit/s |
+| **Double pendulum** | Chaotic motion | ~100 bit/s |
+| **Keyboard timing** | Human unpredictability | ~1-10 bit/keystroke |
+
+Public Randomness Beacons
+
+Beacons provide **verifiable public randomness** - useful for:
+- Lottery systems
+- Audit sampling
+- Distributed protocols
+- Zero-knowledge proofs
+
+NIST Randomness Beacon
+
+The National Institute of Standards and Technology operates a public randomness beacon since 2013.
+
+```
+https://beacon.nist.gov/beacon/2.0/pulse/last
+```
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   NIST BEACON 2.0                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Sources:           Processing:         Output:              │
+│  ┌─────────┐       ┌───────────┐      ┌──────────────┐      │
+│  │ Quantum │──┐    │           │      │ Pulse Record │      │
+│  │   RNG   │  │    │  SHA-512  │      ├──────────────┤      │
+│  └─────────┘  │    │  mixing   │      │ timestamp    │      │
+│  ┌─────────┐  ├───▶│     +     │─────▶│ localRandom  │      │
+│  │Photonic │  │    │  signing  │      │ outputValue  │      │
+│  │  Noise  │──┘    │           │      │ signatureVal │      │
+│  └─────────┘       └───────────┘      └──────────────┘      │
+│                                                              │
+│  Pulse interval: 60 seconds                                  │
+│  Hash chain: Each pulse includes hash of previous            │
+│  Signature: RSA-2048 (Beacon 2.0)                           │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Pulse Record Contents:**
+- `uri` - Unique pulse identifier
+- `version` - Beacon protocol version
+- `timeStamp` - Unix timestamp
+- `localRandomValue` - 512 bits from quantum sources
+- `outputValue` - SHA-512 hash (the public random value)
+- `statusCode` - Health indicator
+- `signatureValue` - Digital signature
+
+**Properties:**
+- **Unpredictable** - Cannot be known before publication
+- **Verifiable** - Anyone can verify the signature chain
+- **Non-manipulable** - NIST cannot control output
+- **Archived** - Full history publicly available
+
+**Use in Cyberspace:**
+```scheme
+;; For ceremonies, audits, public verifiability
+(define (fetch-nist-beacon)
+  (let* ((response (http-get "https://beacon.nist.gov/beacon/2.0/pulse/last"))
+         (pulse (json-parse response))
+         (output (assoc-ref pulse "outputValue")))
+    (hex-&gt;blob output)))
+```
+
+Other Public Beacons
+
+| Beacon | Operator | Source | Interval |
+|--------|----------|--------|----------|
+| **NIST Beacon** | US NIST | Quantum + photonic | 60 seconds |
+| **Chile UChile** | University of Chile | Seismic + radio | 60 seconds |
+| **Cloudflare drand** | League of Entropy | Distributed threshold | 30 seconds |
+| **IRISA** | French research | Multiple physical | 60 seconds |
+
+League of Entropy (drand)
+
+Distributed randomness beacon - no single party controls the output:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              DRAND DISTRIBUTED BEACON                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   Cloudflare ──┐                                            │
+│                │                                             │
+│   EPFL ────────┼─── Threshold ───▶ Public Random           │
+│                │    BLS Sig          (t-of-n nodes          │
+│   Protocol ────┤    (t-of-n)          must participate)     │
+│   Labs         │                                             │
+│                │                                             │
+│   Kudelski ────┘                                            │
+│                                                              │
+│   Endpoint: https://api.drand.sh/public/latest              │
+│   Chain: 8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Entropy Mixing
+
+Real systems mix multiple sources for defense in depth:
+
+```scheme
+;; Conceptual entropy mixer
+(define (mix-entropy-sources)
+  (let ((hw (hardware-random-bytes 32))      ;; RDRAND
+        (os (os-entropy-pool-bytes 32))       ;; /dev/urandom
+        (env (environmental-entropy 32))      ;; If available
+        (beacon (cached-nist-beacon)))        ;; Public verifiability
+    ;; Mix with HKDF or similar
+    (hkdf-sha512
+      (blob-append hw os env beacon)
+      "cyberspace-entropy-v1"
+      64)))
+```
+
+Historical Entropy Failures
+
+Learning from disasters:
+
+| Incident | Year | Cause | Impact |
+|----------|------|-------|--------|
+| **Netscape SSL** | 1995 | PID + timestamp = predictable | All SSL broken |
+| **Debian OpenSSL** | 2006-2008 | Valgrind "fix" removed entropy | 32,767 possible keys |
+| **Android SecureRandom** | 2013 | PRNG state reuse | Bitcoin wallets drained |
+| **Dual_EC_DRBG** | 2013 | NSA backdoor in constants | Unknown surveillance |
+| **Taiwan smart cards** | 2013 | Shared PRNG state | Factored RSA keys |
+
+**Lesson**: Defense in depth. Mix multiple independent sources.
+
+Entropy Requirements by Operation
+
+| Operation | Entropy Needed | Notes |
+|-----------|---------------|-------|
+| **Ed25519 keypair** | 32 bytes | Full key security |
+| **X25519 keypair** | 32 bytes | Full key security |
+| **XSalsa20 nonce** | 24 bytes | Random OK (large space) |
+| **AES-GCM nonce** | 12 bytes | Counter preferred (small space) |
+| **Argon2id salt** | 16 bytes | Unique per derivation |
+| **Session ID** | 16-32 bytes | Unpredictable |
+| **ECDSA k-value** | 32 bytes | CRITICAL - must not repeat |
+
+Security Considerations
+
+Entropy Exhaustion
+
+libsodium's `randombytes_buf()` never blocks on modern systems:
+- Uses ChaCha20 CSPRNG seeded from OS entropy
+- OS entropy pools are continuously replenished
+- Hardware RNG (RDRAND/RDSEED) available on modern CPUs
+
+VM/Container Considerations
+
+Virtual machines may have limited entropy at boot:
+- Use `virtio-rng` to pass host entropy to guests
+- Ensure `haveged` or `rng-tools` if entropy-limited
+- libsodium will block until sufficient entropy available
+
+Fork Safety
+
+libsodium handles fork correctly:
+- Automatic re-seeding after `fork()`
+- No duplicate random sequences in child processes
+
+Deterministic Testing
+
+For reproducible tests ONLY (never production):
+
+```scheme
+(define (set-test-seed seed)
+  "WARNING: Deterministic mode - testing only"
+  ((foreign-lambda void "randombytes_stir")))
+```
+
+Production code MUST use true entropy.
+
+Implementation Notes
+
+Current Status
+
+| Component | Entropy Source | Status |
+|-----------|---------------|--------|
+| crypto-ffi.scm | `randombytes_buf()` | Implemented |
+| vault.scm (keystore) | `random-bytes` | Implemented |
+| OCaml core | TBD | Open Issue |
+
+Audit Trail
+
+All key generation events should be logged (not the keys themselves):
+
+```scheme
+(seal-commit #f
+  `(entropy-event
+    (type "key-generation")
+    (algorithm "ed25519")
+    (timestamp ,(current-seconds))
+    (entropy-source "libsodium")))
+```
+
+Hardware Entropy
+
+When available, hardware entropy sources enhance security:
+
+| Platform | Hardware RNG |
+|----------|-------------|
+| Intel/AMD | RDRAND, RDSEED instructions |
+| ARM | TRNG (True Random Number Generator) |
+| Apple Silicon | Secure Enclave entropy |
+
+libsodium automatically uses hardware entropy when available.
+
+Migration
+
+Phase 1: Audit (Current)
+- Identify all randomness usage in codebase
+- Replace non-libsodium sources
+
+Phase 2: Standardize
+- All Scheme uses `random-bytes` from crypto-ffi
+- Document OCaml approach
+
+Phase 3: Verify
+- Entropy quality testing
+- Audit logging for key generation
+
+References
+
+- libsodium documentation: https://doc.libsodium.org/
+- NIST SP 800-90A: Recommendations for Random Number Generation
+- RFC 4086: Randomness Requirements for Security
+- ChaCha20: https://cr.yp.to/chacha.html
+
+Appendix: Entropy Quality Testing
+
+For paranoid verification:
+
+```bash
+Generate random data
+csi -e "(import crypto-ffi) (display (random-bytes 1000000))" &gt; random.bin
+
+Run NIST statistical tests
+ent random.bin
+dieharder -a -f random.bin
+```
+
+Expected results:
+- Entropy: ~7.9999 bits per byte
+- Chi-square: p-value 0.01-0.99
+- All dieharder tests: PASSED</pre></body></html>

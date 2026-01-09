@@ -1,720 +1,565 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-034-audit-protection</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-</head>
-<body>
-<h1 id="rfc-034-audit-log-protection">RFC-034: Audit Log Protection</h1>
-<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
-<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
-class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
-Proposed</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This RFC specifies protection mechanisms for the Library of
-Cyberspace audit log: how the system prevents resource exhaustion, log
-flooding, and denial of service attacks against the audit trail while
-maintaining its integrity as the authoritative record of all vault
-operations.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>The audit log is sacred:</p>
-<ul>
-<li><strong>Evidence</strong> - Legal and forensic record</li>
-<li><strong>Accountability</strong> - Who did what when</li>
-<li><strong>Recovery</strong> - Reconstruct state after failure</li>
-<li><strong>Trust</strong> - Foundation of the security model</li>
-</ul>
-<p>But the audit log is also a target:</p>
-<ul>
-<li><strong>Flooding</strong> - Generate noise to hide malicious
-activity</li>
-<li><strong>Exhaustion</strong> - Fill storage to halt operations</li>
-<li><strong>Evasion</strong> - Overwhelm to prevent logging of real
-attacks</li>
-<li><strong>Amplification</strong> - Small action triggers large log
-entries</li>
-</ul>
-<p>The audit log must protect itself while never failing to record.</p>
-<hr />
-<h2 id="threat-model">Threat Model</h2>
-<h3 id="attack-vectors">Attack Vectors</h3>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> audit-threats</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  &#39;((flooding</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>     (description <span class="st">&quot;Generate massive log volume&quot;</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>     (goal <span class="st">&quot;Hide malicious activity in noise&quot;</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>     (method <span class="st">&quot;Rapid legitimate-looking operations&quot;</span>))</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    (exhaustion</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>     (description <span class="st">&quot;Fill audit storage&quot;</span>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>     (goal <span class="st">&quot;Halt vault operations&quot;</span>)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>     (method <span class="st">&quot;Sustained high-volume logging&quot;</span>))</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    (amplification</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>     (description <span class="st">&quot;Small input, large log output&quot;</span>)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>     (goal <span class="st">&quot;Asymmetric resource consumption&quot;</span>)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>     (method <span class="st">&quot;Operations that log disproportionately&quot;</span>))</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    (corruption</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>     (description <span class="st">&quot;Tamper with log entries&quot;</span>)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>     (goal <span class="st">&quot;Alter historical record&quot;</span>)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>     (method <span class="st">&quot;Exploit write access to log storage&quot;</span>))</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    (truncation</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>     (description <span class="st">&quot;Force log rotation/deletion&quot;</span>)</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>     (goal <span class="st">&quot;Remove evidence&quot;</span>)</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>     (method <span class="st">&quot;Fill logs to trigger cleanup&quot;</span>))))</span></code></pre></div>
-<h3 id="attacker-capabilities">Attacker Capabilities</h3>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Assume attacker can:</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Authenticate as a valid principal</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Perform many legitimate operations</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Control timing of operations</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Observe system behavior</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Assume attacker cannot:</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Directly write to audit storage</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Forge signatures on log entries</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Break cryptographic primitives</span></span></code></pre></div>
-<hr />
-<h2 id="rate-limiting">Rate Limiting</h2>
-<h3 id="per-principal-audit-limits">Per-Principal Audit Limits</h3>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> audit-rate-limits</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  `((entries-per-second <span class="op">.</span> <span class="dv">100</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    (bytes-per-second <span class="op">.</span> <span class="dv">102400</span>)      <span class="co">; 100KB/s</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    (entries-per-minute <span class="op">.</span> <span class="dv">1000</span>)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    (bytes-per-minute <span class="op">.</span> <span class="dv">10485760</span>)))  <span class="co">; 10MB/min</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> principal-audit-buckets </span>(make-hash-table))</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">get-audit-bucket </span>principal)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">or</span> (hash-table-ref principal-audit-buckets principal <span class="dv">#f</span>)</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((bucket (make-token-bucket</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>                     (assoc-ref audit-rate-limits &#39;entries-per-second)</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>                     (assoc-ref audit-rate-limits &#39;entries-per-second))))</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        (hash-table-set! principal-audit-buckets principal bucket)</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        bucket)))</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-rate-check </span>principal entry-size)</span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Check if principal can generate audit entry&quot;</span></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((bucket (get-audit-bucket principal)))</span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    (bucket <span class="dv">1</span>)))  <span class="co">; Consume one token</span></span></code></pre></div>
-<h3 id="audit-entry-costing">Audit Entry Costing</h3>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Different operations have different audit costs</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> audit-costs</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  `((<span class="kw">read</span> <span class="op">.</span> <span class="dv">1</span>)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">write</span> <span class="op">.</span> <span class="dv">2</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    (delete <span class="op">.</span> <span class="dv">5</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    (query <span class="op">.</span> <span class="dv">1</span>)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    (admin <span class="op">.</span> <span class="dv">10</span>)</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    (key-operation <span class="op">.</span> <span class="dv">50</span>)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    (emergency <span class="op">.</span> <span class="dv">0</span>)))  <span class="co">; Always allowed</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-cost </span>action)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">or</span> (assoc-ref audit-costs action) <span class="dv">1</span>))</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">consume-audit-budget </span>principal action)</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Deduct from principal&#39;s audit budget&quot;</span></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((cost (audit-cost action))</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        (bucket (get-audit-bucket principal)))</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (bucket cost)</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="dv">#t</span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">begin</span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>          <span class="co">;; Log the rate limit event (always succeeds)</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>          (audit-append-privileged</span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>            action: &#39;audit-rate-limited</span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>            principal: principal</span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>            attempted-action: action)</span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>          <span class="dv">#f</span>))))</span></code></pre></div>
-<h3 id="burst-handling">Burst Handling</h3>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Allow short bursts but limit sustained rate</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">make-audit-limiter</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((short-term (make-token-bucket <span class="dv">200</span> <span class="dv">100</span>))   <span class="co">; 100/s, burst 200</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        (long-term (make-sliding-window <span class="dv">10000</span> <span class="dv">60</span>))) <span class="co">; 10k/min</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> (cost)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">and</span> (short-term cost)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>           (long-term)))))</span></code></pre></div>
-<hr />
-<h2 id="storage-protection">Storage Protection</h2>
-<h3 id="reserved-audit-space">Reserved Audit Space</h3>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Always reserve space for audit</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *audit-reserved-space* </span>(<span class="op">*</span> <span class="dv">1024</span> <span class="dv">1024</span> <span class="dv">1024</span>))  <span class="co">; 1GB minimum</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-storage-available</span>)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((total (storage-available))</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        (audit-used (audit-storage-used)))</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">max</span> <span class="dv">0</span> (<span class="op">-</span> total *audit-reserved-space*))))</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">check-audit-storage </span>entry-size)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Ensure space for audit entry&quot;</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((available (audit-storage-available)))</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    (when (<span class="op">&lt;</span> available entry-size)</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Emergency: halt non-audit operations</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>      (enter-audit-protection-mode)</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; But always log</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>      <span class="dv">#t</span>)))</span></code></pre></div>
-<h3 id="audit-protection-mode">Audit Protection Mode</h3>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> audit-protection-mode? </span>(make-parameter <span class="dv">#f</span>))</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">enter-audit-protection-mode</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Emergency mode: only allow audit writes&quot;</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (audit-protection-mode? <span class="dv">#t</span>)</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  (audit-append-privileged</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    action: &#39;audit-protection-enabled</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    reason: &#39;storage-exhaustion)</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Reject all non-essential operations</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  (set-vault-mode! &#39;audit-only))</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">exit-audit-protection-mode</span>)</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Resume normal operations&quot;</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  (when (<span class="op">&gt;</span> (audit-storage-available) (<span class="op">*</span> <span class="dv">2</span> *audit-reserved-space*))</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    (audit-protection-mode? <span class="dv">#f</span>)</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    (set-vault-mode! &#39;normal)</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    (audit-append-privileged</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>      action: &#39;audit-protection-disabled)))</span></code></pre></div>
-<h3 id="tiered-storage">Tiered Storage</h3>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Audit log tiers</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> audit-tiers</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  &#39;((hot <span class="op">.</span> ((retention <span class="op">.</span> <span class="dv">86400</span>)      <span class="co">; 1 day</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>            (storage <span class="op">.</span> ssd)</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>            (compression <span class="op">.</span> none)))</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    (warm <span class="op">.</span> ((retention <span class="op">.</span> <span class="dv">604800</span>)    <span class="co">; 7 days</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>             (storage <span class="op">.</span> hdd)</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>             (compression <span class="op">.</span> zstd-fast)))</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    (cold <span class="op">.</span> ((retention <span class="op">.</span> <span class="dv">31536000</span>)  <span class="co">; 1 year</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>             (storage <span class="op">.</span> archive)</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>             (compression <span class="op">.</span> zstd-max)))</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    (glacier <span class="op">.</span> ((retention <span class="op">.</span> <span class="dv">#f</span>)     <span class="co">; Forever</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>                (storage <span class="op">.</span> offsite)</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>                (compression <span class="op">.</span> zstd-max)))))</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">tier-audit-entry </span>entry age)</span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Move entry to appropriate storage tier&quot;</span></span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((tier (<span class="kw">find</span> (<span class="kw">lambda</span> (t)</span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>                      (<span class="kw">or</span> (<span class="kw">not</span> (assoc-ref (<span class="kw">cdr</span> t) &#39;retention))</span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>                          (<span class="op">&lt;</span> age (assoc-ref (<span class="kw">cdr</span> t) &#39;retention))))</span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>                    audit-tiers)))</span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    (migrate-to-tier entry (<span class="kw">car</span> tier))))</span></code></pre></div>
-<hr />
-<h2 id="entry-size-limits">Entry Size Limits</h2>
-<h3 id="maximum-entry-size">Maximum Entry Size</h3>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *max-audit-entry-size* </span><span class="dv">65536</span>)  <span class="co">; 64KB</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">validate-audit-entry </span>entry)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Validate entry before logging&quot;</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((size (serialized-size entry)))</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    (when (<span class="op">&gt;</span> size *max-audit-entry-size*)</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> &#39;audit-entry-too-large</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>             `((size <span class="op">.</span> ,size)</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>               (limit <span class="op">.</span> ,*max-audit-entry-size*))))))</span></code></pre></div>
-<h3 id="entry-truncation">Entry Truncation</h3>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">truncate-audit-entry </span>entry max-size)</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Truncate oversized entry while preserving critical fields&quot;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((critical &#39;(action principal timestamp hash signature)))</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> loop ((entry entry)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>               (fields (entry-fields entry)))</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">if</span> (<span class="op">&lt;=</span> (serialized-size entry) max-size)</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>          entry</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">let</span> ((removable (<span class="kw">find</span> (<span class="kw">lambda</span> (f)</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>                                   (<span class="kw">not</span> (<span class="kw">member</span> f critical)))</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>                                 fields)))</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">if</span> removable</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>                (loop (assoc-remove entry removable)</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>                      (delete removable fields))</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>                <span class="co">;; Can&#39;t truncate further, log warning</span></span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>                (<span class="kw">begin</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>                  (audit-append-privileged</span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>                    action: &#39;audit-entry-truncation-failed</span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>                    original-size: (serialized-size entry))</span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>                  entry)))))))</span></code></pre></div>
-<h3 id="payload-summarization">Payload Summarization</h3>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">summarize-large-payload </span>payload)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Summarize large payloads for audit&quot;</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">if</span> (<span class="op">&gt;</span> (<span class="kw">bytevector-length</span> payload) <span class="dv">1024</span>)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>      `((type <span class="op">.</span> summarized)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        (original-size <span class="op">.</span> ,(<span class="kw">bytevector-length</span> payload))</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        (hash <span class="op">.</span> ,(content-hash payload))</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        (preview <span class="op">.</span> ,(subbytevector payload <span class="dv">0</span> <span class="dv">256</span>)))</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>      payload))</span></code></pre></div>
-<hr />
-<h2 id="aggregation">Aggregation</h2>
-<h3 id="event-aggregation">Event Aggregation</h3>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Aggregate similar events to reduce volume</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> aggregation-window </span><span class="dv">60</span>)  <span class="co">; seconds</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> pending-aggregations </span>(make-hash-table))</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">aggregate-audit-event </span>action principal details)</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Aggregate similar events within window&quot;</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((key (<span class="kw">list</span> action principal))</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>         (existing (hash-table-ref pending-aggregations key <span class="dv">#f</span>)))</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> existing</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Add to existing aggregation</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">begin</span></span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">set-cdr!</span> (<span class="kw">assoc</span> &#39;count existing)</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>                    (<span class="op">+</span> <span class="dv">1</span> (assoc-ref existing &#39;count)))</span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">set-cdr!</span> (<span class="kw">assoc</span> &#39;last-seen existing)</span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>                    (current-time)))</span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Start new aggregation</span></span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>        (hash-table-set! pending-aggregations key</span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>          `((action <span class="op">.</span> ,action)</span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>            (principal <span class="op">.</span> ,principal)</span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>            (count <span class="op">.</span> <span class="dv">1</span>)</span>
-<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>            (first-seen <span class="op">.</span> ,(current-time))</span>
-<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>            (last-seen <span class="op">.</span> ,(current-time))</span>
-<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>            (sample <span class="op">.</span> ,details))))))</span>
-<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">flush-aggregations</span>)</span>
-<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Flush aggregated events to audit log&quot;</span></span>
-<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>  (hash-table-walk pending-aggregations</span>
-<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> (key agg)</span>
-<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>      (when (<span class="op">&gt;</span> (<span class="op">-</span> (current-time) (assoc-ref agg &#39;first-seen))</span>
-<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>               aggregation-window)</span>
-<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>        (audit-append-direct</span>
-<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>          action: &#39;aggregated-events</span>
-<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>          original-action: (assoc-ref agg &#39;action)</span>
-<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>          principal: (assoc-ref agg &#39;principal)</span>
-<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>          count: (assoc-ref agg &#39;count)</span>
-<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>          window-start: (assoc-ref agg &#39;first-seen)</span>
-<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>          window-end: (assoc-ref agg &#39;last-seen)</span>
-<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>          sample: (assoc-ref agg &#39;sample))</span>
-<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a>        (hash-table-delete! pending-aggregations key)))))</span></code></pre></div>
-<h3 id="sampling">Sampling</h3>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Sample high-volume events</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">should-sample? </span>action principal)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((rate (current-rate action principal)))</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">cond</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> rate <span class="dv">10</span>) <span class="dv">#t</span>)              <span class="co">; Always log low-rate</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> rate <span class="dv">100</span>) (<span class="op">&lt;</span> (random <span class="fl">1.0</span>) <span class="fl">0.5</span>))  <span class="co">; 50% sample</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> rate <span class="dv">1000</span>) (<span class="op">&lt;</span> (random <span class="fl">1.0</span>) <span class="fl">0.1</span>)) <span class="co">; 10% sample</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">else</span> (<span class="op">&lt;</span> (random <span class="fl">1.0</span>) <span class="fl">0.01</span>)))))      <span class="co">; 1% sample</span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-with-sampling </span>action principal details)</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Log with sampling for high-volume events&quot;</span></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">if</span> (should-sample? action principal)</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>      (audit-append action: action</span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>                    principal: principal</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>                    details: details</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>                    sampled: <span class="dv">#t</span>)</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Still count for rate tracking</span></span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>      (increment-audit-counter action principal)))</span></code></pre></div>
-<hr />
-<h2 id="anomaly-detection">Anomaly Detection</h2>
-<h3 id="baseline-establishment">Baseline Establishment</h3>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">establish-audit-baseline </span>principal duration)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Establish normal audit patterns for principal&quot;</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((events (soup-query type: &#39;audit-entry</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>                            principal: principal</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>                            timestamp: (<span class="op">&gt;</span> (<span class="op">-</span> (current-time) duration)))))</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    `((events-per-hour <span class="op">.</span> ,(<span class="op">/</span> (<span class="kw">length</span> events) (<span class="op">/</span> duration <span class="dv">3600</span>)))</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>      (common-actions <span class="op">.</span> ,(top-n (map audit-action events) <span class="dv">10</span>))</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>      (typical-hours <span class="op">.</span> ,(typical-active-hours events))</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>      (established-at <span class="op">.</span> ,(current-time)))))</span></code></pre></div>
-<h3 id="anomaly-detection-1">Anomaly Detection</h3>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">detect-audit-anomaly </span>principal current-rate baseline)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Detect anomalous audit patterns&quot;</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((expected (assoc-ref baseline &#39;events-per-hour))</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>        (threshold <span class="fl">3.0</span>))  <span class="co">; 3x normal is anomalous</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    (when (<span class="op">&gt;</span> current-rate (<span class="op">*</span> threshold expected))</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>      (audit-append-privileged</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        action: &#39;audit-anomaly-detected</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        principal: principal</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>        current-rate: current-rate</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>        expected-rate: expected</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>        severity: (<span class="kw">if</span> (<span class="op">&gt;</span> current-rate (<span class="op">*</span> <span class="dv">10</span> expected))</span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>                      &#39;critical</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>                      &#39;warning))</span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Potentially throttle</span></span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>      (when (<span class="op">&gt;</span> current-rate (<span class="op">*</span> <span class="dv">10</span> expected))</span>
-<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>        (throttle-principal principal)))))</span></code></pre></div>
-<h3 id="flood-detection">Flood Detection</h3>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">detect-audit-flood</span>)</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Detect system-wide audit flooding&quot;</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((current-rate (global-audit-rate))</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>        (threshold (<span class="op">*</span> <span class="dv">10</span> (baseline-global-rate))))</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    (when (<span class="op">&gt;</span> current-rate threshold)</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Identify top contributors</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((top-principals (top-audit-principals <span class="dv">10</span>)))</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        (audit-append-privileged</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>          action: &#39;audit-flood-detected</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>          global-rate: current-rate</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>          threshold: threshold</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>          top-principals: top-principals)</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Throttle top contributors</span></span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">for-each</span> throttle-principal</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>                  (map <span class="kw">car</span> top-principals))))))</span></code></pre></div>
-<hr />
-<h2 id="privileged-logging">Privileged Logging</h2>
-<h3 id="system-events">System Events</h3>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Some events bypass rate limits</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> privileged-actions</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  &#39;(audit-rate-limited</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    audit-protection-enabled</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    audit-protection-disabled</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    audit-anomaly-detected</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    audit-flood-detected</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    key-ceremony</span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    emergency-revoke</span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    security-alert))</span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-append-privileged </span><span class="op">.</span> args)</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Log privileged event (bypasses rate limits)&quot;</span></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((entry (apply make-audit-entry args)))</span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Always log, never rate limit</span></span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    (audit-write-direct entry)</span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Alert on privileged events</span></span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    (when (<span class="kw">member</span> (assoc-ref entry &#39;action) &#39;(security-alert emergency-revoke))</span>
-<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>      (send-security-alert entry))))</span></code></pre></div>
-<h3 id="guaranteed-delivery">Guaranteed Delivery</h3>
-<div class="sourceCode" id="cb18"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-write-guaranteed </span>entry)</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Write audit entry with guaranteed delivery&quot;</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Write to multiple locations</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((locations (<span class="kw">list</span> (primary-audit-log)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>                         (secondary-audit-log)</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>                         (remote-audit-log))))</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((successes (<span class="kw">filter</span> (<span class="kw">lambda</span> (loc)</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>                               (<span class="kw">guard</span> (ex (<span class="kw">else</span> <span class="dv">#f</span>))</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>                                 (audit-write loc entry)</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>                                 <span class="dv">#t</span>))</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>                             locations)))</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>      (when (<span class="op">&lt;</span> (<span class="kw">length</span> successes) <span class="dv">2</span>)</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Failed to write to enough locations</span></span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>        (emergency-audit-alert entry successes)))))</span></code></pre></div>
-<hr />
-<h2 id="integrity-protection">Integrity Protection</h2>
-<h3 id="append-only-enforcement">Append-Only Enforcement</h3>
-<div class="sourceCode" id="cb19"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Audit log is strictly append-only</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-write </span>entry)</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Append entry to audit log&quot;</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((<span class="kw">log</span> (current-audit-log)))</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Verify we&#39;re at the end</span></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    (unless (at-log-end? <span class="kw">log</span>)</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> &#39;audit-log-not-at-end))</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Append with sequence number</span></span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((seq (next-sequence-number <span class="kw">log</span>)))</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>      (write-entry <span class="kw">log</span> (<span class="kw">cons</span> `(sequence <span class="op">.</span> ,seq) entry))</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Sign the entry</span></span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>      (sign-entry <span class="kw">log</span> entry))))</span></code></pre></div>
-<h3 id="chain-integrity">Chain Integrity</h3>
-<div class="sourceCode" id="cb20"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Each entry references previous (blockchain-style)</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">chain-entry </span>entry previous-hash)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  `((previous-hash <span class="op">.</span> ,previous-hash)</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    (sequence <span class="op">.</span> ,(<span class="op">+</span> <span class="dv">1</span> (previous-sequence)))</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    (timestamp <span class="op">.</span> ,(current-time))</span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    ,@entry</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    (hash <span class="op">.</span> ,(compute-entry-hash entry previous-hash))))</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-audit-chain </span><span class="kw">log</span>)</span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Verify audit log chain integrity&quot;</span></span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> loop ((entries (audit-entries <span class="kw">log</span>))</span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>             (expected-prev <span class="dv">#f</span>))</span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (<span class="kw">null?</span> entries)</span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>        <span class="dv">#t</span></span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((entry (<span class="kw">car</span> entries)))</span>
-<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">and</span> (<span class="kw">or</span> (<span class="kw">not</span> expected-prev)</span>
-<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>                   (<span class="kw">equal?</span> (assoc-ref entry &#39;previous-hash) expected-prev))</span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>               (loop (<span class="kw">cdr</span> entries)</span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>                     (assoc-ref entry &#39;hash)))))))</span></code></pre></div>
-<hr />
-<h2 id="recovery">Recovery</h2>
-<h3 id="log-reconstruction">Log Reconstruction</h3>
-<div class="sourceCode" id="cb21"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">reconstruct-audit-log </span>backups)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Reconstruct audit log from multiple backups&quot;</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((entries (merge-backup-entries backups)))</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Deduplicate by sequence number</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((deduped (deduplicate-by-sequence entries)))</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Verify chain</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>      (unless (verify-audit-chain deduped)</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> &#39;audit-chain-broken))</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>      deduped)))</span></code></pre></div>
-<h3 id="gap-detection">Gap Detection</h3>
-<div class="sourceCode" id="cb22"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">detect-audit-gaps </span><span class="kw">log</span>)</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Find gaps in audit sequence&quot;</span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> loop ((entries (audit-entries <span class="kw">log</span>))</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>             (expected-seq <span class="dv">1</span>)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>             (gaps &#39;()))</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (<span class="kw">null?</span> entries)</span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>        gaps</span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((seq (assoc-ref (<span class="kw">car</span> entries) &#39;sequence)))</span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">if</span> (<span class="op">=</span> seq expected-seq)</span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>              (loop (<span class="kw">cdr</span> entries) (<span class="op">+</span> seq <span class="dv">1</span>) gaps)</span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>              (loop (<span class="kw">cdr</span> entries) (<span class="op">+</span> seq <span class="dv">1</span>)</span>
-<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>                    (<span class="kw">cons</span> (<span class="kw">list</span> expected-seq (<span class="op">-</span> seq <span class="dv">1</span>)) gaps)))))))</span></code></pre></div>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li><a
-href="https://csrc.nist.gov/publications/detail/sp/800-92/final">NIST SP
-800-92: Guide to Computer Security Log Management</a></li>
-<li><a href="rfc-003-audit-trail.md">RFC-003: Cryptographic Audit
-Trail</a></li>
-<li><a href="rfc-032-rate-limiting.md">RFC-032: Rate Limiting and
-Quotas</a></li>
-<li><a href="rfc-028-error-handling.md">RFC-028: Error Handling and
-Recovery</a></li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li><strong>2026-01-07</strong> - Initial draft</li>
-</ul>
-<hr />
-<p><strong>Implementation Status:</strong> Draft
-<strong>Dependencies:</strong> audit, storage, monitoring
-<strong>Integration:</strong> All vault operations, security monitoring,
-forensics</p>
-</body>
-</html>
+<html><head><meta charset="UTF-8"><title>RFC-034: Audit Log Protection</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>RFC-034: Audit Log Protection
+
+**Status:** Draft
+**Date:** January 2026
+**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
+**Implementation:** Proposed
+
+---
+
+Abstract
+
+This RFC specifies protection mechanisms for the Library of Cyberspace audit log: how the system prevents resource exhaustion, log flooding, and denial of service attacks against the audit trail while maintaining its integrity as the authoritative record of all vault operations.
+
+---
+
+Motivation
+
+The audit log is sacred:
+
+- **Evidence** - Legal and forensic record
+- **Accountability** - Who did what when
+- **Recovery** - Reconstruct state after failure
+- **Trust** - Foundation of the security model
+
+But the audit log is also a target:
+
+- **Flooding** - Generate noise to hide malicious activity
+- **Exhaustion** - Fill storage to halt operations
+- **Evasion** - Overwhelm to prevent logging of real attacks
+- **Amplification** - Small action triggers large log entries
+
+The audit log must protect itself while never failing to record.
+
+---
+
+Threat Model
+
+Attack Vectors
+
+```scheme
+(define audit-threats
+  '((flooding
+     (description "Generate massive log volume")
+     (goal "Hide malicious activity in noise")
+     (method "Rapid legitimate-looking operations"))
+
+    (exhaustion
+     (description "Fill audit storage")
+     (goal "Halt vault operations")
+     (method "Sustained high-volume logging"))
+
+    (amplification
+     (description "Small input, large log output")
+     (goal "Asymmetric resource consumption")
+     (method "Operations that log disproportionately"))
+
+    (corruption
+     (description "Tamper with log entries")
+     (goal "Alter historical record")
+     (method "Exploit write access to log storage"))
+
+    (truncation
+     (description "Force log rotation/deletion")
+     (goal "Remove evidence")
+     (method "Fill logs to trigger cleanup"))))
+```
+
+Attacker Capabilities
+
+```scheme
+;; Assume attacker can:
+;; - Authenticate as a valid principal
+;; - Perform many legitimate operations
+;; - Control timing of operations
+;; - Observe system behavior
+
+;; Assume attacker cannot:
+;; - Directly write to audit storage
+;; - Forge signatures on log entries
+;; - Break cryptographic primitives
+```
+
+---
+
+Rate Limiting
+
+Per-Principal Audit Limits
+
+```scheme
+(define audit-rate-limits
+  `((entries-per-second . 100)
+    (bytes-per-second . 102400)      ; 100KB/s
+    (entries-per-minute . 1000)
+    (bytes-per-minute . 10485760)))  ; 10MB/min
+
+(define principal-audit-buckets (make-hash-table))
+
+(define (get-audit-bucket principal)
+  (or (hash-table-ref principal-audit-buckets principal #f)
+      (let ((bucket (make-token-bucket
+                     (assoc-ref audit-rate-limits 'entries-per-second)
+                     (assoc-ref audit-rate-limits 'entries-per-second))))
+        (hash-table-set! principal-audit-buckets principal bucket)
+        bucket)))
+
+(define (audit-rate-check principal entry-size)
+  "Check if principal can generate audit entry"
+  (let ((bucket (get-audit-bucket principal)))
+    (bucket 1)))  ; Consume one token
+```
+
+Audit Entry Costing
+
+```scheme
+;; Different operations have different audit costs
+(define audit-costs
+  `((read . 1)
+    (write . 2)
+    (delete . 5)
+    (query . 1)
+    (admin . 10)
+    (key-operation . 50)
+    (emergency . 0)))  ; Always allowed
+
+(define (audit-cost action)
+  (or (assoc-ref audit-costs action) 1))
+
+(define (consume-audit-budget principal action)
+  "Deduct from principal's audit budget"
+  (let ((cost (audit-cost action))
+        (bucket (get-audit-bucket principal)))
+    (if (bucket cost)
+        #t
+        (begin
+          ;; Log the rate limit event (always succeeds)
+          (audit-append-privileged
+            action: 'audit-rate-limited
+            principal: principal
+            attempted-action: action)
+          #f))))
+```
+
+Burst Handling
+
+```scheme
+;; Allow short bursts but limit sustained rate
+(define (make-audit-limiter)
+  (let ((short-term (make-token-bucket 200 100))   ; 100/s, burst 200
+        (long-term (make-sliding-window 10000 60))) ; 10k/min
+    (lambda (cost)
+      (and (short-term cost)
+           (long-term)))))
+```
+
+---
+
+Storage Protection
+
+Reserved Audit Space
+
+```scheme
+;; Always reserve space for audit
+(define *audit-reserved-space* (* 1024 1024 1024))  ; 1GB minimum
+
+(define (audit-storage-available)
+  (let ((total (storage-available))
+        (audit-used (audit-storage-used)))
+    (max 0 (- total *audit-reserved-space*))))
+
+(define (check-audit-storage entry-size)
+  "Ensure space for audit entry"
+  (let ((available (audit-storage-available)))
+    (when (&lt; available entry-size)
+      ;; Emergency: halt non-audit operations
+      (enter-audit-protection-mode)
+      ;; But always log
+      #t)))
+```
+
+Audit Protection Mode
+
+```scheme
+(define audit-protection-mode? (make-parameter #f))
+
+(define (enter-audit-protection-mode)
+  "Emergency mode: only allow audit writes"
+  (audit-protection-mode? #t)
+  (audit-append-privileged
+    action: 'audit-protection-enabled
+    reason: 'storage-exhaustion)
+  ;; Reject all non-essential operations
+  (set-vault-mode! 'audit-only))
+
+(define (exit-audit-protection-mode)
+  "Resume normal operations"
+  (when (&gt; (audit-storage-available) (* 2 *audit-reserved-space*))
+    (audit-protection-mode? #f)
+    (set-vault-mode! 'normal)
+    (audit-append-privileged
+      action: 'audit-protection-disabled)))
+```
+
+Tiered Storage
+
+```scheme
+;; Audit log tiers
+(define audit-tiers
+  '((hot . ((retention . 86400)      ; 1 day
+            (storage . ssd)
+            (compression . none)))
+    (warm . ((retention . 604800)    ; 7 days
+             (storage . hdd)
+             (compression . zstd-fast)))
+    (cold . ((retention . 31536000)  ; 1 year
+             (storage . archive)
+             (compression . zstd-max)))
+    (glacier . ((retention . #f)     ; Forever
+                (storage . offsite)
+                (compression . zstd-max)))))
+
+(define (tier-audit-entry entry age)
+  "Move entry to appropriate storage tier"
+  (let ((tier (find (lambda (t)
+                      (or (not (assoc-ref (cdr t) 'retention))
+                          (&lt; age (assoc-ref (cdr t) 'retention))))
+                    audit-tiers)))
+    (migrate-to-tier entry (car tier))))
+```
+
+---
+
+Entry Size Limits
+
+Maximum Entry Size
+
+```scheme
+(define *max-audit-entry-size* 65536)  ; 64KB
+
+(define (validate-audit-entry entry)
+  "Validate entry before logging"
+  (let ((size (serialized-size entry)))
+    (when (&gt; size *max-audit-entry-size*)
+      (error 'audit-entry-too-large
+             `((size . ,size)
+               (limit . ,*max-audit-entry-size*))))))
+```
+
+Entry Truncation
+
+```scheme
+(define (truncate-audit-entry entry max-size)
+  "Truncate oversized entry while preserving critical fields"
+  (let ((critical '(action principal timestamp hash signature)))
+    (let loop ((entry entry)
+               (fields (entry-fields entry)))
+      (if (&lt;= (serialized-size entry) max-size)
+          entry
+          (let ((removable (find (lambda (f)
+                                   (not (member f critical)))
+                                 fields)))
+            (if removable
+                (loop (assoc-remove entry removable)
+                      (delete removable fields))
+                ;; Can't truncate further, log warning
+                (begin
+                  (audit-append-privileged
+                    action: 'audit-entry-truncation-failed
+                    original-size: (serialized-size entry))
+                  entry)))))))
+```
+
+Payload Summarization
+
+```scheme
+(define (summarize-large-payload payload)
+  "Summarize large payloads for audit"
+  (if (&gt; (bytevector-length payload) 1024)
+      `((type . summarized)
+        (original-size . ,(bytevector-length payload))
+        (hash . ,(content-hash payload))
+        (preview . ,(subbytevector payload 0 256)))
+      payload))
+```
+
+---
+
+Aggregation
+
+Event Aggregation
+
+```scheme
+;; Aggregate similar events to reduce volume
+(define aggregation-window 60)  ; seconds
+(define pending-aggregations (make-hash-table))
+
+(define (aggregate-audit-event action principal details)
+  "Aggregate similar events within window"
+  (let* ((key (list action principal))
+         (existing (hash-table-ref pending-aggregations key #f)))
+    (if existing
+        ;; Add to existing aggregation
+        (begin
+          (set-cdr! (assoc 'count existing)
+                    (+ 1 (assoc-ref existing 'count)))
+          (set-cdr! (assoc 'last-seen existing)
+                    (current-time)))
+        ;; Start new aggregation
+        (hash-table-set! pending-aggregations key
+          `((action . ,action)
+            (principal . ,principal)
+            (count . 1)
+            (first-seen . ,(current-time))
+            (last-seen . ,(current-time))
+            (sample . ,details))))))
+
+(define (flush-aggregations)
+  "Flush aggregated events to audit log"
+  (hash-table-walk pending-aggregations
+    (lambda (key agg)
+      (when (&gt; (- (current-time) (assoc-ref agg 'first-seen))
+               aggregation-window)
+        (audit-append-direct
+          action: 'aggregated-events
+          original-action: (assoc-ref agg 'action)
+          principal: (assoc-ref agg 'principal)
+          count: (assoc-ref agg 'count)
+          window-start: (assoc-ref agg 'first-seen)
+          window-end: (assoc-ref agg 'last-seen)
+          sample: (assoc-ref agg 'sample))
+        (hash-table-delete! pending-aggregations key)))))
+```
+
+Sampling
+
+```scheme
+;; Sample high-volume events
+(define (should-sample? action principal)
+  (let ((rate (current-rate action principal)))
+    (cond
+      ((&lt; rate 10) #t)              ; Always log low-rate
+      ((&lt; rate 100) (&lt; (random 1.0) 0.5))  ; 50% sample
+      ((&lt; rate 1000) (&lt; (random 1.0) 0.1)) ; 10% sample
+      (else (&lt; (random 1.0) 0.01)))))      ; 1% sample
+
+(define (audit-with-sampling action principal details)
+  "Log with sampling for high-volume events"
+  (if (should-sample? action principal)
+      (audit-append action: action
+                    principal: principal
+                    details: details
+                    sampled: #t)
+      ;; Still count for rate tracking
+      (increment-audit-counter action principal)))
+```
+
+---
+
+Anomaly Detection
+
+Baseline Establishment
+
+```scheme
+(define (establish-audit-baseline principal duration)
+  "Establish normal audit patterns for principal"
+  (let ((events (soup-query type: 'audit-entry
+                            principal: principal
+                            timestamp: (&gt; (- (current-time) duration)))))
+    `((events-per-hour . ,(/ (length events) (/ duration 3600)))
+      (common-actions . ,(top-n (map audit-action events) 10))
+      (typical-hours . ,(typical-active-hours events))
+      (established-at . ,(current-time)))))
+```
+
+Anomaly Detection
+
+```scheme
+(define (detect-audit-anomaly principal current-rate baseline)
+  "Detect anomalous audit patterns"
+  (let ((expected (assoc-ref baseline 'events-per-hour))
+        (threshold 3.0))  ; 3x normal is anomalous
+    (when (&gt; current-rate (* threshold expected))
+      (audit-append-privileged
+        action: 'audit-anomaly-detected
+        principal: principal
+        current-rate: current-rate
+        expected-rate: expected
+        severity: (if (&gt; current-rate (* 10 expected))
+                      'critical
+                      'warning))
+      ;; Potentially throttle
+      (when (&gt; current-rate (* 10 expected))
+        (throttle-principal principal)))))
+```
+
+Flood Detection
+
+```scheme
+(define (detect-audit-flood)
+  "Detect system-wide audit flooding"
+  (let ((current-rate (global-audit-rate))
+        (threshold (* 10 (baseline-global-rate))))
+    (when (&gt; current-rate threshold)
+      ;; Identify top contributors
+      (let ((top-principals (top-audit-principals 10)))
+        (audit-append-privileged
+          action: 'audit-flood-detected
+          global-rate: current-rate
+          threshold: threshold
+          top-principals: top-principals)
+        ;; Throttle top contributors
+        (for-each throttle-principal
+                  (map car top-principals))))))
+```
+
+---
+
+Privileged Logging
+
+System Events
+
+```scheme
+;; Some events bypass rate limits
+(define privileged-actions
+  '(audit-rate-limited
+    audit-protection-enabled
+    audit-protection-disabled
+    audit-anomaly-detected
+    audit-flood-detected
+    key-ceremony
+    emergency-revoke
+    security-alert))
+
+(define (audit-append-privileged . args)
+  "Log privileged event (bypasses rate limits)"
+  (let ((entry (apply make-audit-entry args)))
+    ;; Always log, never rate limit
+    (audit-write-direct entry)
+    ;; Alert on privileged events
+    (when (member (assoc-ref entry 'action) '(security-alert emergency-revoke))
+      (send-security-alert entry))))
+```
+
+Guaranteed Delivery
+
+```scheme
+(define (audit-write-guaranteed entry)
+  "Write audit entry with guaranteed delivery"
+  ;; Write to multiple locations
+  (let ((locations (list (primary-audit-log)
+                         (secondary-audit-log)
+                         (remote-audit-log))))
+    (let ((successes (filter (lambda (loc)
+                               (guard (ex (else #f))
+                                 (audit-write loc entry)
+                                 #t))
+                             locations)))
+      (when (&lt; (length successes) 2)
+        ;; Failed to write to enough locations
+        (emergency-audit-alert entry successes)))))
+```
+
+---
+
+Integrity Protection
+
+Append-Only Enforcement
+
+```scheme
+;; Audit log is strictly append-only
+(define (audit-write entry)
+  "Append entry to audit log"
+  (let ((log (current-audit-log)))
+    ;; Verify we're at the end
+    (unless (at-log-end? log)
+      (error 'audit-log-not-at-end))
+    ;; Append with sequence number
+    (let ((seq (next-sequence-number log)))
+      (write-entry log (cons `(sequence . ,seq) entry))
+      ;; Sign the entry
+      (sign-entry log entry))))
+```
+
+Chain Integrity
+
+```scheme
+;; Each entry references previous (blockchain-style)
+(define (chain-entry entry previous-hash)
+  `((previous-hash . ,previous-hash)
+    (sequence . ,(+ 1 (previous-sequence)))
+    (timestamp . ,(current-time))
+    ,@entry
+    (hash . ,(compute-entry-hash entry previous-hash))))
+
+(define (verify-audit-chain log)
+  "Verify audit log chain integrity"
+  (let loop ((entries (audit-entries log))
+             (expected-prev #f))
+    (if (null? entries)
+        #t
+        (let ((entry (car entries)))
+          (and (or (not expected-prev)
+                   (equal? (assoc-ref entry 'previous-hash) expected-prev))
+               (loop (cdr entries)
+                     (assoc-ref entry 'hash)))))))
+```
+
+---
+
+Recovery
+
+Log Reconstruction
+
+```scheme
+(define (reconstruct-audit-log backups)
+  "Reconstruct audit log from multiple backups"
+  (let ((entries (merge-backup-entries backups)))
+    ;; Deduplicate by sequence number
+    (let ((deduped (deduplicate-by-sequence entries)))
+      ;; Verify chain
+      (unless (verify-audit-chain deduped)
+        (error 'audit-chain-broken))
+      deduped)))
+```
+
+Gap Detection
+
+```scheme
+(define (detect-audit-gaps log)
+  "Find gaps in audit sequence"
+  (let loop ((entries (audit-entries log))
+             (expected-seq 1)
+             (gaps '()))
+    (if (null? entries)
+        gaps
+        (let ((seq (assoc-ref (car entries) 'sequence)))
+          (if (= seq expected-seq)
+              (loop (cdr entries) (+ seq 1) gaps)
+              (loop (cdr entries) (+ seq 1)
+                    (cons (list expected-seq (- seq 1)) gaps)))))))
+```
+
+---
+
+References
+
+1. [NIST SP 800-92: Guide to Computer Security Log Management](https://csrc.nist.gov/publications/detail/sp/800-92/final)
+2. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.md)
+3. [RFC-032: Rate Limiting and Quotas](rfc-032-rate-limiting.md)
+4. [RFC-028: Error Handling and Recovery](rfc-028-error-handling.md)
+
+---
+
+Changelog
+
+- **2026-01-07** - Initial draft
+
+---
+
+**Implementation Status:** Draft
+**Dependencies:** audit, storage, monitoring
+**Integration:** All vault operations, security monitoring, forensics</pre></body></html>

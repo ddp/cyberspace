@@ -1,708 +1,576 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-025-query-language</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-</head>
-<body>
-<h1 id="rfc-025-soup-query-language">RFC-025: Soup Query Language</h1>
-<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
-<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
-class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
-Proposed</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This RFC specifies the query language for the Library of Cyberspace
-soup: how principals search, filter, and retrieve objects from the
-content-addressed store using the rich metadata layer. Queries are
-themselves content-addressed and auditable.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>The soup contains infinite metadata. Finding needles requires a query
-language that is:</p>
-<ul>
-<li><strong>Expressive</strong> - Complex predicates, joins across
-objects</li>
-<li><strong>Efficient</strong> - Indexes, bloom filters, query
-planning</li>
-<li><strong>Secure</strong> - Queries respect capability boundaries</li>
-<li><strong>Auditable</strong> - Query patterns reveal access
-patterns</li>
-</ul>
-<p>Newton’s soup had cursor-based queries. We extend this with
-content-addressed semantics.</p>
-<hr />
-<h2 id="query-model">Query Model</h2>
-<h3 id="basic-queries">Basic Queries</h3>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find by type</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find by attribute</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>(soup-query author: <span class="st">&quot;alice@example.com&quot;</span>)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find by multiple attributes (AND)</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            author: <span class="st">&quot;alice@example.com&quot;</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            created-after: <span class="st">&quot;2026-01-01&quot;</span>)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find by content hash</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>(soup-query hash: <span class="st">&quot;sha256:7f83b1657ff1fc...&quot;</span>)</span></code></pre></div>
-<h3 id="query-results">Query Results</h3>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Results are lazy cursors</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> results </span>(soup-query type: &#39;document))</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Iterate</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>(soup-cursor-next results)    <span class="co">; =&gt; soup-object or #f</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>(soup-cursor-peek results)    <span class="co">; =&gt; next without advancing</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>(soup-cursor-reset results)   <span class="co">; =&gt; back to beginning</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Collect (careful with large result sets)</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>(soup-cursor-&gt;list results)   <span class="co">; =&gt; list of soup-objects</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>(soup-cursor-count results)   <span class="co">; =&gt; total count</span></span></code></pre></div>
-<h3 id="predicates">Predicates</h3>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Comparison operators</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>(soup-query size: (<span class="op">&gt;</span> <span class="dv">1000000</span>))           <span class="co">; larger than 1MB</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>(soup-query created: (<span class="op">&lt;</span> <span class="st">&quot;2025-01-01&quot;</span>))   <span class="co">; before 2025</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>(soup-query name: (like <span class="st">&quot;rfc-*&quot;</span>))        <span class="co">; glob pattern</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>(soup-query tags: (contains <span class="st">&quot;urgent&quot;</span>))   <span class="co">; list membership</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Logical operators</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>(soup-query (<span class="kw">and</span> (type: &#39;document)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                 (<span class="kw">or</span> (author: <span class="st">&quot;alice&quot;</span>)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                     (author: <span class="st">&quot;bob&quot;</span>))))</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">;; Negation</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>(soup-query (<span class="kw">not</span> (type: &#39;tombstone)))</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">;; Existence</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>(soup-query (exists &#39;encryption-key))    <span class="co">; has attribute</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>(soup-query (missing &#39;expires))          <span class="co">; lacks attribute</span></span></code></pre></div>
-<hr />
-<h2 id="advanced-queries">Advanced Queries</h2>
-<h3 id="range-queries">Range Queries</h3>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Numeric ranges</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>(soup-query size: (between <span class="dv">1000</span> <span class="dv">10000</span>))</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Date ranges</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>(soup-query created: (between <span class="st">&quot;2026-01-01&quot;</span> <span class="st">&quot;2026-12-31&quot;</span>))</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Lexicographic ranges</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>(soup-query name: (between <span class="st">&quot;rfc-010&quot;</span> <span class="st">&quot;rfc-020&quot;</span>))</span></code></pre></div>
-<h3 id="full-text-search">Full-Text Search</h3>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Search indexed content</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>(soup-query (text-search <span class="st">&quot;capability delegation&quot;</span>))</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; With highlighting</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>(soup-query (text-search <span class="st">&quot;SPKI certificate&quot;</span>)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            highlight: <span class="dv">#t</span>)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Phrase search</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>(soup-query (text-search <span class="st">&quot;</span><span class="ch">\&quot;</span><span class="st">monotonic attenuation</span><span class="ch">\&quot;</span><span class="st">&quot;</span>))</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Fuzzy search</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>(soup-query (text-search <span class="st">&quot;delgation~&quot;</span>))  <span class="co">; typo-tolerant</span></span></code></pre></div>
-<h3 id="reference-traversal">Reference Traversal</h3>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Objects referencing this hash</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>(soup-query references: <span class="st">&quot;sha256:target...&quot;</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Objects referenced by this hash</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>(soup-query referenced-by: <span class="st">&quot;sha256:source...&quot;</span>)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Transitive closure (careful - can be huge)</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>(soup-query (transitive-references <span class="st">&quot;sha256:root...&quot;</span>)</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>            max-depth: <span class="dv">3</span>)</span></code></pre></div>
-<h3 id="temporal-queries">Temporal Queries</h3>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Objects as they existed at a point in time</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>            as-of: <span class="st">&quot;2026-01-01T00:00:00Z&quot;</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Objects modified in time window</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>(soup-query modified: (between <span class="st">&quot;2026-01-01&quot;</span> <span class="st">&quot;2026-01-07&quot;</span>))</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Version history</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>(soup-query (versions-of <span class="st">&quot;sha256:current...&quot;</span>))</span></code></pre></div>
-<hr />
-<h2 id="query-composition">Query Composition</h2>
-<h3 id="subqueries">Subqueries</h3>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Objects authored by members of a group</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>(soup-query author: (soup-query type: &#39;principal</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                                member-of: <span class="st">&quot;engineering&quot;</span>))</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Documents referencing any RFC</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>            references: (soup-query name: (like <span class="st">&quot;rfc-*&quot;</span>)))</span></code></pre></div>
-<h3 id="aggregation">Aggregation</h3>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Count by type</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(soup-aggregate</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  group-by: &#39;type</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  aggregate: (count))</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Total size by author</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>(soup-aggregate</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  group-by: &#39;author</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  aggregate: (sum &#39;size))</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Average document size</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>(soup-aggregate</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  where: (type: &#39;document)</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  aggregate: (avg &#39;size))</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co">;; Distinct values</span></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>(soup-aggregate</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>  aggregate: (distinct &#39;content-type))</span></code></pre></div>
-<h3 id="ordering-and-pagination">Ordering and Pagination</h3>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Sort by creation date, newest first</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>            order-by: &#39;((created desc)))</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Multi-column sort</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>            order-by: &#39;((author asc) (created desc)))</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Pagination</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>            order-by: &#39;((created desc))</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>            limit: <span class="dv">20</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>            offset: <span class="dv">40</span>)</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co">;; Cursor-based pagination (more efficient)</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>            order-by: &#39;((created desc))</span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>            after: <span class="st">&quot;sha256:last-seen...&quot;</span>)</span></code></pre></div>
-<hr />
-<h2 id="capability-aware-queries">Capability-Aware Queries</h2>
-<h3 id="query-filtering">Query Filtering</h3>
-<p>Queries automatically filter results based on the querying
-principal’s capabilities:</p>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">soup-query-with-caps </span>query principal)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Execute query filtered by principal&#39;s capabilities&quot;</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((raw-results (execute-query query))</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>         (caps (principal-capabilities principal)))</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">filter</span> (<span class="kw">lambda</span> (obj)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>              (can-read? principal obj caps))</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>            raw-results)))</span></code></pre></div>
-<h3 id="capability-queries">Capability Queries</h3>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; What can I access?</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>(soup-query (accessible-by (current-principal)))</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Who can access this?</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;certificate</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            grants-access-to: <span class="st">&quot;sha256:target...&quot;</span>)</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find my capabilities</span></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;certificate</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>            subject: (current-principal))</span></code></pre></div>
-<h3 id="query-authorization">Query Authorization</h3>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Some queries require explicit capability</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;audit-log)  <span class="co">; requires audit-read capability</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Query capability certificate</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  (issuer vault-admin)</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  (subject auditor-key)</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  (capability</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    (action query)</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    (object (type &#39;audit-log)))</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  (validity (not-after <span class="st">&quot;2027-01-01&quot;</span>)))</span></code></pre></div>
-<hr />
-<h2 id="indexes">Indexes</h2>
-<h3 id="index-types">Index Types</h3>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; B-tree index (ordered, range queries)</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>(define-index &#39;created-idx</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  type: &#39;btree</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  on: &#39;created)</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Hash index (equality only, faster)</span></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>(define-index &#39;hash-idx</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  type: &#39;hash</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  on: &#39;content-hash)</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Full-text index (search)</span></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>(define-index &#39;content-idx</span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  type: &#39;fulltext</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  on: &#39;content</span>
-<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  language: &#39;english)</span>
-<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="co">;; Composite index</span></span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>(define-index &#39;author-date-idx</span>
-<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  type: &#39;btree</span>
-<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>  on: &#39;(author created))</span>
-<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a><span class="co">;; Bloom filter index (membership testing)</span></span>
-<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>(define-index &#39;tags-bloom</span>
-<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>  type: &#39;bloom</span>
-<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>  on: &#39;tags</span>
-<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>  false-positive-rate: <span class="fl">0.01</span>)</span></code></pre></div>
-<h3 id="index-selection">Index Selection</h3>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">plan-query </span>query indexes)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Select best index for query&quot;</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((predicates (query-predicates query)))</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">find</span> (<span class="kw">lambda</span> (idx)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>            (index-covers? idx predicates))</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>          (sort indexes index-selectivity&gt;))))</span></code></pre></div>
-<h3 id="index-maintenance">Index Maintenance</h3>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Indexes are updated on soup-put</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">soup-put-indexed </span>obj)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((hash (soup-put obj)))</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span> (<span class="kw">lambda</span> (idx)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>                (index-insert! idx obj hash))</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>              (applicable-indexes obj))</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    hash))</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Periodic index optimization</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">optimize-indexes</span>)</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span> index-compact! (all-indexes)))</span></code></pre></div>
-<hr />
-<h2 id="query-execution">Query Execution</h2>
-<h3 id="query-planning">Query Planning</h3>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">execute-query </span>query)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Plan and execute query&quot;</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((plan (plan-query query))</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>         (cost (estimate-cost plan)))</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    (when (<span class="op">&gt;</span> cost *query-cost-limit*)</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> <span class="st">&quot;Query too expensive&quot;</span> cost))</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    (execute-plan plan)))</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">plan-query </span>query)</span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate query execution plan&quot;</span></span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  `(query-plan</span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    (predicates ,(query-predicates query))</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    (index ,(select-index query))</span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">filter</span> ,(remaining-predicates query))</span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    (order ,(query-order query))</span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    (limit ,(query-limit query))))</span></code></pre></div>
-<h3 id="execution-strategies">Execution Strategies</h3>
-<div class="sourceCode" id="cb18"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Index scan</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">index-scan </span>index predicate)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  (index-range-query index</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>                     (predicate-lower-bound predicate)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>                     (predicate-upper-bound predicate)))</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Full scan (last resort)</span></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">full-scan </span>predicate)</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">filter</span> predicate (all-soup-objects)))</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Index intersection</span></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">index-intersect </span>idx1 idx2 pred1 pred2)</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  (set-intersection</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    (index-scan idx1 pred1)</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    (index-scan idx2 pred2)))</span></code></pre></div>
-<h3 id="query-caching">Query Caching</h3>
-<div class="sourceCode" id="cb19"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Query results can be cached</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> query-cache </span>(make-lru-cache <span class="dv">1000</span>))</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">cached-query </span>query)</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((key (query-&gt;hash query)))</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">or</span> (lru-get query-cache key)</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((result (execute-query query)))</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>          (lru-put! query-cache key result)</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>          result))))</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Cache invalidation on soup changes</span></span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">invalidate-query-cache </span>obj)</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((affected (queries-affected-by obj)))</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span> (<span class="kw">lambda</span> (q)</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>                (lru-remove! query-cache (query-&gt;hash q)))</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>              affected)))</span></code></pre></div>
-<hr />
-<h2 id="distributed-queries">Distributed Queries</h2>
-<h3 id="federated-query">Federated Query</h3>
-<div class="sourceCode" id="cb20"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Query across multiple vaults</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>            federation: &#39;(vault-a vault-b vault-c))</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Query with locality preference</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;document</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>            prefer-local: <span class="dv">#t</span>)</span></code></pre></div>
-<h3 id="query-routing">Query Routing</h3>
-<div class="sourceCode" id="cb21"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">route-query </span>query vaults)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Route query to appropriate vaults&quot;</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((partitions (query-partitions query)))</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    (map (<span class="kw">lambda</span> (vault)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>           (<span class="kw">list</span> vault (subquery-for-vault query vault)))</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>         (<span class="kw">filter</span> (<span class="kw">lambda</span> (v)</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>                   (vault-has-partition? v partitions))</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>                 vaults))))</span></code></pre></div>
-<h3 id="result-merging">Result Merging</h3>
-<div class="sourceCode" id="cb22"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">merge-results </span>results order)</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Merge sorted results from multiple vaults&quot;</span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((streams (map result-&gt;stream results)))</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    (merge-sorted-streams streams (order-&gt;comparator order))))</span></code></pre></div>
-<hr />
-<h2 id="query-audit">Query Audit</h2>
-<h3 id="audit-trail">Audit Trail</h3>
-<div class="sourceCode" id="cb23"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; All queries are logged</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audited-query </span>query principal)</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((start (current-time))</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>        (result (soup-query-with-caps query principal)))</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    (audit-append</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>      action: &#39;query</span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>      principal: principal</span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>      query: (query-&gt;sexp query)</span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>      result-count: (soup-cursor-count result)</span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>      duration: (<span class="op">-</span> (current-time) start))</span>
-<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>    result))</span></code></pre></div>
-<h3 id="query-analysis">Query Analysis</h3>
-<div class="sourceCode" id="cb24"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Analyze query patterns</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;audit-entry</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>            action: &#39;query</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>            principal: <span class="st">&quot;alice&quot;</span>)</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find expensive queries</span></span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>(soup-query type: &#39;audit-entry</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>            action: &#39;query</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>            duration: (<span class="op">&gt;</span> <span class="dv">1000</span>))  <span class="co">; &gt; 1 second</span></span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Access pattern analysis</span></span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>(soup-aggregate</span>
-<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>  where: (<span class="kw">and</span> (type: &#39;audit-entry) (action: &#39;query))</span>
-<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>  group-by: &#39;principal</span>
-<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>  aggregate: (count))</span></code></pre></div>
-<hr />
-<h2 id="query-language-grammar">Query Language Grammar</h2>
-<pre><code>query       ::= (soup-query clause*)
+<html><head><meta charset="UTF-8"><title>RFC-025: Soup Query Language</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>RFC-025: Soup Query Language
+
+**Status:** Draft
+**Date:** January 2026
+**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
+**Implementation:** Proposed
+
+---
+
+Abstract
+
+This RFC specifies the query language for the Library of Cyberspace soup: how principals search, filter, and retrieve objects from the content-addressed store using the rich metadata layer. Queries are themselves content-addressed and auditable.
+
+---
+
+Motivation
+
+The soup contains infinite metadata. Finding needles requires a query language that is:
+
+- **Expressive** - Complex predicates, joins across objects
+- **Efficient** - Indexes, bloom filters, query planning
+- **Secure** - Queries respect capability boundaries
+- **Auditable** - Query patterns reveal access patterns
+
+Newton's soup had cursor-based queries. We extend this with content-addressed semantics.
+
+---
+
+Query Model
+
+Basic Queries
+
+```scheme
+;; Find by type
+(soup-query type: 'document)
+
+;; Find by attribute
+(soup-query author: "alice@example.com")
+
+;; Find by multiple attributes (AND)
+(soup-query type: 'document
+            author: "alice@example.com"
+            created-after: "2026-01-01")
+
+;; Find by content hash
+(soup-query hash: "sha256:7f83b1657ff1fc...")
+```
+
+Query Results
+
+```scheme
+;; Results are lazy cursors
+(define results (soup-query type: 'document))
+
+;; Iterate
+(soup-cursor-next results)    ; =&gt; soup-object or #f
+(soup-cursor-peek results)    ; =&gt; next without advancing
+(soup-cursor-reset results)   ; =&gt; back to beginning
+
+;; Collect (careful with large result sets)
+(soup-cursor-&gt;list results)   ; =&gt; list of soup-objects
+(soup-cursor-count results)   ; =&gt; total count
+```
+
+Predicates
+
+```scheme
+;; Comparison operators
+(soup-query size: (&gt; 1000000))           ; larger than 1MB
+(soup-query created: (&lt; "2025-01-01"))   ; before 2025
+(soup-query name: (like "rfc-*"))        ; glob pattern
+(soup-query tags: (contains "urgent"))   ; list membership
+
+;; Logical operators
+(soup-query (and (type: 'document)
+                 (or (author: "alice")
+                     (author: "bob"))))
+
+;; Negation
+(soup-query (not (type: 'tombstone)))
+
+;; Existence
+(soup-query (exists 'encryption-key))    ; has attribute
+(soup-query (missing 'expires))          ; lacks attribute
+```
+
+---
+
+Advanced Queries
+
+Range Queries
+
+```scheme
+;; Numeric ranges
+(soup-query size: (between 1000 10000))
+
+;; Date ranges
+(soup-query created: (between "2026-01-01" "2026-12-31"))
+
+;; Lexicographic ranges
+(soup-query name: (between "rfc-010" "rfc-020"))
+```
+
+Full-Text Search
+
+```scheme
+;; Search indexed content
+(soup-query (text-search "capability delegation"))
+
+;; With highlighting
+(soup-query (text-search "SPKI certificate")
+            highlight: #t)
+
+;; Phrase search
+(soup-query (text-search "\"monotonic attenuation\""))
+
+;; Fuzzy search
+(soup-query (text-search "delgation~"))  ; typo-tolerant
+```
+
+Reference Traversal
+
+```scheme
+;; Objects referencing this hash
+(soup-query references: "sha256:target...")
+
+;; Objects referenced by this hash
+(soup-query referenced-by: "sha256:source...")
+
+;; Transitive closure (careful - can be huge)
+(soup-query (transitive-references "sha256:root...")
+            max-depth: 3)
+```
+
+Temporal Queries
+
+```scheme
+;; Objects as they existed at a point in time
+(soup-query type: 'document
+            as-of: "2026-01-01T00:00:00Z")
+
+;; Objects modified in time window
+(soup-query modified: (between "2026-01-01" "2026-01-07"))
+
+;; Version history
+(soup-query (versions-of "sha256:current..."))
+```
+
+---
+
+Query Composition
+
+Subqueries
+
+```scheme
+;; Objects authored by members of a group
+(soup-query author: (soup-query type: 'principal
+                                member-of: "engineering"))
+
+;; Documents referencing any RFC
+(soup-query type: 'document
+            references: (soup-query name: (like "rfc-*")))
+```
+
+Aggregation
+
+```scheme
+;; Count by type
+(soup-aggregate
+  group-by: 'type
+  aggregate: (count))
+
+;; Total size by author
+(soup-aggregate
+  group-by: 'author
+  aggregate: (sum 'size))
+
+;; Average document size
+(soup-aggregate
+  where: (type: 'document)
+  aggregate: (avg 'size))
+
+;; Distinct values
+(soup-aggregate
+  aggregate: (distinct 'content-type))
+```
+
+Ordering and Pagination
+
+```scheme
+;; Sort by creation date, newest first
+(soup-query type: 'document
+            order-by: '((created desc)))
+
+;; Multi-column sort
+(soup-query type: 'document
+            order-by: '((author asc) (created desc)))
+
+;; Pagination
+(soup-query type: 'document
+            order-by: '((created desc))
+            limit: 20
+            offset: 40)
+
+;; Cursor-based pagination (more efficient)
+(soup-query type: 'document
+            order-by: '((created desc))
+            after: "sha256:last-seen...")
+```
+
+---
+
+Capability-Aware Queries
+
+Query Filtering
+
+Queries automatically filter results based on the querying principal's capabilities:
+
+```scheme
+(define (soup-query-with-caps query principal)
+  "Execute query filtered by principal's capabilities"
+  (let* ((raw-results (execute-query query))
+         (caps (principal-capabilities principal)))
+    (filter (lambda (obj)
+              (can-read? principal obj caps))
+            raw-results)))
+```
+
+Capability Queries
+
+```scheme
+;; What can I access?
+(soup-query (accessible-by (current-principal)))
+
+;; Who can access this?
+(soup-query type: 'certificate
+            grants-access-to: "sha256:target...")
+
+;; Find my capabilities
+(soup-query type: 'certificate
+            subject: (current-principal))
+```
+
+Query Authorization
+
+```scheme
+;; Some queries require explicit capability
+(soup-query type: 'audit-log)  ; requires audit-read capability
+
+;; Query capability certificate
+(spki-cert
+  (issuer vault-admin)
+  (subject auditor-key)
+  (capability
+    (action query)
+    (object (type 'audit-log)))
+  (validity (not-after "2027-01-01")))
+```
+
+---
+
+Indexes
+
+Index Types
+
+```scheme
+;; B-tree index (ordered, range queries)
+(define-index 'created-idx
+  type: 'btree
+  on: 'created)
+
+;; Hash index (equality only, faster)
+(define-index 'hash-idx
+  type: 'hash
+  on: 'content-hash)
+
+;; Full-text index (search)
+(define-index 'content-idx
+  type: 'fulltext
+  on: 'content
+  language: 'english)
+
+;; Composite index
+(define-index 'author-date-idx
+  type: 'btree
+  on: '(author created))
+
+;; Bloom filter index (membership testing)
+(define-index 'tags-bloom
+  type: 'bloom
+  on: 'tags
+  false-positive-rate: 0.01)
+```
+
+Index Selection
+
+```scheme
+(define (plan-query query indexes)
+  "Select best index for query"
+  (let ((predicates (query-predicates query)))
+    (find (lambda (idx)
+            (index-covers? idx predicates))
+          (sort indexes index-selectivity&gt;))))
+```
+
+Index Maintenance
+
+```scheme
+;; Indexes are updated on soup-put
+(define (soup-put-indexed obj)
+  (let ((hash (soup-put obj)))
+    (for-each (lambda (idx)
+                (index-insert! idx obj hash))
+              (applicable-indexes obj))
+    hash))
+
+;; Periodic index optimization
+(define (optimize-indexes)
+  (for-each index-compact! (all-indexes)))
+```
+
+---
+
+Query Execution
+
+Query Planning
+
+```scheme
+(define (execute-query query)
+  "Plan and execute query"
+  (let* ((plan (plan-query query))
+         (cost (estimate-cost plan)))
+    (when (&gt; cost *query-cost-limit*)
+      (error "Query too expensive" cost))
+    (execute-plan plan)))
+
+(define (plan-query query)
+  "Generate query execution plan"
+  `(query-plan
+    (predicates ,(query-predicates query))
+    (index ,(select-index query))
+    (filter ,(remaining-predicates query))
+    (order ,(query-order query))
+    (limit ,(query-limit query))))
+```
+
+Execution Strategies
+
+```scheme
+;; Index scan
+(define (index-scan index predicate)
+  (index-range-query index
+                     (predicate-lower-bound predicate)
+                     (predicate-upper-bound predicate)))
+
+;; Full scan (last resort)
+(define (full-scan predicate)
+  (filter predicate (all-soup-objects)))
+
+;; Index intersection
+(define (index-intersect idx1 idx2 pred1 pred2)
+  (set-intersection
+    (index-scan idx1 pred1)
+    (index-scan idx2 pred2)))
+```
+
+Query Caching
+
+```scheme
+;; Query results can be cached
+(define query-cache (make-lru-cache 1000))
+
+(define (cached-query query)
+  (let ((key (query-&gt;hash query)))
+    (or (lru-get query-cache key)
+        (let ((result (execute-query query)))
+          (lru-put! query-cache key result)
+          result))))
+
+;; Cache invalidation on soup changes
+(define (invalidate-query-cache obj)
+  (let ((affected (queries-affected-by obj)))
+    (for-each (lambda (q)
+                (lru-remove! query-cache (query-&gt;hash q)))
+              affected)))
+```
+
+---
+
+Distributed Queries
+
+Federated Query
+
+```scheme
+;; Query across multiple vaults
+(soup-query type: 'document
+            federation: '(vault-a vault-b vault-c))
+
+;; Query with locality preference
+(soup-query type: 'document
+            prefer-local: #t)
+```
+
+Query Routing
+
+```scheme
+(define (route-query query vaults)
+  "Route query to appropriate vaults"
+  (let ((partitions (query-partitions query)))
+    (map (lambda (vault)
+           (list vault (subquery-for-vault query vault)))
+         (filter (lambda (v)
+                   (vault-has-partition? v partitions))
+                 vaults))))
+```
+
+Result Merging
+
+```scheme
+(define (merge-results results order)
+  "Merge sorted results from multiple vaults"
+  (let ((streams (map result-&gt;stream results)))
+    (merge-sorted-streams streams (order-&gt;comparator order))))
+```
+
+---
+
+Query Audit
+
+Audit Trail
+
+```scheme
+;; All queries are logged
+(define (audited-query query principal)
+  (let ((start (current-time))
+        (result (soup-query-with-caps query principal)))
+    (audit-append
+      action: 'query
+      principal: principal
+      query: (query-&gt;sexp query)
+      result-count: (soup-cursor-count result)
+      duration: (- (current-time) start))
+    result))
+```
+
+Query Analysis
+
+```scheme
+;; Analyze query patterns
+(soup-query type: 'audit-entry
+            action: 'query
+            principal: "alice")
+
+;; Find expensive queries
+(soup-query type: 'audit-entry
+            action: 'query
+            duration: (&gt; 1000))  ; &gt; 1 second
+
+;; Access pattern analysis
+(soup-aggregate
+  where: (and (type: 'audit-entry) (action: 'query))
+  group-by: 'principal
+  aggregate: (count))
+```
+
+---
+
+Query Language Grammar
+
+```
+query       ::= (soup-query clause*)
 clause      ::= attribute-clause | predicate-clause | option-clause
-attribute   ::= symbol &#39;:&#39; value
-predicate   ::= &#39;(&#39; op value* &#39;)&#39;
-op          ::= &#39;&gt;&#39; | &#39;&lt;&#39; | &#39;&gt;=&#39; | &#39;&lt;=&#39; | &#39;=&#39; | &#39;!=&#39;
-              | &#39;like&#39; | &#39;between&#39; | &#39;contains&#39;
-              | &#39;and&#39; | &#39;or&#39; | &#39;not&#39;
-              | &#39;exists&#39; | &#39;missing&#39;
-              | &#39;text-search&#39; | &#39;references&#39; | &#39;referenced-by&#39;
-option      ::= &#39;order-by&#39; | &#39;limit&#39; | &#39;offset&#39; | &#39;after&#39;
-              | &#39;as-of&#39; | &#39;highlight&#39; | &#39;federation&#39;
-value       ::= string | number | boolean | hash | query</code></pre>
-<hr />
-<h2 id="security-considerations">Security Considerations</h2>
-<h3 id="query-injection">Query Injection</h3>
-<div class="sourceCode" id="cb26"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Never interpolate user input into queries</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; BAD:</span></span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>(soup-query name: (<span class="kw">string-append</span> <span class="st">&quot;rfc-&quot;</span> user-input))</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; GOOD:</span></span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>(soup-query name: (like (sanitize-pattern user-input)))</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">sanitize-pattern </span>s)</span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  (string-map (<span class="kw">lambda</span> (c)</span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>                (<span class="kw">if</span> (<span class="kw">member</span> c &#39;(<span class="ch">#\*</span> <span class="ch">#\?</span> <span class="ch">#\[</span> <span class="ch">#\]</span>))</span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>                    <span class="ch">#\\</span></span>
-<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>                    c))</span>
-<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>              s))</span></code></pre></div>
-<h3 id="query-cost-limits">Query Cost Limits</h3>
-<div class="sourceCode" id="cb27"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Prevent denial of service via expensive queries</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *query-cost-limit* </span><span class="dv">10000</span>)</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *query-timeout* </span><span class="dv">30</span>)  <span class="co">; seconds</span></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">safe-query </span>query)</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  (with-timeout *query-timeout*</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((cost (estimate-cost query)))</span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>      (when (<span class="op">&gt;</span> cost *query-cost-limit*)</span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> <span class="st">&quot;Query exceeds cost limit&quot;</span>))</span>
-<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>      (execute-query query))))</span></code></pre></div>
-<h3 id="information-leakage">Information Leakage</h3>
-<div class="sourceCode" id="cb28"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Query existence can leak information</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Even &quot;not found&quot; reveals something</span></span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Use constant-time responses for sensitive queries</span></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">private-query </span>query)</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((result (soup-query query)))</span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (authorized? (current-principal) result)</span>
-<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>        result</span>
-<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>        (constant-time-not-found))))</span></code></pre></div>
-<hr />
-<h2 id="implementation-notes">Implementation Notes</h2>
-<h3 id="performance">Performance</h3>
-<ul>
-<li>Index selection is critical for large soups</li>
-<li>Bloom filters for fast negative lookups</li>
-<li>Query result streaming to avoid memory exhaustion</li>
-<li>Connection pooling for federated queries</li>
-</ul>
-<h3 id="compatibility">Compatibility</h3>
-<ul>
-<li>Query language inspired by Newton’s soup cursors</li>
-<li>SQL-like semantics where applicable</li>
-<li>S-expression syntax for Scheme integration</li>
-</ul>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li><a href="https://www.newtonresearch.org/">Newton Programmer’s
-Guide</a> - Soup and cursor APIs</li>
-<li><a href="https://sqlite.org/queryplanner.html">SQLite Query
-Planner</a> - Query optimization</li>
-<li><a href="rfc-020-content-addressed-storage.md">RFC-020:
-Content-Addressed Storage</a></li>
-<li><a href="rfc-021-capability-delegation.md">RFC-021: Capability
-Delegation</a></li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li><strong>2026-01-07</strong> - Initial draft</li>
-</ul>
-<hr />
-<p><strong>Implementation Status:</strong> Draft
-<strong>Dependencies:</strong> soup, cas, spki
-<strong>Integration:</strong> Vault queries, federation, audit trail</p>
-</body>
-</html>
+attribute   ::= symbol ':' value
+predicate   ::= '(' op value* ')'
+op          ::= '&gt;' | '&lt;' | '&gt;=' | '&lt;=' | '=' | '!='
+              | 'like' | 'between' | 'contains'
+              | 'and' | 'or' | 'not'
+              | 'exists' | 'missing'
+              | 'text-search' | 'references' | 'referenced-by'
+option      ::= 'order-by' | 'limit' | 'offset' | 'after'
+              | 'as-of' | 'highlight' | 'federation'
+value       ::= string | number | boolean | hash | query
+```
+
+---
+
+Security Considerations
+
+Query Injection
+
+```scheme
+;; Never interpolate user input into queries
+;; BAD:
+(soup-query name: (string-append "rfc-" user-input))
+
+;; GOOD:
+(soup-query name: (like (sanitize-pattern user-input)))
+
+(define (sanitize-pattern s)
+  (string-map (lambda (c)
+                (if (member c '(#\* #\? #\[ #\]))
+                    #\\
+                    c))
+              s))
+```
+
+Query Cost Limits
+
+```scheme
+;; Prevent denial of service via expensive queries
+(define *query-cost-limit* 10000)
+(define *query-timeout* 30)  ; seconds
+
+(define (safe-query query)
+  (with-timeout *query-timeout*
+    (let ((cost (estimate-cost query)))
+      (when (&gt; cost *query-cost-limit*)
+        (error "Query exceeds cost limit"))
+      (execute-query query))))
+```
+
+Information Leakage
+
+```scheme
+;; Query existence can leak information
+;; Even "not found" reveals something
+
+;; Use constant-time responses for sensitive queries
+(define (private-query query)
+  (let ((result (soup-query query)))
+    (if (authorized? (current-principal) result)
+        result
+        (constant-time-not-found))))
+```
+
+---
+
+Implementation Notes
+
+Performance
+
+- Index selection is critical for large soups
+- Bloom filters for fast negative lookups
+- Query result streaming to avoid memory exhaustion
+- Connection pooling for federated queries
+
+Compatibility
+
+- Query language inspired by Newton's soup cursors
+- SQL-like semantics where applicable
+- S-expression syntax for Scheme integration
+
+---
+
+References
+
+1. [Newton Programmer's Guide](https://www.newtonresearch.org/) - Soup and cursor APIs
+2. [SQLite Query Planner](https://sqlite.org/queryplanner.html) - Query optimization
+3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.md)
+4. [RFC-021: Capability Delegation](rfc-021-capability-delegation.md)
+
+---
+
+Changelog
+
+- **2026-01-07** - Initial draft
+
+---
+
+**Implementation Status:** Draft
+**Dependencies:** soup, cas, spki
+**Integration:** Vault queries, federation, audit trail</pre></body></html>

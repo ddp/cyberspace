@@ -24,9 +24,16 @@ deferred as a very hard problem space.
 
 ## Publishing to Yoyodyne
 
-After rsync to www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/, always fix
-permissions to be world-readable:
+Before publishing RFCs, always:
 
-    ssh www.yoyodyne.com 'chmod 755 /www/yoyodyne/ddp/cyberspace && chmod 644 /www/yoyodyne/ddp/cyberspace/*'
+1. Generate all formats (only rebuilds stale/missing files):
 
-The rsync preserves local permissions which are not world-readable by default.
+       cd spki/scheme/docs/rfc && ./generate-rfcs.sh
+
+2. Rsync to yoyodyne:
+
+       rsync -avz --delete spki/scheme/docs/rfc/ www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/
+
+3. Fix permissions (rsync preserves local non-world-readable permissions):
+
+       ssh www.yoyodyne.com 'chmod 755 /www/yoyodyne/ddp/cyberspace && chmod 644 /www/yoyodyne/ddp/cyberspace/*'

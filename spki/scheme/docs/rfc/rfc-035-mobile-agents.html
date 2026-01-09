@@ -1,747 +1,495 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-035-mobile-agents</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-</head>
-<body>
-<h1 id="rfc-035-mobile-agents-and-pubsub">RFC-035: Mobile Agents and
-Pub/Sub</h1>
-<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
-<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
-class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
-Proposed</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This RFC specifies the mobile agent architecture for the Library of
-Cyberspace: Telescript-inspired agents that migrate between realms,
-carry SPKI credentials, communicate via pub/sub channels, and operate
-under realm coordinator supervision. Agents are first-class citizens
-with cryptographic identity.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>Distributed computation requires mobile code:</p>
-<ul>
-<li><strong>Latency</strong> - Move computation to data, not data to
-computation</li>
-<li><strong>Autonomy</strong> - Agents act on behalf of principals when
-disconnected</li>
-<li><strong>Coordination</strong> - Pub/sub enables loose coupling
-across realms</li>
-<li><strong>Accountability</strong> - Every agent action is
-auditable</li>
-</ul>
-<p>General Magic’s Telescript (1994) pioneered these ideas. We preserve
-the good parts while integrating with SPKI capabilities and
-content-addressed storage.</p>
-<hr />
-<h2 id="agent-model">Agent Model</h2>
-<h3 id="what-is-an-agent">What is an Agent?</h3>
-<p>An agent is:</p>
-<ol type="1">
-<li><strong>Mobile code</strong> - Scheme closures that can serialize
-and migrate</li>
-<li><strong>Credentialed</strong> - Carries SPKI certificates granting
-capabilities</li>
-<li><strong>Accountable</strong> - Every action recorded in audit
-trail</li>
-<li><strong>Supervised</strong> - Realm coordinator can inspect,
-suspend, terminate</li>
-</ol>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;agent&gt;</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  (make-agent id principal code state credentials realm)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  agent?</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  (id agent-id)                    <span class="co">; Content hash of initial code+state</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  (principal agent-principal)      <span class="co">; SPKI key that spawned this agent</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  (code agent-code)                <span class="co">; Scheme closure (serializable)</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  (state agent-state)              <span class="co">; Mutable state (content-addressed)</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  (credentials agent-credentials)  <span class="co">; SPKI certificate chain</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  (realm agent-realm))             <span class="co">; Current realm location</span></span></code></pre></div>
-<h3 id="agent-lifecycle">Agent Lifecycle</h3>
-<pre><code>entangle → running → [teleport] → running → ... → decohere
+<html><head><meta charset="UTF-8"><title>RFC-035: Mobile Agents and Pub/Sub</title>
+<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
+pre{white-space:pre-wrap;}</style>
+</head><body><pre>RFC-035: Mobile Agents and Pub/Sub
+
+**Status:** Draft
+**Date:** January 2026
+**Author:** Derrell Piper &lt;ddp@eludom.net&gt;
+**Implementation:** Proposed
+
+---
+
+Abstract
+
+This RFC specifies the mobile agent architecture for the Library of Cyberspace: Telescript-inspired agents that migrate between realms, carry SPKI credentials, communicate via pub/sub channels, and operate under realm coordinator supervision. Agents are first-class citizens with cryptographic identity.
+
+---
+
+Motivation
+
+Distributed computation requires mobile code:
+
+- **Latency** - Move computation to data, not data to computation
+- **Autonomy** - Agents act on behalf of principals when disconnected
+- **Coordination** - Pub/sub enables loose coupling across realms
+- **Accountability** - Every agent action is auditable
+
+General Magic's Telescript (1994) pioneered these ideas. We preserve the good parts while integrating with SPKI capabilities and content-addressed storage.
+
+---
+
+Agent Model
+
+What is an Agent?
+
+An agent is:
+
+1. **Mobile code** - Scheme closures that can serialize and migrate
+2. **Credentialed** - Carries SPKI certificates granting capabilities
+3. **Accountable** - Every action recorded in audit trail
+4. **Supervised** - Realm coordinator can inspect, suspend, terminate
+
+```scheme
+(define-record-type &lt;agent&gt;
+  (make-agent id principal code state credentials realm)
+  agent?
+  (id agent-id)                    ; Content hash of initial code+state
+  (principal agent-principal)      ; SPKI key that spawned this agent
+  (code agent-code)                ; Scheme closure (serializable)
+  (state agent-state)              ; Mutable state (content-addressed)
+  (credentials agent-credentials)  ; SPKI certificate chain
+  (realm agent-realm))             ; Current realm location
+```
+
+Agent Lifecycle
+
+```
+entangle → running → [teleport] → running → ... → decohere
              ↓                       ↓
           suspend               superpose
              ↓                       ↓
-          resume                  collapse</code></pre>
-<h3 id="telescript-parallels">Telescript Parallels</h3>
-<table>
-<thead>
-<tr>
-<th>Telescript</th>
-<th>Cyberspace</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>go</code></td>
-<td><code>teleport</code></td>
-<td>Move agent to another realm</td>
-</tr>
-<tr>
-<td><code>meet</code></td>
-<td><code>entangle</code></td>
-<td>Two agents become correlated</td>
-</tr>
-<tr>
-<td><code>send</code></td>
-<td><code>tunnel</code></td>
-<td>Message passes through barriers</td>
-</tr>
-<tr>
-<td><code>permits</code></td>
-<td>SPKI certificates</td>
-<td>Capability credentials</td>
-</tr>
-<tr>
-<td><code>places</code></td>
-<td>Realms</td>
-<td>Execution environments</td>
-</tr>
-<tr>
-<td><code>telename</code></td>
-<td>Content hash</td>
-<td>Globally unique identity</td>
-</tr>
-</tbody>
-</table>
-<h3 id="quantum-vocabulary">Quantum Vocabulary</h3>
-<p>The fabric of cyberspace uses quantum metaphors:</p>
-<table>
-<thead>
-<tr>
-<th>Operation</th>
-<th>Name</th>
-<th>Metaphor</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>send message</td>
-<td><code>tunnel</code></td>
-<td>Quantum tunneling through barriers</td>
-</tr>
-<tr>
-<td>receive message</td>
-<td><code>observe</code></td>
-<td>Collapse the wave function</td>
-</tr>
-<tr>
-<td>spawn agent</td>
-<td><code>entangle</code></td>
-<td>Create correlated pair</td>
-</tr>
-<tr>
-<td>migrate agent</td>
-<td><code>teleport</code></td>
-<td>Quantum teleportation</td>
-</tr>
-<tr>
-<td>terminate</td>
-<td><code>decohere</code></td>
-<td>Loss of quantum coherence</td>
-</tr>
-<tr>
-<td>checkpoint</td>
-<td><code>superpose</code></td>
-<td>Exist in multiple states</td>
-</tr>
-<tr>
-<td>link processes</td>
-<td><code>correlate</code></td>
-<td>Spooky action at a distance</td>
-</tr>
-</tbody>
-</table>
-<p><em>“A wilderness of mirrors”</em> - James Angleton</p>
-<p>Agents live in a cryptographic wilderness where: - They cannot see
-plaintext (HE encryption) - They cannot trust other agents
-(capability-restricted) - Every interaction is mediated by certificates
-- Identity is what you can prove, not who you claim</p>
-<hr />
-<h2 id="agent-operations">Agent Operations</h2>
-<h3 id="entangle-spawn">entangle (spawn)</h3>
-<p>Create a new agent in the current realm:</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(entangle</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  code: (<span class="kw">lambda</span> (self msg) <span class="op">...</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  state: initial-state</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  credentials: cert-chain</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> name timeout)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Returns agent-id (content hash)</span></span></code></pre></div>
-<p>The spawning principal’s key signs the agent, establishing
-provenance. The new agent is <em>entangled</em> with its creator -
-correlated through shared lineage.</p>
-<h3 id="teleport-migrate">teleport (migrate)</h3>
-<p>Move agent to another realm:</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(teleport agent-id target-realm</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> superpose)  <span class="co">; checkpoint before teleport</span></span></code></pre></div>
-<p><strong>Process:</strong> 1. Serialize agent code + state 2. Create
-migration certificate (signed by current realm) 3. Transmit to target
-realm 4. Target validates credentials against its policy 5. Resume
-execution</p>
-<p><strong>Migration Certificate:</strong></p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(spki-cert</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (issuer source-realm-key)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (subject agent-id)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (capability (action execute) (object target-realm))</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (validity (not-after migration-timeout)))</span></code></pre></div>
-<h3 id="decohere-terminate">decohere (terminate)</h3>
-<p>End agent execution:</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(decohere agent-id</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> reason superpose-final)</span></code></pre></div>
-<p>Decoherence can be: - <strong>Self-initiated</strong> - Agent calls
-<code>(decohere)</code> - <strong>Coordinator-initiated</strong> - Kill
-signal from realm coordinator - <strong>Timeout</strong> - Exceeded
-allocated time - <strong>Revocation</strong> - Credentials revoked
-mid-execution</p>
-<h3 id="superpose-collapse-checkpoint-restore">superpose / collapse
-(checkpoint / restore)</h3>
-<p>Save and restore agent state:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(superpose agent-id)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Returns content hash of serialized state</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; Agent exists in multiple potential states</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>(collapse checkpoint-hash realm)</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Resurrects agent from superposition</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Wave function collapses to specific state</span></span></code></pre></div>
-<p>Checkpoints are content-addressed, enabling: - Fault recovery - Time
-travel debugging - Forking (spawn from checkpoint)</p>
-<hr />
-<h2 id="quantum-messaging">Quantum Messaging</h2>
-<h3 id="topics-observation-points">Topics (Observation Points)</h3>
-<p>Topics are hierarchical, content-addressed channels where agents
-observe:</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;topic&gt;</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  (make-topic name realm observers)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  topic?</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  (name topic-name)           <span class="co">; Hierarchical name &quot;realm/category/subject&quot;</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  (realm topic-realm)         <span class="co">; Owning realm</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  (observers topic-observers))<span class="co">; Set of observing agent-ids</span></span></code></pre></div>
-<h3 id="observe-subscribe">observe (subscribe)</h3>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(observe topic-pattern handler</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> <span class="kw">filter</span> replay-from)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; topic-pattern: &quot;realm/events/*&quot; (glob supported)</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; handler: (lambda (topic message) ...)</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; filter: Predicate for message selection</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; replay-from: Sequence number for replay</span></span></code></pre></div>
-<p>When you observe, you collapse potential messages into actual
-received values.</p>
-<h3 id="tunnel-publishsend">tunnel (publish/send)</h3>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(tunnel topic message</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> ttl priority)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; message: Any serializable Scheme value</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; ttl: Time-to-live in seconds</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; priority: &#39;normal | &#39;high | &#39;critical</span></span></code></pre></div>
-<p>Messages tunnel through the fabric of cyberspace, passing barriers
-that would block classical communication.</p>
-<h3 id="message-structure">Message Structure</h3>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(quantum-message</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  (id <span class="st">&quot;sha256:msg-hash...&quot;</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (topic <span class="st">&quot;realm/agents/status&quot;</span>)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  (source agent-id)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1767700000</span>)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">42</span>)</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  (payload (status running) (progress <span class="fl">0.73</span>))</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  (signature #<span class="op">${</span>ed25519-sig<span class="op">}</span>))</span></code></pre></div>
-<p>All messages are signed by the source agent.</p>
-<h3 id="delivery-guarantees">Delivery Guarantees</h3>
-<table>
-<thead>
-<tr>
-<th>Mode</th>
-<th>Guarantee</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>at-most-once</code></td>
-<td>Fire and forget (default)</td>
-</tr>
-<tr>
-<td><code>at-least-once</code></td>
-<td>Retry until ack</td>
-</tr>
-<tr>
-<td><code>exactly-once</code></td>
-<td>Deduplication + ack</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="realm-coordination">Realm Coordination</h2>
-<h3 id="what-is-a-realm">What is a Realm?</h3>
-<p>A realm is an execution domain with:</p>
-<ul>
-<li><strong>Coordinator</strong> - Supervises agents, enforces policy
-(quiescent until message)</li>
-<li><strong>Policy</strong> - What agents can do (SPKI-based)</li>
-<li><strong>Resources</strong> - CPU, memory, network quotas</li>
-<li><strong>Pub/sub broker</strong> - Message routing</li>
-</ul>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;realm&gt;</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  (make-realm id coordinator policy agents topics)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  realm?</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  (id realm-id)</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  (coordinator realm-coordinator)  <span class="co">; Coordinator agent-id</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  (policy realm-policy)            <span class="co">; SPKI authorization policy</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  (agents realm-agents)            <span class="co">; Hash table of active agents</span></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  (topics realm-topics))           <span class="co">; Hash table of topics</span></span></code></pre></div>
-<h3 id="quiescent-coordinator">Quiescent Coordinator</h3>
-<p>Coordinators are event-driven, not polling. Zero CPU when idle:</p>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">coordinator-loop </span>realm)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> loop ()</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Block until message arrives (no busy-wait)</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((msg (observe! (realm-inbox realm))))</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">case</span> (message-type msg)</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        ((heartbeat) (handle-heartbeat realm msg))</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        ((entangle)  (handle-spawn realm msg))</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        ((teleport)  (handle-migrate realm msg))</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        ((decohere)  (handle-terminate realm msg))</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        ((lock-req)  (handle-lock-request realm msg))</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        ((signal)    (handle-signal realm msg)))</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>      (loop))))</span></code></pre></div>
-<h3 id="agent-heartbeat">Agent Heartbeat</h3>
-<p>Agents must heartbeat to their coordinator:</p>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(agent-heartbeat</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  (agent-id <span class="st">&quot;sha256:...&quot;</span>)</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  (realm <span class="st">&quot;sha256:realm...&quot;</span>)</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1767700000</span>)</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  (status running)</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  (resources</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    (cpu-ms <span class="dv">1234</span>)</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    (memory-kb <span class="dv">5678</span>)</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    (messages-sent <span class="dv">42</span>)))</span></code></pre></div>
-<p>Missing heartbeats trigger investigation:</p>
-<pre><code>0s    - heartbeat expected
+          resume                  collapse
+```
+
+Telescript Parallels
+
+| Telescript | Cyberspace | Description |
+|------------|------------|-------------|
+| `go` | `teleport` | Move agent to another realm |
+| `meet` | `entangle` | Two agents become correlated |
+| `send` | `tunnel` | Message passes through barriers |
+| `permits` | SPKI certificates | Capability credentials |
+| `places` | Realms | Execution environments |
+| `telename` | Content hash | Globally unique identity |
+
+Quantum Vocabulary
+
+The fabric of cyberspace uses quantum metaphors:
+
+| Operation | Name | Metaphor |
+|-----------|------|----------|
+| send message | `tunnel` | Quantum tunneling through barriers |
+| receive message | `observe` | Collapse the wave function |
+| spawn agent | `entangle` | Create correlated pair |
+| migrate agent | `teleport` | Quantum teleportation |
+| terminate | `decohere` | Loss of quantum coherence |
+| checkpoint | `superpose` | Exist in multiple states |
+| link processes | `correlate` | Spooky action at a distance |
+
+*"A wilderness of mirrors"* - James Angleton
+
+Agents live in a cryptographic wilderness where:
+- They cannot see plaintext (HE encryption)
+- They cannot trust other agents (capability-restricted)
+- Every interaction is mediated by certificates
+- Identity is what you can prove, not who you claim
+
+---
+
+Agent Operations
+
+entangle (spawn)
+
+Create a new agent in the current realm:
+
+```scheme
+(entangle
+  code: (lambda (self msg) ...)
+  state: initial-state
+  credentials: cert-chain
+  #!key name timeout)
+
+;; Returns agent-id (content hash)
+```
+
+The spawning principal's key signs the agent, establishing provenance. The new agent is *entangled* with its creator - correlated through shared lineage.
+
+teleport (migrate)
+
+Move agent to another realm:
+
+```scheme
+(teleport agent-id target-realm
+  #!key superpose)  ; checkpoint before teleport
+```
+
+**Process:**
+1. Serialize agent code + state
+2. Create migration certificate (signed by current realm)
+3. Transmit to target realm
+4. Target validates credentials against its policy
+5. Resume execution
+
+**Migration Certificate:**
+```scheme
+(spki-cert
+  (issuer source-realm-key)
+  (subject agent-id)
+  (capability (action execute) (object target-realm))
+  (validity (not-after migration-timeout)))
+```
+
+decohere (terminate)
+
+End agent execution:
+
+```scheme
+(decohere agent-id
+  #!key reason superpose-final)
+```
+
+Decoherence can be:
+- **Self-initiated** - Agent calls `(decohere)`
+- **Coordinator-initiated** - Kill signal from realm coordinator
+- **Timeout** - Exceeded allocated time
+- **Revocation** - Credentials revoked mid-execution
+
+superpose / collapse (checkpoint / restore)
+
+Save and restore agent state:
+
+```scheme
+(superpose agent-id)
+;; Returns content hash of serialized state
+;; Agent exists in multiple potential states
+
+(collapse checkpoint-hash realm)
+;; Resurrects agent from superposition
+;; Wave function collapses to specific state
+```
+
+Checkpoints are content-addressed, enabling:
+- Fault recovery
+- Time travel debugging
+- Forking (spawn from checkpoint)
+
+---
+
+Quantum Messaging
+
+Topics (Observation Points)
+
+Topics are hierarchical, content-addressed channels where agents observe:
+
+```scheme
+(define-record-type &lt;topic&gt;
+  (make-topic name realm observers)
+  topic?
+  (name topic-name)           ; Hierarchical name "realm/category/subject"
+  (realm topic-realm)         ; Owning realm
+  (observers topic-observers)); Set of observing agent-ids
+```
+
+observe (subscribe)
+
+```scheme
+(observe topic-pattern handler
+  #!key filter replay-from)
+
+;; topic-pattern: "realm/events/*" (glob supported)
+;; handler: (lambda (topic message) ...)
+;; filter: Predicate for message selection
+;; replay-from: Sequence number for replay
+```
+
+When you observe, you collapse potential messages into actual received values.
+
+tunnel (publish/send)
+
+```scheme
+(tunnel topic message
+  #!key ttl priority)
+
+;; message: Any serializable Scheme value
+;; ttl: Time-to-live in seconds
+;; priority: 'normal | 'high | 'critical
+```
+
+Messages tunnel through the fabric of cyberspace, passing barriers that would block classical communication.
+
+Message Structure
+
+```scheme
+(quantum-message
+  (id "sha256:msg-hash...")
+  (topic "realm/agents/status")
+  (source agent-id)
+  (timestamp 1767700000)
+  (sequence 42)
+  (payload (status running) (progress 0.73))
+  (signature #${ed25519-sig}))
+```
+
+All messages are signed by the source agent.
+
+Delivery Guarantees
+
+| Mode | Guarantee |
+|------|-----------|
+| `at-most-once` | Fire and forget (default) |
+| `at-least-once` | Retry until ack |
+| `exactly-once` | Deduplication + ack |
+
+---
+
+Realm Coordination
+
+What is a Realm?
+
+A realm is an execution domain with:
+
+- **Coordinator** - Supervises agents, enforces policy (quiescent until message)
+- **Policy** - What agents can do (SPKI-based)
+- **Resources** - CPU, memory, network quotas
+- **Pub/sub broker** - Message routing
+
+```scheme
+(define-record-type &lt;realm&gt;
+  (make-realm id coordinator policy agents topics)
+  realm?
+  (id realm-id)
+  (coordinator realm-coordinator)  ; Coordinator agent-id
+  (policy realm-policy)            ; SPKI authorization policy
+  (agents realm-agents)            ; Hash table of active agents
+  (topics realm-topics))           ; Hash table of topics
+```
+
+Quiescent Coordinator
+
+Coordinators are event-driven, not polling. Zero CPU when idle:
+
+```scheme
+(define (coordinator-loop realm)
+  (let loop ()
+    ;; Block until message arrives (no busy-wait)
+    (let ((msg (observe! (realm-inbox realm))))
+      (case (message-type msg)
+        ((heartbeat) (handle-heartbeat realm msg))
+        ((entangle)  (handle-spawn realm msg))
+        ((teleport)  (handle-migrate realm msg))
+        ((decohere)  (handle-terminate realm msg))
+        ((lock-req)  (handle-lock-request realm msg))
+        ((signal)    (handle-signal realm msg)))
+      (loop))))
+```
+
+Agent Heartbeat
+
+Agents must heartbeat to their coordinator:
+
+```scheme
+(agent-heartbeat
+  (agent-id "sha256:...")
+  (realm "sha256:realm...")
+  (timestamp 1767700000)
+  (status running)
+  (resources
+    (cpu-ms 1234)
+    (memory-kb 5678)
+    (messages-sent 42)))
+```
+
+Missing heartbeats trigger investigation:
+
+```
+0s    - heartbeat expected
 30s   - grace period
 60s   - coordinator pings agent
 90s   - agent marked unhealthy
-120s  - agent decohered (or superposed)</code></pre>
-<h3 id="remote-termination-kill-signal">Remote Termination (Kill
-Signal)</h3>
-<p>Coordinators can terminate agents remotely:</p>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(coordinator-kill agent-id</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> reason grace-period)</span></code></pre></div>
-<p><strong>Kill Signal:</strong></p>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(kill-signal</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  (target agent-id)</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  (issuer coordinator-key)</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  (reason (policy-violation <span class="st">&quot;exceeded-cpu-quota&quot;</span>))</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  (grace-period <span class="dv">5</span>)  <span class="co">; seconds to superpose</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  (signature #<span class="op">${</span>ed25519-sig<span class="op">}</span>))</span></code></pre></div>
-<p>Agents MUST honor kill signals. Failure to terminate results in: 1.
-Resource revocation (network, storage access removed) 2. Forced
-decoherence by runtime 3. Blacklisting of spawning principal</p>
-<hr />
-<h2 id="distributed-locking-scs-style">Distributed Locking
-(SCS-Style)</h2>
-<h3 id="lock-manager">Lock Manager</h3>
-<p>Each realm has a lock manager for coordination:</p>
-<div class="sourceCode" id="cb18"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;lock-manager&gt;</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  (make-lock-manager realm locks waiters)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  lock-manager?</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  (realm lm-realm)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  (locks lm-locks)      <span class="co">; Hash table: resource → holder</span></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  (waiters lm-waiters)) <span class="co">; Hash table: resource → queue</span></span></code></pre></div>
-<h3 id="lock-operations">Lock Operations</h3>
-<div class="sourceCode" id="cb19"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>(lock-acquire resource</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> timeout mode)</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; mode: &#39;exclusive | &#39;shared</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>(lock-release resource)</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>(lock-upgrade resource)  <span class="co">; shared → exclusive</span></span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>(lock-downgrade resource)  <span class="co">; exclusive → shared</span></span></code></pre></div>
-<h3 id="distributed-locks-cross-realm">Distributed Locks
-(Cross-Realm)</h3>
-<p>For resources spanning realms:</p>
-<div class="sourceCode" id="cb20"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>(distributed-lock resource realms</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">#!key</span> timeout coordinator)</span></code></pre></div>
-<p>Uses two-phase locking: 1. <strong>Prepare</strong> - All realms vote
-to grant lock 2. <strong>Commit</strong> - Lock granted if all vote yes
-3. <strong>Abort</strong> - Any no vote aborts</p>
-<h3 id="deadlock-detection">Deadlock Detection</h3>
-<p>Lock manager maintains wait-for graph:</p>
-<div class="sourceCode" id="cb21"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">detect-deadlock </span>lock-manager)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Find cycles in wait-for graph&quot;</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((graph (build-wait-for-graph lock-manager)))</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    (find-cycles graph)))</span></code></pre></div>
-<p>Resolution: Youngest agent in cycle is aborted.</p>
-<hr />
-<h2 id="security-considerations">Security Considerations</h2>
-<h3 id="tcsec-b2-channel-security">TCSEC B2 Channel Security</h3>
-<p>Agent channels must resist covert channel analysis:</p>
-<table>
-<thead>
-<tr>
-<th>Channel Type</th>
-<th>Leak Vector</th>
-<th>Mitigation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Storage</strong></td>
-<td>Message size, topic names</td>
-<td>Pad to fixed sizes</td>
-</tr>
-<tr>
-<td><strong>Timing</strong></td>
-<td>Response latency</td>
-<td>Add jitter, batch windows</td>
-</tr>
-<tr>
-<td><strong>Signaling</strong></td>
-<td>Pub/sub presence</td>
-<td>Dummy traffic</td>
-</tr>
-</tbody>
-</table>
-<h3 id="credential-validation">Credential Validation</h3>
-<p>On every operation: 1. Verify agent’s SPKI certificate chain 2. Check
-capability grants requested action 3. Validate certificates not revoked
-4. Enforce monotonic attenuation</p>
-<h3 id="migration-security">Migration Security</h3>
-<div class="sourceCode" id="cb22"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">validate-migration </span>agent target-realm)</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">and</span> (valid-credentials? (agent-credentials agent))</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>       (realm-admits? target-realm agent)</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>       (not-revoked? (agent-credentials agent))</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>       (within-quota? target-realm agent)))</span></code></pre></div>
-<h3 id="audit-trail">Audit Trail</h3>
-<p>All agent actions recorded:</p>
-<div class="sourceCode" id="cb23"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>(audit-append</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  actor: (agent-principal agent)</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  action: `(teleport ,agent-id ,target-realm)</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  motivation: <span class="st">&quot;data locality optimization&quot;</span>)</span></code></pre></div>
-<hr />
-<h2 id="homomorphic-encryption-integration">Homomorphic Encryption
-Integration</h2>
-<h3 id="when-to-use-he">When to Use HE</h3>
-<p>Use homomorphic encryption for narrow, well-defined operations:</p>
-<table>
-<thead>
-<tr>
-<th>Use Case</th>
-<th>HE Appropriate?</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Vote tallying</td>
-<td>Yes - sum encrypted votes</td>
-</tr>
-<tr>
-<td>Aggregate metrics</td>
-<td>Yes - sum/average encrypted values</td>
-</tr>
-<tr>
-<td>Private analytics</td>
-<td>Yes - fixed statistical operations</td>
-</tr>
-<tr>
-<td>General computation</td>
-<td>No - too slow</td>
-</tr>
-<tr>
-<td>Dynamic branching</td>
-<td>No - can’t branch on encrypted values</td>
-</tr>
-</tbody>
-</table>
-<h3 id="encrypted-agent-state">Encrypted Agent State</h3>
-<p>Agents can carry encrypted state they cannot read:</p>
-<div class="sourceCode" id="cb24"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>(entangle</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  code: aggregation-circuit  <span class="co">; Pre-compiled HE circuit</span></span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  state: (encrypted-state</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>           (ciphertext #<span class="op">${...}</span>)</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>           (scheme &#39;bfv)</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>           (operations &#39;(add multiply)))</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  credentials: cert-chain)</span></code></pre></div>
-<p>The agent computes on encrypted data, returns encrypted result. Only
-the principal with the decryption key can read the result.</p>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li>Telescript Language Reference - General Magic
-<em>(preserved)</em></li>
-<li>Mobile Agents - Lange &amp; Oshima <em>(preserved)</em></li>
-<li>Distributed Lock Manager - VAX/VMS SCS <em>(preserved)</em></li>
-<li>Concurrency Oriented Programming in Termite Scheme - Germain
-<em>(preserved)</em></li>
-<li>RFC-003: Cryptographic Audit Trail</li>
-<li>RFC-004: SPKI Authorization</li>
-<li>RFC-010: Federation Protocol</li>
-<li>RFC-021: Capability Delegation</li>
-<li>RFC-023: Agent Sandboxing</li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li><strong>2026-01-07</strong> - Initial draft with quantum
-vocabulary</li>
-</ul>
-<hr />
-<p><strong>Implementation Status:</strong> Proposed
-<strong>Dependencies:</strong> spki, vault, audit, federation
-<strong>Integration:</strong> Realm coordinators, pub/sub broker, lock
-manager</p>
-</body>
-</html>
+120s  - agent decohered (or superposed)
+```
+
+Remote Termination (Kill Signal)
+
+Coordinators can terminate agents remotely:
+
+```scheme
+(coordinator-kill agent-id
+  #!key reason grace-period)
+```
+
+**Kill Signal:**
+```scheme
+(kill-signal
+  (target agent-id)
+  (issuer coordinator-key)
+  (reason (policy-violation "exceeded-cpu-quota"))
+  (grace-period 5)  ; seconds to superpose
+  (signature #${ed25519-sig}))
+```
+
+Agents MUST honor kill signals. Failure to terminate results in:
+1. Resource revocation (network, storage access removed)
+2. Forced decoherence by runtime
+3. Blacklisting of spawning principal
+
+---
+
+Distributed Locking (SCS-Style)
+
+Lock Manager
+
+Each realm has a lock manager for coordination:
+
+```scheme
+(define-record-type &lt;lock-manager&gt;
+  (make-lock-manager realm locks waiters)
+  lock-manager?
+  (realm lm-realm)
+  (locks lm-locks)      ; Hash table: resource → holder
+  (waiters lm-waiters)) ; Hash table: resource → queue
+```
+
+Lock Operations
+
+```scheme
+(lock-acquire resource
+  #!key timeout mode)
+;; mode: 'exclusive | 'shared
+
+(lock-release resource)
+
+(lock-upgrade resource)  ; shared → exclusive
+
+(lock-downgrade resource)  ; exclusive → shared
+```
+
+Distributed Locks (Cross-Realm)
+
+For resources spanning realms:
+
+```scheme
+(distributed-lock resource realms
+  #!key timeout coordinator)
+```
+
+Uses two-phase locking:
+1. **Prepare** - All realms vote to grant lock
+2. **Commit** - Lock granted if all vote yes
+3. **Abort** - Any no vote aborts
+
+Deadlock Detection
+
+Lock manager maintains wait-for graph:
+
+```scheme
+(define (detect-deadlock lock-manager)
+  "Find cycles in wait-for graph"
+  (let ((graph (build-wait-for-graph lock-manager)))
+    (find-cycles graph)))
+```
+
+Resolution: Youngest agent in cycle is aborted.
+
+---
+
+Security Considerations
+
+TCSEC B2 Channel Security
+
+Agent channels must resist covert channel analysis:
+
+| Channel Type | Leak Vector | Mitigation |
+|--------------|-------------|------------|
+| **Storage** | Message size, topic names | Pad to fixed sizes |
+| **Timing** | Response latency | Add jitter, batch windows |
+| **Signaling** | Pub/sub presence | Dummy traffic |
+
+Credential Validation
+
+On every operation:
+1. Verify agent's SPKI certificate chain
+2. Check capability grants requested action
+3. Validate certificates not revoked
+4. Enforce monotonic attenuation
+
+Migration Security
+
+```scheme
+(define (validate-migration agent target-realm)
+  (and (valid-credentials? (agent-credentials agent))
+       (realm-admits? target-realm agent)
+       (not-revoked? (agent-credentials agent))
+       (within-quota? target-realm agent)))
+```
+
+Audit Trail
+
+All agent actions recorded:
+
+```scheme
+(audit-append
+  actor: (agent-principal agent)
+  action: `(teleport ,agent-id ,target-realm)
+  motivation: "data locality optimization")
+```
+
+---
+
+Homomorphic Encryption Integration
+
+When to Use HE
+
+Use homomorphic encryption for narrow, well-defined operations:
+
+| Use Case | HE Appropriate? |
+|----------|-----------------|
+| Vote tallying | Yes - sum encrypted votes |
+| Aggregate metrics | Yes - sum/average encrypted values |
+| Private analytics | Yes - fixed statistical operations |
+| General computation | No - too slow |
+| Dynamic branching | No - can't branch on encrypted values |
+
+Encrypted Agent State
+
+Agents can carry encrypted state they cannot read:
+
+```scheme
+(entangle
+  code: aggregation-circuit  ; Pre-compiled HE circuit
+  state: (encrypted-state
+           (ciphertext #${...})
+           (scheme 'bfv)
+           (operations '(add multiply)))
+  credentials: cert-chain)
+```
+
+The agent computes on encrypted data, returns encrypted result. Only the principal with the decryption key can read the result.
+
+---
+
+References
+
+1. Telescript Language Reference - General Magic *(preserved)*
+2. Mobile Agents - Lange &amp; Oshima *(preserved)*
+3. Distributed Lock Manager - VAX/VMS SCS *(preserved)*
+4. Concurrency Oriented Programming in Termite Scheme - Germain *(preserved)*
+5. RFC-003: Cryptographic Audit Trail
+6. RFC-004: SPKI Authorization
+7. RFC-010: Federation Protocol
+8. RFC-021: Capability Delegation
+9. RFC-023: Agent Sandboxing
+
+---
+
+Changelog
+
+- **2026-01-07** - Initial draft with quantum vocabulary
+
+---
+
+**Implementation Status:** Proposed
+**Dependencies:** spki, vault, audit, federation
+**Integration:** Realm coordinators, pub/sub broker, lock manager</pre></body></html>
