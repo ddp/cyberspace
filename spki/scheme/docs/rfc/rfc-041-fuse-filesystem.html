@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-041-fuse-filesystem</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<h1 id="rfc-041-wormholes-fuse-filesystem-layer">RFC-041: Wormholes
+(FUSE Filesystem Layer)</h1>
+<p><strong>Status:</strong> Draft <strong>Created:</strong> 2026-01-07
+<strong>Authors:</strong> Library of Cyberspace Contributors</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies wormholes—FUSE-based bidirectional portals between
+the macOS filesystem and the Library of Cyberspace vault. Wormholes
+preserve full metadata including extended attributes, Finder tags, and
+ACLs. All operations are auditable (RFC-003) and rate-limited
+(RFC-032).<a href="#fn1" class="footnote-ref" id="fnref1"
+role="doc-noteref"><sup>1</sup></a></p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Users need seamless integration between their existing filesystem and
+the vault. Manual import/export creates friction and risks metadata
+loss.</p>
+<p>A wormhole provides:</p>
+<ol type="1">
+<li><strong>Transparency</strong> — Finder, <code>cp</code>,
+<code>rsync</code> work unchanged</li>
+<li><strong>Bidirectionality</strong> — No separate sync step; it IS the
+filesystem</li>
+<li><strong>Metadata preservation</strong> — Full macOS attributes
+captured automatically</li>
+<li><strong>Content addressing</strong> — Deduplication and integrity
+built-in</li>
+<li><strong>Security</strong> — First-class SPKI object with audit and
+rate-limit</li>
+</ol>
+<p>The filesystem abstraction is the right boundary—everything above it
+(apps, shell, Finder) works without modification.<a href="#fn2"
+class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<hr />
+<h2 id="wormhole-as-security-object">Wormhole as Security Object</h2>
+<p>A wormhole is a first-class security object in cyberspace, subject
+to:<a href="#fn3" class="footnote-ref" id="fnref3"
+role="doc-noteref"><sup>3</sup></a></p>
+<ul>
+<li><strong>SPKI Authorization</strong> (RFC-004) — Opening requires
+valid certificate</li>
+<li><strong>Capability Delegation</strong> (RFC-021) — Wormhole access
+can be delegated</li>
+<li><strong>Audit Trail</strong> (RFC-003) — All operations logged</li>
+<li><strong>Rate Limiting</strong> (RFC-032) — Configurable
+ops/minute</li>
+<li><strong>Sandboxing</strong> (RFC-023) — Agents access wormholes
+through capabilities</li>
+</ul>
+<h3 id="wormhole-certificate">Wormhole Certificate</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">wormhole-cert </span>issuer fs-path vault-path permissions)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create SPKI certificate authorizing wormhole&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  (create-cert</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>   issuer</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>   (wormhole-principal fs-path vault-path)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>   `(tag (wormhole</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>          (fs-path ,fs-path)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>          (vault-path ,vault-path)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>          (permissions ,@permissions)   <span class="co">; read, write, delete</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>          (rate-limit <span class="dv">1000</span>)             <span class="co">; ops/minute</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>          (expires ,(<span class="op">+</span> (current-seconds) <span class="dv">86400</span>))))))</span></code></pre></div>
+<h3 id="capability-model">Capability Model</h3>
+<p>Wormholes support fine-grained capabilities:<a href="#fn4"
+class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></p>
+<p><em>Table 0: Wormhole Capabilities</em></p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Allows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Data Access</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>read</code></td>
+<td>Read file contents</td>
+</tr>
+<tr>
+<td><code>write</code></td>
+<td>Write/modify file contents</td>
+</tr>
+<tr>
+<td><code>create</code></td>
+<td>Create new files</td>
+</tr>
+<tr>
+<td><code>delete</code></td>
+<td>Remove files</td>
+</tr>
+<tr>
+<td><code>rename</code></td>
+<td>Rename/move files</td>
+</tr>
+<tr>
+<td><strong>Metadata</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>stat</code></td>
+<td>Read POSIX attributes</td>
+</tr>
+<tr>
+<td><code>chmod</code></td>
+<td>Modify permissions</td>
+</tr>
+<tr>
+<td><code>chown</code></td>
+<td>Change ownership</td>
+</tr>
+<tr>
+<td><code>xattr-read</code></td>
+<td>Read extended attributes</td>
+</tr>
+<tr>
+<td><code>xattr-write</code></td>
+<td>Modify extended attributes</td>
+</tr>
+<tr>
+<td><code>acl-read</code></td>
+<td>Read ACLs</td>
+</tr>
+<tr>
+<td><code>acl-write</code></td>
+<td>Modify ACLs</td>
+</tr>
+<tr>
+<td><strong>Directory</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>readdir</code></td>
+<td>List directory contents</td>
+</tr>
+<tr>
+<td><code>mkdir</code></td>
+<td>Create directories</td>
+</tr>
+<tr>
+<td><code>rmdir</code></td>
+<td>Remove directories</td>
+</tr>
+<tr>
+<td><strong>Control</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>admin</code></td>
+<td>Configure wormhole</td>
+</tr>
+<tr>
+<td><code>delegate</code></td>
+<td>Delegate capabilities to others</td>
+</tr>
+<tr>
+<td><code>audit-read</code></td>
+<td>Read wormhole audit log</td>
+</tr>
+<tr>
+<td><code>rate-limit</code></td>
+<td>Modify rate limits</td>
+</tr>
+</tbody>
+</table>
+<h3 id="capability-composition">Capability Composition</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Common capability sets (long form for readability)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> capability:read-only</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  &#39;(<span class="kw">read</span> stat readdir xattr-read acl-read))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> capability:read-write</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  &#39;(<span class="kw">read</span> <span class="kw">write</span> create stat chmod readdir mkdir xattr-read xattr-write))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> capability:full</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  &#39;(<span class="kw">read</span> <span class="kw">write</span> create delete rename</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    stat chmod chown</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    xattr-read xattr-write acl-read acl-write</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    readdir mkdir rmdir admin delegate audit-read rate-limit))</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> capability:backup</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  &#39;(<span class="kw">read</span> stat readdir xattr-read acl-read))</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> capability:synchronize</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  &#39;(<span class="kw">read</span> <span class="kw">write</span> create delete rename</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    stat chmod readdir mkdir rmdir</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    xattr-read xattr-write))</span></code></pre></div>
+<h3 id="capability-attenuation">Capability Attenuation</h3>
+<p>Capabilities can only be reduced, never amplified:<a href="#fn5"
+class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">wormhole-delegate </span>wormhole new-caps recipient)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Delegate subset of wormhole capabilities&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((my-caps (wormhole-capabilities wormhole)))</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    (unless (subset? new-caps my-caps)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> &#39;capability-amplification</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>             <span class="st">&quot;Cannot delegate capabilities you don&#39;t have&quot;</span>))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    (wormhole-cert</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>     (wormhole-issuer wormhole)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>     (wormhole-fs-path wormhole)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>     (wormhole-vault-path wormhole)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>     new-caps</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>     recipient: recipient)))</span></code></pre></div>
+<h3 id="opening-a-wormhole">Opening a Wormhole</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">wormhole-open </span>fs-path <span class="ex">#!key</span> (<span class="fu">vault-path </span><span class="st">&quot;/&quot;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                                     (<span class="fu">capabilities </span>capability:read-write)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                                     (<span class="fu">rate-limit </span><span class="dv">1000</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                                     (<span class="fu">locked </span><span class="dv">#f</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                                     (<span class="fu">auth-required </span>&#39;())</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                                     (<span class="fu">certificate </span><span class="dv">#f</span>))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Open wormhole - requires valid certificate&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  (unless certificate</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> &#39;unauthorized <span class="st">&quot;Wormhole requires SPKI certificate&quot;</span>))</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  (unless (verify-wormhole-cert certificate fs-path vault-path)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> &#39;unauthorized <span class="st">&quot;Invalid wormhole certificate&quot;</span>))</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Audit the open</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  (wormhole-audit &#39;wormhole-open fs-path</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                  `((vault ,vault-path)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                    (capabilities ,(<span class="kw">length</span> capabilities))))</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Proceed with FUSE mount</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
+<h3 id="usage-examples">Usage Examples</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Basic read-write wormhole</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>(wormhole-open <span class="st">&quot;~/Cyberspace&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Read-only wormhole for browsing</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>(wormhole-open <span class="st">&quot;~/Archive&quot;</span> capabilities: capability:read-only)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Sync wormhole with rate limiting</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>(wormhole-open <span class="st">&quot;~/Sync&quot;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  capabilities: capability:synchronize</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  rate-limit: <span class="dv">500</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">;; Locked wormhole requiring unlock for sensitive operations</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>(wormhole-open <span class="st">&quot;~/Secure&quot;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  capabilities: capability:full</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  locked: <span class="dv">#t</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  auth-required: &#39;(delete admin))</span></code></pre></div>
+<hr />
+<h2 id="architecture">Architecture</h2>
+<h3 id="mount-topology">Mount Topology</h3>
+<pre><code>~/Cyberspace/                    ← FUSE mount point
+├── documents/
+│   ├── paper.pdf               ← Virtual file (content in vault)
+│   └── notes.txt
+├── projects/
+│   └── cyberspace/
+│       └── ...
+└── .vault/                      ← Hidden, actual storage
+    ├── objects/                 ← Content-addressed blobs
+    │   ├── sha256:abc123...
+    │   └── sha256:def456...
+    ├── manifests/               ← Directory → file mappings
+    └── metadata/                ← Per-file metadata store</code></pre>
+<h3 id="component-stack">Component Stack</h3>
+<pre><code>┌─────────────────────────────────────┐
+│         Applications                │
+│    (Finder, cp, rsync, etc.)        │
+├─────────────────────────────────────┤
+│         VFS (kernel)                │
+├─────────────────────────────────────┤
+│      FUSE-T / macFUSE               │
+├─────────────────────────────────────┤
+│    cyberspace-fuse daemon           │  ← Our code
+├─────────────────────────────────────┤
+│         Vault layer                 │
+│   (content-address, metadata)       │
+└─────────────────────────────────────┘</code></pre>
+<hr />
+<h2 id="metadata-preservation">Metadata Preservation</h2>
+<h3 id="macos-metadata-captured">macOS Metadata Captured</h3>
+<p><em>Table 1: Preserved Metadata</em></p>
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 31%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr>
+<th>Category</th>
+<th>Attributes</th>
+<th>Capture Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POSIX</td>
+<td>mode, uid, gid, size</td>
+<td><code>stat()</code></td>
+</tr>
+<tr>
+<td>Timestamps</td>
+<td>mtime, atime, ctime, birthtime</td>
+<td><code>stat()</code></td>
+</tr>
+<tr>
+<td>Extended attrs</td>
+<td>Finder info, tags, quarantine</td>
+<td><code>listxattr()</code>, <code>getxattr()</code></td>
+</tr>
+<tr>
+<td>Spotlight</td>
+<td>kMDItem* metadata</td>
+<td><code>mdls</code> / MDItem API</td>
+</tr>
+<tr>
+<td>ACLs</td>
+<td>Access control lists</td>
+<td><code>acl_get_file()</code></td>
+</tr>
+<tr>
+<td>Flags</td>
+<td>hidden, locked, immutable</td>
+<td><code>chflags()</code> / <code>stat()</code></td>
+</tr>
+<tr>
+<td>Resource fork</td>
+<td>Legacy resource data</td>
+<td><code>xattr com.apple.ResourceFork</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="internal-representation">Internal Representation</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;vault-file&gt;</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  (make-vault-file path content-hash metadata)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  vault-file?</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  (path vault-file-path)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  (content-hash vault-file-hash)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  (metadata vault-file-metadata))</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">capture-metadata </span>path)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Capture all macOS metadata for a file&quot;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  `((posix</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>     (mode ,(file-mode path))</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>     (uid ,(file-uid path))</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>     (gid ,(file-gid path))</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>     (size ,(file-size path))</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>     (mtime ,(file-mtime path))</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>     (atime ,(file-atime path))</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>     (ctime ,(file-ctime path))</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>     (birthtime ,(file-birthtime path)))</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    (xattr ,(capture-xattrs path))</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    (flags ,(capture-flags path))</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    (acl ,(capture-acl path))))</span></code></pre></div>
+<h3 id="restoration">Restoration</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">restore-metadata </span>path metadata)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Restore all metadata to a file&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((posix (alist-ref &#39;posix metadata))</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        (xattr (alist-ref &#39;xattr metadata))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        (flags (alist-ref &#39;flags metadata))</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        (acl (alist-ref &#39;acl metadata)))</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    (restore-posix path posix)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    (restore-xattrs path xattr)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    (restore-flags path flags)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    (restore-acl path acl)))</span></code></pre></div>
+<hr />
+<h2 id="fuse-operations">FUSE Operations</h2>
+<h3 id="required-operations">Required Operations</h3>
+<p><em>Table 2: FUSE Operations</em></p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Purpose</th>
+<th>Vault Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>getattr</code></td>
+<td>stat()</td>
+<td>Return stored metadata</td>
+</tr>
+<tr>
+<td><code>readdir</code></td>
+<td>List directory</td>
+<td>Read manifest</td>
+</tr>
+<tr>
+<td><code>open</code></td>
+<td>Open file</td>
+<td>Validate hash exists</td>
+</tr>
+<tr>
+<td><code>read</code></td>
+<td>Read content</td>
+<td>Fetch by content hash</td>
+</tr>
+<tr>
+<td><code>write</code></td>
+<td>Write content</td>
+<td>Content-address, update manifest</td>
+</tr>
+<tr>
+<td><code>create</code></td>
+<td>Create file</td>
+<td>Allocate manifest entry</td>
+</tr>
+<tr>
+<td><code>unlink</code></td>
+<td>Delete file</td>
+<td>Remove from manifest (GC later)</td>
+</tr>
+<tr>
+<td><code>mkdir</code></td>
+<td>Create directory</td>
+<td>Create manifest node</td>
+</tr>
+<tr>
+<td><code>rmdir</code></td>
+<td>Remove directory</td>
+<td>Remove manifest node</td>
+</tr>
+<tr>
+<td><code>rename</code></td>
+<td>Move/rename</td>
+<td>Update manifest path</td>
+</tr>
+<tr>
+<td><code>setxattr</code></td>
+<td>Set extended attr</td>
+<td>Store in metadata</td>
+</tr>
+<tr>
+<td><code>getxattr</code></td>
+<td>Get extended attr</td>
+<td>Retrieve from metadata</td>
+</tr>
+<tr>
+<td><code>listxattr</code></td>
+<td>List extended attrs</td>
+<td>Enumerate metadata</td>
+</tr>
+</tbody>
+</table>
+<h3 id="implementation-sketch">Implementation Sketch</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">fuse-getattr </span>path)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Return file attributes from vault metadata&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((entry (manifest-lookup path)))</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> entry</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((meta (vault-file-metadata entry)))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>          (make-stat</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>           (alist-ref &#39;mode (alist-ref &#39;posix meta))</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>           (alist-ref &#39;size (alist-ref &#39;posix meta))</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>           (alist-ref &#39;mtime (alist-ref &#39;posix meta))</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>           <span class="op">...</span>))</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        -ENOENT)))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">fuse-read </span>path size offset)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Read file content from vault&quot;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((entry (manifest-lookup path))</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>         (hash (vault-file-hash entry))</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>         (content (vault-fetch hash)))</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    (subbytes content offset (<span class="op">+</span> offset size))))</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">fuse-write </span>path data offset)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Write to file, content-address the result&quot;</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((entry (manifest-lookup path))</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>         (current (vault-fetch (vault-file-hash entry)))</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>         (updated (bytes-splice current offset data))</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>         (new-hash (content-address updated)))</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    (manifest-update! path new-hash)</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">string-length</span> data)))</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">fuse-setxattr </span>path name value)</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Store extended attribute in vault metadata&quot;</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((entry (manifest-lookup path)))</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    (metadata-set-xattr! entry name value)</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span>))</span></code></pre></div>
+<hr />
+<h2 id="content-addressing">Content Addressing</h2>
+<p>Files are stored by content hash (RFC-020):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">content-address </span>data)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Store data, return hash&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((hash (sha256 data))</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>         (path (vault-object-path hash)))</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    (unless (<span class="kw">file-exists?</span> path)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>      (write-blob path data))</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    hash))</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">vault-fetch </span>hash)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Retrieve data by hash&quot;</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  (read-blob (vault-object-path hash)))</span></code></pre></div>
+<p>Benefits: - Identical files stored once (deduplication) - Integrity
+verification on every read - Immutable objects enable safe caching</p>
+<hr />
+<h2 id="synchronization">Synchronization</h2>
+<h3 id="change-detection">Change Detection</h3>
+<p>The FUSE layer captures all writes in real-time. No separate sync
+needed for local changes.</p>
+<p>For multi-device sync, the manifest includes version vectors
+(RFC-012):</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">manifest-entry </span>path hash metadata)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  `(entry</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    (path ,path)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    (hash ,hash)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    (metadata ,metadata)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    (version-vector ,*local-node* ,*lamport-clock*)))</span></code></pre></div>
+<h3 id="conflict-resolution">Conflict Resolution</h3>
+<p>When merging manifests from different devices (RFC-016 lazy
+clustering):</p>
+<ol type="1">
+<li>Same hash → No conflict (identical content)</li>
+<li>Different hash, one newer → Take newer</li>
+<li>Different hash, concurrent → Conflict, apply
+<code>lazy-resolve</code></li>
+</ol>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">merge-manifests </span>local remote)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>   (<span class="kw">lambda</span> (path)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">let</span> ((l (manifest-lookup local path))</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>           (r (manifest-lookup remote path)))</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">cond</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        ((<span class="kw">not</span> l) (manifest-add! local r))</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        ((<span class="kw">not</span> r) &#39;keep-local)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        ((<span class="kw">equal?</span> (vault-file-hash l) (vault-file-hash r)) &#39;identical)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        ((version-newer? r l) (manifest-update! local r))</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        ((version-newer? l r) &#39;keep-local)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">else</span> (queue-conflict! path l r)))))</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>   (union (manifest-paths local) (manifest-paths remote))))</span></code></pre></div>
+<hr />
+<h2 id="mount-commands">Mount Commands</h2>
+<h3 id="repl-interface">REPL Interface</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">vault-mount </span>point)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Mount vault at filesystem path&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  (fuse-main point</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    `((getattr <span class="op">.</span> ,fuse-getattr)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>      (readdir <span class="op">.</span> ,fuse-readdir)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>      (open <span class="op">.</span> ,fuse-open)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">read</span> <span class="op">.</span> ,fuse-read)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">write</span> <span class="op">.</span> ,fuse-write)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>      (create <span class="op">.</span> ,fuse-create)</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>      (unlink <span class="op">.</span> ,fuse-unlink)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>      (mkdir <span class="op">.</span> ,fuse-mkdir)</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>      (rmdir <span class="op">.</span> ,fuse-rmdir)</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>      (rename <span class="op">.</span> ,fuse-rename)</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>      (setxattr <span class="op">.</span> ,fuse-setxattr)</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>      (getxattr <span class="op">.</span> ,fuse-getxattr)</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>      (listxattr <span class="op">.</span> ,fuse-listxattr))))</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">vault-unmount </span>point)</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Unmount vault filesystem&quot;</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>  (fuse-unmount point))</span></code></pre></div>
+<h3 id="command-line">Command Line</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mount</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">cyberspace</span> mount ~/Cyberspace</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Unmount</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">cyberspace</span> unmount ~/Cyberspace</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Or via REPL</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="ex">$</span> ./cyberspace-repl</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> <span class="kw">(</span><span class="ex">vault-mount</span> <span class="st">&quot;~/Cyberspace&quot;</span><span class="kw">)</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="ex">Mounted</span> vault at /Users/ddp/Cyberspace</span></code></pre></div>
+<hr />
+<h2 id="macos-integration">macOS Integration</h2>
+<h3 id="fuse-t-vs-macfuse">FUSE-T vs macFUSE</h3>
+<p><em>Table 3: FUSE Implementation Options</em></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>macFUSE</th>
+<th>FUSE-T</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kernel extension</td>
+<td>Yes (deprecated)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>System extension</td>
+<td>Optional</td>
+<td>Uses NFS</td>
+</tr>
+<tr>
+<td>SIP compatible</td>
+<td>Requires disable</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Better</td>
+<td>Adequate</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Active</td>
+<td>Active</td>
+</tr>
+</tbody>
+</table>
+<p>FUSE-T recommended for new installations—no kernel extension
+required.<a href="#fn6" class="footnote-ref" id="fnref6"
+role="doc-noteref"><sup>6</sup></a></p>
+<h3 id="installation">Installation</h3>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># FUSE-T (recommended)</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install fuse-t</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Or macFUSE (if kernel ext acceptable)</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install macfuse</span></code></pre></div>
+<h3 id="finder-integration">Finder Integration</h3>
+<p>The mount appears as a regular volume in Finder. Optional
+<code>.VolumeIcon.icns</code> for custom icon.</p>
+<p>Spotlight indexing can be enabled by implementing
+<code>getxattr</code> for <code>com.apple.FinderInfo</code> and related
+Spotlight attributes.</p>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="permissions">Permissions</h3>
+<p>FUSE daemon runs as user, not root. Respects vault ACLs.</p>
+<h3 id="content-integrity">Content Integrity</h3>
+<p>Every read verifies content hash. Corruption detected
+immediately.</p>
+<h3 id="metadata-trust">Metadata Trust</h3>
+<p>Metadata is stored separately from content. A compromised metadata
+store cannot alter file contents (hashes won’t match).</p>
+<h3 id="mount-security">Mount Security</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">vault-mount </span>point <span class="ex">#!key</span> (<span class="fu">allow-other </span><span class="dv">#f</span>))</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; allow-other permits other users to access mount</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Default: owner only</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>)</span></code></pre></div>
+<hr />
+<h2 id="dependencies">Dependencies</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FUSE-T or macFUSE</td>
+<td>Userspace filesystem</td>
+</tr>
+<tr>
+<td>libfuse</td>
+<td>FUSE library</td>
+</tr>
+<tr>
+<td>Scheme FFI</td>
+<td>Bindings to libfuse</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>RFC-012: Lamport Clocks</li>
+<li>RFC-016: Lazy Clustering</li>
+<li>RFC-020: Content-Addressed Storage</li>
+<li>FUSE documentation: https://libfuse.github.io/</li>
+<li>FUSE-T: https://github.com/macos-fuse-t/fuse-t</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-07</strong> - Initial specification</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Draft</p>
+<section id="footnotes" class="footnotes footnotes-end-of-document"
+role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Historical: FUSE originated in Linux 2.6 (2005),
+inspired by earlier userspace filesystem work in Plan 9 and Hurd.
+macFUSE (originally MacFUSE) brought it to macOS in 2007. The
+abstraction outlived Apple’s hostility.<a href="#fnref1"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Design: FUSE inverts the usual model. Instead of
+teaching applications about vaults, we teach the vault to speak
+filesystem. Unix got this right: everything is a file.<a href="#fnref2"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Design: Wormholes are attack surface. Unrestricted
+filesystem access defeats vault security. Every wormhole must be
+explicitly authorized, continuously audited, and rate-limited against
+abuse.<a href="#fnref3" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>Design: Rich capabilities enable principle of least
+privilege. A backup agent needs read-only; a sync agent needs read-write
+but not delete. Capabilities compose—grant exactly what’s needed.<a
+href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>Research: Capability attenuation is fundamental to the
+object-capability model. See Miller, “Robust Composition” (2006). You
+cannot grant more authority than you possess.<a href="#fnref5"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>Implementation: FUSE-T implements FUSE API over NFS
+loopback. Slightly higher latency but avoids Apple’s kernel extension
+hostility.<a href="#fnref6" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+</body>
+</html>

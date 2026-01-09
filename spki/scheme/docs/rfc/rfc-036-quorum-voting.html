@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-036-quorum-voting</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<h1 id="rfc-036-quorum-protocol-with-homomorphic-voting">RFC-036: Quorum
+Protocol with Homomorphic Voting</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
+Proposed</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC specifies the quorum protocol for the Library of Cyberspace:
+how principals reach collective decisions through homomorphic
+encryption-based voting, enabling private ballot tallying without
+revealing individual votes. Quorum integrates with threshold governance
+(RFC-007) and Byzantine consensus (RFC-011).</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Collective decisions require:</p>
+<ul>
+<li><strong>Privacy</strong> - Voters shouldn’t know how others
+voted</li>
+<li><strong>Verifiability</strong> - Results must be provably
+correct</li>
+<li><strong>Coercion resistance</strong> - Can’t prove how you voted to
+others</li>
+<li><strong>Availability</strong> - Voting continues despite
+failures</li>
+</ul>
+<p>Traditional approaches fail:</p>
+<ul>
+<li><strong>Open ballot</strong> - No privacy, enables coercion</li>
+<li><strong>Trusted tallier</strong> - Single point of compromise</li>
+<li><strong>Secure multi-party computation</strong> - Complex, high
+communication overhead</li>
+</ul>
+<p>Homomorphic encryption provides:</p>
+<ul>
+<li>Vote on encrypted ballots</li>
+<li>Sum without decryption</li>
+<li>Decrypt only the final tally</li>
+<li>Mathematical proof of correctness</li>
+</ul>
+<hr />
+<h2 id="cryptographic-foundation">Cryptographic Foundation</h2>
+<h3 id="homomorphic-encryption-schemes">Homomorphic Encryption
+Schemes</h3>
+<table>
+<thead>
+<tr>
+<th>Scheme</th>
+<th>Operations</th>
+<th>Performance</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Paillier</strong></td>
+<td>Addition</td>
+<td>Fast</td>
+<td>Vote tallying</td>
+</tr>
+<tr>
+<td><strong>BFV/BGV</strong></td>
+<td>Add + Multiply</td>
+<td>Medium</td>
+<td>Complex predicates</td>
+</tr>
+<tr>
+<td><strong>TFHE</strong></td>
+<td>Arbitrary</td>
+<td>Slow</td>
+<td>General computation</td>
+</tr>
+</tbody>
+</table>
+<p>For quorum voting, Paillier suffices - we only need addition.</p>
+<h3 id="paillier-properties">Paillier Properties</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Additive homomorphism</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>(<span class="op">=</span> (decrypt (he-add (encrypt a) (encrypt b)))</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>   (<span class="op">+</span> a b))</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Scalar multiplication via repeated addition</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>(<span class="op">=</span> (decrypt (he-scalar-mult (encrypt a) k))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>   (<span class="op">*</span> a k))</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Semantic security - ciphertexts indistinguishable</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>(<span class="kw">not</span> (distinguishable? (encrypt <span class="dv">0</span>) (encrypt <span class="dv">1</span>)))</span></code></pre></div>
+<h3 id="key-generation">Key Generation</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;quorum-keys&gt;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  (make-quorum-keys public private threshold shares)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  quorum-keys?</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  (public qk-public)           <span class="co">; Public encryption key</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  (private qk-private)         <span class="co">; Private decryption key (or #f if distributed)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  (threshold qk-threshold)     <span class="co">; M-of-N threshold</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  (shares qk-shares))          <span class="co">; Distributed key shares</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generate-quorum-keys </span>bit-length threshold trustees)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate threshold Paillier keys&quot;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((keys (paillier-keygen bit-length))</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>         (shares (shamir-split (paillier-private keys)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>                               threshold</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                               (<span class="kw">length</span> trustees))))</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    (make-quorum-keys</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      (paillier-public keys)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>      <span class="dv">#f</span>  <span class="co">; No single party holds private key</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>      threshold</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>      (map <span class="kw">cons</span> trustees shares))))</span></code></pre></div>
+<hr />
+<h2 id="ballot-structure">Ballot Structure</h2>
+<h3 id="ballot-definition">Ballot Definition</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;ballot&gt;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (make-ballot id question options threshold deadline)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  ballot?</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  (id ballot-id)                 <span class="co">; Content hash</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (question ballot-question)     <span class="co">; Human-readable question</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  (options ballot-options)       <span class="co">; List of choices</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  (threshold ballot-threshold)   <span class="co">; Votes needed to pass</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  (deadline ballot-deadline))    <span class="co">; Voting closes</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">;; Example ballot</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>(make-ballot</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  id: <span class="st">&quot;sha256:ballot...&quot;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  question: <span class="st">&quot;Accept RFC-042 into standard?&quot;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  options: &#39;(accept reject abstain)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  threshold: &#39;(majority members)  <span class="co">; &gt;50% of members</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  deadline: <span class="dv">1767786000</span>)</span></code></pre></div>
+<h3 id="encrypted-vote">Encrypted Vote</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> &lt;encrypted-vote&gt;</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (make-encrypted-vote ballot-id voter ciphertext proof timestamp signature)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  encrypted-vote?</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  (ballot-id vote-ballot-id)     <span class="co">; Which ballot</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  (voter vote-voter)             <span class="co">; Voter&#39;s public key (or anonymous token)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  (ciphertext vote-ciphertext)   <span class="co">; HE-encrypted choice</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  (proof vote-proof)             <span class="co">; Zero-knowledge proof of validity</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  (timestamp vote-timestamp)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  (signature vote-signature))</span></code></pre></div>
+<h3 id="vote-encoding">Vote Encoding</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; One-hot encoding for multiple choices</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; accept=1, reject=0, abstain=0 → (1, 0, 0)</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">encode-vote </span>choice options)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Encode choice as one-hot vector&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  (map (<span class="kw">lambda</span> (opt)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>         (<span class="kw">if</span> (<span class="kw">eq?</span> opt choice) <span class="dv">1</span> <span class="dv">0</span>))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>       options))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">encrypt-vote </span>choice options public-key)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Encrypt one-hot encoded vote&quot;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  (map (<span class="kw">lambda</span> (v)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>         (paillier-encrypt public-key v))</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>       (encode-vote choice options)))</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">;; Vote for &quot;accept&quot;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>(encrypt-vote &#39;accept &#39;(accept reject abstain) pub-key)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">;; =&gt; (Enc(1), Enc(0), Enc(0))</span></span></code></pre></div>
+<hr />
+<h2 id="voting-protocol">Voting Protocol</h2>
+<h3 id="phase-1-ballot-creation">Phase 1: Ballot Creation</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">create-ballot </span>question options threshold deadline trustees)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create new ballot with threshold decryption&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((keys (generate-quorum-keys <span class="dv">2048</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                                     (<span class="kw">ceiling</span> (<span class="op">/</span> (<span class="kw">length</span> trustees) <span class="dv">2</span>))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                                     trustees))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>         (ballot (make-ballot</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>                   question: question</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                   options: options</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                   threshold: threshold</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                   deadline: deadline)))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Distribute key shares to trustees</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span> (<span class="kw">lambda</span> (trustee share)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>                (secure-send trustee</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                  `(key-share</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>                    (ballot-id ,(ballot-id ballot))</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>                    (share ,share))))</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>              trustees</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>              (qk-shares keys))</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Publish ballot</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    (soup-put ballot type: &#39;ballot)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    (audit-append action: &#39;ballot-created</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>                  ballot: (ballot-id ballot))</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    ballot))</span></code></pre></div>
+<h3 id="phase-2-vote-casting">Phase 2: Vote Casting</h3>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">cast-vote </span>ballot choice voter-key)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Cast encrypted vote with validity proof&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((pub-key (ballot-public-key ballot))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>         (encrypted (encrypt-vote choice (ballot-options ballot) pub-key))</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>         (proof (generate-validity-proof encrypted choice pub-key))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>         (vote (make-encrypted-vote</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>                 ballot-id: (ballot-id ballot)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>                 voter: (key-&gt;principal voter-key)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>                 ciphertext: encrypted</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>                 proof: proof</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>                 timestamp: (current-time))))</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Sign the vote</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    (set-encrypted-vote-signature! vote</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>      (sign-vote voter-key vote))</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Submit</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    (submit-vote vote)</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    vote))</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">submit-vote </span>vote)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Submit vote to ballot coordinator&quot;</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Verify eligibility</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  (unless (eligible-voter? (vote-voter vote) (vote-ballot-id vote))</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> &#39;not-eligible))</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Verify validity proof</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  (unless (verify-validity-proof vote)</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> &#39;invalid-vote-proof))</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Verify not already voted</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  (when (already-voted? (vote-voter vote) (vote-ballot-id vote))</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> &#39;already-voted))</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Record vote</span></span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  (soup-put vote type: &#39;encrypted-vote)</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  (audit-append action: &#39;vote-cast</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>                ballot: (vote-ballot-id vote)</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>                voter: (vote-voter vote)))</span></code></pre></div>
+<h3 id="phase-3-homomorphic-tallying">Phase 3: Homomorphic Tallying</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">tally-votes </span>ballot)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Homomorphically sum all votes&quot;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((votes (soup-query type: &#39;encrypted-vote</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                            ballot-id: (ballot-id ballot)))</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>         (num-options (<span class="kw">length</span> (ballot-options ballot)))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>         (zero-tally (make-list num-options (paillier-encrypt-zero))))</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Sum encrypted votes</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    (fold (<span class="kw">lambda</span> (vote tally)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>            (map paillier-add</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>                 (vote-ciphertext vote)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>                 tally))</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>          zero-tally</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>          votes)))</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">;; After tallying 100 votes:</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co">;; (Enc(47), Enc(41), Enc(12))</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co">;; Still encrypted - no one knows the result yet</span></span></code></pre></div>
+<h3 id="phase-4-threshold-decryption">Phase 4: Threshold Decryption</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">decrypt-tally </span>ballot encrypted-tally)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Threshold decrypt the tally&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((trustees (ballot-trustees ballot))</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>         (threshold (ballot-key-threshold ballot))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>         (shares &#39;()))</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Collect decryption shares</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span> (<span class="kw">lambda</span> (trustee)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>                (<span class="kw">let</span> ((share (request-decryption-share trustee</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>                               (ballot-id ballot)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>                               encrypted-tally)))</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>                  (when share</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>                    (<span class="kw">set!</span> shares (<span class="kw">cons</span> share shares)))))</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>              trustees)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Need threshold shares</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    (unless (<span class="op">&gt;=</span> (<span class="kw">length</span> shares) threshold)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> &#39;insufficient-decryption-shares))</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Combine shares to decrypt</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((plaintext-tally</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>           (map (<span class="kw">lambda</span> (ct)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>                  (threshold-decrypt ct shares))</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>                encrypted-tally)))</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Publish result</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>      (publish-result ballot plaintext-tally)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>      plaintext-tally)))</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">request-decryption-share </span>trustee ballot-id encrypted-tally)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Request trustee&#39;s decryption share&quot;</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((response (tunnel trustee</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>                    `(decryption-share-request</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>                      (ballot-id ,ballot-id)</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>                      (tally ,encrypted-tally)))))</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> (valid-share? response)</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>         response)))</span></code></pre></div>
+<h3 id="phase-5-result-publication">Phase 5: Result Publication</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">publish-result </span>ballot tally)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Publish verified result&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((options (ballot-options ballot))</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>         (result (map <span class="kw">cons</span> options tally))</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>         (winner (determine-winner result (ballot-threshold ballot))))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    (soup-put</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>      `(ballot-result</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        (ballot-id ,(ballot-id ballot))</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        (tally ,result)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>        (winner ,winner)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        (timestamp ,(current-time))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        (total-votes ,(apply <span class="op">+</span> tally)))</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>      type: &#39;ballot-result)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    (audit-append action: &#39;ballot-result</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>                  ballot: (ballot-id ballot)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>                  result: result</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>                  winner: winner)))</span></code></pre></div>
+<hr />
+<h2 id="zero-knowledge-proofs">Zero-Knowledge Proofs</h2>
+<h3 id="vote-validity-proof">Vote Validity Proof</h3>
+<p>Prove vote is valid (exactly one 1, rest 0s) without revealing
+which:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generate-validity-proof </span>encrypted-vote choice public-key)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ZK proof that vote encodes valid choice&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Disjunctive proof: prove one of N possibilities</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Without revealing which</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((n (<span class="kw">length</span> encrypted-vote)))</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    (make-or-proof</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>      (map (<span class="kw">lambda</span> (i)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>             (<span class="kw">if</span> (<span class="op">=</span> i (choice-index choice))</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                 <span class="co">;; Real proof for actual choice</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                 (make-encryption-proof (<span class="kw">list-ref</span> encrypted-vote i) <span class="dv">1</span> public-key)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                 <span class="co">;; Simulated proof for other choices</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>                 (simulate-encryption-proof (<span class="kw">list-ref</span> encrypted-vote i) <span class="dv">1</span> public-key)))</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>           (iota n)))))</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-validity-proof </span>vote)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Verify vote validity without learning choice&quot;</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((proof (vote-proof vote))</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        (ciphertext (vote-ciphertext vote))</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        (pub-key (ballot-public-key (vote-ballot-id vote))))</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Verify OR proof</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> (verify-or-proof proof ciphertext pub-key)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; Verify sum of encrypted values equals Enc(1)</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>         (verify-sum-equals-one ciphertext pub-key))))</span></code></pre></div>
+<h3 id="decryption-share-proof">Decryption Share Proof</h3>
+<p>Prove decryption share is correct:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generate-share-proof </span>share ciphertext trustee-key)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ZK proof that decryption share is correct&quot;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  (make-dlog-proof</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    (share-value share)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    trustee-key</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    ciphertext))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-share-proof </span>share ciphertext trustee-pubkey)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Verify decryption share correctness&quot;</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  (verify-dlog-proof</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    (share-proof share)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    (share-value share)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    trustee-pubkey</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    ciphertext))</span></code></pre></div>
+<hr />
+<h2 id="voter-privacy">Voter Privacy</h2>
+<h3 id="anonymous-voting-tokens">Anonymous Voting Tokens</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">issue-voting-token </span>voter-key ballot-id issuer-key)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Issue blind voting token&quot;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Voter blinds their key</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((blinding-factor (random-scalar))</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>         (blinded-key (blind-key voter-key blinding-factor)))</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Issuer signs blinded key</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((blind-signature (sign issuer-key blinded-key)))</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Voter unblinds signature</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((token (unblind-signature blind-signature blinding-factor)))</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Token proves eligibility without linking to voter</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        (make-voting-token</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>          ballot-id: ballot-id</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>          token: token</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>          <span class="co">;; Cannot be linked to voter-key</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>          )))))</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">vote-anonymously </span>ballot choice token)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Cast vote using anonymous token&quot;</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((vote (cast-vote ballot choice token)))</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Vote linked to token, not voter identity</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    vote))</span></code></pre></div>
+<h3 id="receipt-freeness">Receipt-Freeness</h3>
+<p>Voters cannot prove how they voted (prevents vote
+buying/coercion):</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Re-encryption mixnet for receipt-freeness</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">submit-through-mixnet </span>vote mixnet-nodes)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Submit vote through re-encryption mixnet&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  (fold (<span class="kw">lambda</span> (node encrypted-vote)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>          <span class="co">;; Each node re-encrypts</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">let</span> ((re-encrypted (paillier-rerandomize encrypted-vote)))</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>            <span class="co">;; Shuffle with other votes</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>            (mixnet-shuffle node re-encrypted)))</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        vote</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        mixnet-nodes))</span></code></pre></div>
+<hr />
+<h2 id="quorum-types">Quorum Types</h2>
+<h3 id="simple-majority">Simple Majority</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">simple-majority </span>tally total-eligible)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;More than half of voters&quot;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((total-votes (apply <span class="op">+</span> tally))</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>        (winning-votes (apply <span class="kw">max</span> tally)))</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    (<span class="op">&gt;</span> winning-votes (<span class="op">/</span> total-votes <span class="dv">2</span>))))</span></code></pre></div>
+<h3 id="supermajority">Supermajority</h3>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">supermajority </span>tally fraction)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Require fraction (e.g., 2/3) agreement&quot;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((total-votes (apply <span class="op">+</span> tally))</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>        (winning-votes (apply <span class="kw">max</span> tally)))</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    (<span class="op">&gt;=</span> winning-votes (<span class="op">*</span> fraction total-votes))))</span></code></pre></div>
+<h3 id="threshold-of-eligible">Threshold of Eligible</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">threshold-of-eligible </span>tally total-eligible threshold)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Require threshold of all eligible voters&quot;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((winning-votes (apply <span class="kw">max</span> tally)))</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    (<span class="op">&gt;=</span> winning-votes (<span class="op">*</span> threshold total-eligible))))</span></code></pre></div>
+<h3 id="weighted-voting">Weighted Voting</h3>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">weighted-vote </span>voter-key weight choice ballot)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Cast vote with weight&quot;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Encode weight in vote</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((encoded (map (<span class="kw">lambda</span> (v) (<span class="op">*</span> v weight))</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>                      (encode-vote choice (ballot-options ballot)))))</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    (encrypt-vote-vector encoded (ballot-public-key ballot))))</span></code></pre></div>
+<hr />
+<h2 id="integration-with-governance">Integration with Governance</h2>
+<h3 id="rfc-007-threshold-governance">RFC-007 Threshold Governance</h3>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Quorum voting for threshold operations</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">threshold-operation-vote </span>operation trustees)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Vote on threshold operation&quot;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((ballot (create-ballot</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>                  question: (format <span class="st">&quot;Approve ~a?&quot;</span> operation)</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>                  options: &#39;(approve reject)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>                  threshold: &#39;(supermajority <span class="dv">2</span>/3)</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>                  deadline: (<span class="op">+</span> (current-time) <span class="dv">86400</span>)</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>                  trustees: trustees)))</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Wait for voting</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    (await-ballot-result ballot)))</span></code></pre></div>
+<h3 id="rfc-011-byzantine-consensus">RFC-011 Byzantine Consensus</h3>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Use quorum voting within Byzantine protocol</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">byzantine-propose-vote </span>proposal validators)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Propose via encrypted voting&quot;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((ballot (create-ballot</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>                  question: proposal</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>                  options: &#39;(commit abort)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>                  threshold: &#39;(byzantine-quorum (<span class="kw">length</span> validators))</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>                  trustees: validators)))</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    ballot))</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">byzantine-quorum </span>n)</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;2f+1 for n=3f+1 validators&quot;</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  (<span class="op">+</span> (<span class="op">*</span> <span class="dv">2</span> (<span class="kw">floor</span> (<span class="op">/</span> (<span class="op">-</span> n <span class="dv">1</span>) <span class="dv">3</span>))) <span class="dv">1</span>))</span></code></pre></div>
+<h3 id="key-ceremony-voting">Key Ceremony Voting</h3>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Vote to approve key ceremony</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">key-ceremony-approval </span>ceremony guardians)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Guardians vote to approve ceremony&quot;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((ballot (create-ballot</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>                  question: (format <span class="st">&quot;Approve key ceremony ~a?&quot;</span> (ceremony-id ceremony))</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>                  options: &#39;(approve reject)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>                  threshold: &#39;(unanimous)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>                  deadline: (<span class="op">+</span> (current-time) <span class="dv">3600</span>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>                  trustees: guardians)))</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((result (await-ballot-result ballot)))</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">if</span> (<span class="kw">eq?</span> (result-winner result) &#39;approve)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>          (proceed-ceremony ceremony)</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>          (abort-ceremony ceremony)))))</span></code></pre></div>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="cryptographic-assumptions">Cryptographic Assumptions</h3>
+<table>
+<thead>
+<tr>
+<th>Assumption</th>
+<th>Primitive</th>
+<th>Consequence if Broken</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Decisional Composite Residuosity</td>
+<td>Paillier</td>
+<td>Vote privacy lost</td>
+</tr>
+<tr>
+<td>Discrete Log</td>
+<td>ZK proofs</td>
+<td>Validity unverifiable</td>
+</tr>
+<tr>
+<td>Random Oracle</td>
+<td>Hash functions</td>
+<td>Proof forgery</td>
+</tr>
+</tbody>
+</table>
+<h3 id="attack-mitigations">Attack Mitigations</h3>
+<table>
+<thead>
+<tr>
+<th>Attack</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vote buying</td>
+<td>Receipt-freeness via re-encryption</td>
+</tr>
+<tr>
+<td>Coercion</td>
+<td>Deniable voting tokens</td>
+</tr>
+<tr>
+<td>Ballot stuffing</td>
+<td>Eligibility proofs, audit trail</td>
+</tr>
+<tr>
+<td>Tally manipulation</td>
+<td>Threshold decryption, ZK proofs</td>
+</tr>
+<tr>
+<td>Denial of service</td>
+<td>Rate limiting, deadlines</td>
+</tr>
+</tbody>
+</table>
+<h3 id="audit-trail">Audit Trail</h3>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; All voting actions audited</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>(audit-append action: &#39;ballot-created <span class="op">...</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>(audit-append action: &#39;vote-cast <span class="op">...</span>)      <span class="co">; Voter ID, not choice</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>(audit-append action: &#39;tally-computed <span class="op">...</span>)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>(audit-append action: &#39;share-provided <span class="op">...</span>)</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>(audit-append action: &#39;result-published <span class="op">...</span>)</span></code></pre></div>
+<hr />
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="paillier-costs">Paillier Costs</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Time (2048-bit)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Key generation</td>
+<td>~100ms</td>
+</tr>
+<tr>
+<td>Encrypt</td>
+<td>~5ms</td>
+</tr>
+<tr>
+<td>Homomorphic add</td>
+<td>~0.1ms</td>
+</tr>
+<tr>
+<td>Decrypt</td>
+<td>~5ms</td>
+</tr>
+<tr>
+<td>Threshold decrypt</td>
+<td>~10ms per share</td>
+</tr>
+</tbody>
+</table>
+<h3 id="scalability">Scalability</h3>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; For N voters, M options:</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Encryption: O(N * M) operations</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Tallying: O(N * M) additions (fast)</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; - Decryption: O(M * threshold) operations</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; 10,000 voters, 3 options, 5 trustees:</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; ~50,000 encryptions (parallel)</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; ~30,000 additions (&lt;1 second)</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; ~15 decryptions (~150ms)</span></span></code></pre></div>
+<hr />
+<h2 id="implementation-notes">Implementation Notes</h2>
+<h3 id="dependencies">Dependencies</h3>
+<ul>
+<li><code>paillier</code> - Paillier cryptosystem</li>
+<li><code>shamir</code> - Secret sharing for threshold keys</li>
+<li><code>zkp</code> - Zero-knowledge proof primitives</li>
+<li><code>srfi-27</code> - Random number generation</li>
+</ul>
+<h3 id="libraries">Libraries</h3>
+<p>Recommended implementations: - OpenFHE (C++) - Full HE library -
+python-paillier - Reference implementation - threshold-paillier -
+Distributed key generation</p>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>Paillier, P. (1999). Public-Key Cryptosystems Based on Composite
+Degree Residuosity Classes</li>
+<li>Benaloh, J. (1994). Dense Probabilistic Encryption</li>
+<li>Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and
+Optimally Efficient Multi-Authority Election Scheme</li>
+<li>RFC-007: Threshold Signature Governance</li>
+<li>RFC-011: Byzantine Consensus</li>
+<li>RFC-022: Key Ceremony Protocol</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>2026-01-07</strong> - Initial draft</li>
+</ul>
+<hr />
+<p><strong>Implementation Status:</strong> Proposed
+<strong>Dependencies:</strong> paillier, shamir, zkp, spki
+<strong>Integration:</strong> Threshold governance, Byzantine consensus,
+key ceremonies</p>
+</body>
+</html>

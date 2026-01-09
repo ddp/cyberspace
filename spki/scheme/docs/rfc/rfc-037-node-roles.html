@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-037-node-roles</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<h1 id="rfc-037-node-roles-and-capabilities">RFC-037: Node Roles and
+Capabilities</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
+spki/scheme/vault.scm, cyberspace-repl</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC defines functional roles for nodes in a Library of
+Cyberspace confederation based on compute, storage, network, and
+security capabilities. Roles determine what operations a node can
+perform and how it participates in the distributed system.</p>
+<hr />
+<h2 id="terminology">Terminology</h2>
+<p><strong>Realm</strong>: A node’s place in cyberspace. A realm
+encompasses: - The node’s <strong>vault</strong> (local
+content-addressed object store) - The node’s <strong>principal</strong>
+(Ed25519 identity) - The node’s <strong>capabilities</strong> (hardware,
+network, security) - The node’s <strong>objects</strong> (what it stores
+and serves)</p>
+<p>A realm is local-first and sovereign. The node controls what to
+share, who to trust, what to replicate. When nodes federate, their
+realms overlap - objects flow between them according to trust
+relationships.</p>
+<p>The hardware manifest stored at <code>.vault/node-hardware</code>
+declares what kind of place this realm occupies in cyberspace.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>RFC-010 (Federation Protocol) defines <strong>trust
+relationships</strong> between peers (publisher, subscriber, peer).
+However, it does not address <strong>functional capabilities</strong> -
+what operations each node can actually perform based on its hardware and
+network constraints.</p>
+<p>A Raspberry Pi on a solar-powered satellite uplink has different
+capabilities than a rack-mounted server in a datacenter. The system
+should:</p>
+<ol type="1">
+<li><strong>Self-assess</strong> - Nodes should know their own
+capabilities</li>
+<li><strong>Declare</strong> - Nodes should advertise their role to
+peers</li>
+<li><strong>Adapt</strong> - Operations should degrade gracefully based
+on available roles</li>
+<li><strong>Persist</strong> - Role assignments should survive
+restarts</li>
+</ol>
+<hr />
+<h2 id="node-roles">Node Roles</h2>
+<h3 id="role-hierarchy">Role Hierarchy</h3>
+<pre><code>                    ┌─────────────┐
+                    │ COORDINATOR │  Byzantine consensus, threshold signing
+                    │   (rare)    │  Always-on, high compute
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+       ┌───────────┐ ┌───────────┐ ┌───────────┐
+       │   FULL    │ │  WITNESS  │ │ ARCHIVER  │
+       │   NODE    │ │           │ │           │
+       └─────┬─────┘ └───────────┘ └───────────┘
+             │
+             ▼
+       ┌───────────┐
+       │   EDGE    │  Read-only, mobile, intermittent
+       └───────────┘</code></pre>
+<h3 id="role-definitions">Role Definitions</h3>
+<table>
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Compute</th>
+<th>Storage</th>
+<th>Network</th>
+<th>Operations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>coordinator</strong></td>
+<td>High</td>
+<td>Medium</td>
+<td>Always-on</td>
+<td>Byzantine consensus, threshold signing, key ceremony</td>
+</tr>
+<tr>
+<td><strong>full</strong></td>
+<td>Medium</td>
+<td>High</td>
+<td>Reliable</td>
+<td>All vault operations, replication origin</td>
+</tr>
+<tr>
+<td><strong>witness</strong></td>
+<td>Low</td>
+<td>High</td>
+<td>Intermittent</td>
+<td>Passive storage, hash verification, audit</td>
+</tr>
+<tr>
+<td><strong>archiver</strong></td>
+<td>Low</td>
+<td>Maximum</td>
+<td>Batch</td>
+<td>Cold storage, offline preservation</td>
+</tr>
+<tr>
+<td><strong>edge</strong></td>
+<td>Minimal</td>
+<td>Minimal</td>
+<td>Sporadic</td>
+<td>Read-only sync, mobile access</td>
+</tr>
+</tbody>
+</table>
+<h3 id="capability-requirements">Capability Requirements</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(node-role-capabilities</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  (coordinator</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    (compute    (min-cores <span class="dv">4</span>) (min-ram-gb <span class="dv">8</span>))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    (storage    (min-gb <span class="dv">100</span>) (type ssd))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    (network    (uptime <span class="fl">0.99</span>) (latency-ms <span class="dv">50</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    (security   (hsm optional) (secure-enclave optional)))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  (full</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    (compute    (min-cores <span class="dv">2</span>) (min-ram-gb <span class="dv">4</span>))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    (storage    (min-gb <span class="dv">500</span>) (type any))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    (network    (uptime <span class="fl">0.95</span>) (latency-ms <span class="dv">200</span>))</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    (security   (signing-key required)))</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  (witness</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    (compute    (min-cores <span class="dv">1</span>) (min-ram-gb <span class="dv">1</span>))</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    (storage    (min-gb <span class="dv">100</span>) (type any))</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    (network    (uptime <span class="fl">0.50</span>) (latency-ms <span class="dv">1000</span>))</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    (security   (verify-key required)))</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  (archiver</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    (compute    (min-cores <span class="dv">1</span>) (min-ram-gb <span class="dv">512</span>mb))</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    (storage    (min-gb <span class="dv">1000</span>) (type cold))</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    (network    (uptime <span class="fl">0.10</span>) (batch-ok <span class="dv">#t</span>))</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    (security   (verify-key required) (offline-ok <span class="dv">#t</span>)))</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  (edge</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    (compute    (min-cores <span class="dv">1</span>) (min-ram-gb <span class="dv">256</span>mb))</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    (storage    (min-gb <span class="dv">1</span>) (type any))</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    (network    (uptime <span class="fl">0.01</span>) (latency-ms <span class="dv">5000</span>))</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    (security   (read-only <span class="dv">#t</span>))))</span></code></pre></div>
+<hr />
+<h2 id="role-detection">Role Detection</h2>
+<h3 id="automatic-probing">Automatic Probing</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">node-probe-capabilities</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Probe local system capabilities&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  `((compute</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>     (cores ,(get-cpu-cores))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>     (ram-gb ,(get-ram-gb))</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>     (load-avg ,(get-load-average)))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    (storage</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>     (available-gb ,(get-available-storage))</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>     (type ,(detect-storage-type)))</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    (network</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>     (latency-ms ,(probe-network-latency))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>     (bandwidth-mbps ,(estimate-bandwidth))</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>     (type ,(detect-network-type)))  <span class="co">; ethernet, wifi, cellular, satellite</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    (security</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>     (signing-key ,(has-signing-key?))</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>     (verify-key ,(has-verify-key?))</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>     (hsm ,(has-hsm?)))))</span></code></pre></div>
+<h3 id="role-assignment">Role Assignment</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">node-assign-role </span>capabilities)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Assign role based on probed capabilities&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((compute (<span class="kw">assq</span> &#39;compute capabilities))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        (storage (<span class="kw">assq</span> &#39;storage capabilities))</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        (network (<span class="kw">assq</span> &#39;network capabilities)))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">cond</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Coordinator: high everything</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>     ((<span class="kw">and</span> (<span class="op">&gt;=</span> (get-cores compute) <span class="dv">4</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>           (<span class="op">&gt;=</span> (get-ram compute) <span class="dv">8</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>           (<span class="op">&lt;=</span> (get-latency network) <span class="dv">50</span>))</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>      &#39;coordinator)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Full node: medium compute, high storage</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>     ((<span class="kw">and</span> (<span class="op">&gt;=</span> (get-cores compute) <span class="dv">2</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>           (<span class="op">&gt;=</span> (get-storage storage) <span class="dv">500</span>))</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>      &#39;full)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Archiver: low compute, massive storage, batch network</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>     ((<span class="kw">and</span> (<span class="op">&gt;=</span> (get-storage storage) <span class="dv">1000</span>)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>           (<span class="kw">eq?</span> (get-network-type network) &#39;batch))</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>      &#39;archiver)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Witness: low compute, decent storage</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>     ((<span class="op">&gt;=</span> (get-storage storage) <span class="dv">100</span>)</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>      &#39;witness)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Edge: everything else</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">else</span> &#39;edge))))</span></code></pre></div>
+<hr />
+<h2 id="role-declaration">Role Declaration</h2>
+<h3 id="local-configuration">Local Configuration</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; ~/.cyberspace/node-role</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>(node-config</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (role witness)                    <span class="co">; Declared role</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (auto-detect <span class="dv">#f</span>)                  <span class="co">; Don&#39;t override with probed</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (capabilities                     <span class="co">; Known constraints</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    (network (type satellite)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>             (latency-ms <span class="dv">600</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>             (bandwidth-mbps <span class="dv">100</span>))))</span></code></pre></div>
+<h3 id="role-announcement">Role Announcement</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">node-announce-role</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Announce role to federation peers&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((role (node-current-role))</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        (caps (node-probe-capabilities))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        (key (vault-config &#39;signing-key)))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    (when key</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((announcement</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>             `(node-role-announcement</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>               (principal ,(get-vault-principal key))</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>               (role ,role)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>               (capabilities ,caps)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>               (timestamp ,(current-seconds)))))</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Sign and broadcast</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        (federation-broadcast</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>         (sign-announcement announcement key))))))</span></code></pre></div>
+<hr />
+<h2 id="role-based-operation-constraints">Role-Based Operation
+Constraints</h2>
+<h3 id="operation-matrix">Operation Matrix</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>coordinator</th>
+<th>full</th>
+<th>witness</th>
+<th>archiver</th>
+<th>edge</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>seal-commit</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>seal-release</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>seal-archive</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>seal-restore</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>seal-publish</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>seal-subscribe</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>seal-synchronize</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>seal-verify</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>threshold-sign</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>byzantine-vote</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>key-ceremony</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>audit-append</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>audit-verify</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="graceful-degradation">Graceful Degradation</h3>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">node-can-perform? </span>operation)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Check if current role permits operation&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((role (node-current-role))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        (required (operation-required-role operation)))</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    (role-permits? role required)))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">role-permits? </span>actual required)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Check role hierarchy&quot;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((hierarchy &#39;(coordinator full witness archiver edge)))</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    (<span class="op">&lt;=</span> (list-index hierarchy actual)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        (list-index hierarchy required))))</span></code></pre></div>
+<hr />
+<h2 id="starlink-considerations">Starlink Considerations</h2>
+<p>Per RFC-016, the system is optimized for satellite links:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(node-config</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  (role witness)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  (network</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    (type satellite)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    (provider starlink)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    (characteristics</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>      (latency-ms <span class="dv">20-40</span>)           <span class="co">; Low-earth orbit</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>      (bandwidth-mbps <span class="dv">100-200</span>)     <span class="co">; Bursty</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      (jitter high)                <span class="co">; Variable</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>      (uptime <span class="fl">0.95</span>)                <span class="co">; Weather dependent</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>      (data-cap none))))           <span class="co">; Unlimited for now</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co">;; Satellite-optimized behavior</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *satellite-mode*</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  &#39;((batch-sync <span class="dv">#t</span>)                <span class="co">; Aggregate operations</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    (lazy-pull <span class="dv">#t</span>)                 <span class="co">; Don&#39;t fetch eagerly</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    (compress-always <span class="dv">#t</span>)           <span class="co">; Minimize transfer</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    (retry-aggressive <span class="dv">#t</span>)          <span class="co">; Handle drops</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    (heartbeat-interval <span class="dv">300</span>)))     <span class="co">; 5 min, not seconds</span></span></code></pre></div>
+<h3 id="role-implications-for-satellite-nodes">Role Implications for
+Satellite Nodes</h3>
+<ul>
+<li><strong>coordinator</strong>: Generally NOT suitable for satellite
+(latency too variable for consensus)</li>
+<li><strong>full</strong>: Marginal (can work with lazy clustering)</li>
+<li><strong>witness</strong>: IDEAL (passive, tolerates latency)</li>
+<li><strong>archiver</strong>: IDEAL (batch operations)</li>
+<li><strong>edge</strong>: IDEAL (intermittent by design)</li>
+</ul>
+<hr />
+<h2 id="implementation">Implementation</h2>
+<h3 id="repl-commands">REPL Commands</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Probe and display capabilities</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(node-probe)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Show current role</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>(node-role)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Set role explicitly</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>(node-role &#39;witness)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">;; Check if operation permitted</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>(node-can? &#39;threshold-sign)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co">;; Announce role to peers</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>(node-announce)</span></code></pre></div>
+<h3 id="persistence">Persistence</h3>
+<p>Role configuration stored in the realm:</p>
+<pre><code>~/.cyberspace/node-role      ; User override (global)
+.vault/node-role             ; Realm-specific role
+.vault/node-hardware         ; Hardware manifest (auto-refreshed)</code></pre>
+<p>The hardware manifest is automatically updated on REPL startup,
+declaring the realm’s capabilities to federated peers.</p>
+<h3 id="audit-trail">Audit Trail</h3>
+<p>Role changes are auditable events:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  (type node-role-change)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736280000</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  (from edge)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  (to witness)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  (reason <span class="st">&quot;Storage expanded&quot;</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  (actor #<span class="op">${</span>principal<span class="op">}</span>))</span></code></pre></div>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="role-spoofing">Role Spoofing</h3>
+<p>A node could claim a higher role than its capabilities warrant.
+Mitigations:</p>
+<ol type="1">
+<li><strong>Capability proofs</strong>: Require benchmark results</li>
+<li><strong>Peer validation</strong>: Other nodes can challenge
+claims</li>
+<li><strong>Reputation</strong>: Track role fulfillment history</li>
+<li><strong>Threshold trust</strong>: Multiple witnesses needed</li>
+</ol>
+<h3 id="role-downgrade-attacks">Role Downgrade Attacks</h3>
+<p>An attacker could force nodes to operate at lower roles:</p>
+<ol type="1">
+<li><strong>Signed role declarations</strong>: Can’t forge</li>
+<li><strong>Local override</strong>: Node controls own role</li>
+<li><strong>Audit trail</strong>: Role changes are logged</li>
+</ol>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>RFC-010: Federation Protocol</li>
+<li>RFC-011: Byzantine Consensus</li>
+<li>RFC-016: Lazy Clustering</li>
+<li>RFC-017: Security Considerations</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li>2026-01-07 - Initial draft</li>
+</ul>
+</body>
+</html>
