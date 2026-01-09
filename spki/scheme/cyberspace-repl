@@ -147,8 +147,9 @@
         (arch (current-arch))
         ;; Build order matters: dependencies before dependents
         ;; vault imports cert, crypto-ffi, audit
-        ;; enroll imports wordlist, crypto-ffi
-        (modules '("crypto-ffi" "sexp" "audit" "cert" "wordlist" "enroll" "vault")))
+        ;; enroll imports wordlist, crypto-ffi, mdns
+        ;; gossip imports bloom, catalog, crypto-ffi
+        (modules '("crypto-ffi" "sexp" "audit" "cert" "wordlist" "mdns" "bloom" "catalog" "enroll" "gossip" "vault")))
     (for-each
      (lambda (module)
        (when (needs-rebuild? module stamp)
@@ -165,7 +166,11 @@
 (import cert)
 (import sexp)
 (import wordlist)
+(import mdns)
+(import bloom)
+(import catalog)
 (import enroll)
+(import gossip)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -2422,8 +2427,35 @@ Cyberspace REPL - Available Commands:
     (introspect-hardware)            Hardware config
     (introspect-network)             Network interfaces
     (introspect-storage)             Storage info
+
+  mDNS Discovery (RFC-044):
+    (mdns-announce name pubkey)      Broadcast enrollment request
+    (mdns-listen handler)            Listen for mDNS announcements
+    (mdns-query service)             Query for service
     (announce-presence n k)          Start mDNS presence
     (discover-peers)                 Find peers on network
+
+  Bloom Filters (RFC-020):
+    (make-blocked-bloom n fpp)       Create blocked Bloom filter
+    (blocked-bloom-add! bf item)     Add item to filter
+    (blocked-bloom-contains? bf i)   Test membership
+    (blocked-bloom-merge bf1 bf2)    Merge two filters
+    (blocked-bloom-serialize bf)     Serialize for network
+    (blocked-bloom-deserialize b)    Deserialize from network
+
+  Merkle Catalog (RFC-020):
+    (catalog-build hashes)           Build Merkle tree of hashes
+    (catalog-root cat)               Get root hash
+    (catalog-diff local remote)      Find differing subtrees
+    (catalog-proof cat hash)         Generate inclusion proof
+    (catalog-verify-proof proof)     Verify inclusion proof
+
+  Anti-Entropy Gossip (RFC-010):
+    (gossip-round peers)             One round of gossip
+    (gossip-start interval peers)    Start gossip daemon
+    (gossip-stop)                    Stop gossip daemon
+    (gossip-status)                  Show gossip statistics
+    (gossip-sync peer)               Full sync with peer
 
   Compilation & Replication:
     (compile-source source)          Full compilation pipeline
