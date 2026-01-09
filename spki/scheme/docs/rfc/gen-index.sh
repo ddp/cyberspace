@@ -105,7 +105,7 @@ HEADER
 for rfc in "${RFCS[@]}"; do
   title=$(get_title "$rfc")
   num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
-  formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext Markup Language</a>'
+  formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
   cat >> index.html << EOF
       <tr>
