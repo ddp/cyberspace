@@ -4426,7 +4426,7 @@ Cyberspace REPL - Available Commands
          (cluster-state *cluster-state*)
          (duration (session-duration))
          ;; Build status segments
-         (realm-seg *realm*)
+         (realm-seg (or *realm* "wilderness"))
          (time-seg duration)
          (activity-seg (cond
                          ((> pending-count 0)
@@ -4619,10 +4619,7 @@ Cyberspace REPL - Available Commands
 
 ;; Session start time and realm
 (define *session-start* (current-seconds))
-(define *realm* (let ((dir (current-directory)))
-                  (let ((parts (string-split dir "/")))
-                    (if (null? parts) "unknown"
-                        (last parts)))))
+(define *realm* #f)  ; unaffiliated until instantiated
 
 (define (session-duration)
   "Format session duration in friendly terms"
@@ -4639,7 +4636,9 @@ Cyberspace REPL - Available Commands
       (else (string-append (number->string hours) " hours")))))
 
 ;; Show realm context
-(print "You entered the " *realm* " realm " (session-duration) ".")
+(if *realm*
+    (print "You entered the " *realm* " realm " (session-duration) ".")
+    (print "You are unaffiliated, in the wilderness."))
 (when (directory-exists? ".vault")
   (describe-vault)
   (node-hardware-refresh!)
