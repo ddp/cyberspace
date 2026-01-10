@@ -3572,11 +3572,9 @@ Cyberspace REPL - Available Commands
                               ;; === CHANNEL OPEN ===
                               (channel-set-state! (alist-ref 'id ch) 'open)
                               (print "")
-                              (print "  ╔════════════════════════════════════╗")
-                              (print "  ║      SECURE CHANNEL ESTABLISHED    ║")
-                              (print "  ╚════════════════════════════════════╝")
-                              (print "  Principal: " (short-id their-principal))
-                              (print "  Capabilities: " their-caps)
+                              (print "  Secure channel established.")
+                              (print "    Principal: " (short-id their-principal))
+                              (print "    Capabilities: " their-caps)
 
                               ;; Register in cluster
                               (set! *node-connections* (cons ch *node-connections*))
@@ -3704,11 +3702,9 @@ Cyberspace REPL - Available Commands
                               ;; === CHANNEL OPEN ===
                               (channel-set-state! (alist-ref 'id ch) 'open)
                               (print "")
-                              (print "  ╔════════════════════════════════════╗")
-                              (print "  ║      SECURE CHANNEL ESTABLISHED    ║")
-                              (print "  ╚════════════════════════════════════╝")
-                              (print "  Principal: " (short-id their-principal))
-                              (print "  Capabilities: " their-caps)
+                              (print "  Secure channel established.")
+                              (print "    Principal: " (short-id their-principal))
+                              (print "    Capabilities: " their-caps)
 
                               ;; Register
                               (set! *node-connections* (cons ch *node-connections*))
