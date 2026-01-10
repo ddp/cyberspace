@@ -605,9 +605,17 @@
 
 (define (lazy-join peer #!key (uri #f) (key #f))
   "Register a peer for lazy sync"
-  (set! *lazy-peers* (cons `((peer . ,peer) (uri . ,uri) (key . ,key) (last-sync . never)) *lazy-peers*))
-  (print "Joined lazy cluster with " peer)
-  `(joined ,peer))
+  (cond
+   ((not peer)
+    (print "Join Refused: No peer specified")
+    #f)
+   ((assoc peer *lazy-peers*)
+    (print "Join Refused: Already joined with " peer)
+    #f)
+   (else
+    (set! *lazy-peers* (cons `((peer . ,peer) (uri . ,uri) (key . ,key) (last-sync . never)) *lazy-peers*))
+    (print "Joined lazy cluster with " peer)
+    `(joined ,peer))))
 
 (define (lazy-leave peer)
   "Remove peer from lazy cluster"
@@ -2574,11 +2582,18 @@ Cyberspace REPL - Available Commands
 
 (define (node-join name #!key (uri #f))
   "Add node to cluster"
-  (unless (assoc name *cluster-nodes*)
-    (set! *cluster-nodes* (cons (list name uri (current-seconds)) *cluster-nodes*)))
-  (when (and (eq? *cluster-state* 'solo) (> (length *cluster-nodes*) 0))
-    (set! *cluster-state* 'forming))
-  *cluster-nodes*)
+  (cond
+   ((not name)
+    (print "Join Refused: No node name specified")
+    #f)
+   ((assoc name *cluster-nodes*)
+    (print "Join Refused: Node already in cluster")
+    #f)
+   (else
+    (set! *cluster-nodes* (cons (list name uri (current-seconds)) *cluster-nodes*))
+    (when (and (eq? *cluster-state* 'solo) (> (length *cluster-nodes*) 0))
+      (set! *cluster-state* 'forming))
+    *cluster-nodes*)))
 
 (define (node-leave name)
   "Remove node from cluster"
