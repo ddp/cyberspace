@@ -245,11 +245,8 @@
         (vault-path ,vault-path)
         (vault-exists ,vault-exists)
         ,@(if vault-exists
-              (let ((objects (handle-exceptions exn 0
-                              (length (directory vault-path)))))
-                `((object-count ,objects)
-                  (has-keystore ,(file-exists? (make-pathname vault-path "keystore")))
-                  (has-audit ,(file-exists? (make-pathname vault-path "audit.log")))))
+              `((has-keystore ,(directory-exists? (make-pathname vault-path "keystore")))
+                (has-audit ,(directory-exists? (make-pathname vault-path "audit"))))
               '()))))
 
   (define (introspect-system)
