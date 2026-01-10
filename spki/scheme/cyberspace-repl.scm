@@ -4148,18 +4148,8 @@ Cyberspace REPL - Available Commands
 (define q goodbye)
 (define bye goodbye)
 
-;; Live prompt with vault counts
-(define (live-prompt)
-  "Prompt with live soup counts: objects releases keys peers"
-  (let* ((all (soup-collect-objects))
-         (objs (length all))
-         (rels (length (filter (lambda (o) (eq? (car o) 'releases)) all)))
-         (keys (length (filter (lambda (o) (eq? (car o) 'keys)) all)))
-         (peers (length *cluster-nodes*)))
-    (string-append (number->string objs) "o "
-                   (number->string rels) "r "
-                   (number->string keys) "k "
-                   (number->string peers) "p: ")))
+;; Settable prompt
+(define *prompt* ": ")
 
 ;; Result history
 ;; Use _ for last result (like Python), _1 _2 _3 for previous
@@ -4208,7 +4198,7 @@ Cyberspace REPL - Available Commands
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
-    (let ((line (repl-read-line (live-prompt))))
+    (let ((line (repl-read-line *prompt*)))
       (cond
         ;; EOF (linenoise returns #f, read-line returns eof-object)
         ((or (not line) (eof-object? line))
