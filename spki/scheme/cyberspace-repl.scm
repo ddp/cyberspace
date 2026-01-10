@@ -4180,8 +4180,16 @@ Cyberspace REPL - Available Commands
 (define q goodbye)
 (define bye goodbye)
 
-;; Settable prompt (default: colon like classic Lisp)
-(define *prompt* ": ")
+;; Live prompt with vault counts
+(define (live-prompt)
+  (let ((objs (count-vault-items "objects"))
+        (rels (count-vault-items "releases"))
+        (keys (count-vault-items "keys"))
+        (peers (length *cluster-nodes*)))
+    (string-append (number->string objs) "o "
+                   (number->string rels) "r "
+                   (number->string keys) "k "
+                   (number->string peers) "p: ")))
 
 ;; Result history
 ;; Use _ for last result (like Python), _1 _2 _3 for previous
@@ -4230,7 +4238,7 @@ Cyberspace REPL - Available Commands
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
-    (let ((line (repl-read-line *prompt*)))
+    (let ((line (repl-read-line (live-prompt))))
       (cond
         ;; EOF (linenoise returns #f, read-line returns eof-object)
         ((or (not line) (eof-object? line))
