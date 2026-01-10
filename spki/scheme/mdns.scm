@@ -170,26 +170,32 @@
               (when *listener-running*
                 (handle-exceptions exn
                   (begin
+                    (print "[enroll] accept error: " (get-condition-property exn 'exn 'message "?"))
                     (thread-sleep! 0.1)
                     (loop))
                   (let-values (((in out) (tcp-accept listener)))
+                    (print "[enroll] connection accepted")
                     (handle-exceptions exn
                       (begin
+                        (print "[enroll] read error: " (get-condition-property exn 'exn 'message "?"))
                         (close-input-port in)
                         (close-output-port out))
                       (let ((data (read-string #f in)))
+                        (print "[enroll] received " (if data (string-length data) 0) " bytes")
                         (close-input-port in)
                         (close-output-port out)
                         (when (and data (> (string-length data) 0))
                           (handle-exceptions exn
-                            #f
+                            (print "[enroll] parse error: " (get-condition-property exn 'exn 'message "?"))
                             (let ((request (with-input-from-string data read)))
+                              (print "[enroll] parsed request: " (if (pair? request) (car request) request))
                               (when (and (pair? request)
                                         (eq? (car request) 'enrollment-request))
                                 (let* ((fields (cdr request))
                                        (name (cadr (assq 'name fields)))
                                        (pubkey (cadr (assq 'pubkey fields)))
                                        (req-port (cadr (assq 'port fields))))
+                                  (print "[enroll] calling handler for " name)
                                   (handler name pubkey "local" req-port))))))))
                     (loop))))))))
 
