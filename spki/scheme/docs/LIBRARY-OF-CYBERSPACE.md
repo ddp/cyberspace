@@ -75,8 +75,9 @@ Level 0 ──┬── os ─────────────────�
                                     └──────────┴── Level 2 ── cert ────────┘ │ │
                                                              enroll ─────────┘ │
                                                              gossip ───────────┘
-                                                                    │
-                                               Level 3 ── vault ────┘
+                                                             security ─────────┤
+                                                                    │          │
+                                               Level 3 ── vault ────┴──────────┘
 ```
 
 **Level 0** - No cyberspace module dependencies:
@@ -97,6 +98,7 @@ Level 0 ──┬── os ─────────────────�
 - `cert` — SPKI certificates (← sexp + crypto-ffi)
 - `enroll` — Node enrollment and presence (← crypto-ffi + wordlist)
 - `gossip` — Anti-entropy gossip protocol (← bloom + catalog + crypto-ffi)
+- `security` — Soup security inspector (← cert + sexp + crypto-ffi)
 
 **Level 3** - Full stack:
 - `vault` — Cryptographically sealed version control (← cert + crypto-ffi + audit)

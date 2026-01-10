@@ -170,13 +170,14 @@
         ;;   cert        ← sexp + crypto-ffi
         ;;   enroll      ← crypto-ffi + wordlist
         ;;   gossip      ← bloom + catalog + crypto-ffi
+        ;;   security    ← cert + sexp + crypto-ffi (soup inspector)
         ;;
         ;; Level 3:
         ;;   vault       ← cert + crypto-ffi + audit
         ;;
         (modules '("os" "crypto-ffi" "sexp" "mdns" "app-bundle" "codesign"
                    "audit" "wordlist" "bloom" "catalog"
-                   "cert" "enroll" "gossip"
+                   "cert" "enroll" "gossip" "security"
                    "vault")))
     (for-each
      (lambda (module)
@@ -200,6 +201,7 @@
 (import catalog)
 (import enroll)
 (import gossip)
+(import security)
 (import app-bundle)
 (import codesign)
 
