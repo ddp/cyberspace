@@ -2882,20 +2882,12 @@ Cyberspace REPL - Available Commands
     (void)))
 
 (define (generate-verification-words pubkey)
-  "Generate human-readable verification words from pubkey"
-  ;; Use first bytes of pubkey to select words
-  (let* ((key-str (if (string? pubkey) pubkey (->string pubkey)))
-         (hash (string->number (substring key-str 0 (min 8 (string-length key-str))) 16))
-         (words '("alpha" "bravo" "charlie" "delta" "echo" "foxtrot"
-                  "golf" "hotel" "india" "juliet" "kilo" "lima"
-                  "mike" "november" "oscar" "papa" "quebec" "romeo"
-                  "sierra" "tango" "uniform" "victor" "whiskey" "xray")))
-    (if hash
-        (let* ((w1 (list-ref words (modulo (quotient hash 1000000) 24)))
-               (w2 (list-ref words (modulo (quotient hash 1000) 24)))
-               (w3 (list-ref words (modulo hash 24))))
-          (string-append w1 " " w2 " " w3))
-        "verify manually")))
+  "Generate FIPS-181 verification syllables from pubkey"
+  (let ((key-data (cond
+                    ((blob? pubkey) pubkey)
+                    ((string? pubkey) (string->blob pubkey))
+                    (else (string->blob (->string pubkey))))))
+    (syllables->display (pubkey->syllables key-data))))
 
 (define (enroll-listen #!optional (port 7654))
   "Start listening for enrollment requests (master side)"
@@ -2971,6 +2963,59 @@ Cyberspace REPL - Available Commands
           (set! *pending-enrollments*
                 (filter (lambda (r) (not (eq? r req))) *pending-enrollments*)))))
   (void))
+
+;;; ============================================================
+;;; Enrollment Request (Node Side)
+;;; ============================================================
+
+(define (enroll-to host name #!key (port 7654))
+  "Request enrollment from master at host.
+   host: master's hostname or IP
+   name: name for this node
+   port: master's enrollment port (default 7654)"
+  (print "")
+  (print "┌─ Enrollment Request ─────────────────────────────────────────────┐")
+  (printf "│  Connecting to ~a:~a...~n" host port)
+
+  ;; Generate a keypair for this node (or use existing)
+  (let* ((keypair (ed25519-keypair))
+         (pubkey (car keypair))       ; first element is public key
+         (privkey (cadr keypair))     ; second is private key
+         (pubkey-hex (blob->hex pubkey))
+         (words (generate-verification-words pubkey-hex)))
+
+    (printf "│  Node: ~a~n" name)
+    (print "│")
+    (printf "│  Verification words: ~a~n" words)
+    (print "│")
+    (print "│  Tell the master these words to verify your identity.")
+    (print "├──────────────────────────────────────────────────────────────────┤")
+
+    ;; Try to connect and send request
+    (handle-exceptions exn
+      (begin
+        (print "│  Connection failed!")
+        (printf "│  ~a~n" (get-condition-property exn 'exn 'message "unknown error"))
+        (print "└──────────────────────────────────────────────────────────────────┘"))
+      (let-values (((in out) (tcp-connect host port)))
+        (printf "│  Connected to ~a~n" host)
+        ;; Send enrollment request
+        (let ((request `(enrollment-request
+                          (name ,name)
+                          (pubkey ,pubkey-hex)
+                          (port ,port))))
+          (write request out)
+          (newline out)
+          (flush-output out)
+          (close-output-port out)  ; Signal end of request
+          (close-input-port in)    ; Close for now (cert comes later)
+          (print "│  Enrollment request sent.")
+          (print "│  Awaiting approval - master will see verification words.")
+          (print "└──────────────────────────────────────────────────────────────────┘")
+          ;; Return pending state with keypair for later
+          (list 'pending
+                (cons 'keypair keypair)
+                (cons 'words words)))))))
 
 ;;; ============================================================
 ;;; Symbol Completion
