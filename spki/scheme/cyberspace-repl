@@ -14,6 +14,7 @@
         (chicken base)
         (chicken format)
         (chicken repl)
+        (chicken csi)      ; toplevel-command
         (chicken file)
         (chicken io)
         (chicken port)     ; with-output-to-string
@@ -3451,59 +3452,62 @@ Cyberspace REPL - Available Commands
                           (reverse (cdr (reverse tokens)))))
                 (loop (cons tok tokens))))))))
 
-;; Handle Chicken comma commands via standard REPL infrastructure
-(define (handle-comma-command line)
-  "Process ,command using Chicken's toplevel-command system"
-  (let* ((trimmed (string-trim-both (substring line 1)))
-         (port (open-input-string trimmed))
-         (cmd (read port)))
-    (if (eof-object? cmd)
-        (print "Usage: ,command [args]")
-        ;; Use Chicken's built-in command handling
-        (condition-case
-          (let ((rest (read-string #f port)))
-            ((toplevel-command cmd)
-             (if (or (not rest) (string=? (string-trim-both rest) ""))
-                 #f
-                 (open-input-string rest))))
-          (e ()
-           ;; Fallback for common commands
-           (cond
-            ((memq cmd '(q quit exit))
-             (print "Goodbye.")
-             (exit 0))
-            ((eq? cmd '?)
-             (print "Chicken REPL: ,q ,quit ,exit ,l FILE ,d NAME ,? ..."))
-            (else
-             (print "Unknown command: ," cmd))))))))
+;;; ============================================================
+;;; Help System
+;;; ============================================================
 
-(define (command-repl)
-  "REPL with command mode, paging, and comma escapes"
-  (let loop ()
-    (display "> ")
-    (flush-output)
-    (let ((line (read-line)))
-      (cond
-       ((eof-object? line)
-        (newline)
-        (print "Goodbye."))
-       ;; Comma commands pass through to Chicken
-       ((and (> (string-length line) 0)
-             (char=? (string-ref line 0) #\,))
-        (handle-comma-command line)
-        (loop))
-       (else
-        (condition-case
-          (let ((expr (parse-command-line line)))
-            (when expr
-              (let ((result (eval expr)))
-                (unless (eq? result (void))
-                  (let ((output (result->string result)))
-                    (pager-display output)
-                    (unless (string-suffix? "\n" output)
-                      (newline)))))))
-          (e () (print-error-message e)))
-        (loop))))))
+(define (help)
+  "Display help for the Library of Cyberspace"
+  (print "")
+  (print "Library of Cyberspace - Chicken Scheme REPL")
+  (print "")
+  (print "Vault commands:")
+  (print "  (soup)              - Browse vault objects")
+  (print "  (soup 'keys)        - List keys")
+  (print "  (soup 'releases)    - List releases")
+  (print "  (soup-stat NAME)    - Object details")
+  (print "  (soup-du)           - Disk usage")
+  (print "  (seal-commit MSG)   - Commit changes")
+  (print "  (seal-release VER)  - Create release")
+  (print "")
+  (print "Crypto:")
+  (print "  (ed25519-keypair)   - Generate keypair")
+  (print "  (sha512-hash DATA)  - Hash data")
+  (print "")
+  (print "Federation:")
+  (print "  (enroll-request 'name)  - Request enrollment")
+  (print "  (introspect-system)     - System info")
+  (print "  (discover-peers)        - Find peers")
+  (print "")
+  (print "Chicken REPL:")
+  (print "  ,q ,exit            - Quit")
+  (print "  ,l FILE             - Load file")
+  (print "  ,d NAME             - Describe")
+  (print "  ,?                  - REPL help")
+  (print "")
+  (print vt100-normal)
+  (void))
+
+;; Friendly exit
+(define (goodbye)
+  (print "")
+  (print "Goodbye from the Library of Cyberspace.")
+  (print "")
+  (exit 0))
+
+;; Register comma commands
+(toplevel-command 'help (lambda _ (help)))
+(toplevel-command 'h (lambda _ (help)))
+
+;; Clear screen (VT100)
+(define (clear)
+  (display "\x1b[2J\x1b[H")
+  (void))
+
+;; English-friendly aliases (just call with parens)
+(define keys (lambda () (soup 'keys)))
+(define releases (lambda () (soup-releases)))
+(define status (lambda () (introspect-system)))
 
 ;; Show current directory context
 (print "Working directory: " (current-directory))
@@ -3512,6 +3516,8 @@ Cyberspace REPL - Available Commands
   (node-hardware-refresh!)
   (print "Hardware: " (platform-stamp)))
 (print "")
+(print "Type (help) for help, ,q to quit.")
+(print "")
 
-;; Start command REPL
-(command-repl)
+;; Start Chicken REPL
+(repl)
