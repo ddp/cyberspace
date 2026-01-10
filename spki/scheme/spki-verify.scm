@@ -127,7 +127,7 @@
           ;; Verify chain
           (handle-exceptions exn
             (begin
-              (print "✗ VERIFICATION FAILED: "
+              (print "✗ Verification Failed: "
                      (if (condition? exn)
                          (get-condition-property exn 'exn 'message)
                          (sprintf "~a" exn)))
@@ -136,10 +136,10 @@
             (let ((result (verify-chain root-key certs target-tag)))
               (if result
                   (begin
-                    (print "✓ VALID: Certificate chain grants authorization")
+                    (print "✓ Valid: Certificate chain grants authorization")
                     (exit 0))
                   (begin
-                    (print "✗ INVALID: Certificate chain does not grant authorization")
+                    (print "✗ Invalid: Certificate chain does not grant authorization")
                     (exit 1))))))))))
 
 (main (command-line-arguments))

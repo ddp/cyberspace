@@ -152,10 +152,10 @@
     ;; Check threshold
     (if (verify-threshold-script script-content signatures threshold)
         (begin
-          (print "✓ SUCCESS: Script verified with " threshold "-of-" (length signatures) " threshold")
+          (print "✓ Success: Script verified with " threshold "-of-" (length signatures) " threshold")
           #t)
         (begin
-          (print "✗ FAILURE: Insufficient valid signatures")
+          (print "✗ Failure: Insufficient valid signatures")
           #f))))
 
 ;;; Script Execution
@@ -166,7 +166,7 @@
   ;; First verify
   (if (not (verify-script-file script-path sig-path threshold key-paths))
       (begin
-        (print "\nExecution ABORTED: Signature verification failed")
+        (print "\nExecution Evaporated: Signature verification failed")
         (exit 1)))
 
   ;; Execute

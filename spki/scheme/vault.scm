@@ -2240,7 +2240,7 @@ Object Types:
       ;; Compute
       (let ((compute (cdr (assq 'compute caps))))
         (print "")
-        (print " COMPUTE")
+        (print " Compute")
         (printf "   Cores:     ~a~%" (cdr (assq 'cores compute)))
         (printf "   RAM:       ~a GB~%" (cdr (assq 'ram-gb compute)))
         (printf "   Load:      ~a~%" (cdr (assq 'load-avg compute))))
@@ -2248,21 +2248,21 @@ Object Types:
       ;; Storage
       (let ((storage (cdr (assq 'storage caps))))
         (print "")
-        (print " STORAGE")
+        (print " Storage")
         (printf "   Available: ~a GB~%" (cdr (assq 'available-gb storage)))
         (printf "   Type:      ~a~%" (cdr (assq 'type storage))))
 
       ;; Network
       (let ((network (cdr (assq 'network caps))))
         (print "")
-        (print " NETWORK")
+        (print " Network")
         (printf "   Type:      ~a~%" (cdr (assq 'type network)))
         (printf "   Latency:   ~a ms (estimated)~%" (cdr (assq 'latency-ms network))))
 
       ;; Security
       (let ((security (cdr (assq 'security caps))))
         (print "")
-        (print " SECURITY")
+        (print " Security")
         (printf "   Signing key:  ~a~%" (if (cdr (assq 'signing-key security)) "present" "absent"))
         (printf "   Verify key:   ~a~%" (if (cdr (assq 'verify-key security)) "present" "absent")))
 
