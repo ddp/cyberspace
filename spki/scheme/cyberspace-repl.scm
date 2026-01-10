@@ -20,6 +20,7 @@
         (chicken port)     ; with-output-to-string
         (chicken pretty-print)  ; pp
         (chicken time)
+        (chicken time posix)
         (chicken process-context)
         (chicken process)
         (chicken blob)
@@ -3817,10 +3818,33 @@ Cyberspace REPL - Available Commands
 ;; Friendly exit
 (define (goodbye)
   (repl-history-save)
-  (print "")
-  (print "Goodbye from Cyberspace Scheme.")
-  (print "")
-  (exit 0))
+  (let* ((now (seconds->local-time (current-seconds)))
+         (date-str (sprintf "~a-~a-~a ~a:~a"
+                           (+ 1900 (vector-ref now 5))
+                           (string-pad-left (number->string (+ 1 (vector-ref now 4))) 2 #\0)
+                           (string-pad-left (number->string (vector-ref now 3)) 2 #\0)
+                           (string-pad-left (number->string (vector-ref now 2)) 2 #\0)
+                           (string-pad-left (number->string (vector-ref now 1)) 2 #\0)))
+         (obj-count (count-vault-items "objects"))
+         (key-count (count-vault-items "keys"))
+         (info-parts (filter identity
+                       (list
+                         (and (> obj-count 0) (sprintf "~a objects" obj-count))
+                         (and (> key-count 0) (sprintf "~a keys" key-count))))))
+    (print "")
+    (if (null? info-parts)
+        (printf "Returning to objective reality, Cyberspace frozen at ~a.~n" date-str)
+        (printf "Returning to objective reality, Cyberspace frozen at ~a, ~a.~n"
+                date-str
+                (string-intersperse info-parts ", ")))
+    (print "")
+    (exit 0)))
+
+(define (string-pad-left str len char)
+  (let ((slen (string-length str)))
+    (if (>= slen len)
+        str
+        (string-append (make-string (- len slen) char) str))))
 
 ;; Clear screen (VT100)
 (define (clear)
