@@ -546,8 +546,15 @@ What must work correctly for security to hold:
 | Capability verifier | Chain validation | Our code |
 | Vault storage | Object integrity | Local filesystem |
 | Audit chain | What happened | Hash chain, signatures |
+| Soup | Object enumeration | Vault, audit |
 
 The core is small. Objects are dumb content. Policy lives in certificates. Verification is stateless computation.
+
+### Authoritative Counts
+
+Object counts MUST come from the TCB. The soup is the authoritative source for object enumeration - it walks the vault and audit trail. Counts displayed outside the TCB (prompts, status displays, dashboards) are advisory only and could be stale or spoofed.
+
+If you need to know how many objects exist, ask the soup. Don't cache counts outside the TCB.
 
 ---
 
