@@ -3195,16 +3195,10 @@ Cyberspace REPL - Available Commands
         #f)))
 
 (define (describe-vault)
-  "Describe vault contents before prompt"
-  (let* ((objs (count-vault-items "objects"))
-         (rels (count-vault-items "releases"))
-         (keys (count-vault-items "keys"))
-         (audit-entries (count-file-lines ".vault/audit.log"))
+  "Describe vault status (enrollment, audit, keystore)"
+  (let* ((audit-entries (count-file-lines ".vault/audit.log"))
          (keystore-exists (directory-exists? ".vault/keystore"))
          (identity (read-node-identity)))
-    (print "")
-    (print "Vault is .vault/")
-    (print "  " (plural objs "object") ", " (plural rels "release") ", " (plural keys "key"))
     (when (> audit-entries 0)
       (print "  " (plural audit-entries "audit entry")))
     (when keystore-exists
@@ -3245,36 +3239,10 @@ Cyberspace REPL - Available Commands
   (let* ((host (capitalize-first (get-hostname)))
          (window-title (string-append host " Workstation"))
          (version (git-version))
-         (date (git-date))
-         (title (string-append "Cyberspace Scheme last updated on " date " (" version ")"))
-         (objs (count-vault-items "objects"))
-         (rels (count-vault-items "releases"))
-         (keys (count-vault-items "keys"))
-         (peers (length *cluster-nodes*))
-         (width 80)
-         (bar "────────────────────────────────────────────────────────────────────────────────")
-         ;; Line 1: title with version
-         (line1 (string-append "  " title))
-         (line1-pad (make-string (max 0 (- width (string-length line1))) #\space))
-         ;; Line 2: stats (plural-aware)
-         (stats (string-append "  "
-                   (plural objs "object") "  "
-                   (plural rels "release") "  "
-                   (plural keys "key") "  "
-                   (plural peers "peer")))
-         (line2-pad (make-string (max 0 (- width (string-length stats))) #\space))
-         ;; Line 3: help hint
-         (hint "  Type (help) for commands.")
-         (hint-pad (make-string (- width (string-length hint)) #\space)))
-    ;; Set terminal window title
+         (date (git-date)))
     (set-terminal-title window-title)
     (print "")
-    (print "┌" bar "┐")
-    (print "│" line1 line1-pad "│")
-    (print "│" stats line2-pad "│")
-    (print "│" hint hint-pad "│")
-    (print "└" bar "┘")
-    (print "")))
+    (print "Cyberspace Scheme " version " (" date ")")))
 
 ;;; ============================================================
 ;;; Cyberspace Channel Protocol
@@ -4338,24 +4306,10 @@ Cyberspace REPL - Available Commands
                (pp result))))
          (loop))))))
 
-;; Show current directory context
+;; Show vault status at startup
 (when (directory-exists? ".vault")
   (describe-vault)
-  (node-hardware-refresh!)
-  ;; Show hardware - VUPS only when enrolled (federation scaling)
-  (let* ((identity (read-node-identity))
-         (enrolled (and identity #t)))
-    (print "  " (platform-stamp))
-    (when enrolled
-      (let* ((hw (introspect-hardware))
-             (cores (cadr (assq 'cores (cdr hw))))
-             (mem (cadr (assq 'memory-gb (cdr hw))))
-             (vups (cadr (assq 'vups (cdr hw))))
-             (mobile (cadr (assq 'mobile (cdr hw)))))
-        (print "  " cores " cores " mem "GB" (if mobile " (mobile)" ""))
-        (print "  " vups " vups")))))
-(print "")
-(print "(help) for help, ,q to quit")
+  (node-hardware-refresh!))
 (print "")
 
 ;; Start custom REPL
