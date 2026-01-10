@@ -2769,6 +2769,49 @@ Cyberspace REPL - Available Commands
       (print "No captured exception"))
   (void))
 
+(define (rich-exception-display exn #!key (frames 5))
+  "Display exception with rich formatting and mini-traceback"
+  (capture-exception exn)
+  (print "")
+  (print "┌─ Exception ──────────────────────────────────────────────────────┐")
+
+  ;; Extract exception properties
+  (let* ((msg (get-condition-property exn 'exn 'message ""))
+         (loc (get-condition-property exn 'exn 'location #f))
+         (args (get-condition-property exn 'exn 'arguments '()))
+         (kind (cond ((condition? exn)
+                      (cond ((get-condition-property exn 'type 'type #f))
+                            ((get-condition-property exn 'exn 'type #f))
+                            (else #f)))
+                     (else #f))))
+
+    ;; Exception type if available
+    (when kind
+      (printf "│ Type: ~a~n" kind))
+
+    ;; Error message
+    (printf "│ Error: ~a~n" msg)
+
+    ;; Location if available
+    (when loc
+      (printf "│ In: ~a~n" loc))
+
+    ;; Arguments if available - format nicely
+    (when (and args (not (null? args)))
+      (printf "│ Args:~n")
+      (for-each
+        (lambda (arg)
+          (let ((s (with-output-to-string (lambda () (write arg)))))
+            (printf "│   ~a~n"
+                   (if (> (string-length s) 65)
+                       (string-append (substring s 0 62) "...")
+                       s))))
+        args))
+
+    (print "├──────────────────────────────────────────────────────────────────┤")
+    (print "│ (bt) backtrace  (frame N) inspect frame  (exception-info) details")
+    (print "└──────────────────────────────────────────────────────────────────┘")))
+
 ;;; ============================================================
 ;;; Enrollment Status Display
 ;;; ============================================================
@@ -3974,10 +4017,7 @@ Cyberspace REPL - Available Commands
         (else
          (repl-history-add line)
          (handle-exceptions exn
-           (begin
-             (capture-exception exn)
-             (print-error-message exn)
-             (print "  Use (bt) for backtrace, (frame N) to inspect"))
+           (rich-exception-display exn)
            (let ((result (eval (with-input-from-string line read))))
              (unless (eq? result (void))
                (pp result))))
