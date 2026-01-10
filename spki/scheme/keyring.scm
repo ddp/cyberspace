@@ -194,7 +194,7 @@
           (begin
             (print "")
             (print "╭───────────────────────────────────────────────────────╮")
-            (print "│                    KEYRING                            │")
+            (print "│                    keyring                            │")
             (print "├───────────────────────────────────────────────────────┤")
             (for-each
              (lambda (name)
@@ -394,7 +394,7 @@
           (begin
             (print "")
             (print "╭───────────────────────────────────────────────────────╮")
-            (printf "│ KEY: ~a~a│~%"
+            (printf "│ key: ~a~a│~%"
                     name (make-string (max 0 (- 49 (string-length name))) #\space))
             (print "├───────────────────────────────────────────────────────┤")
             (printf "│ Fingerprint: ~a~%" (cdr (assq 'fingerprint info)))

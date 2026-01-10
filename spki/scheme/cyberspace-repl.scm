@@ -447,7 +447,9 @@
     (let* ((caps (probe-system-capabilities))
            (role (recommend-role caps)))
       (print "")
-      (print "Node Information")
+      (print "╔═══════════════════════════════════════════════════════════════╗")
+      (print "║                     Node Information                          ║")
+      (print "╠═══════════════════════════════════════════════════════════════╣")
       (print "")
       (print "  Principal:   " (short-id *node-attestation*))
       (print "  Platform:    " (platform-stamp))
@@ -479,6 +481,8 @@
       (print "    Memos:     " (length *memos*))
       (print "    Chaotic:   " (length *chaotic-store*))
       (print "    Pending:   " (length *persistence-queue*))
+      (print "")
+      (print "╚═══════════════════════════════════════════════════════════════╝")
       (print "")
       `((principal . ,*node-attestation*)
         (platform . ,(platform-stamp))
@@ -917,7 +921,7 @@
 
   (let ((addr (parse-teleport-address destination)))
     (print "")
-    (print "TELEPORT")
+    (print "Teleport")
     (print "  From: " *agent-location*)
     (print "  To:   " destination)
     (when as (print "  As:   " as))
@@ -928,7 +932,7 @@
     (let ((grant (teleport-check destination capabilities)))
       (cond
        ((not grant)
-        (print "  [DENIED] No authorization for destination")
+        (print "  [Denied] No authorization for destination")
         (print "  Use (teleport-grant \"" destination "\") to authorize")
         #f)
        (else
@@ -1154,7 +1158,7 @@
     (set! *wormhole-ops-count* (+ *wormhole-ops-count* 1))
     (if (> *wormhole-ops-count* limit)
         (begin
-          (print "  [RATE LIMITED] " *wormhole-ops-count* "/" limit " ops/min")
+          (print "  [Rate Limited] " *wormhole-ops-count* "/" limit " ops/min")
           #f)
         #t)))
 
@@ -1513,9 +1517,9 @@
   ;; 4. SPKI certificate chain verification
   ;; 5. Key derivation via X25519 ECDH
   ;; 6. Finished messages with verify_data
-  (print "  [HANDSHAKE] TLS 1.3 mutual authentication")
-  (print "  [HANDSHAKE] Verifying SPKI certificate chain")
-  (print "  [HANDSHAKE] Deriving session keys (X25519 + HKDF)")
+  (print "  [Handshake] TLS 1.3 mutual authentication")
+  (print "  [Handshake] Verifying SPKI certificate chain")
+  (print "  [Handshake] Deriving session keys (X25519 + HKDF)")
   ;; In production: actual TLS handshake via openssl/libressl
   `(handshake-complete
     (cipher . chacha20-poly1305)
@@ -1527,7 +1531,7 @@
   (let ((caps (alist-ref 'capabilities wormhole)))
     (cond
      ((null? caps)
-      (print "  [DENIED] No capabilities granted")
+      (print "  [Denied] No capabilities granted")
       #f)
      ((member operation caps)
       #t)
@@ -1535,7 +1539,7 @@
            (member 'full caps))
       #t)
      (else
-      (print "  [DENIED] Missing capability: " operation)
+      (print "  [Denied] Missing capability: " operation)
       #f))))
 
 (define (wormhole-transfer! wormhole data)
@@ -1553,7 +1557,9 @@
 (define (wormhole-security)
   "Display wormhole security properties"
   (print "")
-  (print "Wormhole Security Properties")
+  (print "╔═══════════════════════════════════════════════════════════╗")
+  (print "║           Wormhole Security Properties                    ║")
+  (print "╚═══════════════════════════════════════════════════════════╝")
   (print "")
   (for-each
    (lambda (category)
@@ -1588,10 +1594,10 @@
     ;; Report
     (if (null? issues)
         (begin
-          (print "  [PASS] All security properties satisfied")
+          (print "  [Pass] All security properties satisfied")
           #t)
         (begin
-          (print "  [ISSUES]")
+          (print "  [Issues]")
           (for-each (lambda (i) (print "    - " i)) issues)
           #f))))
 
@@ -1621,15 +1627,15 @@
           ((>= i len) #t)
         (unless (zero? (u8vector-ref buffer i))
           (error 'secure-clear-failed "Zeroization verification failed")))
-      (print "  [CLEARED] " len " bytes zeroized")
+      (print "  [Cleared] " len " bytes zeroized")
       #t))
    ((blob? buffer)
-    (print "  [WARN] Blobs are immutable in Chicken Scheme")
-    (print "  [INFO] Use (blob->u8vector/shared b) for mutable access")
-    (print "  [INFO] Or use u8vectors directly for sensitive data")
+    (print "  [Warn] Blobs are immutable in Chicken Scheme")
+    (print "  [Info] Use (blob->u8vector/shared b) for mutable access")
+    (print "  [Info] Or use u8vectors directly for sensitive data")
     #f)
    ((string? buffer)
-    (print "  [WARN] Strings are immutable; cannot clear in place")
+    (print "  [Warn] Strings are immutable; cannot clear in place")
     #f)
    (else
     (error 'secure-clear! "Expected u8vector, blob, or string"))))
@@ -1648,7 +1654,7 @@
                   action: 'key-destroyed
                   target: key-id
                   detail: '(method zeroization))
-    (print "  [DESTROYED] Key material zeroized")
+    (print "  [Destroyed] Key material zeroized")
     'destroyed))
 
 (define (object-erase! hash)
@@ -1658,29 +1664,29 @@
     (if (file-exists? path)
         (begin
           ;; Phase 1: Overwrite with random
-          (print "  [PHASE 1] Overwriting with random data...")
+          (print "  [Phase 1] Overwriting with random data...")
           (let ((size (file-size path)))
             (with-output-to-file path
               (lambda ()
                 (write-string (blob->string (random-bytes size))))))
           ;; Phase 2: Overwrite with zeros
-          (print "  [PHASE 2] Overwriting with zeros...")
+          (print "  [Phase 2] Overwriting with zeros...")
           (let ((size (file-size path)))
             (with-output-to-file path
               (lambda ()
                 (write-string (make-string size #\null)))))
           ;; Phase 3: Delete
-          (print "  [PHASE 3] Unlinking file...")
+          (print "  [Phase 3] Unlinking file...")
           (delete-file path)
           ;; Audit
           (audit-append actor: 'security
                         action: 'object-erased
                         target: hash
                         detail: '(method overwrite-then-delete))
-          (print "  [ERASED] Object securely destroyed")
+          (print "  [Erased] Object securely destroyed")
           'erased)
         (begin
-          (print "  [SKIP] Object not found at " path)
+          (print "  [Skip] Object not found at " path)
           'not-found))))
 
 (define (secure-erase-encrypted hash)
@@ -1694,14 +1700,14 @@
                   action: 'encrypted-object-erased
                   target: hash
                   detail: '(method key-destruction))
-    (print "  [ERASED] Ciphertext now unrecoverable")
+    (print "  [Erased] Ciphertext now unrecoverable")
     'erased-via-key-destruction))
 
 (define (session-key-destroy! session-id)
   "Destroy ephemeral session key after use"
   (print "Destroying session key: " session-id)
   (key-destroy! (string-append "session:" session-id))
-  (print "  [DESTROYED] Forward secrecy maintained")
+  (print "  [Destroyed] Forward secrecy maintained")
   'session-key-destroyed)
 
 (define (erase-audit)
@@ -3215,15 +3221,30 @@ Cyberspace REPL - Available Commands
          (objs (count-vault-items "objects"))
          (rels (count-vault-items "releases"))
          (keys (count-vault-items "keys"))
-         (peers (length *cluster-nodes*)))
+         (peers (length *cluster-nodes*))
+         (width 80)
+         (bar "────────────────────────────────────────────────────────────────────────────────")
+         ;; Line 1: title with version
+         (line1 (string-append "  " title))
+         (line1-pad (make-string (max 0 (- width (string-length line1))) #\space))
+         ;; Line 2: stats (plural-aware)
+         (stats (string-append "  "
+                   (plural objs "object") "  "
+                   (plural rels "release") "  "
+                   (plural keys "key") "  "
+                   (plural peers "peer")))
+         (line2-pad (make-string (max 0 (- width (string-length stats))) #\space))
+         ;; Line 3: help hint
+         (hint "  Type (help) for commands.")
+         (hint-pad (make-string (- width (string-length hint)) #\space)))
     ;; Set terminal window title
     (set-terminal-title window-title)
     (print "")
-    (print title)
-    (print (string-append (plural objs "object") ", "
-                          (plural rels "release") ", "
-                          (plural keys "key") ", "
-                          (plural peers "peer")))
+    (print "┌" bar "┐")
+    (print "│" line1 line1-pad "│")
+    (print "│" stats line2-pad "│")
+    (print "│" hint hint-pad "│")
+    (print "└" bar "┘")
     (print "")))
 
 ;;; ============================================================
@@ -3534,14 +3555,14 @@ Cyberspace REPL - Available Commands
                                 (make-string (- 12 (string-length (number->string seq))) #\null))))
          (key-stream (blake2b-hash (blob-append key nonce))))
     ;; Simulated encryption (real impl uses ChaCha20-Poly1305)
-    (print "    [ENCRYPT] seq=" seq " len=" (blob-size plaintext))
+    (print "    [Encrypt] seq=" seq " len=" (blob-size plaintext))
     plaintext))  ; Placeholder - returns plaintext
 
 ;;; Decrypt message
 (define (channel-decrypt key seq ciphertext)
   "Decrypt and verify message"
   ;; Real impl: crypto_aead_chacha20poly1305_ietf_decrypt
-  (print "    [DECRYPT] seq=" seq " len=" (blob-size ciphertext))
+  (print "    [Decrypt] seq=" seq " len=" (blob-size ciphertext))
   ciphertext)  ; Placeholder - returns ciphertext
 
 ;;; ============================================================
@@ -3555,7 +3576,7 @@ Cyberspace REPL - Available Commands
     (let ((ch (make-channel in out 'initiator)))
 
       ;; Phase 1: KNOCK
-      (print "  [KNOCK] Sending knock...")
+      (print "  [Knock] Sending knock...")
       (channel-write-msg ch CCP-KNOCK (string->blob "KNOCK"))
 
       ;; Phase 2: Receive COOKIE
@@ -3563,7 +3584,7 @@ Cyberspace REPL - Available Commands
         (unless (= type CCP-COOKIE)
           (error "Expected COOKIE, got" type))
         (let ((cookie-r (blob->string payload)))
-          (print "  [COOKIE] Received: " (substring cookie-r 0 8) "...")
+          (print "  [Cookie] Received: " (substring cookie-r 0 8) "...")
           (set! ch (alist-update 'cookie-theirs cookie-r ch))
 
           ;; Generate our ephemeral key and cookie
@@ -3573,7 +3594,7 @@ Cyberspace REPL - Available Commands
             (set! ch (alist-update 'cookie-ours cookie-i ch))
 
             ;; Phase 3: EXCHANGE
-            (print "  [EXCHANGE] Sending ephemeral public key...")
+            (print "  [Exchange] Sending ephemeral public key...")
             (let ((exchange-payload (string->blob
                                       (string-append cookie-r "|"
                                                      cookie-i "|"
@@ -3586,7 +3607,7 @@ Cyberspace REPL - Available Commands
                 (error "Expected EXCHANGE, got" type))
               (let* ((parts (string-split (blob->string payload) "|"))
                      (their-public (string->blob (caddr parts))))
-                (print "  [EXCHANGE] Received their public key")
+                (print "  [Exchange] Received their public key")
                 (set! ch (alist-update 'their-ephemeral their-public ch))
 
                 ;; Derive session keys
@@ -3595,7 +3616,7 @@ Cyberspace REPL - Available Commands
                   (set! ch (alist-update 'shared-secret shared ch))
                   (set! ch (alist-update 'key-send (alist-ref 'key-ir keys) ch))
                   (set! ch (alist-update 'key-recv (alist-ref 'key-ri keys) ch))
-                  (print "  [KEYS] Session keys derived")
+                  (print "  [Keys] Session keys derived")
 
                   ;; === ENCRYPTED FROM HERE ===
                   (set! ch (alist-update 'state 'encrypted ch))
@@ -3603,7 +3624,7 @@ Cyberspace REPL - Available Commands
                   ;; Phase 4: ATTEST - prove our identity (SPKI principal)
                   (unless *node-attestation*
                     (error "Not attested. Use (attest) first"))
-                  (print "  [ATTEST] Sending SPKI principal...")
+                  (print "  [Attest] Sending SPKI principal...")
                   (let* ((principal *node-attestation*)  ; Public key hash
                          (principal-hex principal)
                          (to-sign (string-append cookie-i cookie-r
@@ -3619,13 +3640,13 @@ Cyberspace REPL - Available Commands
                       (error "Expected ATTEST, got" type))
                     (let* ((parts (string-split (blob->string payload) "|"))
                            (their-principal (car parts)))
-                      (print "  [ATTEST] Verified: " (short-id their-principal))
+                      (print "  [Attest] Verified: " (short-id their-principal))
                       (set! ch (alist-update 'their-principal their-principal ch))
 
                       ;; Phase 5: OFFER - exchange capabilities
                       ;; TODO: Should be SPKI auth-certs, not strings
                       ;; Format: (tag (set read write replicate))
-                      (print "  [OFFER] Sending capabilities...")
+                      (print "  [Offer] Sending capabilities...")
                       (let ((our-caps "(tag (* set read write replicate))"))
                         (channel-write-msg ch CCP-OFFER (string->blob our-caps)))
 
@@ -3635,11 +3656,11 @@ Cyberspace REPL - Available Commands
                           (error "Expected OFFER, got" type))
                         ;; TODO: Parse SPKI tag s-expression properly
                         (let ((their-caps (blob->string payload)))
-                          (print "  [OFFER] Received: " their-caps)
+                          (print "  [Offer] Received: " their-caps)
                           (set! ch (alist-update 'their-capabilities their-caps ch))
 
                           ;; Phase 6: CONFIRM - transcript hash
-                          (print "  [CONFIRM] Sending transcript confirmation...")
+                          (print "  [Confirm] Sending transcript confirmation...")
                           (let ((transcript-hash (blake2b-hash
                                                    (string->blob
                                                      (string-append cookie-i cookie-r
@@ -3650,14 +3671,16 @@ Cyberspace REPL - Available Commands
                             (let-values (((type payload) (channel-read-msg ch)))
                               (unless (= type CCP-CONFIRM)
                                 (error "Expected CONFIRM, got" type))
-                              (print "  [CONFIRM] Verified")
+                              (print "  [Confirm] Verified")
 
                               ;; === CHANNEL OPEN ===
                               (channel-set-state! (alist-ref 'id ch) 'open)
                               (print "")
-                              (print "  Secure channel established.")
-                              (print "    Principal: " (short-id their-principal))
-                              (print "    Capabilities: " their-caps)
+                              (print "  ╔════════════════════════════════════╗")
+                              (print "  ║      Secure Channel Established    ║")
+                              (print "  ╚════════════════════════════════════╝")
+                              (print "  Principal: " (short-id their-principal))
+                              (print "  Capabilities: " their-caps)
 
                               ;; Register in cluster
                               (set! *node-connections* (cons ch *node-connections*))
@@ -3682,11 +3705,11 @@ Cyberspace REPL - Available Commands
       (let-values (((type payload) (channel-read-msg ch)))
         (unless (= type CCP-KNOCK)
           (error "Expected KNOCK, got" type))
-        (print "  [KNOCK] Received")
+        (print "  [Knock] Received")
 
         ;; Phase 2: Send COOKIE (stateless)
         (let ((cookie-r (make-cookie "remote" 0)))  ; In real impl: actual remote addr
-          (print "  [COOKIE] Sending: " (substring cookie-r 0 8) "...")
+          (print "  [Cookie] Sending: " (substring cookie-r 0 8) "...")
           (channel-write-msg ch CCP-COOKIE (string->blob cookie-r))
           (set! ch (alist-update 'cookie-ours cookie-r ch))
 
@@ -3703,7 +3726,7 @@ Cyberspace REPL - Available Commands
               ;; Verify they echoed our cookie
               (unless (string=? echoed-cookie cookie-r)
                 (error "Cookie mismatch - possible spoof"))
-              (print "  [EXCHANGE] Cookie verified, received their public key")
+              (print "  [Exchange] Cookie verified, received their public key")
 
               (set! ch (alist-update 'cookie-theirs cookie-i ch))
               (set! ch (alist-update 'their-ephemeral their-public ch))
@@ -3717,7 +3740,7 @@ Cyberspace REPL - Available Commands
                                                          cookie-r "|"
                                                          (blob->hex (alist-ref 'public eph))))))
                   (channel-write-msg ch CCP-EXCHANGE exchange-payload)
-                  (print "  [EXCHANGE] Sent our public key")
+                  (print "  [Exchange] Sent our public key")
 
                   ;; Derive session keys
                   (let* ((shared (x25519-shared (alist-ref 'secret eph) their-public))
@@ -3726,7 +3749,7 @@ Cyberspace REPL - Available Commands
                     ;; Note: responder keys are reversed
                     (set! ch (alist-update 'key-send (alist-ref 'key-ri keys) ch))
                     (set! ch (alist-update 'key-recv (alist-ref 'key-ir keys) ch))
-                    (print "  [KEYS] Session keys derived")
+                    (print "  [Keys] Session keys derived")
 
                     ;; === ENCRYPTED FROM HERE ===
                     (set! ch (alist-update 'state 'encrypted ch))
@@ -3739,13 +3762,13 @@ Cyberspace REPL - Available Commands
                              (their-principal (car parts))
                              (their-sig (cadr parts)))
                         ;; In real impl: verify ed25519 signature
-                        (print "  [ATTEST] Verified: " (short-id their-principal))
+                        (print "  [Attest] Verified: " (short-id their-principal))
                         (set! ch (alist-update 'their-principal their-principal ch))
 
                         ;; Send our ATTEST (SPKI principal)
                         (unless *node-attestation*
                           (error "Not attested. Use (attest) first"))
-                        (print "  [ATTEST] Sending SPKI principal...")
+                        (print "  [Attest] Sending SPKI principal...")
                         (let* ((principal *node-attestation*)  ; Public key hash
                                (principal-hex principal)
                                (to-sign (string-append cookie-i cookie-r
@@ -3760,12 +3783,12 @@ Cyberspace REPL - Available Commands
                             (error "Expected OFFER, got" type))
                           ;; TODO: Parse SPKI tag s-expression properly
                           (let ((their-caps (blob->string payload)))
-                            (print "  [OFFER] Received: " their-caps)
+                            (print "  [Offer] Received: " their-caps)
                             (set! ch (alist-update 'their-capabilities their-caps ch))
 
                             ;; Send our OFFER
                             ;; TODO: Should be SPKI auth-certs
-                            (print "  [OFFER] Sending capabilities...")
+                            (print "  [Offer] Sending capabilities...")
                             (let ((our-caps "(tag (* set read write replicate))"))
                               (channel-write-msg ch CCP-OFFER (string->blob our-caps)))
 
@@ -3773,7 +3796,7 @@ Cyberspace REPL - Available Commands
                             (let-values (((type payload) (channel-read-msg ch)))
                               (unless (= type CCP-CONFIRM)
                                 (error "Expected CONFIRM, got" type))
-                              (print "  [CONFIRM] Verified")
+                              (print "  [Confirm] Verified")
 
                               ;; Send our CONFIRM
                               (let ((transcript-hash (blake2b-hash
@@ -3785,9 +3808,11 @@ Cyberspace REPL - Available Commands
                               ;; === CHANNEL OPEN ===
                               (channel-set-state! (alist-ref 'id ch) 'open)
                               (print "")
-                              (print "  Secure channel established.")
-                              (print "    Principal: " (short-id their-principal))
-                              (print "    Capabilities: " their-caps)
+                              (print "  ╔════════════════════════════════════╗")
+                              (print "  ║      Secure Channel Established    ║")
+                              (print "  ╚════════════════════════════════════╝")
+                              (print "  Principal: " (short-id their-principal))
+                              (print "  Capabilities: " their-caps)
 
                               ;; Register
                               (set! *node-connections* (cons ch *node-connections*))
@@ -3808,7 +3833,7 @@ Cyberspace REPL - Available Commands
            (plaintext (string->blob (format "~a" message)))
            (ciphertext (channel-encrypt key seq plaintext)))
       (channel-write-msg ch CCP-DATA ciphertext)
-      (print "  [SEND] seq=" seq " encrypted"))))
+      (print "  [Send] seq=" seq " encrypted"))))
 
 (define (channel-recv ch)
   "Receive and decrypt message from secure channel"
@@ -3821,7 +3846,7 @@ Cyberspace REPL - Available Commands
         (let* ((seq (channel-seq-recv! id))
                (key (alist-ref 'key-recv ch))
                (plaintext (channel-decrypt key seq payload)))
-          (print "  [RECV] seq=" seq " decrypted")
+          (print "  [Recv] seq=" seq " decrypted")
           (blob->string plaintext)))
        ((= type CCP-CLOSE)
         (channel-set-state! id 'closed)
@@ -3835,7 +3860,7 @@ Cyberspace REPL - Available Commands
     (channel-write-msg ch CCP-CLOSE (string->blob "CLOSE"))
     (channel-set-state! id 'closed)
     ;; Destroy session keys (zeroize)
-    (print "  [CLOSED] Channel closed, keys destroyed")))
+    (print "  [Closed] Channel closed, keys destroyed")))
 
 ;;; ============================================================
 ;;; Backward-compatible API
@@ -4121,411 +4146,13 @@ Cyberspace REPL - Available Commands
 (define releases (lambda () (soup-releases)))
 (define status (lambda () (introspect-system)))
 
-;; Meditative self-introspection
-(define (self?)
-  "Who am I? A friendly, meditative view of your identity in cyberspace."
-  (let* ((identity (read-node-identity))
-         (objs (count-vault-items "objects"))
-         (rels (count-vault-items "releases"))
-         (keys-count (count-vault-items "keys"))
-         (peers (length *cluster-nodes*))
-         (audit-entries (count-file-lines ".vault/audit.log")))
-    (print "")
-    (if identity
-        ;; We have an identity
-        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
-              (role (cond ((assq 'role identity) => cadr) (else #f)))
-              (created (cond ((assq 'created identity) => cadr) (else #f)))
-              (enrolled (cond ((assq 'enrolled identity) => cadr) (else #f)))
-              (confederation (cond ((assq 'confederation identity) => cadr) (else #f)))
-              (pubkey (cond ((assq 'pubkey identity) => cadr) (else #f))))
-          (print "You are " name ".")
-          (print "")
-          ;; Key info
-          (when created
-            (print "  Key created " created "."))
-          (when pubkey
-            (let ((words (generate-verification-words pubkey)))
-              (print "  Verification words: " words)))
-          (print "")
-          ;; Federation status
-          (if enrolled
-              (begin
-                (print "  You belong to " (or confederation "a confederation") ".")
-                (if (> peers 0)
-                    (print "  " peers " peer" (if (= peers 1) " is" "s are") " reachable.")
-                    (print "  No peers currently reachable.")))
-              (begin
-                (print "  You belong to no confederation.")
-                (print "  No peers discovered.")))
-          (print "")
-          ;; Vault summary
-          (if (> objs 0)
-              (print "  Your vault holds " objs " object" (if (= objs 1) "" "s") ".")
-              (print "  Your vault is empty."))
-          (when (> keys-count 0)
-            (print "  You know " keys-count " principal" (if (= keys-count 1) "" "s") "."))
-          (print "")
-          ;; Activity section
-          (let* ((wormhole-count (length *wormholes*))
-                 (pending-count (length *pending-enrollments*))
-                 (listening *enrollment-listener*)
-                 (cluster-active (not (eq? *cluster-state* 'solo)))
-                 (has-activity (or (> wormhole-count 0)
-                                   (> pending-count 0)
-                                   listening
-                                   cluster-active)))
-            (if has-activity
-                (begin
-                  (print "  Activity:")
-                  (when (> wormhole-count 0)
-                    (print "    " wormhole-count " wormhole" (if (= wormhole-count 1) "" "s") " open."))
-                  (when listening
-                    (print "    Listening for enrollment requests."))
-                  (when (> pending-count 0)
-                    (for-each (lambda (req)
-                                (let ((name (alist-ref 'name req))
-                                      (words (alist-ref 'words req)))
-                                  (print "    Enrollment pending from " name ".")
-                                  (when words
-                                    (print "      Verification: " words))))
-                              *pending-enrollments*))
-                  (when cluster-active
-                    (print "    Cluster state: " *cluster-state* "."))
-                  (print ""))
-                (print "  All is quiet."))
-            (print "")))
-        ;; No identity yet
-        (begin
-          (print "You have no identity yet.")
-          (print "")
-          (print "  Use (enroll-request 'your-name) to request enrollment,")
-          (print "  or (ed25519-keypair) to generate a key.")
-          (print "")
-          (if (> objs 0)
-              (print "  Your vault holds " objs " object" (if (= objs 1) "" "s") ".")
-              (print "  Your vault is empty."))
-          (print "")
-          ;; Activity for unenrolled
-          (let* ((wormhole-count (length *wormholes*))
-                 (has-activity (> wormhole-count 0)))
-            (if has-activity
-                (begin
-                  (print "  Activity:")
-                  (print "    " wormhole-count " wormhole" (if (= wormhole-count 1) "" "s") " open.")
-                  (print ""))
-                (print "  All is quiet.")))
-          (print "")))
-    (void)))
-
-;; Alias
-(define whoami? self?)
-
-;; Federation status - who's out there?
-(define (federation?)
-  "What is the state of the network?"
-  (let* ((peers (length *cluster-nodes*))
-         (state *cluster-state*)
-         (identity (read-node-identity))
-         (enrolled (and identity (cond ((assq 'enrolled identity) => cadr) (else #f))))
-         (confederation (and identity (cond ((assq 'confederation identity) => cadr) (else #f)))))
-    (print "")
-    (cond
-      ;; Not enrolled
-      ((not enrolled)
-       (print "You are not part of any confederation.")
-       (print "")
-       (if (> peers 0)
-           (begin
-             (print "  However, you have discovered " peers " peer" (if (= peers 1) "" "s") ":")
-             (for-each (lambda (node)
-                         (let ((name (car node))
-                               (uri (cadr node)))
-                           (print "    " name " at " uri)))
-                       *cluster-nodes*)
-             (print "")
-             (print "  Use (enroll-request 'your-name) to join."))
-           (begin
-             (print "  No peers discovered on the local network.")
-             (print "")
-             (print "  To start a confederation, use (enroll-listen) on the master node.")
-             (print "  To join one, use (enroll-request 'your-name)."))))
-      ;; Enrolled but solo
-      ((eq? state 'solo)
-       (print "You belong to " (or confederation "a confederation") ".")
-       (print "")
-       (print "  No peers are currently reachable.")
-       (print "  You are operating independently.")
-       (print "")
-       (print "  When peers come online, synchronization will resume."))
-      ;; Active cluster
-      (else
-       (print "You belong to " (or confederation "a confederation") ".")
-       (print "")
-       (print "  Cluster state: " state)
-       (print "  " peers " peer" (if (= peers 1) " is" "s are") " reachable:")
-       (for-each (lambda (node)
-                   (let ((name (car node))
-                         (uri (cadr node))
-                         (last-seen (if (> (length node) 2) (caddr node) #f)))
-                     (print "    " name " at " uri)))
-                 *cluster-nodes*)
-       (print "")))
-    (print "")
-    (void)))
-
-;; Principals - who do you know?
-(define (principals?)
-  "Who do you know in cyberspace?"
-  (let* ((keys-dir ".vault/keys")
-         (has-keys (directory-exists? keys-dir))
-         (key-files (if has-keys
-                        (filter (lambda (f) (string-suffix? ".pub" f))
-                                (directory keys-dir))
-                        '()))
-         (key-count (length key-files)))
-    (print "")
-    (if (= key-count 0)
-        (begin
-          (print "You don't know anyone yet.")
-          (print "")
-          (print "  Principals are discovered through enrollment and federation.")
-          (print "  When you meet someone, their key is added to your vault.")
-          (print ""))
-        (begin
-          (print "You know " key-count " principal" (if (= key-count 1) "" "s") ":")
-          (print "")
-          (for-each (lambda (keyfile)
-                      (let* ((name (string-drop-right keyfile 4))  ; remove .pub
-                             (path (string-append keys-dir "/" keyfile))
-                             (stat (file-stat path))
-                             (mtime (vector-ref stat 8))
-                             (date (seconds->string mtime "%B %d")))
-                        (print "  " (string-titlecase name))
-                        (print "    Key added " date ".")))
-                    key-files)
-          (print "")
-          (print "  Use (principal 'name) for details on a specific principal.")
-          (print "")))
-    (void)))
-
-;; Details on a specific principal
-(define (principal name)
-  "Show details about a specific principal"
-  (let* ((name-str (if (symbol? name) (symbol->string name) name))
-         (keyfile (string-append ".vault/keys/" name-str ".pub")))
-    (print "")
-    (if (file-exists? keyfile)
-        (let* ((pubkey (with-input-from-file keyfile read-line))
-               (words (generate-verification-words pubkey))
-               (stat (file-stat keyfile))
-               (mtime (vector-ref stat 8))
-               (date (seconds->string mtime "%B %d, %Y")))
-          (print "Principal: " (string-titlecase name-str))
-          (print "")
-          (print "  Key added " date ".")
-          (print "  Verification words: " words)
-          (print "")
-          ;; Check if in cluster
-          (let ((node (assoc (string->symbol name-str) *cluster-nodes*)))
-            (if node
-                (print "  Status: reachable")
-                (print "  Status: not currently reachable")))
-          (print ""))
-        (begin
-          (print "You don't know anyone named " name-str ".")
-          (print "")
-          (print "  Use (principals?) to see who you know.")
-          (print "")))
-    (void)))
-
-;; Vault status - what's in storage?
-(define (vault?)
-  "What is in your vault?"
-  (let* ((objs (count-vault-items "objects"))
-         (rels (count-vault-items "releases"))
-         (keys-count (count-vault-items "keys"))
-         (audit-entries (count-file-lines ".vault/audit.log"))
-         (releases-dir ".vault/releases")
-         (has-releases (directory-exists? releases-dir))
-         (release-list (if has-releases (directory releases-dir) '())))
-    (print "")
-    (if (and (= objs 0) (= rels 0) (= keys-count 0))
-        (begin
-          (print "Your vault is empty.")
-          (print "")
-          (print "  Use (seal-commit \"message\") to store your first object.")
-          (print "  Use (seal-release \"1.0.0\") to create a release.")
-          (print ""))
-        (begin
-          (print "Your vault contains:")
-          (print "")
-          (when (> objs 0)
-            (print "  " objs " object" (if (= objs 1) "" "s")))
-          (when (> keys-count 0)
-            (print "  " keys-count " key" (if (= keys-count 1) "" "s")))
-          (when (> rels 0)
-            (print "  " rels " release" (if (= rels 1) "" "s") ":"))
-          (when (and has-releases (not (null? release-list)))
-            (for-each (lambda (rel)
-                        (print "    " rel))
-                      (take (sort release-list string>?) (min 5 (length release-list)))))
-          (when (> rels 5)
-            (print "    ... and " (- rels 5) " more"))
-          (print "")
-          (when (> audit-entries 0)
-            (print "  " audit-entries " event" (if (= audit-entries 1) "" "s") " in the audit trail."))
-          (print "")
-          (print "  Use (soup) to browse, (soup-stat 'name) for details.")
-          (print "")))
-    (void)))
-
 ;; Quit shortcuts (don't shadow scheme's exit)
 (define quit goodbye)
 (define q goodbye)
 (define bye goodbye)
 
-;;; ============================================================
-;;; Personalization
-;;; ============================================================
-;;;
-;;; User-settable preferences. Change with (set! *name* value).
-;;; Future: persist to ~/.cyberspace/prefs.scm
-
-;; Prompt pattern (default: colon like classic Lisp)
+;; Settable prompt (default: colon like classic Lisp)
 (define *prompt* ": ")
-
-;; Suggest corrections for typos (default: on)
-(define *suggest-corrections* #t)
-
-;; Show status line above prompt (default: on)
-(define *show-status-line* #t)
-
-;; Language for messages (default: English)
-(define *language* 'en)
-
-;; Message strings table (expandable)
-(define *messages*
-  '((no-identity
-     (en . "You have no identity yet.")
-     (fr . "Vous n'avez pas encore d'identité.")
-     (de . "Sie haben noch keine Identität.")
-     (es . "Aún no tienes identidad."))
-    (all-quiet
-     (en . "All is quiet.")
-     (fr . "Tout est calme.")
-     (de . "Alles ist ruhig.")
-     (es . "Todo está tranquilo."))
-    (vault-empty
-     (en . "Your vault is empty.")
-     (fr . "Votre coffre est vide.")
-     (de . "Ihr Tresor ist leer.")
-     (es . "Tu bóveda está vacía."))
-    (no-peers
-     (en . "No peers discovered.")
-     (fr . "Aucun pair découvert.")
-     (de . "Keine Peers gefunden.")
-     (es . "No se encontraron pares."))
-    (no-confederation
-     (en . "You are not part of any confederation.")
-     (fr . "Vous ne faites partie d'aucune confédération.")
-     (de . "Sie gehören keiner Konföderation an.")
-     (es . "No eres parte de ninguna confederación."))
-    (dont-know-anyone
-     (en . "You don't know anyone yet.")
-     (fr . "Vous ne connaissez encore personne.")
-     (de . "Sie kennen noch niemanden.")
-     (es . "Aún no conoces a nadie."))
-    (goodbye
-     (en . "Goodbye from Cyberspace Scheme.")
-     (fr . "Au revoir de Cyberspace Scheme.")
-     (de . "Auf Wiedersehen von Cyberspace Scheme.")
-     (es . "Adiós de Cyberspace Scheme."))))
-
-;; Get localized message
-(define (msg key)
-  "Get message in current language, fallback to English"
-  (let ((entry (assq key *messages*)))
-    (if entry
-        (let ((translations (cdr entry)))
-          (cond
-            ((assq *language* translations) => cdr)
-            ((assq 'en translations) => cdr)
-            (else (symbol->string key))))
-        (symbol->string key))))
-
-;; Translate between languages
-(define (translate text #!key (from 'en) (to *language*))
-  "Translate text from one language to another using message table"
-  (let loop ((msgs *messages*))
-    (if (null? msgs)
-        ;; Not found in table
-        (begin
-          (print "  (Translation not in phrase book)")
-          text)
-        (let* ((entry (car msgs))
-               (translations (cdr entry))
-               (from-text (assq from translations)))
-          (if (and from-text (string=? (cdr from-text) text))
-              ;; Found it, get target language
-              (let ((to-text (assq to translations)))
-                (if to-text
-                    (cdr to-text)
-                    (begin
-                      (print "  (No " to " translation available)")
-                      text)))
-              (loop (cdr msgs)))))))
-
-;; Status line content generator
-(define (status-line-content)
-  "Generate status line content"
-  (let* ((wormhole-count (length *wormholes*))
-         (pending-count (length *pending-enrollments*))
-         (cluster-state *cluster-state*)
-         (duration (session-duration))
-         ;; Build status segments
-         (realm-seg (or *realm* "wilderness"))
-         (time-seg duration)
-         (activity-seg (cond
-                         ((> pending-count 0)
-                          (string-append (number->string pending-count) " pending"))
-                         ((> wormhole-count 0)
-                          (string-append (number->string wormhole-count) " wormhole"
-                                        (if (= wormhole-count 1) "" "s")))
-                         ((not (eq? cluster-state 'solo))
-                          (symbol->string cluster-state))
-                         (else "quiet"))))
-    (string-append realm-seg " │ " time-seg " │ " activity-seg)))
-
-;; Draw status line with VT100
-(define (draw-status-line)
-  "Draw status line above prompt"
-  (when *show-status-line*
-    (let* ((content (status-line-content))
-           (width 78)
-           (pad-len (max 0 (- width (string-length content))))
-           (pad (make-string pad-len #\space)))
-      ;; Dim text for status line
-      (display "\x1b[2m")  ; dim
-      (display content)
-      (display pad)
-      (display "\x1b[0m")  ; reset
-      (newline))))
-
-;; Show preferences
-(define (prefs)
-  "Show current personalization settings"
-  (print "")
-  (print "Personalization:")
-  (print "")
-  (print "  *prompt*              " (with-output-to-string (lambda () (write *prompt*))))
-  (print "  *suggest-corrections* " *suggest-corrections*)
-  (print "  *show-status-line*    " *show-status-line*)
-  (print "  *language*            " *language* "  (en fr de es)")
-  (print "")
-  (print "Change with (set! *name* value)")
-  (print "")
-  (void))
 
 ;; Result history
 ;; Use _ for last result (like Python), _1 _2 _3 for previous
@@ -4560,9 +4187,8 @@ Cyberspace REPL - Available Commands
 ;; History file for persistence
 (define *history-file* (string-append (or (get-environment-variable "HOME") ".") "/.cyberspace_history"))
 
-;; Read line with status line and prompt
+;; Read line with prompt
 (define (repl-read-line prompt)
-  (draw-status-line)
   (display prompt)
   (flush-output)
   (read-line))
@@ -4675,28 +4301,13 @@ Cyberspace REPL - Available Commands
                (pp result))))
          (loop))))))
 
-;; Session start time and realm
-(define *session-start* (current-seconds))
-(define *realm* #f)  ; unaffiliated until instantiated
-
-(define (session-duration)
-  "Format session duration in friendly terms"
-  (let* ((elapsed (- (current-seconds) *session-start*))
-         (minutes (quotient elapsed 60))
-         (hours (quotient minutes 60))
-         (mins (modulo minutes 60)))
-    (cond
-      ((< elapsed 60) "just now")
-      ((< minutes 2) "about a minute")
-      ((< minutes 60) (string-append (number->string minutes) " minutes"))
-      ((= hours 1) (if (< mins 5) "about an hour"
-                       (string-append "1 hour and " (number->string mins) " minutes")))
-      (else (string-append (number->string hours) " hours")))))
-
-;; Show vault status at startup
+;; Show current directory context
 (when (directory-exists? ".vault")
   (describe-vault)
-  (node-hardware-refresh!))
+  (node-hardware-refresh!)
+  (print "  running on " (platform-stamp)))
+(print "")
+(print "(help) for help, ,q to quit")
 (print "")
 
 ;; Start custom REPL

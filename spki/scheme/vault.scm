@@ -283,7 +283,7 @@
                   (print "Keystore unlocked: ed25519:" (blob->hex public-key))
                   public-key))
               (begin
-                (print "ERROR: Wrong passphrase")
+                (print "Error: Wrong passphrase")
                 #f)))))
 
   (define (keystore-lock)
@@ -629,7 +629,7 @@
                 (print "✓ Release seal verified: " version)
                 #t)
               (begin
-                (print "✗ Release seal INVALID: " version)
+                (print "✗ Release seal Invalid: " version)
                 #f))))))
 
   ;;; ============================================================================
@@ -711,8 +711,8 @@
 
   (define (print-box-header title type width)
     (print (box-top width))
-    (print (box-line (sprintf "OBJECT: ~a" title) width))
-    (print (box-line (sprintf "TYPE:   ~a" type) width))
+    (print (box-line (sprintf "object: ~a" title) width))
+    (print (box-line (sprintf "type:   ~a" type) width))
     (print (box-divider width)))
 
   (define (print-section-header title width)
@@ -761,14 +761,14 @@
                        (if (and archive-hash
                                 (equal? archive-hash expected-hash)
                                 (ed25519-verify pubkey archive-hash signature))
-                           "✓ VERIFIED"
-                           "✗ FAILED"))
-                     "⚠ NOT VERIFIED (no key)")))
+                           "✓ Verified"
+                           "✗ Failed"))
+                     "⚠ Not Verified (no key)")))
 
             ;; Print inspection output
             (print-box-header (pathname-file path) "sealed-archive" width)
 
-            (print-section-header "SECURITY PROPERTIES" width)
+            (print-section-header "Security Properties" width)
             (print (box-line-pair "Signing Algorithm" "ed25519-sha512" width))
             (print (box-line-pair "Content Hash" (string-append "sha512:" (substring hash-hex 0 16) "...") width))
             (print (box-line-pair "Signature" sig-status width))
@@ -783,7 +783,7 @@
                (print (box-line-pair "Encryption" "none" width))))
 
             (print (box-divider width))
-            (print-section-header "MIGRATION PROPERTIES" width)
+            (print-section-header "Migration Properties" width)
             (print (box-line-pair "Format Version" "1" width))
             (print (box-line-pair "Archive Format" (symbol->string fmt) width))
 
@@ -817,7 +817,7 @@
           (sig-file (sprintf ".vault/releases/~a.sig" version)))
 
       (print-box-header version "sealed-release" width)
-      (print-section-header "SECURITY PROPERTIES" width)
+      (print-section-header "Security Properties" width)
 
       (if (file-exists? sig-file)
           (let ((sig-data (with-input-from-file sig-file read)))
@@ -829,15 +829,15 @@
               (let ((sig-status
                      (if verify-key
                          (if (seal-verify version verify-key: verify-key)
-                             "✓ VERIFIED"
-                             "✗ FAILED")
-                         "⚠ NOT VERIFIED (no key)")))
+                             "✓ Verified"
+                             "✗ Failed")
+                         "⚠ Not Verified (no key)")))
                 (print (box-line-pair "Signature" sig-status width)))))
 
           (print (box-line-pair "Signature" "none (unsigned release)" width)))
 
       (print (box-divider width))
-      (print-section-header "MIGRATION PROPERTIES" width)
+      (print-section-header "Migration Properties" width)
 
       ;; Get git info for the tag
       (let ((hash (with-input-from-pipe
@@ -877,7 +877,7 @@
              (cert-sexp (if (pair? cert-data) (car cert-data) cert-data)))
 
         (print-box-header "signed-certificate" "spki-cert" width)
-        (print-section-header "SECURITY PROPERTIES" width)
+        (print-section-header "Security Properties" width)
         (print (box-line-pair "Signing Algorithm" "ed25519-sha512" width))
         (print (box-line-pair "Hash Algorithm" "sha512" width))
 
@@ -892,7 +892,7 @@
         (print (box-line-pair "Propagate" "check cert-propagate" width))
 
         (print (box-divider width))
-        (print-section-header "DELEGATION PROPERTIES" width)
+        (print-section-header "Delegation Properties" width)
         (print (box-line-pair "Chain Depth" "1 (direct)" width))
         (print (box-line-pair "Validity" "check cert-validity" width))
 
@@ -913,7 +913,7 @@
               (seal (assq 'seal fields)))
 
           (print-box-header (sprintf "entry-~a" sequence) "audit-entry" width)
-          (print-section-header "SECURITY PROPERTIES" width)
+          (print-section-header "Security Properties" width)
 
           (if seal
               (let ((seal-fields (cdr seal)))
@@ -925,7 +925,7 @@
               (print (box-line-pair "Seal" "none" width)))
 
           (print (box-divider width))
-          (print-section-header "AUDIT PROPERTIES" width)
+          (print-section-header "Audit Properties" width)
           (print (box-line-pair "Entry ID" (substring id 0 24) width))
           (print (box-line-pair "Sequence" (number->string sequence) width))
           (print (box-line-pair "Timestamp" timestamp width))
@@ -1400,7 +1400,7 @@ Object Types:
                 (count (length filtered)))
             (print "")
             (print (repeat-string "─" width))
-            (printf " SOUP DIRECTORY  ~a object~a~%"
+            (printf " Soup Directory  ~a object~a~%"
                     count (if (= count 1) "" "s"))
             (print (repeat-string "─" width))
 
@@ -1664,7 +1664,7 @@ Object Types:
            (col-width (max 20 (+ max-tag-len 3))))
       (print "")
       (print "╭────────────────────────────────────────────────────────────────────────────╮")
-      (print "│ RELEASES                                                                   │")
+      (print "│ Releases                                                                   │")
       (print "├────────────────────────────────────────────────────────────────────────────┤")
       (printf "│ ~a~aCommit       Signed  Archived  Date       │~%"
               "Version"
@@ -1720,7 +1720,7 @@ Object Types:
 
       (print "")
       (print "╭────────────────────────────────────────╮")
-      (print "│ SOUP DISK USAGE                        │")
+      (print "│ Soup Disk Usage                        │")
       (print "├────────────────────────────────────────┤")
 
       (for-each
@@ -1954,7 +1954,7 @@ Object Types:
             ;; Show entry banner
             (print "")
             (print "╭───────────────────────────────────────────────────────────╮")
-            (printf "│ INSPECTOR: ~a~a│~%"
+            (printf "│ Inspector: ~a~a│~%"
                     name (make-string (max 0 (- 47 (string-length name))) #\space))
             (printf "│ Type: ~a   Size: ~a~a│~%"
                     type
@@ -2097,7 +2097,7 @@ Object Types:
                                         (let ((computed (soup-hash-file tarball-path)))
                                           (if (string-contains computed (cadr stored-hash))
                                               (print "  Archive integrity: ✓")
-                                              (print "  Archive integrity: ✗ MISMATCH")))
+                                              (print "  Archive integrity: ✗ Mismatch")))
                                         (print "  Tarball not found"))))))))
                         (print ""))))
 
@@ -2234,7 +2234,7 @@ Object Types:
       (set! *node-capabilities* caps)
 
       (print "")
-      (print "NODE CAPABILITY PROBE")
+      (print "Node Capability Probe")
       (print (repeat-string "─" 50))
 
       ;; Compute
@@ -2270,7 +2270,7 @@ Object Types:
       (let ((recommended (recommend-role caps)))
         (print "")
         (print (repeat-string "─" 50))
-        (printf " RECOMMENDED ROLE: ~a~%" recommended)
+        (printf " Recommended Role: ~a~%" recommended)
         (let ((desc (cdr (assq 'description (cdr (assq recommended *node-roles*))))))
           (printf "   ~a~%" desc)))
 
@@ -2479,7 +2479,7 @@ Object Types:
           (key (vault-config 'signing-key)))
 
       (print "")
-      (print "NODE ROLE ANNOUNCEMENT")
+      (print "Node Role Announcement")
       (print (repeat-string "─" 50))
 
       (if key
@@ -3072,7 +3072,7 @@ Object Types:
 
       (if dry-run
           (begin
-            (print "DRY RUN - would execute: " migration-script)
+            (print "Dry Run - would execute: " migration-script)
             (print "Migration script:")
             (run-command "cat" migration-script))
           (begin

@@ -118,7 +118,7 @@
     (let ((pad (make-string indent #\space)))
       (cond
        ((all-perms? tag)
-        (printf "~a(*) ALL PERMISSIONS~%" pad))
+        (printf "~a(*) All Permissions~%" pad))
        ((tag? tag)
         (printf "~aCapability: ~a~%" pad (tag-sexp tag)))
        (else
@@ -131,7 +131,7 @@
            (sig (signed-cert-signature signed-cert)))
       (print)
       (printf "~a╭─────────────────────────────────────────────────╮~%" pad)
-      (printf "~a│              SPKI CERTIFICATE                   │~%" pad)
+      (printf "~a│              SPKI Certificate                   │~%" pad)
       (printf "~a├─────────────────────────────────────────────────┤~%" pad)
       (printf "~a│ Issuer:                                         │~%" pad)
       (printf "~a│   ~a~a│~%" pad
@@ -145,7 +145,7 @@
       (printf "~a│ Capability:                                     │~%" pad)
       (let ((tag (cert-tag c)))
         (if (all-perms? tag)
-            (printf "~a│   (*) ALL PERMISSIONS                           │~%" pad)
+            (printf "~a│   (*) All Permissions                           │~%" pad)
             (printf "~a│   ~a~%" pad (tag-sexp tag))))
       (printf "~a├─────────────────────────────────────────────────┤~%" pad)
       (let ((v (cert-validity c)))
@@ -165,14 +165,14 @@
     (let ((pad (make-string indent #\space)))
       (print)
       (printf "~a═══════════════════════════════════════════════════~%" pad)
-      (printf "~a              DELEGATION CHAIN                     ~%" pad)
+      (printf "~a              Delegation Chain                     ~%" pad)
       (printf "~a═══════════════════════════════════════════════════~%" pad)
       (let loop ((certs chain) (n 1))
         (when (pair? certs)
           (let* ((sc (car certs))
                  (c (signed-cert-cert sc)))
             (printf "~a~%~a[~a] ~a~%" pad pad n
-                    (if (= n 1) "ROOT (self-signed or trust anchor)" "DELEGATION"))
+                    (if (= n 1) "Root (self-signed or trust anchor)" "Delegation"))
             (printf "~a    From: ~a~%" pad (principal-fingerprint (cert-issuer c)))
             (printf "~a    To:   ~a~%" pad (principal-fingerprint (cert-subject c)))
             (printf "~a    Grants: ~a~%" pad
@@ -191,7 +191,7 @@
     "Inspect a principal's security properties"
     (print)
     (print "╔═══════════════════════════════════════════════════════════╗")
-    (print "║              PRINCIPAL SECURITY PROPERTIES                ║")
+    (print "║              Principal Security Properties                ║")
     (print "╠═══════════════════════════════════════════════════════════╣")
     (display-principal principal 1)
     (print "╠═══════════════════════════════════════════════════════════╣")
@@ -203,7 +203,7 @@
                           (equal? (principal-fingerprint (cert-issuer c))
                                   (principal-fingerprint principal))))
                       soup-certs)))
-      (printf "║ Certificates ISSUED by this principal: ~a~%" (length as-issuer))
+      (printf "║ Certificates Issued by this principal: ~a~%" (length as-issuer))
       (for-each
        (lambda (sc)
          (let ((c (signed-cert-cert sc)))
@@ -220,7 +220,7 @@
                                    (principal-fingerprint principal))))
                        soup-certs)))
       (print "╠═══════════════════════════════════════════════════════════╣")
-      (printf "║ Certificates GRANTING to this principal: ~a~%" (length as-subject))
+      (printf "║ Certificates Granted to this principal: ~a~%" (length as-subject))
       (for-each
        (lambda (sc)
          (let ((c (signed-cert-cert sc)))
@@ -261,8 +261,8 @@
       (let ((valid (verify-signed-cert signed-cert issuer-key)))
         (print)
         (if valid
-            (print "✓ SIGNATURE VALID")
-            (print "✗ SIGNATURE INVALID"))
+            (print "✓ Signature Valid")
+            (print "✗ Signature Invalid"))
         (print)))
 
     ;; Return structured data
@@ -328,7 +328,7 @@
   (define (what-can principal soup-certs)
     "Find all capabilities granted to a principal"
     (print)
-    (printf "═══ CAPABILITIES OF: ~a ═══~%" (principal-fingerprint principal))
+    (printf "═══ Capabilities of: ~a ═══~%" (principal-fingerprint principal))
     (print)
     (let ((caps
            (filter-map
@@ -344,7 +344,7 @@
           (print "  (no capabilities found)")
           (for-each
            (lambda (cap)
-             (printf "  • ~a~%" (if (all-perms? cap) "(*) ALL PERMISSIONS" (tag-sexp cap))))
+             (printf "  • ~a~%" (if (all-perms? cap) "(*) All Permissions" (tag-sexp cap))))
            caps))
       (print)
       caps))
@@ -352,7 +352,7 @@
   (define (authority-for capability principal soup-certs)
     "Trace the authority chain for a principal's capability"
     (print)
-    (printf "═══ AUTHORITY FOR: ~a doing ~a ═══~%"
+    (printf "═══ Authority for: ~a doing ~a ═══~%"
             (principal-fingerprint principal) capability)
     (print)
     ;; Find direct grants
@@ -394,7 +394,7 @@
   (define (verify-object obj-type obj-name)
     "Verify security properties of a soup object"
     (print)
-    (printf "═══ VERIFYING: ~a (~a) ═══~%" obj-name obj-type)
+    (printf "═══ Verifying: ~a (~a) ═══~%" obj-name obj-type)
     (print)
     (case obj-type
       ((keys)
@@ -422,7 +422,7 @@
   (define (verify-chain-to root-principal chain)
     "Verify a delegation chain back to a root"
     (print)
-    (print "═══ CHAIN VERIFICATION ═══")
+    (print "═══ Chain Verification ═══")
     (print)
     (if (null? chain)
         (begin
@@ -466,7 +466,7 @@
     "Display overall security summary of the soup"
     (print)
     (print "╔═══════════════════════════════════════════════════════════╗")
-    (print "║              SOUP SECURITY SUMMARY                        ║")
+    (print "║              Soup Security Summary                        ║")
     (print "╠═══════════════════════════════════════════════════════════╣")
     (print "║                                                           ║")
     (print "║  Keys:         (run to count)                             ║")
@@ -483,7 +483,7 @@
   (define (security-audit principal soup-certs soup-audit)
     "Correlate security events for a principal"
     (print)
-    (printf "═══ SECURITY AUDIT: ~a ═══~%" (principal-fingerprint principal))
+    (printf "═══ Security Audit: ~a ═══~%" (principal-fingerprint principal))
     (print)
     (print "Certificate events:")
     (print "  (checking issued certificates...)")

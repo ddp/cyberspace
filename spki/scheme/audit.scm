@@ -455,7 +455,7 @@
           (out (or output "audit-export.txt")))
       (with-output-to-file out
         (lambda ()
-          (print "AUDIT TRAIL - Library of Cyberspace")
+          (print "Audit Trail - Library of Cyberspace")
           (print "===================================")
           (print "")
           (let ((files (sort (directory dir) string<?)))
