@@ -1,8 +1,9 @@
 #!/bin/sh
 # Install eggs via HTTP (bypass broken SSL on this machine)
+# srfi-4 is built into Chicken 5, not a separate egg
 set -e
 
-EGGS="srfi-1 srfi-4 srfi-13 srfi-14 srfi-18 srfi-69"
+EGGS="srfi-1 srfi-13 srfi-14 srfi-18 srfi-69"
 SERVER="http://chicken.kitten-technologies.co.uk/henrietta.cgi"
 
 for egg in $EGGS; do
