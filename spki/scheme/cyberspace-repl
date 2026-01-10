@@ -33,7 +33,7 @@
         srfi-13
         srfi-69   ; hash tables
         (chicken tcp)
-        linenoise) ; line editing and history
+        linenoise) ; line editing (C-a, C-e, history)
 
 ;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
@@ -3817,8 +3817,7 @@ Cyberspace REPL - Available Commands
 
 ;; Friendly exit
 (define (goodbye)
-  (handle-exceptions exn #f
-    (save-history-to-file *history-file*))
+  (repl-history-save)
   (print "")
   (print "Goodbye from Cyberspace Scheme.")
   (print "")
@@ -3850,14 +3849,27 @@ Cyberspace REPL - Available Commands
 (handle-exceptions exn #f
   (load-history-from-file *history-file*))
 
+;; Read line with linenoise (C-a, C-e, arrows, history)
+(define (repl-read-line prompt)
+  (linenoise prompt))
+
+;; Add to history
+(define (repl-history-add line)
+  (history-add line))
+
+;; Save history
+(define (repl-history-save)
+  (handle-exceptions exn #f
+    (save-history-to-file *history-file*)))
+
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
-    (let ((line (linenoise *prompt*)))
+    (let ((line (repl-read-line *prompt*)))
       (cond
-        ;; EOF (linenoise returns #f)
-        ((not line)
+        ;; EOF (linenoise returns #f, read-line returns eof-object)
+        ((or (not line) (eof-object? line))
          (newline)
          (goodbye))
 
@@ -3867,7 +3879,7 @@ Cyberspace REPL - Available Commands
 
         ;; Comma commands
         ((char=? (string-ref line 0) #\,)
-         (history-add line)
+         (repl-history-add line)
          (let* ((cmd-line (substring line 1))
                 (parts (string-split cmd-line))
                 (cmd (if (null? parts) "" (car parts)))
@@ -3945,7 +3957,7 @@ Cyberspace REPL - Available Commands
 
         ;; Regular Scheme expression
         (else
-         (history-add line)
+         (repl-history-add line)
          (handle-exceptions exn
            (begin
              (capture-exception exn)
