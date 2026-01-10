@@ -4638,7 +4638,7 @@ Cyberspace REPL - Available Commands
 ;; Show realm context
 (if *realm*
     (print "You entered the " *realm* " realm " (session-duration) ".")
-    (print "You are unaffiliated, in the wilderness."))
+    (print "You are unaffiliated, in a wilderness."))
 (when (directory-exists? ".vault")
   (describe-vault)
   (node-hardware-refresh!)
