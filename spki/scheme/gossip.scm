@@ -23,7 +23,7 @@
    add-peer
    remove-peer
    list-peers
-   peer-status
+   get-peer-status
    ;; Convergence protocol
    sync-bloom-exchange
    sync-merkle-diff
@@ -165,22 +165,22 @@
   (define (list-peers)
     "List all known peers"
     (hash-table-map *peers*
-                   (lambda (key peer)
+                   (lambda (key p)
                      `(,key
-                       (host ,(peer-host peer))
-                       (port ,(peer-port peer))
-                       (status ,(peer-status peer))
-                       (last-seen ,(peer-last-seen peer))))))
+                       (host ,(peer-host p))
+                       (port ,(peer-port p))
+                       (status ,(peer-status p))
+                       (last-seen ,(peer-last-seen p))))))
 
-  (define (peer-status host #!key (port *gossip-port*))
+  (define (get-peer-status host #!key (port *gossip-port*))
     "Get status of specific peer"
     (let* ((key (string-append host ":" (number->string port)))
-           (peer (hash-table-ref/default *peers* key #f)))
-      (and peer
-           `((host ,(peer-host peer))
-             (port ,(peer-port peer))
-             (status ,(peer-status peer))
-             (last-seen ,(peer-last-seen peer))))))
+           (p (hash-table-ref/default *peers* key #f)))
+      (and p
+           `((host ,(peer-host p))
+             (port ,(peer-port p))
+             (status ,(peer-status p))
+             (last-seen ,(peer-last-seen p))))))
 
   ;; ============================================================
   ;; Gossip Daemon

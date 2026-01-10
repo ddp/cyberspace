@@ -256,24 +256,36 @@
                          items
                          '()))))
 
+  (define (tree-contains? node target)
+    "Check if target is in this subtree"
+    (cond
+     ((not node) #f)
+     ((node-leaf? node) (string=? (node-leaf-data node) target))
+     (else (or (tree-contains? (node-left node) target)
+               (tree-contains? (node-right node) target)))))
+
   (define (generate-proof node target items path)
-    "Recursively generate proof path"
+    "Recursively generate proof path by traversing actual tree structure.
+     Returns proof in leaf-to-root order (first element is leaf's sibling)."
     (cond
      ((not node) #f)
      ((node-leaf? node)
       (if (string=? (node-leaf-data node) target)
-          (reverse path)
+          path  ;; Return path as-is (leaf-to-root order)
           #f))
      (else
-      ;; Binary search to find which subtree
-      (let* ((mid (quotient (length items) 2))
-             (left-items (take items mid))
-             (right-items (drop items mid)))
-        (if (member target left-items)
-            (generate-proof (node-left node) target left-items
-                           (cons `(right ,(node-hash (node-right node))) path))
-            (generate-proof (node-right node) target right-items
-                           (cons `(left ,(node-hash (node-left node))) path)))))))
+      ;; Check which subtree actually contains the target
+      ;; Append sibling info AFTER recursing (so leaf level comes first)
+      (cond
+       ((tree-contains? (node-left node) target)
+        (let ((sub-proof (generate-proof (node-left node) target items path)))
+          (and sub-proof
+               (append sub-proof (list `(right ,(node-hash (node-right node))))))))
+       ((tree-contains? (node-right node) target)
+        (let ((sub-proof (generate-proof (node-right node) target items path)))
+          (and sub-proof
+               (append sub-proof (list `(left ,(node-hash (node-left node))))))))
+       (else #f)))))
 
   (define (catalog-verify-proof root-hash item proof)
     "Verify an inclusion proof"
