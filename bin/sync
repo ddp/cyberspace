@@ -306,26 +306,32 @@
         'unknown)))
 
 (define (sync-git-pull)
-  "Pull changes from remote if behind (stashes local changes first)"
+  "Pull changes from remote if behind (stashes local changes, rebases if diverged)"
   (log-info "Pulling changes from ~a/~a..." *master-node* *default-branch*)
   ;; Stash any local changes to avoid conflicts
   (let ((stash-result (git "stash" "--include-untracked" "-m" "sync-autostash")))
     (let ((had-stash (and stash-result
+                          (string? stash-result)
                           (not (string-contains stash-result "No local changes")))))
       (when had-stash
         (log-info "Stashed local changes"))
-      (let ((result (git "pull" *master-node* *default-branch*)))
+      ;; Use rebase to handle divergent branches
+      (let ((result (git "pull" "--rebase" *master-node* *default-branch*)))
         ;; Restore stashed changes
         (when had-stash
           (let ((pop-result (git "stash" "pop")))
-            (if (and pop-result (not (string-contains (or pop-result "") "CONFLICT")))
+            (if (and pop-result
+                     (string? pop-result)
+                     (not (string-contains pop-result "CONFLICT")))
                 (log-info "Restored local changes")
                 (log-info "Note: stashed changes may need manual resolution"))))
-        (if result
+        (if (and result (string? result))
             (begin
               (log-info "Pull complete: ~a" (string-trim-both result))
               #t)
-            #f)))))
+            (begin
+              (log-info "Pull may have failed - check git status")
+              #f))))))
 
 (define (sync-submodules)
   "Update git submodules if present"
