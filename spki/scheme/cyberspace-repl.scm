@@ -2854,6 +2854,125 @@ Cyberspace REPL - Available Commands
 (define (enroll-status) (enrollment-status))
 
 ;;; ============================================================
+;;; Enrollment Listener (Master Side)
+;;; ============================================================
+
+(define *pending-enrollments* '())
+(define *enrollment-listener* #f)
+
+(define (enrollment-handler name pubkey host port)
+  "Handler for incoming enrollment requests"
+  (let* ((words (generate-verification-words pubkey))
+         (request `((name ,name)
+                    (pubkey ,pubkey)
+                    (host ,host)
+                    (port ,port)
+                    (words ,words)
+                    (timestamp ,(current-seconds)))))
+    (set! *pending-enrollments* (cons request *pending-enrollments*))
+    (print "")
+    (print "┌─ New Enrollment Request ─────────────────────────────────────────┐")
+    (printf "│  Node: ~a~n" name)
+    (printf "│  From: ~a:~a~n" host port)
+    (print "│")
+    (printf "│  Verify: ~a~n" words)
+    (print "│")
+    (print "│  Commands: (pending) list, (approve N) accept, (reject N) deny")
+    (print "└──────────────────────────────────────────────────────────────────┘")
+    (void)))
+
+(define (generate-verification-words pubkey)
+  "Generate human-readable verification words from pubkey"
+  ;; Use first bytes of pubkey to select words
+  (let* ((key-str (if (string? pubkey) pubkey (->string pubkey)))
+         (hash (string->number (substring key-str 0 (min 8 (string-length key-str))) 16))
+         (words '("alpha" "bravo" "charlie" "delta" "echo" "foxtrot"
+                  "golf" "hotel" "india" "juliet" "kilo" "lima"
+                  "mike" "november" "oscar" "papa" "quebec" "romeo"
+                  "sierra" "tango" "uniform" "victor" "whiskey" "xray")))
+    (if hash
+        (let* ((w1 (list-ref words (modulo (quotient hash 1000000) 24)))
+               (w2 (list-ref words (modulo (quotient hash 1000) 24)))
+               (w3 (list-ref words (modulo hash 24))))
+          (string-append w1 " " w2 " " w3))
+        "verify manually")))
+
+(define (enroll-listen #!optional (port 7654))
+  "Start listening for enrollment requests (master side)"
+  (when *enrollment-listener*
+    (print "Stopping existing listener...")
+    (stop-listening))
+
+  (print "")
+  (print "┌─ Enrollment Listener ────────────────────────────────────────────┐")
+  (printf "│  Listening on port ~a for enrollment requests...~n" port)
+  (print "│")
+  (print "│  Waiting nodes should run: (enroll-request 'node-name)")
+  (print "│  You will see requests here with verification words.")
+  (print "│")
+  (print "│  Commands: (pending) (approve N) (reject N) (stop-enroll)")
+  (print "└──────────────────────────────────────────────────────────────────┘")
+
+  (set! *enrollment-listener* (listen-for-enrollments enrollment-handler port: port))
+  (void))
+
+(define (stop-enroll)
+  "Stop the enrollment listener"
+  (stop-listening)
+  (set! *enrollment-listener* #f)
+  (print "Enrollment listener stopped.")
+  (void))
+
+(define (pending)
+  "Show pending enrollment requests"
+  (if (null? *pending-enrollments*)
+      (print "No pending enrollment requests.")
+      (begin
+        (print "")
+        (print "┌─ Pending Enrollment Requests ────────────────────────────────────┐")
+        (let loop ((reqs (reverse *pending-enrollments*)) (idx 0))
+          (when (pair? reqs)
+            (let* ((req (car reqs))
+                   (name (cadr (assq 'name req)))
+                   (words (cadr (assq 'words req)))
+                   (ts (cadr (assq 'timestamp req))))
+              (printf "│  [~a] ~a~n" idx name)
+              (printf "│      verify: ~a~n" words)
+              (loop (cdr reqs) (+ idx 1)))))
+        (print "├──────────────────────────────────────────────────────────────────┤")
+        (print "│  (approve N) to accept, (reject N) to deny")
+        (print "└──────────────────────────────────────────────────────────────────┘")))
+  (void))
+
+(define (approve n)
+  "Approve pending enrollment request N"
+  (let ((reqs (reverse *pending-enrollments*)))
+    (if (or (< n 0) (>= n (length reqs)))
+        (print "Invalid request number. Use (pending) to see list.")
+        (let* ((req (list-ref reqs n))
+               (name (cadr (assq 'name req)))
+               (pubkey (cadr (assq 'pubkey req))))
+          (print "")
+          (printf "Approving ~a...~n" name)
+          ;; TODO: Generate and send certificate
+          (print "Certificate generation not yet implemented.")
+          (set! *pending-enrollments*
+                (filter (lambda (r) (not (eq? r req))) *pending-enrollments*)))))
+  (void))
+
+(define (reject n)
+  "Reject pending enrollment request N"
+  (let ((reqs (reverse *pending-enrollments*)))
+    (if (or (< n 0) (>= n (length reqs)))
+        (print "Invalid request number. Use (pending) to see list.")
+        (let* ((req (list-ref reqs n))
+               (name (cadr (assq 'name req))))
+          (printf "Rejected ~a~n" name)
+          (set! *pending-enrollments*
+                (filter (lambda (r) (not (eq? r req))) *pending-enrollments*)))))
+  (void))
+
+;;; ============================================================
 ;;; Symbol Completion
 ;;; ============================================================
 
