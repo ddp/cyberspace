@@ -176,6 +176,36 @@ aliases='alias | sort'
 laptop → servfail.adelman.com → ns1.adelman.com → /usr/local/etc/nsd/master/
 ```
 
+## Deferred Computation Philosophy
+
+**Lazy by default. Force when ready.**
+
+The cyberspace-repl implements deferred computation at multiple levels:
+
+**Lazy Compilation** (content-addressed):
+```scheme
+(define-lazy name source-hash)  ; register, don't compile
+(force-compile name)            ; compile now
+(name args...)                  ; auto-compile on first call
+```
+
+**Lazy Clustering** (RFC-016):
+```scheme
+(lazy-join peer uri: u key: k)  ; register peer, no sync yet
+(lazy-sync peer)                ; sync when ready
+```
+
+**Durability Model**:
+```scheme
+(ephemeral thing)   ; no promise of persistence
+(persist thing)     ; vault-bound, durable
+```
+
+The pattern: wrap computation in a thunk, register with content hash,
+defer work until needed, cache the result. Classic Scheme philosophy
+applied to distributed systems - things exist without promise until
+you choose to materialize them.
+
 ## Implementation Patterns
 
 **Every implementation follows:**
