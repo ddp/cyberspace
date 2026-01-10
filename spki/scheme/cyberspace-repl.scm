@@ -4063,13 +4063,411 @@ Cyberspace REPL - Available Commands
 (define releases (lambda () (soup-releases)))
 (define status (lambda () (introspect-system)))
 
+;; Meditative self-introspection
+(define (self?)
+  "Who am I? A friendly, meditative view of your identity in cyberspace."
+  (let* ((identity (read-node-identity))
+         (objs (count-vault-items "objects"))
+         (rels (count-vault-items "releases"))
+         (keys-count (count-vault-items "keys"))
+         (peers (length *cluster-nodes*))
+         (audit-entries (count-file-lines ".vault/audit.log")))
+    (print "")
+    (if identity
+        ;; We have an identity
+        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
+              (role (cond ((assq 'role identity) => cadr) (else #f)))
+              (created (cond ((assq 'created identity) => cadr) (else #f)))
+              (enrolled (cond ((assq 'enrolled identity) => cadr) (else #f)))
+              (confederation (cond ((assq 'confederation identity) => cadr) (else #f)))
+              (pubkey (cond ((assq 'pubkey identity) => cadr) (else #f))))
+          (print "You are " name ".")
+          (print "")
+          ;; Key info
+          (when created
+            (print "  Key created " created "."))
+          (when pubkey
+            (let ((words (generate-verification-words pubkey)))
+              (print "  Verification words: " words)))
+          (print "")
+          ;; Federation status
+          (if enrolled
+              (begin
+                (print "  You belong to " (or confederation "a confederation") ".")
+                (if (> peers 0)
+                    (print "  " peers " peer" (if (= peers 1) " is" "s are") " reachable.")
+                    (print "  No peers currently reachable.")))
+              (begin
+                (print "  You belong to no confederation.")
+                (print "  No peers discovered.")))
+          (print "")
+          ;; Vault summary
+          (if (> objs 0)
+              (print "  Your vault holds " objs " object" (if (= objs 1) "" "s") ".")
+              (print "  Your vault is empty."))
+          (when (> keys-count 0)
+            (print "  You know " keys-count " principal" (if (= keys-count 1) "" "s") "."))
+          (print "")
+          ;; Activity section
+          (let* ((wormhole-count (length *wormholes*))
+                 (pending-count (length *pending-enrollments*))
+                 (listening *enrollment-listener*)
+                 (cluster-active (not (eq? *cluster-state* 'solo)))
+                 (has-activity (or (> wormhole-count 0)
+                                   (> pending-count 0)
+                                   listening
+                                   cluster-active)))
+            (if has-activity
+                (begin
+                  (print "  Activity:")
+                  (when (> wormhole-count 0)
+                    (print "    " wormhole-count " wormhole" (if (= wormhole-count 1) "" "s") " open."))
+                  (when listening
+                    (print "    Listening for enrollment requests."))
+                  (when (> pending-count 0)
+                    (for-each (lambda (req)
+                                (let ((name (alist-ref 'name req))
+                                      (words (alist-ref 'words req)))
+                                  (print "    Enrollment pending from " name ".")
+                                  (when words
+                                    (print "      Verification: " words))))
+                              *pending-enrollments*))
+                  (when cluster-active
+                    (print "    Cluster state: " *cluster-state* "."))
+                  (print ""))
+                (print "  All is quiet."))
+            (print "")))
+        ;; No identity yet
+        (begin
+          (print "You have no identity yet.")
+          (print "")
+          (print "  Use (enroll-request 'your-name) to request enrollment,")
+          (print "  or (ed25519-keypair) to generate a key.")
+          (print "")
+          (if (> objs 0)
+              (print "  Your vault holds " objs " object" (if (= objs 1) "" "s") ".")
+              (print "  Your vault is empty."))
+          (print "")
+          ;; Activity for unenrolled
+          (let* ((wormhole-count (length *wormholes*))
+                 (has-activity (> wormhole-count 0)))
+            (if has-activity
+                (begin
+                  (print "  Activity:")
+                  (print "    " wormhole-count " wormhole" (if (= wormhole-count 1) "" "s") " open.")
+                  (print ""))
+                (print "  All is quiet.")))
+          (print "")))
+    (void)))
+
+;; Alias
+(define whoami? self?)
+
+;; Federation status - who's out there?
+(define (federation?)
+  "What is the state of the network?"
+  (let* ((peers (length *cluster-nodes*))
+         (state *cluster-state*)
+         (identity (read-node-identity))
+         (enrolled (and identity (cond ((assq 'enrolled identity) => cadr) (else #f))))
+         (confederation (and identity (cond ((assq 'confederation identity) => cadr) (else #f)))))
+    (print "")
+    (cond
+      ;; Not enrolled
+      ((not enrolled)
+       (print "You are not part of any confederation.")
+       (print "")
+       (if (> peers 0)
+           (begin
+             (print "  However, you have discovered " peers " peer" (if (= peers 1) "" "s") ":")
+             (for-each (lambda (node)
+                         (let ((name (car node))
+                               (uri (cadr node)))
+                           (print "    " name " at " uri)))
+                       *cluster-nodes*)
+             (print "")
+             (print "  Use (enroll-request 'your-name) to join."))
+           (begin
+             (print "  No peers discovered on the local network.")
+             (print "")
+             (print "  To start a confederation, use (enroll-listen) on the master node.")
+             (print "  To join one, use (enroll-request 'your-name)."))))
+      ;; Enrolled but solo
+      ((eq? state 'solo)
+       (print "You belong to " (or confederation "a confederation") ".")
+       (print "")
+       (print "  No peers are currently reachable.")
+       (print "  You are operating independently.")
+       (print "")
+       (print "  When peers come online, synchronization will resume."))
+      ;; Active cluster
+      (else
+       (print "You belong to " (or confederation "a confederation") ".")
+       (print "")
+       (print "  Cluster state: " state)
+       (print "  " peers " peer" (if (= peers 1) " is" "s are") " reachable:")
+       (for-each (lambda (node)
+                   (let ((name (car node))
+                         (uri (cadr node))
+                         (last-seen (if (> (length node) 2) (caddr node) #f)))
+                     (print "    " name " at " uri)))
+                 *cluster-nodes*)
+       (print "")))
+    (print "")
+    (void)))
+
+;; Principals - who do you know?
+(define (principals?)
+  "Who do you know in cyberspace?"
+  (let* ((keys-dir ".vault/keys")
+         (has-keys (directory-exists? keys-dir))
+         (key-files (if has-keys
+                        (filter (lambda (f) (string-suffix? ".pub" f))
+                                (directory keys-dir))
+                        '()))
+         (key-count (length key-files)))
+    (print "")
+    (if (= key-count 0)
+        (begin
+          (print "You don't know anyone yet.")
+          (print "")
+          (print "  Principals are discovered through enrollment and federation.")
+          (print "  When you meet someone, their key is added to your vault.")
+          (print ""))
+        (begin
+          (print "You know " key-count " principal" (if (= key-count 1) "" "s") ":")
+          (print "")
+          (for-each (lambda (keyfile)
+                      (let* ((name (string-drop-right keyfile 4))  ; remove .pub
+                             (path (string-append keys-dir "/" keyfile))
+                             (stat (file-stat path))
+                             (mtime (vector-ref stat 8))
+                             (date (seconds->string mtime "%B %d")))
+                        (print "  " (string-titlecase name))
+                        (print "    Key added " date ".")))
+                    key-files)
+          (print "")
+          (print "  Use (principal 'name) for details on a specific principal.")
+          (print "")))
+    (void)))
+
+;; Details on a specific principal
+(define (principal name)
+  "Show details about a specific principal"
+  (let* ((name-str (if (symbol? name) (symbol->string name) name))
+         (keyfile (string-append ".vault/keys/" name-str ".pub")))
+    (print "")
+    (if (file-exists? keyfile)
+        (let* ((pubkey (with-input-from-file keyfile read-line))
+               (words (generate-verification-words pubkey))
+               (stat (file-stat keyfile))
+               (mtime (vector-ref stat 8))
+               (date (seconds->string mtime "%B %d, %Y")))
+          (print "Principal: " (string-titlecase name-str))
+          (print "")
+          (print "  Key added " date ".")
+          (print "  Verification words: " words)
+          (print "")
+          ;; Check if in cluster
+          (let ((node (assoc (string->symbol name-str) *cluster-nodes*)))
+            (if node
+                (print "  Status: reachable")
+                (print "  Status: not currently reachable")))
+          (print ""))
+        (begin
+          (print "You don't know anyone named " name-str ".")
+          (print "")
+          (print "  Use (principals?) to see who you know.")
+          (print "")))
+    (void)))
+
+;; Vault status - what's in storage?
+(define (vault?)
+  "What is in your vault?"
+  (let* ((objs (count-vault-items "objects"))
+         (rels (count-vault-items "releases"))
+         (keys-count (count-vault-items "keys"))
+         (audit-entries (count-file-lines ".vault/audit.log"))
+         (releases-dir ".vault/releases")
+         (has-releases (directory-exists? releases-dir))
+         (release-list (if has-releases (directory releases-dir) '())))
+    (print "")
+    (if (and (= objs 0) (= rels 0) (= keys-count 0))
+        (begin
+          (print "Your vault is empty.")
+          (print "")
+          (print "  Use (seal-commit \"message\") to store your first object.")
+          (print "  Use (seal-release \"1.0.0\") to create a release.")
+          (print ""))
+        (begin
+          (print "Your vault contains:")
+          (print "")
+          (when (> objs 0)
+            (print "  " objs " object" (if (= objs 1) "" "s")))
+          (when (> keys-count 0)
+            (print "  " keys-count " key" (if (= keys-count 1) "" "s")))
+          (when (> rels 0)
+            (print "  " rels " release" (if (= rels 1) "" "s") ":"))
+          (when (and has-releases (not (null? release-list)))
+            (for-each (lambda (rel)
+                        (print "    " rel))
+                      (take (sort release-list string>?) (min 5 (length release-list)))))
+          (when (> rels 5)
+            (print "    ... and " (- rels 5) " more"))
+          (print "")
+          (when (> audit-entries 0)
+            (print "  " audit-entries " event" (if (= audit-entries 1) "" "s") " in the audit trail."))
+          (print "")
+          (print "  Use (soup) to browse, (soup-stat 'name) for details.")
+          (print "")))
+    (void)))
+
 ;; Quit shortcuts (don't shadow scheme's exit)
 (define quit goodbye)
 (define q goodbye)
 (define bye goodbye)
 
-;; Settable prompt (default: colon like classic Lisp)
+;;; ============================================================
+;;; Personalization
+;;; ============================================================
+;;;
+;;; User-settable preferences. Change with (set! *name* value).
+;;; Future: persist to ~/.cyberspace/prefs.scm
+
+;; Prompt pattern (default: colon like classic Lisp)
 (define *prompt* ": ")
+
+;; Suggest corrections for typos (default: on)
+(define *suggest-corrections* #t)
+
+;; Show status line above prompt (default: on)
+(define *show-status-line* #t)
+
+;; Language for messages (default: English)
+(define *language* 'en)
+
+;; Message strings table (expandable)
+(define *messages*
+  '((no-identity
+     (en . "You have no identity yet.")
+     (fr . "Vous n'avez pas encore d'identité.")
+     (de . "Sie haben noch keine Identität.")
+     (es . "Aún no tienes identidad."))
+    (all-quiet
+     (en . "All is quiet.")
+     (fr . "Tout est calme.")
+     (de . "Alles ist ruhig.")
+     (es . "Todo está tranquilo."))
+    (vault-empty
+     (en . "Your vault is empty.")
+     (fr . "Votre coffre est vide.")
+     (de . "Ihr Tresor ist leer.")
+     (es . "Tu bóveda está vacía."))
+    (no-peers
+     (en . "No peers discovered.")
+     (fr . "Aucun pair découvert.")
+     (de . "Keine Peers gefunden.")
+     (es . "No se encontraron pares."))
+    (no-confederation
+     (en . "You are not part of any confederation.")
+     (fr . "Vous ne faites partie d'aucune confédération.")
+     (de . "Sie gehören keiner Konföderation an.")
+     (es . "No eres parte de ninguna confederación."))
+    (dont-know-anyone
+     (en . "You don't know anyone yet.")
+     (fr . "Vous ne connaissez encore personne.")
+     (de . "Sie kennen noch niemanden.")
+     (es . "Aún no conoces a nadie."))
+    (goodbye
+     (en . "Goodbye from Cyberspace Scheme.")
+     (fr . "Au revoir de Cyberspace Scheme.")
+     (de . "Auf Wiedersehen von Cyberspace Scheme.")
+     (es . "Adiós de Cyberspace Scheme."))))
+
+;; Get localized message
+(define (msg key)
+  "Get message in current language, fallback to English"
+  (let ((entry (assq key *messages*)))
+    (if entry
+        (let ((translations (cdr entry)))
+          (cond
+            ((assq *language* translations) => cdr)
+            ((assq 'en translations) => cdr)
+            (else (symbol->string key))))
+        (symbol->string key))))
+
+;; Translate between languages
+(define (translate text #!key (from 'en) (to *language*))
+  "Translate text from one language to another using message table"
+  (let loop ((msgs *messages*))
+    (if (null? msgs)
+        ;; Not found in table
+        (begin
+          (print "  (Translation not in phrase book)")
+          text)
+        (let* ((entry (car msgs))
+               (translations (cdr entry))
+               (from-text (assq from translations)))
+          (if (and from-text (string=? (cdr from-text) text))
+              ;; Found it, get target language
+              (let ((to-text (assq to translations)))
+                (if to-text
+                    (cdr to-text)
+                    (begin
+                      (print "  (No " to " translation available)")
+                      text)))
+              (loop (cdr msgs)))))))
+
+;; Status line content generator
+(define (status-line-content)
+  "Generate status line content"
+  (let* ((wormhole-count (length *wormholes*))
+         (pending-count (length *pending-enrollments*))
+         (cluster-state *cluster-state*)
+         (duration (session-duration))
+         ;; Build status segments
+         (realm-seg *realm*)
+         (time-seg duration)
+         (activity-seg (cond
+                         ((> pending-count 0)
+                          (string-append (number->string pending-count) " pending"))
+                         ((> wormhole-count 0)
+                          (string-append (number->string wormhole-count) " wormhole"
+                                        (if (= wormhole-count 1) "" "s")))
+                         ((not (eq? cluster-state 'solo))
+                          (symbol->string cluster-state))
+                         (else "quiet"))))
+    (string-append realm-seg " │ " time-seg " │ " activity-seg)))
+
+;; Draw status line with VT100
+(define (draw-status-line)
+  "Draw status line above prompt"
+  (when *show-status-line*
+    (let* ((content (status-line-content))
+           (width 78)
+           (pad-len (max 0 (- width (string-length content))))
+           (pad (make-string pad-len #\space)))
+      ;; Dim text for status line
+      (display "\x1b[2m")  ; dim
+      (display content)
+      (display pad)
+      (display "\x1b[0m")  ; reset
+      (newline))))
+
+;; Show preferences
+(define (prefs)
+  "Show current personalization settings"
+  (print "")
+  (print "Personalization:")
+  (print "")
+  (print "  *prompt*              " (with-output-to-string (lambda () (write *prompt*))))
+  (print "  *suggest-corrections* " *suggest-corrections*)
+  (print "  *show-status-line*    " *show-status-line*)
+  (print "  *language*            " *language* "  (en fr de es)")
+  (print "")
+  (print "Change with (set! *name* value)")
+  (print "")
+  (void))
 
 ;; Result history
 ;; Use _ for last result (like Python), _1 _2 _3 for previous
@@ -4104,8 +4502,9 @@ Cyberspace REPL - Available Commands
 ;; History file for persistence
 (define *history-file* (string-append (or (get-environment-variable "HOME") ".") "/.cyberspace_history"))
 
-;; Read line with prompt
+;; Read line with status line and prompt
 (define (repl-read-line prompt)
+  (draw-status-line)
   (display prompt)
   (flush-output)
   (read-line))
@@ -4218,8 +4617,29 @@ Cyberspace REPL - Available Commands
                (pp result))))
          (loop))))))
 
-;; Show current directory context
-(print "Working directory: " (current-directory))
+;; Session start time and realm
+(define *session-start* (current-seconds))
+(define *realm* (let ((dir (current-directory)))
+                  (let ((parts (string-split dir "/")))
+                    (if (null? parts) "unknown"
+                        (last parts)))))
+
+(define (session-duration)
+  "Format session duration in friendly terms"
+  (let* ((elapsed (- (current-seconds) *session-start*))
+         (minutes (quotient elapsed 60))
+         (hours (quotient minutes 60))
+         (mins (modulo minutes 60)))
+    (cond
+      ((< elapsed 60) "just now")
+      ((< minutes 2) "about a minute")
+      ((< minutes 60) (string-append (number->string minutes) " minutes"))
+      ((= hours 1) (if (< mins 5) "about an hour"
+                       (string-append "1 hour and " (number->string mins) " minutes")))
+      (else (string-append (number->string hours) " hours")))))
+
+;; Show realm context
+(print "You entered the " *realm* " realm " (session-duration) ".")
 (when (directory-exists? ".vault")
   (describe-vault)
   (node-hardware-refresh!)
