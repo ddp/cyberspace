@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if "$CHICKEN_CSI" -e "(if (symbol? #:foo) (exit 0) (exit 1))"; then
+    cp srfi-18.types.in srfi-18.types
+    echo '(srfi-18#thread-wait-for-i/o! (#(procedure #:clean #:enforce) srfi-18#thread-wait-for-i/o! (fixnum #!optional symbol) undefined))' >> srfi-18.types
+else
+    cp srfi-18.types.in srfi-18.types
+    echo '(srfi-18#thread-wait-for-i/o! (#(procedure #:clean #:enforce) srfi-18#thread-wait-for-i/o! (fixnum #!optional keyword) undefined))' >> srfi-18.types
+fi
+
+"$CHICKEN_CSC" -C "$CFLAGS" -L "$LDFLAGS" "$@"
+
