@@ -16,6 +16,7 @@
    introspect-network
    introspect-storage
    introspect-realm
+   probe-scaling
    ;; Enrollment (node side)
    enroll-request
    enroll-wait
@@ -88,35 +89,97 @@
                   (reverse lines)
                   (loop (cons line lines)))))))))
 
+  ;; ============================================================
+  ;; VUPS Benchmark - Measure actual compute speed
+  ;; ============================================================
+
+  (define *benchmark-iterations* 10000)  ; SHA-256 hashes to run
+
+  (define (probe-scaling)
+    "Measure compute speed in VUPS (hashes/second).
+     Runs SHA-256 benchmark and returns hashes per second."
+    (let* ((test-data (make-blob 64))  ; 64 bytes of zeros
+           (start (current-seconds))
+           (_ (let loop ((i 0) (data test-data))
+                (if (< i *benchmark-iterations*)
+                    (loop (+ i 1) (sha256-hash data))
+                    data)))
+           (end (current-seconds))
+           (elapsed-sec (max 1 (- end start))))  ; at least 1 second
+      (inexact->exact (round (/ *benchmark-iterations* elapsed-sec)))))
+
+  ;; Mobile device detection patterns
+  (define *mobile-patterns*
+    '("MacBook" "Macbook" "Book" "Laptop" "laptop"
+      "iPad" "iPhone" "Surface" "ThinkPad" "XPS"))
+
+  (define (detect-mobile model)
+    "Detect if model string indicates a mobile device.
+     Returns #t for laptops/tablets, #f for desktops/servers.
+     Unknown models default to #f (assume !mobile)."
+    (if (not model)
+        #f
+        (let ((model-down (list->string (map char-downcase (string->list model)))))
+          (let loop ((patterns *mobile-patterns*))
+            (if (null? patterns)
+                #f
+                (let* ((pat (car patterns))
+                       (pat-down (list->string (map char-downcase (string->list pat)))))
+                  (if (substring-match? model-down pat-down)
+                      #t
+                      (loop (cdr patterns)))))))))
+
+  (define (substring-match? str pattern)
+    "Check if str contains pattern as substring"
+    (let ((slen (string-length str))
+          (plen (string-length pattern)))
+      (let loop ((i 0))
+        (cond ((> (+ i plen) slen) #f)
+              ((string=? (substring str i (+ i plen)) pattern) #t)
+              (else (loop (+ i 1)))))))
+
   (define (introspect-hardware)
-    "Introspect hardware configuration"
+    "Introspect hardware configuration.
+     Includes (mobile #t/#f) flag and (vups N) benchmark for capability scoring."
     (let ((os (shell-command "uname -s"))
           (arch (shell-command "uname -m"))
           (hostname (shell-command "hostname -s")))
-      `(hardware
-        (os ,os)
-        (arch ,arch)
-        (hostname ,hostname)
-        (kernel ,(shell-command "uname -r"))
-        ,@(cond
-           ;; macOS
-           ((and os (string=? os "Darwin"))
-            `((cpu ,(shell-command "sysctl -n machdep.cpu.brand_string"))
-              (cores ,(string->number (or (shell-command "sysctl -n hw.ncpu") "0")))
-              (memory-gb ,(let ((bytes (shell-command "sysctl -n hw.memsize")))
-                           (if bytes
-                               (inexact->exact (round (/ (string->number bytes) 1073741824)))
-                               0)))
-              (model ,(shell-command "sysctl -n hw.model"))))
-           ;; Linux
-           ((and os (string=? os "Linux"))
-            `((cpu ,(shell-command "grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs"))
-              (cores ,(string->number (or (shell-command "nproc") "0")))
-              (memory-gb ,(let ((kb (shell-command "grep MemTotal /proc/meminfo | awk '{print $2}'")))
-                           (if kb
-                               (inexact->exact (round (/ (string->number kb) 1048576)))
-                               0)))))
-           (else '())))))
+      (let* ((model (cond
+                     ((and os (string=? os "Darwin"))
+                      (shell-command "sysctl -n hw.model"))
+                     ((and os (string=? os "Linux"))
+                      (or (shell-command "cat /sys/devices/virtual/dmi/id/product_name 2>/dev/null")
+                          (shell-command "hostnamectl --json short 2>/dev/null | grep -o '\"Chassis\":\"[^\"]*\"' | cut -d'\"' -f4")))
+                     (else #f)))
+             (mobile (detect-mobile model))
+             (vups (probe-scaling)))  ; benchmark during introspection
+        `(hardware
+          (os ,os)
+          (arch ,arch)
+          (hostname ,hostname)
+          (kernel ,(shell-command "uname -r"))
+          (mobile ,mobile)
+          (vups ,vups)
+          ,@(cond
+             ;; macOS
+             ((and os (string=? os "Darwin"))
+              `((cpu ,(shell-command "sysctl -n machdep.cpu.brand_string"))
+                (cores ,(string->number (or (shell-command "sysctl -n hw.ncpu") "0")))
+                (memory-gb ,(let ((bytes (shell-command "sysctl -n hw.memsize")))
+                             (if bytes
+                                 (inexact->exact (round (/ (string->number bytes) 1073741824)))
+                                 0)))
+                (model ,model)))
+             ;; Linux
+             ((and os (string=? os "Linux"))
+              `((cpu ,(shell-command "grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs"))
+                (cores ,(string->number (or (shell-command "nproc") "0")))
+                (memory-gb ,(let ((kb (shell-command "grep MemTotal /proc/meminfo | awk '{print $2}'")))
+                             (if kb
+                                 (inexact->exact (round (/ (string->number kb) 1048576)))
+                                 0)))
+                (model ,model)))
+             (else `((model ,model))))))))
 
   (define (introspect-network)
     "Introspect network configuration"
@@ -209,17 +272,17 @@
   (define (format-enrollment-display name code)
     "Format enrollment request display for node"
     (let* ((code-str (verification-code->display code))
-           (name-str (->string name))
+           (name-str (val->string name))
            (w 48))  ; box width
       (string-append
        "\n"
        "+" (make-string w #\-) "+\n"
        "|" (make-string w #\space) "|\n"
-       "|  Requesting enrollment as: " (string-pad-right name-str (- w 29)) "|\n"
+       "|  Requesting enrollment as: " (pad-right name-str (- w 29)) "|\n"
        "|" (make-string w #\space) "|\n"
        "|  Verification code (FIPS-181):" (make-string (- w 33) #\space) "|\n"
        "|" (make-string w #\space) "|\n"
-       "|      " (string-pad-right code-str (- w 7)) "|\n"
+       "|      " (pad-right code-str (- w 7)) "|\n"
        "|" (make-string w #\space) "|\n"
        "|  Waiting for master to approve..." (make-string (- w 35) #\space) "|\n"
        "|" (make-string w #\space) "|\n"
@@ -228,8 +291,8 @@
   (define (format-approval-display name code host hw)
     "Format enrollment approval display for master"
     (let* ((code-str (verification-code->display code))
-           (name-str (->string name))
-           (host-str (->string host))
+           (name-str (val->string name))
+           (host-str (val->string host))
            (cpu (or (and hw (cadr (assq 'cpu (cdr hw)))) "unknown"))
            (cpu-short (if (> (string-length cpu) 30)
                          (substring cpu 0 30)
@@ -242,28 +305,28 @@
        "|" (make-string w #\space) "|\n"
        "|  Enrollment request received" (make-string (- w 30) #\space) "|\n"
        "|" (make-string w #\space) "|\n"
-       "|  Proposed name: " (string-pad-right name-str (- w 18)) "|\n"
-       "|  From: " (string-pad-right host-str (- w 9)) "|\n"
-       "|  Hardware: " (string-pad-right cpu-short (- w 13)) "|\n"
-       "|  Memory: " (string-pad-right (string-append (->string mem) " GB") (- w 11)) "|\n"
+       "|  Proposed name: " (pad-right name-str (- w 18)) "|\n"
+       "|  From: " (pad-right host-str (- w 9)) "|\n"
+       "|  Hardware: " (pad-right cpu-short (- w 13)) "|\n"
+       "|  Memory: " (pad-right (string-append (val->string mem) " GB") (- w 11)) "|\n"
        "|" (make-string w #\space) "|\n"
        "|  Verification code (FIPS-181):" (make-string (- w 33) #\space) "|\n"
        "|" (make-string w #\space) "|\n"
-       "|      " (string-pad-right code-str (- w 7)) "|\n"
+       "|      " (pad-right code-str (- w 7)) "|\n"
        "|" (make-string w #\space) "|\n"
-       "|  Match what you see on " (string-pad-right (string-append name-str "?") (- w 25)) "|\n"
+       "|  Match what you see on " (pad-right (string-append name-str "?") (- w 25)) "|\n"
        "|" (make-string w #\space) "|\n"
        "|  [y] Approve   [n] Reject   [?] Help" (make-string (- w 38) #\space) "|\n"
        "|" (make-string w #\space) "|\n"
        "+" (make-string w #\-) "+\n")))
 
-  (define (->string x)
+  (define (val->string x)
     (cond ((string? x) x)
           ((symbol? x) (symbol->string x))
           ((number? x) (number->string x))
           (else (with-output-to-string (lambda () (write x))))))
 
-  (define (string-pad-right str len)
+  (define (pad-right str len)
     (if (>= (string-length str) len)
         (substring str 0 len)
         (string-append str (make-string (- len (string-length str)) #\space))))
@@ -548,9 +611,12 @@
 ;;;        (os "Darwin")
 ;;;        (arch "arm64")
 ;;;        (hostname "fluffy")
+;;;        (kernel "25.2.0")
+;;;        (mobile #f)                ; <-- !mobile (server/desktop)
 ;;;        (cpu "Apple M3 Max")
 ;;;        (cores 14)
-;;;        (memory-gb 128))
+;;;        (memory-gb 128)
+;;;        (model "Mac14,6"))         ; Mac Studio -> !mobile
 ;;;       (network
 ;;;        (interfaces (en0 192.168.1.100))
 ;;;        (gateway 192.168.1.1))
@@ -561,4 +627,19 @@
 ;;;        (vault-path ".vault")
 ;;;        (vault-exists #t)
 ;;;        (object-count 42)))
+;;;
+;;; Example: Mobile detection
+;;;
+;;;   ;; On a MacBook (mobile device):
+;;;   (introspect-hardware)
+;;;   => (hardware
+;;;       (os "Darwin")
+;;;       (arch "arm64")
+;;;       (hostname "starlight")
+;;;       (kernel "25.2.0")
+;;;       (mobile #t)                 ; <-- mobile! (laptop)
+;;;       (cpu "Apple M2")
+;;;       (cores 8)
+;;;       (memory-gb 16)
+;;;       (model "MacBookAir10,1"))   ; MacBook -> mobile
 ;;;

@@ -28,6 +28,8 @@
    sync-bloom-exchange
    sync-merkle-diff
    sync-object-transfer
+   ;; Scaling configuration (from auto-enroll)
+   configure-from-scaling!
    ;; Statistics
    gossip-stats
    reset-stats!)
@@ -57,6 +59,28 @@
   (define *gossip-port* 7655)          ; default gossip port
   (define *bloom-error-rate* 0.01)     ; 1% false positive rate
   (define *max-transfer-batch* 100)    ; max objects per transfer
+
+  ;; Scaling-aware configuration (set by auto-enroll)
+  (define *node-scale* 1.0)            ; this node's capability scale (1.0 = reference)
+  (define *effective-capacity* 1.0)    ; confederation total in reference units
+
+  (define (configure-from-scaling! scale effective-capacity batch-size interval)
+    "Configure gossip from capability scaling factors.
+     Called by auto-enroll after master election.
+
+     scale: this node's scale (1.0 = most capable)
+     effective-capacity: total confederation capacity
+     batch-size: recommended batch size for this node
+     interval: recommended gossip interval for this node"
+    (set! *node-scale* scale)
+    (set! *effective-capacity* effective-capacity)
+    (set! *max-transfer-batch* batch-size)
+    (set! *gossip-interval* interval)
+    `(gossip-configured
+      (scale ,scale)
+      (effective-capacity ,effective-capacity)
+      (batch-size ,batch-size)
+      (interval ,interval)))
 
   ;; ============================================================
   ;; State

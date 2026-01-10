@@ -103,7 +103,8 @@
         (> (file-mtime src) (file-mtime so)))))
 
 (define (rebuild-module! module arch stamp)
-  "Rebuild a module for current platform"
+  "Rebuild a module for current platform.
+   Pristine builds: all warnings enabled (-w)."
   (let* ((paths (libsodium-paths arch))
          (inc-path (car paths))
          (lib-path (cadr paths))
@@ -112,12 +113,12 @@
     (print "┌─ forge: " module " ─┐")
     (let ((cmd (if (string=? module "crypto-ffi")
                    ;; crypto-ffi needs libsodium
-                   (string-append "csc -shared -J " src
+                   (string-append "csc -shared -J -w " src
                                   " -I" inc-path
                                   " -L" lib-path
                                   " -L -lsodium 2>&1")
                    ;; other modules (vault, etc)
-                   (string-append "csc -shared -J " src " 2>&1"))))
+                   (string-append "csc -shared -J -w " src " 2>&1"))))
       (print "  " cmd)
       (let ((result (with-input-from-pipe cmd
                       (lambda ()
@@ -147,7 +148,8 @@
   (string-append (current-os) "-" (current-arch)))
 
 (define (bootstrap-modules!)
-  "Ensure all required modules are built for current platform"
+  "Ensure all required modules are built for current platform.
+   Pristine builds: -w enables all warnings, expect zero output."
   (let ((stamp (platform-stamp))
         (arch (current-arch))
         ;; Build order: strict topological sort by dependency level
@@ -172,14 +174,17 @@
         ;;   enroll      ← crypto-ffi + wordlist
         ;;   gossip      ← bloom + catalog + crypto-ffi
         ;;   security    ← cert + sexp + crypto-ffi (soup inspector)
+        ;;   capability  ← (standalone)
         ;;
         ;; Level 3:
         ;;   vault       ← cert + crypto-ffi + audit
+        ;;   auto-enroll ← enroll + capability + mdns + gossip
+        ;;   ui          ← enroll + capability + auto-enroll
         ;;
         (modules '("os" "crypto-ffi" "sexp" "mdns" "app-bundle" "codesign"
                    "audit" "wordlist" "bloom" "catalog" "keyring"
-                   "cert" "enroll" "gossip" "security"
-                   "vault")))
+                   "cert" "enroll" "gossip" "security" "capability"
+                   "vault" "auto-enroll" "ui")))
     (let ((rebuilt (fold
                     (lambda (module count)
                       (if (needs-rebuild? module stamp)
@@ -212,6 +217,9 @@
 (import keyring)
 (import app-bundle)
 (import codesign)
+(import capability)
+(import auto-enroll)
+(import ui)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -4326,7 +4334,18 @@ Cyberspace REPL - Available Commands
 (when (directory-exists? ".vault")
   (describe-vault)
   (node-hardware-refresh!)
-  (print "  running on " (platform-stamp)))
+  ;; Show hardware - VUPS only when enrolled (federation scaling)
+  (let* ((identity (read-node-identity))
+         (enrolled (and identity #t)))
+    (print "  " (platform-stamp))
+    (when enrolled
+      (let* ((hw (introspect-hardware))
+             (cores (cadr (assq 'cores (cdr hw))))
+             (mem (cadr (assq 'memory-gb (cdr hw))))
+             (vups (cadr (assq 'vups (cdr hw))))
+             (mobile (cadr (assq 'mobile (cdr hw)))))
+        (print "  " cores " cores " mem "GB" (if mobile " (mobile)" ""))
+        (print "  " vups " vups")))))
 (print "")
 (print "(help) for help, ,q to quit")
 (print "")
