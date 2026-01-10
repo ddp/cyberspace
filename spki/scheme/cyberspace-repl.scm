@@ -150,11 +150,33 @@
   "Ensure all required modules are built for current platform"
   (let ((stamp (platform-stamp))
         (arch (current-arch))
-        ;; Build order matters: dependencies before dependents
-        ;; vault imports cert, crypto-ffi, audit
-        ;; enroll imports wordlist, crypto-ffi, mdns
-        ;; gossip imports bloom, catalog, crypto-ffi
-        (modules '("crypto-ffi" "sexp" "audit" "cert" "wordlist" "mdns" "bloom" "catalog" "enroll" "gossip" "vault")))
+        ;; Build order: strict topological sort by dependency level
+        ;;
+        ;; Level 0 (no cyberspace deps):
+        ;;   crypto-ffi  - libsodium foundation
+        ;;   sexp        - s-expression parser
+        ;;   mdns        - network discovery
+        ;;   app-bundle  - macOS bundling (shell only)
+        ;;   codesign    - macOS signing (shell only)
+        ;;
+        ;; Level 1 (crypto-ffi only):
+        ;;   audit       - tamper-evident logging
+        ;;   wordlist    - FIPS-181 verification codes
+        ;;   bloom       - probabilistic set membership
+        ;;   catalog     - Merkle tree inventory
+        ;;
+        ;; Level 2 (Levels 0+1):
+        ;;   cert        ← sexp + crypto-ffi
+        ;;   enroll      ← crypto-ffi + wordlist
+        ;;   gossip      ← bloom + catalog + crypto-ffi
+        ;;
+        ;; Level 3:
+        ;;   vault       ← cert + crypto-ffi + audit
+        ;;
+        (modules '("crypto-ffi" "sexp" "mdns" "app-bundle" "codesign"
+                   "audit" "wordlist" "bloom" "catalog"
+                   "cert" "enroll" "gossip"
+                   "vault")))
     (for-each
      (lambda (module)
        (when (needs-rebuild? module stamp)
@@ -176,6 +198,8 @@
 (import catalog)
 (import enroll)
 (import gossip)
+(import app-bundle)
+(import codesign)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -2779,31 +2803,38 @@ Cyberspace REPL - Available Commands
                             (else #f)))
                      (else #f))))
 
+    ;; Helper to pad and print box line
+    (define (box-line content)
+      (let ((s (if (> (string-length content) 63)
+                   (string-append (substring content 0 60) "...")
+                   content)))
+        (printf "│ ~a~a│~n" s (make-string (- 65 (string-length s)) #\space))))
+
     ;; Exception type if available
     (when kind
-      (printf "│ Type: ~a~n" kind))
+      (box-line (sprintf "Type is ~a" kind)))
 
     ;; Error message
-    (printf "│ Error: ~a~n" msg)
+    (box-line msg)
 
     ;; Location if available
     (when loc
-      (printf "│ In: ~a~n" loc))
+      (box-line (sprintf "In ~a" loc)))
 
     ;; Arguments if available - format nicely
     (when (and args (not (null? args)))
-      (printf "│ Args:~n")
+      (box-line "With arguments:")
       (for-each
         (lambda (arg)
           (let ((s (with-output-to-string (lambda () (write arg)))))
-            (printf "│   ~a~n"
-                   (if (> (string-length s) 65)
-                       (string-append (substring s 0 62) "...")
-                       s))))
+            (box-line (sprintf "  ~a"
+                              (if (> (string-length s) 60)
+                                  (string-append (substring s 0 57) "...")
+                                  s)))))
         args))
 
     (print "├──────────────────────────────────────────────────────────────────┤")
-    (print "│ (bt) backtrace  (frame N) inspect frame  (exception-info) details")
+    (print "│ (bt) backtrace  (frame N) inspect  (exception-info) details     │")
     (print "└──────────────────────────────────────────────────────────────────┘")))
 
 ;;; ============================================================
@@ -2866,12 +2897,15 @@ Cyberspace REPL - Available Commands
     (set! *pending-enrollments* (cons request *pending-enrollments*))
     (print "")
     (print "┌─ New Enrollment Request ─────────────────────────────────────────┐")
-    (printf "│  Node: ~a~n" name)
-    (printf "│  From: ~a:~a~n" host port)
-    (print "│")
-    (printf "│  Verify: ~a~n" words)
-    (print "│")
-    (print "│  Commands: (pending) list, (approve N) accept, (reject N) deny")
+    (let* ((node-str (sprintf "Node ~a wants to enroll" name))
+           (from-str (sprintf "Connecting from ~a on port ~a" host port))
+           (verify-str (sprintf "Verification words are ~a" words)))
+      (printf "│  ~a~a│~n" node-str (make-string (- 64 (string-length node-str)) #\space))
+      (printf "│  ~a~a│~n" from-str (make-string (- 64 (string-length from-str)) #\space))
+      (print "│                                                                  │")
+      (printf "│  ~a~a│~n" verify-str (make-string (- 64 (string-length verify-str)) #\space))
+      (print "│                                                                  │"))
+    (print "│  Use (pending), (approve 'name), or (reject 'name)              │")
     (print "└──────────────────────────────────────────────────────────────────┘")
     (void)))
 
@@ -2891,12 +2925,13 @@ Cyberspace REPL - Available Commands
 
   (print "")
   (print "┌─ Enrollment Listener ────────────────────────────────────────────┐")
-  (printf "│  Listening on port ~a for enrollment requests...~n" port)
-  (print "│")
-  (print "│  Waiting nodes should run: (enroll-request 'node-name)")
-  (print "│  You will see requests here with verification words.")
-  (print "│")
-  (print "│  Commands: (pending) (approve N) (reject N) (stop-enroll)")
+  (let ((listen-str (sprintf "Listening for enrollment requests on port ~a" port)))
+    (printf "│  ~a~a│~n" listen-str (make-string (- 64 (string-length listen-str)) #\space)))
+  (print "│                                                                  │")
+  (print "│  Waiting nodes should run (enroll-to \"host\" 'node-name)         │")
+  (print "│  Requests will appear here with verification words.             │")
+  (print "│                                                                  │")
+  (print "│  Use (pending) (approve 'name) (reject 'name) or (stop-enroll)  │")
   (print "└──────────────────────────────────────────────────────────────────┘")
 
   (set! *enrollment-listener* (listen-for-enrollments enrollment-handler port: port))
@@ -2916,28 +2951,26 @@ Cyberspace REPL - Available Commands
       (begin
         (print "")
         (print "┌─ Pending Enrollment Requests ────────────────────────────────────┐")
-        (let loop ((reqs (reverse *pending-enrollments*)) (idx 0))
-          (when (pair? reqs)
-            (let* ((req (car reqs))
-                   (name (cadr (assq 'name req)))
+        (for-each
+          (lambda (req)
+            (let* ((name (cadr (assq 'name req)))
                    (words (cadr (assq 'words req)))
-                   (ts (cadr (assq 'timestamp req))))
-              (printf "│  [~a] ~a~n" idx name)
-              (printf "│      verify: ~a~n" words)
-              (loop (cdr reqs) (+ idx 1)))))
+                   (name-str (sprintf "~a" name))
+                   (verify-str (sprintf "  words are ~a" words)))
+              (printf "│  ~a~a│~n" name-str (make-string (- 64 (string-length name-str)) #\space))
+              (printf "│  ~a~a│~n" verify-str (make-string (- 64 (string-length verify-str)) #\space))))
+          (reverse *pending-enrollments*))
         (print "├──────────────────────────────────────────────────────────────────┤")
-        (print "│  (approve N) to accept, (reject N) to deny")
+        (print "│  Use (approve 'name) to accept or (reject 'name) to deny        │")
         (print "└──────────────────────────────────────────────────────────────────┘")))
   (void))
 
-(define (approve n)
-  "Approve pending enrollment request N"
-  (let ((reqs (reverse *pending-enrollments*)))
-    (if (or (< n 0) (>= n (length reqs)))
-        (print "Invalid request number. Use (pending) to see list.")
-        (let* ((req (list-ref reqs n))
-               (name (cadr (assq 'name req)))
-               (pubkey (cadr (assq 'pubkey req))))
+(define (approve name)
+  "Approve pending enrollment request by name"
+  (let ((req (find (lambda (r) (eq? (cadr (assq 'name r)) name)) *pending-enrollments*)))
+    (if (not req)
+        (printf "No pending request for '~a'. Use (pending) to see list.~n" name)
+        (let ((pubkey (cadr (assq 'pubkey req))))
           (print "")
           (printf "Approving ~a...~n" name)
           ;; TODO: Generate and send certificate
@@ -2946,13 +2979,12 @@ Cyberspace REPL - Available Commands
                 (filter (lambda (r) (not (eq? r req))) *pending-enrollments*)))))
   (void))
 
-(define (reject n)
-  "Reject pending enrollment request N"
-  (let ((reqs (reverse *pending-enrollments*)))
-    (if (or (< n 0) (>= n (length reqs)))
-        (print "Invalid request number. Use (pending) to see list.")
-        (let* ((req (list-ref reqs n))
-               (name (cadr (assq 'name req))))
+(define (reject name)
+  "Reject pending enrollment request by name"
+  (let ((req (find (lambda (r) (eq? (cadr (assq 'name r)) name)) *pending-enrollments*)))
+    (if (not req)
+        (printf "No pending request for '~a'. Use (pending) to see list.~n" name)
+        (begin
           (printf "Rejected ~a~n" name)
           (set! *pending-enrollments*
                 (filter (lambda (r) (not (eq? r req))) *pending-enrollments*)))))
@@ -2969,30 +3001,35 @@ Cyberspace REPL - Available Commands
    port: master's enrollment port (default 7654)"
   (print "")
   (print "┌─ Enrollment Request ─────────────────────────────────────────────┐")
-  (printf "│  Connecting to ~a:~a...~n" host port)
+  (let ((conn-str (sprintf "Connecting to ~a on port ~a" host port)))
+    (printf "│  ~a~a│~n" conn-str (make-string (- 64 (string-length conn-str)) #\space)))
 
   ;; Generate a keypair for this node (or use existing)
   (let* ((keypair (ed25519-keypair))
          (pubkey (car keypair))       ; first element is public key
          (privkey (cadr keypair))     ; second is private key
          (pubkey-hex (blob->hex pubkey))
-         (words (generate-verification-words pubkey-hex)))
+         (words (generate-verification-words pubkey-hex))
+         (node-str (sprintf "Enrolling as ~a" name))
+         (verify-str (sprintf "Verification words are ~a" words)))
 
-    (printf "│  Node: ~a~n" name)
-    (print "│")
-    (printf "│  Verification words: ~a~n" words)
-    (print "│")
-    (print "│  Tell the master these words to verify your identity.")
+    (printf "│  ~a~a│~n" node-str (make-string (- 64 (string-length node-str)) #\space))
+    (print "│                                                                  │")
+    (printf "│  ~a~a│~n" verify-str (make-string (- 64 (string-length verify-str)) #\space))
+    (print "│                                                                  │")
+    (print "│  Tell the master these words to verify your identity.           │")
     (print "├──────────────────────────────────────────────────────────────────┤")
 
     ;; Try to connect and send request
     (handle-exceptions exn
       (begin
-        (print "│  Connection failed!")
-        (printf "│  ~a~n" (get-condition-property exn 'exn 'message "unknown error"))
+        (print "│  Connection failed!                                             │")
+        (let ((err-str (get-condition-property exn 'exn 'message "unknown error")))
+          (printf "│  ~a~a│~n" err-str (make-string (- 64 (string-length err-str)) #\space)))
         (print "└──────────────────────────────────────────────────────────────────┘"))
       (let-values (((in out) (tcp-connect host port)))
-        (printf "│  Connected to ~a~n" host)
+        (let ((connected-str (sprintf "Connected to ~a" host)))
+          (printf "│  ~a~a│~n" connected-str (make-string (- 64 (string-length connected-str)) #\space)))
         ;; Send enrollment request
         (let ((request `(enrollment-request
                           (name ,name)
@@ -3003,13 +3040,51 @@ Cyberspace REPL - Available Commands
           (flush-output out)
           (close-output-port out)  ; Signal end of request
           (close-input-port in)    ; Close for now (cert comes later)
-          (print "│  Enrollment request sent.")
-          (print "│  Awaiting approval - master will see verification words.")
+          (print "│  Enrollment request sent successfully.                          │")
+          (print "│  Awaiting approval from master using verification words.        │")
           (print "└──────────────────────────────────────────────────────────────────┘")
           ;; Return pending state with keypair for later
           (list 'pending
                 (cons 'keypair keypair)
                 (cons 'words words)))))))
+
+;;; ============================================================
+;;; App Building
+;;; ============================================================
+;;; Native macOS .app bundle generation with code signing
+;;; and notarization. In math and quantum mechanics we trust.
+
+(define (build-app #!key
+                   (version #f)
+                   (output-dir ".")
+                   (sign #f)
+                   (notarize #f))
+  "Build Cyberspace.app
+
+   Example: (build-app)
+   Example: (build-app sign: #t)
+   Example: (build-app sign: #t notarize: #t)"
+  (let ((ver (or version (git-version))))
+    (print "")
+    (print "┌─ Building Cyberspace ────────────────────────────────────────────┐")
+    (print "│                                                                  │")
+    (let ((ver-str (sprintf "Version ~a" ver)))
+      (printf "│  ~a~a│~n" ver-str (make-string (- 64 (string-length ver-str)) #\space)))
+    (print "│                                                                  │")
+    (print "└──────────────────────────────────────────────────────────────────┘")
+    (print "")
+
+    (make-app 'cyberspace
+              name: "Cyberspace"
+              identifier: "com.yoyodyne.cyberspace"
+              version: ver
+              modules-dir: "."
+              output-dir: output-dir
+              sign: sign
+              notarize: notarize)))
+
+;; Re-export for convenience from REPL
+;; sign-app, verify-app, notarize-app already exported from codesign module
 
 ;;; ============================================================
 ;;; Symbol Completion
@@ -3035,6 +3110,8 @@ Cyberspace REPL - Available Commands
     audit-append audit-read audit-chain
     ;; Memos
     memo-create memo-commit memo-persist memo-list memo-show
+    ;; App Building
+    build-app make-app sign-app notarize-app verify-app list-signing-identities
     ;; REPL
     help status keys clear banner))
 
@@ -3085,18 +3162,18 @@ Cyberspace REPL - Available Commands
          (keystore-exists (directory-exists? ".vault/keystore"))
          (identity (read-node-identity)))
     (print "")
-    (print "Vault: .vault/")
+    (print "Vault is .vault/")
     (print "  " (plural objs "object") ", " (plural rels "release") ", " (plural keys "key"))
     (when (> audit-entries 0)
-      (print "  audit: " (plural audit-entries "entry")))
+      (print "  " (plural audit-entries "audit entry")))
     (when keystore-exists
       (let ((keycount (count-vault-items "keystore")))
-        (print "  keystore: " (plural keycount "identity"))))
+        (print "  " (plural keycount "identity") " in keystore")))
     (if identity
         (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
               (role (cond ((assq 'role identity) => cadr) (else "unknown"))))
-          (print "  spki: " name " (" role ")"))
-        (print "  spki: not enrolled"))))
+          (print "  enrolled as " name " (" role ")"))
+        (print "  not enrolled"))))
 
 ;; Get git info for banner
 (define (git-version)
@@ -4610,17 +4687,10 @@ Cyberspace REPL - Available Commands
                        (string-append "1 hour and " (number->string mins) " minutes")))
       (else (string-append (number->string hours) " hours")))))
 
-;; Show realm context
-(if *realm*
-    (print "You entered the " *realm* " realm " (session-duration) ".")
-    (print "You are unaffiliated, in a wilderness."))
+;; Show vault status at startup
 (when (directory-exists? ".vault")
   (describe-vault)
-  (node-hardware-refresh!)
-  (print "  hardware: " (platform-stamp)))
-(print "")
-(print "Type (help) for help.")
-(print "Comma commands: ,q ,h ,l ,d ,s ,k ,c ,?")
+  (node-hardware-refresh!))
 (print "")
 
 ;; Start custom REPL

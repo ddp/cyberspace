@@ -61,6 +61,44 @@ Library of Cyberspace
     └── Signature Verification
 ```
 
+### Module Dependency Graph
+
+Build order follows strict topological sort by dependency level:
+
+```
+Level 0 ──┬── crypto-ffi ──────────────────────┬── Level 1 ──┬── audit ────┐
+          ├── sexp ─────────────────┐          │             ├── wordlist ─┼─┐
+          ├── mdns                  │          │             ├── bloom ────┼─┼─┐
+          ├── app-bundle            │          │             └── catalog ──┼─┼─┤
+          └── codesign              │          │                           │ │ │
+                                    └──────────┴── Level 2 ── cert ────────┘ │ │
+                                                             enroll ─────────┘ │
+                                                             gossip ───────────┘
+                                                                    │
+                                               Level 3 ── vault ────┘
+```
+
+**Level 0** - No cyberspace module dependencies:
+- `crypto-ffi` — libsodium foundation (Ed25519, SHA-512, BLAKE2b)
+- `sexp` — S-expression parser/printer
+- `mdns` — Local network discovery
+- `app-bundle` — macOS .app bundle generation
+- `codesign` — macOS code signing and notarization
+
+**Level 1** - Depends on crypto-ffi only:
+- `audit` — Tamper-evident logging with content-addressed entries
+- `wordlist` — FIPS-181 pronounceable verification codes
+- `bloom` — Probabilistic set membership (blocked, counting variants)
+- `catalog` — Merkle tree inventory for federation convergence
+
+**Level 2** - Depends on Levels 0+1:
+- `cert` — SPKI certificates (← sexp + crypto-ffi)
+- `enroll` — Node enrollment and presence (← crypto-ffi + wordlist)
+- `gossip` — Anti-entropy gossip protocol (← bloom + catalog + crypto-ffi)
+
+**Level 3** - Full stack:
+- `vault` — Cryptographically sealed version control (← cert + crypto-ffi + audit)
+
 ### Design Philosophy
 
 The architecture follows these design principles:
