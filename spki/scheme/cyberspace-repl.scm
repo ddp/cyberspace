@@ -4150,10 +4150,12 @@ Cyberspace REPL - Available Commands
 
 ;; Live prompt with vault counts
 (define (live-prompt)
-  (let ((objs (count-vault-items "objects"))
-        (rels (count-vault-items "releases"))
-        (keys (count-vault-items "keys"))
-        (peers (length *cluster-nodes*)))
+  "Prompt with live soup counts: objects releases keys peers"
+  (let* ((all (soup-collect-objects))
+         (objs (length all))
+         (rels (length (filter (lambda (o) (eq? (car o) 'releases)) all)))
+         (keys (length (filter (lambda (o) (eq? (car o) 'keys)) all)))
+         (peers (length *cluster-nodes*)))
     (string-append (number->string objs) "o "
                    (number->string rels) "r "
                    (number->string keys) "k "

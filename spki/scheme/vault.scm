@@ -46,6 +46,7 @@
    soup-find
    soup-query
    soup-inspect
+   soup-collect-objects
    hex-abbrev
    complete
 
