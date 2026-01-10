@@ -66,10 +66,11 @@ Library of Cyberspace
 Build order follows strict topological sort by dependency level:
 
 ```
-Level 0 ──┬── crypto-ffi ──────────────────────┬── Level 1 ──┬── audit ────┐
-          ├── sexp ─────────────────┐          │             ├── wordlist ─┼─┐
-          ├── mdns                  │          │             ├── bloom ────┼─┼─┐
-          ├── app-bundle            │          │             └── catalog ──┼─┼─┤
+Level 0 ──┬── os ──────────────────────────────┬── Level 1 ──┬── audit ────┐
+          ├── crypto-ffi ──────────────────────┤             ├── wordlist ─┼─┐
+          ├── sexp ─────────────────┐          │             ├── bloom ────┼─┼─┐
+          ├── mdns                  │          │             └── catalog ──┼─┼─┤
+          ├── app-bundle            │          │                           │ │ │
           └── codesign              │          │                           │ │ │
                                     └──────────┴── Level 2 ── cert ────────┘ │ │
                                                              enroll ─────────┘ │
@@ -79,6 +80,7 @@ Level 0 ──┬── crypto-ffi ───────────────
 ```
 
 **Level 0** - No cyberspace module dependencies:
+- `os` — OS introspection ("know thyself" - platform, arch, features)
 - `crypto-ffi` — libsodium foundation (Ed25519, SHA-512, BLAKE2b)
 - `sexp` — S-expression parser/printer
 - `mdns` — Local network discovery

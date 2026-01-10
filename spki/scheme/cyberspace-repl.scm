@@ -153,6 +153,7 @@
         ;; Build order: strict topological sort by dependency level
         ;;
         ;; Level 0 (no cyberspace deps):
+        ;;   os          - OS introspection ("know thyself")
         ;;   crypto-ffi  - libsodium foundation
         ;;   sexp        - s-expression parser
         ;;   mdns        - network discovery
@@ -173,7 +174,7 @@
         ;; Level 3:
         ;;   vault       ← cert + crypto-ffi + audit
         ;;
-        (modules '("crypto-ffi" "sexp" "mdns" "app-bundle" "codesign"
+        (modules '("os" "crypto-ffi" "sexp" "mdns" "app-bundle" "codesign"
                    "audit" "wordlist" "bloom" "catalog"
                    "cert" "enroll" "gossip"
                    "vault")))
@@ -187,6 +188,7 @@
 (bootstrap-modules!)
 
 ;; Load cyberspace modules (now guaranteed to be correct arch)
+(import os)
 (import crypto-ffi)
 (import vault)
 (import audit)
