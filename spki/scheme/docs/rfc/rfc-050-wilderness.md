@@ -98,13 +98,38 @@ The Wilderness enables connection. Without it, realms would be isolated. Wormhol
 
 ## 4. The Wilderness of Mirrors
 
-The name evokes the intelligence world's "wilderness of mirrors" - a space of uncertainty, reflection, and misdirection. In Cyberspace:
+A double-entendre:
 
-- Trust is not given, it is established
-- Identity is not assumed, it is proven
-- Affiliation is not automatic, it is earned
+### 4.1 Angleton's Wilderness
 
-The Wilderness is honest about this. You are alone until you prove otherwise.
+James Jesus Angleton, CIA counterintelligence chief, borrowed "wilderness of mirrors" from T.S. Eliot to describe the world of espionage. A place where:
+
+- Reflexive control is dominant
+- Nothing is as it seems
+- Disinformation is the norm
+- Trust is a vulnerability
+
+In Cyberspace, the Wilderness acknowledges this reality:
+
+- Trust is not given, it is established cryptographically
+- Identity is not assumed, it is proven with keys
+- Every claim requires verification
+- The default stance is skepticism
+
+### 4.2 The Tribal Wilderness
+
+The older meaning: outside civilization, unaffiliated with any tribe.
+
+- No confederation claims you
+- No federation protects you
+- You belong to no one
+- You are alone
+
+Both meanings apply. The unaffiliated user is:
+- In a world where trust must be earned (Angleton)
+- Outside any group until they join one (tribal)
+
+The Wilderness is honest about both. You are alone. Trust nothing but your own crypto keys.
 
 ---
 
