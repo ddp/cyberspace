@@ -16,6 +16,8 @@
         (chicken repl)
         (chicken file)
         (chicken io)
+        (chicken port)     ; with-output-to-string
+        (chicken pretty-print)  ; pp
         (chicken time)
         (chicken process-context)
         (chicken process)
@@ -3324,6 +3326,62 @@ Cyberspace REPL - Available Commands
         (newline)))))
 
 ;;; ============================================================
+;;; Simple Pager - for long output
+;;; ============================================================
+
+(define (terminal-height)
+  "Get terminal height, default 24"
+  (handle-exceptions exn 24
+    (let ((h (with-input-from-pipe "tput lines" read-line)))
+      (if (eof-object? h) 24 (or (string->number h) 24)))))
+
+;; VT100 escape codes
+(define vt100-reverse "\x1b[7m")
+(define vt100-normal "\x1b[0m")
+(define vt100-clear-line "\x1b[2K\r")
+
+(define (pager-display str)
+  "Display string with paging for long output (VT100)"
+  (let* ((lines (string-split str "\n" #t))
+         (height (- (terminal-height) 2))  ; leave room for prompt
+         (total (length lines)))
+    (if (<= total height)
+        ;; Short enough - display directly
+        (display str)
+        ;; Need paging
+        (let loop ((remaining lines) (shown 0))
+          (cond
+           ((null? remaining) #t)
+           ((>= shown height)
+            ;; Show "more" prompt in reverse video
+            (display vt100-reverse)
+            (display "-- more (space/q) --")
+            (display vt100-normal)
+            (flush-output)
+            (let ((ch (read-char)))
+              (display vt100-clear-line)
+              (cond
+               ((or (eq? ch #\q) (eq? ch #\Q))
+                #t)  ; quit paging
+               ((eq? ch #\space)
+                (loop remaining 0))  ; next page
+               (else
+                (loop remaining (- height 1))))))  ; next line
+           (else
+            (display (car remaining))
+            (newline)
+            (loop (cdr remaining) (+ shown 1))))))))
+
+(define (result->string result)
+  "Pretty-print result to string"
+  (with-output-to-string
+    (lambda ()
+      (if (and (pair? result) (symbol? (car result)))
+          ;; S-expression - pretty print
+          (pp result)
+          (write result)))))
+
+;;; ============================================================
 ;;; Command Mode - paren-optional syntax
 ;;; ============================================================
 ;;;
@@ -3332,7 +3390,7 @@ Cyberspace REPL - Available Commands
 ;;; Arguments follow: "commit msg" → (seal-commit "msg")
 
 (define *command-aliases*
-  '((status    . vault-status)
+  '((status    . introspect-system)
     (commit    . seal-commit)
     (release   . seal-release)
     (archive   . seal-archive)
@@ -3386,7 +3444,7 @@ Cyberspace REPL - Available Commands
                 (loop (cons tok tokens))))))))
 
 (define (command-repl)
-  "REPL with command mode"
+  "REPL with command mode and paging"
   (let loop ()
     (display "> ")
     (flush-output)
@@ -3401,8 +3459,10 @@ Cyberspace REPL - Available Commands
             (when expr
               (let ((result (eval expr)))
                 (unless (eq? result (void))
-                  (write result)
-                  (newline)))))
+                  (let ((output (result->string result)))
+                    (pager-display output)
+                    (unless (string-suffix? "\n" output)
+                      (newline)))))))
           (e () (print-error-message e)))
         (loop))))))
 
