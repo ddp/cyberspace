@@ -109,7 +109,7 @@
          (lib-path (cadr paths))
          (src (string-append module ".scm")))
     (print "")
-    (print "┌─ BOOTSTRAP: Rebuilding " module " for " stamp " ─┐")
+    (print "┌─ forge: " module " ─┐")
     (let ((cmd (if (string=? module "crypto-ffi")
                    ;; crypto-ffi needs libsodium
                    (string-append "csc -shared -J " src
@@ -132,13 +132,13 @@
         (if (file-exists? (string-append module ".so"))
             (begin
               (write-arch-stamp module stamp)
-              (print "  ✓ Built successfully")
-              (print "└" (make-string 45 #\─) "┘")
+              (print "  ✓ forged")
+              (print "└─────────────────────┘")
               (print "")
               #t)
             (begin
-              (print "  ✗ Build FAILED")
-              (print "└" (make-string 45 #\─) "┘")
+              (print "  ✗ failed")
+              (print "└─────────────────────┘")
               (print "")
               (exit 1)))))))
 
