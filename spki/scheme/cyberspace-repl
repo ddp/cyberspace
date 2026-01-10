@@ -3389,6 +3389,9 @@ Cyberspace REPL - Available Commands
 ;;; Bare words are commands: "status" → (status)
 ;;; Arguments follow: "commit msg" → (seal-commit "msg")
 
+;; Helper for keys command
+(define (list-keys) (soup 'keys))
+
 (define *command-aliases*
   '((status    . introspect-system)
     (commit    . seal-commit)
@@ -3396,7 +3399,7 @@ Cyberspace REPL - Available Commands
     (archive   . seal-archive)
     (history   . seal-history)
     (sync      . seal-synchronize)
-    (keys      . keystore-list)
+    (keys      . list-keys)
     (keygen    . ed25519-keypair)
     (sign      . ed25519-sign)
     (verify    . ed25519-verify)
@@ -3448,8 +3451,34 @@ Cyberspace REPL - Available Commands
                           (reverse (cdr (reverse tokens)))))
                 (loop (cons tok tokens))))))))
 
+;; Handle Chicken comma commands via standard REPL infrastructure
+(define (handle-comma-command line)
+  "Process ,command using Chicken's toplevel-command system"
+  (let* ((trimmed (string-trim-both (substring line 1)))
+         (port (open-input-string trimmed))
+         (cmd (read port)))
+    (if (eof-object? cmd)
+        (print "Usage: ,command [args]")
+        ;; Use Chicken's built-in command handling
+        (condition-case
+          (let ((rest (read-string #f port)))
+            ((toplevel-command cmd)
+             (if (or (not rest) (string=? (string-trim-both rest) ""))
+                 #f
+                 (open-input-string rest))))
+          (e ()
+           ;; Fallback for common commands
+           (cond
+            ((memq cmd '(q quit exit))
+             (print "Goodbye.")
+             (exit 0))
+            ((eq? cmd '?)
+             (print "Chicken REPL: ,q ,quit ,exit ,l FILE ,d NAME ,? ..."))
+            (else
+             (print "Unknown command: ," cmd))))))))
+
 (define (command-repl)
-  "REPL with command mode and paging"
+  "REPL with command mode, paging, and comma escapes"
   (let loop ()
     (display "> ")
     (flush-output)
@@ -3458,6 +3487,11 @@ Cyberspace REPL - Available Commands
        ((eof-object? line)
         (newline)
         (print "Goodbye."))
+       ;; Comma commands pass through to Chicken
+       ((and (> (string-length line) 0)
+             (char=? (string-ref line 0) #\,))
+        (handle-comma-command line)
+        (loop))
        (else
         (condition-case
           (let ((expr (parse-command-line line)))
