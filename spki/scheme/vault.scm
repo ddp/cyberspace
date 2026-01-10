@@ -1568,10 +1568,12 @@ Object Types:
                    (printf "│ Node:       ~a~a│~%" (cadr name-f) (make-string (- 43 (string-length (cadr name-f))) #\space)))
                  (when role
                    (printf "│ Role:       ~a~a│~%" (cadr role) (make-string (- 43 (string-length (symbol->string (cadr role)))) #\space)))
-                 (when (and hw (assq 'cpu hw))
-                   (printf "│ CPU:        ~a~a│~%" (cadr (assq 'cpu hw)) (make-string (- 43 (string-length (cadr (assq 'cpu hw)))) #\space)))
-                 (when (and hw (assq 'memory-gb hw))
-                   (printf "│ Memory:     ~aGB~a│~%" (cadr (assq 'memory-gb hw)) (make-string 38 #\space)))))) ;; close identity case
+                 (when hw
+                   (let ((hw-list (if (pair? (cdr hw)) (cadr hw) '())))
+                     (when (and (list? hw-list) (assq 'cpu hw-list))
+                       (printf "│ CPU:        ~a~a│~%" (cadr (assq 'cpu hw-list)) (make-string (- 43 (string-length (cadr (assq 'cpu hw-list)))) #\space)))
+                     (when (and (list? hw-list) (assq 'memory-gb hw-list))
+                       (printf "│ Memory:     ~aGB~a│~%" (cadr (assq 'memory-gb hw-list)) (make-string 38 #\space)))))))) ;; close identity case
 
             (print "╰────────────────────────────────────────────────────────╯")
             (print "")))))
@@ -2028,7 +2030,10 @@ Object Types:
                                                                  #\.
                                                                  c))
                                                            line)))
-                                           (printf "~4d│ ~a~%" (+ n 1) safe-line)
+                                           (let ((num-str (number->string (+ n 1))))
+                                             (printf "~a│ ~a~%"
+                                                     (string-append (make-string (- 4 (string-length num-str)) #\space) num-str)
+                                                     safe-line))
                                            (loop (+ n 1)))))))))
                              (print "─────────────────────────────────")
                              (print ""))))
@@ -2065,7 +2070,10 @@ Object Types:
                                                                  #\.
                                                                  c))
                                                            line)))
-                                           (printf "~4d│ ~a~%" (+ n 1) safe-line)
+                                           (let ((num-str (number->string (+ n 1))))
+                                             (printf "~a│ ~a~%"
+                                                     (string-append (make-string (- 4 (string-length num-str)) #\space) num-str)
+                                                     safe-line))
                                            (loop (+ n 1)))))))))
                              (print "────────────────────")
                              (print ""))))
