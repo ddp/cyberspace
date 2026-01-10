@@ -32,7 +32,8 @@
         srfi-4
         srfi-13
         srfi-69   ; hash tables
-        (chicken tcp))
+        (chicken tcp)
+        linenoise) ; line editing and history
 
 ;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
@@ -2325,6 +2326,14 @@ Cyberspace REPL - Available Commands
     (seal-inspect \"1.0.0\")          Inspect a release version
     (seal-inspect obj verify-key: k) Verify signatures during inspection
 
+  Debugging (Dylan-style):
+    (inspect obj)                    Tree-view of any object
+    (i obj)                          Short alias for inspect
+    (bt)                             Show backtrace after error
+    (backtrace)                      Full backtrace with limit
+    (frame N)                        Inspect stack frame N
+    (exception-info)                 Last exception details
+
   Object Soup (NewtonOS-style):
     (soup)                         List all objects
     (soup 'archives)               Filter by type
@@ -2597,6 +2606,244 @@ Cyberspace REPL - Available Commands
           (string-append (substring first 0 (- avail 2)) ".." suffix)
           (string-append first suffix))))))
 
+;;; ============================================================
+;;; ASCII Inspector - Visual S-expression Debugging
+;;; ============================================================
+;;; Tree-view display of data structures with box-drawing.
+;;; Inspired by Dylan's object inspector and NewtonOS data browser.
+
+(define (type-tag obj)
+  "Get type tag for display"
+  (cond
+   ((null? obj) "nil")
+   ((pair? obj)
+    (if (list? obj) "list" "pair"))
+   ((symbol? obj) "sym")
+   ((string? obj) "str")
+   ((number? obj) "num")
+   ((boolean? obj) "bool")
+   ((blob? obj) "blob")
+   ((u8vector? obj) "u8vec")
+   ((vector? obj) "vec")
+   ((procedure? obj) "proc")
+   ((port? obj) "port")
+   ((eof-object? obj) "eof")
+   (else "?")))
+
+(define (format-value obj max-len)
+  "Format value for display, truncating if needed"
+  (let ((str (cond
+              ((null? obj) "()")
+              ((symbol? obj) (symbol->string obj))
+              ((string? obj) (string-append "\"" obj "\""))
+              ((number? obj) (number->string obj))
+              ((boolean? obj) (if obj "#t" "#f"))
+              ((blob? obj)
+               (let ((len (blob-size obj)))
+                 (string-append "#${" (number->string len) " bytes}")))
+              ((u8vector? obj)
+               (string-append "#u8(" (number->string (u8vector-length obj)) ")"))
+              ((procedure? obj) "#<procedure>")
+              ((port? obj) "#<port>")
+              ((pair? obj) "...")
+              ((vector? obj) (string-append "#(" (number->string (vector-length obj)) ")"))
+              (else "#<unknown>"))))
+    (if (> (string-length str) max-len)
+        (string-append (substring str 0 (- max-len 1)) "…")
+        str)))
+
+(define (inspect obj #!key (depth 0) (max-depth 6) (prefix "") (last #t))
+  "Display object as ASCII tree"
+  (let* ((indent (if (= depth 0) "" (string-append prefix (if last "└── " "├── "))))
+         (child-prefix (if (= depth 0) "" (string-append prefix (if last "    " "│   "))))
+         (tag (type-tag obj)))
+
+    ;; Print current node
+    (print indent
+           (if (or (pair? obj) (vector? obj))
+               (string-append "┬ " tag)
+               (string-append "─ " tag ": " (format-value obj 50))))
+
+    ;; Recurse into children
+    (when (< depth max-depth)
+      (cond
+       ;; List/pair
+       ((pair? obj)
+        (let loop ((items obj) (idx 0))
+          (cond
+           ((null? items) #f)
+           ((not (pair? items))
+            ;; Improper list - show cdr
+            (inspect items depth: (+ depth 1) prefix: child-prefix last: #t))
+           ((> idx 10)
+            (print child-prefix "└── … (" (- (length obj) idx) " more)"))
+           (else
+            (let ((is-last (or (null? (cdr items))
+                               (and (pair? (cdr items)) (> idx 9)))))
+              (inspect (car items)
+                       depth: (+ depth 1)
+                       prefix: child-prefix
+                       last: is-last)
+              (when (pair? (cdr items))
+                (loop (cdr items) (+ idx 1))))))))
+
+       ;; Vector
+       ((vector? obj)
+        (let ((len (vector-length obj)))
+          (do ((i 0 (+ i 1)))
+              ((or (= i len) (> i 10)))
+            (if (> i 10)
+                (print child-prefix "└── … (" (- len i) " more)")
+                (inspect (vector-ref obj i)
+                         depth: (+ depth 1)
+                         prefix: child-prefix
+                         last: (= i (- len 1))))))))))
+
+  ;; Return void for clean REPL output
+  (void))
+
+(define (i obj)
+  "Short alias for inspect"
+  (inspect obj))
+
+;;; ============================================================
+;;; Stack Frame Inspector - Dylan-style Debugging
+;;; ============================================================
+
+(define *last-exception* #f)
+(define *last-call-chain* #f)
+
+(define (capture-exception exn)
+  "Capture exception and call chain for inspection"
+  (set! *last-exception* exn)
+  (set! *last-call-chain* (get-call-chain)))
+
+(define (backtrace #!optional (limit 20))
+  "Display call stack (backtrace)"
+  (print "")
+  (print "┌─ Backtrace ─────────────────────────────────────────────────────┐")
+  (let ((chain (or *last-call-chain* (get-call-chain))))
+    (let loop ((frames chain) (idx 0))
+      (when (and (pair? frames) (< idx limit))
+        (let* ((frame (car frames))
+               (loc (vector-ref frame 0))   ; location string like "<stdin>:3"
+               (expr (vector-ref frame 1))) ; expression
+          (printf "│ ~a: ~a~n" idx (or loc "<unknown>"))
+          (when (and expr (not (eq? expr #f)))
+            (let ((expr-str (with-output-to-string (lambda () (write expr)))))
+              (printf "│     ~a~n"
+                      (if (> (string-length expr-str) 60)
+                          (string-append (substring expr-str 0 57) "...")
+                          expr-str)))))
+        (loop (cdr frames) (+ idx 1)))))
+  (print "└──────────────────────────────────────────────────────────────────┘")
+  (void))
+
+(define (bt) (backtrace))
+
+(define (frame n)
+  "Inspect a specific stack frame"
+  (let ((chain (or *last-call-chain* (get-call-chain))))
+    (if (< n (length chain))
+        (let* ((f (list-ref chain n))
+               (loc (vector-ref f 0))   ; location string
+               (expr (vector-ref f 1))) ; expression
+          (print "")
+          (print "┌─ Frame " n " ────────────────────────────────────────────────┐")
+          (printf "│ Location: ~a~n" (or loc "<unknown>"))
+          (print "│ Expression:")
+          (when (and expr (not (eq? expr #f)))
+            (inspect expr))
+          (print "└──────────────────────────────────────────────────────────────────┘"))
+        (print "Frame not found")))
+  (void))
+
+(define (exception-info)
+  "Show last exception details"
+  (if *last-exception*
+      (begin
+        (print "")
+        (print "┌─ Last Exception ─────────────────────────────────────────────────┐")
+        (print-error-message *last-exception*)
+        (print "└──────────────────────────────────────────────────────────────────┘"))
+      (print "No captured exception"))
+  (void))
+
+;;; ============================================================
+;;; Enrollment Status Display
+;;; ============================================================
+
+(define (enrollment-status)
+  "Display current enrollment status with ASCII UI"
+  (let* ((identity (read-node-identity))
+         (hostname (get-hostname))
+         (has-keystore (directory-exists? ".vault/keystore"))
+         (keycount (if has-keystore (count-vault-items "keystore") 0)))
+    (print "")
+    (print "┌─ Enrollment Status ──────────────────────────────────────────────┐")
+    (print "│                                                                  │")
+    (if identity
+        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
+              (role (cond ((assq 'role identity) => cadr) (else "unknown")))
+              (master (cond ((assq 'master identity) => cadr) (else #f)))
+              (enrolled (cond ((assq 'enrolled identity) => cadr) (else #f))))
+          (printf "│  node:     ~a~a│~n" name (make-string (- 53 (string-length (->string name))) #\space))
+          (printf "│  role:     ~a~a│~n" role (make-string (- 53 (string-length (->string role))) #\space))
+          (when master
+            (printf "│  master:   ~a~a│~n" master (make-string (- 53 (string-length (->string master))) #\space)))
+          (when enrolled
+            (printf "│  enrolled: ~a~a│~n" enrolled (make-string (- 53 (string-length (->string enrolled))) #\space)))
+          (print "│                                                                  │")
+          (print "│  status:   enrolled                                              │"))
+        (begin
+          (printf "│  host:     ~a~a│~n" hostname (make-string (- 53 (string-length hostname)) #\space))
+          (print "│                                                                  │")
+          (print "│  status:   not enrolled                                          │")
+          (print "│                                                                  │")
+          (print "│  To enroll this node:                                            │")
+          (print "│    1. Run: (enroll-request 'node-name)                           │")
+          (print "│    2. Verify words match on master                               │")
+          (print "│    3. Master approves with: (enroll-approve ...)                 │")))
+    (print "│                                                                  │")
+    (print "└──────────────────────────────────────────────────────────────────┘")
+    (void)))
+
+(define (enroll-status) (enrollment-status))
+
+;;; ============================================================
+;;; Symbol Completion
+;;; ============================================================
+
+(define *cyberspace-symbols*
+  '(;; Vault
+    soup soup-stat soup-du seal-commit seal-release seal-archive
+    seal-restore seal-history seal-update seal-inspect vault-config vault-init
+    ;; Crypto
+    ed25519-keypair ed25519-sign ed25519-verify sha256-hash sha512-hash
+    ;; Enrollment
+    enrollment-status enroll-status
+    enroll-request enroll-wait enroll-complete enroll-listen enroll-approve
+    introspect-system introspect-hardware introspect-network
+    ;; Debugging
+    inspect backtrace bt frame exception-info
+    ;; Federation
+    federate discover-peers announce-presence
+    ;; Certificates
+    create-cert sign-cert create-enrollment-cert
+    ;; Audit
+    audit-append audit-read audit-chain
+    ;; Memos
+    memo-create memo-commit memo-persist memo-list memo-show
+    ;; REPL
+    help status keys clear banner))
+
+(define (complete-symbol prefix)
+  "Find symbols matching prefix"
+  (let ((prefix-str (if (symbol? prefix) (symbol->string prefix) prefix)))
+    (filter (lambda (sym)
+              (string-prefix? prefix-str (symbol->string sym)))
+            *cyberspace-symbols*)))
+
 (define (count-vault-items subdir)
   "Count items in vault subdirectory"
   (let ((path (string-append ".vault/" subdir)))
@@ -2609,6 +2856,47 @@ Cyberspace REPL - Available Commands
   "Return 'N thing' or 'N things' based on count"
   (string-append (number->string n) " " singular (if (= n 1) "" "s")))
 
+(define (count-file-lines path)
+  "Count lines in a file"
+  (if (file-exists? path)
+      (with-input-from-file path
+        (lambda ()
+          (let loop ((count 0))
+            (let ((line (read-line)))
+              (if (eof-object? line)
+                  count
+                  (loop (+ count 1)))))))
+      0))
+
+(define (read-node-identity)
+  "Read node identity from vault (name and role)"
+  (let ((id-file ".vault/identity.sexp"))
+    (if (file-exists? id-file)
+        (with-input-from-file id-file read)
+        #f)))
+
+(define (describe-vault)
+  "Describe vault contents before prompt"
+  (let* ((objs (count-vault-items "objects"))
+         (rels (count-vault-items "releases"))
+         (keys (count-vault-items "keys"))
+         (audit-entries (count-file-lines ".vault/audit.log"))
+         (keystore-exists (directory-exists? ".vault/keystore"))
+         (identity (read-node-identity)))
+    (print "")
+    (print "Vault: .vault/")
+    (print "  " (plural objs "object") ", " (plural rels "release") ", " (plural keys "key"))
+    (when (> audit-entries 0)
+      (print "  audit: " (plural audit-entries "entry")))
+    (when keystore-exists
+      (let ((keycount (count-vault-items "keystore")))
+        (print "  keystore: " (plural keycount "identity"))))
+    (if identity
+        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
+              (role (cond ((assq 'role identity) => cadr) (else "unknown"))))
+          (print "  spki: " name " (" role ")"))
+        (print "  spki: not enrolled"))))
+
 ;; Get git info for banner
 (define (git-version)
   (let ((result (with-input-from-pipe "git describe --tags --always 2>/dev/null" read-line)))
@@ -2618,8 +2906,26 @@ Cyberspace REPL - Available Commands
   (let ((result (with-input-from-pipe "git log -1 --format=%cs 2>/dev/null" read-line)))
     (if (eof-object? result) "unknown" result)))
 
+(define (get-hostname)
+  "Get short hostname (first component)"
+  (let ((result (with-input-from-pipe "hostname -s 2>/dev/null" read-line)))
+    (if (eof-object? result) "unknown" result)))
+
+(define (set-terminal-title title)
+  "Set terminal window title via escape sequence"
+  (display (string-append "\x1b]0;" title "\x07")))
+
+(define (capitalize-first s)
+  "Capitalize first letter of string"
+  (if (string-null? s)
+      s
+      (string-append (string (char-upcase (string-ref s 0)))
+                     (substring s 1))))
+
 (define (banner)
-  (let* ((version (git-version))
+  (let* ((host (capitalize-first (get-hostname)))
+         (window-title (string-append host " Workstation"))
+         (version (git-version))
          (date (git-date))
          (title (string-append "Cyberspace Scheme last updated on " date " (" version ")"))
          (objs (count-vault-items "objects"))
@@ -2641,6 +2947,8 @@ Cyberspace REPL - Available Commands
          ;; Line 3: help hint
          (hint "  Type (help) for commands.")
          (hint-pad (make-string (- width (string-length hint)) #\space)))
+    ;; Set terminal window title
+    (set-terminal-title window-title)
     (print "")
     (print "┌" bar "┐")
     (print "│" line1 line1-pad "│")
@@ -3487,14 +3795,21 @@ Cyberspace REPL - Available Commands
   (print "  (sha512-hash DATA)  - Hash data")
   (print "")
   (print "Federation:")
+  (print "  (enrollment-status)     - Show enrollment status")
   (print "  (enroll-request 'name)  - Request enrollment")
   (print "  (introspect-system)     - System info")
   (print "  (discover-peers)        - Find peers")
+  (print "")
+  (print "Debugging:")
+  (print "  (inspect OBJ)           - Tree-view of object")
+  (print "  (bt)                    - Backtrace after error")
+  (print "  (frame N)               - Inspect stack frame")
   (print "")
   (print "Chicken REPL:")
   (print "  ,q ,exit            - Quit")
   (print "  ,l FILE             - Load file")
   (print "  ,d NAME             - Describe")
+  (print "  ,comp PREFIX        - Symbol completion")
   (print "  ,?                  - REPL help")
   (print "")
   (print vt100-normal)
@@ -3502,6 +3817,8 @@ Cyberspace REPL - Available Commands
 
 ;; Friendly exit
 (define (goodbye)
+  (handle-exceptions exn #f
+    (save-history-to-file *history-file*))
   (print "")
   (print "Goodbye from Cyberspace Scheme.")
   (print "")
@@ -3525,16 +3842,22 @@ Cyberspace REPL - Available Commands
 ;; Settable prompt (default: colon like classic Lisp)
 (define *prompt* ": ")
 
+;; History file for persistence
+(define *history-file* (string-append (or (get-environment-variable "HOME") ".") "/.cyberspace_history"))
+
+;; Initialize linenoise
+(set-history-length! 500)
+(handle-exceptions exn #f
+  (load-history-from-file *history-file*))
+
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
-    (display *prompt*)
-    (flush-output)
-    (let ((line (read-line)))
+    (let ((line (linenoise *prompt*)))
       (cond
-        ;; EOF
-        ((eof-object? line)
+        ;; EOF (linenoise returns #f)
+        ((not line)
          (newline)
          (goodbye))
 
@@ -3543,8 +3866,8 @@ Cyberspace REPL - Available Commands
          (loop))
 
         ;; Comma commands
-        ((and (> (string-length line) 0)
-              (char=? (string-ref line 0) #\,))
+        ((char=? (string-ref line 0) #\,)
+         (history-add line)
          (let* ((cmd-line (substring line 1))
                 (parts (string-split cmd-line))
                 (cmd (if (null? parts) "" (car parts)))
@@ -3603,6 +3926,17 @@ Cyberspace REPL - Available Commands
               (clear)
               (loop))
 
+             ;; Complete - show symbol completions
+             ((or (string=? cmd "comp") (string=? cmd "complete"))
+              (if (null? args)
+                  (print "Usage: ,comp PREFIX")
+                  (let* ((prefix (car args))
+                         (matches (complete-symbol prefix)))
+                    (if (null? matches)
+                        (print "No completions for: " prefix)
+                        (for-each (lambda (m) (print "  " m)) matches))))
+              (loop))
+
              ;; Unknown comma command
              (else
               (print "Unknown command: ," cmd)
@@ -3611,22 +3945,23 @@ Cyberspace REPL - Available Commands
 
         ;; Regular Scheme expression
         (else
-         (condition-case
-             (let ((result (eval (with-input-from-string line read))))
-               (unless (eq? result (void))
-                 (pp result)))
-           ((exn i/o)
-            (print "Read error"))
-           ((exn)
-            (print-error-message (current-exception))))
+         (history-add line)
+         (handle-exceptions exn
+           (begin
+             (capture-exception exn)
+             (print-error-message exn)
+             (print "  Use (bt) for backtrace, (frame N) to inspect"))
+           (let ((result (eval (with-input-from-string line read))))
+             (unless (eq? result (void))
+               (pp result))))
          (loop))))))
 
 ;; Show current directory context
 (print "Working directory: " (current-directory))
 (when (directory-exists? ".vault")
-  (print "Vault detected: .vault/")
+  (describe-vault)
   (node-hardware-refresh!)
-  (print "Hardware: " (platform-stamp)))
+  (print "  hardware: " (platform-stamp)))
 (print "")
 (print "Type (help) for help.")
 (print "Comma commands: ,q ,h ,l ,d ,s ,k ,c ,?")

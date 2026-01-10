@@ -495,15 +495,22 @@
   ;; Helpers
   ;; ============================================================
 
+  (define hex-chars "0123456789abcdef")
+
+  (define (byte->hex byte)
+    "Convert byte to two-character hex string"
+    (string (string-ref hex-chars (quotient byte 16))
+            (string-ref hex-chars (modulo byte 16))))
+
   (define (blob->base64 blob)
-    "Convert blob to base64 string (placeholder)"
-    ;; Real implementation would use proper base64 encoding
+    "Convert blob to hex string (placeholder for base64)"
+    ;; Using hex encoding for now; proper base64 can be added later
     (let ((vec (blob->u8vector blob)))
-      (with-output-to-string
-        (lambda ()
-          (do ((i 0 (+ i 1)))
-              ((= i (u8vector-length vec)))
-            (printf "~2,'0x" (u8vector-ref vec i)))))))
+      (let loop ((i 0) (acc '()))
+        (if (= i (u8vector-length vec))
+            (apply string-append (reverse acc))
+            (loop (+ i 1)
+                  (cons (byte->hex (u8vector-ref vec i)) acc))))))
 
 ) ;; end module
 
