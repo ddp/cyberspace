@@ -4,6 +4,63 @@
 
 A comprehensive cataloging and search system for the cyberspace research library, implemented in Chicken Scheme.
 
+## RFCs
+
+| RFC | Title |
+|-----|-------|
+| [RFC-000](spki/scheme/docs/rfc/rfc-000-declaration.md) | The Library of Cyberspace |
+| [RFC-001](spki/scheme/docs/rfc/rfc-001-replication-layer.md) | Replication Layer |
+| [RFC-002](spki/scheme/docs/rfc/rfc-002-architecture.md) | Cyberspace Architecture |
+| [RFC-003](spki/scheme/docs/rfc/rfc-003-audit-trail.md) | Cryptographic Audit Trail |
+| [RFC-004](spki/scheme/docs/rfc/rfc-004-spki-authorization.md) | SPKI Authorization |
+| [RFC-005](spki/scheme/docs/rfc/rfc-005-metadata-levels.md) | Progressive Metadata Levels |
+| [RFC-006](spki/scheme/docs/rfc/rfc-006-vault-architecture.md) | Vault System Architecture |
+| [RFC-007](spki/scheme/docs/rfc/rfc-007-threshold-governance.md) | Threshold Signature Governance |
+| [RFC-008](spki/scheme/docs/rfc/rfc-008-shamir-sharing.md) | Shamir Secret Sharing |
+| [RFC-009](spki/scheme/docs/rfc/rfc-009-library-directory.md) | Library Directory System |
+| [RFC-010](spki/scheme/docs/rfc/rfc-010-federation.md) | Federation Protocol |
+| [RFC-011](spki/scheme/docs/rfc/rfc-011-byzantine-consensus.md) | Byzantine Consensus |
+| [RFC-012](spki/scheme/docs/rfc/rfc-012-lamport-clocks.md) | Lamport Logical Clocks |
+| [RFC-013](spki/scheme/docs/rfc/rfc-013-tla-specification.md) | TLA+ Formal Specification |
+| [RFC-014](spki/scheme/docs/rfc/rfc-014-coq-extraction.md) | Coq Extraction for TCB |
+| [RFC-015](spki/scheme/docs/rfc/rfc-015-versioning-rollback.md) | Versioning and Rollback |
+| [RFC-016](spki/scheme/docs/rfc/rfc-016-lazy-clustering.md) | Lazy Clustering |
+| [RFC-017](spki/scheme/docs/rfc/rfc-017-opera.md) | The Burning of Alexandria |
+| [RFC-018](spki/scheme/docs/rfc/rfc-018-sealed-archive.md) | Sealed Archive Format |
+| [RFC-019](spki/scheme/docs/rfc/rfc-019-documentation-pipeline.md) | Documentation Pipeline |
+| [RFC-020](spki/scheme/docs/rfc/rfc-020-content-addressed-storage.md) | Content-Addressed Storage |
+| [RFC-021](spki/scheme/docs/rfc/rfc-021-capability-delegation.md) | Capability Delegation Patterns |
+| [RFC-022](spki/scheme/docs/rfc/rfc-022-key-ceremony.md) | Key Ceremony Protocol |
+| [RFC-023](spki/scheme/docs/rfc/rfc-023-agent-sandboxing.md) | Demonic Agents |
+| [RFC-024](spki/scheme/docs/rfc/rfc-024-network-protocol.md) | Network Protocol |
+| [RFC-025](spki/scheme/docs/rfc/rfc-025-query-language.md) | Soup Query Language |
+| [RFC-026](spki/scheme/docs/rfc/rfc-026-garbage-collection.md) | Garbage Collection |
+| [RFC-027](spki/scheme/docs/rfc/rfc-027-vault-migration.md) | Vault Migration |
+| [RFC-028](spki/scheme/docs/rfc/rfc-028-error-handling.md) | Error Handling and Recovery |
+| [RFC-029](spki/scheme/docs/rfc/rfc-029-compression.md) | Compression and Deduplication |
+| [RFC-030](spki/scheme/docs/rfc/rfc-030-encryption-at-rest.md) | Encryption at Rest |
+| [RFC-031](spki/scheme/docs/rfc/rfc-031-monitoring.md) | Monitoring and Observability |
+| [RFC-032](spki/scheme/docs/rfc/rfc-032-rate-limiting.md) | Rate Limiting and Quotas |
+| [RFC-033](spki/scheme/docs/rfc/rfc-033-schema-evolution.md) | Schema Evolution |
+| [RFC-034](spki/scheme/docs/rfc/rfc-034-audit-protection.md) | Audit Log Protection |
+| [RFC-035](spki/scheme/docs/rfc/rfc-035-mobile-agents.md) | Mobile Agents and Pub/Sub |
+| [RFC-036](spki/scheme/docs/rfc/rfc-036-quorum-voting.md) | Quorum Protocol with Homomorphic Voting |
+| [RFC-037](spki/scheme/docs/rfc/rfc-037-node-roles.md) | Node Roles and Capabilities |
+| [RFC-038](spki/scheme/docs/rfc/rfc-038-local-inference.md) | Local Inference Integration |
+| [RFC-039](spki/scheme/docs/rfc/rfc-039-ipv6-scaling.md) | Scaling Architecture for IPv6 |
+| [RFC-040](spki/scheme/docs/rfc/rfc-040-security-architecture.md) | Cyberspace Security Architecture |
+| [RFC-041](spki/scheme/docs/rfc/rfc-041-fuse-filesystem.md) | Wormholes (FUSE Filesystem Layer) |
+| [RFC-042](spki/scheme/docs/rfc/rfc-042-ietf-normative.md) | IETF Normative Reference |
+| [RFC-043](spki/scheme/docs/rfc/rfc-043-memo-conventions.md) | Memo Conventions |
+| [RFC-044](spki/scheme/docs/rfc/rfc-044-cryptographic-entropy.md) | Cryptographic Entropy Sources |
+| [RFC-045](spki/scheme/docs/rfc/rfc-045-ccp.md) | Cookie-Capability Protocol (CCP) |
+| [RFC-046](spki/scheme/docs/rfc/rfc-046-security-architecture.md) | Security Architecture |
+| [RFC-047](spki/scheme/docs/rfc/rfc-047-keystore-and-attestation.md) | Realm Keystore and Attestation |
+| [RFC-048](spki/scheme/docs/rfc/rfc-048-quantum-resistant-merkle.md) | Quantum-Resistant Merkle Trees |
+| [RFC-049](spki/scheme/docs/rfc/rfc-049-post-quantum-signatures.md) | Post-Quantum Signatures |
+| [RFC-050](spki/scheme/docs/rfc/rfc-050-wilderness.md) | The Wilderness |
+| [RFC-051](spki/scheme/docs/rfc/rfc-051-normie-interface.md) | The Normie Interface |
+
 ## Philosophy
 
 This directory system embodies the cyberspace philosophy:
