@@ -28,6 +28,7 @@
         (chicken bitwise)
         (chicken string)
         (chicken sort)
+        srfi-18            ; threads (for background listeners)
         (chicken condition)
         srfi-1
         srfi-4
