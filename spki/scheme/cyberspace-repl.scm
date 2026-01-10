@@ -165,6 +165,7 @@
         ;;   wordlist    - FIPS-181 verification codes
         ;;   bloom       - probabilistic set membership
         ;;   catalog     - Merkle tree inventory
+        ;;   keyring     - key management
         ;;
         ;; Level 2 (Levels 0+1):
         ;;   cert        ← sexp + crypto-ffi
@@ -176,7 +177,7 @@
         ;;   vault       ← cert + crypto-ffi + audit
         ;;
         (modules '("os" "crypto-ffi" "sexp" "mdns" "app-bundle" "codesign"
-                   "audit" "wordlist" "bloom" "catalog"
+                   "audit" "wordlist" "bloom" "catalog" "keyring"
                    "cert" "enroll" "gossip" "security"
                    "vault")))
     (for-each
@@ -202,6 +203,7 @@
 (import enroll)
 (import gossip)
 (import security)
+(import keyring)
 (import app-bundle)
 (import codesign)
 
