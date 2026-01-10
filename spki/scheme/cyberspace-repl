@@ -1,5 +1,5 @@
 #!/usr/bin/env csi -q -w
-;;; cyberspace-repl - Knowledge Access Station for the Library of Cyberspace
+;;; cyberspace-repl - Cyberspace Scheme (cs)
 ;;;
 ;;; Usage: ./cyberspace-repl
 ;;;
@@ -2609,26 +2609,38 @@ Cyberspace REPL - Available Commands
   "Return 'N thing' or 'N things' based on count"
   (string-append (number->string n) " " singular (if (= n 1) "" "s")))
 
+;; Get git info for banner
+(define (git-version)
+  (let ((result (with-input-from-pipe "git describe --tags --always 2>/dev/null" read-line)))
+    (if (eof-object? result) "unknown" result)))
+
+(define (git-date)
+  (let ((result (with-input-from-pipe "git log -1 --format=%cs 2>/dev/null" read-line)))
+    (if (eof-object? result) "unknown" result)))
+
 (define (banner)
-  (let* ((title "Library of Cyberspace")
+  (let* ((version (git-version))
+         (date (git-date))
+         (title (string-append "Cyberspace Scheme last updated on " date " (" version ")"))
          (objs (count-vault-items "objects"))
          (rels (count-vault-items "releases"))
          (keys (count-vault-items "keys"))
          (peers (length *cluster-nodes*))
-         (bar "──────────────────────────────────────────────────")
-         ;; Line 1: title
+         (width 80)
+         (bar "────────────────────────────────────────────────────────────────────────────────")
+         ;; Line 1: title with version
          (line1 (string-append "  " title))
-         (line1-pad (make-string (- 50 (string-length line1)) #\space))
+         (line1-pad (make-string (max 0 (- width (string-length line1))) #\space))
          ;; Line 2: stats (plural-aware)
          (stats (string-append "  "
                    (plural objs "object") "  "
                    (plural rels "release") "  "
                    (plural keys "key") "  "
                    (plural peers "peer")))
-         (line2-pad (make-string (max 0 (- 50 (string-length stats))) #\space))
+         (line2-pad (make-string (max 0 (- width (string-length stats))) #\space))
          ;; Line 3: help hint
-         (hint "  Type \"help\" for help.")
-         (hint-pad (make-string (- 50 (string-length hint)) #\space)))
+         (hint "  Type (help) for commands.")
+         (hint-pad (make-string (- width (string-length hint)) #\space)))
     (print "")
     (print "┌" bar "┐")
     (print "│" line1 line1-pad "│")
@@ -3457,9 +3469,9 @@ Cyberspace REPL - Available Commands
 ;;; ============================================================
 
 (define (help)
-  "Display help for the Library of Cyberspace"
+  "Display help for Cyberspace Scheme"
   (print "")
-  (print "Library of Cyberspace - Chicken Scheme REPL")
+  (print "Cyberspace Scheme (cs) - built on Chicken Scheme")
   (print "")
   (print "Vault commands:")
   (print "  (soup)              - Browse vault objects")
@@ -3491,13 +3503,9 @@ Cyberspace REPL - Available Commands
 ;; Friendly exit
 (define (goodbye)
   (print "")
-  (print "Goodbye from the Library of Cyberspace.")
+  (print "Goodbye from Cyberspace Scheme.")
   (print "")
   (exit 0))
-
-;; Register comma commands
-(toplevel-command 'help (lambda _ (help)))
-(toplevel-command 'h (lambda _ (help)))
 
 ;; Clear screen (VT100)
 (define (clear)
@@ -3514,6 +3522,102 @@ Cyberspace REPL - Available Commands
 (define q goodbye)
 (define bye goodbye)
 
+;; Custom REPL with comma command handling
+;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
+(define (command-repl)
+  (let loop ()
+    (display "cs> ")
+    (flush-output)
+    (let ((line (read-line)))
+      (cond
+        ;; EOF
+        ((eof-object? line)
+         (newline)
+         (goodbye))
+
+        ;; Empty line
+        ((string=? line "")
+         (loop))
+
+        ;; Comma commands
+        ((and (> (string-length line) 0)
+              (char=? (string-ref line 0) #\,))
+         (let* ((cmd-line (substring line 1))
+                (parts (string-split cmd-line))
+                (cmd (if (null? parts) "" (car parts)))
+                (args (if (null? parts) '() (cdr parts))))
+           (cond
+             ;; Quit
+             ((or (string=? cmd "q")
+                  (string=? cmd "quit")
+                  (string=? cmd "exit"))
+              (goodbye))
+
+             ;; Help
+             ((or (string=? cmd "h")
+                  (string=? cmd "help")
+                  (string=? cmd "?"))
+              (help)
+              (loop))
+
+             ;; Load file
+             ((string=? cmd "l")
+              (if (null? args)
+                  (print "Usage: ,l <filename>")
+                  (begin
+                    (print "Loading " (car args) "...")
+                    (load (car args))))
+              (loop))
+
+             ;; Describe
+             ((string=? cmd "d")
+              (if (null? args)
+                  (print "Usage: ,d <name>")
+                  (let ((sym (string->symbol (car args))))
+                    (print "Looking up: " sym)
+                    (condition-case
+                        (let ((val (eval sym)))
+                          (if (procedure? val)
+                              (print "  " sym " is a procedure")
+                              (begin
+                                (print "  Value: ")
+                                (pp val))))
+                      ((exn) (print "  Not bound")))))
+              (loop))
+
+             ;; Status
+             ((string=? cmd "s")
+              (status)
+              (loop))
+
+             ;; Keys
+             ((string=? cmd "k")
+              (keys)
+              (loop))
+
+             ;; Clear
+             ((string=? cmd "c")
+              (clear)
+              (loop))
+
+             ;; Unknown comma command
+             (else
+              (print "Unknown command: ," cmd)
+              (print "Try ,? for help")
+              (loop)))))
+
+        ;; Regular Scheme expression
+        (else
+         (condition-case
+             (let ((result (eval (with-input-from-string line read))))
+               (unless (eq? result (void))
+                 (pp result)))
+           ((exn i/o)
+            (print "Read error"))
+           ((exn)
+            (print-error-message (current-exception))))
+         (loop))))))
+
 ;; Show current directory context
 (print "Working directory: " (current-directory))
 (when (directory-exists? ".vault")
@@ -3521,8 +3625,9 @@ Cyberspace REPL - Available Commands
   (node-hardware-refresh!)
   (print "Hardware: " (platform-stamp)))
 (print "")
-(print "Type (help) for help. Exit with ,q or (quit).")
+(print "Type (help) for help.")
+(print "Comma commands: ,q ,h ,l ,d ,s ,k ,c ,?")
 (print "")
 
-;; Start Chicken REPL
-(repl)
+;; Start custom REPL
+(command-repl)
