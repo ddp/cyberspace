@@ -180,11 +180,17 @@
                    "audit" "wordlist" "bloom" "catalog" "keyring"
                    "cert" "enroll" "gossip" "security"
                    "vault")))
-    (for-each
-     (lambda (module)
-       (when (needs-rebuild? module stamp)
-         (rebuild-module! module arch stamp)))
-     modules)))
+    (let ((rebuilt (fold
+                    (lambda (module count)
+                      (if (needs-rebuild? module stamp)
+                          (begin
+                            (rebuild-module! module arch stamp)
+                            (+ count 1))
+                          count))
+                    0
+                    modules)))
+      (when (= rebuilt 0)
+        (print "All modules current for " stamp)))))
 
 ;; Run bootstrap before loading modules
 (bootstrap-modules!)
