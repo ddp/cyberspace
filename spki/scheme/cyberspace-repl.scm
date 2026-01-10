@@ -195,7 +195,7 @@
                     0
                     modules)))
       (when (= rebuilt 0)
-        (print "All modules current for " stamp)))))
+        (print "All tomes current for " stamp)))))
 
 ;; Run bootstrap before loading modules
 (bootstrap-modules!)
