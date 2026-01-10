@@ -181,7 +181,7 @@
         ;;   auto-enroll ← enroll + capability + mdns + gossip
         ;;   ui          ← enroll + capability + auto-enroll
         ;;
-        (modules '("os" "crypto-ffi" "sexp" "mdns" "app-bundle" "codesign"
+        (modules '("os" "crypto-ffi" "sexp" "mdns"
                    "audit" "wordlist" "bloom" "catalog" "keyring"
                    "cert" "enroll" "gossip" "security" "capability"
                    "vault" "auto-enroll" "ui")))
@@ -215,8 +215,6 @@
 (import gossip)
 (import security)
 (import keyring)
-(import app-bundle)
-(import codesign)
 (import capability)
 (import auto-enroll)
 (import ui)
