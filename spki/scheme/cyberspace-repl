@@ -2,8 +2,9 @@
 # Cyberspace Scheme REPL with line editing via rlwrap
 #
 # Usage:
-#   cyberspace              - start REPL
-#   cyberspace mirror       - run bin/sync (replicate from origin)
+#   cyberspace              - mirror then REPL
+#   cyberspace mirror       - just mirror (bin/sync)
+#   cyberspace --no-mirror  - skip mirror, straight to REPL
 
 SCRIPT_DIR="$(dirname "$0")"
 CYBERSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -12,7 +13,13 @@ case "$1" in
     mirror|replicate)
         exec "$CYBERSPACE_ROOT/bin/sync"
         ;;
+    --no-mirror|--offline)
+        shift
+        exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
+        ;;
     *)
+        # Mirror first (quiet, with timeout), then REPL
+        timeout 10 "$CYBERSPACE_ROOT/bin/sync" --quiet 2>/dev/null || true
         exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
         ;;
 esac
