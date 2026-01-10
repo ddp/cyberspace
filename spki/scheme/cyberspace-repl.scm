@@ -4026,6 +4026,36 @@ Cyberspace REPL - Available Commands
 ;; Settable prompt (default: colon like classic Lisp)
 (define *prompt* ": ")
 
+;; Result history
+;; Use _ for last result (like Python), _1 _2 _3 for previous
+;; And ($ n) for numbered access
+(define _ #f)   ; last result
+(define _1 #f)  ; second-to-last
+(define _2 #f)  ; third-to-last
+(define *result-count* 0)
+(define *result-history* (make-vector 100 #f))  ; numbered results
+
+(define (push-result! val)
+  "Save result to history"
+  (set! _2 _1)
+  (set! _1 _)
+  (set! _ val)
+  (vector-set! *result-history* (modulo *result-count* 100) val)
+  (set! *result-count* (+ 1 *result-count*))
+  val)
+
+(define ($ n)
+  "Get result N from history. ($ 0) = first, ($ -1) = last"
+  (cond
+    ((< n 0)  ; negative index from end
+     (let ((idx (+ *result-count* n)))
+       (if (>= idx 0)
+           (vector-ref *result-history* (modulo idx 100))
+           (error "No such result" n))))
+    ((< n (min *result-count* 100))
+     (vector-ref *result-history* (modulo n 100)))
+    (else (error "No such result" n))))
+
 ;; History file for persistence
 (define *history-file* (string-append (or (get-environment-variable "HOME") ".") "/.cyberspace_history"))
 
@@ -4139,6 +4169,7 @@ Cyberspace REPL - Available Commands
            (rich-exception-display exn)
            (let ((result (eval (with-input-from-string line read))))
              (unless (eq? result (void))
+               (push-result! result)
                (pp result))))
          (loop))))))
 
