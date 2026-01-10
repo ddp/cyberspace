@@ -123,7 +123,46 @@ The command layer is syntactic sugar. The Scheme layer is substrate. Users start
 
 ### 3.1 The Vault
 
-Sealed version control with cryptographic signatures.
+**The vault is the disk.**
+
+In VAXcluster, multiple subsystems coordinated distributed storage: MSCP served disks across nodes, the DLM managed locks, SCS handled communication, and the quorum disk arbitrated partitions. Five subsystems, complex interactions, decades of refinement.
+
+Cyberspace has one abstraction: the vault.
+
+```
+VAXcluster          Cyberspace
+──────────          ──────────
+Shared disk    →    Vault
+MSCP           →    Gossip replication
+DLM            →    Quorum consensus
+SCS            →    CCP (secure channels)
+Quorum disk    →    Vault
+LAVC           →    Enrollment
+```
+
+The vault is content-addressed storage, replicated across nodes via gossip, with quorum state for partition handling:
+
+```scheme
+(cluster-quorum
+  (epoch 42)
+  (expected-votes 5)
+  (quorum 3)
+  (members
+    (alice (votes 1) (role master))
+    (bob   (votes 1) (role full))
+    (carol (votes 1) (role full))
+    (dave  (votes 1) (role witness))
+    (eve   (votes 1) (role archive))))
+```
+
+Boot sequence mirrors VAXcluster:
+1. Node reads local vault → knows expected membership
+2. Contacts other expected members
+3. Counts responding votes
+4. If ≥ quorum → cluster forms, proceed
+5. If < quorum → hang, wait, retry
+
+Partition with quorum continues. Partition without hangs. No split-brain writes. When healed, minority syncs from majority. Epoch increments on membership change.
 
 ```bash
 $ cyberspace vault init
