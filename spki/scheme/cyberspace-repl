@@ -1,3 +1,18 @@
-#\!/bin/sh
+#!/bin/sh
 # Cyberspace Scheme REPL with line editing via rlwrap
-exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$(dirname "$0")/cyberspace-repl.scm" "$@"
+#
+# Usage:
+#   cyberspace              - start REPL
+#   cyberspace mirror       - run bin/sync (replicate from origin)
+
+SCRIPT_DIR="$(dirname "$0")"
+CYBERSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+case "$1" in
+    mirror|replicate)
+        exec "$CYBERSPACE_ROOT/bin/sync"
+        ;;
+    *)
+        exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
+        ;;
+esac
