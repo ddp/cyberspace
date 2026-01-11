@@ -48,6 +48,16 @@
       (row "IX" "Library Directory" "Knowledge freely accessible")
       (row "X" "Federation" "Union without empire")))
 
+  (section
+    "Acknowledgments"
+    (p "This declaration stands on the shoulders of giants:")
+    (list
+      (item "The Grateful Dead, who understood that sharing creates more value than hoarding, and whose tape-trading gift economy prefigured the commons")
+      (item "Thomas Jefferson, who wrote the declaration of human liberty in language that still echoes")
+      (item "Alexander Hamilton, who designed federation—sovereignty with union—in the Federalist Papers")
+      (item "Hal Abelson and Gerald Jay Sussman, who showed in Structure and Interpretation of Computer Programs that from a few primitives, you can build everything"))
+    (p "The language is incidental. The shape is inevitable."))
+
   (footer
     (p "E Pluribus Unum")
     (p "Signed under cryptographic seal:")
