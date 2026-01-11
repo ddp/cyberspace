@@ -1,0 +1,385 @@
+# RFC-054: Terminal Interface Conventions
+
+**Status:** Proposed
+**Category:** Informational
+**Created:** 2026-01-11
+**Author:** Derrell Piper <ddp@eludom.net>
+
+---
+
+## Abstract
+
+The terminal is for operators. This RFC specifies visual conventions for
+the Cyberspace REPL: box drawing, tree displays, prompts, color usage,
+and output formatting. Consistency aids muscle memory.
+
+---
+
+## 1. The Operator Interface
+
+The Cyberspace REPL is for hackers, admins, and operators—people who
+think in terms of data structures. This interface is deliberately
+different from the "normie" GUI interface (RFC-053).
+
+```
+                    CYBERSPACE
+                        │
+           ┌────────────┴────────────┐
+           │                         │
+      ┌────▼────┐              ┌─────▼─────┐
+      │ Terminal │              │  Friendly  │
+      │  (cs)    │  ← this RFC │    Door    │
+      └─────────┘              └───────────┘
+```
+
+---
+
+## 2. Box Drawing
+
+### 2.1 Unicode Box Characters
+
+All boxes MUST use Unicode box-drawing characters:
+
+```
+┌ U+250C  ─ U+2500  ┐ U+2510
+│ U+2502            │ U+2502
+└ U+2514  ─ U+2500  ┘ U+2518
+```
+
+Double-line boxes for emphasis:
+
+```
+╔ U+2554  ═ U+2550  ╗ U+2557
+║ U+2551            ║ U+2551
+╚ U+255A  ═ U+2550  ╝ U+255D
+```
+
+Rounded corners for certificates and sealed objects:
+
+```
+╭ U+256D  ─ U+2500  ╮ U+256E
+│ U+2502            │ U+2502
+╰ U+2570  ─ U+2500  ╯ U+256F
+```
+
+### 2.2 Box Construction Pattern
+
+Use closures to encapsulate box state:
+
+```scheme
+(define (make-box title w)
+  "Create a box drawing closure with given title and width"
+  (let* ((title-padded (string-append " " title " "))
+         (title-len (string-length title-padded))
+         (left-pad (quotient (- w title-len) 2))
+         (right-pad (- w title-len left-pad))
+         (header (string-append "┌" (make-string left-pad #\─)
+                               title-padded
+                               (make-string right-pad #\─) "┐\n"))
+         (footer (string-append "└" (make-string w #\─) "┘\n")))
+    (lambda (cmd . args)
+      (case cmd
+        ((header) header)
+        ((footer) footer)
+        ((line) (let* ((content (if (null? args) "" (car args)))
+                       (pad (- w (string-length content) 2)))
+                  (string-append "│ " content
+                                (make-string (max 0 pad) #\space)
+                                " │\n")))))))
+```
+
+### 2.3 Standard Box Widths
+
+| Context | Width | Usage |
+|---------|-------|-------|
+| Compact | 40 | Small status displays |
+| Standard | 50 | Most dialogs |
+| Wide | 65 | Detailed information |
+
+---
+
+## 3. Tree Display
+
+### 3.1 Tree Characters
+
+```
+├─  U+251C + U+2500  branch with more siblings
+└─  U+2514 + U+2500  final branch (no more siblings)
+│   U+2502           vertical continuation
+```
+
+### 3.2 Tree Example
+
+```
+hostname · up 3d 12:45:03
+├─ 10 cores, 64GB, Apple M4
+├─ 192.168.1.100 / 2001:db8::1...
+└─ vault: .vault/ (keys) (audit)
+```
+
+### 3.3 Multi-level Trees
+
+```
+vault (49 objects)
+├─ archives (3)
+│  └─ cyberspace-v0.59.tar.gz
+├─ keys (2)
+│  ├─ starlight · Ed25519
+│  └─ macmini · Ed25519
+└─ releases (5)
+   └─ v0.59 (signed)
+```
+
+---
+
+## 4. Prompt
+
+### 4.1 Default Prompt
+
+The default prompt is a simple colon with trailing space:
+
+```
+:
+```
+
+This echoes the Newton's soup browser prompt.
+
+### 4.2 Prompt Variants
+
+| Context | Prompt | Usage |
+|---------|--------|-------|
+| Normal | `: ` | Default |
+| Continuation | `> ` | Multi-line input |
+| Debug | `[n]: ` | In debugger at frame n |
+
+---
+
+## 5. Color and Emphasis
+
+### 5.1 VT100 Codes
+
+Use ANSI/VT100 escape sequences sparingly:
+
+```scheme
+(define vt100-bold    "\x1b[1m")
+(define vt100-dim     "\x1b[2m")
+(define vt100-normal  "\x1b[0m")
+(define vt100-red     "\x1b[31m")
+(define vt100-green   "\x1b[32m")
+(define vt100-yellow  "\x1b[33m")
+(define vt100-blue    "\x1b[34m")
+```
+
+### 5.2 When to Use Color
+
+- **Green**: Success, completion (✓)
+- **Red**: Error, failure (✗)
+- **Yellow**: Warning, attention needed
+- **Blue**: Informational highlights
+- **Dim**: Secondary information
+- **Bold**: Headers, important values
+
+### 5.3 Principle
+
+Color is enhancement, not information. All output MUST be readable
+without color (plain terminal, logging, piped output).
+
+---
+
+## 6. Status Symbols
+
+### 6.1 Checkmarks and Crosses
+
+```
+✓ U+2713  Success
+✗ U+2717  Failure
+• U+2022  Bullet point
+→ U+2192  Arrow, implies
+```
+
+### 6.2 Sparklines
+
+For activity visualization over time:
+
+```
+▁▂▃▄▅▆▇█  U+2581 through U+2588
+```
+
+Eight levels map to normalized data:
+
+```scheme
+(define *sparkline-chars* '#("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█"))
+```
+
+---
+
+## 7. Output Conventions
+
+### 7.1 Blank Lines
+
+- One blank line before major output blocks
+- One blank line after banner/header boxes
+- No trailing blank lines in functions returning (void)
+
+### 7.2 Indentation
+
+- 2 spaces for nested information
+- 4 spaces for code examples in help text
+- Tree branches provide visual indentation
+
+### 7.3 Truncation
+
+Long values should be truncated with ellipsis:
+
+```scheme
+(define (short-id id)
+  "Truncate id for display (max 16 chars)"
+  (if (> (string-length id) 16)
+      (string-append (substring id 0 16) "...")
+      id))
+```
+
+---
+
+## 8. Result Display
+
+### 8.1 History Variables
+
+```scheme
+_   ; last result
+_1  ; second-to-last
+_2  ; third-to-last
+($n); result by number
+```
+
+### 8.2 Void
+
+Functions that print output typically return `(void)` to suppress
+duplicate display.
+
+---
+
+## 9. Messages
+
+### 9.1 Welcome Banner
+
+```
+Cyberspace Scheme v0.59 (2026-01-11)
+  Starlight · Darwin-arm64 · 10 cores, 64GB, Apple M4
+  IPv4: 192.168.1.100
+  IPv6: 2001:db8::1
+```
+
+### 9.2 Goodbye Message
+
+```
+Returning to objective reality, Cyberspace frozen at 2026-01-11 14:30,
+47 objects, 2 keys.
+```
+
+### 9.3 Error Messages
+
+Errors should be clear and actionable:
+
+```
+No signing key configured. Generate with (ed25519-keypair)
+```
+
+Not:
+
+```
+Error: nil key
+```
+
+---
+
+## 10. Single-Character Shortcuts
+
+| Symbol | Function | Description |
+|--------|----------|-------------|
+| `\|.\|` | `status` | Compact status display |
+| `\|?\|` | `help` | Show help |
+
+These use pipe-delimited symbols to avoid conflict with Scheme.
+
+---
+
+## 11. Terminal Window
+
+### 11.1 Title
+
+Set terminal title on startup:
+
+```scheme
+(define (set-terminal-title title)
+  (display (string-append "\x1b]0;" title "\x07")))
+```
+
+Format: `<Hostname> Workstation`
+
+### 11.2 Clear Screen
+
+```scheme
+(define (clear)
+  (display "\x1b[2J\x1b[H")
+  (void))
+```
+
+---
+
+## 12. Implementation Notes
+
+### 12.1 UTF-8 and string-ref
+
+Do NOT use `string-ref` on strings containing multi-byte UTF-8
+characters. Use vectors of strings instead:
+
+```scheme
+;; WRONG - fails on multi-byte chars
+(string-ref "▁▂▃" idx)
+
+;; RIGHT - vector of strings
+(vector-ref '#("▁" "▂" "▃") idx)
+```
+
+### 12.2 Width Calculations
+
+String length for box padding must account for display width, not byte
+length. ASCII characters are safe. For emoji or CJK, additional handling
+is needed.
+
+---
+
+## 13. Linting Checklist
+
+When auditing terminal output:
+
+1. [ ] Boxes use Unicode box-drawing characters
+2. [ ] Trees use ├─ and └─ consistently
+3. [ ] Prompt is `: ` (colon-space)
+4. [ ] Colors are optional, not required for meaning
+5. [ ] Error messages are actionable
+6. [ ] Functions returning output use (void)
+7. [ ] Long values are truncated with ...
+8. [ ] Blank lines follow the convention
+9. [ ] No ASCII art boxes (+---, |, etc.)
+10. [ ] No tabs in output (spaces only)
+
+---
+
+## 14. References
+
+1. RFC-053 — The Normie Interface (GUI counterpart)
+2. RFC-002 — Architecture ("English on top, Scheme underneath")
+3. Unicode Standard — Box Drawing (U+2500–U+257F)
+4. ECMA-48 — Control Functions for Coded Character Sets (VT100)
+
+---
+
+## Changelog
+
+- **2026-01-11** — Initial specification
+
+---
+
+*The terminal is for operators. Respect their time.*
