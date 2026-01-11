@@ -82,8 +82,7 @@ generate_html_from_md() {
   local base="$1"
   pandoc "${base}.md" -o "${base}.html" --standalone \
     --metadata title="" \
-    --css="" \
-    -V margin-top=2rem -V margin-bottom=2rem \
+    --css="rfc.css" \
     2>/dev/null
 }
 
@@ -567,7 +566,7 @@ YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/rfc/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_RFC_PATH"
-  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
+  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
   echo "  -> $YOYODYNE_RFC_PATH"
   # Ensure directories are world-readable for browser indexing
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
