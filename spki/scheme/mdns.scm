@@ -197,6 +197,8 @@
                                        (req-port (cadr (assq 'port fields))))
                                   (print "[enroll] calling handler for " name)
                                   (handler name pubkey "local" req-port))))))))
+                    ;; Yield to other threads (cooperative threading)
+                    (thread-yield!)
                     (loop))))))))
 
       listener))

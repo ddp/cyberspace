@@ -2922,12 +2922,26 @@ Cyberspace REPL - Available Commands
 ;;; Enrollment Listener (Master Side)
 ;;; ============================================================
 
+(define *enrollment-debug* #f)          ; set to #t for verbose debugging
 (define *pending-enrollments* '())      ; incoming requests (master side)
 (define *outgoing-enrollments* '())     ; outgoing requests (requestor side)
 (define *enrollment-listener* #f)
 
+(define (enroll-debug! #!optional (on #t))
+  "Enable/disable enrollment debugging"
+  (set! *enrollment-debug* on)
+  (print (if on "Enrollment debugging enabled" "Enrollment debugging disabled")))
+
 (define (enrollment-handler name pubkey host port)
   "Handler for incoming enrollment requests"
+  (when *enrollment-debug*
+    (print "[debug] enrollment-handler called:")
+    (print "[debug]   name=" name)
+    (print "[debug]   pubkey=" (if (> (string-length pubkey) 20)
+                                    (string-append (substring pubkey 0 20) "...")
+                                    pubkey))
+    (print "[debug]   host=" host " port=" port)
+    (print "[debug]   current pending=" (length *pending-enrollments*)))
   (let* ((words (generate-verification-words pubkey))
          (request `((name ,name)
                     (pubkey ,pubkey)
@@ -2936,7 +2950,9 @@ Cyberspace REPL - Available Commands
                     (words ,words)
                     (timestamp ,(current-seconds)))))
     (set! *pending-enrollments* (cons request *pending-enrollments*))
-    (print "[handler] stored request, now " (length *pending-enrollments*) " pending")
+    (when *enrollment-debug*
+      (print "[debug] after set!, pending=" (length *pending-enrollments*))
+      (print "[debug] request=" request))
     (print "")
     (print "┌─ New Enrollment Request ─────────────────────────────────────────┐")
     (let* ((node-str (sprintf "Node ~a wants to enroll" name))
@@ -2965,6 +2981,10 @@ Cyberspace REPL - Available Commands
     (print "Stopping existing listener...")
     (stop-listening))
 
+  (when *enrollment-debug*
+    (print "[debug] enroll-listen starting on port " port)
+    (print "[debug] current pending count: " (length *pending-enrollments*)))
+
   (print "")
   (print "┌─ Enrollment Listener ────────────────────────────────────────────┐")
   (let ((listen-str (sprintf "Listening for enrollment requests on port ~a" port)))
@@ -2974,9 +2994,24 @@ Cyberspace REPL - Available Commands
   (print "│  Requests will appear here with verification words.             │")
   (print "│                                                                  │")
   (print "│  Use (pending) (approve 'name) (reject 'name) or (stop-enroll)  │")
+  (print "│  Use (enroll-debug!) to enable verbose debugging                │")
   (print "└──────────────────────────────────────────────────────────────────┘")
 
   (set! *enrollment-listener* (listen-for-enrollments enrollment-handler port: port))
+  (when *enrollment-debug*
+    (print "[debug] listener started: " *enrollment-listener*))
+  (void))
+
+(define (wait #!optional (seconds 5))
+  "Wait for background events (enrollment requests, etc.)"
+  (print "Waiting for events... (Ctrl-C to stop)")
+  (let loop ((remaining seconds))
+    (when (> remaining 0)
+      (thread-sleep! 1)
+      (when (> (length *pending-enrollments*) 0)
+        (print "")
+        (pending))
+      (loop (- remaining 1))))
   (void))
 
 (define (stop-enroll)
@@ -2988,6 +3023,9 @@ Cyberspace REPL - Available Commands
 
 (define (pending)
   "Show pending enrollment requests"
+  (when *enrollment-debug*
+    (print "[debug] pending called, count=" (length *pending-enrollments*))
+    (print "[debug] list=" *pending-enrollments*))
   (if (null? *pending-enrollments*)
       (print "No pending enrollment requests.")
       (begin
@@ -3006,6 +3044,27 @@ Cyberspace REPL - Available Commands
         (print "│  Use (approve 'name) to accept or (reject 'name) to deny        │")
         (print "└──────────────────────────────────────────────────────────────────┘")))
   (void))
+
+(define (enroll-test)
+  "Run enrollment system diagnostics"
+  (print "")
+  (print "Enrollment System Diagnostics")
+  (print "─────────────────────────────")
+  (print "  Debug mode:    " (if *enrollment-debug* "ON" "OFF (use (enroll-debug!) to enable)"))
+  (print "  Listener:      " (if *enrollment-listener* "ACTIVE" "INACTIVE"))
+  (print "  Pending:       " (length *pending-enrollments*) " requests")
+  (print "  Outgoing:      " (length *outgoing-enrollments*) " requests")
+  (print "")
+  (print "Test handler directly? (enroll-test-handler 'test)")
+  (void))
+
+(define (enroll-test-handler name)
+  "Test enrollment handler directly (bypasses network)"
+  (print "Testing handler with fake enrollment request...")
+  (let ((fake-pubkey (blob->hex (random-bytes 32))))
+    (enrollment-handler name fake-pubkey "127.0.0.1" 7654)
+    (print "")
+    (print "Handler test complete. Check (pending) to see if request was stored.")))
 
 (define (approve name)
   "Approve pending enrollment request by name"
