@@ -459,9 +459,7 @@ YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
 
 if ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_PATH"
-  rsync -av --delete *.html *.ps *.txt "$YOYODYNE_HOST:$YOYODYNE_PATH"
-  # Fix permissions (rsync preserves local non-world-readable permissions)
-  ssh "$YOYODYNE_HOST" "chmod 755 $YOYODYNE_PATH; chmod 644 ${YOYODYNE_PATH}*"
+  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt "$YOYODYNE_HOST:$YOYODYNE_PATH"
   echo "  Published to $YOYODYNE_URL"
 else
   echo "  [skip] Cannot reach yoyodyne"
