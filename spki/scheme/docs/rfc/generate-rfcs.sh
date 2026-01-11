@@ -93,8 +93,8 @@ generate_html_from_txt() {
   cat > "${base}.html" << EOF
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${title}</title>
-<style>body{font-family:monospace;max-width:80ch;margin:2rem auto;padding:1rem;line-height:1.4;}
-pre{white-space:pre-wrap;}</style>
+<link rel="stylesheet" href="rfc.css">
+<style>body{max-width:80ch;}pre{white-space:pre-wrap;}</style>
 </head><body><pre>$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' "${base}.txt")</pre></body></html>
 EOF
 }
@@ -414,6 +414,7 @@ FOOTER
 # Sanity check before publish
 sanity_check() {
   local errors=0
+  local warnings=0
 
   echo "=== Sanity Check ==="
 
@@ -458,10 +459,59 @@ sanity_check() {
     echo "  [OK] index.html size: $index_size bytes"
   fi
 
+  # Lint: Check CSS reference in HTML files
+  local no_css=0
+  for rfc in "${RFCS[@]}"; do
+    if [[ -f "${rfc}.html" ]] && ! grep -q 'rfc.css' "${rfc}.html" 2>/dev/null; then
+      no_css=$((no_css + 1))
+    fi
+  done
+  if [[ $no_css -gt 0 ]]; then
+    echo "  [WARN] $no_css HTML files missing rfc.css reference"
+    warnings=$((warnings + 1))
+  else
+    echo "  [OK] All HTML files reference rfc.css"
+  fi
+
+  # Lint: Check for Unicode replacement characters (broken encoding)
+  local broken_unicode=0
+  for rfc in "${RFCS[@]}"; do
+    if [[ -f "${rfc}.html" ]] && grep -q $'\xef\xbf\xbd' "${rfc}.html" 2>/dev/null; then
+      broken_unicode=$((broken_unicode + 1))
+      echo "  [WARN] ${rfc}.html has replacement characters (U+FFFD)"
+    fi
+  done
+  if [[ $broken_unicode -eq 0 ]]; then
+    echo "  [OK] No broken Unicode detected"
+  fi
+
+  # Lint: Check for box-drawing in HTML (should use Unicode, not ASCII)
+  local ascii_boxes=0
+  for rfc in "${RFCS[@]}"; do
+    if [[ -f "${rfc}.html" ]] && grep -E '\+[-]+\+' "${rfc}.html" 2>/dev/null | grep -qv '<!--'; then
+      ascii_boxes=$((ascii_boxes + 1))
+    fi
+  done
+  if [[ $ascii_boxes -gt 0 ]]; then
+    echo "  [INFO] $ascii_boxes HTML files have ASCII box-drawing (OK in code examples)"
+  fi
+
+  # Lint: Check rfc.css exists
+  if [[ ! -f "rfc.css" ]]; then
+    echo "  [FAIL] rfc.css missing"
+    errors=$((errors + 1))
+  else
+    echo "  [OK] rfc.css present"
+  fi
+
   if [[ $errors -gt 0 ]]; then
     echo ""
     echo "  $errors error(s) found - aborting publish"
     return 1
+  fi
+
+  if [[ $warnings -gt 0 ]]; then
+    echo "  $warnings warning(s) - continuing"
   fi
 
   echo "  All checks passed"
