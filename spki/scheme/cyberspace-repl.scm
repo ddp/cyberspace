@@ -4289,9 +4289,16 @@ Cyberspace REPL - Available Commands
 
 ;; Read line with prompt
 (define (repl-read-line prompt)
+  "Read line with polling - yields to background threads"
   (display prompt)
   (flush-output)
-  (read-line))
+  ;; Poll for input, yielding to background threads periodically
+  (let loop ()
+    (if (char-ready?)
+        (read-line)
+        (begin
+          (thread-sleep! 0.1)  ; yield to listener thread
+          (loop)))))
 
 ;; History stubs - no-op without linenoise
 (define (repl-history-add line) #f)
