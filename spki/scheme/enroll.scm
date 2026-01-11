@@ -604,58 +604,95 @@
         (signature (ed25519 "SIGNATURE_PLACEHOLDER")))))
 
   ;; ============================================================
-  ;; Presence Announcement
+  ;; Presence Announcement (_cyberspace._tcp service)
   ;; ============================================================
 
   (define *presence-thread* #f)
   (define *presence-running* #f)
+  (define *presence-pid* #f)
 
-  (define (announce-presence name pubkey #!key (interval 30) (port 7654))
-    "Start announcing realm presence on local network.
-     Updates mDNS with current system info periodically.
+  (define (announce-presence name #!key (port 7654))
+    "Start announcing as Cyberspace node on local network.
+     Registers _cyberspace._tcp service via dns-sd (macOS) or avahi (Linux).
 
-     name: realm name
-     pubkey: realm public key
-     interval: seconds between announcements"
+     name: node name (shown in discovery)
+     port: service port"
 
     (when *presence-running*
       (stop-presence))
 
-    (set! *presence-running* #t)
-    (set! *presence-thread*
-      (thread-start!
-        (make-thread
-          (lambda ()
-            (let loop ()
-              (when *presence-running*
-                ;; Gather current system info
-                (let ((info (introspect-system)))
-                  ;; Announce via mDNS (would integrate with mdns module)
-                  ;; For now, just a heartbeat
-                  (handle-exceptions exn #f
-                    ;; mDNS announcement would go here
-                    #f))
-                (thread-sleep! interval)
-                (loop)))))))
+    (let* ((os (shell-command "uname -s"))
+           (name-str (if (symbol? name) (symbol->string name) name)))
+      (cond
+        ((and os (string=? os "Darwin"))
+         ;; macOS: dns-sd -R <name> _cyberspace._tcp local. <port>
+         (let ((cmd (string-append "dns-sd -R '" name-str "' _cyberspace._tcp local. "
+                                   (number->string port) " &")))
+           (set! *presence-running* #t)
+           (system cmd)
+           (print "Announcing: " name-str " (_cyberspace._tcp on port " port ")")
+           `(presence-started (name ,name-str) (port ,port) (service "_cyberspace._tcp"))))
 
-    `(presence-started
-      (name ,name)
-      (interval ,interval)))
+        ((and os (string=? os "Linux"))
+         ;; Linux: avahi-publish -s <name> _cyberspace._tcp <port>
+         (let ((cmd (string-append "avahi-publish -s '" name-str "' _cyberspace._tcp "
+                                   (number->string port) " &")))
+           (set! *presence-running* #t)
+           (system cmd)
+           (print "Announcing: " name-str " (_cyberspace._tcp on port " port ")")
+           `(presence-started (name ,name-str) (port ,port) (service "_cyberspace._tcp"))))
+
+        (else
+         (print "mDNS announcement not available on this platform")
+         #f))))
 
   (define (stop-presence)
     "Stop presence announcement"
     (set! *presence-running* #f)
-    (when *presence-thread*
-      (handle-exceptions exn #f
-        (thread-terminate! *presence-thread*))
-      (set! *presence-thread* #f)))
+    ;; Kill background dns-sd/avahi process
+    (system "pkill -f '_cyberspace._tcp' 2>/dev/null")
+    (print "Presence announcement stopped"))
 
-  (define (discover-peers #!key (timeout 5))
-    "Discover peers on local network via mDNS.
-     Returns: list of discovered peers with their system info"
-    ;; Would scan mDNS for _cyberspace._tcp services
-    ;; Return list of (name host port system-info) tuples
-    '())
+  (define *cyberspace-service* "_cyberspace._tcp")
+
+  (define (discover-peers #!key (timeout 3))
+    "Discover Cyberspace peers on local network via mDNS.
+     Uses dns-sd (macOS) or avahi-browse (Linux) to find _cyberspace._tcp services.
+     Returns: list of (name host port) tuples"
+    (let* ((os (shell-command "uname -s"))
+           (cmd (cond
+                  ((and os (string=? os "Darwin"))
+                   ;; macOS: dns-sd -B _cyberspace._tcp local. -timeout N
+                   (string-append "timeout " (number->string timeout)
+                                  " dns-sd -B " *cyberspace-service* " local. 2>/dev/null"
+                                  " | grep 'Add' | awk '{print $7}'"))
+                  ((and os (string=? os "Linux"))
+                   ;; Linux: avahi-browse -t _cyberspace._tcp
+                   (string-append "timeout " (number->string timeout)
+                                  " avahi-browse -t -p " *cyberspace-service*
+                                  " 2>/dev/null | grep '^=' | cut -d';' -f4"))
+                  (else #f))))
+      (if (not cmd)
+          (begin
+            (print "mDNS discovery not available on this platform")
+            '())
+          (let ((result (shell-command cmd)))
+            (if (or (not result) (string=? result ""))
+                (begin
+                  (print "No Cyberspace peers found (service: " *cyberspace-service* ")")
+                  '())
+                (let ((names (with-input-from-string result
+                               (lambda ()
+                                 (let loop ((names '()))
+                                   (let ((line (read-line)))
+                                     (if (eof-object? line)
+                                         (reverse names)
+                                         (loop (cons line names)))))))))
+                  (print "")
+                  (print "Cyberspace peers:")
+                  (for-each (lambda (name) (print "  " name)) names)
+                  (print "")
+                  names))))))
 
   ;; ============================================================
   ;; Helpers
