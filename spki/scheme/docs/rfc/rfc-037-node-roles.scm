@@ -108,5 +108,7 @@
     (p "1. RFC-010: Federation Protocol 2. RFC-011: Byzantine Consensus 3. RFC-016: Lazy Clustering 4. RFC-017: Security Considerations"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

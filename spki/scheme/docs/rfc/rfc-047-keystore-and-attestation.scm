@@ -13,7 +13,11 @@
     "Motivation"
     (p "RFC-040 established that capabilities flow from Ed25519 signatures. Every certificate, every sealed release, every audit entry requires a signature. But where does the signing key live?")
     (p "Currently: ephemeral, generated per session. This is fine for testing but broken for production. A realm needs:")
-    (p "- Persistent identity - the same principal across sessions - Protected storage - keys encrypted at rest - Recovery path - don't lose your realm to a forgotten passphrase - Rotation support - keys age, compromise happens")
+    (list
+      (item "Persistent identity - the same principal across sessions")
+      (item "Protected storage - keys encrypted at rest")
+      (item "Recovery path - don't lose your realm to a forgotten passphrase")
+      (item "Rotation support - keys age, compromise happens"))
     (p "The keystore solves this."))
   (section
     "Realm Continuity"
@@ -227,5 +231,7 @@
     (p "1. libsodium documentation - Password Hashing, Secret-key Encryption 2. Argon2 specification - https://github.com/P-H-C/phc-winner-argon2 3. Shamir's Secret Sharing - Shamir, A., \"How to Share a Secret\", 1979 4. RFC-007 - Threshold Governance 5. RFC-040 - Cyberspace Security Architecture"))
   (section
     "Changelog"
-    (p "- 2026-01-08 - Initial draft")))
+    (list
+      (item "2026-01-08")
+      (item "Initial draft"))))
 

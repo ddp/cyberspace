@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Critical operations require collective authorization:")
-    (p "- Release signing: Multiple maintainers must approve - Deployment: Operations team quorum required - Key ceremonies: Distributed trust for root keys - Emergency response: Prevent unilateral action")
+    (list
+      (item "Release signing: Multiple maintainers must approve")
+      (item "Deployment: Operations team quorum required")
+      (item "Key ceremonies: Distributed trust for root keys")
+      (item "Emergency response: Prevent unilateral action"))
     (p "Traditional approaches fail: - Shared passwords: Who has it? Who used it? - Sudo access: Root is root - Approval workflows: Soft controls, bypassable")
     (p "Threshold signatures provide cryptographic enforcement:")
     (blockquote "K valid signatures required. Not K-1. Not bypass. Mathematics."))
@@ -94,14 +98,23 @@
     "Implementation Notes"
     (subsection
       "Dependencies"
-      (p "- crypto-ffi - Ed25519 operations - cert - SPKI integration - audit - Trail recording"))
+      (list
+        (item "crypto-ffi")
+        (item "Ed25519 operations - cert")
+        (item "SPKI integration - audit")
+        (item "Trail recording")))
     (subsection
       "Performance"
-      (p "- Signature verification: ~10μs per Ed25519 verify - Threshold check: O(N) where N = signature count - No network round-trips (offline verification)")))
+      (list
+        (item "Signature verification: ~10μs per Ed25519 verify")
+        (item "Threshold check: O(N) where N = signature count")
+        (item "No network round-trips (offline verification)"))))
   (section
     "References"
     (p "1. Boneh, D., et al. (2001). Short Signatures from the Weil Pairing. 2. Gennaro, R., et al. (2016). Threshold-optimal DSA/ECDSA signatures. 3. NIST SP 800-57. Recommendation for Key Management. 4. RFC-004: SPKI Authorization Integration"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

@@ -66,5 +66,7 @@
     (p "1. RFC-002 - Architecture (\"English on top, Scheme underneath\") 2. RFC-050 - The Wilderness (onboarding state)"))
   (section
     "Changelog"
-    (p "- 2026-01-10 - Initial specification")))
+    (list
+      (item "2026-01-10")
+      (item "Initial specification"))))
 

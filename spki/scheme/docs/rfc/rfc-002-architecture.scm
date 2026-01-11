@@ -28,13 +28,20 @@
       (row "2026 " "Cyberspace " "Synthesis: SPKI + audit + IPv6 mesh + no central authority "))
     (p "DECnet Phase IV had 24-bit addressing - fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.")
     (p "Cyberspace returns to first principles:")
-    (p "- S-expressions for everything: readable, parseable, auditable - Minimal TCB: prove the crypto, evolve the rest - No central authority: SPKI/SDSI namespaces over PKI hierarchies - Running code: every feature traces to research, runs, and is tested"))
+    (list
+      (item "S-expressions for everything: readable, parseable, auditable")
+      (item "Minimal TCB: prove the crypto, evolve the rest")
+      (item "No central authority: SPKI/SDSI namespaces over PKI hierarchies")
+      (item "Running code: every feature traces to research, runs, and is tested")))
   (section
     "2. The Prime Directive"
     (blockquote "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.")
     (code "┌─────────────────────────────────────────────────────────────┐\n│                                                             │\n│   TRUSTED COMPUTING BASE (OCaml, ~1000 lines)              │\n│                                                             │\n│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │\n│   │   Ed25519   │  │   SHA-512   │  │   Verify    │        │\n│   │   Sign      │  │   Hash      │  │   Chain     │        │\n│   └─────────────┘  └─────────────┘  └─────────────┘        │\n│                                                             │\n│   That's it. Everything else is policy.                    │\n│                                                             │\n└─────────────────────────────────────────────────────────────┘\n                           │\n                           │ FFI (tiny surface)\n                           ▼\n┌─────────────────────────────────────────────────────────────┐\n│                                                             │\n│   EVERYTHING ELSE (Chicken Scheme, unlimited)              │\n│                                                             │\n│   Vault · Audit · Replication · Names · Discovery          │\n│   CLI Tools · API Server · Library · Scripts               │\n│                                                             │\n│   Change it anytime. It's just policy.                     │\n│                                                             │\n└─────────────────────────────────────────────────────────────┘")
     (p "Rationale:")
-    (p "- OCaml: Strong types, formal verification with Coq, compile-time safety - Chicken Scheme: Interactive development, S-expressions everywhere, rapid evolution - The boundary: Tiny, frozen, proven. The TCB does crypto and nothing else.")
+    (list
+      (item "OCaml: Strong types, formal verification with Coq, compile-time safety")
+      (item "Chicken Scheme: Interactive development, S-expressions everywhere, rapid evolution")
+      (item "The boundary: Tiny, frozen, proven. The TCB does crypto and nothing else."))
     (p "A smaller TCB means fewer bugs that can break security. We prove the crypto in Coq. Everything else can evolve freely.")
     (subsection
       "2.1 Interface Philosophy"
@@ -125,23 +132,46 @@
     (subsection
       "7.1 TCB Minimization"
       (p "The attack surface is limited to ~1000 lines of OCaml calling libsodium. This code is:")
-      (p "- Formally specified - Proven in Coq - Frozen (rarely changes)"))
+      (list
+        (item "Formally specified")
+        (item "Proven in Coq")
+        (item "Frozen (rarely changes)")))
     (subsection
       "7.2 No Single Point of Failure"
-      (p "- No CA: SPKI namespaces are local - No central server: Federation, not empire - No single key: Threshold signatures, Shamir sharing"))
+      (list
+        (item "No CA: SPKI namespaces are local")
+        (item "No central server: Federation, not empire")
+        (item "No single key: Threshold signatures, Shamir sharing")))
     (subsection
       "7.3 Auditability"
-      (p "- All security policy is human-readable S-expressions - All history is hash-chained and signed - All audit trails are exportable text")))
+      (list
+        (item "All security policy is human-readable S-expressions")
+        (item "All history is hash-chained and signed")
+        (item "All audit trails are exportable text"))))
   (section
     "8. Getting Started"
     (code bash "git clone git@github.com:ddp/cyberspace.git\ncd cyberspace/spki/scheme\n./spki-keygen alice\n./seal init --key alice.private\n./seal commit -m \"Hello, Cyberspace\""))
   (section
     "9. Future Work"
-    (p "- ChaCha20-Poly1305 AEAD - Authenticated encryption - Lamport Logical Clocks - Distributed ordering - TLA+ Specifications - Model-checked protocols - Coq Extraction - Verified OCaml from proofs - Federation Protocol - Cross-instance sync - Byzantine Paxos - Fault-tolerant consensus"))
+    (list
+      (item "ChaCha20-Poly1305 AEAD")
+      (item "Authenticated encryption")
+      (item "Lamport Logical Clocks")
+      (item "Distributed ordering")
+      (item "TLA+ Specifications")
+      (item "Model-checked protocols")
+      (item "Coq Extraction")
+      (item "Verified OCaml from proofs")
+      (item "Federation Protocol")
+      (item "Cross-instance sync")
+      (item "Byzantine Paxos")
+      (item "Fault-tolerant consensus")))
   (section
     "10. References"
     (p "1. Diffie, W., & Hellman, M. (1976). New directions in cryptography. 2. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document. 3. Merkle, R. C. (1987). A digital signature based on a conventional encryption function. 4. Shamir, A. (1979). How to share a secret. 5. Lamport, L. (1978). Time, clocks, and the ordering of events in a distributed system. 6. Lampson, B. W. (1971). Protection. 7. Ellison, C., et al. (1999). SPKI certificate theory. RFC 2693."))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

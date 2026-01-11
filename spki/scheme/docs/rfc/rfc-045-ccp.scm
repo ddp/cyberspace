@@ -130,7 +130,10 @@
       (p "Principal identity: - Is the public key hash (not a name, not a certificate) - Only revealed after encryption established - Only revealed to authenticated peer - Never in plaintext on wire - Self-certifying: principal = hash(public_key)"))
     (subsection
       "Replay Protection"
-      (p "- Sequence numbers per direction - Nonce never reused (fatal if violated) - AEAD authentication fails on replay")))
+      (list
+        (item "Sequence numbers per direction")
+        (item "Nonce never reused (fatal if violated)")
+        (item "AEAD authentication fails on replay"))))
   (section
     "Comparison"
     (table

@@ -20,42 +20,59 @@
     (subsection
       "Internet Engineering Task Force (IETF)"
       (p "The principal standards body for Internet protocols.")
-      (p "- Website: https://www.ietf.org/ - Datatracker: https://datatracker.ietf.org/ - Mission: RFC 3935")
+      (list
+        (item "Website: https://www.ietf.org/")
+        (item "Datatracker: https://datatracker.ietf.org/")
+        (item "Mission: RFC 3935"))
       (p "The IETF operates through working groups organized by area. Participation is open to any individual. Standards emerge through rough consensus."))
     (subsection
       "Internet Architecture Board (IAB)"
       (p "Oversees the technical and engineering development of the Internet.")
-      (p "- Website: https://www.iab.org/ - Charter: RFC 2850")
+      (list
+        (item "Website: https://www.iab.org/")
+        (item "Charter: RFC 2850"))
       (p "The IAB provides architectural oversight, adjudicates appeals, and appoints the RFC Series Editor."))
     (subsection
       "Internet Engineering Steering Group (IESG)"
       (p "Manages the IETF standards process and working groups.")
-      (p "- Responsibilities: RFC 2026, Section 6 - Appeals: RFC 2026, Section 6.5")
+      (list
+        (item "Responsibilities: RFC 2026, Section 6")
+        (item "Appeals: RFC 2026, Section 6.5"))
       (p "The IESG reviews documents for publication as RFCs and manages the standards track progression."))
     (subsection
       "Internet Research Task Force (IRTF)"
       (p "Promotes research of importance to the evolution of the Internet.")
-      (p "- Website: https://irtf.org/ - Charter: RFC 2014")
+      (list
+        (item "Website: https://irtf.org/")
+        (item "Charter: RFC 2014"))
       (p "The IRTF focuses on longer-term research issues, complementing the IETF's near-term engineering focus."))
     (subsection
       "Internet Assigned Numbers Authority (IANA)"
       (p "Coordinates global Internet protocol parameters.")
-      (p "- Website: https://www.iana.org/ - Functions: RFC 5226")
+      (list
+        (item "Website: https://www.iana.org/")
+        (item "Functions: RFC 5226"))
       (p "IANA maintains registries for protocol parameters, port numbers, and other Internet-wide identifiers."))
     (subsection
       "Internet Society (ISOC)"
       (p "Organizational home of the IETF, IAB, and IANA.")
-      (p "- Website: https://www.internetsociety.org/ - Charter: RFC 2031")
+      (list
+        (item "Website: https://www.internetsociety.org/")
+        (item "Charter: RFC 2031"))
       (p "ISOC provides legal and financial support for Internet standards development."))
     (subsection
       "Security Area Directorate (SECDIR)"
       (p "Reviews IETF documents for security issues.")
-      (p "- Area: Security (sec) - Review: Mandatory for Standards Track documents")
+      (list
+        (item "Area: Security (sec)")
+        (item "Review: Mandatory for Standards Track documents"))
       (p "The Security Area ensures all specifications receive security review before publication. Security Considerations sections are required."))
     (subsection
       "IETF Working Groups"
       (p "Technical work happens in working groups organized by area.")
-      (p "- List: https://datatracker.ietf.org/wg/ - Process: RFC 2418")
+      (list
+        (item "List: https://datatracker.ietf.org/wg/")
+        (item "Process: RFC 2418"))
       (p "Table 1a: IETF Areas")
       (table
         (header "Area " "Focus ")
@@ -71,7 +88,10 @@
     (subsection
       "RFC Editor"
       (p "Publishes and maintains the RFC series.")
-      (p "- Website: https://www.rfc-editor.org/ - Style Guide: RFC 7322 - Instructions: RFC 7997")))
+      (list
+        (item "Website: https://www.rfc-editor.org/")
+        (item "Style Guide: RFC 7322")
+        (item "Instructions: RFC 7997"))))
   (section
     "Normative RFCs"
     (p "The following IETF RFCs are normative for Library of Cyberspace processes:")
@@ -106,9 +126,19 @@
     (p "The IETF process is thorough but obscure. We do our own thing.[^d1]")
     (p "[^d1]: Design: IETF processes evolved for Internet-scale coordination across thousands of participants. We're smaller, faster, more direct. We reference their norms, not their bureaucracy.")
     (p "What we take from IETF:")
-    (p "- RFC format — Document structure, numbering, required sections - RFC 2119 keywords — MUST, SHOULD, MAY precision - Security Considerations — Required in every specification - Rough consensus — General agreement over voting - Running code — Implementations validate specifications")
+    (list
+      (item "RFC format — Document structure, numbering, required sections")
+      (item "RFC 2119 keywords — MUST, SHOULD, MAY precision")
+      (item "Security Considerations — Required in every specification")
+      (item "Rough consensus — General agreement over voting")
+      (item "Running code — Implementations validate specifications"))
     (p "What we skip:")
-    (p "- Working group charters - Area director approval - IESG review cycles - Last call periods - IANA registry formalism")
+    (list
+      (item "Working group charters")
+      (item "Area director approval")
+      (item "IESG review cycles")
+      (item "Last call periods")
+      (item "IANA registry formalism"))
     (p "Table 2: Our Process")
     (table
       (header "Step " "Action ")

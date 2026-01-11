@@ -98,19 +98,34 @@
     "Migration Timeline"
     (subsection
       "Phase 1: Preparation (Now)"
-      (p "- Implement SPHINCS+ and Dilithium in crypto-ffi - Add multi-algorithm support to keystore - Test hybrid signatures"))
+      (list
+        (item "Implement SPHINCS+ and Dilithium in crypto-ffi")
+        (item "Add multi-algorithm support to keystore")
+        (item "Test hybrid signatures")))
     (subsection
       "Phase 2: Hybrid Default (Now + 1 year)"
-      (p "- New realms generate hybrid keys (Ed25519 + SPHINCS+) - All signatures include both - Legacy realms can upgrade"))
+      (list
+        (item "New realms generate hybrid keys (Ed25519 + SPHINCS+)")
+        (item "All signatures include both")
+        (item "Legacy realms can upgrade")))
     (subsection
       "Phase 3: Post-Quantum Primary (Q-Day - 3 years)"
-      (p "- SPHINCS+/Dilithium become primary - Ed25519 becomes secondary - Capability chains require at least one PQ signature"))
+      (list
+        (item "SPHINCS+/Dilithium become primary")
+        (item "Ed25519 becomes secondary")
+        (item "Capability chains require at least one PQ signature")))
     (subsection
       "Phase 4: Legacy Sunset (Q-Day)"
-      (p "- Ed25519 signatures no longer trusted - Hybrid signatures verified by PQ component only - Legacy-only realms frozen (read-only)"))
+      (list
+        (item "Ed25519 signatures no longer trusted")
+        (item "Hybrid signatures verified by PQ component only")
+        (item "Legacy-only realms frozen (read-only)")))
     (subsection
       "Phase 5: Pure Post-Quantum (Q-Day + 2 years)"
-      (p "- Ed25519 removed from new certificates - Historical certificates retain for audit - Cyberspace survives")))
+      (list
+        (item "Ed25519 removed from new certificates")
+        (item "Historical certificates retain for audit")
+        (item "Cyberspace survives"))))
   (section
     "Storage Implications"
     (p "Post-quantum signatures are larger:")
@@ -171,5 +186,7 @@
     (p "1. NIST Post-Quantum Cryptography Standardization 2. SPHINCS+ specification - https://sphincs.org/ 3. CRYSTALS-Dilithium specification - https://pq-crystals.org/dilithium/ 4. Open Quantum Safe project - https://openquantumsafe.org/ 5. Shor, P., \"Algorithms for Quantum Computation\", 1994 6. RFC-041 - Keystore and Attestation 7. RFC-042 - Quantum-Resistant Merkle Trees"))
   (section
     "Changelog"
-    (p "- 2026-01-08 - Initial draft")))
+    (list
+      (item "2026-01-08")
+      (item "Initial draft"))))
 

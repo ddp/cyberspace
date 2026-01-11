@@ -11,7 +11,11 @@
   (section
     "Motivation"
     (p "Agents in the Library of Cyberspace require language understanding and generation capabilities for:")
-    (p "- Document summarization and indexing - Natural language query translation (RFC-025) - Content annotation and metadata extraction - Inter-agent communication in natural language")
+    (list
+      (item "Document summarization and indexing")
+      (item "Natural language query translation (RFC-025)")
+      (item "Content annotation and metadata extraction")
+      (item "Inter-agent communication in natural language"))
     (p "External API dependencies (OpenAI, Anthropic, etc.) introduce:")
     (p "1. Privacy leakage — document content leaves the realm 2. Availability risk — network partitions break agent operation 3. Cost unpredictability — metered APIs scale poorly 4. Vendor lock-in — proprietary formats and rate limits")
     (p "Local inference eliminates these concerns while maintaining capability.[^d1]")
@@ -95,7 +99,10 @@
     (subsection
       "Inference Isolation"
       (p "Sensitive documents require isolated inference contexts:")
-      (p "- Separate model instances per security domain - Clear KV cache between requests from different agents - No persistent memory across security boundaries")))
+      (list
+        (item "Separate model instances per security domain")
+        (item "Clear KV cache between requests from different agents")
+        (item "No persistent memory across security boundaries"))))
   (section
     "Ollama Integration"
     (p "Ollama is the reference implementation for local inference.[^h2]")
@@ -124,7 +131,10 @@
     (subsection
       "Alternative Backends"
       (p "The protocol supports any OpenAI-compatible inference server:")
-      (p "- llama.cpp — server binary with --host flag - vLLM — production serving with PagedAttention - LocalAI — drop-in OpenAI replacement - LM Studio — GUI with server mode"))
+      (list
+        (item "llama.cpp — server binary with --host flag - vLLM — production serving with PagedAttention")
+        (item "LocalAI — drop-in OpenAI replacement")
+        (item "LM Studio — GUI with server mode")))
     (subsection
       "Cloud Fallback"
       (p "For realms without local GPU resources, cloud inference MAY be used as fallback with explicit user consent and encryption:")
@@ -135,5 +145,7 @@
     (p "1. RFC-023: Demonic Agent Sandboxing 2. RFC-025: Query Language 3. RFC-035: Mobile Agents and Pub/Sub 4. Ollama Documentation: https://ollama.com/ 5. Lewis et al., \"Retrieval-Augmented Generation\" (2020)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial specification")))
+    (list
+      (item "2026-01-07")
+      (item "Initial specification"))))
 

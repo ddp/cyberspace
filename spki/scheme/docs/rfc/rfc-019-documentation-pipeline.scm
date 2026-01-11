@@ -14,7 +14,15 @@
     (subsection
       "Why PostScript, Not PDF"
       (p "PDF is Adobe's proprietary format dressed in ISO clothing.[^h1] PostScript is:")
-      (p "- Open - Published specification since 1984 - Stable - Level 3 unchanged since 1997 - Readable - Plain text you can grep, diff, edit - Honest - Describes rendering, doesn't control viewing")
+      (list
+        (item "Open")
+        (item "Published specification since 1984")
+        (item "Stable")
+        (item "Level 3 unchanged since 1997")
+        (item "Readable")
+        (item "Plain text you can grep, diff, edit")
+        (item "Honest")
+        (item "Describes rendering, doesn't control viewing"))
       (p "NeXT got it right. The source is the document.[^h2]")
       (p "[^h1]: Historical: Adobe created PDF in 1993 as a proprietary format, then donated it to ISO in 2008 (ISO 32000) after market dominance was achieved. The \"open standard\" arrived after lock-in.")
       (p "[^h2]: Historical: NeXT's Display PostScript (1988) used PostScript as the native imaging model. What you saw on screen was what the printer rendered. Steve Jobs understood that the document format is the document.")))
@@ -84,13 +92,22 @@
     (subsection
       "Table of Contents"
       (p "Each RFC generates a table of contents from section headings:[^i1]")
-      (p "- Level 1: # - RFC title (not in TOC) - Level 2: ## - Major sections - Level 3: ### - Subsections")
+      (list
+        (item "Level 1: #")
+        (item "RFC title (not in TOC)")
+        (item "Level 2: ##")
+        (item "Major sections")
+        (item "Level 3: ###")
+        (item "Subsections"))
       (p "HTML output includes navigable TOC with anchor links.")
       (p "[^i1]: Implementation: Pandoc generates TOC with --toc flag. PostScript uses LaTeX \\tableofcontents. Plain text uses indented section listing."))
     (subsection
       "Index Generation"
       (p "The index.html catalog provides:")
-      (p "- RFC number and title - Links to all output formats (html, ps, txt) - Clean, accessible HTML")
+      (list
+        (item "RFC number and title")
+        (item "Links to all output formats (html, ps, txt)")
+        (item "Clean, accessible HTML"))
       (p "Structure:")
       (code html "<table>\n  <tr>\n    <td>RFC Number</td>\n    <td>Title</td>\n    <td>html | ps | txt</td>\n  </tr>\n</table>"))
     (subsection
@@ -131,7 +148,12 @@
     (subsection
       "HTML: Modern, Themeable"
       (p "HTML output uses rfc.css for rich presentation:")
-      (p "- Light/dark themes: Respects prefers-color-scheme, toggleable - Typography: System fonts with monospace fallbacks for code - Code blocks: font-feature-settings ensures box-drawing alignment - Responsive: Mobile-friendly with print styles - Tables: Shadows, hover states, proper borders")
+      (list
+        (item "Light/dark themes: Respects prefers-color-scheme, toggleable")
+        (item "Typography: System fonts with monospace fallbacks for code")
+        (item "Code blocks: font-feature-settings ensures box-drawing alignment")
+        (item "Responsive: Mobile-friendly with print styles")
+        (item "Tables: Shadows, hover states, proper borders"))
       (code css ":root {\n  --bg: #fafafa; --fg: #1a1a1a; --accent: #0066cc;\n}\n@media (prefers-color-scheme: dark) {\n  :root { --bg: #0d1117; --fg: #e6edf3; --accent: #58a6ff; }\n}"))
     (subsection
       "PostScript: Professional Typesetting"
@@ -141,7 +163,11 @@
     (subsection
       "Text: Immortal ASCII"
       (p "Plain text remains intentionally simple:")
-      (p "- 78 columns for universal display - Unicode box-drawing converted to ASCII - No formatting dependencies - Grep-able, diff-able, eternal")))
+      (list
+        (item "78 columns for universal display")
+        (item "Unicode box-drawing converted to ASCII")
+        (item "No formatting dependencies")
+        (item "Grep-able, diff-able, eternal"))))
   (section
     "Dependencies"
     (table
@@ -166,5 +192,10 @@
     (p "1. Pandoc User's Guide (preserved) 2. PostScript Language Reference Manual - Adobe (preserved) 3. RFC-006: Vault System Architecture"))
   (section
     "Changelog"
-    (p "- 2026-01-11 - Add rich formatting pipeline (groff, CSS themes) - 2026-01-07 - Add footnote categories, TOC, permuted index (KWIC) - 2026-01-07 - Replace PDF with PostScript (open format) - 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-11")
+      (item "Add rich formatting pipeline (groff, CSS themes) - 2026-01-07")
+      (item "Add footnote categories, TOC, permuted index (KWIC) - 2026-01-07")
+      (item "Replace PDF with PostScript (open format) - 2026-01-06")
+      (item "Initial specification"))))
 

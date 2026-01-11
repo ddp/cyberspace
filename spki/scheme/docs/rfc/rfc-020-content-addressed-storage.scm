@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Traditional storage systems use location-based addressing:")
-    (p "- DECtape: Physical position on magnetic tape - Filesystems: Path names (/home/ddp/file.txt) - Databases: Row IDs, primary keys - URLs: Server + path (https://example.com/doc.ps)")
+    (list
+      (item "DECtape: Physical position on magnetic tape")
+      (item "Filesystems: Path names (/home/ddp/file.txt)")
+      (item "Databases: Row IDs, primary keys")
+      (item "URLs: Server + path (https://example.com/doc.ps)"))
     (p "Location-based addressing has fundamental problems:")
     (p "1. Mutability - Same address can point to different content over time 2. Link rot - Addresses become invalid when content moves 3. Duplication - Identical content stored multiple times 4. No verification - Address doesn't prove content integrity")
     (p "Content-addressed storage inverts this:")
@@ -86,7 +90,9 @@
       "Philosophy"
       (blockquote "\"The soup is infinite.\" - Objects swim in a queryable sea of metadata.")
       (p "The Soup inverts the traditional filesystem model:")
-      (p "- Filesystem: Navigate hierarchy to find objects - Soup: Query attributes to discover objects"))
+      (list
+        (item "Filesystem: Navigate hierarchy to find objects")
+        (item "Soup: Query attributes to discover objects")))
     (subsection
       "Object Enumeration"
       (code scheme "(define (soup)\n  \"List all objects in the vault with metadata\"\n  (append\n    (soup-releases)      ; Signed releases\n    (soup-archives)      ; Sealed archives\n    (soup-keys)          ; Cryptographic keys\n    (soup-audit-entries) ; Audit trail\n    (soup-commits)))     ; Recent commits"))
@@ -324,5 +330,8 @@
     (p "1. Merkle, R. (1987), \"A Digital Signature Based on a Conventional Encryption Function\" 2. Git Internals - Git Objects 3. IPFS Content Addressing 4. Putze, Sanders, Singler (2007), \"Cache-, Hash-, and Space-Efficient Bloom Filters\" 5. Bender et al. (2012), \"Don't Thrash: How to Cache Your Hash on Flash\" 6. RFC-006: Vault System Architecture 7. RFC-018: Sealed Archive Format"))
   (section
     "Changelog"
-    (p "- 2026-01-09 - Advanced probabilistic data structures: blocked Bloom filters, counting Bloom filters, quotient filters, hierarchical existence checking - 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-09")
+      (item "Advanced probabilistic data structures: blocked Bloom filters, counting Bloom filters, quotient filters, hierarchical existence checking - 2026-01-07")
+      (item "Initial draft"))))
 

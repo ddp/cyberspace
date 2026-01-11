@@ -10,9 +10,25 @@
   (section
     "Motivation"
     (p "Vaults must communicate to:")
-    (p "- Replicate - Distribute objects across vaults - Federate - Link independent vaults into networks - Subscribe - Receive updates from publishers - Query - Search the distributed soup")
+    (list
+      (item "Replicate")
+      (item "Distribute objects across vaults")
+      (item "Federate")
+      (item "Link independent vaults into networks")
+      (item "Subscribe")
+      (item "Receive updates from publishers")
+      (item "Query")
+      (item "Search the distributed soup"))
     (p "The protocol must handle:")
-    (p "- Intermittent connectivity - Vaults may be offline - Untrusted networks - All communication authenticated - Large objects - Efficient chunked transfer - Partial sync - Resume interrupted transfers"))
+    (list
+      (item "Intermittent connectivity")
+      (item "Vaults may be offline")
+      (item "Untrusted networks")
+      (item "All communication authenticated")
+      (item "Large objects")
+      (item "Efficient chunked transfer")
+      (item "Partial sync")
+      (item "Resume interrupted transfers")))
   (section
     "Protocol Layers"
     (code "┌─────────────────────────────────────────┐\n│           APPLICATION LAYER             │\n│  (vault operations, soup queries)       │\n├─────────────────────────────────────────┤\n│           MESSAGE LAYER                 │\n│  (request/response, streaming)          │\n├─────────────────────────────────────────┤\n│           SECURITY LAYER                │\n│  (authentication, encryption)           │\n├─────────────────────────────────────────┤\n│           TRANSPORT LAYER               │\n│  (TCP, QUIC, Unix socket, etc.)         │\n└─────────────────────────────────────────┘"))
@@ -138,5 +154,7 @@
     (p "1. [QUIC Protocol - RFC 9000](https://tools.ietf.org/html/rfc9000) 2. [Noise Protocol Framework](http://noiseprotocol.org/) 3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.html) 4. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 5. [IPFS Bitswap Protocol](https://docs.ipfs.tech/concepts/bitswap/) 6. [libp2p Specifications](https://github.com/libp2p/specs)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

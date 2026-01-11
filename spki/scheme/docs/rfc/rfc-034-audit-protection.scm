@@ -10,9 +10,25 @@
   (section
     "Motivation"
     (p "The audit log is sacred:")
-    (p "- Evidence - Legal and forensic record - Accountability - Who did what when - Recovery - Reconstruct state after failure - Trust - Foundation of the security model")
+    (list
+      (item "Evidence")
+      (item "Legal and forensic record")
+      (item "Accountability")
+      (item "Who did what when")
+      (item "Recovery")
+      (item "Reconstruct state after failure")
+      (item "Trust")
+      (item "Foundation of the security model"))
     (p "But the audit log is also a target:")
-    (p "- Flooding - Generate noise to hide malicious activity - Exhaustion - Fill storage to halt operations - Evasion - Overwhelm to prevent logging of real attacks - Amplification - Small action triggers large log entries")
+    (list
+      (item "Flooding")
+      (item "Generate noise to hide malicious activity")
+      (item "Exhaustion")
+      (item "Fill storage to halt operations")
+      (item "Evasion")
+      (item "Overwhelm to prevent logging of real attacks")
+      (item "Amplification")
+      (item "Small action triggers large log entries"))
     (p "The audit log must protect itself while never failing to record."))
   (section
     "Threat Model"
@@ -103,5 +119,7 @@
     (p "1. [NIST SP 800-92: Guide to Computer Security Log Management](https://csrc.nist.gov/publications/detail/sp/800-92/final) 2. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.html) 3. [RFC-032: Rate Limiting and Quotas](rfc-032-rate-limiting.html) 4. [RFC-028: Error Handling and Recovery](rfc-028-error-handling.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

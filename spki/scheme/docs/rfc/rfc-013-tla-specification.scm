@@ -10,7 +10,10 @@
   (section
     "Motivation"
     (p "Running code is necessary but not sufficient:")
-    (p "- Tests check examples: Not all possible executions - Reviews check logic: Not all interleavings - Bugs hide in corners: Race conditions, edge cases")
+    (list
+      (item "Tests check examples: Not all possible executions")
+      (item "Reviews check logic: Not all interleavings")
+      (item "Bugs hide in corners: Race conditions, edge cases"))
     (p "TLA+ provides:")
     (p "1. Precise specification: Mathematical description of behavior 2. Model checking: Exhaustive state space exploration 3. Proof capability: Formal verification of properties 4. Design tool: Find bugs before writing code")
     (p "From Lamport:")
@@ -78,12 +81,18 @@
       (row "Maintenance " "Risky changes " "Verify changes ")))
   (section
     "Limitations"
-    (p "- State explosion: Large state spaces take time - Learning curve: TLA+ is different - Abstraction gap: Spec ≠ implementation - Finite models: Cannot check infinite systems directly")
+    (list
+      (item "State explosion: Large state spaces take time")
+      (item "Learning curve: TLA+ is different")
+      (item "Abstraction gap: Spec ≠ implementation")
+      (item "Finite models: Cannot check infinite systems directly"))
     (p "Mitigations: - Symmetry reduction - Abstraction - Proof for infinite cases"))
   (section
     "References"
     (p "1. Lamport, L. (2002). Specifying Systems: The TLA+ Language. 2. Lamport, L. (2009). The PlusCal Algorithm Language. 3. Newcombe, C., et al. (2015). How Amazon Web Services Uses Formal Methods. 4. TLA+ Tools: https://lamport.azurewebsites.net/tla/tools.html"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

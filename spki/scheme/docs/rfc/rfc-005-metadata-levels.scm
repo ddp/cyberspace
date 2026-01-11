@@ -10,7 +10,10 @@
   (section
     "Motivation"
     (p "Different commits deserve different metadata:")
-    (p "- Quick fix: Just record it happened - Feature release: Add searchable keywords - Archival snapshot: Capture full environment")
+    (list
+      (item "Quick fix: Just record it happened")
+      (item "Feature release: Add searchable keywords")
+      (item "Archival snapshot: Capture full environment"))
     (p "Traditional VCS provides one-size-fits-all commit messages. Cyberspace provides progressive levels:")
     (p "1. Minimal - Hash, timestamp, message (default) 2. Catalog - Add subjects, keywords, descriptions (discovery) 3. Preserve - Add environment, dependencies, git state (archival)"))
   (section
@@ -116,5 +119,7 @@
     (p "1. Dublin Core Metadata Initiative (DCMI) 2. Library of Congress Subject Headings (LCSH) 3. Software Heritage Archive Metadata 4. Reproducible Builds Project"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

@@ -12,7 +12,15 @@
     (p "Authorization in distributed systems is hard:")
     (p "- ACLs don't scale - Central lists become bottlenecks - Identity is fragile - Names change, keys rotate - Ambient authority is dangerous - \"Run as root\" is not a security model - Revocation is an afterthought - Usually bolted on badly")
     (p "SPKI (Simple Public Key Infrastructure) solved this decades ago:")
-    (p "- Capabilities, not identities - What you can do, not who you are - Local names - No global namespace required - Delegation chains - Authority flows from source to delegate - Threshold signatures - M-of-N for critical operations")
+    (list
+      (item "Capabilities, not identities")
+      (item "What you can do, not who you are")
+      (item "Local names")
+      (item "No global namespace required")
+      (item "Delegation chains")
+      (item "Authority flows from source to delegate")
+      (item "Threshold signatures")
+      (item "M-of-N for critical operations"))
     (p "The Library integrates SPKI with content-addressed storage, creating capabilities that are themselves content-addressed and introspectable."))
   (section
     "Capability Model"
@@ -154,11 +162,16 @@
       (code scheme ";; Certificates stored in CAS\n(define (store-cert cert)\n  (let ((signed (sign-cert cert)))\n    (cas-put (serialize signed))))\n\n;; Indexed by issuer and subject for fast lookup\n(define cert-by-issuer (make-hash-table))\n(define cert-by-subject (make-hash-table))"))
     (subsection
       "Performance"
-      (p "- Certificate validation is expensive - cache results - Chain discovery can be slow - index by issuer/subject - Revocation checks add latency - use short-lived certs when possible")))
+      (list
+        (item "Certificate validation is expensive - cache results")
+        (item "Chain discovery can be slow - index by issuer/subject")
+        (item "Revocation checks add latency - use short-lived certs when possible"))))
   (section
     "References"
     (p "1. SPKI/SDSI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication - Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller, Yee, Shapiro (preserved) 4. RFC-004: SPKI Authorization 5. RFC-020: Content-Addressed Storage 6. RFC-007: Threshold Signature Governance"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

@@ -10,7 +10,15 @@
   (section
     "Motivation"
     (p "Distributed computation requires mobile code:")
-    (p "- Latency - Move computation to data, not data to computation - Autonomy - Agents act on behalf of principals when disconnected - Coordination - Pub/sub enables loose coupling across realms - Accountability - Every agent action is auditable")
+    (list
+      (item "Latency")
+      (item "Move computation to data, not data to computation")
+      (item "Autonomy")
+      (item "Agents act on behalf of principals when disconnected")
+      (item "Coordination")
+      (item "Pub/sub enables loose coupling across realms")
+      (item "Accountability")
+      (item "Every agent action is auditable"))
     (p "General Magic's Telescript (1994) pioneered these ideas. We preserve the good parts while integrating with SPKI capabilities and content-addressed storage."))
   (section
     "Agent Model"
@@ -100,7 +108,15 @@
     (subsection
       "What is a Realm?"
       (p "A realm is an execution domain with:")
-      (p "- Coordinator - Supervises agents, enforces policy (quiescent until message) - Policy - What agents can do (SPKI-based) - Resources - CPU, memory, network quotas - Pub/sub broker - Message routing")
+      (list
+        (item "Coordinator")
+        (item "Supervises agents, enforces policy (quiescent until message)")
+        (item "Policy")
+        (item "What agents can do (SPKI-based)")
+        (item "Resources")
+        (item "CPU, memory, network quotas")
+        (item "Pub/sub broker")
+        (item "Message routing"))
       (code scheme "(define-record-type <realm>\n  (make-realm id coordinator policy agents topics)\n  realm?\n  (id realm-id)\n  (coordinator realm-coordinator)  ; Coordinator agent-id\n  (policy realm-policy)            ; SPKI authorization policy\n  (agents realm-agents)            ; Hash table of active agents\n  (topics realm-topics))           ; Hash table of topics"))
     (subsection
       "Quiescent Coordinator"
@@ -180,5 +196,7 @@
     (p "1. Telescript Language Reference - General Magic (preserved) 2. Mobile Agents - Lange & Oshima (preserved) 3. Distributed Lock Manager - VAX/VMS SCS (preserved) 4. Concurrency Oriented Programming in Termite Scheme - Germain (preserved) 5. RFC-003: Cryptographic Audit Trail 6. RFC-004: SPKI Authorization 7. RFC-010: Federation Protocol 8. RFC-021: Capability Delegation 9. RFC-023: Agent Sandboxing"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft with quantum vocabulary")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft with quantum vocabulary"))))
 

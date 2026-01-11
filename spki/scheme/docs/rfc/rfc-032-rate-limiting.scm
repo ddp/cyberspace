@@ -10,9 +10,25 @@
   (section
     "Motivation"
     (p "Shared resources require protection:")
-    (p "- Denial of Service - Malicious overload - Resource exhaustion - Runaway processes - Fair sharing - Equal access for all users - Cost control - Prevent unbounded consumption")
+    (list
+      (item "Denial of Service")
+      (item "Malicious overload")
+      (item "Resource exhaustion")
+      (item "Runaway processes")
+      (item "Fair sharing")
+      (item "Equal access for all users")
+      (item "Cost control")
+      (item "Prevent unbounded consumption"))
     (p "Limits must be:")
-    (p "- Configurable - Different limits for different principals - Graceful - Degrade smoothly, don't cliff - Transparent - Users know their limits - Auditable - All limiting decisions logged"))
+    (list
+      (item "Configurable")
+      (item "Different limits for different principals")
+      (item "Graceful")
+      (item "Degrade smoothly, don't cliff")
+      (item "Transparent")
+      (item "Users know their limits")
+      (item "Auditable")
+      (item "All limiting decisions logged")))
   (section
     "Rate Limiting"
     (subsection
@@ -97,5 +113,7 @@
     (p "1. [Token Bucket Algorithm](https://en.wikipedia.org/wiki/Tokenbucket) 2. [Leaky Bucket Algorithm](https://en.wikipedia.org/wiki/Leakybucket) 3. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 4. [RFC-031: Monitoring](rfc-031-monitoring.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

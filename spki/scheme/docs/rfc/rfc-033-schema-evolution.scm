@@ -10,9 +10,25 @@
   (section
     "Motivation"
     (p "Data outlives code:")
-    (p "- Long-term preservation - Data must remain readable for centuries - Software updates - New versions need new fields - Federation - Different vaults may have different schema versions - Rollback - Must handle downgrades gracefully")
+    (list
+      (item "Long-term preservation")
+      (item "Data must remain readable for centuries")
+      (item "Software updates")
+      (item "New versions need new fields")
+      (item "Federation")
+      (item "Different vaults may have different schema versions")
+      (item "Rollback")
+      (item "Must handle downgrades gracefully"))
     (p "Schema evolution must be:")
-    (p "- Non-breaking - Old data remains accessible - Bidirectional - Upgrade and downgrade paths - Explicit - Changes documented and versioned - Verifiable - Schema validation at boundaries"))
+    (list
+      (item "Non-breaking")
+      (item "Old data remains accessible")
+      (item "Bidirectional")
+      (item "Upgrade and downgrade paths")
+      (item "Explicit")
+      (item "Changes documented and versioned")
+      (item "Verifiable")
+      (item "Schema validation at boundaries")))
   (section
     "Schema Model"
     (subsection
@@ -102,5 +118,7 @@
     (p "1. [Protocol Buffers - Updating A Message Type](https://developers.google.com/protocol-buffers/docs/proto#updating) 2. [Avro Schema Evolution](https://avro.apache.org/docs/current/spec.html#Schema+Resolution) 3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.html) 4. [RFC-025: Query Language](rfc-025-query-language.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

@@ -10,7 +10,10 @@
   (section
     "Motivation"
     (p "Private keys are single points of failure:")
-    (p "- Key loss: Funds locked forever - Key theft: Complete compromise - Key escrow: Trust a third party?")
+    (list
+      (item "Key loss: Funds locked forever")
+      (item "Key theft: Complete compromise")
+      (item "Key escrow: Trust a third party?"))
     (p "Shamir's Secret Sharing provides:")
     (p "1. Threshold recovery: Any K of N shares reconstruct 2. Information-theoretic security: K-1 shares reveal nothing 3. Distributed custody: No single holder 4. Backup flexibility: Geographic distribution")
     (p "From Adi Shamir's 1979 paper \"How to Share a Secret\":")
@@ -71,7 +74,11 @@
       (row "Paranoid " "11-of-15 " "Maximum distribution "))
     (subsection
       "Considerations"
-      (p "- Availability: Higher K = harder to recover - Security: Lower K = easier to collude - Geography: Consider time zones for ceremonies - Succession: What if custodians unavailable?")))
+      (list
+        (item "Availability: Higher K = harder to recover")
+        (item "Security: Lower K = easier to collude")
+        (item "Geography: Consider time zones for ceremonies")
+        (item "Succession: What if custodians unavailable?"))))
   (section
     "Share Distribution"
     (subsection
@@ -82,7 +89,10 @@
       (code "Share 1: Hardware security module\nShare 2: Air-gapped laptop\nShare 3: Encrypted USB (passphrase protected)\nShare 4: Paper printout (secure location)\nShare 5: Tattoo (not recommended)"))
     (subsection
       "Geographic Distribution"
-      (p "- Different jurisdictions - Different failure domains - Different time zones (for ceremonies)")))
+      (list
+        (item "Different jurisdictions")
+        (item "Different failure domains")
+        (item "Different time zones (for ceremonies)"))))
   (section
     "Verification Without Reconstruction"
     (p "For periodic verification that shares are intact:")
@@ -124,17 +134,27 @@
     "Implementation Notes"
     (subsection
       "Dependencies"
-      (p "- libsodium - Secure random number generation - srfi-4 - u8vectors for byte manipulation"))
+      (list
+        (item "libsodium")
+        (item "Secure random number generation - srfi-4 - u8vectors for byte manipulation")))
     (subsection
       "Performance"
-      (p "- Split: O(N × K × secretlength) - Reconstruct: O(K² × secretlength) - GF(2⁸) operations: O(1) per byte"))
+      (list
+        (item "Split: O(N × K × secretlength)")
+        (item "Reconstruct: O(K² × secretlength)")
+        (item "GF(2⁸) operations: O(1) per byte")))
     (subsection
       "Limitations"
-      (p "- Secret size: Arbitrary (but typically ≤ 64 bytes) - Share count: Practical limit ~255 (byte x-coordinates) - Threshold: 2 ≤ K ≤ N")))
+      (list
+        (item "Secret size: Arbitrary (but typically ≤ 64 bytes)")
+        (item "Share count: Practical limit ~255 (byte x-coordinates)")
+        (item "Threshold: 2 ≤ K ≤ N"))))
   (section
     "References"
     (p "1. Shamir, A. (1979). How to share a secret. Communications of the ACM. 2. Blakley, G. R. (1979). Safeguarding cryptographic keys. 3. Beimel, A. (2011). Secret-Sharing Schemes: A Survey. 4. NIST SP 800-57. Recommendation for Key Management."))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

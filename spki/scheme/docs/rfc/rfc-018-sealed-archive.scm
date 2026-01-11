@@ -59,10 +59,17 @@
     "Security Model"
     (subsection
       "Encryption Layer (Age)"
-      (p "- Algorithm: X25519 + ChaCha20-Poly1305 - Recipients: Multiple allowed (each can decrypt) - Forward secrecy: Ephemeral key per archive - Authenticity: Poly1305 MAC"))
+      (list
+        (item "Algorithm: X25519 + ChaCha20-Poly1305")
+        (item "Recipients: Multiple allowed (each can decrypt)")
+        (item "Forward secrecy: Ephemeral key per archive")
+        (item "Authenticity: Poly1305 MAC")))
     (subsection
       "Signature Layer (SPKI)"
-      (p "- Algorithm: Ed25519 - Scope: Signs encrypted archive hash - Non-repudiation: Signer cannot deny creating archive"))
+      (list
+        (item "Algorithm: Ed25519")
+        (item "Scope: Signs encrypted archive hash")
+        (item "Non-repudiation: Signer cannot deny creating archive")))
     (subsection
       "Verification Order"
       (p "1. Verify signature - Before decryption (fail fast on tampering) 2. Verify hash - Encrypted archive integrity 3. Decrypt - Only after signature verified 4. Extract - Only after successful decryption"))
@@ -124,5 +131,7 @@
     (p "1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Age](https://age-encryption.org/) - Modern encryption tool 3. [RFC-006](rfc-006-vault-architecture.html) - Vault System Architecture 4. [RFC-004](rfc-004-spki-authorization.html) - SPKI Authorization"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

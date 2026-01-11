@@ -142,5 +142,7 @@
     (p "1. NIST FIPS 202 - SHA-3 Standard (SHAKE256) 2. BLAKE3 specification - https://github.com/BLAKE3-team/BLAKE3 3. Merkle, R., \"A Digital Signature Based on a Conventional Encryption Function\", 1987 4. Grover, L., \"A Fast Quantum Mechanical Algorithm for Database Search\", 1996 5. RFC-040 - Cyberspace Security Architecture"))
   (section
     "Changelog"
-    (p "- 2026-01-08 - Initial draft")))
+    (list
+      (item "2026-01-08")
+      (item "Initial draft"))))
 

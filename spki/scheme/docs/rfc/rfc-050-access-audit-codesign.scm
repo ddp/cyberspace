@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Security systems often treat auditing as an afterthought—bolted on after access control is designed. This leads to:")
-    (p "- Incomplete coverage: Some decisions are never logged - Inconsistent records: Different formats at different points - Performance surprises: Auditing added late without cost analysis - Policy gaps: No framework for what to log when")
+    (list
+      (item "Incomplete coverage: Some decisions are never logged")
+      (item "Inconsistent records: Different formats at different points")
+      (item "Performance surprises: Auditing added late without cost analysis")
+      (item "Policy gaps: No framework for what to log when"))
     (p "The solution: co-design access control and auditing from the start."))
   (section
     "Design Principle"
@@ -22,7 +26,9 @@
       (p "1. Decision: Grant or refuse the requested action 2. Effect: The consequence of the decision (action performed, or refusal message) 3. Record: An audit entry capturing what happened"))
     (subsection
       "Auditable vs. Audited"
-      (p "- Auditable: The mechanism exists to log the event - Audited: The event is actively being logged")
+      (list
+        (item "Auditable: The mechanism exists to log the event")
+        (item "Audited: The event is actively being logged"))
       (p "All access control decisions are auditable. Whether they are audited depends on realm policy.")))
   (section
     "Per-Realm Audit Policy"
@@ -78,7 +84,10 @@
       (p "Audit entries themselves are tamper-evident. An attacker cannot: - Delete entries (breaks hash chain) - Modify entries (invalidates signature) - Reorder entries (violates sequence numbers)")))
   (section
     "References"
-    (p "- RFC-003: Cryptographic Audit Trail - RFC-004: SPKI Authorization - RFC-046: Security Architecture"))
+    (list
+      (item "RFC-003: Cryptographic Audit Trail")
+      (item "RFC-004: SPKI Authorization")
+      (item "RFC-046: Security Architecture")))
   (section
     "Changelog"
     (p "- 2026-01-10: Initial draft")))

@@ -18,11 +18,27 @@
       (p "Telescript, from 1994:")
       (blockquote "\"Programs that travel from machine to machine, carrying your authority, doing things while you sleep.\"")
       (p "That vision failed because:")
-      (p "- No security model - Agents ran with ambient authority - No isolation - One agent could corrupt another - No accountability - No audit of agent actions - No revocation - Once launched, agents were uncontrollable"))
+      (list
+        (item "No security model")
+        (item "Agents ran with ambient authority")
+        (item "No isolation")
+        (item "One agent could corrupt another")
+        (item "No accountability")
+        (item "No audit of agent actions")
+        (item "No revocation")
+        (item "Once launched, agents were uncontrollable")))
     (subsection
       "The Demonic Solution"
       (p "The Library realizes this vision with proper daemonology:")
-      (p "- Capability-based authority - Daemons have only granted permissions - Sandbox isolation - Process, filesystem, network boundaries - Full audit trail - The Audit Daemon witnesses every action - Remote termination - Daemons can be banished at any time")
+      (list
+        (item "Capability-based authority")
+        (item "Daemons have only granted permissions")
+        (item "Sandbox isolation")
+        (item "Process, filesystem, network boundaries")
+        (item "Full audit trail")
+        (item "The Audit Daemon witnesses every action")
+        (item "Remote termination")
+        (item "Daemons can be banished at any time"))
       (p "Daemons don't rule—they serve. They don't watch over—they watch with.")))
   (section
     "Daemon Model"
@@ -144,11 +160,16 @@
         (row "Scheme sandbox " "custom safe environment ")))
     (subsection
       "Performance"
-      (p "- Sandbox creation: ~100ms (container), ~10ms (process), ~1ms (WASM) - Message passing: ~10μs (local), ~1ms (cross-sandbox) - Capability check: ~100ns (cached), ~10μs (chain validation)")))
+      (list
+        (item "Sandbox creation: ~100ms (container), ~10ms (process), ~1ms (WASM)")
+        (item "Message passing: ~10μs (local), ~1ms (cross-sandbox)")
+        (item "Capability check: ~100ns (cached), ~10μs (chain validation)"))))
   (section
     "References"
     (p "1. [Telescript Technology: Mobile Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html) 2. [Capsicum: Practical Capabilities for UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/) 3. [WebAssembly System Interface (WASI)](https://wasi.dev/) 4. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 5. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.html) 6. [E Programming Language](http://erights.org/) - Object capabilities"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

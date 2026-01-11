@@ -149,19 +149,32 @@
     "Implementation Phases"
     (subsection
       "Phase 1: Native Object Store"
-      (p "- Implement .vault/objects/ storage - Soup catalog and query - Keep git for development workflow"))
+      (list
+        (item "Implement .vault/objects/ storage")
+        (item "Soup catalog and query")
+        (item "Keep git for development workflow")))
     (subsection
       "Phase 2: Local-First Sync"
-      (p "- Direct node-to-node protocol - have?/fetch message types - UDP transport with TCP fallback"))
+      (list
+        (item "Direct node-to-node protocol - have?/fetch message types")
+        (item "UDP transport with TCP fallback")))
     (subsection
       "Phase 3: Discovery"
-      (p "- Gossip peer exchange - Bootstrap nodes - Bloom filters for content location"))
+      (list
+        (item "Gossip peer exchange")
+        (item "Bootstrap nodes")
+        (item "Bloom filters for content location")))
     (subsection
       "Phase 4: Scale Testing"
-      (p "- 100 nodes - 1000 nodes - 10000 nodes - Measure: latency, convergence time, bandwidth"))
+      (list
+        (item "100 nodes - 1000 nodes - 10000 nodes")
+        (item "Measure: latency, convergence time, bandwidth")))
     (subsection
       "Phase 5: Git Deprecation"
-      (p "- Vault as source of truth - Git export for compatibility - Remove git dependency from core operations")))
+      (list
+        (item "Vault as source of truth")
+        (item "Git export for compatibility")
+        (item "Remove git dependency from core operations"))))
   (section
     "Metrics and Monitoring"
     (code scheme "(node-metrics)\n;; Returns:\n((objects-stored 150000)\n (objects-size-gb 50)\n (peers-known 500)\n (peers-connected 20)\n (sync-lag-seconds 30)\n (bandwidth-in-mbps 10)\n (bandwidth-out-mbps 5)\n (requests-per-second 100)\n (errors-per-second 0.1))"))
@@ -170,5 +183,7 @@
     (p "1. RFC-010: Federation Protocol 2. RFC-016: Lazy Clustering 3. RFC-037: Node Roles and Capabilities 4. Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information System 5. Rabin, M. (1981). Fingerprinting by Random Polynomials 6. IPFS Whitepaper (2014) 7. Shapiro, M. (2011). Conflict-Free Replicated Data Types"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

@@ -56,13 +56,22 @@
     "Transport Implementations"
     (subsection
       "Git Remote"
-      (p "- Uses git push to share tags - Optionally uploads archives as release assets (GitHub, GitLab) - Fetch uses git fetch + git tag -l"))
+      (list
+        (item "Uses git push to share tags")
+        (item "Optionally uploads archives as release assets (GitHub, GitLab)")
+        (item "Fetch uses git fetch + git tag -l")))
     (subsection
       "HTTP Endpoint"
-      (p "- POST to /releases/<version> for publication - GET /releases for discovery - Content-Type: application/x-sealed-archive"))
+      (list
+        (item "POST to /releases/<version> for publication")
+        (item "GET /releases for discovery")
+        (item "Content-Type: application/x-sealed-archive")))
     (subsection
       "Filesystem"
-      (p "- Copy archives to shared directory - Directory structure: <remote>/<archive-name> - No network required, works with NFS, USB drives, etc.")))
+      (list
+        (item "Copy archives to shared directory")
+        (item "Directory structure: <remote>/<archive-name>")
+        (item "No network required, works with NFS, USB drives, etc."))))
   (section
     "Audit Integration"
     (p "Every replication operation creates an audit entry with:")
@@ -90,11 +99,28 @@
       (code scheme "(tag-exists? tag-name)        ; Check if git tag exists\n(git-remote? str)             ; Detect git remote format\n(http-url? str)               ; Detect HTTP/HTTPS URL\n(publish-filesystem remote version archive)  ; Copy to directory\n(publish-http url version archive)           ; POST to endpoint"))
     (subsection
       "Dependencies"
-      (p "- Git - For version control and tag management - libsodium - Ed25519 signatures, SHA-512 hashing - Chicken Scheme modules:   - (chicken process) - Run git commands   - (chicken file) - Filesystem operations   - (chicken irregex) - URL/remote detection")))
+      (list
+        (item "Git")
+        (item "For version control and tag management - libsodium")
+        (item "Ed25519 signatures, SHA-512 hashing")
+        (item "Chicken Scheme modules:   - (chicken process)")
+        (item "Run git commands   - (chicken file)")
+        (item "Filesystem operations   - (chicken irregex)")
+        (item "URL/remote detection"))))
   (section
     "Compatibility"
     (p "This specification is compatible with:")
-    (p "- Git tags - Standard git operations - Git bundles - Portable repository format - Tarball archives - Universal archive format - S-expressions - LISP/Scheme readable format - SPKI/SDSI - Authorization certificates")
+    (list
+      (item "Git tags")
+      (item "Standard git operations")
+      (item "Git bundles")
+      (item "Portable repository format")
+      (item "Tarball archives")
+      (item "Universal archive format")
+      (item "S-expressions")
+      (item "LISP/Scheme readable format")
+      (item "SPKI/SDSI")
+      (item "Authorization certificates"))
     (p "Future extensions may add: - IPFS transport - Content-addressed distribution - Tor hidden services - Anonymous publication - Encrypted archives - Confidential distribution - Multi-signature releases - Threshold authorization"))
   (section
     "Test Coverage"
@@ -105,5 +131,9 @@
     (p "1. SPKI/SDSI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 - Bernstein et al. 5. Audit Trails - RFC-002 (Cryptographic Audit Trail)"))
   (section
     "Changelog"
-    (p "- 2026-01-05 - Initial implementation and specification   - seal-publish with git/HTTP/filesystem support   - seal-subscribe with signature verification   - seal-synchronize with bidirectional sync   - Full audit trail integration   - Cryptographic archive format")))
+    (list
+      (item "2026-01-05")
+      (item "Initial implementation and specification   - seal-publish with git/HTTP/filesystem support   - seal-subscribe with signature verification   - seal-synchronize with bidirectional sync  ")
+      (item "Full audit trail integration  ")
+      (item "Cryptographic archive format"))))
 

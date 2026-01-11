@@ -13,7 +13,10 @@
   (section
     "Motivation"
     (p "The Library of Cyberspace contains 421+ research papers spanning 50 years of computing history. Without a catalog:")
-    (p "- Discoverability: How to find Lamport's clock paper? - Connections: What relates to SPKI? - Context: When was this written? By whom?")
+    (list
+      (item "Discoverability: How to find Lamport's clock paper?")
+      (item "Connections: What relates to SPKI?")
+      (item "Context: When was this written? By whom?"))
     (p "The Directory System provides:")
     (p "1. Natural language search - \"papers by Lampson about protection\" 2. Multi-index access - By author, topic, year, collection 3. Fuzzy matching - \"Lamp\" finds Lampson and Lamport 4. Beautiful output - Unicode, emoji, formatted results 5. S-expression export - Machine-readable catalogs"))
   (section
@@ -89,13 +92,25 @@
     "Design Philosophy"
     (subsection
       "Super Nice and Helpful"
-      (p "- Natural language understanding - Fuzzy matching catches typos - Suggestions for empty results - Encouraging prompts"))
+      (list
+        (item "Natural language understanding")
+        (item "Fuzzy matching catches typos")
+        (item "Suggestions for empty results")
+        (item "Encouraging prompts")))
     (subsection
       "Beautiful Output"
-      (p "- Unicode box drawing (╔═══╗) - Emoji visual markers (📖 📚 👤 📅) - Consistent formatting - Progressive disclosure"))
+      (list
+        (item "Unicode box drawing (╔═══╗)")
+        (item "Emoji visual markers (📖 📚 👤 📅)")
+        (item "Consistent formatting")
+        (item "Progressive disclosure")))
     (subsection
       "Hone In On What You Need"
-      (p "- Multi-strategy search - Progressive filtering - Cross-references - Related paper discovery")))
+      (list
+        (item "Multi-strategy search")
+        (item "Progressive filtering")
+        (item "Cross-references")
+        (item "Related paper discovery"))))
   (section
     "Security Considerations"
     (subsection
@@ -108,10 +123,18 @@
     "Implementation Notes"
     (subsection
       "Dependencies"
-      (p "- srfi-1 - List utilities - srfi-13 - String utilities - srfi-69 - Hash tables - chicken file - Directory scanning"))
+      (list
+        (item "srfi-1")
+        (item "List utilities - srfi-13")
+        (item "String utilities - srfi-69")
+        (item "Hash tables - chicken file")
+        (item "Directory scanning")))
     (subsection
       "Performance"
-      (p "- Index building: O(N) documents - Query: O(1) hash lookup + O(M) result filtering - Fuzzy match: O(K) candidates"))
+      (list
+        (item "Index building: O(N) documents")
+        (item "Query: O(1) hash lookup + O(M) result filtering")
+        (item "Fuzzy match: O(K) candidates")))
     (subsection
       "Extensibility"
       (p "Future enhancements: - Full-text search (PostScript/Text extraction) - Citation graph visualization - BibTeX export - Web API server - Semantic search with embeddings")))
@@ -120,5 +143,7 @@
     (p "1. Dublin Core Metadata Initiative 2. Library of Congress Subject Headings 3. BibTeX format specification 4. Unicode Standard for box drawing"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

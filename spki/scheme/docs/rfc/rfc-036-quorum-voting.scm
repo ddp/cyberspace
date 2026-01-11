@@ -10,11 +10,29 @@
   (section
     "Motivation"
     (p "Collective decisions require:")
-    (p "- Privacy - Voters shouldn't know how others voted - Verifiability - Results must be provably correct - Coercion resistance - Can't prove how you voted to others - Availability - Voting continues despite failures")
+    (list
+      (item "Privacy")
+      (item "Voters shouldn't know how others voted")
+      (item "Verifiability")
+      (item "Results must be provably correct")
+      (item "Coercion resistance")
+      (item "Can't prove how you voted to others")
+      (item "Availability")
+      (item "Voting continues despite failures"))
     (p "Traditional approaches fail:")
-    (p "- Open ballot - No privacy, enables coercion - Trusted tallier - Single point of compromise - Secure multi-party computation - Complex, high communication overhead")
+    (list
+      (item "Open ballot")
+      (item "No privacy, enables coercion")
+      (item "Trusted tallier")
+      (item "Single point of compromise")
+      (item "Secure multi-party computation")
+      (item "Complex, high communication overhead"))
     (p "Homomorphic encryption provides:")
-    (p "- Vote on encrypted ballots - Sum without decryption - Decrypt only the final tally - Mathematical proof of correctness"))
+    (list
+      (item "Vote on encrypted ballots")
+      (item "Sum without decryption")
+      (item "Decrypt only the final tally")
+      (item "Mathematical proof of correctness")))
   (section
     "Cryptographic Foundation"
     (subsection
@@ -142,7 +160,12 @@
     "Implementation Notes"
     (subsection
       "Dependencies"
-      (p "- paillier - Paillier cryptosystem - shamir - Secret sharing for threshold keys - zkp - Zero-knowledge proof primitives - srfi-27 - Random number generation"))
+      (list
+        (item "paillier")
+        (item "Paillier cryptosystem - shamir")
+        (item "Secret sharing for threshold keys - zkp")
+        (item "Zero-knowledge proof primitives - srfi-27")
+        (item "Random number generation")))
     (subsection
       "Libraries"
       (p "Recommended implementations: - OpenFHE (C++) - Full HE library - python-paillier - Reference implementation - threshold-paillier - Distributed key generation")))
@@ -151,5 +174,7 @@
     (p "1. Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes 2. Benaloh, J. (1994). Dense Probabilistic Encryption 3. Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and Optimally Efficient Multi-Authority Election Scheme 4. RFC-007: Threshold Signature Governance 5. RFC-011: Byzantine Consensus 6. RFC-022: Key Ceremony Protocol"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

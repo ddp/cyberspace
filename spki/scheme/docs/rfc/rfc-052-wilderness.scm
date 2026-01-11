@@ -45,13 +45,25 @@
     (subsection
       "4.1 Angleton's Wilderness"
       (p "James Jesus Angleton, CIA counterintelligence chief, borrowed \"wilderness of mirrors\" from T.S. Eliot to describe the world of espionage. A place where:")
-      (p "- Reflexive control is dominant - Nothing is as it seems - Disinformation is the norm - Trust is a vulnerability")
+      (list
+        (item "Reflexive control is dominant")
+        (item "Nothing is as it seems")
+        (item "Disinformation is the norm")
+        (item "Trust is a vulnerability"))
       (p "In Cyberspace, the Wilderness acknowledges this reality:")
-      (p "- Trust is not given, it is established cryptographically - Identity is not assumed, it is proven with keys - Every claim requires verification - The default stance is skepticism"))
+      (list
+        (item "Trust is not given, it is established cryptographically")
+        (item "Identity is not assumed, it is proven with keys")
+        (item "Every claim requires verification")
+        (item "The default stance is skepticism")))
     (subsection
       "4.2 The Tribal Wilderness"
       (p "The older meaning: outside civilization, unaffiliated with any tribe.")
-      (p "- No confederation claims you - No federation protects you - You belong to no one - You are alone")
+      (list
+        (item "No confederation claims you")
+        (item "No federation protects you")
+        (item "You belong to no one")
+        (item "You are alone"))
       (p "Both meanings apply. The unaffiliated user is: - In a world where trust must be earned (Angleton) - Outside any group until they join one (tribal)")
       (p "The Wilderness is honest about both. You are alone. Trust nothing but your own crypto keys.")))
   (section
@@ -73,5 +85,7 @@
     (p "1. Angleton, J.J. - \"Wilderness of Mirrors\" (intelligence terminology) 2. Eliot, T.S. - \"Gerontion\" (original source of the phrase) 3. RFC-010 - Federation Protocol 4. RFC-044 - Node Enrollment"))
   (section
     "Changelog"
-    (p "- 2026-01-10 - Initial specification")))
+    (list
+      (item "2026-01-10")
+      (item "Initial specification"))))
 

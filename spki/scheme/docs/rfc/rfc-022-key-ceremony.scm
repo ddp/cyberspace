@@ -10,11 +10,31 @@
   (section
     "Motivation"
     (p "Keys are the foundation of all cryptographic trust:")
-    (p "- Generate wrong - Everything built on them fails - Store wrong - Compromise propagates everywhere - Distribute wrong - Man-in-the-middle forever - No witnesses - No one believes you did it right")
+    (list
+      (item "Generate wrong")
+      (item "Everything built on them fails")
+      (item "Store wrong")
+      (item "Compromise propagates everywhere")
+      (item "Distribute wrong")
+      (item "Man-in-the-middle forever")
+      (item "No witnesses")
+      (item "No one believes you did it right"))
     (p "Key ceremonies solve this through:")
-    (p "- Witnessed generation - Multiple parties verify randomness - Split custody - No single point of compromise - Documented process - Reproducible and auditable - Air-gapped execution - Network isolation during critical operations")
+    (list
+      (item "Witnessed generation")
+      (item "Multiple parties verify randomness")
+      (item "Split custody")
+      (item "No single point of compromise")
+      (item "Documented process")
+      (item "Reproducible and auditable")
+      (item "Air-gapped execution")
+      (item "Network isolation during critical operations"))
     (p "The Library requires key ceremonies for:")
-    (p "- Vault master keys - Threshold signing keys - Root certificates - Recovery keys"))
+    (list
+      (item "Vault master keys")
+      (item "Threshold signing keys")
+      (item "Root certificates")
+      (item "Recovery keys")))
   (section
     "Ceremony Types"
     (subsection
@@ -126,5 +146,7 @@
     (p "1. [DNSSEC Root Key Ceremony](https://www.iana.org/dnssec/ceremonies) 2. [RFC 2693 - SPKI Certificate Theory](https://tools.ietf.org/html/rfc2693) 3. [RFC-007: Threshold Signature Governance](rfc-007-threshold-governance.html) 4. [RFC-008: Shamir Secret Sharing](rfc-008-shamir-sharing.html) 5. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 6. [Key Ceremony Best Practices - NIST SP 800-57](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

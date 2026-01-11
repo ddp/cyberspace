@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Not every deployment needs Byzantine consensus:")
-    (p "- Friends trust friends: No active adversary - Bandwidth costs: Continuous sync is expensive - Offline operation: Internet isn't always available - Simplicity: Complex protocols have complex bugs")
+    (list
+      (item "Friends trust friends: No active adversary")
+      (item "Bandwidth costs: Continuous sync is expensive")
+      (item "Offline operation: Internet isn't always available")
+      (item "Simplicity: Complex protocols have complex bugs"))
     (p "Lazy Clustering provides:")
     (p "1. Sync when ready: Push/pull at human pace 2. Offline-first: Work without network 3. Conflict detection: Know when divergence happens 4. Manual resolution: Humans resolve, not algorithms 5. Audit everything: Full history preserved")
     (blockquote "The best protocol is the one you don't run."))
@@ -115,10 +119,18 @@
     "Consistency Guarantees"
     (subsection
       "What We Guarantee"
-      (p "- Signature integrity: All releases verified - Causal ordering: Within single node - Conflict detection: Divergence detected - Audit preservation: Full history kept"))
+      (list
+        (item "Signature integrity: All releases verified")
+        (item "Causal ordering: Within single node")
+        (item "Conflict detection: Divergence detected")
+        (item "Audit preservation: Full history kept")))
     (subsection
       "What We Don't Guarantee"
-      (p "- Global ordering: Nodes may see different orders - Consistency: Nodes may have different content - Availability: Offline nodes are offline - Automatic resolution: Humans must resolve"))
+      (list
+        (item "Global ordering: Nodes may see different orders")
+        (item "Consistency: Nodes may have different content")
+        (item "Availability: Offline nodes are offline")
+        (item "Automatic resolution: Humans must resolve")))
     (subsection
       "CAP Theorem Position"
       (code "      Consistency\n          /\\\n         /  \\\n        /    \\\n       / Lazy \\\n      / Cluster\\\n     /    ✓     \\\n    /\\\nAvailability    Partition\n    ✓           Tolerance ✓")
@@ -141,7 +153,10 @@
     (subsection
       "Trust Model"
       (p "Lazy clustering assumes good-faith peers:")
-      (p "- Peers won't inject malicious releases - Peers won't withhold releases maliciously - Peers will eventually sync")
+      (list
+        (item "Peers won't inject malicious releases")
+        (item "Peers won't withhold releases maliciously")
+        (item "Peers will eventually sync"))
       (p "Not suitable for: Adversarial environments, high-value targets.")
       (p "Suitable for: Research groups, open source projects, friend networks."))
     (subsection
@@ -156,7 +171,11 @@
     "Implementation Notes"
     (subsection
       "Dependencies"
-      (p "- crypto-ffi - Signature verification - audit - Sync logging - Transport (git/HTTP/filesystem)"))
+      (list
+        (item "crypto-ffi")
+        (item "Signature verification - audit")
+        (item "Sync logging")
+        (item "Transport (git/HTTP/filesystem)")))
     (subsection
       "Storage"
       (code ".vault/\n  lazy/\n    peers.sexp        # Registered peers\n    vectors.sexp      # Version vectors\n    conflicts/        # Unresolved conflicts\n    queue/            # Pending pushes")))
@@ -165,5 +184,8 @@
     (p "1. Saito, Y., & Shapiro, M. (2005). Optimistic Replication. 2. Terry, D., et al. (1995). Managing Update Conflicts in Bayou. 3. DeCandia, G., et al. (2007). Dynamo: Amazon's Key-Value Store. 4. RFC-010: Federation Protocol 5. RFC-012: Lamport Logical Clocks"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Set minimum bandwidth: 128 Kb/s floor (dual-ISDN), 1 Mb/s target (T1) - 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Set minimum bandwidth: 128 Kb/s floor (dual-ISDN), 1 Mb/s target (T1) - 2026-01-06")
+      (item "Initial specification"))))
 

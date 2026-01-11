@@ -17,7 +17,13 @@
       (p "Why this matters: - Security proofs assume perfect randomness - Key security = min(algorithmbits, entropybits) - A 256-bit key from a 32-bit PRNG seed provides only 32 bits of security - Nation-state adversaries may have capabilities to model classical entropy sources"))
     (subsection
       "Cryptographic Operations Requiring Entropy"
-      (p "- Key generation (Ed25519, X25519) - Nonce generation (XSalsa20-Poly1305) - Salt generation (Argon2id) - Shamir secret sharing - Challenge-response protocols - Zero-knowledge proofs")
+      (list
+        (item "Key generation (Ed25519, X25519)")
+        (item "Nonce generation (XSalsa20-Poly1305)")
+        (item "Salt generation (Argon2id)")
+        (item "Shamir secret sharing")
+        (item "Challenge-response protocols")
+        (item "Zero-knowledge proofs"))
       (p "Weak or predictable entropy destroys security completely. A realm's sovereignty depends on unpredictable secrets.")))
   (section
     "Specification"
@@ -88,7 +94,15 @@
       (p "True randomness comes from physical processes that are fundamentally unpredictable:")
       (p "#### Quantum Sources (Required for Provable Security)")
       (p "The only sources that satisfy cryptographic assumptions. Quantum mechanics guarantees unpredictability:")
-      (p "- Photon beam splitters - Single photon hits 50/50 beam splitter, detection is truly random - Vacuum fluctuations - Measuring quantum vacuum state - Quantum tunneling - Electron tunneling through barriers - Nuclear decay - Timing of radioactive decay events")
+      (list
+        (item "Photon beam splitters")
+        (item "Single photon hits 50/50 beam splitter, detection is truly random")
+        (item "Vacuum fluctuations")
+        (item "Measuring quantum vacuum state")
+        (item "Quantum tunneling")
+        (item "Electron tunneling through barriers")
+        (item "Nuclear decay")
+        (item "Timing of radioactive decay events"))
       (p "Commercial quantum RNGs: ID Quantique (QUANTIS), Quintessence Labs, Crypta Labs")
       (p "#### Silicon-Based TRNG")
       (p "Modern CPUs include hardware random number generators:")
@@ -207,16 +221,26 @@
     "Migration"
     (subsection
       "Phase 1: Audit (Current)"
-      (p "- Identify all randomness usage in codebase - Replace non-libsodium sources"))
+      (list
+        (item "Identify all randomness usage in codebase")
+        (item "Replace non-libsodium sources")))
     (subsection
       "Phase 2: Standardize"
-      (p "- All Scheme uses random-bytes from crypto-ffi - Document OCaml approach"))
+      (list
+        (item "All Scheme uses random-bytes from crypto-ffi")
+        (item "Document OCaml approach")))
     (subsection
       "Phase 3: Verify"
-      (p "- Entropy quality testing - Audit logging for key generation")))
+      (list
+        (item "Entropy quality testing")
+        (item "Audit logging for key generation"))))
   (section
     "References"
-    (p "- libsodium documentation: https://doc.libsodium.org/ - NIST SP 800-90A: Recommendations for Random Number Generation - RFC 4086: Randomness Requirements for Security - ChaCha20: https://cr.yp.to/chacha.html"))
+    (list
+      (item "libsodium documentation: https://doc.libsodium.org/")
+      (item "NIST SP 800-90A: Recommendations for Random Number Generation")
+      (item "RFC 4086: Randomness Requirements for Security")
+      (item "ChaCha20: https://cr.yp.to/chacha.html")))
   (section
     "Appendix: Entropy Quality Testing"
     (p "For paranoid verification:")

@@ -12,7 +12,11 @@
     (p "Git is powerful but lacks:")
     (p "1. Cryptographic sealing - GPG signing is optional and awkward 2. Authorization model - Anyone with access can commit 3. Archival features - No first-class backup/restore 4. Audit integration - History is mutable")
     (p "The Vault wraps Git with:")
-    (p "- seal- commands that cryptographically sign operations - SPKI certificates for authorization - Three archive formats for different use cases - Integrated audit trail for non-repudiation")
+    (list
+      (item "seal- commands that cryptographically sign operations")
+      (item "SPKI certificates for authorization")
+      (item "Three archive formats for different use cases")
+      (item "Integrated audit trail for non-repudiation"))
     (code "                    ╭────────────────────────────────╮\n                    │         CYBERSPACE VAULT       │\n                    ├────────────────────────────────┤\n                    │  seal-commit    seal-release   │\n                    │  seal-archive   seal-publish   │\n                    │  seal-verify    seal-subscribe │\n                    ├────────────────────────────────┤\n                    │         Audit Trail            │\n                    ├────────────────────────────────┤\n                    │         SPKI Certs             │\n                    ├────────────────────────────────┤\n                    │            Git                 │\n                    ╰────────────────────────────────╯"))
   (section
     "Core Operations"
@@ -33,7 +37,10 @@
       "seal-undo"
       (p "Undo changes.")
       (code scheme "(seal-undo #!key file hard)")
-      (p "- file - Restore specific file - hard - Discard all uncommitted changes"))
+      (list
+        (item "file")
+        (item "Restore specific file - hard")
+        (item "Discard all uncommitted changes")))
     (subsection
       "seal-history"
       (p "Show commit history.")
@@ -67,16 +74,30 @@
       (p "Formats:")
       (p "#### Tarball (default)")
       (code scheme "(seal-archive \"1.0.0\" format: 'tarball)")
-      (p "- Standard gzipped tarball - No history included - Smallest size")
+      (list
+        (item "Standard gzipped tarball")
+        (item "No history included")
+        (item "Smallest size"))
       (p "#### Git Bundle")
       (code scheme "(seal-archive \"1.0.0\" format: 'bundle)")
-      (p "- Full git history - Can clone directly - Medium size")
+      (list
+        (item "Full git history")
+        (item "Can clone directly")
+        (item "Medium size"))
       (p "#### Cryptographic (legacy)")
       (code scheme "(seal-archive \"1.0.0\" format: 'cryptographic)")
-      (p "- Tarball + SHA-512 hash + Ed25519 signature - Tamper-evident - Manifest for verification")
+      (list
+        (item "Tarball + SHA-512 hash + Ed25519 signature")
+        (item "Tamper-evident")
+        (item "Manifest for verification"))
       (p "#### Zstd+Age (preferred)")
       (code scheme "(seal-archive \"1.0.0\" format: 'zstd-age)")
-      (p "- Zstd compression (faster, better ratio than gzip) - Age encryption (X25519/Ed25519 compatible) - SHA-512 hash + Ed25519 signature - Encrypted at rest - See RFC-018: Sealed Archive Format for full specification")
+      (list
+        (item "Zstd compression (faster, better ratio than gzip)")
+        (item "Age encryption (X25519/Ed25519 compatible)")
+        (item "SHA-512 hash + Ed25519 signature")
+        (item "Encrypted at rest")
+        (item "See RFC-018: Sealed Archive Format for full specification"))
       (p "Cryptographic Archive Structure:")
       (code "vault-1.0.0.archive        # Manifest\nvault-1.0.0.archive.tar.gz # Tarball (cryptographic)")
       (p "Zstd+Age Archive Structure:")
@@ -203,5 +224,7 @@
     (p "1. Git Internals - Plumbing and Porcelain 2. RFC-001: Replication Layer 3. RFC-003: Cryptographic Audit Trail 4. RFC-004: SPKI Authorization 5. RFC-005: Progressive Metadata Levels 6. RFC-018: Sealed Archive Format 7. Semantic Versioning 2.0.0"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

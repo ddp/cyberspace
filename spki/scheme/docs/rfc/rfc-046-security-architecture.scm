@@ -209,7 +209,10 @@
     (subsection
       "SSD/Flash Considerations"
       (p "Modern storage complicates secure erasure:")
-      (p "- Wear leveling moves data without notification - Trim/discard doesn't guarantee overwrite - Encryption is the only reliable approach")
+      (list
+        (item "Wear leveling moves data without notification")
+        (item "Trim/discard doesn't guarantee overwrite")
+        (item "Encryption is the only reliable approach"))
       (p "Our answer: Encrypt at rest (RFC-030). Erasing the key erases the data.")
       (code scheme ";; With encryption at rest, key destruction = data destruction\n(define (secure-erase-encrypted hash)\n  \"For encrypted objects: destroy decryption key\"\n  (let ((dek (object-data-encryption-key hash)))\n    (key-destroy! dek)\n    ;; The ciphertext remains but is now meaningless\n    'erased-via-key-destruction))")))
   (section
@@ -308,5 +311,7 @@
     (p "1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model"))
   (section
     "Changelog"
-    (p "- 2026-01-08 - Initial draft")))
+    (list
+      (item "2026-01-08")
+      (item "Initial draft"))))
 

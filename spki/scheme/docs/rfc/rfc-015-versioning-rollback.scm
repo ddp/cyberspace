@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Users need simple answers to simple questions:")
-    (p "- What version am I on? - What versions exist? - How do I go back? - What if I make a mistake?")
+    (list
+      (item "What version am I on?")
+      (item "What versions exist?")
+      (item "How do I go back?")
+      (item "What if I make a mistake?"))
     (p "Git provides mechanisms. Cyberspace provides semantics:")
     (code "seal-version         → \"2.1.0\"\nseal-versions        → [1.0.0, 1.1.0, 2.0.0, 2.1.0]\nseal-rollback 2.0.0  → Done. Now at 2.0.0.\nseal-recover         → Here's what you can recover."))
   (section
@@ -123,5 +127,7 @@
     (p "1. Semantic Versioning 2.0.0 (semver.org) 2. Git Reset, Checkout, and Revert (git-scm.com) 3. RFC-003: Cryptographic Audit Trail 4. RFC-006: Vault System Architecture"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

@@ -10,9 +10,27 @@
   (section
     "Motivation"
     (p "Operating distributed systems requires visibility:")
-    (p "- Health - Is the vault functioning correctly? - Performance - How fast are operations? - Capacity - How much storage remains? - Errors - What's failing and why? - Security - Who's accessing what?")
+    (list
+      (item "Health")
+      (item "Is the vault functioning correctly?")
+      (item "Performance")
+      (item "How fast are operations?")
+      (item "Capacity")
+      (item "How much storage remains?")
+      (item "Errors")
+      (item "What's failing and why?")
+      (item "Security")
+      (item "Who's accessing what?"))
     (p "But observability must not compromise:")
-    (p "- Privacy - No sensitive data in metrics - Security - Metrics don't leak capabilities - Performance - Minimal overhead - Storage - Observability data is bounded"))
+    (list
+      (item "Privacy")
+      (item "No sensitive data in metrics")
+      (item "Security")
+      (item "Metrics don't leak capabilities")
+      (item "Performance")
+      (item "Minimal overhead")
+      (item "Storage")
+      (item "Observability data is bounded")))
   (section
     "Metrics"
     (subsection
@@ -91,5 +109,7 @@
     (p "1. [OpenTelemetry](https://opentelemetry.io/) - Observability framework 2. [Prometheus](https://prometheus.io/) - Monitoring system 3. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.html) 4. [RFC-028: Error Handling](rfc-028-error-handling.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

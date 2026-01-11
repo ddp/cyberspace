@@ -10,9 +10,27 @@
   (section
     "Motivation"
     (p "Distributed systems fail in creative ways:")
-    (p "- Network partitions - Vaults lose contact - Storage corruption - Bits flip, disks fail - Byzantine faults - Nodes lie or misbehave - Resource exhaustion - Out of memory, disk, connections - Protocol violations - Malformed messages, invalid state")
+    (list
+      (item "Network partitions")
+      (item "Vaults lose contact")
+      (item "Storage corruption")
+      (item "Bits flip, disks fail")
+      (item "Byzantine faults")
+      (item "Nodes lie or misbehave")
+      (item "Resource exhaustion")
+      (item "Out of memory, disk, connections")
+      (item "Protocol violations")
+      (item "Malformed messages, invalid state"))
     (p "Recovery must be:")
-    (p "- Deterministic - Same error, same recovery - Auditable - Every error logged with context - Automatic - Self-healing where possible - Graceful - Degrade rather than crash"))
+    (list
+      (item "Deterministic")
+      (item "Same error, same recovery")
+      (item "Auditable")
+      (item "Every error logged with context")
+      (item "Automatic")
+      (item "Self-healing where possible")
+      (item "Graceful")
+      (item "Degrade rather than crash")))
   (section
     "Error Model"
     (subsection
@@ -103,5 +121,7 @@
     (p "1. [Release It!](https://pragprog.com/titles/mnee2/release-it-second-edition/) - Nygard 2. [Hystrix](https://github.com/Netflix/Hystrix) - Netflix Circuit Breaker 3. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.html) 4. [RFC-026: Garbage Collection](rfc-026-garbage-collection.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

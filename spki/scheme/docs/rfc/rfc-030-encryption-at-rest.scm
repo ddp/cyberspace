@@ -10,9 +10,25 @@
   (section
     "Motivation"
     (p "Data at rest faces threats:")
-    (p "- Physical theft - Disks, servers, backups stolen - Insider access - Unauthorized admin access - Legal compulsion - Forced disclosure orders - Decommissioning - Data remnants on old hardware")
+    (list
+      (item "Physical theft")
+      (item "Disks, servers, backups stolen")
+      (item "Insider access")
+      (item "Unauthorized admin access")
+      (item "Legal compulsion")
+      (item "Forced disclosure orders")
+      (item "Decommissioning")
+      (item "Data remnants on old hardware"))
     (p "Encryption must be:")
-    (p "- Transparent - Applications unaware of encryption - Performant - Minimal overhead - Recoverable - Key loss doesn't mean data loss - Auditable - All key operations logged"))
+    (list
+      (item "Transparent")
+      (item "Applications unaware of encryption")
+      (item "Performant")
+      (item "Minimal overhead")
+      (item "Recoverable")
+      (item "Key loss doesn't mean data loss")
+      (item "Auditable")
+      (item "All key operations logged")))
   (section
     "Encryption Model"
     (subsection
@@ -118,5 +134,7 @@
     (p "1. [age](https://age-encryption.org/) - Modern file encryption 2. [LUKS](https://gitlab.com/cryptsetup/cryptsetup) - Linux Unified Key Setup 3. [RFC-022: Key Ceremony Protocol](rfc-022-key-ceremony.html) 4. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

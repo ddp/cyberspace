@@ -13,14 +13,38 @@
     (p "The soup is not a runtime heap. It is a library.")
     (p "In runtime garbage collection, the goal is to reclaim memory quickly. Young objects die young. Old objects survive. Collect aggressively.")
     (p "In archival garbage collection, the opposite holds:")
-    (p "- Old objects are precious - They have survived, been referenced, replicated - Young objects are suspect - They may be transient, failed, or temporary - Deletion is violence - Once collected, an object is gone from this vault forever - Preservation is the default - When in doubt, keep it")
+    (list
+      (item "Old objects are precious")
+      (item "They have survived, been referenced, replicated")
+      (item "Young objects are suspect")
+      (item "They may be transient, failed, or temporary")
+      (item "Deletion is violence")
+      (item "Once collected, an object is gone from this vault forever")
+      (item "Preservation is the default")
+      (item "When in doubt, keep it"))
     (p "The Library of Alexandria burned once. We will not let it burn again."))
   (section
     "Motivation"
     (p "Content-addressed storage accumulates objects forever unless actively pruned:")
-    (p "- Orphaned objects - No longer referenced by any root - Superseded versions - Old versions after updates - Failed uploads - Partial or abandoned writes - Temporary objects - Intermediate computation results")
+    (list
+      (item "Orphaned objects")
+      (item "No longer referenced by any root")
+      (item "Superseded versions")
+      (item "Old versions after updates")
+      (item "Failed uploads")
+      (item "Partial or abandoned writes")
+      (item "Temporary objects")
+      (item "Intermediate computation results"))
     (p "But deletion is dangerous:")
-    (p "- Hash as capability - Someone may hold the hash - Lazy replication - Remote vaults may need it later - Audit requirements - May need historical data - Resurrection - Deleted objects may be re-added")
+    (list
+      (item "Hash as capability")
+      (item "Someone may hold the hash")
+      (item "Lazy replication")
+      (item "Remote vaults may need it later")
+      (item "Audit requirements")
+      (item "May need historical data")
+      (item "Resurrection")
+      (item "Deleted objects may be re-added"))
     (p "GC must be conservative, consensual, and auditable.")
     (p "The default is: never collect. Collection requires explicit action."))
   (section
@@ -182,5 +206,9 @@
     (p "1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. RFC-020: Content-Addressed Storage 4. RFC-003: Cryptographic Audit Trail 5. RFC-036: Quorum Protocol with Homomorphic Voting 6. RFC-007: Threshold Signature Governance"))
   (section
     "Changelog"
-    (p "- 2026-01-09 - Tricolor marking with worklist (eliminates stack overflow), incremental marking, SATB write barriers, concurrent GC support - 2026-01-09 - Archival GC improvements: evaporation certificates, quorum requirements, reversed generational policy, cycle detection, preservation-first defaults - 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-09")
+      (item "Tricolor marking with worklist (eliminates stack overflow), incremental marking, SATB write barriers, concurrent GC support - 2026-01-09")
+      (item "Archival GC improvements: evaporation certificates, quorum requirements, reversed generational policy, cycle detection, preservation-first defaults - 2026-01-07")
+      (item "Initial draft"))))
 

@@ -10,9 +10,27 @@
   (section
     "Motivation"
     (p "Vaults must outlive their infrastructure:")
-    (p "- Hardware failure - Disks die, servers decommission - Provider changes - Cloud vendors come and go - Jurisdiction - Legal requirements may force relocation - Performance - Move closer to users - Cost - Cheaper storage becomes available")
+    (list
+      (item "Hardware failure")
+      (item "Disks die, servers decommission")
+      (item "Provider changes")
+      (item "Cloud vendors come and go")
+      (item "Jurisdiction")
+      (item "Legal requirements may force relocation")
+      (item "Performance")
+      (item "Move closer to users")
+      (item "Cost")
+      (item "Cheaper storage becomes available"))
     (p "Migration must be:")
-    (p "- Complete - All objects, metadata, capabilities - Verifiable - Cryptographic proof of integrity - Resumable - Handle interruptions gracefully - Auditable - Full trail of what moved where"))
+    (list
+      (item "Complete")
+      (item "All objects, metadata, capabilities")
+      (item "Verifiable")
+      (item "Cryptographic proof of integrity")
+      (item "Resumable")
+      (item "Handle interruptions gracefully")
+      (item "Auditable")
+      (item "Full trail of what moved where")))
   (section
     "Migration Types"
     (subsection
@@ -119,5 +137,7 @@
     (p "1. [Live Migration of Virtual Machines](https://dl.acm.org/doi/10.1145/1095810.1095816) - Clark et al. 2. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.html) 3. [RFC-022: Key Ceremony Protocol](rfc-022-key-ceremony.html) 4. [RFC-024: Network Protocol](rfc-024-network-protocol.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

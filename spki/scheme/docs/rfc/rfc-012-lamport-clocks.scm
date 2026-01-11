@@ -107,5 +107,7 @@
     (p "1. Lamport, L. (1978). Time, Clocks, and the Ordering of Events in a Distributed System. 2. Fidge, C. J. (1988). Timestamps in Message-Passing Systems. 3. Mattern, F. (1989). Virtual Time and Global States of Distributed Systems. 4. RFC-003: Cryptographic Audit Trail 5. RFC-010: Federation Protocol"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

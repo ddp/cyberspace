@@ -10,9 +10,25 @@
   (section
     "Motivation"
     (p "Storage efficiency matters for preservation:")
-    (p "- Cost - Less storage means more preservation per dollar - Bandwidth - Compressed transfers are faster - Redundancy - More copies fit in same space - Longevity - Smaller archives survive longer")
+    (list
+      (item "Cost")
+      (item "Less storage means more preservation per dollar")
+      (item "Bandwidth")
+      (item "Compressed transfers are faster")
+      (item "Redundancy")
+      (item "More copies fit in same space")
+      (item "Longevity")
+      (item "Smaller archives survive longer"))
     (p "But compression must not compromise:")
-    (p "- Integrity - Hashes must remain valid - Addressability - Content addressing still works - Deduplication - Identical content stored once - Accessibility - Data remains retrievable"))
+    (list
+      (item "Integrity")
+      (item "Hashes must remain valid")
+      (item "Addressability")
+      (item "Content addressing still works")
+      (item "Deduplication")
+      (item "Identical content stored once")
+      (item "Accessibility")
+      (item "Data remains retrievable")))
   (section
     "Compression Model"
     (subsection
@@ -97,5 +113,7 @@
     (p "1. [Zstandard](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Content-Defined Chunking](https://restic.net/blog/2015-09-12/restic-foundation1-cdc/) - Restic blog 3. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.html) 4. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.html)"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial draft")))
+    (list
+      (item "2026-01-07")
+      (item "Initial draft"))))
 

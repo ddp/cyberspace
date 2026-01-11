@@ -13,7 +13,13 @@
     (subsection
       "Heritage: VMS Cluster-Wide Audit"
       (p "This audit trail descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:")
-      (p "- SECURITYPOLICY bit 7 propagation - Intrusion detection state replicated cluster-wide - Cluster-wide intrusion detection - Breakin attempts detected across all nodes as one - TLV-encoded object store - The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records")
+      (list
+        (item "SECURITYPOLICY bit 7 propagation")
+        (item "Intrusion detection state replicated cluster-wide")
+        (item "Cluster-wide intrusion detection")
+        (item "Breakin attempts detected across all nodes as one")
+        (item "TLV-encoded object store")
+        (item "The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records"))
       (p "The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.")
       (p "Cyberspace audit trails apply the same principle at IPv6 scale."))
     (subsection
@@ -128,14 +134,23 @@
     "Implementation Notes"
     (subsection
       "Dependencies"
-      (p "- crypto-ffi - Ed25519 signatures, SHA-512 hashing - srfi-1 - List utilities - srfi-4 - u8vectors for binary data - srfi-13 - String utilities"))
+      (list
+        (item "crypto-ffi")
+        (item "Ed25519 signatures, SHA-512 hashing - srfi-1")
+        (item "List utilities - srfi-4 - u8vectors for binary data - srfi-13")
+        (item "String utilities")))
     (subsection
       "Performance Considerations"
-      (p "- Content-addressed IDs enable O(1) lookup by hash - Sequential file naming enables efficient range queries - Lazy verification: verify on read, not on load")))
+      (list
+        (item "Content-addressed IDs enable O(1) lookup by hash")
+        (item "Sequential file naming enables efficient range queries")
+        (item "Lazy verification: verify on read, not on load"))))
   (section
     "References"
     (p "1. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document. 2. Merkle, R. C. (1987). A digital signature based on a conventional encryption function. 3. Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records. 4. SPKI/SDSI - RFC 2693, RFC 2692"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

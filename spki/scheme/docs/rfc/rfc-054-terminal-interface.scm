@@ -65,7 +65,13 @@
       (code scheme "(define vt100-bold    \"\\x1b[1m\")\n(define vt100-dim     \"\\x1b[2m\")\n(define vt100-normal  \"\\x1b[0m\")\n(define vt100-red     \"\\x1b[31m\")\n(define vt100-green   \"\\x1b[32m\")\n(define vt100-yellow  \"\\x1b[33m\")\n(define vt100-blue    \"\\x1b[34m\")"))
     (subsection
       "5.2 When to Use Color"
-      (p "- Green: Success, completion (✓) - Red: Error, failure (✗) - Yellow: Warning, attention needed - Blue: Informational highlights - Dim: Secondary information - Bold: Headers, important values"))
+      (list
+        (item "Green: Success, completion (✓)")
+        (item "Red: Error, failure (✗)")
+        (item "Yellow: Warning, attention needed")
+        (item "Blue: Informational highlights")
+        (item "Dim: Secondary information")
+        (item "Bold: Headers, important values")))
     (subsection
       "5.3 Principle"
       (p "Color is enhancement, not information. All output MUST be readable without color (plain terminal, logging, piped output).")))
@@ -84,10 +90,15 @@
     "7. Output Conventions"
     (subsection
       "7.1 Blank Lines"
-      (p "- One blank line before major output blocks - One blank line after banner/header boxes - No trailing blank lines in functions returning (void)"))
+      (list
+        (item "One blank line before major output blocks")
+        (item "One blank line after banner/header boxes")
+        (item "No trailing blank lines in functions returning (void)")))
     (subsection
       "7.2 Indentation"
-      (p "- 2 spaces for nested information - 4 spaces for code examples in help text - Tree branches provide visual indentation"))
+      (list
+        (item "2 spaces for nested information - 4 spaces for code examples in help text")
+        (item "Tree branches provide visual indentation")))
     (subsection
       "7.3 Truncation"
       (p "Long values should be truncated with ellipsis:")

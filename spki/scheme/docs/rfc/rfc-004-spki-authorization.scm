@@ -132,7 +132,11 @@
         (row "Over-delegation " "Tag implication checking ")))
     (subsection
       "Key Management"
-      (p "- Generation: Use secure random (libsodium) - Storage: Private keys in protected files - Backup: Shamir secret sharing (see RFC-001) - Rotation: Issue new certs, revoke old")))
+      (list
+        (item "Generation: Use secure random (libsodium)")
+        (item "Storage: Private keys in protected files")
+        (item "Backup: Shamir secret sharing (see RFC-001)")
+        (item "Rotation: Issue new certs, revoke old"))))
   (section
     "Integration Points"
     (subsection
@@ -160,5 +164,7 @@
     (p "1. Ellison, C., et al. (1999). SPKI Certificate Theory. RFC 2693. 2. Ellison, C., et al. (1999). SPKI Requirements. RFC 2692. 3. Rivest, R., & Lampson, B. (1996). SDSI - A Simple Distributed Security Infrastructure. 4. Lampson, B. (1971). Protection. 5. [RFC-006](rfc-006-vault-architecture.html) - Vault System Architecture 6. [RFC-018](rfc-018-sealed-archive.html) - Sealed Archive Format (X25519/Ed25519 key compatibility)"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

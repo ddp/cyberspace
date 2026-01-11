@@ -14,7 +14,11 @@
   (section
     "Motivation"
     (p "Centralized systems fail:")
-    (p "- Single point of failure: Server goes down, everyone stops - Censorship: Authority can deny access - Trust concentration: Must trust operator - Survival: Company folds, data lost")
+    (list
+      (item "Single point of failure: Server goes down, everyone stops")
+      (item "Censorship: Authority can deny access")
+      (item "Trust concentration: Must trust operator")
+      (item "Survival: Company folds, data lost"))
     (p "Federation provides:")
     (p "1. Decentralized - No master server 2. Resilient - Survives node failures 3. Autonomous - Each peer controls own data 4. Cryptographic - Trust through math, not authority 5. Eventual consistency - Convergence without coordination"))
   (section
@@ -89,13 +93,21 @@
     "Consistency Model"
     (subsection
       "Eventual Consistency"
-      (p "- No global ordering required - Each peer has local view - Convergence through sync - Conflicts resolved locally"))
+      (list
+        (item "No global ordering required")
+        (item "Each peer has local view")
+        (item "Convergence through sync")
+        (item "Conflicts resolved locally")))
     (subsection
       "Causal Ordering"
       (p "Within a peer's releases: - Version numbers are monotonic - Audit trail provides causality - Hash chains prevent reordering"))
     (subsection
       "No Coordination"
-      (p "- No consensus protocol required - No distributed lock - No leader election - Each peer autonomous")))
+      (list
+        (item "No consensus protocol required")
+        (item "No distributed lock")
+        (item "No leader election")
+        (item "Each peer autonomous"))))
   (section
     "Security Considerations"
     (subsection
@@ -120,7 +132,10 @@
       (p "1. Generate keypair 2. Register with known peer 3. Exchange public keys (out-of-band verification) 4. Initial sync to get current releases 5. Begin participating in federation"))
     (subsection
       "Network Partitions"
-      (p "- Partitions heal automatically on reconnection - Conflicting releases detected and flagged - Audit trails show partition history")))
+      (list
+        (item "Partitions heal automatically on reconnection")
+        (item "Conflicting releases detected and flagged")
+        (item "Audit trails show partition history"))))
   (section
     "Configuration"
     (code scheme "(federation-config\n  ;; Identity\n  (identity my-private-key)\n\n  ;; Peers\n  (peers\n    (peer \"alice\" uri: \"git@github.com:alice/vault.git\"\n                  key: alice-pubkey\n                  trust: verified)\n    (peer \"bob\"   uri: \"/shared/bob-vault\"\n                  key: bob-pubkey\n                  trust: known))\n\n  ;; Policies\n  (auto-sync #t)\n  (sync-interval 3600)  ; seconds\n  (verify-before-accept #t)\n\n  ;; Security\n  (require-signature #t)\n  (trust-on-first-use #f))"))
@@ -128,14 +143,23 @@
     "Implementation Status"
     (subsection
       "Implemented (RFC-001)"
-      (p "- seal-publish: Push to single remote - seal-subscribe: Pull from single remote - seal-synchronize: Bidirectional with single peer - Transport: git, HTTP, filesystem"))
+      (list
+        (item "seal-publish: Push to single remote - seal-subscribe: Pull from single remote - seal-synchronize: Bidirectional with single peer")
+        (item "Transport: git, HTTP, filesystem")))
     (subsection
       "Proposed (This RFC)"
-      (p "- Multi-peer management - Trust levels and policies - Announcement protocol - Gossip propagation - Conflict resolution UI")))
+      (list
+        (item "Multi-peer management")
+        (item "Trust levels and policies")
+        (item "Announcement protocol")
+        (item "Gossip propagation")
+        (item "Conflict resolution UI"))))
   (section
     "References"
     (p "1. Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols. 2. Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance. 3. Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types. 4. RFC-001: Replication Layer 5. RFC-004: SPKI Authorization"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

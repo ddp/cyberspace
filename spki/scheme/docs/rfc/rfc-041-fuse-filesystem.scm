@@ -18,7 +18,12 @@
   (section
     "Wormhole as Security Object"
     (p "A wormhole is a first-class security object in cyberspace, subject to:[^d2]")
-    (p "- SPKI Authorization (RFC-004) — Opening requires valid certificate - Capability Delegation (RFC-021) — Wormhole access can be delegated - Audit Trail (RFC-003) — All operations logged - Rate Limiting (RFC-032) — Configurable ops/minute - Sandboxing (RFC-023) — Agents access wormholes through capabilities")
+    (list
+      (item "SPKI Authorization (RFC-004) — Opening requires valid certificate")
+      (item "Capability Delegation (RFC-021) — Wormhole access can be delegated")
+      (item "Audit Trail (RFC-003) — All operations logged")
+      (item "Rate Limiting (RFC-032) — Configurable ops/minute")
+      (item "Sandboxing (RFC-023) — Agents access wormholes through capabilities"))
     (p "[^d2]: Design: Wormholes are attack surface. Unrestricted filesystem access defeats vault security. Every wormhole must be explicitly authorized, continuously audited, and rate-limited against abuse.")
     (subsection
       "Wormhole Certificate"
@@ -190,5 +195,7 @@
     (p "1. RFC-012: Lamport Clocks 2. RFC-016: Lazy Clustering 3. RFC-020: Content-Addressed Storage 4. FUSE documentation: https://libfuse.github.io/ 5. FUSE-T: https://github.com/macos-fuse-t/fuse-t"))
   (section
     "Changelog"
-    (p "- 2026-01-07 - Initial specification")))
+    (list
+      (item "2026-01-07")
+      (item "Initial specification"))))
 

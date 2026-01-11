@@ -84,10 +84,16 @@
     "Existing Verified Libraries"
     (subsection
       "Fiat-Crypto"
-      (p "- Verified elliptic curve implementations - Used by BoringSSL, Chrome - Extraction to C, Java, Go"))
+      (list
+        (item "Verified elliptic curve implementations")
+        (item "Used by BoringSSL, Chrome")
+        (item "Extraction to C, Java, Go")))
     (subsection
       "HACL*"
-      (p "- Verified cryptographic library - Written in F* (similar to Coq) - Used by Firefox, Wireguard"))
+      (list
+        (item "Verified cryptographic library")
+        (item "Written in F* (similar to Coq)")
+        (item "Used by Firefox, Wireguard")))
     (subsection
       "Potential Use"
       (code coq "Require Import Fiat.Crypto.Ed25519.\n( Use pre-verified Ed25519 implementation )")))
@@ -95,10 +101,15 @@
     "Security Considerations"
     (subsection
       "Verified Components"
-      (p "- Signature operations - Hash operations - Chain verification logic"))
+      (list
+        (item "Signature operations")
+        (item "Hash operations")
+        (item "Chain verification logic")))
     (subsection
       "Unverified (Trusted)"
-      (p "- FFI layer (small, auditable) - libsodium bindings - Scheme runtime"))
+      (list
+        (item "FFI layer (small, auditable) - libsodium bindings")
+        (item "Scheme runtime")))
     (subsection
       "Audit Surface"
       (code "Total TCB:     ~1000 lines OCaml\nVerified:      ~800 lines (extracted from ~2000 lines Coq)\nTrusted:       ~200 lines (FFI, bindings)")))
@@ -107,5 +118,7 @@
     (p "1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2. Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic. 3. Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*. 4. Chlipala, A. (2013). Certified Programming with Dependent Types. 5. RFC-002: Cyberspace Architecture"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 

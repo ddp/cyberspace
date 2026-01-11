@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Federation (RFC-010) assumes honest peers. Reality differs:")
-    (p "- Crash failures: Nodes go offline - Byzantine failures: Nodes lie, equivocate, or attack - Network partitions: Messages delayed or lost - Sybil attacks: Fake identities flood the network")
+    (list
+      (item "Crash failures: Nodes go offline")
+      (item "Byzantine failures: Nodes lie, equivocate, or attack")
+      (item "Network partitions: Messages delayed or lost")
+      (item "Sybil attacks: Fake identities flood the network"))
     (p "Byzantine consensus provides:")
     (p "1. Safety: Honest nodes agree on same value 2. Liveness: System makes progress despite failures 3. Fault tolerance: Survives f failures with 3f+1 nodes")
     (p "From Lamport, Shostak, and Pease (1982):")
@@ -86,11 +90,17 @@
       (code scheme "(define-record-type <pbft-state>\n  (make-pbft-state view sequence log prepared committed)\n  pbft-state?\n  (view pbft-view)\n  (sequence pbft-sequence)\n  (log pbft-log)              ; sequence → messages\n  (prepared pbft-prepared)    ; sequence → value\n  (committed pbft-committed)) ; sequence → value"))
     (subsection
       "Dependencies"
-      (p "- crypto-ffi - Ed25519 signatures - audit - Decision logging - Network transport (TCP, QUIC)")))
+      (list
+        (item "crypto-ffi")
+        (item "Ed25519 signatures - audit")
+        (item "Decision logging")
+        (item "Network transport (TCP, QUIC)"))))
   (section
     "References"
     (p "1. Lamport, L., Shostak, R., & Pease, M. (1982). The Byzantine Generals Problem. 2. Castro, M., & Liskov, B. (1999). Practical Byzantine Fault Tolerance. 3. Yin, M., et al. (2019). HotStuff: BFT Consensus with Linearity and Responsiveness. 4. RFC-007: Threshold Signature Governance 5. RFC-010: Federation Protocol"))
   (section
     "Changelog"
-    (p "- 2026-01-06 - Initial specification")))
+    (list
+      (item "2026-01-06")
+      (item "Initial specification"))))
 
