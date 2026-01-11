@@ -2971,6 +2971,9 @@ Cyberspace REPL - Available Commands
   "Generate FIPS-181 verification syllables from pubkey"
   (let ((key-data (cond
                     ((blob? pubkey) pubkey)
+                    ;; Hex string (64 chars for 32-byte key)
+                    ((and (string? pubkey) (= (string-length pubkey) 64))
+                     (hex->blob pubkey))
                     ((string? pubkey) (string->blob pubkey))
                     (else (string->blob (->string pubkey))))))
     (syllables->display (pubkey->syllables key-data))))
