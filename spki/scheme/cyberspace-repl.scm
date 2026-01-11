@@ -3078,6 +3078,8 @@ Cyberspace REPL - Available Commands
           (write request out)
           (newline out)
           (flush-output out)
+          ;; Give receiver time to read before we close
+          (thread-sleep! 0.5)
           (close-output-port out)  ; Signal end of request
           (close-input-port in)    ; Close for now (cert comes later)
           (print "│  Enrollment request sent successfully.                          │")
