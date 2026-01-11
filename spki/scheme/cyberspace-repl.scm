@@ -4324,7 +4324,7 @@ Cyberspace REPL - Available Commands
   (print "")
   (print "Library:")
   (print "  (library)               - Browse all RFCs")
-  (print "  (library 'crypto)       - Filter by topic")
+  (print "  (search 'crypto)        - Search vault + library")
   (print "  (rfc 54)                - View RFC in terminal")
   (print "  (rfc 54 'html)          - Open in browser")
   (print "  (rfc 54 'ps)            - Open in Preview")
@@ -4415,6 +4415,54 @@ Cyberspace REPL - Available Commands
                    title-short))))
      rfcs)
     (print "")
+    (void)))
+
+;; Unified search - vault + library
+(define (search term)
+  "Search across vault and library
+   (search 'crypto)     - find crypto-related items
+   (search \"*.tar.gz\") - find by pattern"
+  (let ((term-str (if (symbol? term) (symbol->string term) term)))
+    (print "")
+    (print "Searching for: " term-str)
+    (print "")
+
+    ;; Search vault
+    (let ((vault-results (soup-query `(name ,(string-append "*" term-str "*")) #t)))
+      (when (and vault-results (not (null? vault-results)))
+        (print "Vault:")
+        (for-each
+         (lambda (obj)
+           (printf "  ~a/~a~%" (car obj) (cadr obj)))
+         (take (if (> (length vault-results) 10) 10 (length vault-results)) vault-results))
+        (when (> (length vault-results) 10)
+          (printf "  ... (~a more)~%" (- (length vault-results) 10)))
+        (print "")))
+
+    ;; Search library
+    (let* ((lib (introspect-library))
+           (rfcs (cadr (assq 'rfcs (cdr lib))))
+           (matches (filter
+                     (lambda (rfc)
+                       (let ((title (cadr (assq 'title (cdr rfc))))
+                             (num (cadr (assq 'number (cdr rfc)))))
+                         (or (string-contains-ci title term-str)
+                             (string-contains-ci num term-str))))
+                     rfcs)))
+      (when (not (null? matches))
+        (print "Library:")
+        (for-each
+         (lambda (rfc)
+           (let ((num (cadr (assq 'number (cdr rfc))))
+                 (title (cadr (assq 'title (cdr rfc)))))
+             (printf "  RFC-~a  ~a~%"
+                     (string-pad-left num 3 #\0)
+                     (if (> (string-length title) 45)
+                         (string-append (substring title 0 42) "...")
+                         title))))
+         matches)
+        (print "")))
+
     (void)))
 
 ;; Open RFC in viewer
