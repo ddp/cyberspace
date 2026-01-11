@@ -218,7 +218,7 @@ STOP_WORDS="a an and for in of on or the to with"
 
 is_stop_word() {
   local word=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-  for stop in $STOP_WORDS; do
+  for stop in ${=STOP_WORDS}; do
     [[ "$word" == "$stop" ]] && return 0
   done
   return 1
@@ -231,23 +231,24 @@ generate_kwic_entries() {
     local title=$(get_title "$rfc")
     # Strip "RFC-NNN: " prefix for rotation
     local bare_title=$(echo "$title" | sed 's/^RFC-[0-9]*: //')
-    local words=($bare_title)
+    # zsh: use ${=var} for word splitting, arrays are 1-indexed
+    local words=(${=bare_title})
     local num_words=${#words[@]}
 
-    for ((i=0; i<num_words; i++)); do
+    for ((i=1; i<=num_words; i++)); do
       local word="${words[$i]}"
       # Skip stop words
       is_stop_word "$word" && continue
 
       # Build left context (words before keyword)
       local left=""
-      for ((j=0; j<i; j++)); do
+      for ((j=1; j<i; j++)); do
         left="$left${words[$j]} "
       done
 
       # Build right context (words after keyword)
       local right=""
-      for ((j=i+1; j<num_words; j++)); do
+      for ((j=i+1; j<=num_words; j++)); do
         right="$right ${words[$j]}"
       done
 
@@ -368,6 +369,63 @@ FOOTER
   echo "  -> index.html"
 }
 
+# Sanity check before publish
+sanity_check() {
+  local errors=0
+
+  echo "=== Sanity Check ==="
+
+  # Check KWIC has actual keywords (not empty)
+  local kwic_entries
+  kwic_entries=$(grep -c 'class="keyword">[^<]' index.html 2>/dev/null) || kwic_entries=0
+  local empty_keywords
+  empty_keywords=$(grep -c 'class="keyword"><' index.html 2>/dev/null) || empty_keywords=0
+
+  if [[ $kwic_entries -lt 50 ]]; then
+    echo "  [FAIL] KWIC index has only $kwic_entries entries (expected 50+)"
+    errors=$((errors + 1))
+  else
+    echo "  [OK] KWIC index: $kwic_entries entries"
+  fi
+
+  if [[ $empty_keywords -gt 0 ]]; then
+    echo "  [FAIL] KWIC has $empty_keywords empty keyword entries"
+    errors=$((errors + 1))
+  fi
+
+  # Check all RFC files exist
+  local missing=0
+  for rfc in "${RFCS[@]}"; do
+    [[ ! -f "${rfc}.html" ]] && missing=$((missing + 1))
+  done
+
+  if [[ $missing -gt 0 ]]; then
+    echo "  [FAIL] $missing RFC HTML files missing"
+    errors=$((errors + 1))
+  else
+    echo "  [OK] All ${#RFCS[@]} RFC HTML files present"
+  fi
+
+  # Check index.html is not tiny (corruption check)
+  local index_size
+  index_size=$(stat -f%z index.html 2>/dev/null) || index_size=$(stat -c%s index.html 2>/dev/null) || index_size=0
+  if [[ $index_size -lt 10000 ]]; then
+    echo "  [FAIL] index.html suspiciously small ($index_size bytes)"
+    errors=$((errors + 1))
+  else
+    echo "  [OK] index.html size: $index_size bytes"
+  fi
+
+  if [[ $errors -gt 0 ]]; then
+    echo ""
+    echo "  $errors error(s) found - aborting publish"
+    return 1
+  fi
+
+  echo "  All checks passed"
+  return 0
+}
+
 # Main
 echo "=== RFC Documentation Pipeline ==="
 echo ""
@@ -429,9 +487,9 @@ if [[ -f "$REPL_FILE" ]]; then
 
     if [[ -n "$keyword" ]]; then
       if grep -q "$keyword" "$REPL_FILE" 2>/dev/null; then
-        ((implemented++))
+        ((implemented++)) || true
       else
-        ((pending++))
+        ((pending++)) || true
         pending_list="${pending_list}    - ${rfc} (${keyword})\n"
       fi
     fi
@@ -448,6 +506,10 @@ if [[ -f "$REPL_FILE" ]]; then
 else
   echo "  [skip] REPL not found at $REPL_FILE"
 fi
+
+# Sanity check before publish
+echo ""
+sanity_check || exit 1
 
 # Publish to yoyodyne (world-readable web directory)
 echo ""
