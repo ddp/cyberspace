@@ -286,14 +286,62 @@ Permission model:
 
 ------------------------------------------------------------------------------
 
+Rich Formatting Pipeline
+
+HTML: Modern, Themeable
+
+HTML output uses rfc.css for rich presentation:
+
+- Light/dark themes: Respects prefers-color-scheme, toggleable
+- Typography: System fonts with monospace fallbacks for code
+- Code blocks: font-feature-settings ensures box-drawing alignment
+- Responsive: Mobile-friendly with print styles
+- Tables: Shadows, hover states, proper borders
+
+:root {
+  --bg: #fafafa; --fg: #1a1a1a; --accent: #0066cc;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1117; --fg: #e6edf3; --accent: #58a6ff; }
+}
+
+PostScript: Professional Typesetting
+
+PostScript uses groff with ms macros for rich output:
+
+- Markdown sources: pandoc → groff ms → PostScript
+- Text-only sources: enscript with fancy headers
+- Page layout: 1" margins, 10pt body, Helvetica headers
+- Running headers: Title left, page number right
+
+From markdown (via groff)
+pandoc doc.md -t ms | groff -ms -Tps > doc.ps
+
+From text (via enscript)
+enscript --fancy-header=enscript -p doc.ps doc.txt
+
+Text: Immortal ASCII
+
+Plain text remains intentionally simple:
+
+- 78 columns for universal display
+- Unicode box-drawing converted to ASCII
+- No formatting dependencies
+- Grep-able, diff-able, eternal
+
+------------------------------------------------------------------------------
+
 Dependencies
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| pandoc | 2.x+ | Document conversion |
-| latex | TeX Live | DVI generation |
-| dvips | TeX Live | DVI → PostScript |
+| pandoc | 2.x+ | Markdown → HTML, Markdown → groff ms |
+| groff | 1.23+ | ms macros → PostScript |
+| enscript | 1.6+ | Text → PostScript (fancy headers) |
 | rsync | 3.x+ | Publication |
+
+Install on macOS:
+brew install pandoc groff enscript
 
 PostScript viewers: TeXShop, Preview, Ghostscript, or read the source directly.
 
@@ -326,6 +374,7 @@ References
 
 Changelog
 
+- 2026-01-11 - Add rich formatting pipeline (groff, CSS themes)
 - 2026-01-07 - Add footnote categories, TOC, permuted index (KWIC)
 - 2026-01-07 - Replace PDF with PostScript (open format)
 - 2026-01-06 - Initial specification

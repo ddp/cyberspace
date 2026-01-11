@@ -437,6 +437,52 @@ https://www.yoyodyne.com/ddp/cyberspace/</p>
 <p>Permission model: - Directories: 755 (world-readable, owner-writable)
 - Files: 644 (world-readable, owner-writable)</p>
 <hr />
+<h2 id="rich-formatting-pipeline">Rich Formatting Pipeline</h2>
+<h3 id="html-modern-themeable">HTML: Modern, Themeable</h3>
+<p>HTML output uses <code>rfc.css</code> for rich presentation:</p>
+<ul>
+<li><strong>Light/dark themes</strong>: Respects
+<code>prefers-color-scheme</code>, toggleable</li>
+<li><strong>Typography</strong>: System fonts with monospace fallbacks
+for code</li>
+<li><strong>Code blocks</strong>: <code>font-feature-settings</code>
+ensures box-drawing alignment</li>
+<li><strong>Responsive</strong>: Mobile-friendly with print styles</li>
+<li><strong>Tables</strong>: Shadows, hover states, proper borders</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode css"><code class="sourceCode css"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="in">:root</span> {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">--bg</span><span class="ch">:</span> <span class="cn">#fafafa</span><span class="op">;</span> <span class="va">--fg</span><span class="ch">:</span> <span class="cn">#1a1a1a</span><span class="op">;</span> <span class="va">--accent</span><span class="ch">:</span> <span class="cn">#0066cc</span><span class="op">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="im">@media</span> <span class="fu">(</span><span class="kw">prefers-color-scheme</span><span class="ch">:</span> <span class="dv">dark</span><span class="fu">)</span> {</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="in">:root</span> { <span class="va">--bg</span><span class="ch">:</span> <span class="cn">#0d1117</span><span class="op">;</span> <span class="va">--fg</span><span class="ch">:</span> <span class="cn">#e6edf3</span><span class="op">;</span> <span class="va">--accent</span><span class="ch">:</span> <span class="cn">#58a6ff</span><span class="op">;</span> }</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="postscript-professional-typesetting">PostScript: Professional
+Typesetting</h3>
+<p>PostScript uses groff with ms macros for rich output:</p>
+<ul>
+<li><strong>Markdown sources</strong>: pandoc → groff ms →
+PostScript</li>
+<li><strong>Text-only sources</strong>: enscript with fancy headers</li>
+<li><strong>Page layout</strong>: 1” margins, 10pt body, Helvetica
+headers</li>
+<li><strong>Running headers</strong>: Title left, page number right</li>
+</ul>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># From markdown (via groff)</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> doc.md <span class="at">-t</span> ms <span class="kw">|</span> <span class="fu">groff</span> <span class="at">-ms</span> <span class="at">-Tps</span> <span class="op">&gt;</span> doc.ps</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># From text (via enscript)</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">enscript</span> <span class="at">--fancy-header</span><span class="op">=</span>enscript <span class="at">-p</span> doc.ps doc.txt</span></code></pre></div>
+<h3 id="text-immortal-ascii">Text: Immortal ASCII</h3>
+<p>Plain text remains intentionally simple:</p>
+<ul>
+<li>78 columns for universal display</li>
+<li>Unicode box-drawing converted to ASCII</li>
+<li>No formatting dependencies</li>
+<li>Grep-able, diff-able, eternal</li>
+</ul>
+<hr />
 <h2 id="dependencies">Dependencies</h2>
 <table>
 <thead>
@@ -450,17 +496,17 @@ https://www.yoyodyne.com/ddp/cyberspace/</p>
 <tr>
 <td>pandoc</td>
 <td>2.x+</td>
-<td>Document conversion</td>
+<td>Markdown → HTML, Markdown → groff ms</td>
 </tr>
 <tr>
-<td>latex</td>
-<td>TeX Live</td>
-<td>DVI generation</td>
+<td>groff</td>
+<td>1.23+</td>
+<td>ms macros → PostScript</td>
 </tr>
 <tr>
-<td>dvips</td>
-<td>TeX Live</td>
-<td>DVI → PostScript</td>
+<td>enscript</td>
+<td>1.6+</td>
+<td>Text → PostScript (fancy headers)</td>
 </tr>
 <tr>
 <td>rsync</td>
@@ -469,6 +515,9 @@ https://www.yoyodyne.com/ddp/cyberspace/</p>
 </tr>
 </tbody>
 </table>
+<p>Install on macOS:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install pandoc groff enscript</span></code></pre></div>
 <p>PostScript viewers: TeXShop, Preview, Ghostscript, or read the source
 directly.</p>
 <hr />
@@ -490,6 +539,8 @@ in documents - World-readable permissions only</p>
 <hr />
 <h2 id="changelog">Changelog</h2>
 <ul>
+<li><strong>2026-01-11</strong> - Add rich formatting pipeline (groff,
+CSS themes)</li>
 <li><strong>2026-01-07</strong> - Add footnote categories, TOC, permuted
 index (KWIC)</li>
 <li><strong>2026-01-07</strong> - Replace PDF with PostScript (open

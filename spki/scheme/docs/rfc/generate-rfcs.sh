@@ -99,10 +99,52 @@ generate_html_from_txt() {
 EOF
 }
 
-# Generate PostScript from text using enscript
-generate_ps() {
-  local base="$1" source="$2"
-  enscript -B -f Courier10 -p "${base}.ps" "$source" 2>/dev/null
+# Generate PostScript from markdown via groff for rich formatting
+# Uses ms macros for professional typesetting (groff required: brew install groff)
+generate_ps_from_md() {
+  local base="$1"
+  local title=$(head -1 "${base}.md" | sed 's/^# //')
+
+  # Use pandoc to groff ms macros with proper preamble
+  {
+    # Preamble for better formatting
+    echo '.nr PS 10'        # 10pt body text
+    echo '.nr VS 12'        # 12pt vertical spacing
+    echo '.nr PO 1i'        # 1 inch page offset
+    echo '.nr LL 6.5i'      # 6.5 inch line length
+    echo '.nr HM 0.75i'     # Header margin
+    echo '.nr FM 0.75i'     # Footer margin
+    echo '.ds CH'           # Clear center header
+    echo ".ds LH $title"    # Left header: title
+    echo '.ds RH %'         # Right header: page number
+    echo '.fam H'           # Helvetica for headers
+  } > "${base}.ms"
+
+  # Append pandoc conversion
+  pandoc "${base}.md" -t ms 2>/dev/null >> "${base}.ms"
+
+  if [[ -s "${base}.ms" ]]; then
+    groff -ms -Tps -dpaper=letter "${base}.ms" > "${base}.ps" 2>/dev/null
+    rm -f "${base}.ms"
+  fi
+}
+
+# Generate PostScript from text using enscript (for txt-only sources)
+# Rich formatting: borders, proper fonts, headers, color-capable
+generate_ps_from_txt() {
+  local base="$1"
+  local title=$(head -1 "${base}.txt" | sed 's/^# //')
+
+  enscript \
+    -M Letter \
+    --margins=72:72:72:72 \
+    -f Courier9 \
+    --header-font=Helvetica-Bold10 \
+    --fancy-header=enscript \
+    --word-wrap \
+    --mark-wrapped-lines=arrow \
+    --header="$title|\$W|Page \$% of \$=" \
+    -p "${base}.ps" "${base}.txt" 2>/dev/null
 }
 
 # Generate from Markdown source (prose, docs, RFCs)
@@ -139,9 +181,9 @@ generate_from_md() {
     generated="${generated}html "
   fi
 
-  # PostScript: enscript from plain text
-  if is_stale "${rfc}.txt" "${rfc}.ps"; then
-    generate_ps "$rfc" "${rfc}.txt"
+  # PostScript: rich formatting via groff
+  if is_stale "${rfc}.md" "${rfc}.ps"; then
+    generate_ps_from_md "$rfc"
     generated="${generated}ps "
   fi
 
@@ -163,7 +205,7 @@ generate_from_txt() {
 
   # PostScript: enscript from text
   if is_stale "${rfc}.txt" "${rfc}.ps"; then
-    generate_ps "$rfc" "${rfc}.txt"
+    generate_ps_from_txt "$rfc"
     generated="${generated}ps "
   fi
 
