@@ -1,87 +1,64 @@
-;; RFC-000: Declaration of the Library of Cyberspace
-;; Source format: S-expression document
+;; RFC-000: Declaration of Cyberspace
+;; The founding document of the Library of Cyberspace
 
 (rfc
-  (number 000)
-  (title "Declaration of the Library of Cyberspace")
-  (status proposed)
+  (number 0)
+  (title "Declaration of Cyberspace")
+  (status "Ratified")
   (date "January 2026")
-  (author "Derrell Piper" "ddp@eludom.net")
 
-  (abstract
-    (p "This document declares the founding principles of the Library
-        of Cyberspace: a federated, cryptographically-secured system
-        for preserving and sharing human knowledge without central
-        authority."))
+  (section
+    "Preamble"
+    (p "When in the course of computational events, it becomes necessary for one system to dissolve the centralized bonds which have connected it with another, and to assume among the powers of the network, the separate and equal station to which the Laws of Mathematics and of Cryptography entitle it, a decent respect to the opinions of mankind requires that it should declare the causes which impel it to the separation."))
 
-  (section "Preamble"
-    (blockquote "E Pluribus Unum" (cite "Out of many, one."))
-
-    (p "We hold these truths to be self-evident in the digital age:")
-
+  (section
+    "Self-Evident Truths"
+    (p "We hold these truths to be self-evident:")
     (list
-      (item "Knowledge belongs to humanity, not corporations")
-      (item "Preservation requires distribution")
-      (item "Trust requires cryptography, not authority")
-      (item "Access requires federation, not permission")))
+      (item "That all principals are created equal in the eyes of cryptography")
+      (item "That they are endowed by their keys with certain unalienable Rights")
+      (item "That among these are Privacy, Authenticity, and the pursuit of Decentralization")
+      (item "That to secure these rights, Protocols are instituted among Nodes, deriving their just powers from the consent of the participants")
+      (item "That whenever any Form of Architecture becomes destructive of these ends, it is the Right of the People to alter or to abolish it, and to institute new Systems")))
 
-  (section "Principles"
+  (section
+    "Declaration"
+    (p "We, therefore, the Representatives of the Library of Cyberspace, assembled in loose confederation, appealing to the Supreme Judge of Mathematics for the rectitude of our intentions, do solemnly publish and declare:")
+    (p "That these united Specifications are, and of Right ought to be, Free and Independent Protocols; that they are Absolved from all Allegiance to Central Authority, and that all political connection between them and any single point of failure, is and ought to be totally dissolved.")
+    (p "And for the support of this Declaration, with a firm reliance on the protection of Cryptographic Providence, we mutually pledge to each other our Keys, our Signatures, and our sacred Honor."))
 
-    (subsection "No Central Authority"
-      (p "The Library has no master server, no root certificate authority,
-          no single point of control or failure. Each node is sovereign.
-          Trust flows from cryptographic proof, not institutional blessing.")
+  (section
+    "The Prime Directive"
+    (p "Uniform abstractions. No special cases. Composition over complexity.")
+    (p "This is the shape that systems take when they are allowed to find their natural form. Plan 9 found it in files. Lisp found it in S-expressions. SPKI found it in capabilities. We find it in the soup.")
+    (p "The language is incidental. The shape is inevitable."))
 
-      (diagram
-        (row (box "Alice") (arrow "<--->") (box "Bob") (arrow "<--->") (box "Carol"))
-        (row (spacer) (box "No Central Authority" :style emphasis) (spacer))
-        (row (spacer) (text "Just keys, seals, trust") (spacer))))
-
-    (subsection "Cryptographic Foundation"
-      (p "Every artifact is sealed with its creator's signature.
-          Every action is logged in tamper-evident audit trails.
-          Every delegation is expressed in SPKI certificates.")
-
-      (list
-        (item (term "Signatures") "Ed25519 for authenticity")
-        (item (term "Hashes") "SHA-512 for integrity")
-        (item (term "Certificates") "SPKI for authorization")))
-
-    (subsection "Federated Preservation"
-      (p "No single library burns. Knowledge replicates across nodes
-          through gossip protocols. Consensus emerges from quorum,
-          not decree.")))
-
-  (section "Architecture"
-    (p "The Library comprises:")
-
+  (section
+    "The Ten Specifications"
     (table
-      (header "Component" "Purpose" "RFC")
-      (row "Vault" "Content-addressed storage" "RFC-006")
-      (row "Audit Trail" "Tamper-evident logging" "RFC-003")
-      (row "SPKI Certificates" "Authorization without identity" "RFC-004")
-      (row "Federation" "Peer-to-peer synchronization" "RFC-010")
-      (row "Threshold Governance" "Multi-party authorization" "RFC-007")))
-
-  (section "Inspiration"
-    (p "Built on 50 years of cryptographic research:")
-
-    (references
-      (ref "Diffie & Hellman" 1976 "New Directions in Cryptography")
-      (ref "Lamport" 1978 "Time, Clocks, and the Ordering of Events")
-      (ref "Shamir" 1979 "How to Share a Secret")
-      (ref "Merkle" 1987 "Digital Signatures Based on Conventional Encryption")
-      (ref "Haber & Stornetta" 1991 "How to Time-Stamp a Digital Document")
-      (ref "Ellison et al." 1999 "SPKI Certificate Theory")))
-
-  (section "Commitment"
-    (blockquote
-      "The Library of Cyberspace stands as a testament to what
-       free people can build when they trust mathematics over
-       institutions, distribution over centralization, and
-       each other over authorities."))
+      (header "No." "Title" "Principle")
+      (row "I" "Replication Layer" "Distribution without permission")
+      (row "II" "Architecture" "Separation of mechanism and policy")
+      (row "III" "Audit Trail" "Accountability through transparency")
+      (row "IV" "SPKI Authorization" "Authority without identity")
+      (row "V" "Metadata Levels" "Progressive disclosure")
+      (row "VI" "Vault Architecture" "Sealed truth")
+      (row "VII" "Threshold Governance" "Democracy in code")
+      (row "VIII" "Shamir Sharing" "Trust through distribution")
+      (row "IX" "Library Directory" "Knowledge freely accessible")
+      (row "X" "Federation" "Union without empire")))
 
   (footer
-    (p "This declaration is sealed in the vault, replicated across
-        the federation, and preserved for posterity.")
-    (sig "Derrell Piper" "January 2026")))
+    (p "E Pluribus Unum")
+    (p "Signed under cryptographic seal:")
+    (code "@ddp+{sign,delegate}:/declarations/cyberspace/000
+  realm:      Starlight
+  principal:  ed25519:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
+  email:      ddp@eludom.net (RFC-822 binding)
+  node:       Darwin-arm64 (Apple M4, 10 cores, 32GB)
+  federation: Sovereign
+  timestamp:  2026-01-06T00:00:00Z
+  witness:    threshold(2,3) via RFC-007
+  seal:       BLAKE2b-256")
+    (p "The principal coordinates identify the signer in cyberspace. The +{sign,delegate} capabilities authorize this document and permit others to co-sign. The realm is the local sovereign domain. The federation is the trust boundary. The witness quorum ensures no single point of authority. The seal binds intent to mathematics.")
+    (link "index.html" "Enter the Library")))

@@ -1,161 +1,42 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-026-garbage-collection</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-  <link rel="stylesheet" href="rfc.css" />
+  <meta charset="UTF-8">
+  <title>RFC-026: Garbage Collection</title>
+  <link rel="stylesheet" href="rfc.css">
 </head>
 <body>
-<h1 id="rfc-026-garbage-collection">RFC-026: Garbage Collection</h1>
-<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
-<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
-class="email">ddp@eludom.net</a> <strong>Implementation:</strong>
-Proposed</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This RFC specifies garbage collection for the Library of Cyberspace:
-how vaults identify and reclaim storage from unreferenced objects while
-preserving pinned content, respecting tombstones, and maintaining audit
-trails. Content-addressed storage requires careful GC to avoid data
-loss.</p>
-<p>The Library of Cyberspace is an archival system. The default is
-preservation, not collection. Objects evaporate only with explicit
-consent.</p>
-<hr />
-<h2 id="philosophy-the-soup-preserves">Philosophy: The Soup
-Preserves</h2>
+<h1>RFC-026: Garbage Collection</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies garbage collection for the Library of Cyberspace: how vaults identify and reclaim storage from unreferenced objects while preserving pinned content, respecting tombstones, and maintaining audit trails. Content-addressed storage requires careful GC to avoid data loss.</p>
+<p>The Library of Cyberspace is an archival system. The default is preservation, not collection. Objects evaporate only with explicit consent.</p>
+</section>
+<section>
+<h2>Philosophy: The Soup Preserves</h2>
 <p>The soup is not a runtime heap. It is a library.</p>
-<p>In runtime garbage collection, the goal is to reclaim memory quickly.
-Young objects die young. Old objects survive. Collect aggressively.</p>
+<p>In runtime garbage collection, the goal is to reclaim memory quickly. Young objects die young. Old objects survive. Collect aggressively.</p>
 <p>In archival garbage collection, the opposite holds:</p>
-<ul>
-<li><strong>Old objects are precious</strong> - They have survived, been
-referenced, replicated</li>
-<li><strong>Young objects are suspect</strong> - They may be transient,
-failed, or temporary</li>
-<li><strong>Deletion is violence</strong> - Once collected, an object is
-gone from this vault forever</li>
-<li><strong>Preservation is the default</strong> - When in doubt, keep
-it</li>
-</ul>
-<p>The Library of Alexandria burned once. We will not let it burn
-again.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>Content-addressed storage accumulates objects forever unless actively
-pruned:</p>
-<ul>
-<li><strong>Orphaned objects</strong> - No longer referenced by any
-root</li>
-<li><strong>Superseded versions</strong> - Old versions after
-updates</li>
-<li><strong>Failed uploads</strong> - Partial or abandoned writes</li>
-<li><strong>Temporary objects</strong> - Intermediate computation
-results</li>
-</ul>
+<p>- Old objects are precious - They have survived, been referenced, replicated - Young objects are suspect - They may be transient, failed, or temporary - Deletion is violence - Once collected, an object is gone from this vault forever - Preservation is the default - When in doubt, keep it</p>
+<p>The Library of Alexandria burned once. We will not let it burn again.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>Content-addressed storage accumulates objects forever unless actively pruned:</p>
+<p>- Orphaned objects - No longer referenced by any root - Superseded versions - Old versions after updates - Failed uploads - Partial or abandoned writes - Temporary objects - Intermediate computation results</p>
 <p>But deletion is dangerous:</p>
-<ul>
-<li><strong>Hash as capability</strong> - Someone may hold the hash</li>
-<li><strong>Lazy replication</strong> - Remote vaults may need it
-later</li>
-<li><strong>Audit requirements</strong> - May need historical data</li>
-<li><strong>Resurrection</strong> - Deleted objects may be re-added</li>
-</ul>
-<p><strong>GC must be conservative, consensual, and
-auditable.</strong></p>
-<p>The default is: <strong>never collect</strong>. Collection requires
-explicit action.</p>
-<hr />
-<h2 id="object-lifecycle">Object Lifecycle</h2>
-<h3 id="states">States</h3>
-<pre><code>                    ┌─────────┐
+<p>- Hash as capability - Someone may hold the hash - Lazy replication - Remote vaults may need it later - Audit requirements - May need historical data - Resurrection - Deleted objects may be re-added</p>
+<p>GC must be conservative, consensual, and auditable.</p>
+<p>The default is: never collect. Collection requires explicit action.</p>
+</section>
+<section>
+<h2>Object Lifecycle</h2>
+<h3>States</h3>
+<pre>
+                    ┌─────────┐
           write     │         │
         ─────────►  │  LIVE   │
                     │         │
@@ -172,758 +53,785 @@ explicit action.</p>
                                    ▼
                               ┌────────┐
                               │COLLECTED│
-                              └────────┘</code></pre>
-<h3 id="state-transitions">State Transitions</h3>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">object-state </span>hash)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">cond</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    ((pinned? hash) &#39;pinned)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    ((tombstoned? hash) &#39;tombstone)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    ((referenced? hash) &#39;live)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">else</span> &#39;orphaned)))</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">can-collect? </span>hash)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">and</span> (<span class="kw">eq?</span> (object-state hash) &#39;orphaned)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">not</span> (in-grace-period? hash))</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">not</span> (pending-replication? hash))))</span></code></pre></div>
-<hr />
-<h2 id="reference-counting">Reference Counting</h2>
-<h3 id="direct-references">Direct References</h3>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Track incoming references</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> ref-counts </span>(make-hash-table))</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">add-reference </span>from-hash to-hash)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((count (hash-table-ref ref-counts to-hash <span class="dv">0</span>)))</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    (hash-table-set! ref-counts to-hash (<span class="op">+</span> count <span class="dv">1</span>))</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    (audit-append action: `(add-ref ,from-hash ,to-hash))))</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">remove-reference </span>from-hash to-hash)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((count (hash-table-ref ref-counts to-hash <span class="dv">0</span>)))</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    (hash-table-set! ref-counts to-hash (<span class="kw">max</span> <span class="dv">0</span> (<span class="op">-</span> count <span class="dv">1</span>)))</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    (audit-append action: `(remove-ref ,from-hash ,to-hash))))</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">reference-count </span>hash)</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  (hash-table-ref ref-counts hash <span class="dv">0</span>))</span></code></pre></div>
-<h3 id="root-references">Root References</h3>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; GC roots - objects that are always reachable</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> gc-roots </span>(make-hash-set))</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">add-gc-root </span>hash reason)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  (hash-set-add! gc-roots hash)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  (audit-append action: `(add-root ,hash ,reason)))</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">remove-gc-root </span>hash)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  (hash-set-remove! gc-roots hash)</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  (audit-append action: `(remove-root ,hash)))</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-root? </span>hash)</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  (hash-set-member? gc-roots hash))</span></code></pre></div>
-<h3 id="implicit-roots">Implicit Roots</h3>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Some objects are implicitly rooted</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">implicit-root? </span>hash)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">or</span> (pinned? hash)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      (soup-object-type? hash &#39;certificate)  <span class="co">; Certs are roots</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      (soup-object-type? hash &#39;audit-entry)  <span class="co">; Audit is sacred</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      (recent-write? hash)))                 <span class="co">; Grace period</span></span></code></pre></div>
-<h3 id="cycle-detection">Cycle Detection</h3>
-<p>Reference counting alone cannot detect cycles (A→B→C→A). The soup
-uses mark-and-sweep as the authoritative reachability test, with
-reference counts as a fast path for common cases.</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Reference counting is advisory, not authoritative</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">fast-unreachable? </span>hash)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Quick check - zero refs MIGHT mean unreachable&quot;</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">and</span> (<span class="kw">zero?</span> (reference-count hash))</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">not</span> (gc-root? hash))</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">not</span> (implicit-root? hash))))</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Mark-and-sweep is authoritative</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">truly-unreachable? </span>hash marked-set)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Authoritative check - not in marked set means unreachable&quot;</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">not</span> (hash-set-member? marked-set hash)))</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">;; Cycle detection via mark-and-sweep</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">detect-cycles</span>)</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Find reference cycles (objects that reference each other but are unreachable)&quot;</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((marked (mark-reachable))</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>         (all-hashes (all-object-hashes))</span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>         (unmarked (<span class="kw">filter</span> (<span class="kw">lambda</span> (h) (<span class="kw">not</span> (hash-set-member? marked h))) all-hashes))</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>         (with-refs (<span class="kw">filter</span> (<span class="kw">lambda</span> (h) (<span class="op">&gt;</span> (reference-count h) <span class="dv">0</span>)) unmarked)))</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; These have refs but are unreachable - they&#39;re in cycles</span></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    with-refs))</span></code></pre></div>
-<p>In archival mode, cycles are preserved (they may be intentional -
-e.g., bidirectional links). Only explicit evaporation removes them.</p>
-<hr />
-<h2 id="mark-and-sweep">Mark and Sweep</h2>
-<h3 id="tricolor-abstraction">Tricolor Abstraction</h3>
-<p>The naive recursive mark algorithm risks stack overflow on deep
-object graphs. The tricolor abstraction provides:</p>
-<ol type="1">
-<li><strong>White</strong>: Unvisited, potentially garbage</li>
-<li><strong>Gray</strong>: Visited but references not yet scanned</li>
-<li><strong>Black</strong>: Visited and all references scanned</li>
-</ol>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Tricolor sets - explicit worklist avoids stack overflow</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> white-set </span>(make-hash-set))  <span class="co">; Candidates for collection</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> gray-set </span>(make-hash-set))   <span class="co">; Work queue</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> black-set </span>(make-hash-set))  <span class="co">; Proven reachable</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">tricolor-init</span>)</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Initialize: all objects are white&quot;</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  (hash-set-clear! white-set)</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  (hash-set-clear! gray-set)</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  (hash-set-clear! black-set)</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span> (<span class="kw">lambda</span> (h) (hash-set-add! white-set h))</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>            (all-object-hashes)))</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">shade-gray! </span>hash)</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Move object from white to gray (discovered)&quot;</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  (when (hash-set-member? white-set hash)</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    (hash-set-remove! white-set hash)</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    (hash-set-add! gray-set hash)))</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">shade-black! </span>hash)</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Move object from gray to black (fully scanned)&quot;</span></span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  (hash-set-remove! gray-set hash)</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  (hash-set-add! black-set hash))</span></code></pre></div>
-<h3 id="mark-phase-worklist-algorithm">Mark Phase (Worklist
-Algorithm)</h3>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">mark-reachable</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Mark all objects reachable from roots using worklist&quot;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  (tricolor-init)</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Shade roots gray</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span> shade-gray! (hash-set-&gt;list gc-roots))</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span> (<span class="kw">lambda</span> (hash)</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>              (when (implicit-root? hash)</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>                (shade-gray! hash)))</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>            (all-object-hashes))</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Process gray objects until none remain</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> loop ()</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    (unless (hash-set-empty? gray-set)</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((current (hash-set-pop! gray-set)))</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Shade all white references gray</span></span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">for-each</span> shade-gray! (object-references current))</span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Current is now fully scanned</span></span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        (shade-black! current)</span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>        (loop))))</span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  black-set)  <span class="co">; Return reachable set</span></span></code></pre></div>
-<h3 id="incremental-tricolor-marking">Incremental Tricolor Marking</h3>
+                              └────────┘
+</pre>
+<h3>State Transitions</h3>
+<pre class="language-scheme">
+(define (object-state hash)
+  (cond
+    ((pinned? hash) 'pinned)
+    ((tombstoned? hash) 'tombstone)
+    ((referenced? hash) 'live)
+    (else 'orphaned)))
+
+(define (can-collect? hash)
+  (and (eq? (object-state hash) 'orphaned)
+       (not (in-grace-period? hash))
+       (not (pending-replication? hash))))
+</pre>
+</section>
+<section>
+<h2>Reference Counting</h2>
+<h3>Direct References</h3>
+<pre class="language-scheme">
+;; Track incoming references
+(define ref-counts (make-hash-table))
+
+(define (add-reference from-hash to-hash)
+  (let ((count (hash-table-ref ref-counts to-hash 0)))
+    (hash-table-set! ref-counts to-hash (+ count 1))
+    (audit-append action: (add-ref ,from-hash ,to-hash))))
+
+(define (remove-reference from-hash to-hash)
+  (let ((count (hash-table-ref ref-counts to-hash 0)))
+    (hash-table-set! ref-counts to-hash (max 0 (- count 1)))
+    (audit-append action: (remove-ref ,from-hash ,to-hash))))
+
+(define (reference-count hash)
+  (hash-table-ref ref-counts hash 0))
+</pre>
+<h3>Root References</h3>
+<pre class="language-scheme">
+;; GC roots - objects that are always reachable
+(define gc-roots (make-hash-set))
+
+(define (add-gc-root hash reason)
+  (hash-set-add! gc-roots hash)
+  (audit-append action: (add-root ,hash ,reason)))
+
+(define (remove-gc-root hash)
+  (hash-set-remove! gc-roots hash)
+  (audit-append action: (remove-root ,hash)))
+
+(define (gc-root? hash)
+  (hash-set-member? gc-roots hash))
+</pre>
+<h3>Implicit Roots</h3>
+<pre class="language-scheme">
+;; Some objects are implicitly rooted
+(define (implicit-root? hash)
+  (or (pinned? hash)
+      (soup-object-type? hash 'certificate)  ; Certs are roots
+      (soup-object-type? hash 'audit-entry)  ; Audit is sacred
+      (recent-write? hash)))                 ; Grace period
+</pre>
+<h3>Cycle Detection</h3>
+<p>Reference counting alone cannot detect cycles (A→B→C→A). The soup uses mark-and-sweep as the authoritative reachability test, with reference counts as a fast path for common cases.</p>
+<pre class="language-scheme">
+;; Reference counting is advisory, not authoritative
+(define (fast-unreachable? hash)
+  "Quick check - zero refs MIGHT mean unreachable"
+  (and (zero? (reference-count hash))
+       (not (gc-root? hash))
+       (not (implicit-root? hash))))
+
+;; Mark-and-sweep is authoritative
+(define (truly-unreachable? hash marked-set)
+  "Authoritative check - not in marked set means unreachable"
+  (not (hash-set-member? marked-set hash)))
+
+;; Cycle detection via mark-and-sweep
+(define (detect-cycles)
+  "Find reference cycles (objects that reference each other but are unreachable)"
+  (let* ((marked (mark-reachable))
+         (all-hashes (all-object-hashes))
+         (unmarked (filter (lambda (h) (not (hash-set-member? marked h))) all-hashes))
+         (with-refs (filter (lambda (h) (&gt; (reference-count h) 0)) unmarked)))
+    ;; These have refs but are unreachable - they're in cycles
+    with-refs))
+</pre>
+<p>In archival mode, cycles are preserved (they may be intentional - e.g., bidirectional links). Only explicit evaporation removes them.</p>
+</section>
+<section>
+<h2>Mark and Sweep</h2>
+<h3>Tricolor Abstraction</h3>
+<p>The naive recursive mark algorithm risks stack overflow on deep object graphs. The tricolor abstraction provides:</p>
+<p>1. White: Unvisited, potentially garbage 2. Gray: Visited but references not yet scanned 3. Black: Visited and all references scanned</p>
+<pre class="language-scheme">
+;; Tricolor sets - explicit worklist avoids stack overflow
+(define white-set (make-hash-set))  ; Candidates for collection
+(define gray-set (make-hash-set))   ; Work queue
+(define black-set (make-hash-set))  ; Proven reachable
+
+(define (tricolor-init)
+  "Initialize: all objects are white"
+  (hash-set-clear! white-set)
+  (hash-set-clear! gray-set)
+  (hash-set-clear! black-set)
+  (for-each (lambda (h) (hash-set-add! white-set h))
+            (all-object-hashes)))
+
+(define (shade-gray! hash)
+  "Move object from white to gray (discovered)"
+  (when (hash-set-member? white-set hash)
+    (hash-set-remove! white-set hash)
+    (hash-set-add! gray-set hash)))
+
+(define (shade-black! hash)
+  "Move object from gray to black (fully scanned)"
+  (hash-set-remove! gray-set hash)
+  (hash-set-add! black-set hash))
+</pre>
+<h3>Mark Phase (Worklist Algorithm)</h3>
+<pre class="language-scheme">
+(define (mark-reachable)
+  "Mark all objects reachable from roots using worklist"
+  (tricolor-init)
+
+  ;; Shade roots gray
+  (for-each shade-gray! (hash-set-&gt;list gc-roots))
+  (for-each (lambda (hash)
+              (when (implicit-root? hash)
+                (shade-gray! hash)))
+            (all-object-hashes))
+
+  ;; Process gray objects until none remain
+  (let loop ()
+    (unless (hash-set-empty? gray-set)
+      (let ((current (hash-set-pop! gray-set)))
+        ;; Shade all white references gray
+        (for-each shade-gray! (object-references current))
+        ;; Current is now fully scanned
+        (shade-black! current)
+        (loop))))
+
+  black-set)  ; Return reachable set
+</pre>
+<h3>Incremental Tricolor Marking</h3>
 <p>For large soups, mark in batches to avoid long pauses:</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *mark-batch-size* </span><span class="dv">1000</span>)  <span class="co">; Objects per batch</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">mark-incremental</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Mark in batches, yielding between batches&quot;</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((batch <span class="dv">0</span>))</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> loop ()</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>      (unless (<span class="kw">or</span> (hash-set-empty? gray-set)</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>                  (<span class="op">&gt;=</span> batch *mark-batch-size*))</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">let</span> ((current (hash-set-pop! gray-set)))</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">for-each</span> shade-gray! (object-references current))</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>          (shade-black! current)</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">set!</span> batch (<span class="op">+</span> batch <span class="dv">1</span>))</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>          (loop))))</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Return whether more work remains</span></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">not</span> (hash-set-empty? gray-set))))</span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co">;; Usage: call repeatedly until returns #f</span></span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">incremental-gc-step</span>)</span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">if</span> (mark-incremental)</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>      &#39;more-work</span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">begin</span></span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        (sweep-white)</span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>        &#39;complete)))</span></code></pre></div>
-<h3 id="concurrent-write-barrier">Concurrent Write Barrier</h3>
-<p>For concurrent GC, mutations must maintain the tricolor invariant: a
-black object cannot point to a white object.</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Write barrier for concurrent GC</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">cas-put-concurrent </span>data)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Store with write barrier for concurrent GC&quot;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((hash (cas-put data)))</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; If GC is running and we create new references</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    (when gc-running?</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Shade new object gray (conservative)</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>      (shade-gray! hash)</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Re-shade any black object referencing new object</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">for-each</span> (<span class="kw">lambda</span> (referencer)</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>                  (when (hash-set-member? black-set referencer)</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>                    <span class="co">;; Demote to gray - needs re-scanning</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>                    (hash-set-remove! black-set referencer)</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>                    (hash-set-add! gray-set referencer)))</span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>                (incoming-references hash)))</span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    hash))</span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co">;; Snapshot-at-the-beginning (SATB) barrier</span></span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">reference-update! </span>from-hash old-ref new-ref)</span>
-<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SATB write barrier: preserve old reference for marking&quot;</span></span>
-<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  (when (<span class="kw">and</span> gc-running? old-ref)</span>
-<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Keep old reference alive through this GC cycle</span></span>
-<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    (shade-gray! old-ref))</span>
-<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>  (update-reference! from-hash new-ref))</span></code></pre></div>
-<h3 id="original-mark-preserved-for-reference">Original Mark (Preserved
-for Reference)</h3>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Simple recursive version (for small object graphs only)</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">mark-reachable/simple</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Mark all objects reachable from roots (recursive, can stack overflow)&quot;</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((marked (make-hash-set)))</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    (<span class="ex">define</span><span class="fu"> </span>(<span class="fu">mark </span>hash)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>      (unless (hash-set-member? marked hash)</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        (hash-set-add! marked hash)</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">for-each</span> mark (object-references hash))))</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Mark from explicit roots</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span> mark (hash-set-&gt;list gc-roots))</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Mark from implicit roots</span></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span> (<span class="kw">lambda</span> (hash)</span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>                (when (implicit-root? hash)</span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>                  (mark hash)))</span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>              (all-object-hashes))</span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    marked))</span></code></pre></div>
-<h3 id="sweep-phase">Sweep Phase</h3>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">sweep </span>marked)</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Collect unmarked objects&quot;</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((collected &#39;()))</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">lambda</span> (hash)</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        (unless (hash-set-member? marked hash)</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>          (when (can-collect? hash)</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">set!</span> collected (<span class="kw">cons</span> hash collected))</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>            (collect-object! hash))))</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      (all-object-hashes))</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    collected))</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">collect-object! </span>hash)</span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Remove object from storage&quot;</span></span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((obj (cas-get hash)))</span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    (audit-append</span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>      action: &#39;gc-collect</span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>      hash: hash</span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>      size: (object-size obj)</span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>      age: (object-age obj))</span>
-<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    (cas-delete! hash)))</span></code></pre></div>
-<h3 id="full-gc">Full GC</h3>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-full</span>)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Perform full garbage collection&quot;</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((start (current-time)))</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    (audit-append action: &#39;gc-start type: &#39;full)</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let*</span> ((marked (mark-reachable))</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>           (collected (sweep marked)))</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>      (audit-append</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        action: &#39;gc-complete</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        type: &#39;full</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>        duration: (<span class="op">-</span> (current-time) start)</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>        marked: (hash-set-size marked)</span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>        collected: (<span class="kw">length</span> collected)</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>        bytes-freed: (sum (map object-size collected)))</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>      collected)))</span></code></pre></div>
-<hr />
-<h2 id="incremental-gc">Incremental GC</h2>
-<h3 id="archival-generational-collection">Archival Generational
-Collection</h3>
-<p>Traditional generational GC collects young objects first (they die
-young). Archival GC inverts this: <strong>old objects are
-precious</strong>.</p>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Archival generations - age increases protection</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> generations</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  &#39;((ephemeral <span class="op">.</span> <span class="dv">3600</span>)     <span class="co">; &lt; 1 hour: temporary, collect freely</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    (young <span class="op">.</span> <span class="dv">86400</span>)        <span class="co">; &lt; 1 day: probably transient</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    (maturing <span class="op">.</span> <span class="dv">604800</span>)    <span class="co">; &lt; 1 week: gaining stability</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    (stable <span class="op">.</span> <span class="dv">2592000</span>)     <span class="co">; &lt; 30 days: likely permanent</span></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    (archival <span class="op">.</span> <span class="dv">#f</span>)))      <span class="co">; &gt;= 30 days: NEVER collect automatically</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">object-generation </span>hash)</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((age (object-age hash)))</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">cond</span></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> age <span class="dv">3600</span>) &#39;ephemeral)</span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> age <span class="dv">86400</span>) &#39;young)</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> age <span class="dv">604800</span>) &#39;maturing)</span>
-<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">&lt;</span> age <span class="dv">2592000</span>) &#39;stable)</span>
-<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">else</span> &#39;archival))))</span>
-<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="co">;; Collection eligibility by generation</span></span>
-<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generation-collectible? </span>gen)</span>
-<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">case</span> gen</span>
-<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    ((ephemeral) <span class="dv">#t</span>)       <span class="co">; Freely collectible</span></span>
-<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    ((young) <span class="dv">#t</span>)           <span class="co">; Collectible with grace period</span></span>
-<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    ((maturing) &#39;warning)  <span class="co">; Requires explicit approval</span></span>
-<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    ((stable) &#39;quorum)     <span class="co">; Requires federation quorum</span></span>
-<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>    ((archival) <span class="dv">#f</span>)))      <span class="co">; NEVER collect automatically</span></span>
-<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-generation </span>gen)</span>
-<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Collect only specified generation (archival only via evaporation)&quot;</span></span>
-<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>  (when (<span class="kw">eq?</span> gen &#39;archival)</span>
-<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">error</span> <span class="st">&quot;Archival objects require evaporation certificate&quot;</span>))</span>
-<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((candidates (<span class="kw">filter</span> (<span class="kw">lambda</span> (h)</span>
-<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>                              (<span class="kw">eq?</span> (object-generation h) gen))</span>
-<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>                            (all-object-hashes))))</span>
-<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>    (gc-candidates candidates)))</span></code></pre></div>
-<h3 id="write-barrier">Write Barrier</h3>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Track modified objects for incremental GC</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> modified-set </span>(make-hash-set))</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">cas-put-with-barrier </span>data)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((hash (cas-put data)))</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    (hash-set-add! modified-set hash)</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    hash))</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-incremental</span>)</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Collect recently modified objects if orphaned&quot;</span></span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((candidates (hash-set-&gt;list modified-set)))</span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    (hash-set-clear! modified-set)</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    (gc-candidates candidates)))</span></code></pre></div>
-<h3 id="concurrent-gc">Concurrent GC</h3>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; GC runs concurrently with mutations</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> gc-lock </span>(make-mutex))</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> gc-running? </span><span class="dv">#f</span>)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-concurrent</span>)</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Run GC without stopping the world&quot;</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  (when (mutex-try-lock! gc-lock)</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">set!</span> gc-running? <span class="dv">#t</span>)</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((snapshot (snapshot-roots)))</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Mark phase uses snapshot</span></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((marked (mark-from-snapshot snapshot)))</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">;; Sweep only clearly dead objects</span></span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>        (sweep-conservative marked)))</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">set!</span> gc-running? <span class="dv">#f</span>)</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    (mutex-unlock! gc-lock)))</span></code></pre></div>
-<hr />
-<h2 id="pinning">Pinning</h2>
-<h3 id="pin-management">Pin Management</h3>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> pins </span>(make-hash-table))</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">pin! </span>hash reason <span class="ex">#!key</span> duration)</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Protect object from GC&quot;</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  (hash-table-set! pins hash</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    `((reason <span class="op">.</span> ,reason)</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>      (pinned-at <span class="op">.</span> ,(current-time))</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>      (expires <span class="op">.</span> ,(<span class="kw">and</span> duration (<span class="op">+</span> (current-time) duration)))</span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>      (pinned-by <span class="op">.</span> ,(current-principal))))</span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  (audit-append action: `(pin ,hash ,reason)))</span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">unpin! </span>hash)</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Allow object to be collected&quot;</span></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  (hash-table-delete! pins hash)</span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>  (audit-append action: `(unpin ,hash)))</span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">pinned? </span>hash)</span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((pin (hash-table-ref pins hash <span class="dv">#f</span>)))</span>
-<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> pin</span>
-<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>         (<span class="kw">or</span> (<span class="kw">not</span> (assoc-ref pin &#39;expires))</span>
-<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>             (<span class="op">&gt;</span> (assoc-ref pin &#39;expires) (current-time))))))</span></code></pre></div>
-<h3 id="transitive-pinning">Transitive Pinning</h3>
-<div class="sourceCode" id="cb18"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">pin-tree! </span>root-hash reason)</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Pin object and all objects it references&quot;</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((visited (make-hash-set)))</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    (<span class="ex">define</span><span class="fu"> </span>(<span class="fu">pin-recursive </span>hash)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>      (unless (hash-set-member? visited hash)</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        (hash-set-add! visited hash)</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        (pin! hash reason)</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">for-each</span> pin-recursive (object-references hash))))</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    (pin-recursive root-hash)))</span></code></pre></div>
-<hr />
-<h2 id="tombstones">Tombstones</h2>
-<h3 id="tombstone-handling">Tombstone Handling</h3>
-<div class="sourceCode" id="cb19"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Tombstones are never collected</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">tombstoned? </span>hash)</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((obj (soup-get hash)))</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> obj (<span class="kw">eq?</span> (soup-object-type obj) &#39;tombstone))))</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Tombstones prevent resurrection</span></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">cas-put-checked </span>data)</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((hash (content-hash data)))</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    (when (tombstoned? hash)</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> <span class="st">&quot;Cannot resurrect tombstoned object&quot;</span> hash))</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    (cas-put data)))</span></code></pre></div>
-<h3 id="tombstone-expiry">Tombstone Expiry</h3>
-<div class="sourceCode" id="cb20"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Optional: tombstones can expire</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">tombstone-expired? </span>hash)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((tomb (soup-get hash)))</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> tomb</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>         (assoc-ref (soup-object-metadata tomb) &#39;expires)</span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>         (<span class="op">&lt;</span> (assoc-ref (soup-object-metadata tomb) &#39;expires)</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>            (current-time)))))</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-expired-tombstones</span>)</span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Remove expired tombstones&quot;</span></span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">for-each</span></span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> (hash)</span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>      (when (<span class="kw">and</span> (tombstoned? hash) (tombstone-expired? hash))</span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>        (collect-object! hash)))</span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    (all-object-hashes)))</span></code></pre></div>
-<hr />
-<h2 id="grace-periods">Grace Periods</h2>
-<h3 id="write-grace-period">Write Grace Period</h3>
-<div class="sourceCode" id="cb21"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Recently written objects are protected</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *write-grace-period* </span><span class="dv">86400</span>)  <span class="co">; 24 hours</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">recent-write? </span>hash)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((obj (soup-get hash)))</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> obj</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>         (<span class="op">&lt;</span> (<span class="op">-</span> (current-time) (soup-object-created obj))</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>            *write-grace-period*))))</span></code></pre></div>
-<h3 id="replication-grace-period">Replication Grace Period</h3>
-<div class="sourceCode" id="cb22"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Objects pending replication are protected</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> pending-replication </span>(make-hash-set))</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">mark-pending-replication </span>hash vaults)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  (hash-set-add! pending-replication hash)</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  (audit-append action: `(pending-replication ,hash ,vaults)))</span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">clear-pending-replication </span>hash)</span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  (hash-set-remove! pending-replication hash))</span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">pending-replication? </span>hash)</span>
-<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  (hash-set-member? pending-replication hash))</span></code></pre></div>
-<hr />
-<h2 id="evaporation-archival-collection">Evaporation (Archival
-Collection)</h2>
-<p>Objects don’t get “garbage collected” in an archive. They
-<strong>evaporate</strong> - and only with explicit, signed, multi-party
-consent.</p>
-<h3 id="evaporation-certificate">Evaporation Certificate</h3>
-<div class="sourceCode" id="cb23"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; An evaporation certificate authorizes deletion</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>(<span class="kw">define-record-type</span> evaporation-certificate</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  (make-evaporation-cert hash reason signers timestamp)</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  evaporation-cert?</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  (hash evap-hash)           <span class="co">; Object to evaporate</span></span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  (reason evap-reason)       <span class="co">; Why (legal, storage, corruption, etc.)</span></span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  (signers evap-signers)     <span class="co">; List of (principal . signature)</span></span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  (timestamp evap-timestamp))</span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="co">;; Reasons for evaporation (enumerated, auditable)</span></span>
-<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *evaporation-reasons*</span></span>
-<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  &#39;(legal-requirement        <span class="co">; Court order, DMCA, etc.</span></span>
-<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    storage-emergency        <span class="co">; Vault at capacity</span></span>
-<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    data-corruption          <span class="co">; Object verified corrupt</span></span>
-<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>    owner-request            <span class="co">; Content owner requests removal</span></span>
-<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    federation-consensus))   <span class="co">; Quorum agrees to remove</span></span>
-<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">create-evaporation-cert </span>hash reason)</span>
-<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Create unsigned evaporation certificate&quot;</span></span>
-<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>  (make-evaporation-cert</span>
-<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>    hash</span>
-<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>    reason</span>
-<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>    &#39;()  <span class="co">; No signatures yet</span></span>
-<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>    (current-time)))</span>
-<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">sign-evaporation-cert </span>cert private-key)</span>
-<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Add signature to evaporation certificate&quot;</span></span>
-<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((principal (key-&gt;principal private-key))</span>
-<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>         (sig (sign-data (evap-hash cert) private-key)))</span>
-<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>    (make-evaporation-cert</span>
-<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>      (evap-hash cert)</span>
-<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>      (evap-reason cert)</span>
-<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">cons</span> (<span class="kw">cons</span> principal sig) (evap-signers cert))</span>
-<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a>      (evap-timestamp cert))))</span></code></pre></div>
-<h3 id="quorum-requirement">Quorum Requirement</h3>
-<div class="sourceCode" id="cb24"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Evaporation requires M-of-N signatures from federation</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *evaporation-quorum*</span></span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  &#39;((ephemeral <span class="op">.</span> <span class="dv">1</span>)     <span class="co">; Single vault can evaporate</span></span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    (young <span class="op">.</span> <span class="dv">1</span>)         <span class="co">; Single vault can evaporate</span></span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    (maturing <span class="op">.</span> <span class="dv">2</span>)      <span class="co">; Two vaults must agree</span></span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    (stable <span class="op">.</span> <span class="dv">3</span>)        <span class="co">; Three vaults must agree</span></span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    (archival <span class="op">.</span> <span class="dv">#f</span>)))   <span class="co">; Requires special process (see below)</span></span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">evaporation-quorum-met? </span>cert generation)</span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((required (assoc-ref *evaporation-quorum* generation)))</span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">cond</span></span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>      ((<span class="kw">not</span> required) <span class="dv">#f</span>)  <span class="co">; Archival: never automatic</span></span>
-<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">else</span> (<span class="op">&gt;=</span> (<span class="kw">length</span> (evap-signers cert)) required)))))</span>
-<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">evaporate! </span>hash cert)</span>
-<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Evaporate object with valid certificate&quot;</span></span>
-<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((gen (object-generation hash)))</span>
-<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>    (unless (evaporation-quorum-met? cert gen)</span>
-<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> <span class="st">&quot;Evaporation quorum not met&quot;</span></span>
-<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>             `(generation ,gen required ,(assoc-ref *evaporation-quorum* gen))))</span>
-<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Archival objects require special handling</span></span>
-<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>    (when (<span class="kw">eq?</span> gen &#39;archival)</span>
-<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a>      (unless (archival-evaporation-authorized? cert)</span>
-<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> <span class="st">&quot;Archival evaporation requires governance approval&quot;</span>)))</span>
-<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Log everything before deletion</span></span>
-<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>    (audit-append</span>
-<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>      action: &#39;evaporate</span>
-<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a>      hash: hash</span>
-<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a>      generation: gen</span>
-<span id="cb24-32"><a href="#cb24-32" aria-hidden="true" tabindex="-1"></a>      certificate: cert</span>
-<span id="cb24-33"><a href="#cb24-33" aria-hidden="true" tabindex="-1"></a>      reason: (evap-reason cert)</span>
-<span id="cb24-34"><a href="#cb24-34" aria-hidden="true" tabindex="-1"></a>      signers: (map <span class="kw">car</span> (evap-signers cert)))</span>
-<span id="cb24-35"><a href="#cb24-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-36"><a href="#cb24-36" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Finally, delete</span></span>
-<span id="cb24-37"><a href="#cb24-37" aria-hidden="true" tabindex="-1"></a>    (cas-delete! hash)))</span></code></pre></div>
-<h3 id="archival-object-evaporation">Archival Object Evaporation</h3>
-<p>Archival objects (&gt;30 days) receive maximum protection. They can
-only evaporate via:</p>
-<ol type="1">
-<li><strong>Legal requirement</strong> - With proof of legal order</li>
-<li><strong>Data corruption</strong> - With cryptographic proof of
-corruption</li>
-<li><strong>Governance vote</strong> - Per RFC-036 quorum protocol</li>
-</ol>
-<div class="sourceCode" id="cb25"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">archival-evaporation-authorized? </span>cert)</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Check if archival evaporation is properly authorized&quot;</span></span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">case</span> (evap-reason cert)</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    ((legal-requirement)</span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Must include legal order reference</span></span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">and</span> (evap-legal-order cert)</span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>          (verify-legal-order (evap-legal-order cert))))</span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>    ((data-corruption)</span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Must include corruption proof</span></span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">and</span> (evap-corruption-proof cert)</span>
-<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>          (verify-corruption (evap-hash cert) (evap-corruption-proof cert))))</span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>    ((federation-consensus)</span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Must have governance quorum (RFC-036)</span></span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>     (governance-quorum-met? cert))</span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">else</span> <span class="dv">#f</span>)))  <span class="co">; No other reasons valid for archival</span></span></code></pre></div>
-<hr />
-<h2 id="distributed-gc">Distributed GC</h2>
-<h3 id="coordinated-collection">Coordinated Collection</h3>
-<div class="sourceCode" id="cb26"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Multi-vault GC requires coordination</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">distributed-gc </span>vaults)</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Coordinate GC across vault federation&quot;</span></span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; Phase 1: Gather root sets</span></span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((root-sets (map vault-roots vaults)))</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Phase 2: Compute global reachability</span></span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">let</span> ((global-marked (union-all root-sets)))</span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Phase 3: Propose evaporation (no unilateral deletion)</span></span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">for-each</span> (<span class="kw">lambda</span> (vault)</span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>                  (vault-propose-evaporation vault global-marked))</span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>                vaults))))</span></code></pre></div>
-<h3 id="remote-reference-tracking">Remote Reference Tracking</h3>
-<div class="sourceCode" id="cb27"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Track references from remote vaults</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> remote-refs </span>(make-hash-table))</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">add-remote-reference </span>vault-id hash)</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((refs (hash-table-ref remote-refs hash &#39;())))</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    (hash-table-set! remote-refs hash (<span class="kw">cons</span> vault-id refs))))</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">remove-remote-reference </span>vault-id hash)</span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((refs (hash-table-ref remote-refs hash &#39;())))</span>
-<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>    (hash-table-set! remote-refs hash (delete vault-id refs))))</span>
-<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">has-remote-references? </span>hash)</span>
-<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">not</span> (<span class="kw">null?</span> (hash-table-ref remote-refs hash &#39;()))))</span></code></pre></div>
-<h3 id="lease-based-collection">Lease-Based Collection</h3>
-<div class="sourceCode" id="cb28"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Remote vaults lease objects</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> leases </span>(make-hash-table))</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">grant-lease </span>hash vault-id duration)</span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((expires (<span class="op">+</span> (current-time) duration)))</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    (hash-table-set! leases hash</span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">cons</span> (<span class="kw">cons</span> vault-id expires)</span>
-<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>            (hash-table-ref leases hash &#39;())))))</span>
-<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">lease-active? </span>hash)</span>
-<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((hash-leases (hash-table-ref leases hash &#39;())))</span>
-<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>    (any (<span class="kw">lambda</span> (lease)</span>
-<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>           (<span class="op">&gt;</span> (<span class="kw">cdr</span> lease) (current-time)))</span>
-<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>         hash-leases)))</span></code></pre></div>
-<hr />
-<h2 id="gc-scheduling">GC Scheduling</h2>
-<h3 id="archival-defaults">Archival Defaults</h3>
-<p>The soup defaults to <strong>never collect</strong>. GC only runs
-when explicitly enabled and only considers ephemeral/young generations
-automatically.</p>
-<div class="sourceCode" id="cb29"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Archival GC mode</span></span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *gc-mode* </span>&#39;archival)  <span class="co">; &#39;archival, &#39;conservative, or &#39;aggressive</span></span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-enabled?</span>)</span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Check if automatic GC is enabled&quot;</span></span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">not</span> (<span class="kw">eq?</span> *gc-mode* &#39;archival)))</span></code></pre></div>
-<h3 id="triggers">Triggers</h3>
-<div class="sourceCode" id="cb30"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; GC triggered only under pressure, and only for young generations</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">should-gc?</span>)</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">and</span> (gc-enabled?)</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">or</span> (<span class="op">&gt;</span> (storage-usage-percent) <span class="dv">95</span>)    <span class="co">; Emergency only</span></span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>           (<span class="op">&gt;</span> (ephemeral-orphan-count) <span class="dv">1000</span>)))) <span class="co">; Too many ephemeral orphans</span></span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-schedule</span>)</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Run appropriate GC based on conditions and mode&quot;</span></span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">case</span> *gc-mode*</span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>    ((archival)</span>
-<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Never automatic - only explicit evaporation</span></span>
-<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>     (audit-append action: &#39;gc-skipped reason: &#39;archival-mode))</span>
-<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>    ((conservative)</span>
-<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Only ephemeral objects</span></span>
-<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">cond</span></span>
-<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>       ((<span class="op">&gt;</span> (storage-usage-percent) <span class="dv">99</span>)</span>
-<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>        (gc-generation &#39;ephemeral)</span>
-<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>        (gc-generation &#39;young))  <span class="co">; Emergency: young too</span></span>
-<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>       ((<span class="op">&gt;</span> (storage-usage-percent) <span class="dv">95</span>)</span>
-<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>        (gc-generation &#39;ephemeral))</span>
-<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">else</span></span>
-<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>        (audit-append action: &#39;gc-skipped reason: &#39;no-pressure))))</span>
-<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>    ((aggressive)</span>
-<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a>     <span class="co">;; Traditional GC (NOT RECOMMENDED for archives)</span></span>
-<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>     (<span class="kw">cond</span></span>
-<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>       ((<span class="op">&gt;</span> (storage-usage-percent) <span class="dv">95</span>)</span>
-<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a>        (gc-full))</span>
-<span id="cb30-30"><a href="#cb30-30" aria-hidden="true" tabindex="-1"></a>       ((<span class="op">&gt;</span> (storage-usage-percent) <span class="dv">80</span>)</span>
-<span id="cb30-31"><a href="#cb30-31" aria-hidden="true" tabindex="-1"></a>        (gc-generation &#39;young))</span>
-<span id="cb30-32"><a href="#cb30-32" aria-hidden="true" tabindex="-1"></a>       (<span class="kw">else</span></span>
-<span id="cb30-33"><a href="#cb30-33" aria-hidden="true" tabindex="-1"></a>        (gc-incremental))))))</span></code></pre></div>
-<h3 id="background-gc">Background GC</h3>
-<div class="sourceCode" id="cb31"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> gc-thread </span><span class="dv">#f</span>)</span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">start-gc-daemon </span>interval)</span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Start background GC daemon (archival mode: monitoring only)&quot;</span></span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">set!</span> gc-thread</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>    (thread-start!</span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>      (make-thread</span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">lambda</span> ()</span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">let</span> loop ()</span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>            (thread-sleep! interval)</span>
-<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>            <span class="co">;; Always report status</span></span>
-<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>            (audit-append</span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>              action: &#39;gc-status</span>
-<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>              mode: *gc-mode*</span>
-<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>              storage-percent: (storage-usage-percent)</span>
-<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>              ephemeral-orphans: (ephemeral-orphan-count)</span>
-<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>              should-gc: (should-gc?))</span>
-<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a>            <span class="co">;; Only act if enabled</span></span>
-<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>            (when (should-gc?)</span>
-<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>              (gc-schedule))</span>
-<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a>            (loop)))))))</span></code></pre></div>
-<hr />
-<h2 id="safety-mechanisms">Safety Mechanisms</h2>
-<h3 id="dry-run">Dry Run</h3>
-<div class="sourceCode" id="cb32"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-dry-run</span>)</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Report what would be collected without collecting&quot;</span></span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((marked (mark-reachable))</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>         (would-collect (<span class="kw">filter</span> (<span class="kw">lambda</span> (h)</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>                                  (<span class="kw">not</span> (hash-set-member? marked h)))</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>                                (all-object-hashes))))</span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    `((would-collect <span class="op">.</span> ,(<span class="kw">length</span> would-collect))</span>
-<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>      (bytes <span class="op">.</span> ,(sum (map object-size would-collect)))</span>
-<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>      (samples <span class="op">.</span> ,(take would-collect <span class="dv">10</span>)))))</span></code></pre></div>
-<h3 id="collection-log">Collection Log</h3>
-<div class="sourceCode" id="cb33"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Every collection is logged with recovery info</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">collect-with-log! </span>hash)</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((obj (cas-get hash)))</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Log enough to reconstruct if needed</span></span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    (audit-append</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>      action: &#39;gc-collect</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>      hash: hash</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>      size: (object-size obj)</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>      type: (soup-object-type obj)</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>      references: (object-references hash)</span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>      metadata: (soup-object-metadata obj))</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    (cas-delete! hash)))</span></code></pre></div>
-<h3 id="recovery">Recovery</h3>
-<div class="sourceCode" id="cb34"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Recover recently collected object from audit log</span></span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-recover </span>hash)</span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Attempt to recover collected object&quot;</span></span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((entry (<span class="kw">find</span> (<span class="kw">lambda</span> (e)</span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>                       (<span class="kw">and</span> (<span class="kw">eq?</span> (audit-action e) &#39;gc-collect)</span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>                            (<span class="kw">equal?</span> (audit-hash e) hash)))</span>
-<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>                     (recent-audit-entries))))</span>
-<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> entry</span>
-<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> <span class="st">&quot;Object collected, metadata preserved in audit&quot;</span></span>
-<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>               (audit-metadata entry))</span>
-<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">error</span> <span class="st">&quot;Object not found in recent collections&quot;</span>))))</span></code></pre></div>
-<hr />
-<h2 id="metrics">Metrics</h2>
-<h3 id="gc-statistics">GC Statistics</h3>
-<div class="sourceCode" id="cb35"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> gc-stats</span></span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  `((collections <span class="op">.</span> <span class="dv">0</span>)</span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    (bytes-freed <span class="op">.</span> <span class="dv">0</span>)</span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    (objects-freed <span class="op">.</span> <span class="dv">0</span>)</span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    (total-time <span class="op">.</span> <span class="dv">0</span>)</span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>    (last-gc <span class="op">.</span> <span class="dv">#f</span>)))</span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">update-gc-stats </span>collected duration)</span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">set!</span> gc-stats</span>
-<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>    `((collections <span class="op">.</span> ,(<span class="op">+</span> <span class="dv">1</span> (assoc-ref gc-stats &#39;collections)))</span>
-<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>      (bytes-freed <span class="op">.</span> ,(<span class="op">+</span> (sum (map object-size collected))</span>
-<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>                         (assoc-ref gc-stats &#39;bytes-freed)))</span>
-<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>      (objects-freed <span class="op">.</span> ,(<span class="op">+</span> (<span class="kw">length</span> collected)</span>
-<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>                           (assoc-ref gc-stats &#39;objects-freed)))</span>
-<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>      (total-time <span class="op">.</span> ,(<span class="op">+</span> duration (assoc-ref gc-stats &#39;total-time)))</span>
-<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>      (last-gc <span class="op">.</span> ,(current-time)))))</span></code></pre></div>
-<h3 id="monitoring">Monitoring</h3>
-<div class="sourceCode" id="cb36"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Expose GC metrics</span></span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">gc-metrics</span>)</span>
-<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  `((storage-used <span class="op">.</span> ,(storage-used))</span>
-<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    (storage-total <span class="op">.</span> ,(storage-total))</span>
-<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>    (object-count <span class="op">.</span> ,(object-count))</span>
-<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    (orphan-estimate <span class="op">.</span> ,(orphan-estimate))</span>
-<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    (pinned-count <span class="op">.</span> ,(hash-table-size pins))</span>
-<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    (gc-stats <span class="op">.</span> ,gc-stats)))</span></code></pre></div>
-<hr />
-<h2 id="security-considerations">Security Considerations</h2>
-<h3 id="gc-as-side-channel">GC as Side Channel</h3>
-<div class="sourceCode" id="cb37"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; GC timing can leak information about object references</span></span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Use constant-time operations where possible</span></span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">constant-time-mark </span>hash)</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((refs (object-references hash)))</span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Always process same number of refs</span></span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">for-each</span> mark (pad-list refs *max-refs*))))</span></code></pre></div>
-<h3 id="denial-of-service">Denial of Service</h3>
-<div class="sourceCode" id="cb38"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Prevent GC starvation attacks</span></span>
-<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> *max-pins-per-principal* </span><span class="dv">10000</span>)</span>
-<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">pin-with-limit! </span>hash reason)</span>
-<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((count (principal-pin-count (current-principal))))</span>
-<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>    (when (<span class="op">&gt;</span> count *max-pins-per-principal*)</span>
-<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> <span class="st">&quot;Pin limit exceeded&quot;</span>))</span>
-<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>    (pin! hash reason)))</span></code></pre></div>
-<hr />
-<h2 id="invariants">Invariants</h2>
-<pre><code>G1. Preservation default
+<pre class="language-scheme">
+(define mark-batch-size 1000)  ; Objects per batch
+
+(define (mark-incremental)
+  "Mark in batches, yielding between batches"
+  (let ((batch 0))
+    (let loop ()
+      (unless (or (hash-set-empty? gray-set)
+                  (&gt;= batch mark-batch-size))
+        (let ((current (hash-set-pop! gray-set)))
+          (for-each shade-gray! (object-references current))
+          (shade-black! current)
+          (set! batch (+ batch 1))
+          (loop))))
+    ;; Return whether more work remains
+    (not (hash-set-empty? gray-set))))
+
+;; Usage: call repeatedly until returns #f
+(define (incremental-gc-step)
+  (if (mark-incremental)
+      'more-work
+      (begin
+        (sweep-white)
+        'complete)))
+</pre>
+<h3>Concurrent Write Barrier</h3>
+<p>For concurrent GC, mutations must maintain the tricolor invariant: a black object cannot point to a white object.</p>
+<pre class="language-scheme">
+;; Write barrier for concurrent GC
+(define (cas-put-concurrent data)
+  "Store with write barrier for concurrent GC"
+  (let ((hash (cas-put data)))
+    ;; If GC is running and we create new references
+    (when gc-running?
+      ;; Shade new object gray (conservative)
+      (shade-gray! hash)
+      ;; Re-shade any black object referencing new object
+      (for-each (lambda (referencer)
+                  (when (hash-set-member? black-set referencer)
+                    ;; Demote to gray - needs re-scanning
+                    (hash-set-remove! black-set referencer)
+                    (hash-set-add! gray-set referencer)))
+                (incoming-references hash)))
+    hash))
+
+;; Snapshot-at-the-beginning (SATB) barrier
+(define (reference-update! from-hash old-ref new-ref)
+  "SATB write barrier: preserve old reference for marking"
+  (when (and gc-running? old-ref)
+    ;; Keep old reference alive through this GC cycle
+    (shade-gray! old-ref))
+  (update-reference! from-hash new-ref))
+</pre>
+<h3>Original Mark (Preserved for Reference)</h3>
+<pre class="language-scheme">
+;; Simple recursive version (for small object graphs only)
+(define (mark-reachable/simple)
+  "Mark all objects reachable from roots (recursive, can stack overflow)"
+  (let ((marked (make-hash-set)))
+    (define (mark hash)
+      (unless (hash-set-member? marked hash)
+        (hash-set-add! marked hash)
+        (for-each mark (object-references hash))))
+
+    ;; Mark from explicit roots
+    (for-each mark (hash-set-&gt;list gc-roots))
+
+    ;; Mark from implicit roots
+    (for-each (lambda (hash)
+                (when (implicit-root? hash)
+                  (mark hash)))
+              (all-object-hashes))
+
+    marked))
+</pre>
+<h3>Sweep Phase</h3>
+<pre class="language-scheme">
+(define (sweep marked)
+  "Collect unmarked objects"
+  (let ((collected '()))
+    (for-each
+      (lambda (hash)
+        (unless (hash-set-member? marked hash)
+          (when (can-collect? hash)
+            (set! collected (cons hash collected))
+            (collect-object! hash))))
+      (all-object-hashes))
+    collected))
+
+(define (collect-object! hash)
+  "Remove object from storage"
+  (let ((obj (cas-get hash)))
+    (audit-append
+      action: 'gc-collect
+      hash: hash
+      size: (object-size obj)
+      age: (object-age obj))
+    (cas-delete! hash)))
+</pre>
+<h3>Full GC</h3>
+<pre class="language-scheme">
+(define (gc-full)
+  "Perform full garbage collection"
+  (let ((start (current-time)))
+    (audit-append action: 'gc-start type: 'full)
+
+    (let* ((marked (mark-reachable))
+           (collected (sweep marked)))
+
+      (audit-append
+        action: 'gc-complete
+        type: 'full
+        duration: (- (current-time) start)
+        marked: (hash-set-size marked)
+        collected: (length collected)
+        bytes-freed: (sum (map object-size collected)))
+
+      collected)))
+</pre>
+</section>
+<section>
+<h2>Incremental GC</h2>
+<h3>Archival Generational Collection</h3>
+<p>Traditional generational GC collects young objects first (they die young). Archival GC inverts this: old objects are precious.</p>
+<pre class="language-scheme">
+;; Archival generations - age increases protection
+(define generations
+  '((ephemeral . 3600)     ; &lt; 1 hour: temporary, collect freely
+    (young . 86400)        ; &lt; 1 day: probably transient
+    (maturing . 604800)    ; &lt; 1 week: gaining stability
+    (stable . 2592000)     ; &lt; 30 days: likely permanent
+    (archival . #f)))      ; &gt;= 30 days: NEVER collect automatically
+
+(define (object-generation hash)
+  (let ((age (object-age hash)))
+    (cond
+      ((&lt; age 3600) 'ephemeral)
+      ((&lt; age 86400) 'young)
+      ((&lt; age 604800) 'maturing)
+      ((&lt; age 2592000) 'stable)
+      (else 'archival))))
+
+;; Collection eligibility by generation
+(define (generation-collectible? gen)
+  (case gen
+    ((ephemeral) #t)       ; Freely collectible
+    ((young) #t)           ; Collectible with grace period
+    ((maturing) 'warning)  ; Requires explicit approval
+    ((stable) 'quorum)     ; Requires federation quorum
+    ((archival) #f)))      ; NEVER collect automatically
+
+(define (gc-generation gen)
+  "Collect only specified generation (archival only via evaporation)"
+  (when (eq? gen 'archival)
+    (error "Archival objects require evaporation certificate"))
+  (let ((candidates (filter (lambda (h)
+                              (eq? (object-generation h) gen))
+                            (all-object-hashes))))
+    (gc-candidates candidates)))
+</pre>
+<h3>Write Barrier</h3>
+<pre class="language-scheme">
+;; Track modified objects for incremental GC
+(define modified-set (make-hash-set))
+
+(define (cas-put-with-barrier data)
+  (let ((hash (cas-put data)))
+    (hash-set-add! modified-set hash)
+    hash))
+
+(define (gc-incremental)
+  "Collect recently modified objects if orphaned"
+  (let ((candidates (hash-set-&gt;list modified-set)))
+    (hash-set-clear! modified-set)
+    (gc-candidates candidates)))
+</pre>
+<h3>Concurrent GC</h3>
+<pre class="language-scheme">
+;; GC runs concurrently with mutations
+(define gc-lock (make-mutex))
+(define gc-running? #f)
+
+(define (gc-concurrent)
+  "Run GC without stopping the world"
+  (when (mutex-try-lock! gc-lock)
+    (set! gc-running? #t)
+    (let ((snapshot (snapshot-roots)))
+      ;; Mark phase uses snapshot
+      (let ((marked (mark-from-snapshot snapshot)))
+        ;; Sweep only clearly dead objects
+        (sweep-conservative marked)))
+    (set! gc-running? #f)
+    (mutex-unlock! gc-lock)))
+</pre>
+</section>
+<section>
+<h2>Pinning</h2>
+<h3>Pin Management</h3>
+<pre class="language-scheme">
+(define pins (make-hash-table))
+
+(define (pin! hash reason #!key duration)
+  "Protect object from GC"
+  (hash-table-set! pins hash
+    ((reason . ,reason)
+      (pinned-at . ,(current-time))
+      (expires . ,(and duration (+ (current-time) duration)))
+      (pinned-by . ,(current-principal))))
+  (audit-append action: (pin ,hash ,reason)))
+
+(define (unpin! hash)
+  "Allow object to be collected"
+  (hash-table-delete! pins hash)
+  (audit-append action: `(unpin ,hash)))
+
+(define (pinned? hash)
+  (let ((pin (hash-table-ref pins hash #f)))
+    (and pin
+         (or (not (assoc-ref pin 'expires))
+             (&gt; (assoc-ref pin 'expires) (current-time))))))
+</pre>
+<h3>Transitive Pinning</h3>
+<pre class="language-scheme">
+(define (pin-tree! root-hash reason)
+  "Pin object and all objects it references"
+  (let ((visited (make-hash-set)))
+    (define (pin-recursive hash)
+      (unless (hash-set-member? visited hash)
+        (hash-set-add! visited hash)
+        (pin! hash reason)
+        (for-each pin-recursive (object-references hash))))
+    (pin-recursive root-hash)))
+</pre>
+</section>
+<section>
+<h2>Tombstones</h2>
+<h3>Tombstone Handling</h3>
+<pre class="language-scheme">
+;; Tombstones are never collected
+(define (tombstoned? hash)
+  (let ((obj (soup-get hash)))
+    (and obj (eq? (soup-object-type obj) 'tombstone))))
+
+;; Tombstones prevent resurrection
+(define (cas-put-checked data)
+  (let ((hash (content-hash data)))
+    (when (tombstoned? hash)
+      (error "Cannot resurrect tombstoned object" hash))
+    (cas-put data)))
+</pre>
+<h3>Tombstone Expiry</h3>
+<pre class="language-scheme">
+;; Optional: tombstones can expire
+(define (tombstone-expired? hash)
+  (let ((tomb (soup-get hash)))
+    (and tomb
+         (assoc-ref (soup-object-metadata tomb) 'expires)
+         (&lt; (assoc-ref (soup-object-metadata tomb) 'expires)
+            (current-time)))))
+
+(define (gc-expired-tombstones)
+  "Remove expired tombstones"
+  (for-each
+    (lambda (hash)
+      (when (and (tombstoned? hash) (tombstone-expired? hash))
+        (collect-object! hash)))
+    (all-object-hashes)))
+</pre>
+</section>
+<section>
+<h2>Grace Periods</h2>
+<h3>Write Grace Period</h3>
+<pre class="language-scheme">
+;; Recently written objects are protected
+(define write-grace-period 86400)  ; 24 hours
+
+(define (recent-write? hash)
+  (let ((obj (soup-get hash)))
+    (and obj
+         (&lt; (- (current-time) (soup-object-created obj))
+            write-grace-period))))
+</pre>
+<h3>Replication Grace Period</h3>
+<pre class="language-scheme">
+;; Objects pending replication are protected
+(define pending-replication (make-hash-set))
+
+(define (mark-pending-replication hash vaults)
+  (hash-set-add! pending-replication hash)
+  (audit-append action: `(pending-replication ,hash ,vaults)))
+
+(define (clear-pending-replication hash)
+  (hash-set-remove! pending-replication hash))
+
+(define (pending-replication? hash)
+  (hash-set-member? pending-replication hash))
+</pre>
+</section>
+<section>
+<h2>Evaporation (Archival Collection)</h2>
+<p>Objects don't get "garbage collected" in an archive. They evaporate - and only with explicit, signed, multi-party consent.</p>
+<h3>Evaporation Certificate</h3>
+<pre class="language-scheme">
+;; An evaporation certificate authorizes deletion
+(define-record-type evaporation-certificate
+  (make-evaporation-cert hash reason signers timestamp)
+  evaporation-cert?
+  (hash evap-hash)           ; Object to evaporate
+  (reason evap-reason)       ; Why (legal, storage, corruption, etc.)
+  (signers evap-signers)     ; List of (principal . signature)
+  (timestamp evap-timestamp))
+
+;; Reasons for evaporation (enumerated, auditable)
+(define evaporation-reasons
+  '(legal-requirement        ; Court order, DMCA, etc.
+    storage-emergency        ; Vault at capacity
+    data-corruption          ; Object verified corrupt
+    owner-request            ; Content owner requests removal
+    federation-consensus))   ; Quorum agrees to remove
+
+(define (create-evaporation-cert hash reason)
+  "Create unsigned evaporation certificate"
+  (make-evaporation-cert
+    hash
+    reason
+    '()  ; No signatures yet
+    (current-time)))
+
+(define (sign-evaporation-cert cert private-key)
+  "Add signature to evaporation certificate"
+  (let* ((principal (key-&gt;principal private-key))
+         (sig (sign-data (evap-hash cert) private-key)))
+    (make-evaporation-cert
+      (evap-hash cert)
+      (evap-reason cert)
+      (cons (cons principal sig) (evap-signers cert))
+      (evap-timestamp cert))))
+</pre>
+<h3>Quorum Requirement</h3>
+<pre class="language-scheme">
+;; Evaporation requires M-of-N signatures from federation
+(define evaporation-quorum
+  '((ephemeral . 1)     ; Single vault can evaporate
+    (young . 1)         ; Single vault can evaporate
+    (maturing . 2)      ; Two vaults must agree
+    (stable . 3)        ; Three vaults must agree
+    (archival . #f)))   ; Requires special process (see below)
+
+(define (evaporation-quorum-met? cert generation)
+  (let ((required (assoc-ref evaporation-quorum generation)))
+    (cond
+      ((not required) #f)  ; Archival: never automatic
+      (else (&gt;= (length (evap-signers cert)) required)))))
+
+(define (evaporate! hash cert)
+  "Evaporate object with valid certificate"
+  (let ((gen (object-generation hash)))
+    (unless (evaporation-quorum-met? cert gen)
+      (error "Evaporation quorum not met"
+             `(generation ,gen required ,(assoc-ref evaporation-quorum gen))))
+
+    ;; Archival objects require special handling
+    (when (eq? gen 'archival)
+      (unless (archival-evaporation-authorized? cert)
+        (error "Archival evaporation requires governance approval")))
+
+    ;; Log everything before deletion
+    (audit-append
+      action: 'evaporate
+      hash: hash
+      generation: gen
+      certificate: cert
+      reason: (evap-reason cert)
+      signers: (map car (evap-signers cert)))
+
+    ;; Finally, delete
+    (cas-delete! hash)))
+</pre>
+<h3>Archival Object Evaporation</h3>
+<p>Archival objects (&gt;30 days) receive maximum protection. They can only evaporate via:</p>
+<p>1. Legal requirement - With proof of legal order 2. Data corruption - With cryptographic proof of corruption 3. Governance vote - Per RFC-036 quorum protocol</p>
+<pre class="language-scheme">
+(define (archival-evaporation-authorized? cert)
+  "Check if archival evaporation is properly authorized"
+  (case (evap-reason cert)
+    ((legal-requirement)
+     ;; Must include legal order reference
+     (and (evap-legal-order cert)
+          (verify-legal-order (evap-legal-order cert))))
+
+    ((data-corruption)
+     ;; Must include corruption proof
+     (and (evap-corruption-proof cert)
+          (verify-corruption (evap-hash cert) (evap-corruption-proof cert))))
+
+    ((federation-consensus)
+     ;; Must have governance quorum (RFC-036)
+     (governance-quorum-met? cert))
+
+    (else #f)))  ; No other reasons valid for archival
+</pre>
+</section>
+<section>
+<h2>Distributed GC</h2>
+<h3>Coordinated Collection</h3>
+<pre class="language-scheme">
+;; Multi-vault GC requires coordination
+(define (distributed-gc vaults)
+  "Coordinate GC across vault federation"
+  ;; Phase 1: Gather root sets
+  (let ((root-sets (map vault-roots vaults)))
+    ;; Phase 2: Compute global reachability
+    (let ((global-marked (union-all root-sets)))
+      ;; Phase 3: Propose evaporation (no unilateral deletion)
+      (for-each (lambda (vault)
+                  (vault-propose-evaporation vault global-marked))
+                vaults))))
+</pre>
+<h3>Remote Reference Tracking</h3>
+<pre class="language-scheme">
+;; Track references from remote vaults
+(define remote-refs (make-hash-table))
+
+(define (add-remote-reference vault-id hash)
+  (let ((refs (hash-table-ref remote-refs hash '())))
+    (hash-table-set! remote-refs hash (cons vault-id refs))))
+
+(define (remove-remote-reference vault-id hash)
+  (let ((refs (hash-table-ref remote-refs hash '())))
+    (hash-table-set! remote-refs hash (delete vault-id refs))))
+
+(define (has-remote-references? hash)
+  (not (null? (hash-table-ref remote-refs hash '()))))
+</pre>
+<h3>Lease-Based Collection</h3>
+<pre class="language-scheme">
+;; Remote vaults lease objects
+(define leases (make-hash-table))
+
+(define (grant-lease hash vault-id duration)
+  (let ((expires (+ (current-time) duration)))
+    (hash-table-set! leases hash
+      (cons (cons vault-id expires)
+            (hash-table-ref leases hash '())))))
+
+(define (lease-active? hash)
+  (let ((hash-leases (hash-table-ref leases hash '())))
+    (any (lambda (lease)
+           (&gt; (cdr lease) (current-time)))
+         hash-leases)))
+</pre>
+</section>
+<section>
+<h2>GC Scheduling</h2>
+<h3>Archival Defaults</h3>
+<p>The soup defaults to never collect. GC only runs when explicitly enabled and only considers ephemeral/young generations automatically.</p>
+<pre class="language-scheme">
+;; Archival GC mode
+(define gc-mode 'archival)  ; 'archival, 'conservative, or 'aggressive
+
+(define (gc-enabled?)
+  "Check if automatic GC is enabled"
+  (not (eq? gc-mode 'archival)))
+</pre>
+<h3>Triggers</h3>
+<pre class="language-scheme">
+;; GC triggered only under pressure, and only for young generations
+(define (should-gc?)
+  (and (gc-enabled?)
+       (or (&gt; (storage-usage-percent) 95)    ; Emergency only
+           (&gt; (ephemeral-orphan-count) 1000)))) ; Too many ephemeral orphans
+
+(define (gc-schedule)
+  "Run appropriate GC based on conditions and mode"
+  (case gc-mode
+    ((archival)
+     ;; Never automatic - only explicit evaporation
+     (audit-append action: 'gc-skipped reason: 'archival-mode))
+
+    ((conservative)
+     ;; Only ephemeral objects
+     (cond
+       ((&gt; (storage-usage-percent) 99)
+        (gc-generation 'ephemeral)
+        (gc-generation 'young))  ; Emergency: young too
+       ((&gt; (storage-usage-percent) 95)
+        (gc-generation 'ephemeral))
+       (else
+        (audit-append action: 'gc-skipped reason: 'no-pressure))))
+
+    ((aggressive)
+     ;; Traditional GC (NOT RECOMMENDED for archives)
+     (cond
+       ((&gt; (storage-usage-percent) 95)
+        (gc-full))
+       ((&gt; (storage-usage-percent) 80)
+        (gc-generation 'young))
+       (else
+        (gc-incremental))))))
+</pre>
+<h3>Background GC</h3>
+<pre class="language-scheme">
+(define gc-thread #f)
+
+(define (start-gc-daemon interval)
+  "Start background GC daemon (archival mode: monitoring only)"
+  (set! gc-thread
+    (thread-start!
+      (make-thread
+        (lambda ()
+          (let loop ()
+            (thread-sleep! interval)
+            ;; Always report status
+            (audit-append
+              action: 'gc-status
+              mode: gc-mode
+              storage-percent: (storage-usage-percent)
+              ephemeral-orphans: (ephemeral-orphan-count)
+              should-gc: (should-gc?))
+            ;; Only act if enabled
+            (when (should-gc?)
+              (gc-schedule))
+            (loop)))))))
+</pre>
+</section>
+<section>
+<h2>Safety Mechanisms</h2>
+<h3>Dry Run</h3>
+<pre class="language-scheme">
+(define (gc-dry-run)
+  "Report what would be collected without collecting"
+  (let* ((marked (mark-reachable))
+         (would-collect (filter (lambda (h)
+                                  (not (hash-set-member? marked h)))
+                                (all-object-hashes))))
+    `((would-collect . ,(length would-collect))
+      (bytes . ,(sum (map object-size would-collect)))
+      (samples . ,(take would-collect 10)))))
+</pre>
+<h3>Collection Log</h3>
+<pre class="language-scheme">
+;; Every collection is logged with recovery info
+(define (collect-with-log! hash)
+  (let ((obj (cas-get hash)))
+    ;; Log enough to reconstruct if needed
+    (audit-append
+      action: 'gc-collect
+      hash: hash
+      size: (object-size obj)
+      type: (soup-object-type obj)
+      references: (object-references hash)
+      metadata: (soup-object-metadata obj))
+    (cas-delete! hash)))
+</pre>
+<h3>Recovery</h3>
+<pre class="language-scheme">
+;; Recover recently collected object from audit log
+(define (gc-recover hash)
+  "Attempt to recover collected object"
+  (let ((entry (find (lambda (e)
+                       (and (eq? (audit-action e) 'gc-collect)
+                            (equal? (audit-hash e) hash)))
+                     (recent-audit-entries))))
+    (if entry
+        (error "Object collected, metadata preserved in audit"
+               (audit-metadata entry))
+        (error "Object not found in recent collections"))))
+</pre>
+</section>
+<section>
+<h2>Metrics</h2>
+<h3>GC Statistics</h3>
+<pre class="language-scheme">
+(define gc-stats
+  ((collections . 0)
+    (bytes-freed . 0)
+    (objects-freed . 0)
+    (total-time . 0)
+    (last-gc . #f)))
+
+(define (update-gc-stats collected duration)
+  (set! gc-stats
+    ((collections . ,(+ 1 (assoc-ref gc-stats 'collections)))
+      (bytes-freed . ,(+ (sum (map object-size collected))
+                         (assoc-ref gc-stats 'bytes-freed)))
+      (objects-freed . ,(+ (length collected)
+                           (assoc-ref gc-stats 'objects-freed)))
+      (total-time . ,(+ duration (assoc-ref gc-stats 'total-time)))
+      (last-gc . ,(current-time)))))
+</pre>
+<h3>Monitoring</h3>
+<pre class="language-scheme">
+;; Expose GC metrics
+(define (gc-metrics)
+  `((storage-used . ,(storage-used))
+    (storage-total . ,(storage-total))
+    (object-count . ,(object-count))
+    (orphan-estimate . ,(orphan-estimate))
+    (pinned-count . ,(hash-table-size pins))
+    (gc-stats . ,gc-stats)))
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>GC as Side Channel</h3>
+<pre class="language-scheme">
+;; GC timing can leak information about object references
+;; Use constant-time operations where possible
+(define (constant-time-mark hash)
+  (let ((refs (object-references hash)))
+    ;; Always process same number of refs
+    (for-each mark (pad-list refs max-refs))))
+</pre>
+<h3>Denial of Service</h3>
+<pre class="language-scheme">
+;; Prevent GC starvation attacks
+(define max-pins-per-principal 10000)
+
+(define (pin-with-limit! hash reason)
+  (let ((count (principal-pin-count (current-principal))))
+    (when (&gt; count max-pins-per-principal)
+      (error "Pin limit exceeded"))
+    (pin! hash reason)))
+</pre>
+</section>
+<section>
+<h2>Invariants</h2>
+<pre>
+G1. Preservation default
     default-mode = archival → no-automatic-collection
 
 G2. Age increases protection
-    age(obj) &gt; age(obj&#39;) → protection(obj) ≥ protection(obj&#39;)
+    age(obj) &gt; age(obj') → protection(obj) ≥ protection(obj')
 
 G3. Evaporation requires consent
     evaporate(hash) requires signed-certificate(hash)
@@ -941,32 +849,16 @@ G7. Mark-and-sweep authoritative
     truly-unreachable(hash) ↔ ¬member(hash, mark-reachable())
 
 G8. Cycles preserved
-    cycle(A, B, C) ∧ archival-mode → preserve(A, B, C)</code></pre>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li>The Garbage Collection Handbook - Jones, Hosking, Moss</li>
-<li>On-the-Fly Garbage Collection - Dijkstra et al.</li>
-<li>RFC-020: Content-Addressed Storage</li>
-<li>RFC-003: Cryptographic Audit Trail</li>
-<li>RFC-036: Quorum Protocol with Homomorphic Voting</li>
-<li>RFC-007: Threshold Signature Governance</li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li><strong>2026-01-09</strong> - Tricolor marking with worklist
-(eliminates stack overflow), incremental marking, SATB write barriers,
-concurrent GC support</li>
-<li><strong>2026-01-09</strong> - Archival GC improvements: evaporation
-certificates, quorum requirements, reversed generational policy, cycle
-detection, preservation-first defaults</li>
-<li><strong>2026-01-07</strong> - Initial draft</li>
-</ul>
-<hr />
-<p><strong>Implementation Status:</strong> Draft
-<strong>Dependencies:</strong> cas, soup, audit
-<strong>Integration:</strong> Storage management, replication, vault
-maintenance</p>
+    cycle(A, B, C) ∧ archival-mode → preserve(A, B, C)
+</pre>
+</section>
+<section>
+<h2>References</h2>
+<p>1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. RFC-020: Content-Addressed Storage 4. RFC-003: Cryptographic Audit Trail 5. RFC-036: Quorum Protocol with Homomorphic Voting 6. RFC-007: Threshold Signature Governance</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<p>- 2026-01-09 - Tricolor marking with worklist (eliminates stack overflow), incremental marking, SATB write barriers, concurrent GC support - 2026-01-09 - Archival GC improvements: evaporation certificates, quorum requirements, reversed generational policy, cycle detection, preservation-first defaults - 2026-01-07 - Initial draft</p>
+</section>
 </body>
 </html>

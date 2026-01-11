@@ -1,363 +1,406 @@
 RFC-014: Coq Extraction for TCB
 
-Status: Proposed
-Date: January 2026
-Author: Derrell Piper <ddp@eludom.net>
 
 ------------------------------------------------------------------------------
 
-Abstract
-
-This RFC specifies the use of Coq proof assistant for verified implementation of the Trusted Computing Base, with extraction to OCaml for production use. Prove once, trust forever.
-
+------------------------------------------------------------------------------
+ABSTRACT
 ------------------------------------------------------------------------------
 
-Motivation
+This RFC specifies the use of Coq proof assistant for verified implementation
+of the Trusted Computing Base, with extraction to OCaml for production use.
+Prove once, trust forever.
+
+
+------------------------------------------------------------------------------
+MOTIVATION
+------------------------------------------------------------------------------
 
 The Prime Directive (RFC-002):
 
-  If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.
 
-But even OCaml can have bugs. The TCB handles:
-- Ed25519 signatures
-- SHA-512 hashing
-- Signature chain verification
+    "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme."
+
+But even OCaml can have bugs. The TCB handles: - Ed25519 signatures - SHA-512
+hashing - Signature chain verification
 
 A single bug breaks everything.
 
 Coq provides:
 
-1. Machine-checked proofs: Theorems verified by computer
-2. Extraction: Generate OCaml from proofs
-3. Correctness by construction: Implementation matches specification
-4. Eternal validity: Proofs don't expire
+1. Machine-checked proofs: Theorems verified by computer 2. Extraction:
+Generate OCaml from proofs 3. Correctness by construction: Implementation
+matches specification 4. Eternal validity: Proofs don't expire
 
 From the Coq motto:
 
-  The proof is in the code.
+
+    "The proof is in the code."
+
 
 ------------------------------------------------------------------------------
+SPECIFICATION
+------------------------------------------------------------------------------
 
-Specification
 
 Trusted Computing Base
+----------------------
 
-+-------------------------------------------------------------+
-|                    CYBERSPACE TCB                           |
-|                                                             |
-|   +-------------+  +-------------+  +-------------+        |
-|   |   Ed25519   |  |   SHA-512   |  |   Verify    |        |
-|   |   Proven    |  |   Proven    |  |   Proven    |        |
-|   +------+------+  +------+------+  +------+------+        |
-|          |                |                |                |
-|          +----------------+----------------+                |
-|                           |                                 |
-|                    Coq Extraction                           |
-|                           |                                 |
-|                    +------v------+                          |
-|                    |    OCaml    |                          |
-|                    |   ~1000 LOC |                          |
-|                    +-------------+                          |
-|                                                             |
-|   Proven in Coq. Extracted to OCaml. Called from Scheme.   |
-|                                                             |
-+-------------------------------------------------------------+
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                    CYBERSPACE TCB                           │
+    │                                                             │
+    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+    │   │   Ed25519   │  │   SHA-512   │  │   Verify    │        │
+    │   │   Proven    │  │   Proven    │  │   Proven    │        │
+    │   └──────┬──────┘  └──────┬──────┘  └──────┬──────┘        │
+    │          │                │                │                │
+    │          └────────────────┼────────────────┘                │
+    │                           │                                 │
+    │                    Coq Extraction                           │
+    │                           │                                 │
+    │                    ┌──────▼──────┐                          │
+    │                    │    OCaml    │                          │
+    │                    │   ~1000 LOC │                          │
+    │                    └─────────────┘                          │
+    │                                                             │
+    │   Proven in Coq. Extracted to OCaml. Called from Scheme.   │
+    │                                                             │
+    └─────────────────────────────────────────────────────────────┘
+
 
 ------------------------------------------------------------------------------
+COQ SPECIFICATIONS
+------------------------------------------------------------------------------
 
-Coq Specifications
 
 Types
+-----
 
-( Byte arrays )
-Definition bytes := list byte.
 
-( Keys )
-Record ed25519publickey := {
-  pk_bytes : bytes;
-  pklength : length pkbytes = 32
-}.
+    ( Byte arrays )
+    Definition bytes := list byte.
+    ( Keys )
+    Record ed25519publickey := {
+      pkbytes : bytes;
+      pklength : length pkbytes = 32
+    }.
+    Record ed25519privatekey := {
+      skbytes : bytes;
+      sklength : length skbytes = 64
+    }.
+    ( Signatures )
+    Record ed25519signature := {
+      sigbytes : bytes;
+      siglength : length sigbytes = 64
+    }.
+    ( Hashes )
+    Record sha512hash := {
+      hashbytes : bytes;
+      hashlength : length hashbytes = 64
+    }.
 
-Record ed25519privatekey := {
-  sk_bytes : bytes;
-  sklength : length skbytes = 64
-}.
-
-( Signatures )
-Record ed25519_signature := {
-  sig_bytes : bytes;
-  siglength : length sigbytes = 64
-}.
-
-( Hashes )
-Record sha512_hash := {
-  hash_bytes : bytes;
-  hashlength : length hashbytes = 64
-}.
 
 Signature Specification
+-----------------------
 
-( Abstract signature scheme )
-Module Type ED25519_SPEC.
-  Parameter sign : ed25519privatekey -> bytes -> ed25519_signature.
-  Parameter verify : ed25519publickey -> bytes -> ed25519_signature -> bool.
 
-  ( Correctness: valid signatures verify )
-  Axiom signverifycorrect :
-    forall sk pk msg,
-      pk = derive_public sk ->
-      verify pk msg (sign sk msg) = true.
+    ( Abstract signature scheme )
+    Module Type ED25519SPEC.
+      Parameter sign : ed25519privatekey -> bytes -> ed25519signature.
+      Parameter verify : ed25519publickey -> bytes -> ed25519signature -> bool.
+      ( Correctness: valid signatures verify )
+      Axiom signverifycorrect :
+        forall sk pk msg,
+          pk = derivepublic sk ->
+          verify pk msg (sign sk msg) = true.
+      ( Security: cannot forge without private key )
+      Axiom unforgeability :
+        forall pk msg sig,
+          verify pk msg sig = true ->
+          exists sk, pk = derivepublic sk /\ sig = sign sk msg.
+    End ED25519SPEC.
 
-  ( Security: cannot forge without private key )
-  Axiom unforgeability :
-    forall pk msg sig,
-      verify pk msg sig = true ->
-      exists sk, pk = derive_public sk /\ sig = sign sk msg.
-End ED25519_SPEC.
 
 Hash Specification
+------------------
 
-Module Type SHA512_SPEC.
-  Parameter hash : bytes -> sha512_hash.
 
-  ( Determinism )
-  Axiom hash_deterministic :
-    forall x, hash x = hash x.
+    Module Type SHA512SPEC.
+      Parameter hash : bytes -> sha512hash.
+      ( Determinism )
+      Axiom hashdeterministic :
+        forall x, hash x = hash x.
+      ( Collision resistance (assumed) )
+      Axiom collisionresistant :
+        forall x y, hash x = hash y -> x = y. ( Idealized )
+    End SHA512_SPEC.
 
-  ( Collision resistance (assumed) )
-  Axiom collision_resistant :
-    forall x y, hash x = hash y -> x = y. ( Idealized )
-End SHA512_SPEC.
 
 Chain Verification
+------------------
 
-( Certificate chain verification )
-Fixpoint verify_chain
-  (root : ed25519publickey)
-  (certs : list signed_cert)
-  (target_tag : tag) : bool :=
-  match certs with
-  | nil => false
-  | cert :: rest =>
-      let issuerkey := certissuer cert in
-      let subjectkey := certsubject cert in
-      let certtag := certtag cert in
-      ( Check issuer matches current key )
-      andb (keyeq root issuerkey)
-      ( Check signature valid )
-      (andb (verify issuerkey (certcontent cert) (cert_signature cert))
-      ( Check tag grants permission )
-      (andb (tagimplies certtag target_tag)
-      ( Continue chain )
-      (match rest with
-       | nil => true
-       |  => verifychain subjectkey rest targettag
-       end)))
-  end.
 
-( Theorem: Valid chain implies authorization )
-Theorem chain_authorization :
-  forall root certs tag,
-    verify_chain root certs tag = true ->
-    authorized root tag.
-Proof.
-  ( Proof by induction on chain length )
-  ...
-Qed.
+    ( Certificate chain verification )
+    Fixpoint verifychain
+      (root : ed25519publickey)
+      (certs : list signedcert)
+      (targettag : tag) : bool :=
+      match certs with
+      | nil => false
+      | cert :: rest =>
+          let issuerkey := certissuer cert in
+          let subjectkey := certsubject cert in
+          let certtag := certtag cert in
+          ( Check issuer matches current key )
+          andb (keyeq root issuerkey)
+          ( Check signature valid )
+          (andb (verify issuerkey (certcontent cert) (certsignature cert))
+          ( Check tag grants permission )
+          (andb (tagimplies certtag targettag)
+          ( Continue chain )
+          (match rest with
+           | nil => true
+           |  => verifychain subjectkey rest targettag
+           end)))
+      end.
+    ( Theorem: Valid chain implies authorization )
+    Theorem chainauthorization :
+      forall root certs tag,
+        verify_chain root certs tag = true ->
+        authorized root tag.
+    Proof.
+      ( Proof by induction on chain length )
+      ...
+    Qed.
+
 
 ------------------------------------------------------------------------------
+EXTRACTION TO OCAML
+------------------------------------------------------------------------------
 
-Extraction to OCaml
 
 Extraction Directives
+---------------------
 
-Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString.
 
-( Extract to OCaml types )
-Extract Inductive bool => "bool" ["true" "false"].
-Extract Inductive list => "list" ["[]" "(::)"].
+    Require Import ExtrOcamlBasic.
+    Require Import ExtrOcamlString.
+    ( Extract to OCaml types )
+    Extract Inductive bool => "bool" ["true" "false"].
+    Extract Inductive list => "list" ["[]" "(::)"].
+    ( Link to libsodium )
+    Extract Constant ed25519sign => "Sodium.Ed25519.sign".
+    Extract Constant ed25519verify => "Sodium.Ed25519.verify".
+    Extract Constant sha512hash => "Sodium.SHA512.hash".
+    ( Generate OCaml )
+    Extraction "tcb.ml" verifychain sign verify hash.
 
-( Link to libsodium )
-Extract Constant ed25519_sign => "Sodium.Ed25519.sign".
-Extract Constant ed25519_verify => "Sodium.Ed25519.verify".
-Extract Constant sha512_hash => "Sodium.SHA512.hash".
-
-( Generate OCaml )
-Extraction "tcb.ml" verify_chain sign verify hash.
 
 Generated OCaml
+---------------
 
-( tcb.ml - Extracted from Coq )
 
-let rec verifychain root certs targettag =
-  match certs with
-  | [] -> false
-  | cert :: rest ->
-      let issuerkey = certissuer cert in
-      let subjectkey = certsubject cert in
-      keyeq root issuerkey &&
-      Sodium.Ed25519.verify issuerkey (certcontent cert) (cert_signature cert) &&
-      tagimplies (certtag cert) target_tag &&
-      (match rest with
-       | [] -> true
-       |  -> verifychain subjectkey rest targettag)
+    ( tcb.ml - Extracted from Coq )
+    let rec verifychain root certs targettag =
+      match certs with
+      | [] -> false
+      | cert :: rest ->
+          let issuerkey = certissuer cert in
+          let subjectkey = certsubject cert in
+          keyeq root issuerkey &&
+          Sodium.Ed25519.verify issuerkey (certcontent cert) (certsignature cert) &&
+          tagimplies (certtag cert) targettag &&
+          (match rest with
+           | [] -> true
+           |  -> verifychain subjectkey rest targettag)
+
 
 ------------------------------------------------------------------------------
+INTEGRATION WITH SCHEME
+------------------------------------------------------------------------------
 
-Integration with Scheme
 
 FFI Layer
+---------
 
-( tcb_ffi.ml - FFI bindings for Chicken Scheme )
 
-let () = Callback.register "tcbverifychain" verify_chain
-let () = Callback.register "tcb_sign" sign
-let () = Callback.register "tcb_verify" verify
-let () = Callback.register "tcb_hash" hash
+    ( tcbffi.ml - FFI bindings for Chicken Scheme )
+    let () = Callback.register "tcbverifychain" verifychain
+    let () = Callback.register "tcbsign" sign
+    let () = Callback.register "tcbverify" verify
+    let () = Callback.register "tcb_hash" hash
+
 
 Scheme Bindings
+---------------
 
-;; crypto-ffi.scm
-(module crypto-ffi
-  (ed25519-sign ed25519-verify sha512-hash verify-chain)
 
-  (import (chicken foreign))
+    ;; crypto-ffi.scm
+    (module crypto-ffi
+      (ed25519-sign ed25519-verify sha512-hash verify-chain)
+      (import (chicken foreign))
+      ;; Call into verified OCaml
+      (define ed25519-sign
+        (foreign-lambda blob ((blob key) (blob msg))
+          "return tcbsign(key, msg);"))
+      (define verify-chain
+        (foreign-lambda bool ((blob root) (pointer certs) (pointer tag))
+          "return tcbverify_chain(root, certs, tag);"))
+      ...)
 
-  ;; Call into verified OCaml
-  (define ed25519-sign
-    (foreign-lambda* blob ((blob key) (blob msg))
-      "return tcb_sign(key, msg);"))
-
-  (define verify-chain
-    (foreign-lambda* bool ((blob root) (pointer certs) (pointer tag))
-      "return tcbverifychain(root, certs, tag);"))
-
-  ...)
 
 ------------------------------------------------------------------------------
+PROOF OBLIGATIONS
+------------------------------------------------------------------------------
 
-Proof Obligations
 
 What We Prove
+-------------
 
-1. Signature correctness: Valid signatures verify
-2. Chain soundness: Valid chain implies authorization
-3. Hash properties: Determinism, length preservation
-4. Type safety: No buffer overflows, no null pointers
+1. Signature correctness: Valid signatures verify 2. Chain soundness: Valid
+chain implies authorization 3. Hash properties: Determinism, length
+preservation 4. Type safety: No buffer overflows, no null pointers
+
 
 What We Assume
+--------------
 
-1. Cryptographic hardness: Ed25519 unforgeability
-2. libsodium correctness: Implementation matches spec
-3. OCaml runtime: Extraction target is correct
-4. Hardware: CPU executes instructions correctly
+1. Cryptographic hardness: Ed25519 unforgeability 2. libsodium correctness:
+Implementation matches spec 3. OCaml runtime: Extraction target is correct 4.
+Hardware: CPU executes instructions correctly
+
 
 Trust Chain
+-----------
 
-Mathematical proof (Coq)
-    ↓
-Extraction (verified by Coq)
-    ↓
-OCaml code (typed, memory-safe)
-    ↓
-libsodium (audited, widely deployed)
-    ↓
-CPU instructions (trust hardware)
+
+    Mathematical proof (Coq)
+        ↓
+    Extraction (verified by Coq)
+        ↓
+    OCaml code (typed, memory-safe)
+        ↓
+    libsodium (audited, widely deployed)
+        ↓
+    CPU instructions (trust hardware)
+
 
 ------------------------------------------------------------------------------
+DEVELOPMENT WORKFLOW
+------------------------------------------------------------------------------
 
-Development Workflow
 
 1. Specify in Coq
+-----------------
 
-( Define types and operations )
-( State properties and theorems )
+
+    ( Define types and operations )
+    ( State properties and theorems )
+
 
 2. Prove Correctness
+--------------------
 
-( Prove theorems )
-( Coq checks proofs mechanically )
+
+    ( Prove theorems )
+    ( Coq checks proofs mechanically )
+
 
 3. Extract to OCaml
+-------------------
 
-$ coqc -R . Cyberspace tcb.v
-$ coqc -R . Cyberspace extract.v
-$ ls *.ml
-tcb.ml tcb_types.ml
+
+    $ coqc -R . Cyberspace tcb.v
+    $ coqc -R . Cyberspace extract.v
+    $ ls *.ml
+    tcb.ml tcb_types.ml
+
 
 4. Compile and Link
+-------------------
 
-$ ocamlfind ocamlopt -package sodium -linkpkg \
-    tcb.ml tcb_ffi.ml -o tcb.cmxa
+
+    $ ocamlfind ocamlopt -package sodium -linkpkg \
+        tcb.ml tcb_ffi.ml -o tcb.cmxa
+
 
 5. Call from Scheme
+-------------------
 
-(import crypto-ffi)
-(ed25519-sign key message)  ; Calls verified code
+
+    (import crypto-ffi)
+    (ed25519-sign key message)  ; Calls verified code
+
 
 ------------------------------------------------------------------------------
+EXISTING VERIFIED LIBRARIES
+------------------------------------------------------------------------------
 
-Existing Verified Libraries
 
 Fiat-Crypto
+-----------
 
-- Verified elliptic curve implementations
-- Used by BoringSSL, Chrome
-- Extraction to C, Java, Go
+- Verified elliptic curve implementations - Used by BoringSSL, Chrome -
+Extraction to C, Java, Go
+
 
 HACL*
+-----
 
-- Verified cryptographic library
-- Written in F* (similar to Coq)
-- Used by Firefox, Wireguard
+- Verified cryptographic library - Written in F* (similar to Coq) - Used by
+Firefox, Wireguard
+
 
 Potential Use
+-------------
 
-Require Import Fiat.Crypto.Ed25519.
-( Use pre-verified Ed25519 implementation )
+
+    Require Import Fiat.Crypto.Ed25519.
+    ( Use pre-verified Ed25519 implementation )
+
 
 ------------------------------------------------------------------------------
+SECURITY CONSIDERATIONS
+------------------------------------------------------------------------------
 
-Security Considerations
 
 Verified Components
+-------------------
 
-- Signature operations
-- Hash operations
-- Chain verification logic
+- Signature operations - Hash operations - Chain verification logic
+
 
 Unverified (Trusted)
+--------------------
 
-- FFI layer (small, auditable)
-- libsodium bindings
-- Scheme runtime
+- FFI layer (small, auditable) - libsodium bindings - Scheme runtime
+
 
 Audit Surface
+-------------
 
-Total TCB:     ~1000 lines OCaml
-Verified:      ~800 lines (extracted from ~2000 lines Coq)
-Trusted:       ~200 lines (FFI, bindings)
 
-------------------------------------------------------------------------------
+    Total TCB:     ~1000 lines OCaml
+    Verified:      ~800 lines (extracted from ~2000 lines Coq)
+    Trusted:       ~200 lines (FFI, bindings)
 
-References
-
-1. Coq Development Team. The Coq Proof Assistant Reference Manual.
-2. Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic.
-3. Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*.
-4. Chlipala, A. (2013). Certified Programming with Dependent Types.
-5. RFC-002: Cyberspace Architecture
 
 ------------------------------------------------------------------------------
+REFERENCES
+------------------------------------------------------------------------------
 
-Changelog
+1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2. Erbsen,
+A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic. 3.
+Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*.
+4. Chlipala, A. (2013). Certified Programming with Dependent Types. 5.
+RFC-002: Cyberspace Architecture
+
+
+------------------------------------------------------------------------------
+CHANGELOG
+------------------------------------------------------------------------------
 
 - 2026-01-06 - Initial specification
 
 ------------------------------------------------------------------------------
-
-Implementation Status: Proposed
-Proof Assistant: Coq
-Extraction Target: OCaml
-TCB Size: ~1000 lines

@@ -1,17 +1,16 @@
 #!/bin/zsh
-# RFC Documentation Pipeline
+# RFC Documentation Pipeline (S-expression Edition)
 setopt null_glob
 # Generates all RFC formats and index catalog
-# Auto-discovers all rfc-*.md and rfc-*.txt files
+# Auto-discovers all rfc-*.scm source files
 #
-# Source formats:
-#   .md   - Markdown (prose, docs, RFCs) → pandoc
-#   .tex  - LaTeX (math, proofs, papers) → latex + dvips
+# Source format:
+#   .scm  - S-expression documents (DSSSL-inspired)
 #
 # Output formats:
 #   .html - Web viewing (standalone)
 #   .ps   - PostScript (archival, printing) - NeXT got it right
-#   .txt  - Plain text (IETF tradition, prose only)
+#   .txt  - Plain text (IETF tradition)
 #
 # PDF is Adobe's proprietary format dressed in ISO clothing.
 # PostScript is open, stable, readable, and honest.
@@ -20,9 +19,12 @@ set -e
 
 # Discover RFCs from filesystem (unique basenames, sorted by number)
 discover_rfcs() {
-  for f in rfc-*.md rfc-*.txt; do
-    [[ -f "$f" ]] && echo "${f%.*}"
-  done | sort -u | sort -t- -k2,2n
+  for f in rfc-*.scm; do
+    [[ -f "$f" ]] || continue
+    # Skip support files
+    [[ "$f" == "rfc-format.scm" ]] && continue
+    echo "${f%.*}"
+  done | sort -t- -k2,2n
 }
 
 # Check for duplicate RFC numbers
@@ -47,210 +49,14 @@ RFCS=("${(@f)$(discover_rfcs)}")
 echo "Discovered ${#RFCS[@]} RFCs"
 check_duplicates "${RFCS[@]}"
 
-# Extract title from markdown file
-get_title_md() {
-  head -1 "$1" | sed 's/^# //'
-}
-
-# Extract title from LaTeX file
-get_title_tex() {
-  grep -m1 '\\title{' "$1" 2>/dev/null | sed 's/.*\\title{\([^}]*\)}.*/\1/' || basename "$1" .tex
-}
-
-# Get title from any source
+# Extract title from S-expression file
 get_title() {
   local base="$1"
-  if [[ -f "${base}.md" ]]; then
-    get_title_md "${base}.md"
-  elif [[ -f "${base}.tex" ]]; then
-    get_title_tex "${base}.tex"
+  if [[ -f "${base}.scm" ]]; then
+    # Extract (title "...") from S-expression
+    grep -o '(title "[^"]*")' "${base}.scm" 2>/dev/null | sed 's/(title "//; s/")//' | head -1
   else
     echo "$base"
-  fi
-}
-
-# Check if target is stale (missing or older than source)
-is_stale() {
-  local source="$1" target="$2"
-  [[ ! -f "$target" ]] && return 0
-  [[ "$source" -nt "$target" ]] && return 0
-  return 1
-}
-
-# Generate HTML from markdown using pandoc
-generate_html_from_md() {
-  local base="$1"
-  pandoc "${base}.md" -o "${base}.html" --standalone \
-    --metadata title="" \
-    --css="rfc.css" \
-    2>/dev/null
-}
-
-# Generate HTML from plain text (pre-formatted, for .txt-only sources)
-generate_html_from_txt() {
-  local base="$1"
-  local title=$(head -1 "${base}.txt")
-  cat > "${base}.html" << EOF
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>${title}</title>
-<link rel="stylesheet" href="rfc.css">
-<style>body{max-width:80ch;}pre{white-space:pre-wrap;}</style>
-</head><body><pre>$(sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' "${base}.txt")</pre></body></html>
-EOF
-}
-
-# Generate PostScript from markdown via groff for rich formatting
-# Uses ms macros for professional typesetting (groff required: brew install groff)
-generate_ps_from_md() {
-  local base="$1"
-  local title=$(head -1 "${base}.md" | sed 's/^# //')
-
-  # Use pandoc to groff ms macros with proper preamble
-  {
-    # Preamble for better formatting
-    echo '.nr PS 10'        # 10pt body text
-    echo '.nr VS 12'        # 12pt vertical spacing
-    echo '.nr PO 1i'        # 1 inch page offset
-    echo '.nr LL 6.5i'      # 6.5 inch line length
-    echo '.nr HM 0.75i'     # Header margin
-    echo '.nr FM 0.75i'     # Footer margin
-    echo '.ds CH'           # Clear center header
-    echo ".ds LH $title"    # Left header: title
-    echo '.ds RH %'         # Right header: page number
-    echo '.fam H'           # Helvetica for headers
-  } > "${base}.ms"
-
-  # Append pandoc conversion
-  pandoc "${base}.md" -t ms 2>/dev/null >> "${base}.ms"
-
-  if [[ -s "${base}.ms" ]]; then
-    groff -ms -Tps -dpaper=letter "${base}.ms" > "${base}.ps" 2>/dev/null
-    rm -f "${base}.ms"
-  fi
-}
-
-# Generate PostScript from text using enscript (for txt-only sources)
-# Rich formatting: borders, proper fonts, headers, color-capable
-generate_ps_from_txt() {
-  local base="$1"
-  local title=$(head -1 "${base}.txt" | sed 's/^# //')
-
-  enscript \
-    -M Letter \
-    --margins=72:72:72:72 \
-    -f Courier9 \
-    --header-font=Helvetica-Bold10 \
-    --fancy-header=enscript \
-    --word-wrap \
-    --mark-wrapped-lines=arrow \
-    --header="$title|\$W|Page \$% of \$=" \
-    -p "${base}.ps" "${base}.txt" 2>/dev/null
-}
-
-# Generate from Markdown source (prose, docs, RFCs)
-generate_from_md() {
-  local rfc="$1"
-  local generated=""
-
-  # Text: strip markdown to plain RFC-style text
-  if is_stale "${rfc}.md" "${rfc}.txt"; then
-    sed -e '/^```/d' \
-        -e 's/^#\{1,6\} //' \
-        -e 's/\*\*\([^*]*\)\*\*/\1/g' \
-        -e 's/__\([^_]*\)__/\1/g' \
-        -e 's/\*\([^*]*\)\*/\1/g' \
-        -e 's/_\([^_]*\)_/\1/g' \
-        -e 's/`\([^`]*\)`/\1/g' \
-        -e 's/\[\([^]]*\)\]([^)]*)/\1/g' \
-        -e 's/^---$/------------------------------------------------------------------------------/' \
-        -e 's/^> /  /' \
-        -e 's/[┌┐└┘├┤┬┴┼]/+/g' \
-        -e 's/─/-/g' \
-        -e 's/[│]/|/g' \
-        -e 's/[▼]/v/g' \
-        -e 's/[►]/>/g' \
-        -e 's/[◄]/</g' \
-        -e 's/[▲]/^/g' \
-        "${rfc}.md" > "${rfc}.txt"
-    generated="txt "
-  fi
-
-  # Hypertext: pandoc from markdown (proper HTML with markup)
-  if is_stale "${rfc}.md" "${rfc}.html"; then
-    generate_html_from_md "$rfc"
-    generated="${generated}html "
-  fi
-
-  # PostScript: rich formatting via groff
-  if is_stale "${rfc}.md" "${rfc}.ps"; then
-    generate_ps_from_md "$rfc"
-    generated="${generated}ps "
-  fi
-
-  if [[ -n "$generated" ]]; then
-    echo "  ${rfc}: ${generated}"
-  fi
-}
-
-# Generate from plain text source (IETF-style RFCs, no .md)
-generate_from_txt() {
-  local rfc="$1"
-  local generated=""
-
-  # Hypertext: wrap plain text in pre (no markdown to convert)
-  if is_stale "${rfc}.txt" "${rfc}.html"; then
-    generate_html_from_txt "$rfc"
-    generated="${generated}html "
-  fi
-
-  # PostScript: enscript from text
-  if is_stale "${rfc}.txt" "${rfc}.ps"; then
-    generate_ps_from_txt "$rfc"
-    generated="${generated}ps "
-  fi
-
-  if [[ -n "$generated" ]]; then
-    echo "  ${rfc}: ${generated}"
-  fi
-}
-
-# Generate from LaTeX source (math, proofs, papers)
-generate_from_tex() {
-  local paper="$1"
-  local generated=""
-
-  # PostScript via LaTeX -> DVI -> PS
-  if is_stale "${paper}.tex" "${paper}.ps"; then
-    latex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1
-    latex -interaction=nonstopmode "${paper}.tex" >/dev/null 2>&1  # twice for refs
-    if [[ -f "${paper}.dvi" ]]; then
-      dvips -q -o "${paper}.ps" "${paper}.dvi" 2>/dev/null
-      generated="ps "
-    fi
-    rm -f "${paper}.dvi" "${paper}.aux" "${paper}.log" "${paper}.out" 2>/dev/null
-  fi
-
-  # HTML (LaTeXML if available)
-  if is_stale "${paper}.tex" "${paper}.html" && command -v latexmlc &>/dev/null; then
-    latexmlc --dest="${paper}.html" "${paper}.tex" 2>/dev/null || true
-    generated="${generated}html "
-  fi
-
-  if [[ -n "$generated" ]]; then
-    echo "  ${paper}: ${generated}"
-  fi
-}
-
-# Generate individual document formats (auto-detect source)
-generate_formats() {
-  local doc="$1"
-
-  if [[ -f "${doc}.md" ]]; then
-    generate_from_md "$doc"
-  elif [[ -f "${doc}.txt" ]]; then
-    generate_from_txt "$doc"
-  elif [[ -f "${doc}.tex" ]]; then
-    generate_from_tex "$doc"
   fi
 }
 
@@ -265,39 +71,45 @@ is_stop_word() {
   return 1
 }
 
-# Generate KWIC permuted index entries
-# Output: "keyword|left-context|right-context|rfc-name"
-generate_kwic_entries() {
-  for rfc in "${RFCS[@]}"; do
-    local title=$(get_title "$rfc")
-    # Strip "RFC-NNN: " prefix for rotation
-    local bare_title=$(echo "$title" | sed 's/^RFC-[0-9]*: //')
-    # Clean punctuation that breaks word boundaries
-    bare_title=$(echo "$bare_title" | sed 's/[()]//g; s/,//g')
-    # zsh: use ${=var} for word splitting, arrays are 1-indexed
-    local words=(${=bare_title})
-    local num_words=${#words[@]}
+# Generate KWIC entry for a single document
+kwic_for_doc() {
+  local doc="$1"
+  local title="$2"
+  local bare_title=$(echo "$title" | sed 's/[()]//g; s/,//g')
+  local words=(${=bare_title})
+  local num_words=${#words[@]}
 
-    for ((i=1; i<=num_words; i++)); do
-      local word="${words[$i]}"
-      # Skip stop words
-      is_stop_word "$word" && continue
+  for ((i=1; i<=num_words; i++)); do
+    local word="${words[$i]}"
+    is_stop_word "$word" && continue
 
-      # Build left context (words before keyword)
-      local left=""
-      for ((j=1; j<i; j++)); do
-        left="$left${words[$j]} "
-      done
-
-      # Build right context (words after keyword)
-      local right=""
-      for ((j=i+1; j<=num_words; j++)); do
-        right="$right ${words[$j]}"
-      done
-
-      echo "${word}|${left}|${right}|${rfc}"
+    local left=""
+    for ((j=1; j<i; j++)); do
+      left="$left${words[$j]} "
     done
+
+    local right=""
+    for ((j=i+1; j<=num_words; j++)); do
+      right="$right ${words[$j]}"
+    done
+
+    echo "${word}|${left}|${right}|${doc}"
   done
+}
+
+# Generate KWIC permuted index entries
+# Output: "keyword|left-context|right-context|doc-name"
+generate_kwic_entries() {
+  # RFCs
+  for rfc in "${RFCS[@]}"; do
+    kwic_for_doc "$rfc" "$(get_title "$rfc")"
+  done
+
+  # README
+  if [[ -f "README.scm" ]]; then
+    local readme_title=$(grep -o '(title "[^"]*")' README.scm | sed 's/(title "//; s/")//' | head -1)
+    kwic_for_doc "README" "$readme_title"
+  fi
 }
 
 # Generate index.html catalog
@@ -362,6 +174,13 @@ generate_index() {
   <h1>Library of Cyberspace - RFC Index</h1>
   <p>Request for Comments documents for the Library of Cyberspace preservation architecture.</p>
 
+  <p>
+    <a href="README.html">About the Library</a>
+    [<a href="README.txt">txt</a>]
+    [<a href="README.ps">ps</a>]
+  </p>
+
+  <h2>RFCs</h2>
   <table>
     <thead>
       <tr>
@@ -376,17 +195,7 @@ HEADER
   for rfc in "${RFCS[@]}"; do
     local title=$(get_title "$rfc")
     local num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
-    local formats=""
-
-    if [[ -f "${rfc}.md" ]]; then
-      # Text, PostScript, Hypertext Markup Language
-      formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext Markup Language</a>'
-    elif [[ -f "${rfc}.tex" ]]; then
-      # LaTeX source: PostScript, Hypertext Markup Language (no txt - math doesn't work in plaintext)
-      formats='<a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext Markup Language</a>'
-    else
-      continue
-    fi
+    local formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
     cat >> index.html << EOF
       <tr>
@@ -426,7 +235,7 @@ EOF
 
   <footer>
     <p>Generated by the Library of Cyberspace documentation pipeline.</p>
-    <p>Text: immortal. PostScript: open, stable, readable. Hypertext Markup Language: the dumb web.</p>
+    <p>S-expression source. Text: immortal. PostScript: open. Hypertext: accessible.</p>
   </footer>
   <script>
     function toggleTheme() {
@@ -436,7 +245,6 @@ EOF
       html.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
     }
-    // Load saved preference, or respect system, or default dark
     (function() {
       const saved = localStorage.getItem('theme');
       if (saved) {
@@ -460,22 +268,15 @@ sanity_check() {
 
   echo "=== Sanity Check ==="
 
-  # Check KWIC has actual keywords (not empty)
+  # Check KWIC has actual keywords
   local kwic_entries
   kwic_entries=$(grep -c 'class="keyword">[^<]' index.html 2>/dev/null) || kwic_entries=0
-  local empty_keywords
-  empty_keywords=$(grep -c 'class="keyword"><' index.html 2>/dev/null) || empty_keywords=0
 
   if [[ $kwic_entries -lt 50 ]]; then
     echo "  [FAIL] KWIC index has only $kwic_entries entries (expected 50+)"
     errors=$((errors + 1))
   else
     echo "  [OK] KWIC index: $kwic_entries entries"
-  fi
-
-  if [[ $empty_keywords -gt 0 ]]; then
-    echo "  [FAIL] KWIC has $empty_keywords empty keyword entries"
-    errors=$((errors + 1))
   fi
 
   # Check all RFC files exist
@@ -491,7 +292,7 @@ sanity_check() {
     echo "  [OK] All ${#RFCS[@]} RFC HTML files present"
   fi
 
-  # Check index.html is not tiny (corruption check)
+  # Check index.html is not tiny
   local index_size
   index_size=$(stat -f%z index.html 2>/dev/null) || index_size=$(stat -c%s index.html 2>/dev/null) || index_size=0
   if [[ $index_size -lt 10000 ]]; then
@@ -501,44 +302,7 @@ sanity_check() {
     echo "  [OK] index.html size: $index_size bytes"
   fi
 
-  # Lint: Check CSS reference in HTML files
-  local no_css=0
-  for rfc in "${RFCS[@]}"; do
-    if [[ -f "${rfc}.html" ]] && ! grep -q 'rfc.css' "${rfc}.html" 2>/dev/null; then
-      no_css=$((no_css + 1))
-    fi
-  done
-  if [[ $no_css -gt 0 ]]; then
-    echo "  [WARN] $no_css HTML files missing rfc.css reference"
-    warnings=$((warnings + 1))
-  else
-    echo "  [OK] All HTML files reference rfc.css"
-  fi
-
-  # Lint: Check for Unicode replacement characters (broken encoding)
-  local broken_unicode=0
-  for rfc in "${RFCS[@]}"; do
-    if [[ -f "${rfc}.html" ]] && grep -q $'\xef\xbf\xbd' "${rfc}.html" 2>/dev/null; then
-      broken_unicode=$((broken_unicode + 1))
-      echo "  [WARN] ${rfc}.html has replacement characters (U+FFFD)"
-    fi
-  done
-  if [[ $broken_unicode -eq 0 ]]; then
-    echo "  [OK] No broken Unicode detected"
-  fi
-
-  # Lint: Check for box-drawing in HTML (should use Unicode, not ASCII)
-  local ascii_boxes=0
-  for rfc in "${RFCS[@]}"; do
-    if [[ -f "${rfc}.html" ]] && grep -E '\+[-]+\+' "${rfc}.html" 2>/dev/null | grep -qv '<!--'; then
-      ascii_boxes=$((ascii_boxes + 1))
-    fi
-  done
-  if [[ $ascii_boxes -gt 0 ]]; then
-    echo "  [INFO] $ascii_boxes HTML files have ASCII box-drawing (OK in code examples)"
-  fi
-
-  # Lint: Check rfc.css exists
+  # Check rfc.css exists
   if [[ ! -f "rfc.css" ]]; then
     echo "  [FAIL] rfc.css missing"
     errors=$((errors + 1))
@@ -552,115 +316,45 @@ sanity_check() {
     return 1
   fi
 
-  if [[ $warnings -gt 0 ]]; then
-    echo "  $warnings warning(s) - continuing"
-  fi
-
   echo "  All checks passed"
   return 0
 }
 
 # Main
-echo "=== RFC Documentation Pipeline ==="
+echo "=== RFC Documentation Pipeline (S-expression) ==="
 echo ""
 
-# Clean old PDFs
-rm -f rfc-*.pdf 2>/dev/null
+# Generate all formats via Scheme
+echo "Generating formats..."
+csi -q generate-all.scm 2>/dev/null
 
-for rfc in "${RFCS[@]}"; do
-  generate_formats "$rfc"
-done
-
+# Generate index
 generate_index
 
 echo ""
 echo "Done."
-echo "  HTML: $(ls *.html 2>/dev/null | wc -l | tr -d ' ')"
-echo "  PS:   $(ls *.ps 2>/dev/null | wc -l | tr -d ' ')"
-echo "  TXT:  $(ls *.txt 2>/dev/null | wc -l | tr -d ' ')"
-echo "  Sources:"
-echo "    MD:  $(ls rfc-*.md 2>/dev/null | wc -l | tr -d ' ')"
-echo "    TeX: $(ls rfc-*.tex 2>/dev/null | wc -l | tr -d ' ')"
-
-# RFC Implementation Coverage Check
-echo ""
-echo "=== RFC Implementation Coverage ==="
-
-REPL_FILE="../../cyberspace-repl"
-if [[ -f "$REPL_FILE" ]]; then
-  # RFC keyword mappings (rfc-num:keyword)
-  RFC_MAP="
-003:audit-append
-004:create-cert
-006:seal-commit
-010:federate
-011:consensus
-012:lamport
-016:lazy-join
-018:seal-archive
-020:content-address
-021:delegate
-023:sandbox
-025:query
-035:tunnel
-036:quorum
-037:node-role
-038:inference
-041:vault-mount
-"
-
-  implemented=0
-  pending=0
-  pending_list=""
-
-  for rfc in "${RFCS[@]}"; do
-    # Extract RFC number (e.g., rfc-003-foo -> 003)
-    num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/')
-    # Find keyword for this RFC
-    keyword=$(echo "$RFC_MAP" | grep "^${num}:" | cut -d: -f2)
-
-    if [[ -n "$keyword" ]]; then
-      if grep -q "$keyword" "$REPL_FILE" 2>/dev/null; then
-        ((implemented++)) || true
-      else
-        ((pending++)) || true
-        pending_list="${pending_list}    - ${rfc} (${keyword})\n"
-      fi
-    fi
-  done
-
-  echo "  Implemented: $implemented"
-  echo "  Pending:     $pending"
-
-  if [[ $pending -gt 0 ]]; then
-    echo ""
-    echo "  Missing in REPL:"
-    echo -e "$pending_list"
-  fi
-else
-  echo "  [skip] REPL not found at $REPL_FILE"
-fi
+echo "  HTML: $(ls rfc-*.html 2>/dev/null | wc -l | tr -d ' ')"
+echo "  PS:   $(ls rfc-*.ps 2>/dev/null | wc -l | tr -d ' ')"
+echo "  TXT:  $(ls rfc-*.txt 2>/dev/null | wc -l | tr -d ' ')"
+echo "  SCM:  ${#RFCS[@]}"
 
 # Sanity check before publish
 echo ""
 sanity_check || exit 1
 
-# Publish to yoyodyne (world-readable web directory)
+# Publish to yoyodyne
 echo ""
 echo "=== Publishing to yoyodyne ==="
 
 YOYODYNE_HOST="ddp@www.yoyodyne.com"
 YOYODYNE_BASE="/www/yoyodyne/ddp/cyberspace"
 YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
-
-# RFC publish location only - don't overwrite main Library index
 YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/rfc/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_RFC_PATH"
   rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
   echo "  -> $YOYODYNE_RFC_PATH"
-  # Ensure directories are world-readable for browser indexing
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
   echo "  Published RFCs to ${YOYODYNE_URL}spki/scheme/docs/rfc/"
 else

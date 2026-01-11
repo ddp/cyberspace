@@ -38,6 +38,34 @@
         (chicken tcp))
 
 ;;; ============================================================
+;;; Startup Timing
+;;; ============================================================
+
+(define *repl-start-time* (current-milliseconds))
+(define *module-times* '())
+(define *module-start* 0)
+
+(define (module-start! name)
+  "Mark start of module loading."
+  (set! *module-start* (current-milliseconds)))
+
+(define (module-end! name)
+  "Mark end of module loading, record timing."
+  (let ((elapsed (- (current-milliseconds) *module-start*)))
+    (set! *module-times* (cons (cons name elapsed) *module-times*))))
+
+(define (report-module-times)
+  "Print per-module timing report."
+  (let* ((times (reverse *module-times*))
+         (total (apply + (map cdr times))))
+    (for-each (lambda (t)
+                (let ((name (car t))
+                      (ms (cdr t)))
+                  (when (> ms 0)
+                    (print (format "  ~a: ~ams" name ms)))))
+              times)))
+
+;;; ============================================================
 ;;; Unicode Helpers
 ;;; ============================================================
 ;;; make-string doesn't work with multi-byte Unicode chars.
@@ -52,6 +80,8 @@
 ;;; ============================================================
 ;;; Ensures compiled modules match current architecture.
 ;;; Rebuilds automatically if arch mismatch or source newer.
+
+(module-start! "bootstrap")
 
 (define (current-arch)
   "Detect current CPU architecture"
@@ -253,6 +283,9 @@
 ;; Initialize libsodium
 (sodium-init)
 
+(module-end! "bootstrap")
+(module-start! "core")
+
 ;;; ============================================================
 ;;; BLAKE2b Hash (placeholder using SHA-256)
 ;;; ============================================================
@@ -307,6 +340,9 @@
   "Clear screen (ANSI escape)"
   (display "\x1b[2J\x1b[H")
   (banner))
+
+(module-end! "core")
+(module-start! "rfcs")
 
 ;;; ============================================================
 ;;; RFC-040: Object State (chaotic/quiescent) and Persistence
@@ -4324,6 +4360,9 @@ Cyberspace REPL - Available Commands
                           (reverse (cdr (reverse tokens)))))
                 (loop (cons tok tokens))))))))
 
+(module-end! "rfcs")
+(module-start! "repl")
+
 ;;; ============================================================
 ;;; Help System
 ;;; ============================================================
@@ -4753,10 +4792,21 @@ Cyberspace REPL - Available Commands
                (pp result))))
          (loop))))))
 
+(module-end! "repl")
+
 ;; Show vault status at startup
 (when (directory-exists? ".vault")
   (describe-vault)
   (node-hardware-refresh!))
+
+;; Report startup time
+(report-module-times)
+(let* ((elapsed-ms (- (current-milliseconds) *repl-start-time*))
+       (elapsed-sec (/ elapsed-ms 1000.0)))
+  (print (format "Ready in ~a"
+                 (if (< elapsed-sec 1)
+                     (format "~ams" elapsed-ms)
+                     (format "~as" elapsed-sec)))))
 (print "")
 
 ;; Start custom REPL

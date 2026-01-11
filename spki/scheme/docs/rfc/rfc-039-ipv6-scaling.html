@@ -1,147 +1,47 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-039-ipv6-scaling</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-  <link rel="stylesheet" href="rfc.css" />
+  <meta charset="UTF-8">
+  <title>RFC-039: Scaling Architecture for IPv6</title>
+  <link rel="stylesheet" href="rfc.css">
 </head>
 <body>
-<h1 id="rfc-039-scaling-architecture-for-ipv6">RFC-039: Scaling
-Architecture for IPv6</h1>
-<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
-<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
-class="email">ddp@eludom.net</a> <strong>Requires:</strong> RFC-010
-(Federation), RFC-016 (Lazy Clustering), RFC-037 (Node Roles)</p>
-<hr />
-<h2 id="abstract">Abstract</h2>
-<p>This RFC defines the architectural changes required to scale
-Cyberspace from a git-backed prototype to a native distributed system
-capable of operating at IPv6 scale (billions of realms, exabytes of
-content). Git becomes an export format; the vault becomes the source of
-truth.</p>
-<hr />
-<h2 id="terminology">Terminology</h2>
-<p><strong>Realm</strong>: A node’s place in cyberspace - its vault,
-principal, capabilities, and objects. Each realm is sovereign:
-local-first, controlled by its operator. Realms federate by choice,
-sharing objects according to trust relationships.</p>
-<p><strong>Vault</strong>: The local content-addressed object store
-(<code>.vault/</code>). The vault IS the realm’s storage - all objects,
-catalogs, audit trails, and configuration live here.</p>
-<p><strong>Principal</strong>: A node’s cryptographic identity (Ed25519
-public key). The principal identifies the realm to peers and signs its
-objects.</p>
-<p>At IPv6 scale, cyberspace consists of billions of realms, each
-occupying its own address space, each sovereign, each choosing what to
-share and with whom.</p>
-<hr />
-<h2 id="motivation">Motivation</h2>
-<p>Git served as an excellent prototype substrate: - Content-addressed
-objects (proof of concept) - Merkle tree integrity (validates the model)
-- Ubiquitous tooling (bootstrap adoption)</p>
-<p>Git cannot scale to IPv6: - Full history on every clone - Repository
-as replication unit (too coarse) - SHA-1 (cryptographically broken) - No
-native federation or discovery - Merge semantics are wrong model</p>
+<h1>RFC-039: Scaling Architecture for IPv6</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC defines the architectural changes required to scale Cyberspace from a git-backed prototype to a native distributed system capable of operating at IPv6 scale (billions of realms, exabytes of content). Git becomes an export format; the vault becomes the source of truth.</p>
+</section>
+<section>
+<h2>Terminology</h2>
+<p>Realm: A node's place in cyberspace - its vault, principal, capabilities, and objects. Each realm is sovereign: local-first, controlled by its operator. Realms federate by choice, sharing objects according to trust relationships.</p>
+<p>Vault: The local content-addressed object store (.vault/). The vault IS the realm's storage - all objects, catalogs, audit trails, and configuration live here.</p>
+<p>Principal: A node's cryptographic identity (Ed25519 public key). The principal identifies the realm to peers and signs its objects.</p>
+<p>At IPv6 scale, cyberspace consists of billions of realms, each occupying its own address space, each sovereign, each choosing what to share and with whom.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>Git served as an excellent prototype substrate: - Content-addressed objects (proof of concept) - Merkle tree integrity (validates the model) - Ubiquitous tooling (bootstrap adoption)</p>
+<p>Git cannot scale to IPv6: - Full history on every clone - Repository as replication unit (too coarse) - SHA-1 (cryptographically broken) - No native federation or discovery - Merge semantics are wrong model</p>
 <p>The internet has 2^128 addresses. Cyberspace should use them.</p>
-<hr />
-<h2 id="design-principles">Design Principles</h2>
-<pre><code>1. Objects, not repositories
+</section>
+<section>
+<h2>Design Principles</h2>
+<pre>
+1. Objects, not repositories
 2. Pull, not push
 3. Lazy, not eager
 4. Local-first, federate-second
-5. Trust math, not infrastructure</code></pre>
-<hr />
-<h2 id="content-addressed-object-store">Content-Addressed Object
-Store</h2>
-<h3 id="storage-model">Storage Model</h3>
-<pre><code>.vault/
+5. Trust math, not infrastructure
+</pre>
+</section>
+<section>
+<h2>Content-Addressed Object Store</h2>
+<h3>Storage Model</h3>
+<pre>
+.vault/
   objects/
     sha512-a1b2c3.../    # First 8 chars as directory
       a1b2c3d4e5f6...    # Full hash as filename (S-expression)
@@ -155,22 +55,24 @@ Store</h2>
     sha512-xxxx/         # Chunked large objects
   audit/
     head.sexp            # Current audit chain head
-    chain/               # Audit entries (hash-addressed)</code></pre>
-<h3 id="object-format">Object Format</h3>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(cyberspace-object</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="dv">1</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (type blob|tree|manifest|cert|audit)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  (size <span class="dv">1048576</span>)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (compression zstd|none)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;sha512:a1b2c3...&quot;</span>)</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  (chunks (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span> <span class="op">...</span>))  <span class="co">; If chunked</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>))</span></code></pre></div>
-<h3 id="chunking-strategy">Chunking Strategy</h3>
-<p>Large objects split at content-defined boundaries (Rabin
-fingerprinting):</p>
-<pre><code>Target chunk: 64 KB (Starlink-optimized)
+    chain/               # Audit entries (hash-addressed)
+</pre>
+<h3>Object Format</h3>
+<pre class="language-scheme">
+(cyberspace-object
+  (version 1)
+  (type blob|tree|manifest|cert|audit)
+  (size 1048576)
+  (compression zstd|none)
+  (hash "sha512:a1b2c3...")
+  (chunks ("sha512:..." "sha512:..." ...))  ; If chunked
+  (signature "ed25519:...")
+  (timestamp 1736300000))
+</pre>
+<h3>Chunking Strategy</h3>
+<p>Large objects split at content-defined boundaries (Rabin fingerprinting):</p>
+<pre>
+Target chunk: 64 KB (Starlink-optimized)
 Min chunk:    16 KB
 Max chunk:   256 KB
 
@@ -178,9 +80,11 @@ Benefits:
   - Deduplication across objects
   - Partial sync (fetch only missing chunks)
   - Resumable transfers
-  - Efficient diff</code></pre>
-<h3 id="hash-function">Hash Function</h3>
-<pre><code>SHA-512 everywhere.
+  - Efficient diff
+</pre>
+<h3>Hash Function</h3>
+<pre>
+SHA-512 everywhere.
 
 Not SHA-256: We have the bits, use them.
 Not SHA-1: Broken.
@@ -190,242 +94,258 @@ SHA-512 is:
   - FIPS certified (GovCloud path)
   - 50 years of cryptanalysis
   - Hardware accelerated
-  - Already in use (audit trail, signatures)</code></pre>
-<hr />
-<h2 id="catalog-and-query">Catalog and Query</h2>
-<p>The soup IS the catalog. No SQL. Objects are S-expressions, queries
-are pattern matching.</p>
-<h3 id="the-soup-query-model">The Soup Query Model</h3>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find objects by pattern</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>(soup-query</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  &#39;(cyberspace-object</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    (type blob)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    (signer <span class="st">&quot;ed25519:alice...&quot;</span>)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    ?rest))                        <span class="co">; Match any object signed by Alice</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find by hash (direct lookup)</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>(soup-fetch <span class="st">&quot;sha512:a1b2c3...&quot;</span>)    <span class="co">; O(1) content-addressed</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find by type</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>(soup-query &#39;(cyberspace-object (type cert) ?rest))</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co">;; Find by time range</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>(soup-query-range</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  type: &#39;audit</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  from: <span class="dv">1736000000</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  to:   <span class="dv">1736100000</span>)</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co">;; Cursor-based iteration for large result sets</span></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>(soup-cursor</span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>  &#39;(cyberspace-object (type <span class="op">?</span>) ?rest)</span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  batch: <span class="dv">100</span>)</span></code></pre></div>
-<h3 id="object-catalog">Object Catalog</h3>
-<p>The catalog is itself an object in the soup - a manifest of what the
-vault contains:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(vault-catalog</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="dv">1</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (realm <span class="st">&quot;ed25519:principal...&quot;</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  (object-count <span class="dv">150000</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (types</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    (blob <span class="dv">100000</span>)</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    (tree <span class="dv">30000</span>)</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    (cert <span class="dv">15000</span>)</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    (audit <span class="dv">5000</span>))</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  (bloom-filter #<span class="op">${...}</span>)           <span class="co">; Fast existence check</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  (updated <span class="dv">1736400000</span>))</span></code></pre></div>
-<h3 id="bloom-filter">Bloom Filter</h3>
+  - Already in use (audit trail, signatures)
+</pre>
+</section>
+<section>
+<h2>Catalog and Query</h2>
+<p>The soup IS the catalog. No SQL. Objects are S-expressions, queries are pattern matching.</p>
+<h3>The Soup Query Model</h3>
+<pre class="language-scheme">
+;; Find objects by pattern
+(soup-query
+  '(cyberspace-object
+    (type blob)
+    (signer "ed25519:alice...")
+    ?rest))                        ; Match any object signed by Alice
+
+;; Find by hash (direct lookup)
+(soup-fetch "sha512:a1b2c3...")    ; O(1) content-addressed
+
+;; Find by type
+(soup-query '(cyberspace-object (type cert) ?rest))
+
+;; Find by time range
+(soup-query-range
+  type: 'audit
+  from: 1736000000
+  to:   1736100000)
+
+;; Cursor-based iteration for large result sets
+(soup-cursor
+  '(cyberspace-object (type ?) ?rest)
+  batch: 100)
+</pre>
+<h3>Object Catalog</h3>
+<p>The catalog is itself an object in the soup - a manifest of what the vault contains:</p>
+<pre class="language-scheme">
+(vault-catalog
+  (version 1)
+  (realm "ed25519:principal...")
+  (object-count 150000)
+  (types
+    (blob 100000)
+    (tree 30000)
+    (cert 15000)
+    (audit 5000))
+  (bloom-filter #${...})           ; Fast existence check
+  (updated 1736400000))
+</pre>
+<h3>Bloom Filter</h3>
 <p>Fast existence check before network round-trip:</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">soup-maybe-contains? </span>hash)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Check bloom filter - false means definitely not, true means maybe&quot;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((catalog (soup-fetch-catalog)))</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    (bloom-test (catalog-bloom catalog) hash)))</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Bloom parameters</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>(bloom-filter</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  (capacity <span class="dv">10000000</span>)              <span class="co">; 10M objects</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  (false-positive <span class="fl">0.001</span>)           <span class="co">; 0.1% FP rate</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  (bits #<span class="op">${...}</span>))</span></code></pre></div>
-<h3 id="audit-trail">Audit Trail</h3>
+<pre class="language-scheme">
+(define (soup-maybe-contains? hash)
+  "Check bloom filter - false means definitely not, true means maybe"
+  (let ((catalog (soup-fetch-catalog)))
+    (bloom-test (catalog-bloom catalog) hash)))
+
+;; Bloom parameters
+(bloom-filter
+  (capacity 10000000)              ; 10M objects
+  (false-positive 0.001)           ; 0.1% FP rate
+  (bits #${...}))
+</pre>
+<h3>Audit Trail</h3>
 <p>The audit trail is a hash-chain of objects in the soup:</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(audit-entry</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (sequence <span class="dv">12345</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (lamport <span class="dv">67890</span>)</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (actor <span class="st">&quot;ed25519:subject...&quot;</span>)</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  (action (<span class="kw">read</span> <span class="st">&quot;sha512:object...&quot;</span>))</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  (previous <span class="st">&quot;sha512:prev-entry...&quot;</span>)  <span class="co">; Chain link</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:auditor...&quot;</span>))</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">;; Query audit by walking the chain</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">audit-query </span>actor from-seq)</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Walk audit chain, filter by actor&quot;</span></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  (soup-chain-walk</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    start: (audit-head)</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    filter: (<span class="kw">lambda</span> (entry)</span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>              (<span class="kw">equal?</span> (entry-actor entry) actor))</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    from: from-seq))</span></code></pre></div>
-<h3 id="secondary-indices">Secondary Indices</h3>
-<p>For queries that can’t use content-addressing, the soup maintains
-lightweight indices as objects:</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(soup-index</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  (name <span class="st">&quot;by-signer&quot;</span>)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  (key-type principal)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  (entries</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    ((<span class="st">&quot;ed25519:alice...&quot;</span> (<span class="st">&quot;sha512:obj1&quot;</span> <span class="st">&quot;sha512:obj2&quot;</span> <span class="op">...</span>))</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>     (<span class="st">&quot;ed25519:bob...&quot;</span> (<span class="st">&quot;sha512:obj3&quot;</span> <span class="st">&quot;sha512:obj4&quot;</span> <span class="op">...</span>)))))</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>(soup-index</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  (name <span class="st">&quot;by-type&quot;</span>)</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  (key-type symbol)</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  (entries</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    ((blob (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span> <span class="op">...</span>))</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>     (cert (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span> <span class="op">...</span>))</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>     (audit (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span> <span class="op">...</span>)))))</span></code></pre></div>
-<p>Indices are rebuilt on demand, not authoritative - the soup is
-truth.</p>
-<hr />
-<h2 id="discovery-and-routing">Discovery and Routing</h2>
-<h3 id="realm-identity">Realm Identity</h3>
-<p>Each realm has a principal (Ed25519 public key). This IS its
-identity:</p>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(realm-identity</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  (principal <span class="st">&quot;ed25519:a1b2c3...&quot;</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (addresses                          <span class="co">; Where to reach this realm</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    (ipv6 <span class="st">&quot;2001:db8::1&quot;</span> port: <span class="dv">7777</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    (ipv4 <span class="st">&quot;192.0.2.1&quot;</span> port: <span class="dv">7777</span>)     <span class="co">; Legacy</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    (onion <span class="st">&quot;xxxx.onion&quot;</span> port: <span class="dv">7777</span>))  <span class="co">; Tor</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  (role witness)</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  (capabilities (storage-gb <span class="dv">1000</span>) (bandwidth-mbps <span class="dv">100</span>))</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))</span></code></pre></div>
-<h3 id="peer-discovery">Peer Discovery</h3>
-<p><strong>Bootstrap:</strong></p>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(bootstrap-peers</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  (<span class="st">&quot;ed25519:official1...&quot;</span> <span class="st">&quot;bootstrap.cyberspace.org&quot;</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  (<span class="st">&quot;ed25519:official2...&quot;</span> <span class="st">&quot;bootstrap2.cyberspace.org&quot;</span>))</span></code></pre></div>
-<p><strong>Gossip Protocol:</strong></p>
-<pre><code>1. Realm joins, contacts bootstrap peer
+<pre class="language-scheme">
+(audit-entry
+  (sequence 12345)
+  (timestamp 1736300000)
+  (lamport 67890)
+  (actor "ed25519:subject...")
+  (action (read "sha512:object..."))
+  (previous "sha512:prev-entry...")  ; Chain link
+  (signature "ed25519:auditor..."))
+
+;; Query audit by walking the chain
+(define (audit-query actor from-seq)
+  "Walk audit chain, filter by actor"
+  (soup-chain-walk
+    start: (audit-head)
+    filter: (lambda (entry)
+              (equal? (entry-actor entry) actor))
+    from: from-seq))
+</pre>
+<h3>Secondary Indices</h3>
+<p>For queries that can't use content-addressing, the soup maintains lightweight indices as objects:</p>
+<pre class="language-scheme">
+(soup-index
+  (name "by-signer")
+  (key-type principal)
+  (entries
+    (("ed25519:alice..." ("sha512:obj1" "sha512:obj2" ...))
+     ("ed25519:bob..." ("sha512:obj3" "sha512:obj4" ...)))))
+
+(soup-index
+  (name "by-type")
+  (key-type symbol)
+  (entries
+    ((blob ("sha512:..." "sha512:..." ...))
+     (cert ("sha512:..." "sha512:..." ...))
+     (audit ("sha512:..." "sha512:..." ...)))))
+</pre>
+<p>Indices are rebuilt on demand, not authoritative - the soup is truth.</p>
+</section>
+<section>
+<h2>Discovery and Routing</h2>
+<h3>Realm Identity</h3>
+<p>Each realm has a principal (Ed25519 public key). This IS its identity:</p>
+<pre class="language-scheme">
+(realm-identity
+  (principal "ed25519:a1b2c3...")
+  (addresses                          ; Where to reach this realm
+    (ipv6 "2001:db8::1" port: 7777)
+    (ipv4 "192.0.2.1" port: 7777)     ; Legacy
+    (onion "xxxx.onion" port: 7777))  ; Tor
+  (role witness)
+  (capabilities (storage-gb 1000) (bandwidth-mbps 100))
+  (signature "ed25519:..."))
+</pre>
+<h3>Peer Discovery</h3>
+<p>Bootstrap:</p>
+<pre class="language-scheme">
+(bootstrap-peers
+  ("ed25519:official1..." "bootstrap.cyberspace.org")
+  ("ed25519:official2..." "bootstrap2.cyberspace.org"))
+</pre>
+<p>Gossip Protocol:</p>
+<pre>
+1. Realm joins, contacts bootstrap peer
 2. Receives partial peer list (random subset)
 3. Contacts those peers, exchanges lists
 4. Epidemic spread: O(log n) rounds to reach all realms
-5. Periodic refresh (every 5 min on Starlink-friendly schedule)</code></pre>
-<p><strong>Distributed Hash Table (Future):</strong></p>
-<pre><code>Kademlia-style routing:
+5. Periodic refresh (every 5 min on Starlink-friendly schedule)
+</pre>
+<p>Distributed Hash Table (Future):</p>
+<pre>
+Kademlia-style routing:
   - XOR distance metric on principal hashes
   - O(log n) lookups
   - Realms responsible for nearby hash ranges
-  - Natural load balancing</code></pre>
-<h3 id="content-discovery">Content Discovery</h3>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; &quot;Who has this hash?&quot;</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>(content-locate <span class="st">&quot;sha512:a1b2c3...&quot;</span>)</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">;; Returns list of peers claiming to have it:</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>((<span class="st">&quot;ed25519:peer1...&quot;</span> (latency-ms <span class="dv">50</span>) (role full))</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a> (<span class="st">&quot;ed25519:peer2...&quot;</span> (latency-ms <span class="dv">200</span>) (role witness))</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a> (<span class="st">&quot;ed25519:peer3...&quot;</span> (latency-ms <span class="dv">600</span>) (role archiver)))</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Fetch from best candidate</span></span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>(content-fetch <span class="st">&quot;sha512:a1b2c3...&quot;</span> from: <span class="st">&quot;ed25519:peer1...&quot;</span>)</span></code></pre></div>
-<hr />
-<h2 id="transport-protocol">Transport Protocol</h2>
-<h3 id="end-to-end-encryption">End-to-End Encryption</h3>
-<p>All network traffic is encrypted. The OS and network are not
-trusted.</p>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(cyberspace-message</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  (version <span class="dv">1</span>)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  (from <span class="st">&quot;ed25519:sender...&quot;</span>)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  (to <span class="st">&quot;ed25519:recipient...&quot;</span>)        <span class="co">; Or broadcast key</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  (ephemeral <span class="st">&quot;x25519:...&quot;</span>)           <span class="co">; One-time key (PFS)</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  (nonce #<span class="op">${</span><span class="dv">24</span>-bytes<span class="op">}</span>)               <span class="co">; Random nonce</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  (ciphertext #<span class="op">${...}</span>)               <span class="co">; NaCl box: X25519 + XSalsa20-Poly1305</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  (signature <span class="st">&quot;ed25519:...&quot;</span>))         <span class="co">; Sign the ciphertext</span></span></code></pre></div>
-<p><strong>Encryption scheme:</strong> NaCl crypto_box (libsodium) - Key
-agreement: X25519 (Curve25519 ECDH) - Cipher: XSalsa20-Poly1305 -
-Perfect forward secrecy: ephemeral keys per message</p>
-<p><strong>Decrypted payload:</strong></p>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(plaintext-payload</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  (type request|response|announce|gossip)</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  (nonce <span class="dv">12345678</span>)                   <span class="co">; Replay protection</span></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  (timestamp <span class="dv">1736300000</span>)</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  (body <span class="op">...</span>))</span></code></pre></div>
-<p><strong>Broadcast messages</strong> use a shared group key or are
-signed-only (announcements of public objects).</p>
-<h3 id="wire-format-encrypted">Wire Format (Encrypted)</h3>
-<div class="sourceCode" id="cb18"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Sender encrypts</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">seal-message </span>payload recipient-pubkey sender-keypair)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((ephemeral (x25519-keypair))</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>         (shared (x25519-shared (ephemeral-secret ephemeral) recipient-pubkey))</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>         (nonce (random-bytes <span class="dv">24</span>))</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>         (ciphertext (crypto-box payload nonce shared)))</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    `(cyberspace-message</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>      (version <span class="dv">1</span>)</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>      (from ,(keypair-public sender-keypair))</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>      (to ,recipient-pubkey)</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>      (ephemeral ,(ephemeral-public ephemeral))</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>      (nonce ,nonce)</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>      (ciphertext ,ciphertext)</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>      (signature ,(sign-message ciphertext sender-keypair)))))</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="co">;; Recipient decrypts</span></span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">open-message </span>msg recipient-keypair)</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((shared (x25519-shared (keypair-secret recipient-keypair)</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>                                (message-ephemeral msg)))</span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>         (plaintext (crypto-box-open (message-ciphertext msg)</span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>                                     (message-nonce msg)</span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>                                     shared)))</span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">and</span> (verify-signature msg (message-from msg))</span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>         plaintext)))</span></code></pre></div>
-<h3 id="request-types">Request Types</h3>
-<div class="sourceCode" id="cb19"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Existence check</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>(have? (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span> <span class="op">...</span>))</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (have (&quot;sha512:...&quot; &quot;sha512:...&quot;) missing (&quot;sha512:...&quot;))</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Fetch object</span></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>(fetch <span class="st">&quot;sha512:...&quot;</span>)</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (object ...)</span></span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="co">;; Fetch chunk range</span></span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>(fetch-chunks <span class="st">&quot;sha512:...&quot;</span> start: <span class="dv">5</span> count: <span class="dv">10</span>)</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (chunks ...)</span></span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="co">;; Peer list exchange</span></span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>(peers? limit: <span class="dv">50</span>)</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (peers ...)</span></span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a><span class="co">;; Announce new content</span></span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>(announce (<span class="st">&quot;sha512:...&quot;</span> <span class="st">&quot;sha512:...&quot;</span>))</span>
-<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response: (ack)</span></span></code></pre></div>
-<h3 id="transport-bindings">Transport Bindings</h3>
-<pre><code>Native:     UDP/IPv6, port 7777 (primary)
+  - Natural load balancing
+</pre>
+<h3>Content Discovery</h3>
+<pre class="language-scheme">
+;; "Who has this hash?"
+(content-locate "sha512:a1b2c3...")
+
+;; Returns list of peers claiming to have it:
+(("ed25519:peer1..." (latency-ms 50) (role full))
+ ("ed25519:peer2..." (latency-ms 200) (role witness))
+ ("ed25519:peer3..." (latency-ms 600) (role archiver)))
+
+;; Fetch from best candidate
+(content-fetch "sha512:a1b2c3..." from: "ed25519:peer1...")
+</pre>
+</section>
+<section>
+<h2>Transport Protocol</h2>
+<h3>End-to-End Encryption</h3>
+<p>All network traffic is encrypted. The OS and network are not trusted.</p>
+<pre class="language-scheme">
+(cyberspace-message
+  (version 1)
+  (from "ed25519:sender...")
+  (to "ed25519:recipient...")        ; Or broadcast key
+  (ephemeral "x25519:...")           ; One-time key (PFS)
+  (nonce #${24-bytes})               ; Random nonce
+  (ciphertext #${...})               ; NaCl box: X25519 + XSalsa20-Poly1305
+  (signature "ed25519:..."))         ; Sign the ciphertext
+</pre>
+<p>Encryption scheme: NaCl crypto_box (libsodium) - Key agreement: X25519 (Curve25519 ECDH) - Cipher: XSalsa20-Poly1305 - Perfect forward secrecy: ephemeral keys per message</p>
+<p>Decrypted payload:</p>
+<pre class="language-scheme">
+(plaintext-payload
+  (type request|response|announce|gossip)
+  (nonce 12345678)                   ; Replay protection
+  (timestamp 1736300000)
+  (body ...))
+</pre>
+<p>Broadcast messages use a shared group key or are signed-only (announcements of public objects).</p>
+<h3>Wire Format (Encrypted)</h3>
+<pre class="language-scheme">
+;; Sender encrypts
+(define (seal-message payload recipient-pubkey sender-keypair)
+  (let ((ephemeral (x25519-keypair))
+         (shared (x25519-shared (ephemeral-secret ephemeral) recipient-pubkey))
+         (nonce (random-bytes 24))
+         (ciphertext (crypto-box payload nonce shared)))
+    `(cyberspace-message
+      (version 1)
+      (from ,(keypair-public sender-keypair))
+      (to ,recipient-pubkey)
+      (ephemeral ,(ephemeral-public ephemeral))
+      (nonce ,nonce)
+      (ciphertext ,ciphertext)
+      (signature ,(sign-message ciphertext sender-keypair)))))
+
+;; Recipient decrypts
+(define (open-message msg recipient-keypair)
+  (let ((shared (x25519-shared (keypair-secret recipient-keypair)
+                                (message-ephemeral msg)))
+         (plaintext (crypto-box-open (message-ciphertext msg)
+                                     (message-nonce msg)
+                                     shared)))
+    (and (verify-signature msg (message-from msg))
+         plaintext)))
+</pre>
+<h3>Request Types</h3>
+<pre class="language-scheme">
+;; Existence check
+(have? ("sha512:..." "sha512:..." ...))
+;; Response: (have ("sha512:..." "sha512:...") missing ("sha512:..."))
+
+;; Fetch object
+(fetch "sha512:...")
+;; Response: (object ...)
+
+;; Fetch chunk range
+(fetch-chunks "sha512:..." start: 5 count: 10)
+;; Response: (chunks ...)
+
+;; Peer list exchange
+(peers? limit: 50)
+;; Response: (peers ...)
+
+;; Announce new content
+(announce ("sha512:..." "sha512:..."))
+;; Response: (ack)
+</pre>
+<h3>Transport Bindings</h3>
+<pre>
+Native:     UDP/IPv6, port 7777 (primary)
 Fallback:   TCP/IPv6, port 7777 (firewalls)
 Legacy:     TCP/IPv4, port 7777 (transition)
 Stealth:    Tor onion service (censorship resistance)
 Offline:    USB drive, file copy (sneakernet)
-Export:     Git bundle (GitHub compatibility)</code></pre>
-<h3 id="starlink-optimization">Starlink Optimization</h3>
-<div class="sourceCode" id="cb21"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>(transport-config</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  (mode satellite)</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  (batch-window-ms <span class="dv">500</span>)        <span class="co">; Aggregate small messages</span></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  (chunk-size-kb <span class="dv">64</span>)           <span class="co">; Match MTU</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  (retry-strategy exponential)</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  (max-in-flight <span class="dv">10</span>)           <span class="co">; Parallelism</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  (keepalive-sec <span class="dv">300</span>))         <span class="co">; 5 min, not 30 sec</span></span></code></pre></div>
-<hr />
-<h2 id="synchronization-protocol">Synchronization Protocol</h2>
-<h3 id="lazy-sync-default">Lazy Sync (Default)</h3>
-<pre><code>Node A                              Node B
+Export:     Git bundle (GitHub compatibility)
+</pre>
+<h3>Starlink Optimization</h3>
+<pre class="language-scheme">
+(transport-config
+  (mode satellite)
+  (batch-window-ms 500)        ; Aggregate small messages
+  (chunk-size-kb 64)           ; Match MTU
+  (retry-strategy exponential)
+  (max-in-flight 10)           ; Parallelism
+  (keepalive-sec 300))         ; 5 min, not 30 sec
+</pre>
+</section>
+<section>
+<h2>Synchronization Protocol</h2>
+<h3>Lazy Sync (Default)</h3>
+<pre>
+Node A                              Node B
    |                                   |
    |----(have? [h1, h2, h3])----------&gt;|
    |&lt;---(have [h1, h3] missing [h2])---|
@@ -433,24 +353,24 @@ class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb21-1"><a h
    |&lt;---(object h2 ...)----------------|
    |                                   |
 
-No coordination. No locks. No leader.</code></pre>
-<h3 id="crdt-style-convergence">Crdt-Style Convergence</h3>
-<p>Objects are immutable and content-addressed. No conflicts possible at
-object level.</p>
-<p>Manifests (collections of objects) use: - Lamport timestamps for
-ordering - Last-writer-wins with principal tiebreaker - Or: union
-(add-only sets)</p>
-<div class="sourceCode" id="cb23"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>(manifest</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  (name <span class="st">&quot;library&quot;</span>)</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  (version (lamport <span class="dv">42</span>) (principal <span class="st">&quot;ed25519:...&quot;</span>))</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  (entries</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&quot;rfc-001&quot;</span> <span class="st">&quot;sha512:...&quot;</span>)</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&quot;rfc-002&quot;</span> <span class="st">&quot;sha512:...&quot;</span>)</span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>))</span></code></pre></div>
-<h3 id="merkle-sync">Merkle Sync</h3>
+No coordination. No locks. No leader.
+</pre>
+<h3>Crdt-Style Convergence</h3>
+<p>Objects are immutable and content-addressed. No conflicts possible at object level.</p>
+<p>Manifests (collections of objects) use: - Lamport timestamps for ordering - Last-writer-wins with principal tiebreaker - Or: union (add-only sets)</p>
+<pre class="language-scheme">
+(manifest
+  (name "library")
+  (version (lamport 42) (principal "ed25519:..."))
+  (entries
+    ("rfc-001" "sha512:...")
+    ("rfc-002" "sha512:...")
+    ...))
+</pre>
+<h3>Merkle Sync</h3>
 <p>Efficient diff for large manifests:</p>
-<pre><code>         root
+<pre>
+         root
         /    \
       h1      h2
      /  \    /  \
@@ -458,11 +378,14 @@ class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb23-1"><a h
 
 Exchange root hash.
 If different, recurse on children.
-O(log n) round trips to find diff.</code></pre>
-<hr />
-<h2 id="federation-at-scale">Federation at Scale</h2>
-<h3 id="cluster-topology">Cluster Topology</h3>
-<pre><code>                    ┌─────────────────────────────────────┐
+O(log n) round trips to find diff.
+</pre>
+</section>
+<section>
+<h2>Federation at Scale</h2>
+<h3>Cluster Topology</h3>
+<pre>
+                    ┌─────────────────────────────────────┐
                     │         COORDINATOR CLUSTER         │
                     │  (3-7 nodes, Byzantine consensus)   │
                     └────────────────┬────────────────────┘
@@ -484,123 +407,94 @@ Coordinators: Rare, high-capability realms, run consensus
 Full: Common realms, replicate everything, serve content
 Witnesses: Abundant realms, verify and store, passive sync
 Archivers: Cold storage realms, batch sync
-Edges: Read-only realms, intermittent, mobile</code></pre>
-<h3 id="partition-tolerance">Partition Tolerance</h3>
-<pre><code>Network splits → clusters diverge → clusters converge on reconnect
+Edges: Read-only realms, intermittent, mobile
+</pre>
+<h3>Partition Tolerance</h3>
+<pre>
+Network splits → clusters diverge → clusters converge on reconnect
 
 No data loss (content-addressed)
 No conflicts (immutable objects)
 Audit trails merge (union of entries, Lamport ordering)
-Manifests resolve (LWW or union based on type)</code></pre>
-<hr />
-<h2 id="git-as-export-format">Git as Export Format</h2>
-<h3 id="the-transition">The Transition</h3>
-<pre><code>Phase 1 (Now):      Git is source of truth, vault is cache
+Manifests resolve (LWW or union based on type)
+</pre>
+</section>
+<section>
+<h2>Git as Export Format</h2>
+<h3>The Transition</h3>
+<pre>
+Phase 1 (Now):      Git is source of truth, vault is cache
 Phase 2 (Next):     Vault is source of truth, git is export
-Phase 3 (Future):   Git optional, purely for GitHub presence</code></pre>
-<h3 id="export-process">Export Process</h3>
-<div class="sourceCode" id="cb28"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>(git-export</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  from: <span class="st">&quot;.vault&quot;</span></span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  to: <span class="st">&quot;/tmp/cyberspace-export&quot;</span></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  format: &#39;git-repo)</span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Creates standard git repo from vault contents</span></span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; For publishing to GitHub, GitLab, etc.</span></span></code></pre></div>
-<h3 id="import-process">Import Process</h3>
-<div class="sourceCode" id="cb29"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>(git-import</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  from: <span class="st">&quot;https://github.com/ddp/cyberspace.git&quot;</span></span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  to: <span class="st">&quot;.vault&quot;</span>)</span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Extracts objects from git, stores in vault</span></span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="co">;; Discards git history, keeps content</span></span></code></pre></div>
-<hr />
-<h2 id="security-at-scale">Security at Scale</h2>
-<h3 id="sybil-resistance">Sybil Resistance</h3>
+Phase 3 (Future):   Git optional, purely for GitHub presence
+</pre>
+<h3>Export Process</h3>
+<pre class="language-scheme">
+(git-export
+  from: ".vault"
+  to: "/tmp/cyberspace-export"
+  format: 'git-repo)
+
+;; Creates standard git repo from vault contents
+;; For publishing to GitHub, GitLab, etc.
+</pre>
+<h3>Import Process</h3>
+<pre class="language-scheme">
+(git-import
+  from: "https://github.com/ddp/cyberspace.git"
+  to: ".vault")
+
+;; Extracts objects from git, stores in vault
+;; Discards git history, keeps content
+</pre>
+</section>
+<section>
+<h2>Security at Scale</h2>
+<h3>Sybil Resistance</h3>
 <p>Problem: Attacker creates many fake nodes to dominate network.</p>
-<p>Mitigations: 1. <strong>Stake-weighted voting</strong> (not
-proof-of-work, just reputation) 2. <strong>Web of trust</strong> - new
-nodes introduced by existing trusted nodes 3. <strong>Rate
-limiting</strong> - bound resources per principal 4. <strong>Coordinator
-consensus</strong> - Byzantine-resistant core</p>
-<h3 id="eclipse-attack-resistance">Eclipse Attack Resistance</h3>
+<p>Mitigations: 1. Stake-weighted voting (not proof-of-work, just reputation) 2. Web of trust - new nodes introduced by existing trusted nodes 3. Rate limiting - bound resources per principal 4. Coordinator consensus - Byzantine-resistant core</p>
+<h3>Eclipse Attack Resistance</h3>
 <p>Problem: Attacker isolates a node by controlling all its peers.</p>
-<p>Mitigations: 1. <strong>Diverse bootstrap</strong> - multiple
-independent entry points 2. <strong>Random peer selection</strong> -
-can’t predict who you’ll connect to 3. <strong>Peer rotation</strong> -
-periodically reconnect to new peers 4. <strong>Out-of-band
-verification</strong> - publish peer lists via DNS, blockchain, etc.</p>
-<h3 id="denial-of-service">Denial of Service</h3>
+<p>Mitigations: 1. Diverse bootstrap - multiple independent entry points 2. Random peer selection - can't predict who you'll connect to 3. Peer rotation - periodically reconnect to new peers 4. Out-of-band verification - publish peer lists via DNS, blockchain, etc.</p>
+<h3>Denial of Service</h3>
 <p>Problem: Attacker floods network with junk.</p>
-<p>Mitigations: 1. <strong>Proof of work on announcements</strong>
-(small, CPU cost) 2. <strong>Rate limiting per principal</strong> 3.
-<strong>Reputation scoring</strong> - misbehaving peers deprioritized 4.
-<strong>Content validation</strong> - reject malformed objects
-immediately</p>
-<hr />
-<h2 id="implementation-phases">Implementation Phases</h2>
-<h3 id="phase-1-native-object-store">Phase 1: Native Object Store</h3>
-<ul>
-<li>Implement <code>.vault/objects/</code> storage</li>
-<li>Soup catalog and query</li>
-<li>Keep git for development workflow</li>
-</ul>
-<h3 id="phase-2-local-first-sync">Phase 2: Local-First Sync</h3>
-<ul>
-<li>Direct node-to-node protocol</li>
-<li><code>have?</code>/<code>fetch</code> message types</li>
-<li>UDP transport with TCP fallback</li>
-</ul>
-<h3 id="phase-3-discovery">Phase 3: Discovery</h3>
-<ul>
-<li>Gossip peer exchange</li>
-<li>Bootstrap nodes</li>
-<li>Bloom filters for content location</li>
-</ul>
-<h3 id="phase-4-scale-testing">Phase 4: Scale Testing</h3>
-<ul>
-<li>100 nodes</li>
-<li>1000 nodes</li>
-<li>10000 nodes</li>
-<li>Measure: latency, convergence time, bandwidth</li>
-</ul>
-<h3 id="phase-5-git-deprecation">Phase 5: Git Deprecation</h3>
-<ul>
-<li>Vault as source of truth</li>
-<li>Git export for compatibility</li>
-<li>Remove git dependency from core operations</li>
-</ul>
-<hr />
-<h2 id="metrics-and-monitoring">Metrics and Monitoring</h2>
-<div class="sourceCode" id="cb30"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>(node-metrics)</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="co">;; Returns:</span></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>((objects-stored <span class="dv">150000</span>)</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a> (objects-size-gb <span class="dv">50</span>)</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a> (peers-known <span class="dv">500</span>)</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a> (peers-connected <span class="dv">20</span>)</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a> (sync-lag-seconds <span class="dv">30</span>)</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a> (bandwidth-in-mbps <span class="dv">10</span>)</span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a> (bandwidth-out-mbps <span class="dv">5</span>)</span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a> (requests-per-second <span class="dv">100</span>)</span>
-<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a> (errors-per-second <span class="fl">0.1</span>))</span></code></pre></div>
-<hr />
-<h2 id="references">References</h2>
-<ol type="1">
-<li>RFC-010: Federation Protocol</li>
-<li>RFC-016: Lazy Clustering</li>
-<li>RFC-037: Node Roles and Capabilities</li>
-<li>Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information
-System</li>
-<li>Rabin, M. (1981). Fingerprinting by Random Polynomials</li>
-<li>IPFS Whitepaper (2014)</li>
-<li>Shapiro, M. (2011). Conflict-Free Replicated Data Types</li>
-</ol>
-<hr />
-<h2 id="changelog">Changelog</h2>
-<ul>
-<li>2026-01-07 - Initial draft</li>
-</ul>
+<p>Mitigations: 1. Proof of work on announcements (small, CPU cost) 2. Rate limiting per principal 3. Reputation scoring - misbehaving peers deprioritized 4. Content validation - reject malformed objects immediately</p>
+</section>
+<section>
+<h2>Implementation Phases</h2>
+<h3>Phase 1: Native Object Store</h3>
+<p>- Implement .vault/objects/ storage - Soup catalog and query - Keep git for development workflow</p>
+<h3>Phase 2: Local-First Sync</h3>
+<p>- Direct node-to-node protocol - have?/fetch message types - UDP transport with TCP fallback</p>
+<h3>Phase 3: Discovery</h3>
+<p>- Gossip peer exchange - Bootstrap nodes - Bloom filters for content location</p>
+<h3>Phase 4: Scale Testing</h3>
+<p>- 100 nodes - 1000 nodes - 10000 nodes - Measure: latency, convergence time, bandwidth</p>
+<h3>Phase 5: Git Deprecation</h3>
+<p>- Vault as source of truth - Git export for compatibility - Remove git dependency from core operations</p>
+</section>
+<section>
+<h2>Metrics and Monitoring</h2>
+<pre class="language-scheme">
+(node-metrics)
+;; Returns:
+((objects-stored 150000)
+ (objects-size-gb 50)
+ (peers-known 500)
+ (peers-connected 20)
+ (sync-lag-seconds 30)
+ (bandwidth-in-mbps 10)
+ (bandwidth-out-mbps 5)
+ (requests-per-second 100)
+ (errors-per-second 0.1))
+</pre>
+</section>
+<section>
+<h2>References</h2>
+<p>1. RFC-010: Federation Protocol 2. RFC-016: Lazy Clustering 3. RFC-037: Node Roles and Capabilities 4. Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information System 5. Rabin, M. (1981). Fingerprinting by Random Polynomials 6. IPFS Whitepaper (2014) 7. Shapiro, M. (2011). Conflict-Free Replicated Data Types</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<p>- 2026-01-07 - Initial draft</p>
+</section>
 </body>
 </html>

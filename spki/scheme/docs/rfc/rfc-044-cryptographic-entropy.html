@@ -1,244 +1,95 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>rfc-044-cryptographic-entropy</title>
-  <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
-  <link rel="stylesheet" href="rfc.css" />
+  <meta charset="UTF-8">
+  <title>RFC-044: Cryptographic Entropy Sources</title>
+  <link rel="stylesheet" href="rfc.css">
 </head>
 <body>
-<h1 id="rfc-044-cryptographic-entropy-sources">RFC-044: Cryptographic
-Entropy Sources</h1>
-<p><strong>Status:</strong> Draft <strong>Created:</strong> 2026-01-08
-<strong>Author:</strong> ddp@eludom.net</p>
-<h2 id="abstract">Abstract</h2>
-<p>All cryptographic operations in Cyberspace require high-quality
-entropy. This RFC specifies the canonical entropy sources for each
-platform, ensuring consistent, auditable, and secure randomness across
-the entire system.</p>
-<h2 id="motivation">Motivation</h2>
-<h3 id="the-fundamental-requirement">The Fundamental Requirement</h3>
-<p><strong>All cryptography requires true quantum randomness. The math
-doesn’t work otherwise.</strong></p>
-<p>Cryptographic proofs assume a source of bits that are: 1.
-<strong>Statistically uniform</strong> - Each bit equally likely 0 or 1
-2. <strong>Independent</strong> - No correlations between bits 3.
-<strong>Unpredictable in principle</strong> - Not just hard to predict,
-but impossible</p>
-<p>Only quantum mechanical processes satisfy condition 3. Classical
-chaotic systems (lava lamps, thermal noise, ring oscillators) are
-<em>deterministic</em> - an adversary with sufficient knowledge of
-initial conditions could, in theory, predict their output. Quantum
-processes have no “initial conditions” to know - the randomness is
-fundamental to physics itself.</p>
-<p><strong>Why this matters:</strong> - Security proofs assume perfect
-randomness - Key security = min(algorithm_bits, entropy_bits) - A
-256-bit key from a 32-bit PRNG seed provides only 32 bits of security -
-Nation-state adversaries may have capabilities to model classical
-entropy sources</p>
-<h3 id="cryptographic-operations-requiring-entropy">Cryptographic
-Operations Requiring Entropy</h3>
-<ul>
-<li>Key generation (Ed25519, X25519)</li>
-<li>Nonce generation (XSalsa20-Poly1305)</li>
-<li>Salt generation (Argon2id)</li>
-<li>Shamir secret sharing</li>
-<li>Challenge-response protocols</li>
-<li>Zero-knowledge proofs</li>
-</ul>
-<p>Weak or predictable entropy destroys security completely. A realm’s
-sovereignty depends on unpredictable secrets.</p>
-<h2 id="specification">Specification</h2>
-<h3 id="canonical-source-libsodium">Canonical Source: libsodium</h3>
-<p>All Cyberspace implementations MUST use libsodium’s
-<code>randombytes_buf()</code> as the primary entropy source:</p>
-<pre><code>randombytes_buf(buffer, size)</code></pre>
-<p>libsodium automatically selects the best available source: - Linux:
-<code>getrandom(2)</code> syscall, falls back to
-<code>/dev/urandom</code> - macOS/iOS: <code>arc4random_buf()</code> -
-Windows: <code>RtlGenRandom()</code> - OpenBSD:
-<code>arc4random_buf()</code> (ChaCha20-based)</p>
-<h3 id="why-libsodium">Why libsodium?</h3>
-<ol type="1">
-<li><strong>Cross-platform consistency</strong> - Same API
-everywhere</li>
-<li><strong>Automatic best-source selection</strong> - No
-platform-specific code</li>
-<li><strong>Initialization safety</strong> - Blocks until entropy
-available</li>
-<li><strong>Fork safety</strong> - Handles process forking
-correctly</li>
-<li><strong>Audited implementation</strong> - Widely reviewed
-cryptographic library</li>
-</ol>
-<h3 id="platform-requirements">Platform Requirements</h3>
-<h4 id="scheme-chicken">Scheme (CHICKEN)</h4>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; crypto-ffi.scm provides:</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">random-bytes </span>n)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Generate n cryptographically secure random bytes&quot;</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((buf (make-blob n)))</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    ((foreign-lambda void <span class="st">&quot;randombytes_buf&quot;</span> scheme-pointer unsigned-integer)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>     buf n)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    buf))</span></code></pre></div>
-<p>All Scheme code MUST use <code>random-bytes</code> from crypto-ffi.
-NEVER use: - <code>(chicken random)</code> - Uses PRNG, not
-cryptographically secure - <code>/dev/random</code> directly -
-Platform-specific, may block - Custom PRNGs - Unaudited, likely
-insecure</p>
-<h4 id="ocaml">OCaml</h4>
-<p><strong>Status: Open Issue</strong></p>
-<p>OCaml implementations should use one of: -
-<code>mirage-crypto-rng</code> with <code>Nocrypto.Rng.generate</code> -
-Direct FFI to libsodium via <code>ctypes</code></p>
-<p>Decision pending based on: - Multicore OCaml compatibility -
-Domain-local PRNG state handling - Build system integration (dune vs
-opam)</p>
-<h3 id="entropy-initialization">Entropy Initialization</h3>
-<p>Before ANY cryptographic operation, ensure libsodium is
-initialized:</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">sodium-init</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((result ((foreign-lambda int <span class="st">&quot;sodium_init&quot;</span>))))</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    (when (<span class="op">=</span> result -<span class="dv">1</span>)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">error</span> <span class="st">&quot;sodium_init failed - entropy source unavailable&quot;</span>))))</span></code></pre></div>
-<p><code>sodium_init()</code> is idempotent and thread-safe. Call it
-early in program startup.</p>
-<h3 id="key-generation">Key Generation</h3>
-<p>All key generation MUST use libsodium’s key generation functions,
-which internally use <code>randombytes_buf()</code>:</p>
+<h1>RFC-044: Cryptographic Entropy Sources</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>All cryptographic operations in Cyberspace require high-quality entropy. This RFC specifies the canonical entropy sources for each platform, ensuring consistent, auditable, and secure randomness across the entire system.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<h3>The Fundamental Requirement</h3>
+<p>All cryptography requires true quantum randomness. The math doesn't work otherwise.</p>
+<p>Cryptographic proofs assume a source of bits that are: 1. Statistically uniform - Each bit equally likely 0 or 1 2. Independent - No correlations between bits 3. Unpredictable in principle - Not just hard to predict, but impossible</p>
+<p>Only quantum mechanical processes satisfy condition 3. Classical chaotic systems (lava lamps, thermal noise, ring oscillators) are deterministic - an adversary with sufficient knowledge of initial conditions could, in theory, predict their output. Quantum processes have no "initial conditions" to know - the randomness is fundamental to physics itself.</p>
+<p>Why this matters: - Security proofs assume perfect randomness - Key security = min(algorithmbits, entropybits) - A 256-bit key from a 32-bit PRNG seed provides only 32 bits of security - Nation-state adversaries may have capabilities to model classical entropy sources</p>
+<h3>Cryptographic Operations Requiring Entropy</h3>
+<p>- Key generation (Ed25519, X25519) - Nonce generation (XSalsa20-Poly1305) - Salt generation (Argon2id) - Shamir secret sharing - Challenge-response protocols - Zero-knowledge proofs</p>
+<p>Weak or predictable entropy destroys security completely. A realm's sovereignty depends on unpredictable secrets.</p>
+</section>
+<section>
+<h2>Specification</h2>
+<h3>Canonical Source: libsodium</h3>
+<p>All Cyberspace implementations MUST use libsodium's randombytes_buf() as the primary entropy source:</p>
+<pre>
+randombytes_buf(buffer, size)
+</pre>
+<p>libsodium automatically selects the best available source: - Linux: getrandom(2) syscall, falls back to /dev/urandom - macOS/iOS: arc4randombuf() - Windows: RtlGenRandom() - OpenBSD: arc4randombuf() (ChaCha20-based)</p>
+<h3>Why libsodium?</h3>
+<p>1. Cross-platform consistency - Same API everywhere 2. Automatic best-source selection - No platform-specific code 3. Initialization safety - Blocks until entropy available 4. Fork safety - Handles process forking correctly 5. Audited implementation - Widely reviewed cryptographic library</p>
+<h3>Platform Requirements</h3>
+<p>#### Scheme (CHICKEN)</p>
+<pre class="language-scheme">
+;; crypto-ffi.scm provides:
+(define (random-bytes n)
+  "Generate n cryptographically secure random bytes"
+  (let ((buf (make-blob n)))
+    ((foreign-lambda void "randombytes_buf" scheme-pointer unsigned-integer)
+     buf n)
+    buf))
+</pre>
+<p>All Scheme code MUST use random-bytes from crypto-ffi. NEVER use: - (chicken random) - Uses PRNG, not cryptographically secure - /dev/random directly - Platform-specific, may block - Custom PRNGs - Unaudited, likely insecure</p>
+<p>#### OCaml</p>
+<p>Status: Open Issue</p>
+<p>OCaml implementations should use one of: - mirage-crypto-rng with Nocrypto.Rng.generate - Direct FFI to libsodium via ctypes</p>
+<p>Decision pending based on: - Multicore OCaml compatibility - Domain-local PRNG state handling - Build system integration (dune vs opam)</p>
+<h3>Entropy Initialization</h3>
+<p>Before ANY cryptographic operation, ensure libsodium is initialized:</p>
+<pre class="language-scheme">
+(define (sodium-init)
+  (let ((result ((foreign-lambda int "sodiuminit"))))
+    (when (= result -1)
+      (error "sodiuminit failed - entropy source unavailable"))))
+</pre>
+<p>sodium_init() is idempotent and thread-safe. Call it early in program startup.</p>
+<h3>Key Generation</h3>
+<p>All key generation MUST use libsodium's key generation functions, which internally use randombytes_buf():</p>
 <table>
-<thead>
-<tr>
-<th>Operation</th>
-<th>Function</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Ed25519 signing key</td>
-<td><code>crypto_sign_keypair()</code></td>
-</tr>
-<tr>
-<td>X25519 key exchange</td>
-<td><code>crypto_box_keypair()</code></td>
-</tr>
-<tr>
-<td>Symmetric key</td>
-<td><code>crypto_secretbox_keygen()</code></td>
-</tr>
-<tr>
-<td>Generic random</td>
-<td><code>randombytes_buf()</code></td>
-</tr>
-</tbody>
+<tr><th>Operation </th><th>Function </th></tr>
+<tr><td>Ed25519 signing key </td><td>cryptosignkeypair() </td></tr>
+<tr><td>X25519 key exchange </td><td>cryptoboxkeypair() </td></tr>
+<tr><td>Symmetric key </td><td>cryptosecretboxkeygen() </td></tr>
+<tr><td>Generic random </td><td>randombytes_buf() </td></tr>
 </table>
-<h3 id="nonce-generation">Nonce Generation</h3>
+<h3>Nonce Generation</h3>
 <p>Nonces MUST be generated fresh for each encryption:</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generate-nonce</span>)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (random-bytes (secretbox-noncebytes)))  <span class="co">;; 24 bytes</span></span></code></pre></div>
-<p>For XSalsa20-Poly1305 with 24-byte nonces, random nonces are safe: -
-2^192 possible nonces - Birthday collision after ~2^96 messages -
-Practical limit: ~2^64 messages per key (still astronomical)</p>
-<h3 id="salt-generation">Salt Generation</h3>
+<pre class="language-scheme">
+(define (generate-nonce)
+  (random-bytes (secretbox-noncebytes)))  ;; 24 bytes
+</pre>
+<p>For XSalsa20-Poly1305 with 24-byte nonces, random nonces are safe: - 2^192 possible nonces - Birthday collision after ~2^96 messages - Practical limit: ~2^64 messages per key (still astronomical)</p>
+<h3>Salt Generation</h3>
 <p>For Argon2id key derivation:</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">generate-salt</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (random-bytes <span class="dv">16</span>))  <span class="co">;; crypto_pwhash_SALTBYTES</span></span></code></pre></div>
-<p>Salts prevent rainbow table attacks. Each salt MUST be unique per
-derived key.</p>
-<h2 id="deep-dive-entropy-sources">Deep Dive: Entropy Sources</h2>
-<p>Randomness is the foundation of all cryptography. This section
-explores the physics and engineering of true randomness.</p>
-<h3 id="the-entropy-hierarchy">The Entropy Hierarchy</h3>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
+<pre class="language-scheme">
+(define (generate-salt)
+  (random-bytes 16))  ;; cryptopwhashSALTBYTES
+</pre>
+<p>Salts prevent rainbow table attacks. Each salt MUST be unique per derived key.</p>
+</section>
+<section>
+<h2>Deep Dive: Entropy Sources</h2>
+<p>Randomness is the foundation of all cryptography. This section explores the physics and engineering of true randomness.</p>
+<h3>The Entropy Hierarchy</h3>
+<pre>
+┌─────────────────────────────────────────────────────────────┐
 │                    Entropy Quality Pyramid                   │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
@@ -270,123 +121,57 @@ explores the physics and engineering of true randomness.</p>
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 
-   ★★★ = Cryptographic operations MUST ultimately trace to quantum sources</code></pre>
-<p><strong>Critical distinction</strong>: Everything below the security
-boundary is <em>computationally</em> secure (hard to predict), not
-<em>information-theoretically</em> secure (impossible to predict). For
-operations like key generation that must withstand future advances in
-computation and modeling, only quantum sources provide provable
-security.</p>
-<h3 id="practical-access-to-quantum-randomness">Practical Access to
-Quantum Randomness</h3>
-<p><strong>The ideal</strong>: Every cryptographic operation sources
-entropy from a local quantum RNG.</p>
-<p><strong>Current reality</strong>: Most systems rely on: 1. Hardware
-RNG (thermal noise, ring oscillators) - classical, but unpredictable at
-human scales 2. OS mixing of multiple sources - defense in depth 3. NIST
-beacon - quantum-sourced, publicly verifiable, but network-dependent</p>
-<p><strong>Path forward for Cyberspace</strong>: - Phase 1 (Now):
-libsodium with OS entropy (relies on hardware quality) - Phase 2:
-Optional quantum RNG hardware support (USB devices, PCIe cards) - Phase
-3: Attestation of entropy source in realm metadata - Phase 4: Quantum
-RNG as standard infrastructure (as quantum internet develops)</p>
-<p><strong>Minimum acceptable</strong>: Modern Intel/AMD RDSEED
-instruction, which samples thermal noise at the silicon level. While not
-provably quantum, it has no known exploits and is mixed with other
-sources.</p>
-<p><strong>Goal</strong>: True quantum randomness as the foundation. The
-math requires it; the engineering will catch up.</p>
-<h3 id="cyberspace-as-entropy-provider">Cyberspace as Entropy
-Provider</h3>
-<p><strong>We will provide all the randomness that our users need - on
-demand, for whatever their cryptographic desires.</strong></p>
+   ★★★ = Cryptographic operations MUST ultimately trace to quantum sources
+</pre>
+<p>Critical distinction: Everything below the security boundary is computationally secure (hard to predict), not information-theoretically secure (impossible to predict). For operations like key generation that must withstand future advances in computation and modeling, only quantum sources provide provable security.</p>
+<h3>Practical Access to Quantum Randomness</h3>
+<p>The ideal: Every cryptographic operation sources entropy from a local quantum RNG.</p>
+<p>Current reality: Most systems rely on: 1. Hardware RNG (thermal noise, ring oscillators) - classical, but unpredictable at human scales 2. OS mixing of multiple sources - defense in depth 3. NIST beacon - quantum-sourced, publicly verifiable, but network-dependent</p>
+<p>Path forward for Cyberspace: - Phase 1 (Now): libsodium with OS entropy (relies on hardware quality) - Phase 2: Optional quantum RNG hardware support (USB devices, PCIe cards) - Phase 3: Attestation of entropy source in realm metadata - Phase 4: Quantum RNG as standard infrastructure (as quantum internet develops)</p>
+<p>Minimum acceptable: Modern Intel/AMD RDSEED instruction, which samples thermal noise at the silicon level. While not provably quantum, it has no known exploits and is mixed with other sources.</p>
+<p>Goal: True quantum randomness as the foundation. The math requires it; the engineering will catch up.</p>
+<h3>Cyberspace as Entropy Provider</h3>
+<p>We will provide all the randomness that our users need - on demand, for whatever their cryptographic desires.</p>
 <p>Cyberspace realms can serve as entropy sources for their users:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Request entropy from the realm</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>(realm-entropy-request</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  (bytes <span class="dv">32</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  (purpose <span class="st">&quot;key-generation&quot;</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (attestation-required <span class="dv">#t</span>))</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">;; Response includes attestation of entropy source</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>(realm-entropy-response</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  (value #<span class="op">${</span>..<span class="fl">.32</span> bytes...<span class="op">}</span>)</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  (source <span class="st">&quot;quantum-rng&quot;</span>)</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  (attestation (signed-by realm-principal)</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>               (hardware <span class="st">&quot;ID-Quantique-QUANTIS&quot;</span>)</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>               (timestamp <span class="dv">1736344800</span>)))</span></code></pre></div>
-<p><strong>Entropy services</strong>: 1. <strong>Local
-generation</strong> - Realm uses its best available source 2.
-<strong>Federated entropy</strong> - Request quantum entropy from realms
-with quantum hardware 3. <strong>Beacon aggregation</strong> - Mix NIST
-+ drand + realm sources 4. <strong>Attestation chain</strong> - Prove
-the entropy source for audit</p>
-<p><strong>Long-term vision</strong>: A network of realms with quantum
-RNG hardware providing verifiable, quantum-sourced entropy to all
-participants. The soup carries randomness as naturally as it carries
-data.</p>
-<h3 id="true-random-number-generators-trng">True Random Number
-Generators (TRNG)</h3>
-<p>True randomness comes from physical processes that are fundamentally
-unpredictable:</p>
-<h4 id="quantum-sources-required-for-provable-security">Quantum Sources
-(Required for Provable Security)</h4>
-<p>The only sources that satisfy cryptographic assumptions. Quantum
-mechanics guarantees unpredictability:</p>
-<ul>
-<li><strong>Photon beam splitters</strong> - Single photon hits 50/50
-beam splitter, detection is truly random</li>
-<li><strong>Vacuum fluctuations</strong> - Measuring quantum vacuum
-state</li>
-<li><strong>Quantum tunneling</strong> - Electron tunneling through
-barriers</li>
-<li><strong>Nuclear decay</strong> - Timing of radioactive decay
-events</li>
-</ul>
-<p>Commercial quantum RNGs: ID Quantique (QUANTIS), Quintessence Labs,
-Crypta Labs</p>
-<h4 id="silicon-based-trng">Silicon-Based TRNG</h4>
+<pre class="language-scheme">
+;; Request entropy from the realm
+(realm-entropy-request
+  (bytes 32)
+  (purpose "key-generation")
+  (attestation-required #t))
+
+;; Response includes attestation of entropy source
+(realm-entropy-response
+  (value #${...32 bytes...})
+  (source "quantum-rng")
+  (attestation (signed-by realm-principal)
+               (hardware "ID-Quantique-QUANTIS")
+               (timestamp 1736344800)))
+</pre>
+<p>Entropy services: 1. Local generation - Realm uses its best available source 2. Federated entropy - Request quantum entropy from realms with quantum hardware 3. Beacon aggregation - Mix NIST + drand + realm sources 4. Attestation chain - Prove the entropy source for audit</p>
+<p>Long-term vision: A network of realms with quantum RNG hardware providing verifiable, quantum-sourced entropy to all participants. The soup carries randomness as naturally as it carries data.</p>
+<h3>True Random Number Generators (TRNG)</h3>
+<p>True randomness comes from physical processes that are fundamentally unpredictable:</p>
+<p>#### Quantum Sources (Required for Provable Security)</p>
+<p>The only sources that satisfy cryptographic assumptions. Quantum mechanics guarantees unpredictability:</p>
+<p>- Photon beam splitters - Single photon hits 50/50 beam splitter, detection is truly random - Vacuum fluctuations - Measuring quantum vacuum state - Quantum tunneling - Electron tunneling through barriers - Nuclear decay - Timing of radioactive decay events</p>
+<p>Commercial quantum RNGs: ID Quantique (QUANTIS), Quintessence Labs, Crypta Labs</p>
+<p>#### Silicon-Based TRNG</p>
 <p>Modern CPUs include hardware random number generators:</p>
 <table>
-<thead>
-<tr>
-<th>CPU</th>
-<th>Instruction</th>
-<th>Mechanism</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Intel</td>
-<td>RDRAND/RDSEED</td>
-<td>Thermal noise + AES-CBC-MAC</td>
-</tr>
-<tr>
-<td>AMD</td>
-<td>RDRAND/RDSEED</td>
-<td>Ring oscillator jitter</td>
-</tr>
-<tr>
-<td>ARM</td>
-<td>TRNG</td>
-<td>Metastable flip-flops</td>
-</tr>
-<tr>
-<td>RISC-V</td>
-<td>Zkr extension</td>
-<td>Implementation-defined</td>
-</tr>
-</tbody>
+<tr><th>CPU </th><th>Instruction </th><th>Mechanism </th></tr>
+<tr><td>Intel </td><td>RDRAND/RDSEED </td><td>Thermal noise + AES-CBC-MAC </td></tr>
+<tr><td>AMD </td><td>RDRAND/RDSEED </td><td>Ring oscillator jitter </td></tr>
+<tr><td>ARM </td><td>TRNG </td><td>Metastable flip-flops </td></tr>
+<tr><td>RISC-V </td><td>Zkr extension </td><td>Implementation-defined </td></tr>
 </table>
-<p><strong>Security note</strong>: Intel’s RDRAND has faced scrutiny.
-Mix with other sources.</p>
-<h3 id="environmental-entropy-lavarand">Environmental Entropy:
-Lavarand</h3>
-<p><strong>The most famous entropy source in computing.</strong></p>
-<p>Silicon Graphics (SGI) invented Lavarand in 1996. Cloudflare operates
-the modern successor.</p>
-<h4 id="how-it-works">How It Works</h4>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
+<p>Security note: Intel's RDRAND has faced scrutiny. Mix with other sources.</p>
+<h3>Environmental Entropy: Lavarand</h3>
+<p>The most famous entropy source in computing.</p>
+<p>Silicon Graphics (SGI) invented Lavarand in 1996. Cloudflare operates the modern successor.</p>
+<p>#### How It Works</p>
+<pre>
+┌─────────────────────────────────────────────────────────────┐
 │                     LAVARAND SYSTEM                          │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
@@ -402,74 +187,31 @@ the modern successor.</p>
 │                                  │  (mix with CSPRNG)  │     │
 │                                  └─────────────────────┘     │
 │                                                              │
-└─────────────────────────────────────────────────────────────┘</code></pre>
-<h4 id="why-lava-lamps">Why Lava Lamps?</h4>
-<ol type="1">
-<li><strong>Chaotic fluid dynamics</strong> - Wax movement is
-unpredictable</li>
-<li><strong>Thermal convection</strong> - Heat creates complex flow
-patterns</li>
-<li><strong>High bandwidth</strong> - Each video frame yields fresh
-entropy</li>
-<li><strong>Tamper-evident</strong> - Physical installation is
-visible</li>
-<li><strong>Independent source</strong> - Not correlated with CPU
-state</li>
-</ol>
-<p>Cloudflare’s wall of 100 lava lamps generates entropy for ~10% of
-internet HTTPS traffic.</p>
-<h4 id="other-environmental-sources">Other Environmental Sources</h4>
+└─────────────────────────────────────────────────────────────┘
+</pre>
+<p>#### Why Lava Lamps?</p>
+<p>1. Chaotic fluid dynamics - Wax movement is unpredictable 2. Thermal convection - Heat creates complex flow patterns 3. High bandwidth - Each video frame yields fresh entropy 4. Tamper-evident - Physical installation is visible 5. Independent source - Not correlated with CPU state</p>
+<p>Cloudflare's wall of 100 lava lamps generates entropy for ~10% of internet HTTPS traffic.</p>
+<p>#### Other Environmental Sources</p>
 <table>
-<thead>
-<tr>
-<th>Source</th>
-<th>Mechanism</th>
-<th>Bandwidth</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Lava lamps</strong></td>
-<td>Fluid dynamics</td>
-<td>~100 Kbit/s</td>
-</tr>
-<tr>
-<td><strong>Radioactive decay</strong></td>
-<td>Nuclear physics</td>
-<td>~1-10 Kbit/s</td>
-</tr>
-<tr>
-<td><strong>Atmospheric noise</strong></td>
-<td>RF antenna</td>
-<td>~1 Mbit/s</td>
-</tr>
-<tr>
-<td><strong>Thermal camera</strong></td>
-<td>Johnson-Nyquist noise</td>
-<td>~10 Kbit/s</td>
-</tr>
-<tr>
-<td><strong>Double pendulum</strong></td>
-<td>Chaotic motion</td>
-<td>~100 bit/s</td>
-</tr>
-<tr>
-<td><strong>Keyboard timing</strong></td>
-<td>Human unpredictability</td>
-<td>~1-10 bit/keystroke</td>
-</tr>
-</tbody>
+<tr><th>Source </th><th>Mechanism </th><th>Bandwidth </th></tr>
+<tr><td>Lava lamps </td><td>Fluid dynamics </td><td>~100 Kbit/s </td></tr>
+<tr><td>Radioactive decay </td><td>Nuclear physics </td><td>~1-10 Kbit/s </td></tr>
+<tr><td>Atmospheric noise </td><td>RF antenna </td><td>~1 Mbit/s </td></tr>
+<tr><td>Thermal camera </td><td>Johnson-Nyquist noise </td><td>~10 Kbit/s </td></tr>
+<tr><td>Double pendulum </td><td>Chaotic motion </td><td>~100 bit/s </td></tr>
+<tr><td>Keyboard timing </td><td>Human unpredictability </td><td>~1-10 bit/keystroke </td></tr>
 </table>
-<h3 id="public-randomness-beacons">Public Randomness Beacons</h3>
-<p>Beacons provide <strong>verifiable public randomness</strong> -
-useful for: - Lottery systems - Audit sampling - Distributed protocols -
-Zero-knowledge proofs</p>
-<h4 id="nist-randomness-beacon">NIST Randomness Beacon</h4>
-<p>The National Institute of Standards and Technology operates a public
-randomness beacon since 2013.</p>
-<pre><code>https://beacon.nist.gov/beacon/2.0/pulse/last</code></pre>
-<p><strong>Architecture:</strong></p>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
+<h3>Public Randomness Beacons</h3>
+<p>Beacons provide verifiable public randomness - useful for: - Lottery systems - Audit sampling - Distributed protocols - Zero-knowledge proofs</p>
+<p>#### NIST Randomness Beacon</p>
+<p>The National Institute of Standards and Technology operates a public randomness beacon since 2013.</p>
+<pre>
+https://beacon.nist.gov/beacon/2.0/pulse/last
+</pre>
+<p>Architecture:</p>
+<pre>
+┌─────────────────────────────────────────────────────────────┐
 │                   NIST BEACON 2.0                            │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
@@ -487,73 +229,31 @@ randomness beacon since 2013.</p>
 │  Hash chain: Each pulse includes hash of previous            │
 │  Signature: RSA-2048 (Beacon 2.0)                           │
 │                                                              │
-└─────────────────────────────────────────────────────────────┘</code></pre>
-<p><strong>Pulse Record Contents:</strong> - <code>uri</code> - Unique
-pulse identifier - <code>version</code> - Beacon protocol version -
-<code>timeStamp</code> - Unix timestamp - <code>localRandomValue</code>
-- 512 bits from quantum sources - <code>outputValue</code> - SHA-512
-hash (the public random value) - <code>statusCode</code> - Health
-indicator - <code>signatureValue</code> - Digital signature</p>
-<p><strong>Properties:</strong> - <strong>Unpredictable</strong> -
-Cannot be known before publication - <strong>Verifiable</strong> -
-Anyone can verify the signature chain - <strong>Non-manipulable</strong>
-- NIST cannot control output - <strong>Archived</strong> - Full history
-publicly available</p>
-<p><strong>Use in Cyberspace:</strong></p>
-<div class="sourceCode" id="cb11"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; For ceremonies, audits, public verifiability</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">fetch-nist-beacon</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((response (http-get <span class="st">&quot;https://beacon.nist.gov/beacon/2.0/pulse/last&quot;</span>))</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>         (pulse (json-parse response))</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>         (output (assoc-ref pulse <span class="st">&quot;outputValue&quot;</span>)))</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    (hex-&gt;blob output)))</span></code></pre></div>
-<h4 id="other-public-beacons">Other Public Beacons</h4>
+└─────────────────────────────────────────────────────────────┘
+</pre>
+<p>Pulse Record Contents: - uri - Unique pulse identifier - version - Beacon protocol version - timeStamp - Unix timestamp - localRandomValue - 512 bits from quantum sources - outputValue - SHA-512 hash (the public random value) - statusCode - Health indicator - signatureValue - Digital signature</p>
+<p>Properties: - Unpredictable - Cannot be known before publication - Verifiable - Anyone can verify the signature chain - Non-manipulable - NIST cannot control output - Archived - Full history publicly available</p>
+<p>Use in Cyberspace:</p>
+<pre class="language-scheme">
+;; For ceremonies, audits, public verifiability
+(define (fetch-nist-beacon)
+  (let* ((response (http-get "https://beacon.nist.gov/beacon/2.0/pulse/last"))
+         (pulse (json-parse response))
+         (output (assoc-ref pulse "outputValue")))
+    (hex-&gt;blob output)))
+</pre>
+<p>#### Other Public Beacons</p>
 <table>
-<colgroup>
-<col style="width: 22%" />
-<col style="width: 27%" />
-<col style="width: 22%" />
-<col style="width: 27%" />
-</colgroup>
-<thead>
-<tr>
-<th>Beacon</th>
-<th>Operator</th>
-<th>Source</th>
-<th>Interval</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>NIST Beacon</strong></td>
-<td>US NIST</td>
-<td>Quantum + photonic</td>
-<td>60 seconds</td>
-</tr>
-<tr>
-<td><strong>Chile UChile</strong></td>
-<td>University of Chile</td>
-<td>Seismic + radio</td>
-<td>60 seconds</td>
-</tr>
-<tr>
-<td><strong>Cloudflare drand</strong></td>
-<td>League of Entropy</td>
-<td>Distributed threshold</td>
-<td>30 seconds</td>
-</tr>
-<tr>
-<td><strong>IRISA</strong></td>
-<td>French research</td>
-<td>Multiple physical</td>
-<td>60 seconds</td>
-</tr>
-</tbody>
+<tr><th>Beacon </th><th>Operator </th><th>Source </th><th>Interval </th></tr>
+<tr><td>NIST Beacon </td><td>US NIST </td><td>Quantum + photonic </td><td>60 seconds </td></tr>
+<tr><td>Chile UChile </td><td>University of Chile </td><td>Seismic + radio </td><td>60 seconds </td></tr>
+<tr><td>Cloudflare drand </td><td>League of Entropy </td><td>Distributed threshold </td><td>30 seconds </td></tr>
+<tr><td>IRISA </td><td>French research </td><td>Multiple physical </td><td>60 seconds </td></tr>
 </table>
-<h4 id="league-of-entropy-drand">League of Entropy (drand)</h4>
-<p>Distributed randomness beacon - no single party controls the
-output:</p>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
+<p>#### League of Entropy (drand)</p>
+<p>Distributed randomness beacon - no single party controls the output:</p>
+<pre>
+┌─────────────────────────────────────────────────────────────┐
 │              DRAND DISTRIBUTED BEACON                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
@@ -569,240 +269,117 @@ output:</p>
 │   Endpoint: https://api.drand.sh/public/latest              │
 │   Chain: 8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce │
 │                                                              │
-└─────────────────────────────────────────────────────────────┘</code></pre>
-<h3 id="entropy-mixing">Entropy Mixing</h3>
+└─────────────────────────────────────────────────────────────┘
+</pre>
+<h3>Entropy Mixing</h3>
 <p>Real systems mix multiple sources for defense in depth:</p>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Conceptual entropy mixer</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">mix-entropy-sources</span>)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((hw (hardware-random-bytes <span class="dv">32</span>))      <span class="co">;; RDRAND</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        (os (os-entropy-pool-bytes <span class="dv">32</span>))       <span class="co">;; /dev/urandom</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        (env (environmental-entropy <span class="dv">32</span>))      <span class="co">;; If available</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        (beacon (cached-nist-beacon)))        <span class="co">;; Public verifiability</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; Mix with HKDF or similar</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    (hkdf-sha512</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>      (blob-append hw os env beacon)</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;cyberspace-entropy-v1&quot;</span></span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>      <span class="dv">64</span>)))</span></code></pre></div>
-<h3 id="historical-entropy-failures">Historical Entropy Failures</h3>
+<pre class="language-scheme">
+;; Conceptual entropy mixer
+(define (mix-entropy-sources)
+  (let ((hw (hardware-random-bytes 32))      ;; RDRAND
+        (os (os-entropy-pool-bytes 32))       ;; /dev/urandom
+        (env (environmental-entropy 32))      ;; If available
+        (beacon (cached-nist-beacon)))        ;; Public verifiability
+    ;; Mix with HKDF or similar
+    (hkdf-sha512
+      (blob-append hw os env beacon)
+      "cyberspace-entropy-v1"
+      64)))
+</pre>
+<h3>Historical Entropy Failures</h3>
 <p>Learning from disasters:</p>
 <table>
-<colgroup>
-<col style="width: 32%" />
-<col style="width: 19%" />
-<col style="width: 22%" />
-<col style="width: 25%" />
-</colgroup>
-<thead>
-<tr>
-<th>Incident</th>
-<th>Year</th>
-<th>Cause</th>
-<th>Impact</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Netscape SSL</strong></td>
-<td>1995</td>
-<td>PID + timestamp = predictable</td>
-<td>All SSL broken</td>
-</tr>
-<tr>
-<td><strong>Debian OpenSSL</strong></td>
-<td>2006-2008</td>
-<td>Valgrind “fix” removed entropy</td>
-<td>32,767 possible keys</td>
-</tr>
-<tr>
-<td><strong>Android SecureRandom</strong></td>
-<td>2013</td>
-<td>PRNG state reuse</td>
-<td>Bitcoin wallets drained</td>
-</tr>
-<tr>
-<td><strong>Dual_EC_DRBG</strong></td>
-<td>2013</td>
-<td>NSA backdoor in constants</td>
-<td>Unknown surveillance</td>
-</tr>
-<tr>
-<td><strong>Taiwan smart cards</strong></td>
-<td>2013</td>
-<td>Shared PRNG state</td>
-<td>Factored RSA keys</td>
-</tr>
-</tbody>
+<tr><th>Incident </th><th>Year </th><th>Cause </th><th>Impact </th></tr>
+<tr><td>Netscape SSL </td><td>1995 </td><td>PID + timestamp = predictable </td><td>All SSL broken </td></tr>
+<tr><td>Debian OpenSSL </td><td>2006-2008 </td><td>Valgrind "fix" removed entropy </td><td>32,767 possible keys </td></tr>
+<tr><td>Android SecureRandom </td><td>2013 </td><td>PRNG state reuse </td><td>Bitcoin wallets drained </td></tr>
+<tr><td>DualECDRBG </td><td>2013 </td><td>NSA backdoor in constants </td><td>Unknown surveillance </td></tr>
+<tr><td>Taiwan smart cards </td><td>2013 </td><td>Shared PRNG state </td><td>Factored RSA keys </td></tr>
 </table>
-<p><strong>Lesson</strong>: Defense in depth. Mix multiple independent
-sources.</p>
-<h3 id="entropy-requirements-by-operation">Entropy Requirements by
-Operation</h3>
+<p>Lesson: Defense in depth. Mix multiple independent sources.</p>
+<h3>Entropy Requirements by Operation</h3>
 <table>
-<thead>
-<tr>
-<th>Operation</th>
-<th>Entropy Needed</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Ed25519 keypair</strong></td>
-<td>32 bytes</td>
-<td>Full key security</td>
-</tr>
-<tr>
-<td><strong>X25519 keypair</strong></td>
-<td>32 bytes</td>
-<td>Full key security</td>
-</tr>
-<tr>
-<td><strong>XSalsa20 nonce</strong></td>
-<td>24 bytes</td>
-<td>Random OK (large space)</td>
-</tr>
-<tr>
-<td><strong>AES-GCM nonce</strong></td>
-<td>12 bytes</td>
-<td>Counter preferred (small space)</td>
-</tr>
-<tr>
-<td><strong>Argon2id salt</strong></td>
-<td>16 bytes</td>
-<td>Unique per derivation</td>
-</tr>
-<tr>
-<td><strong>Session ID</strong></td>
-<td>16-32 bytes</td>
-<td>Unpredictable</td>
-</tr>
-<tr>
-<td><strong>ECDSA k-value</strong></td>
-<td>32 bytes</td>
-<td>CRITICAL - must not repeat</td>
-</tr>
-</tbody>
+<tr><th>Operation </th><th>Entropy Needed </th><th>Notes </th></tr>
+<tr><td>Ed25519 keypair </td><td>32 bytes </td><td>Full key security </td></tr>
+<tr><td>X25519 keypair </td><td>32 bytes </td><td>Full key security </td></tr>
+<tr><td>XSalsa20 nonce </td><td>24 bytes </td><td>Random OK (large space) </td></tr>
+<tr><td>AES-GCM nonce </td><td>12 bytes </td><td>Counter preferred (small space) </td></tr>
+<tr><td>Argon2id salt </td><td>16 bytes </td><td>Unique per derivation </td></tr>
+<tr><td>Session ID </td><td>16-32 bytes </td><td>Unpredictable </td></tr>
+<tr><td>ECDSA k-value </td><td>32 bytes </td><td>CRITICAL - must not repeat </td></tr>
 </table>
-<h2 id="security-considerations">Security Considerations</h2>
-<h3 id="entropy-exhaustion">Entropy Exhaustion</h3>
-<p>libsodium’s <code>randombytes_buf()</code> never blocks on modern
-systems: - Uses ChaCha20 CSPRNG seeded from OS entropy - OS entropy
-pools are continuously replenished - Hardware RNG (RDRAND/RDSEED)
-available on modern CPUs</p>
-<h3 id="vmcontainer-considerations">VM/Container Considerations</h3>
-<p>Virtual machines may have limited entropy at boot: - Use
-<code>virtio-rng</code> to pass host entropy to guests - Ensure
-<code>haveged</code> or <code>rng-tools</code> if entropy-limited -
-libsodium will block until sufficient entropy available</p>
-<h3 id="fork-safety">Fork Safety</h3>
-<p>libsodium handles fork correctly: - Automatic re-seeding after
-<code>fork()</code> - No duplicate random sequences in child
-processes</p>
-<h3 id="deterministic-testing">Deterministic Testing</h3>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Entropy Exhaustion</h3>
+<p>libsodium's randombytes_buf() never blocks on modern systems: - Uses ChaCha20 CSPRNG seeded from OS entropy - OS entropy pools are continuously replenished - Hardware RNG (RDRAND/RDSEED) available on modern CPUs</p>
+<h3>VM/Container Considerations</h3>
+<p>Virtual machines may have limited entropy at boot: - Use virtio-rng to pass host entropy to guests - Ensure haveged or rng-tools if entropy-limited - libsodium will block until sufficient entropy available</p>
+<h3>Fork Safety</h3>
+<p>libsodium handles fork correctly: - Automatic re-seeding after fork() - No duplicate random sequences in child processes</p>
+<h3>Deterministic Testing</h3>
 <p>For reproducible tests ONLY (never production):</p>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">set-test-seed </span>seed)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;WARNING: Deterministic mode - testing only&quot;</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  ((foreign-lambda void <span class="st">&quot;randombytes_stir&quot;</span>)))</span></code></pre></div>
+<pre class="language-scheme">
+(define (set-test-seed seed)
+  "WARNING: Deterministic mode - testing only"
+  ((foreign-lambda void "randombytes_stir")))
+</pre>
 <p>Production code MUST use true entropy.</p>
-<h2 id="implementation-notes">Implementation Notes</h2>
-<h3 id="current-status">Current Status</h3>
+</section>
+<section>
+<h2>Implementation Notes</h2>
+<h3>Current Status</h3>
 <table>
-<thead>
-<tr>
-<th>Component</th>
-<th>Entropy Source</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>crypto-ffi.scm</td>
-<td><code>randombytes_buf()</code></td>
-<td>Implemented</td>
-</tr>
-<tr>
-<td>vault.scm (keystore)</td>
-<td><code>random-bytes</code></td>
-<td>Implemented</td>
-</tr>
-<tr>
-<td>OCaml core</td>
-<td>TBD</td>
-<td>Open Issue</td>
-</tr>
-</tbody>
+<tr><th>Component </th><th>Entropy Source </th><th>Status </th></tr>
+<tr><td>crypto-ffi.scm </td><td>randombytes_buf() </td><td>Implemented </td></tr>
+<tr><td>vault.scm (keystore) </td><td>random-bytes </td><td>Implemented </td></tr>
+<tr><td>OCaml core </td><td>TBD </td><td>Open Issue </td></tr>
 </table>
-<h3 id="audit-trail">Audit Trail</h3>
-<p>All key generation events should be logged (not the keys
-themselves):</p>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(seal-commit <span class="dv">#f</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  `(entropy-event</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    (type <span class="st">&quot;key-generation&quot;</span>)</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    (algorithm <span class="st">&quot;ed25519&quot;</span>)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    (timestamp ,(current-seconds))</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    (entropy-source <span class="st">&quot;libsodium&quot;</span>)))</span></code></pre></div>
-<h3 id="hardware-entropy">Hardware Entropy</h3>
+<h3>Audit Trail</h3>
+<p>All key generation events should be logged (not the keys themselves):</p>
+<pre class="language-scheme">
+(seal-commit #f
+  `(entropy-event
+    (type "key-generation")
+    (algorithm "ed25519")
+    (timestamp ,(current-seconds))
+    (entropy-source "libsodium")))
+</pre>
+<h3>Hardware Entropy</h3>
 <p>When available, hardware entropy sources enhance security:</p>
 <table>
-<thead>
-<tr>
-<th>Platform</th>
-<th>Hardware RNG</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Intel/AMD</td>
-<td>RDRAND, RDSEED instructions</td>
-</tr>
-<tr>
-<td>ARM</td>
-<td>TRNG (True Random Number Generator)</td>
-</tr>
-<tr>
-<td>Apple Silicon</td>
-<td>Secure Enclave entropy</td>
-</tr>
-</tbody>
+<tr><th>Platform </th><th>Hardware RNG </th></tr>
+<tr><td>Intel/AMD </td><td>RDRAND, RDSEED instructions </td></tr>
+<tr><td>ARM </td><td>TRNG (True Random Number Generator) </td></tr>
+<tr><td>Apple Silicon </td><td>Secure Enclave entropy </td></tr>
 </table>
 <p>libsodium automatically uses hardware entropy when available.</p>
-<h2 id="migration">Migration</h2>
-<h3 id="phase-1-audit-current">Phase 1: Audit (Current)</h3>
-<ul>
-<li>Identify all randomness usage in codebase</li>
-<li>Replace non-libsodium sources</li>
-</ul>
-<h3 id="phase-2-standardize">Phase 2: Standardize</h3>
-<ul>
-<li>All Scheme uses <code>random-bytes</code> from crypto-ffi</li>
-<li>Document OCaml approach</li>
-</ul>
-<h3 id="phase-3-verify">Phase 3: Verify</h3>
-<ul>
-<li>Entropy quality testing</li>
-<li>Audit logging for key generation</li>
-</ul>
-<h2 id="references">References</h2>
-<ul>
-<li>libsodium documentation: https://doc.libsodium.org/</li>
-<li>NIST SP 800-90A: Recommendations for Random Number Generation</li>
-<li>RFC 4086: Randomness Requirements for Security</li>
-<li>ChaCha20: https://cr.yp.to/chacha.html</li>
-</ul>
-<h2 id="appendix-entropy-quality-testing">Appendix: Entropy Quality
-Testing</h2>
+</section>
+<section>
+<h2>Migration</h2>
+<h3>Phase 1: Audit (Current)</h3>
+<p>- Identify all randomness usage in codebase - Replace non-libsodium sources</p>
+<h3>Phase 2: Standardize</h3>
+<p>- All Scheme uses random-bytes from crypto-ffi - Document OCaml approach</p>
+<h3>Phase 3: Verify</h3>
+<p>- Entropy quality testing - Audit logging for key generation</p>
+</section>
+<section>
+<h2>References</h2>
+<p>- libsodium documentation: https://doc.libsodium.org/ - NIST SP 800-90A: Recommendations for Random Number Generation - RFC 4086: Randomness Requirements for Security - ChaCha20: https://cr.yp.to/chacha.html</p>
+</section>
+<section>
+<h2>Appendix: Entropy Quality Testing</h2>
 <p>For paranoid verification:</p>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate random data</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">csi</span> <span class="at">-e</span> <span class="st">&quot;(import crypto-ffi) (display (random-bytes 1000000))&quot;</span> <span class="op">&gt;</span> random.bin</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Run NIST statistical tests</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="ex">ent</span> random.bin</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="ex">dieharder</span> <span class="at">-a</span> <span class="at">-f</span> random.bin</span></code></pre></div>
-<p>Expected results: - Entropy: ~7.9999 bits per byte - Chi-square:
-p-value 0.01-0.99 - All dieharder tests: PASSED</p>
+<pre class="language-bash">
+# Generate random data
+csi -e "(import crypto-ffi) (display (random-bytes 1000000))" &gt; random.bin
+
+# Run NIST statistical tests
+ent random.bin
+dieharder -a -f random.bin
+</pre>
+<p>Expected results: - Entropy: ~7.9999 bits per byte - Chi-square: p-value 0.01-0.99 - All dieharder tests: PASSED</p>
+</section>
 </body>
 </html>

@@ -35,11 +35,11 @@
 ;;; Text Output (Plain ASCII, 78 columns)
 ;;; ============================================================
 
-(define *txt-width* 78)
-(define *txt-indent* 0)
+(define txt-width 78)
+(define txt-indent 0)
 
 (define (txt-hr)
-  (make-string *txt-width* #\-))
+  (make-string txt-width #\-))
 
 (define (txt-wrap text width indent)
   "Word-wrap text to width with indent."
@@ -55,14 +55,18 @@
                                (string-append line word)
                                (string-append line " " word))))
             (if (> (string-length new-line) width)
-                (loop words indent-str (cons line lines))
+                (if (= (string-length line) indent)
+                    ;; Word itself too long - emit it and continue
+                    (loop (cdr words) indent-str (cons new-line lines))
+                    ;; Line + word too long - emit line, retry word
+                    (loop words indent-str (cons line lines)))
                 (loop (cdr words) new-line lines)))))))
 
 (define (txt-emit-p text port indent)
   (for-each (lambda (line)
               (display line port)
               (newline port))
-            (txt-wrap text *txt-width* indent))
+            (txt-wrap text txt-width indent))
   (newline port))
 
 (define (txt-emit-element elem port indent)
@@ -128,6 +132,28 @@
                     (cdr elem))
           (newline port))
 
+        ((link)
+          ;; (link "url" "text") - in txt, show text with URL
+          (display (caddr elem) port)
+          (display " <" port)
+          (display (cadr elem) port)
+          (display ">" port)
+          (newline port))
+
+        ((code)
+          ;; Code blocks - may have optional language tag
+          (let ((content (if (and (pair? (cdr elem))
+                                  (symbol? (cadr elem)))
+                             (caddr elem)  ; (code lang "...")
+                             (cadr elem)))) ; (code "...")
+            (newline port)
+            (for-each (lambda (line)
+                        (display "    " port)
+                        (display line port)
+                        (newline port))
+                      (string-split content "\n"))
+            (newline port)))
+
         ((diagram)
           (newline port)
           (display "    [Diagram]" port)
@@ -152,22 +178,40 @@
         ((number? x) (number->string x))
         (else "")))
 
+(define (get-field doc field default)
+  "Get field from doc, or default if missing."
+  (let ((entry (assq field (cdr doc))))
+    (if entry (cadr entry) default)))
+
+(define (doc-type doc)
+  "Return document type: 'rfc or 'document."
+  (if (pair? doc) (car doc) 'unknown))
+
 (define (rfc->txt doc filename)
-  "Convert RFC S-expression to plain text."
+  "Convert RFC or document S-expression to plain text."
   (call-with-output-file filename
     (lambda (port)
-      (let ((num (cadr (assq 'number (cdr doc))))
-            (title (cadr (assq 'title (cdr doc))))
-            (status (cadr (assq 'status (cdr doc))))
-            (date (cadr (assq 'date (cdr doc))))
+      (let ((is-rfc (eq? (doc-type doc) 'rfc))
+            (num (get-field doc 'number 0))
+            (title (get-field doc 'title "Untitled"))
+            (subtitle (get-field doc 'subtitle #f))
+            (status (get-field doc 'status #f))
+            (date (get-field doc 'date ""))
             (author (assq 'author (cdr doc))))
 
         ;; Header
-        (display (format "RFC-~a: ~a~%" (zero-pad num 3) title) port)
+        (if is-rfc
+            (display (format "RFC-~a: ~a~%" (zero-pad num 3) title) port)
+            (display (format "~a~%" title) port))
+        (when subtitle
+          (display (format "~a~%" subtitle) port))
         (newline port)
-        (display (format "Status: ~a~%" status) port)
-        (display (format "Date: ~a~%" date) port)
-        (display (format "Author: ~a <~a>~%" (cadr author) (caddr author)) port)
+        (when status
+          (display (format "Status: ~a~%" status) port))
+        (when (and date (not (string-null? date)))
+          (display (format "Date: ~a~%" date) port))
+        (when author
+          (display (format "Author: ~a <~a>~%" (cadr author) (caddr author)) port))
         (newline port)
         (display (txt-hr) port)
         (newline port)
@@ -261,6 +305,18 @@
                     (cdr elem))
           (display "</table>\n" port))
 
+        ((code)
+          ;; Code blocks - may have optional language tag
+          (let* ((has-lang (and (pair? (cdr elem)) (symbol? (cadr elem))))
+                 (lang (if has-lang (symbol->string (cadr elem)) ""))
+                 (content (if has-lang (caddr elem) (cadr elem))))
+            (display (format "<pre~a>\n"
+                           (if (string-null? lang)
+                               ""
+                               (format " class=\"language-~a\"" lang))) port)
+            (display (html-escape content) port)
+            (display "\n</pre>\n" port)))
+
         ((diagram)
           (display "<pre class=\"diagram\">\n" port)
           ;; TODO: render diagram as ASCII art or SVG
@@ -288,33 +344,50 @@
                            (html-escape (cadr elem))
                            (html-escape (caddr elem))) port))
 
+        ((link)
+          ;; (link "url" "text") - hyperlink
+          (display (format "<p><a href=\"~a\">~a</a></p>\n"
+                           (html-escape (cadr elem))
+                           (html-escape (caddr elem))) port))
+
         (else #f)))))
 
 (define (rfc->html doc filename)
-  "Convert RFC S-expression to HTML."
+  "Convert RFC or document S-expression to HTML."
   (call-with-output-file filename
     (lambda (port)
-      (let ((num (cadr (assq 'number (cdr doc))))
-            (title (cadr (assq 'title (cdr doc))))
-            (status (cadr (assq 'status (cdr doc))))
-            (date (cadr (assq 'date (cdr doc))))
+      (let ((is-rfc (eq? (doc-type doc) 'rfc))
+            (num (get-field doc 'number 0))
+            (title (get-field doc 'title "Untitled"))
+            (subtitle (get-field doc 'subtitle #f))
+            (status (get-field doc 'status #f))
+            (date (get-field doc 'date ""))
             (author (assq 'author (cdr doc))))
 
         ;; HTML header
         (display "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n" port)
         (display "  <meta charset=\"UTF-8\">\n" port)
-        (display (format "  <title>RFC-~a: ~a</title>\n" (zero-pad num 3) (html-escape title)) port)
+        (if is-rfc
+            (display (format "  <title>RFC-~a: ~a</title>\n" (zero-pad num 3) (html-escape title)) port)
+            (display (format "  <title>~a</title>\n" (html-escape title)) port))
         (display "  <link rel=\"stylesheet\" href=\"rfc.css\">\n" port)
         (display "</head>\n<body>\n" port)
 
         ;; Title block
-        (display (format "<h1>RFC-~a: ~a</h1>\n" (zero-pad num 3) (html-escape title)) port)
+        (if is-rfc
+            (display (format "<h1>RFC-~a: ~a</h1>\n" (zero-pad num 3) (html-escape title)) port)
+            (display (format "<h1>~a</h1>\n" (html-escape title)) port))
+        (when subtitle
+          (display (format "<p class=\"subtitle\"><em>~a</em></p>\n" (html-escape subtitle)) port))
         (display "<dl class=\"metadata\">\n" port)
-        (display (format "  <dt>Status</dt><dd>~a</dd>\n" status) port)
-        (display (format "  <dt>Date</dt><dd>~a</dd>\n" date) port)
-        (display (format "  <dt>Author</dt><dd>~a &lt;~a&gt;</dd>\n"
-                         (html-escape (cadr author))
-                         (html-escape (caddr author))) port)
+        (when status
+          (display (format "  <dt>Status</dt><dd>~a</dd>\n" status) port))
+        (when (and date (not (string-null? date)))
+          (display (format "  <dt>Date</dt><dd>~a</dd>\n" date) port))
+        (when author
+          (display (format "  <dt>Author</dt><dd>~a &lt;~a&gt;</dd>\n"
+                           (html-escape (->string (cadr author)))
+                           (html-escape (->string (caddr author)))) port))
         (display "</dl>\n<hr>\n" port)
 
         ;; Abstract
@@ -405,6 +478,15 @@
                     (cdr elem))
           (display ".TE\n" port))
 
+        ((code)
+          ;; Code blocks - may have optional language tag
+          (let ((content (if (and (pair? (cdr elem)) (symbol? (cadr elem)))
+                             (caddr elem)
+                             (cadr elem))))
+            (display ".DS\n.ft CW\n.ps 8\n" port)
+            (display (ms-escape content) port)
+            (display "\n.ps\n.ft\n.DE\n" port)))
+
         ((diagram)
           (display ".DS C\n[Diagram]\n.DE\n" port))
 
@@ -417,34 +499,53 @@
                                          (ms-escape (cadddr ref))) port)))
                     (cdr elem)))
 
+        ((link)
+          ;; (link "url" "text") - in PS, show text with URL
+          (display (format ".PP\n~a\n.br\n\\fI~a\\fP\n"
+                           (ms-escape (caddr elem))
+                           (ms-escape (cadr elem))) port))
+
         ((footer sig) #f)
 
         (else #f)))))
 
 (define (rfc->ms doc filename)
-  "Convert RFC S-expression to groff ms macros."
+  "Convert RFC or document S-expression to groff ms macros."
   (call-with-output-file filename
     (lambda (port)
-      (let ((num (cadr (assq 'number (cdr doc))))
-            (title (cadr (assq 'title (cdr doc))))
-            (status (cadr (assq 'status (cdr doc))))
-            (date (cadr (assq 'date (cdr doc))))
+      (let ((is-rfc (eq? (doc-type doc) 'rfc))
+            (num (get-field doc 'number 0))
+            (title (get-field doc 'title "Untitled"))
+            (subtitle (get-field doc 'subtitle #f))
+            (status (get-field doc 'status #f))
+            (date (get-field doc 'date ""))
             (author (assq 'author (cdr doc))))
 
         ;; ms preamble
         (display ".nr PS 10\n" port)
         (display ".nr VS 12\n" port)
-        (display (format ".ds LH RFC-~a\n" (zero-pad num 3)) port)
+        (if is-rfc
+            (display (format ".ds LH RFC-~a\n" (zero-pad num 3)) port)
+            (display ".ds LH\n" port))
         (display ".ds CH\n" port)
         (display ".ds RH \\n%\n" port)
 
         ;; Title
         (display ".TL\n" port)
-        (display (format "RFC-~a: ~a\n" (zero-pad num 3) (ms-escape title)) port)
+        (if is-rfc
+            (display (format "RFC-~a: ~a\n" (zero-pad num 3) (ms-escape title)) port)
+            (display (format "~a\n" (ms-escape title)) port))
+        (when subtitle
+          (display (format ".br\n\\fI~a\\fP\n" (ms-escape subtitle)) port))
         (display ".AU\n" port)
-        (display (format "~a <~a>\n" (cadr author) (caddr author)) port)
+        (if author
+            (display (format "~a <~a>\n" (cadr author) (caddr author)) port)
+            (display "Library of Cyberspace\n" port))
         (display ".AI\n" port)
-        (display (format "~a \\(em ~a\n" date status) port)
+        (let ((date-str (if (or (not date) (string-null? date)) "2026" date)))
+          (if status
+              (display (format "~a \\(em ~a\n" date-str status) port)
+              (display (format "~a\n" date-str) port)))
         (display ".AB\n" port)
 
         ;; Abstract
