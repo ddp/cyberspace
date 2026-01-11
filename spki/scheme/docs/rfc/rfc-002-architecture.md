@@ -117,6 +117,23 @@ A smaller TCB means fewer bugs that can break security. We prove the crypto in C
 
 The command layer is syntactic sugar. The Scheme layer is substrate. Users start with English, graduate to Scheme when they need composition. No mode switching—parens are the only delimiter.
 
+### 2.2 The Data Flow
+
+> **Eggs into soup.**
+
+```
+forge → eggs → soup → vault
+```
+
+| Stage | What | How |
+|-------|------|-----|
+| **forge** | Compilation | Source newer than `.so`? Rebuild. Arch changed? Rebuild. |
+| **eggs** | Modules | Chicken Scheme's dynamically compiled units |
+| **soup** | Cache | Newton-style queryable view of vault (in memory) |
+| **vault** | Storage | Content-addressed persistence (on disk) |
+
+The system is lazy. Modules compile on demand. The soup is the vault cache—query the soup, persist to the vault. The whole thing simmers together.
+
 ---
 
 ## 3. Core Components
