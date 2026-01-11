@@ -17,6 +17,7 @@
    introspect-storage
    introspect-realm
    introspect-codebase
+   introspect-library
    probe-scaling
    ;; Enrollment (node side)
    enroll-request
@@ -291,6 +292,57 @@
         (files ,(if file-count (string->number (string-trim-both file-count)) 0))
         (modules ,(if module-count (string->number (string-trim-both module-count)) 0))
         (rfcs ,(if rfc-count (string->number (string-trim-both rfc-count)) 0)))))
+
+  (define (parse-rfc-txt path)
+    "Parse RFC .txt file for metadata (cleaner than markdown)"
+    (handle-exceptions exn #f
+      (with-input-from-file path
+        (lambda ()
+          (let ((line1 (read-line))   ; RFC-NNN: Title
+                (line2 (read-line))   ; blank
+                (line3 (read-line))   ; Status: X
+                (line4 (read-line)))  ; Category: Y
+            (and (not (eof-object? line1))
+                 (let ((colon-pos (string-index line1 #\:)))
+                   (and colon-pos
+                        (let* ((num-part (substring line1 4 colon-pos))
+                               (title (string-trim-both (substring line1 (+ colon-pos 1))))
+                               (status (and (not (eof-object? line3))
+                                            (string-prefix? "Status:" line3)
+                                            (string-trim-both (substring line3 7))))
+                               (category (and (not (eof-object? line4))
+                                              (string-prefix? "Category:" line4)
+                                              (string-trim-both (substring line4 9)))))
+                          `((number ,num-part)
+                            (title ,title)
+                            (status ,(or status "unknown"))
+                            (category ,(or category "unknown"))))))))))))
+
+  (define (introspect-library)
+    "Introspect the Library of Cyberspace - RFC catalog from .txt files"
+    (let* ((base-dir (or (get-environment-variable "CYBERSPACE_HOME")
+                         (make-pathname (current-directory) "")))
+           (rfc-dir (make-pathname base-dir "docs/rfc"))
+           (rfc-files (shell-command
+                       (string-append "ls " rfc-dir "/rfc-*.txt 2>/dev/null | sort"))))
+      (if (not rfc-files)
+          '(library (count 0) (rfcs ()))
+          (let* ((files (with-input-from-string rfc-files
+                          (lambda ()
+                            (let loop ((files '()))
+                              (let ((line (read-line)))
+                                (if (eof-object? line)
+                                    (reverse files)
+                                    (loop (cons line files))))))))
+                 (rfcs (filter-map
+                        (lambda (path)
+                          (let ((meta (parse-rfc-txt path)))
+                            (and meta
+                                 `(rfc ,@meta (path ,path)))))
+                        files)))
+            `(library
+              (count ,(length rfcs))
+              (rfcs ,rfcs))))))
 
   (define (introspect-system)
     "Full system introspection - all the thangs!"

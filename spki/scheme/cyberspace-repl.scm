@@ -4383,6 +4383,33 @@ Cyberspace REPL - Available Commands
 (define keys (lambda () (soup 'keys)))
 (define releases (lambda () (soup-releases)))
 
+;; Library of Cyberspace - RFC browser
+(define (library #!optional filter)
+  "Browse the Library of Cyberspace RFCs"
+  (let* ((lib (introspect-library))
+         (count (cadr (assq 'count (cdr lib))))
+         (rfcs (cadr (assq 'rfcs (cdr lib)))))
+    (print "")
+    (printf "Library of Cyberspace (~a memos)~%" count)
+    (print "")
+    (for-each
+     (lambda (rfc)
+       (let* ((num (cadr (assq 'number (cdr rfc))))
+              (title (cadr (assq 'title (cdr rfc))))
+              (status (cadr (assq 'status (cdr rfc))))
+              (title-short (if (> (string-length title) 45)
+                               (string-append (substring title 0 42) "...")
+                               title)))
+         (when (or (not filter)
+                   (string-contains-ci title (symbol->string filter))
+                   (string-contains-ci num (symbol->string filter)))
+           (printf "  RFC-~a  ~a~%"
+                   (string-pad-left num 3 #\0)
+                   title-short))))
+     rfcs)
+    (print "")
+    (void)))
+
 ;; Status - compact tree view
 (define (status)
   (define (safe-ref lst key)
