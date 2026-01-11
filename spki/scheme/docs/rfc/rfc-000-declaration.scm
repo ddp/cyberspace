@@ -53,6 +53,7 @@
     (p "This declaration stands on the shoulders of giants:")
     (list
       (item "The Grateful Dead, who understood that sharing creates more value than hoarding, and whose tape-trading gift economy prefigured the commons")
+      (item "John Perry Barlow, Dead lyricist and cyberspace prophet, whose 1996 Declaration of Independence lit the way")
       (item "Thomas Jefferson, who wrote the declaration of human liberty in language that still echoes")
       (item "Alexander Hamilton, who designed federation—sovereignty with union—in the Federalist Papers")
       (item "Hal Abelson and Gerald Jay Sussman, who showed in Structure and Interpretation of Computer Programs that from a few primitives, you can build everything"))
