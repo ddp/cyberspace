@@ -533,6 +533,8 @@ if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>
     rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt "$YOYODYNE_HOST:$ypath"
     echo "  -> $ypath"
   done
+  # Ensure directories are world-readable for browser indexing
+  /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
   echo "  Published to $YOYODYNE_URL"
 else
   echo "  [skip] Cannot reach yoyodyne"
