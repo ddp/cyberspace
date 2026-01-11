@@ -4322,6 +4322,13 @@ Cyberspace REPL - Available Commands
   (print "  (ed25519-keypair)   - Generate keypair")
   (print "  (sha512-hash DATA)  - Hash data")
   (print "")
+  (print "Library:")
+  (print "  (library)               - Browse all RFCs")
+  (print "  (library 'crypto)       - Filter by topic")
+  (print "  (rfc 54)                - View RFC in terminal")
+  (print "  (rfc 54 'html)          - Open in browser")
+  (print "  (rfc 54 'ps)            - Open in Preview")
+  (print "")
   (print "Federation:")
   (print "  (enrollment-status)     - Show enrollment status")
   (print "  (enroll-request 'name)  - Request enrollment")
@@ -4409,6 +4416,51 @@ Cyberspace REPL - Available Commands
      rfcs)
     (print "")
     (void)))
+
+;; Open RFC in viewer
+(define (rfc num #!optional format)
+  "Open RFC in viewer. (rfc 54) or (rfc 54 'html) or (rfc 54 'ps)"
+  (let* ((num-str (if (number? num)
+                      (string-pad-left (number->string num) 3 #\0)
+                      (string-pad-left (symbol->string num) 3 #\0)))
+         (base-dir (or (get-environment-variable "CYBERSPACE_HOME")
+                       (make-pathname (current-directory) "")))
+         (rfc-dir (make-pathname base-dir "docs/rfc"))
+         (fmt (or format 'txt))
+         (ext (case fmt
+                ((html) ".html")
+                ((ps postscript) ".ps")
+                ((txt text) ".txt")
+                ((md markdown) ".md")
+                (else ".txt")))
+         (path (string-append rfc-dir "/rfc-" num-str "-*.txt"))
+         ;; Find the actual filename
+         (actual (with-input-from-pipe
+                  (string-append "ls " rfc-dir "/rfc-" num-str "-*" ext " 2>/dev/null | head -1")
+                  read-line)))
+    (if (or (eof-object? actual) (string=? actual ""))
+        (print "RFC-" num-str " not found")
+        (begin
+          (case fmt
+            ((html)
+             (system (string-append "open " actual))
+             (print "Opening " (pathname-strip-directory actual) " in browser"))
+            ((ps postscript)
+             (system (string-append "open " actual))
+             (print "Opening " (pathname-strip-directory actual) " in Preview"))
+            (else
+             ;; Display in terminal
+             (print "")
+             (with-input-from-file actual
+               (lambda ()
+                 (let loop ((n 0))
+                   (let ((line (read-line)))
+                     (when (and (not (eof-object? line)) (< n 50))
+                       (print line)
+                       (loop (+ n 1)))))))
+             (print "")
+             (print "... (rfc " num " 'html) to open in browser")))
+          (void)))))
 
 ;; Status - compact tree view
 (define (status)
