@@ -4398,6 +4398,7 @@ Cyberspace REPL - Available Commands
          (hw (assq 'hardware (cdr info)))
          (net (assq 'network (cdr info)))
          (realm (assq 'realm (cdr info)))
+         (code (assq 'codebase (cdr info)))
          (uptime (safe-ref info 'uptime))
          (cores (safe-ref hw 'cores))
          (mem (safe-ref hw 'memory-gb))
@@ -4406,7 +4407,10 @@ Cyberspace REPL - Available Commands
          (ipv6 (get-en0-ip net 'ipv6))
          (vault-exists (safe-ref realm 'vault-exists))
          (keystore (safe-ref realm 'has-keystore))
-         (audit (safe-ref realm 'has-audit)))
+         (audit (safe-ref realm 'has-audit))
+         (loc (safe-ref code 'loc))
+         (modules (safe-ref code 'modules))
+         (rfcs (safe-ref code 'rfcs)))
     (printf "~%~a · up ~a~%" (get-hostname) (or uptime "?"))
     (printf "├─ ~a cores, ~aGB~a~%"
             (or cores "?")
@@ -4417,12 +4421,16 @@ Cyberspace REPL - Available Commands
             (if (and ipv6 (string? ipv6))
                 (string-append " / " (substring ipv6 0 (min 20 (string-length ipv6))) "...")
                 ""))
-    (printf "└─ ~a~%"
+    (printf "├─ ~a~%"
             (if vault-exists
                 (string-append "vault: " vault-exists
                                (if keystore " (keys)" "")
                                (if audit " (audit)" ""))
                 "no vault"))
+    (printf "└─ ~aK loc, ~a modules, ~a rfcs~%"
+            (if loc (quotient loc 1000) "?")
+            (or modules "?")
+            (or rfcs "?"))
     (void)))
 
 ;; Single-char shortcuts

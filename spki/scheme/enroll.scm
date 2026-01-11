@@ -16,6 +16,7 @@
    introspect-network
    introspect-storage
    introspect-realm
+   introspect-codebase
    probe-scaling
    ;; Enrollment (node side)
    enroll-request
@@ -269,6 +270,28 @@
                 (has-audit ,(directory-exists? (make-pathname vault-path "audit"))))
               '()))))
 
+  (define (introspect-codebase)
+    "Introspect Cyberspace codebase - LOC and module inventory"
+    (let* ((base-dir (or (get-environment-variable "CYBERSPACE_HOME")
+                         (make-pathname (current-directory) "")))
+           ;; Count .scm files and lines
+           (loc-output (shell-command
+                        (string-append "find " base-dir " -name '*.scm' -type f 2>/dev/null | "
+                                       "xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}'")))
+           (file-count (shell-command
+                        (string-append "find " base-dir " -name '*.scm' -type f 2>/dev/null | wc -l")))
+           ;; Count modules (files with (module ...))
+           (module-count (shell-command
+                          (string-append "grep -l '^(module' " base-dir "/*.scm 2>/dev/null | wc -l")))
+           ;; Count RFCs
+           (rfc-count (shell-command
+                       (string-append "ls " base-dir "/docs/rfc/rfc-*.md 2>/dev/null | wc -l"))))
+      `(codebase
+        (loc ,(if loc-output (string->number (string-trim-both loc-output)) 0))
+        (files ,(if file-count (string->number (string-trim-both file-count)) 0))
+        (modules ,(if module-count (string->number (string-trim-both module-count)) 0))
+        (rfcs ,(if rfc-count (string->number (string-trim-both rfc-count)) 0)))))
+
   (define (introspect-system)
     "Full system introspection - all the thangs!"
     `(system-info
@@ -278,6 +301,7 @@
       ,(introspect-network)
       ,(introspect-storage)
       ,(introspect-realm)
+      ,(introspect-codebase)
       (versions
        (chicken ,(shell-command "csi -version 2>&1 | head -1"))
        (libsodium ,(shell-command "pkg-config --modversion libsodium 2>/dev/null || echo unknown")))))

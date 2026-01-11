@@ -1,0 +1,952 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 24 24 571 818
+%%Title: Enscript Output
+%%For: Derrell Piper
+%%Creator: GNU Enscript 1.6.6
+%%CreationDate: Sun Jan 11 00:31:23 2026
+%%Orientation: Portrait
+%%Pages: (atend)
+%%DocumentMedia: A4 595 842 0 () ()
+%%DocumentNeededResources: (atend)
+%%EndComments
+%%BeginProlog
+%%BeginResource: procset Enscript-Prolog 1.6 6
+%
+% Procedures.
+%
+
+/_S {	% save current state
+  /_s save def
+} def
+/_R {	% restore from saved state
+  _s restore
+} def
+
+/S {	% showpage protecting gstate
+  gsave
+  showpage
+  grestore
+} bind def
+
+/MF {	% fontname newfontname -> -	make a new encoded font
+  /newfontname exch def
+  /fontname exch def
+
+  /fontdict fontname findfont def
+  /newfont fontdict maxlength dict def
+
+  fontdict {
+    exch
+    dup /FID eq {
+      % skip FID pair
+      pop pop
+    } {
+      % copy to the new font dictionary
+      exch newfont 3 1 roll put
+    } ifelse
+  } forall
+
+  newfont /FontName newfontname put
+
+  % insert only valid encoding vectors
+  encoding_vector length 256 eq {
+    newfont /Encoding encoding_vector put
+  } if
+
+  newfontname newfont definefont pop
+} def
+
+/MF_PS { % fontname newfontname -> -	make a new font preserving its enc
+  /newfontname exch def
+  /fontname exch def
+
+  /fontdict fontname findfont def
+  /newfont fontdict maxlength dict def
+
+  fontdict {
+    exch
+    dup /FID eq {
+      % skip FID pair
+      pop pop
+    } {
+      % copy to the new font dictionary
+      exch newfont 3 1 roll put
+    } ifelse
+  } forall
+
+  newfont /FontName newfontname put
+
+  newfontname newfont definefont pop
+} def
+
+/SF { % fontname width height -> -	set a new font
+  /height exch def
+  /width exch def
+
+  findfont
+  [width 0 0 height 0 0] makefont setfont
+} def
+
+/SUF { % fontname width height -> -	set a new user font
+  /height exch def
+  /width exch def
+
+  /F-gs-user-font MF
+  /F-gs-user-font width height SF
+} def
+
+/SUF_PS { % fontname width height -> -	set a new user font preserving its enc
+  /height exch def
+  /width exch def
+
+  /F-gs-user-font MF_PS
+  /F-gs-user-font width height SF
+} def
+
+/M {moveto} bind def
+/s {show} bind def
+
+/Box {	% x y w h -> -			define box path
+  /d_h exch def /d_w exch def /d_y exch def /d_x exch def
+  d_x d_y  moveto
+  d_w 0 rlineto
+  0 d_h rlineto
+  d_w neg 0 rlineto
+  closepath
+} def
+
+/bgs {	% x y height blskip gray str -> -	show string with bg color
+  /str exch def
+  /gray exch def
+  /blskip exch def
+  /height exch def
+  /y exch def
+  /x exch def
+
+  gsave
+    x y blskip sub str stringwidth pop height Box
+    gray setgray
+    fill
+  grestore
+  x y M str s
+} def
+
+/bgcs { % x y height blskip red green blue str -> -  show string with bg color
+  /str exch def
+  /blue exch def
+  /green exch def
+  /red exch def
+  /blskip exch def
+  /height exch def
+  /y exch def
+  /x exch def
+
+  gsave
+    x y blskip sub str stringwidth pop height Box
+    red green blue setrgbcolor
+    fill
+  grestore
+  x y M str s
+} def
+
+% Highlight bars.
+/highlight_bars {	% nlines lineheight output_y_margin gray -> -
+  gsave
+    setgray
+    /ymarg exch def
+    /lineheight exch def
+    /nlines exch def
+
+    % This 2 is just a magic number to sync highlight lines to text.
+    0 d_header_y ymarg sub 2 sub translate
+
+    /cw d_output_w cols div def
+    /nrows d_output_h ymarg 2 mul sub lineheight div cvi def
+
+    % for each column
+    0 1 cols 1 sub {
+      cw mul /xp exch def
+
+      % for each rows
+      0 1 nrows 1 sub {
+        /rn exch def
+        rn lineheight mul neg /yp exch def
+        rn nlines idiv 2 mod 0 eq {
+	  % Draw highlight bar.  4 is just a magic indentation.
+	  xp 4 add yp cw 8 sub lineheight neg Box fill
+	} if
+      } for
+    } for
+
+  grestore
+} def
+
+% Line highlight bar.
+/line_highlight {	% x y width height gray -> -
+  gsave
+    /gray exch def
+    Box gray setgray fill
+  grestore
+} def
+
+% Column separator lines.
+/column_lines {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h translate
+    /cw d_output_w cols div def
+    1 1 cols 1 sub {
+      cw mul 0 moveto
+      0 d_output_h rlineto stroke
+    } for
+  grestore
+} def
+
+% Column borders.
+/column_borders {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h moveto
+    0 d_output_h rlineto
+    d_output_w 0 rlineto
+    0 d_output_h neg rlineto
+    closepath stroke
+  grestore
+} def
+
+% Do the actual underlay drawing
+/draw_underlay {
+  ul_style 0 eq {
+    ul_str true charpath stroke
+  } {
+    ul_str show
+  } ifelse
+} def
+
+% Underlay
+/underlay {	% - -> -
+  gsave
+    0 d_page_h translate
+    d_page_h neg d_page_w atan rotate
+
+    ul_gray setgray
+    ul_font setfont
+    /dw d_page_h dup mul d_page_w dup mul add sqrt def
+    ul_str stringwidth pop dw exch sub 2 div ul_h_ptsize -2 div moveto
+    draw_underlay
+  grestore
+} def
+
+/user_underlay {	% - -> -
+  gsave
+    ul_x ul_y translate
+    ul_angle rotate
+    ul_gray setgray
+    ul_font setfont
+    0 0 ul_h_ptsize 2 div sub moveto
+    draw_underlay
+  grestore
+} def
+
+% Page prefeed
+/page_prefeed {		% bool -> -
+  statusdict /prefeed known {
+    statusdict exch /prefeed exch put
+  } {
+    pop
+  } ifelse
+} def
+
+% Wrapped line markers
+/wrapped_line_mark {	% x y charwith charheight type -> -
+  /type exch def
+  /h exch def
+  /w exch def
+  /y exch def
+  /x exch def
+
+  type 2 eq {
+    % Black boxes (like TeX does)
+    gsave
+      0 setlinewidth
+      x w 4 div add y M
+      0 h rlineto w 2 div 0 rlineto 0 h neg rlineto
+      closepath fill
+    grestore
+  } {
+    type 3 eq {
+      % Small arrows
+      gsave
+        .2 setlinewidth
+        x w 2 div add y h 2 div add M
+        w 4 div 0 rlineto
+        x w 4 div add y lineto stroke
+
+        x w 4 div add w 8 div add y h 4 div add M
+        x w 4 div add y lineto
+	w 4 div h 8 div rlineto stroke
+      grestore
+    } {
+      % do nothing
+    } ifelse
+  } ifelse
+} def
+
+% EPSF import.
+
+/BeginEPSF {
+  /b4_Inc_state save def    		% Save state for cleanup
+  /dict_count countdictstack def	% Count objects on dict stack
+  /op_count count 1 sub def		% Count objects on operand stack
+  userdict begin
+  /showpage { } def
+  0 setgray 0 setlinecap
+  1 setlinewidth 0 setlinejoin
+  10 setmiterlimit [ ] 0 setdash newpath
+  /languagelevel where {
+    pop languagelevel
+    1 ne {
+      false setstrokeadjust false setoverprint
+    } if
+  } if
+} bind def
+
+/EndEPSF {
+  count op_count sub { pos } repeat	% Clean up stacks
+  countdictstack dict_count sub { end } repeat
+  b4_Inc_state restore
+} bind def
+
+% Check PostScript language level.
+/languagelevel where {
+  pop /gs_languagelevel languagelevel def
+} {
+  /gs_languagelevel 1 def
+} ifelse
+%%EndResource
+%%BeginResource: procset Enscript-Encoding-88591 1.6 6
+/encoding_vector [
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclam       	/quotedbl     	/numbersign   	
+/dollar       	/percent      	/ampersand    	/quoteright   	
+/parenleft    	/parenright   	/asterisk     	/plus         	
+/comma        	/hyphen       	/period       	/slash        	
+/zero         	/one          	/two          	/three        	
+/four         	/five         	/six          	/seven        	
+/eight        	/nine         	/colon        	/semicolon    	
+/less         	/equal        	/greater      	/question     	
+/at           	/A            	/B            	/C            	
+/D            	/E            	/F            	/G            	
+/H            	/I            	/J            	/K            	
+/L            	/M            	/N            	/O            	
+/P            	/Q            	/R            	/S            	
+/T            	/U            	/V            	/W            	
+/X            	/Y            	/Z            	/bracketleft  	
+/backslash    	/bracketright 	/asciicircum  	/underscore   	
+/quoteleft    	/a            	/b            	/c            	
+/d            	/e            	/f            	/g            	
+/h            	/i            	/j            	/k            	
+/l            	/m            	/n            	/o            	
+/p            	/q            	/r            	/s            	
+/t            	/u            	/v            	/w            	
+/x            	/y            	/z            	/braceleft    	
+/bar          	/braceright   	/tilde        	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclamdown   	/cent         	/sterling     	
+/currency     	/yen          	/brokenbar    	/section      	
+/dieresis     	/copyright    	/ordfeminine  	/guillemotleft	
+/logicalnot   	/hyphen       	/registered   	/macron       	
+/degree       	/plusminus    	/twosuperior  	/threesuperior	
+/acute        	/mu           	/paragraph    	/bullet       	
+/cedilla      	/onesuperior  	/ordmasculine 	/guillemotright	
+/onequarter   	/onehalf      	/threequarters	/questiondown 	
+/Agrave       	/Aacute       	/Acircumflex  	/Atilde       	
+/Adieresis    	/Aring        	/AE           	/Ccedilla     	
+/Egrave       	/Eacute       	/Ecircumflex  	/Edieresis    	
+/Igrave       	/Iacute       	/Icircumflex  	/Idieresis    	
+/Eth          	/Ntilde       	/Ograve       	/Oacute       	
+/Ocircumflex  	/Otilde       	/Odieresis    	/multiply     	
+/Oslash       	/Ugrave       	/Uacute       	/Ucircumflex  	
+/Udieresis    	/Yacute       	/Thorn        	/germandbls   	
+/agrave       	/aacute       	/acircumflex  	/atilde       	
+/adieresis    	/aring        	/ae           	/ccedilla     	
+/egrave       	/eacute       	/ecircumflex  	/edieresis    	
+/igrave       	/iacute       	/icircumflex  	/idieresis    	
+/eth          	/ntilde       	/ograve       	/oacute       	
+/ocircumflex  	/otilde       	/odieresis    	/divide       	
+/oslash       	/ugrave       	/uacute       	/ucircumflex  	
+/udieresis    	/yacute       	/thorn        	/ydieresis    	
+] def
+%%EndResource
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier-Bold
+%%IncludeResource: font Courier
+/HFpt_w 10 def
+/HFpt_h 10 def
+/Courier-Bold /HF-gs-font MF
+/HF /HF-gs-font findfont [HFpt_w 0 0 HFpt_h 0 0] makefont def
+/Courier /F-gs-font MF
+/F-gs-font 10 10 SF
+/#copies 1 def
+% Pagedevice definitions:
+gs_languagelevel 1 gt {
+  <<
+    /PageSize [595 842] 
+  >> setpagedevice
+} if
+/d_page_w 547 def
+/d_page_h 794 def
+/d_header_x 0 def
+/d_header_y 794 def
+/d_header_w 547 def
+/d_header_h 0 def
+/d_footer_x 0 def
+/d_footer_y 0 def
+/d_footer_w 547 def
+/d_footer_h 0 def
+/d_output_w 547 def
+/d_output_h 794 def
+/cols 1 def
+%%EndSetup
+%%Page: (1) 1
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 1 def
+/fname (rfc-054-terminal-interface.txt) def
+/fdir (.) def
+/ftail (rfc-054-terminal-interface.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(RFC-054: Terminal Interface Conventions) s
+5 759 M
+(Status: Proposed) s
+5 748 M
+(Category: Informational) s
+5 737 M
+(Created: 2026-01-11) s
+5 726 M
+(Author: Derrell Piper <ddp@eludom.net>) s
+5 704 M
+(------------------------------------------------------------------------------) s
+5 682 M
+(Abstract) s
+5 660 M
+(The terminal is for operators. This RFC specifies visual conventions for) s
+5 649 M
+(the Cyberspace REPL: box drawing, tree displays, prompts, color usage,) s
+5 638 M
+(and output formatting. Consistency aids muscle memory.) s
+5 616 M
+(------------------------------------------------------------------------------) s
+5 594 M
+(1. The Operator Interface) s
+5 572 M
+(The Cyberspace REPL is for hackers, admins, and operators\342\\200\\224people who) s
+5 561 M
+(think in terms of data structures. This interface is deliberately) s
+5 550 M
+(different from the "normie" GUI interface \(RFC-053\).) s
+5 528 M
+(                    CYBERSPACE) s
+5 517 M
+(                        |) s
+5 506 M
+(           +------------+------------+) s
+5 495 M
+(           |                         |) s
+5 484 M
+(      +----v----+              +-----v-----+) s
+5 473 M
+(      | Terminal |              |  Friendly  |) s
+5 462 M
+(      |  \(cs\)    |  \342\\206\\220 this RFC |    Door    |) s
+5 451 M
+(      +---------+              +-----------+) s
+5 429 M
+(------------------------------------------------------------------------------) s
+5 407 M
+(2. Box Drawing) s
+5 385 M
+(2.1 Unicode Box Characters) s
+5 363 M
+(All boxes MUST use Unicode box-drawing characters:) s
+5 341 M
+(+ U+250C  - U+2500  + U+2510) s
+5 330 M
+(| U+2502            | U+2502) s
+5 319 M
+(+ U+2514  - U+2500  + U+2518) s
+5 297 M
+(Double-line boxes for emphasis:) s
+5 275 M
+(\342\\225\\224 U+2554  \342\\225\\220 U+2550  \342\\225\\227 U+2557) s
+5 264 M
+(\342\\225\\221 U+2551            \342\\225\\221 U+2551) s
+5 253 M
+(\342\\225\\232 U+255A  \342\\225\\220 U+2550  \342\\225\\235 U+255D) s
+5 231 M
+(Rounded corners for certificates and sealed objects:) s
+5 209 M
+(\342\\225\255 U+256D  - U+2500  \342\\225\256 U+256E) s
+5 198 M
+(| U+2502            | U+2502) s
+5 187 M
+(\342\\225\260 U+2570  - U+2500  \342\\225\257 U+256F) s
+5 165 M
+(2.2 Box Construction Pattern) s
+5 143 M
+(Use closures to encapsulate box state:) s
+5 121 M
+(\(define \(make-box title w\)) s
+5 110 M
+(  "Create a box drawing closure with given title and width") s
+5 99 M
+(  \(let* \(\(title-padded \(string-append " " title " "\)\)) s
+5 88 M
+(         \(title-len \(string-length title-padded\)\)) s
+5 77 M
+(         \(left-pad \(quotient \(- w title-len\) 2\)\)) s
+5 66 M
+(         \(right-pad \(- w title-len left-pad\)\)) s
+5 55 M
+(         \(header \(string-append "+" \(make-string left-pad #\\-\)) s
+5 44 M
+(                               title-padded) s
+5 33 M
+(                               \(make-string right-pad #\\-\) "+\\n"\)\)) s
+5 22 M
+(         \(footer \(string-append "+" \(make-string w #\\-\) "+\\n"\)\)\)) s
+5 11 M
+(    \(lambda \(cmd . args\)) s
+_R
+S
+%%Page: (2) 2
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 2 def
+/fname (rfc-054-terminal-interface.txt) def
+/fdir (.) def
+/ftail (rfc-054-terminal-interface.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(      \(case cmd) s
+5 770 M
+(        \(\(header\) header\)) s
+5 759 M
+(        \(\(footer\) footer\)) s
+5 748 M
+(        \(\(line\) \(let* \(\(content \(if \(null? args\) "" \(car args\)\)\)) s
+5 737 M
+(                       \(pad \(- w \(string-length content\) 2\)\)\)) s
+5 726 M
+(                  \(string-append "| " content) s
+5 715 M
+(                                \(make-string \(max 0 pad\) #\\space\)) s
+5 704 M
+(                                " |\\n"\)\)\)\)\)\)\)) s
+5 682 M
+(2.3 Standard Box Widths) s
+5 660 M
+(| Context | Width | Usage |) s
+5 649 M
+(|---------|-------|-------|) s
+5 638 M
+(| Compact | 40 | Small status displays |) s
+5 627 M
+(| Standard | 50 | Most dialogs |) s
+5 616 M
+(| Wide | 65 | Detailed information |) s
+5 594 M
+(------------------------------------------------------------------------------) s
+5 572 M
+(3. Tree Display) s
+5 550 M
+(3.1 Tree Characters) s
+5 528 M
+(+-  U+251C + U+2500  branch with more siblings) s
+5 517 M
+(+-  U+2514 + U+2500  final branch \(no more siblings\)) s
+5 506 M
+(|   U+2502           vertical continuation) s
+5 484 M
+(3.2 Tree Example) s
+5 462 M
+(hostname \302\267 up 3d 12:45:03) s
+5 451 M
+(+- 10 cores, 64GB, Apple M4) s
+5 440 M
+(+- 192.168.1.100 / 2001:db8::1...) s
+5 429 M
+(+- vault: .vault/ \(keys\) \(audit\)) s
+5 407 M
+(3.3 Multi-level Trees) s
+5 385 M
+(vault \(49 objects\)) s
+5 374 M
+(+- archives \(3\)) s
+5 363 M
+(|  +- cyberspace-v0.59.tar.gz) s
+5 352 M
+(+- keys \(2\)) s
+5 341 M
+(|  +- starlight \302\267 Ed25519) s
+5 330 M
+(|  +- macmini \302\267 Ed25519) s
+5 319 M
+(+- releases \(5\)) s
+5 308 M
+(   +- v0.59 \(signed\)) s
+5 286 M
+(------------------------------------------------------------------------------) s
+5 264 M
+(4. Prompt) s
+5 242 M
+(4.1 Default Prompt) s
+5 220 M
+(The default prompt is a simple colon with trailing space:) s
+5 198 M
+(:) s
+5 176 M
+(This echoes the Newton's soup browser prompt.) s
+5 154 M
+(4.2 Prompt Variants) s
+5 132 M
+(| Context | Prompt | Usage |) s
+5 121 M
+(|---------|--------|-------|) s
+5 110 M
+(| Normal | :  | Default |) s
+5 99 M
+(| Continuation | >  | Multi-line input |) s
+5 88 M
+(| Debug | [n]:  | In debugger at frame n |) s
+5 66 M
+(------------------------------------------------------------------------------) s
+5 44 M
+(5. Color and Emphasis) s
+5 22 M
+(5.1 VT100 Codes) s
+_R
+S
+%%Page: (3) 3
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 3 def
+/fname (rfc-054-terminal-interface.txt) def
+/fdir (.) def
+/ftail (rfc-054-terminal-interface.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(Use ANSI/VT100 escape sequences sparingly:) s
+5 759 M
+(\(define vt100-bold    "\\x1b[1m"\)) s
+5 748 M
+(\(define vt100-dim     "\\x1b[2m"\)) s
+5 737 M
+(\(define vt100-normal  "\\x1b[0m"\)) s
+5 726 M
+(\(define vt100-red     "\\x1b[31m"\)) s
+5 715 M
+(\(define vt100-green   "\\x1b[32m"\)) s
+5 704 M
+(\(define vt100-yellow  "\\x1b[33m"\)) s
+5 693 M
+(\(define vt100-blue    "\\x1b[34m"\)) s
+5 671 M
+(5.2 When to Use Color) s
+5 649 M
+(- Green: Success, completion \(\342\\234\\223\)) s
+5 638 M
+(- Red: Error, failure \(\342\\234\\227\)) s
+5 627 M
+(- Yellow: Warning, attention needed) s
+5 616 M
+(- Blue: Informational highlights) s
+5 605 M
+(- Dim: Secondary information) s
+5 594 M
+(- Bold: Headers, important values) s
+5 572 M
+(5.3 Principle) s
+5 550 M
+(Color is enhancement, not information. All output MUST be readable) s
+5 539 M
+(without color \(plain terminal, logging, piped output\).) s
+5 517 M
+(------------------------------------------------------------------------------) s
+5 495 M
+(6. Status Symbols) s
+5 473 M
+(6.1 Checkmarks and Crosses) s
+5 451 M
+(\342\\234\\223 U+2713  Success) s
+5 440 M
+(\342\\234\\227 U+2717  Failure) s
+5 429 M
+(\342\\200\242 U+2022  Bullet point) s
+5 418 M
+(\342\\206\\222 U+2192  Arrow, implies) s
+5 396 M
+(6.2 Sparklines) s
+5 374 M
+(For activity visualization over time:) s
+5 352 M
+(\342\\226\\201\342\\226\\202\342\\226\\203\342\\226\\204\342\\226\\205\342\\226\\206\342\\226\\207\342\\226\\210  U+2581 through ) s
+5 341 M
+(U+2588) s
+5 319 M
+(Eight levels map to normalized data:) s
+5 297 M
+(\(define sparkline-chars '#\("\342\\226\\201" "\342\\226\\202" "\342\\226\\203" "\342\\226\\204" "\342\\226\\205" "\342) s
+5 286 M
+(\\226\\206" "\342\\226\\207" "\342\\226\\210"\)\)) s
+5 264 M
+(------------------------------------------------------------------------------) s
+5 242 M
+(7. Output Conventions) s
+5 220 M
+(7.1 Blank Lines) s
+5 198 M
+(- One blank line before major output blocks) s
+5 187 M
+(- One blank line after banner/header boxes) s
+5 176 M
+(- No trailing blank lines in functions returning \(void\)) s
+5 154 M
+(7.2 Indentation) s
+5 132 M
+(- 2 spaces for nested information) s
+5 121 M
+(- 4 spaces for code examples in help text) s
+5 110 M
+(- Tree branches provide visual indentation) s
+5 88 M
+(7.3 Truncation) s
+5 66 M
+(Long values should be truncated with ellipsis:) s
+5 44 M
+(\(define \(short-id id\)) s
+5 33 M
+(  "Truncate id for display \(max 16 chars\)") s
+5 22 M
+(  \(if \(> \(string-length id\) 16\)) s
+5 11 M
+(      \(string-append \(substring id 0 16\) "..."\)) s
+_R
+S
+%%Page: (4) 4
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 4 def
+/fname (rfc-054-terminal-interface.txt) def
+/fdir (.) def
+/ftail (rfc-054-terminal-interface.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(      id\)\)) s
+5 759 M
+(------------------------------------------------------------------------------) s
+5 737 M
+(8. Result Display) s
+5 715 M
+(8.1 History Variables) s
+5 693 M
+(_   ; last result) s
+5 682 M
+(_1  ; second-to-last) s
+5 671 M
+(_2  ; third-to-last) s
+5 660 M
+(\($n\); result by number) s
+5 638 M
+(8.2 Void) s
+5 616 M
+(Functions that print output typically return \(void\) to suppress) s
+5 605 M
+(duplicate display.) s
+5 583 M
+(------------------------------------------------------------------------------) s
+5 561 M
+(9. Messages) s
+5 539 M
+(9.1 Welcome Banner) s
+5 517 M
+(Cyberspace Scheme v0.59 \(2026-01-11\)) s
+5 506 M
+(  Starlight \302\267 Darwin-arm64 \302\267 10 cores, 64GB, Apple M4) s
+5 495 M
+(  IPv4: 192.168.1.100) s
+5 484 M
+(  IPv6: 2001:db8::1) s
+5 462 M
+(9.2 Goodbye Message) s
+5 440 M
+(Returning to objective reality, Cyberspace frozen at 2026-01-11 14:30,) s
+5 429 M
+(47 objects, 2 keys.) s
+5 407 M
+(9.3 Error Messages) s
+5 385 M
+(Errors should be clear and actionable:) s
+5 363 M
+(No signing key configured. Generate with \(ed25519-keypair\)) s
+5 341 M
+(Not:) s
+5 319 M
+(Error: nil key) s
+5 297 M
+(------------------------------------------------------------------------------) s
+5 275 M
+(10. Single-Character Shortcuts) s
+5 253 M
+(| Symbol | Function | Description |) s
+5 242 M
+(|--------|----------|-------------|) s
+5 231 M
+(| \\|.\\| | status | Compact status display |) s
+5 220 M
+(| \\|?\\| | help | Show help |) s
+5 198 M
+(These use pipe-delimited symbols to avoid conflict with Scheme.) s
+5 176 M
+(------------------------------------------------------------------------------) s
+5 154 M
+(11. Terminal Window) s
+5 132 M
+(11.1 Title) s
+5 110 M
+(Set terminal title on startup:) s
+5 88 M
+(\(define \(set-terminal-title title\)) s
+5 77 M
+(  \(display \(string-append "\\x1b]0;" title "\\x07"\)\)\)) s
+5 55 M
+(Format: <Hostname> Workstation) s
+5 33 M
+(11.2 Clear Screen) s
+5 11 M
+(\(define \(clear\)) s
+_R
+S
+%%Page: (5) 5
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 5 def
+/fname (rfc-054-terminal-interface.txt) def
+/fdir (.) def
+/ftail (rfc-054-terminal-interface.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(  \(display "\\x1b[2J\\x1b[H"\)) s
+5 770 M
+(  \(void\)\)) s
+5 748 M
+(------------------------------------------------------------------------------) s
+5 726 M
+(12. Implementation Notes) s
+5 704 M
+(12.1 UTF-8 and string-ref) s
+5 682 M
+(Do NOT use string-ref on strings containing multi-byte UTF-8) s
+5 671 M
+(characters. Use vectors of strings instead:) s
+5 649 M
+(;; WRONG - fails on multi-byte chars) s
+5 638 M
+(\(string-ref "\342\\226\\201\342\\226\\202\342\\226\\203" idx\)) s
+5 616 M
+(;; RIGHT - vector of strings) s
+5 605 M
+(\(vector-ref '#\("\342\\226\\201" "\342\\226\\202" "\342\\226\\203"\) idx\)) s
+5 583 M
+(12.2 Width Calculations) s
+5 561 M
+(String length for box padding must account for display width, not byte) s
+5 550 M
+(length. ASCII characters are safe. For emoji or CJK, additional handling) s
+5 539 M
+(is needed.) s
+5 517 M
+(------------------------------------------------------------------------------) s
+5 495 M
+(13. Linting Checklist) s
+5 473 M
+(When auditing terminal output:) s
+5 451 M
+(1. [ ] Boxes use Unicode box-drawing characters) s
+5 440 M
+(2. [ ] Trees use +- and +- consistently) s
+5 429 M
+(3. [ ] Prompt is :  \(colon-space\)) s
+5 418 M
+(4. [ ] Colors are optional, not required for meaning) s
+5 407 M
+(5. [ ] Error messages are actionable) s
+5 396 M
+(6. [ ] Functions returning output use \(void\)) s
+5 385 M
+(7. [ ] Long values are truncated with ...) s
+5 374 M
+(8. [ ] Blank lines follow the convention) s
+5 363 M
+(9. [ ] No ASCII art boxes \(+---, |, etc.\)) s
+5 352 M
+(10. [ ] No tabs in output \(spaces only\)) s
+5 330 M
+(------------------------------------------------------------------------------) s
+5 308 M
+(14. References) s
+5 286 M
+(1. RFC-053 \342\\200\\224 The Normie Interface \(GUI counterpart\)) s
+5 275 M
+(2. RFC-002 \342\\200\\224 Architecture \("English on top, Scheme underneath"\)) s
+5 264 M
+(3. Unicode Standard \342\\200\\224 Box Drawing \(U+2500\342\\200\\223U+257F\)) s
+5 253 M
+(4. ECMA-48 \342\\200\\224 Control Functions for Coded Character Sets \(VT100\)) s
+5 231 M
+(------------------------------------------------------------------------------) s
+5 209 M
+(Changelog) s
+5 187 M
+(- 2026-01-11 \342\\200\\224 Initial specification) s
+5 165 M
+(------------------------------------------------------------------------------) s
+5 143 M
+(The terminal is for operators. Respect their time.) s
+_R
+S
+%%Trailer
+%%Pages: 5
+%%DocumentNeededResources: font Courier-Bold Courier 
+%%EOF
