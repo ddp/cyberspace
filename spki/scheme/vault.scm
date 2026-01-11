@@ -59,6 +59,7 @@
    *node-roles*
    *node-operations*
    probe-system-capabilities
+   measure-vups
    recommend-role
 
    ;; Keystore (RFC-041)
@@ -2463,13 +2464,15 @@ Object Types:
     (let ((cores (get-cpu-cores))
           (ram (get-ram-gb))
           (load (get-load-average))
+          (vups (measure-vups))
           (storage (get-available-storage-gb))
           (storage-type (detect-storage-type))
           (network-type (detect-network-type))
           (latency (estimate-network-latency)))
       `((compute . ((cores . ,cores)
                     (ram-gb . ,ram)
-                    (load-avg . ,load)))
+                    (load-avg . ,load)
+                    (vups . ,vups)))
         (storage . ((available-gb . ,storage)
                     (type . ,storage-type)))
         (network . ((type . ,network-type)
@@ -2539,6 +2542,21 @@ Object Types:
         ((satellite) 600)
         ((cellular) 100)
         (else 50))))
+
+  (define (measure-vups)
+    "Benchmark crypto ops/second, normalize to VUPS.
+     1 VUPS = 1000 SHA-512 hashes/sec (arbitrary baseline).
+     A VAX-11/780 was ~1 VUPS. Modern systems: 100-10000+ VUPS."
+    (handle-exceptions exn 0.0
+      (let* ((test-data (make-blob 64))
+             (iterations 5000)
+             (start (current-milliseconds)))
+        (do ((i 0 (+ i 1))) ((= i iterations))
+          (sha512-hash test-data))
+        (let* ((elapsed (max 1 (- (current-milliseconds) start)))
+               (ops-per-sec (/ (* iterations 1000.0) elapsed)))
+          ;; Round to 1 decimal place
+          (/ (round (* (/ ops-per-sec 1000.0) 10)) 10.0)))))
 
   (define (recommend-role capabilities)
     "Recommend role based on capabilities"
