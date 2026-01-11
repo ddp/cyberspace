@@ -2926,6 +2926,30 @@ Cyberspace REPL - Available Commands
 (define *pending-enrollments* '())      ; incoming requests (master side)
 (define *outgoing-enrollments* '())     ; outgoing requests (requestor side)
 (define *enrollment-listener* #f)
+(define *pending-file* ".vault/pending-enrollments.sexp")
+
+(define (save-pending-enrollments!)
+  "Persist pending enrollments to disk"
+  (when (directory-exists? ".vault")
+    (with-output-to-file *pending-file*
+      (lambda ()
+        (write `(pending-enrollments
+                  (version 1)
+                  (timestamp ,(current-seconds))
+                  (requests ,*pending-enrollments*)))
+        (newline)))))
+
+(define (load-pending-enrollments!)
+  "Load pending enrollments from disk"
+  (when (file-exists? *pending-file*)
+    (handle-exceptions exn
+      (print "Warning: could not load pending enrollments")
+      (let ((data (with-input-from-file *pending-file* read)))
+        (when (and (pair? data) (eq? 'pending-enrollments (car data)))
+          (let ((requests (cdr (assq 'requests (cdr data)))))
+            (when requests
+              (set! *pending-enrollments* (car requests))))))))
+  (length *pending-enrollments*))
 
 (define (enroll-debug! #!optional (on #t))
   "Enable/disable enrollment debugging"
@@ -2950,6 +2974,7 @@ Cyberspace REPL - Available Commands
                     (words ,words)
                     (timestamp ,(current-seconds)))))
     (set! *pending-enrollments* (cons request *pending-enrollments*))
+    (save-pending-enrollments!)  ; persist to disk
     (when *enrollment-debug*
       (print "[debug] after set!, pending=" (length *pending-enrollments*))
       (print "[debug] request=" request))
@@ -2990,6 +3015,11 @@ Cyberspace REPL - Available Commands
   (when *enrollment-listener*
     (print "Stopping existing listener...")
     (stop-listening))
+
+  ;; Load any persisted pending requests
+  (let ((loaded (load-pending-enrollments!)))
+    (when (> loaded 0)
+      (print "Loaded " loaded " pending enrollment request(s) from disk")))
 
   (when *enrollment-debug*
     (print "[debug] enroll-listen starting on port " port)
@@ -3115,9 +3145,10 @@ Cyberspace REPL - Available Commands
                       (printf "│  ~a~a│~n" node-str (make-string (max 0 (- 64 (string-length node-str))) #\space))
                       (printf "│  ~a~a│~n" cert-str (make-string (max 0 (- 64 (string-length cert-str))) #\space)))
                     (print "└──────────────────────────────────────────────────────────────────┘")
-                    ;; Remove from pending
+                    ;; Remove from pending and persist
                     (set! *pending-enrollments*
                           (filter (lambda (r) (not (eq? r req))) *pending-enrollments*))
+                    (save-pending-enrollments!)
                     signed))))))
   (void)))
 
@@ -3129,7 +3160,8 @@ Cyberspace REPL - Available Commands
         (begin
           (printf "Rejected ~a~n" name)
           (set! *pending-enrollments*
-                (filter (lambda (r) (not (eq? r req))) *pending-enrollments*)))))
+                (filter (lambda (r) (not (eq? r req))) *pending-enrollments*))
+          (save-pending-enrollments!))))
   (void))
 
 ;;; ============================================================
