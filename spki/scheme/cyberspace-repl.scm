@@ -3010,14 +3010,47 @@ Cyberspace REPL - Available Commands
   (let ((req (find (lambda (r) (eq? (cadr (assq 'name r)) name)) *pending-enrollments*)))
     (if (not req)
         (printf "No pending request for '~a'. Use (pending) to see list.~n" name)
-        (let ((pubkey (cadr (assq 'pubkey req))))
+        (let* ((pubkey-hex (cadr (assq 'pubkey req)))
+               (pubkey (hex->blob pubkey-hex))
+               (signing-key (vault-config 'signing-key))
+               (master-pubkey (if (and signing-key (blob? signing-key) (= (blob-size signing-key) 64))
+                                  (blob-copy signing-key 32 32)
+                                  #f)))
           (print "")
-          (printf "Approving ~a...~n" name)
-          ;; TODO: Generate and send certificate
-          (print "Certificate generation not yet implemented.")
-          (set! *pending-enrollments*
-                (filter (lambda (r) (not (eq? r req))) *pending-enrollments*)))))
-  (void))
+          (if (not signing-key)
+              (print "Error: No signing key. Use (keystore-unlock \"passphrase\") first.")
+              (begin
+                (printf "Approving ~a...~n" name)
+                ;; Create enrollment certificate
+                (let* ((now (current-seconds))
+                       (validity `(not-after ,(+ now (* 365 24 60 60))))  ; 1 year
+                       (tag '(tag (member)))  ; Basic membership
+                       (cert (create-cert
+                               `(public-key ed25519 ,master-pubkey)  ; issuer
+                               `(public-key ed25519 ,pubkey)         ; subject
+                               tag
+                               validity: validity))
+                       (signed (sign-cert cert signing-key)))
+                  ;; Store certificate in vault
+                  (let ((cert-path (make-pathname ".vault/keys" (string-append (->string name) ".cert"))))
+                    (unless (directory-exists? ".vault/keys")
+                      (create-directory ".vault/keys" #t))
+                    (with-output-to-file cert-path
+                      (lambda ()
+                        (write (signed-cert->sexp signed))
+                        (newline)))
+                    (print "")
+                    (print "┌─ Enrollment Approved ───────────────────────────────────────────┐")
+                    (let ((node-str (sprintf "~a is now a member of this realm" name))
+                          (cert-str (sprintf "Certificate: ~a" cert-path)))
+                      (printf "│  ~a~a│~n" node-str (make-string (max 0 (- 64 (string-length node-str))) #\space))
+                      (printf "│  ~a~a│~n" cert-str (make-string (max 0 (- 64 (string-length cert-str))) #\space)))
+                    (print "└──────────────────────────────────────────────────────────────────┘")
+                    ;; Remove from pending
+                    (set! *pending-enrollments*
+                          (filter (lambda (r) (not (eq? r req))) *pending-enrollments*))
+                    signed))))))
+  (void)))
 
 (define (reject name)
   "Reject pending enrollment request by name"
