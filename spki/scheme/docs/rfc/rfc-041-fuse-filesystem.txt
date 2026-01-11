@@ -86,30 +86,30 @@ Capabilities compose—grant exactly what's needed.
 Table 0: Wormhole Capabilities
 
 
-  Capability          Allows              
-  Data Access         
-  read                Read file contents  
-  write               Write/modify file co
-  create              Create new files    
-  delete              Remove files        
-  rename              Rename/move files   
-  Metadata            
-  stat                Read POSIX attribute
-  chmod               Modify permissions  
-  chown               Change ownership    
-  xattr-read          Read extended attrib
-  xattr-write         Modify extended attr
-  acl-read            Read ACLs           
-  acl-write           Modify ACLs         
-  Directory           
-  readdir             List directory conte
-  mkdir               Create directories  
-  rmdir               Remove directories  
-  Control             
-  admin               Configure wormhole  
-  delegate            Delegate capabilitie
-  audit-read          Read wormhole audit 
-  rate-limit          Modify rate limits  
+  Capability    Allows                            
+  Data Access   
+  read          Read file contents                
+  write         Write/modify file contents        
+  create        Create new files                  
+  delete        Remove files                      
+  rename        Rename/move files                 
+  Metadata      
+  stat          Read POSIX attributes             
+  chmod         Modify permissions                
+  chown         Change ownership                  
+  xattr-read    Read extended attributes          
+  xattr-write   Modify extended attributes        
+  acl-read      Read ACLs                         
+  acl-write     Modify ACLs                       
+  Directory     
+  readdir       List directory contents           
+  mkdir         Create directories                
+  rmdir         Remove directories                
+  Control       
+  admin         Configure wormhole                
+  delegate      Delegate capabilities to others   
+  audit-read    Read wormhole audit log           
+  rate-limit    Modify rate limits                
 
 
 Capability Composition
@@ -254,14 +254,14 @@ macOS Metadata Captured
 Table 1: Preserved Metadata
 
 
-  Category            Attributes          Capture Method      
-  POSIX               mode, uid, gid, sizestat()              
-  Timestamps          mtime, atime, ctime,stat()              
-  Extended attrs      Finder info, tags, qlistxattr(), getxatt
-  Spotlight           kMDItem* metadata   mdls / MDItem API   
-  ACLs                Access control listsaclgetfile()        
-  Flags               hidden, locked, immuchflags() / stat()  
-  Resource fork       Legacy resource dataxattr com.apple.Reso
+  Category         Attributes                       Capture Method                 
+  POSIX            mode, uid, gid, size             stat()                         
+  Timestamps       mtime, atime, ctime, birthtime   stat()                         
+  Extended attrs   Finder info, tags, quarantine    listxattr(), getxattr()        
+  Spotlight        kMDItem* metadata                mdls / MDItem API              
+  ACLs             Access control lists             aclgetfile()                   
+  Flags            hidden, locked, immutable        chflags() / stat()             
+  Resource fork    Legacy resource data             xattr com.apple.ResourceFork   
 
 
 Internal Representation
@@ -317,20 +317,20 @@ Required Operations
 Table 2: FUSE Operations
 
 
-  Operation           Purpose             Vault Action        
-  getattr             stat()              Return stored metada
-  readdir             List directory      Read manifest       
-  open                Open file           Validate hash exists
-  read                Read content        Fetch by content has
-  write               Write content       Content-address, upd
-  create              Create file         Allocate manifest en
-  unlink              Delete file         Remove from manifest
-  mkdir               Create directory    Create manifest node
-  rmdir               Remove directory    Remove manifest node
-  rename              Move/rename         Update manifest path
-  setxattr            Set extended attr   Store in metadata   
-  getxattr            Get extended attr   Retrieve from metada
-  listxattr           List extended attrs Enumerate metadata  
+  Operation   Purpose               Vault Action                       
+  getattr     stat()                Return stored metadata             
+  readdir     List directory        Read manifest                      
+  open        Open file             Validate hash exists               
+  read        Read content          Fetch by content hash              
+  write       Write content         Content-address, update manifest   
+  create      Create file           Allocate manifest entry            
+  unlink      Delete file           Remove from manifest (GC later)    
+  mkdir       Create directory      Create manifest node               
+  rmdir       Remove directory      Remove manifest node               
+  rename      Move/rename           Update manifest path               
+  setxattr    Set extended attr     Store in metadata                  
+  getxattr    Get extended attr     Retrieve from metadata             
+  listxattr   List extended attrs   Enumerate metadata                 
 
 
 Implementation Sketch
@@ -492,12 +492,12 @@ FUSE-T vs macFUSE
 Table 3: FUSE Implementation Options
 
 
-  Feature             macFUSE             FUSE-T              
-  Kernel extension    Yes (deprecated)    No                  
-  System extension    Optional            Uses NFS            
-  SIP compatible      Requires disable    Yes                 
-  Performance         Better              Adequate            
-  Maintenance         Active              Active              
+  Feature            macFUSE            FUSE-T     
+  Kernel extension   Yes (deprecated)   No         
+  System extension   Optional           Uses NFS   
+  SIP compatible     Requires disable   Yes        
+  Performance        Better             Adequate   
+  Maintenance        Active             Active     
 
 FUSE-T recommended for new installations—no kernel extension required.[^i1]
 
@@ -564,10 +564,10 @@ DEPENDENCIES
 ------------------------------------------------------------------------------
 
 
-  Component           Purpose             
-  FUSE-T or macFUSE   Userspace filesystem
-  libfuse             FUSE library        
-  Scheme FFI          Bindings to libfuse 
+  Component           Purpose                
+  FUSE-T or macFUSE   Userspace filesystem   
+  libfuse             FUSE library           
+  Scheme FFI          Bindings to libfuse    
 
 
 ------------------------------------------------------------------------------

@@ -91,16 +91,16 @@ Core Fields
 -----------
 
 
-  Field               Type                Description         
-  id                  string              Content-addressed ha
-  timestamp           string              Human-readable time 
-  sequence            integer             Monotonic counter wi
-  parent-id           string/nil          ID of previous entry
-  actor               record              SPKI principal who p
-  action              record              What was done (verb,
-  context             record              Human-readable motiv
-  environment         alist               Machine environment 
-  seal                record              Cryptographic signat
+  Field         Type         Description                                            
+  id            string       Content-addressed hash (SHA-512, first 32 hex chars)   
+  timestamp     string       Human-readable time                                    
+  sequence      integer      Monotonic counter within audit trail                   
+  parent-id     string/nil   ID of previous entry (hash chain)                      
+  actor         record       SPKI principal who performed action                    
+  action        record       What was done (verb, object, parameters)               
+  context       record       Human-readable motivation                              
+  environment   alist        Machine environment snapshot                           
+  seal          record       Cryptographic signature                                
 
 
 Actor Record
@@ -263,12 +263,12 @@ Attack Mitigations
 ------------------
 
 
-  Attack              Mitigation          
-  Entry modification  SHA-512 hash detects
-  Entry deletion      Chain breaks are det
-  Entry insertion     Hash chain prevents 
-  Actor impersonation Ed25519 signatures v
-  Replay attacks      Sequence numbers det
+  Attack                Mitigation                           
+  Entry modification    SHA-512 hash detects tampering       
+  Entry deletion        Chain breaks are detectable          
+  Entry insertion       Hash chain prevents backdating       
+  Actor impersonation   Ed25519 signatures verify identity   
+  Replay attacks        Sequence numbers detect duplicates   
 
 
 Non-Repudiation

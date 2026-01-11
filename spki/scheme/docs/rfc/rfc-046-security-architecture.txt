@@ -37,13 +37,13 @@ Design Lineage
 --------------
 
 
-  Era                 System              Contribution        
-  1984                VAXcluster          "Behave as one" - N 
-  1985                VMS C2              Audit trails, access
-  1993                VMS 6.0             Cluster-wide intrusi
-  1994                SDSI                Self-certifying keys
-  1999                SPKI                Authorization certif
-  2026                Cyberspace          Synthesis: SPKI + au
+  Era    System       Contribution                                                 
+  1984   VAXcluster   "Behave as one" - N nodes, one security domain               
+  1985   VMS C2       Audit trails, access control, TCSEC security primitives      
+  1993   VMS 6.0      Cluster-wide intrusion detection, TLV object store           
+  1994   SDSI         Self-certifying keys, local names (Rivest, IETF 29)          
+  1999   SPKI         Authorization certificates, capability delegation            
+  2026   Cyberspace   Synthesis: SPKI + audit + IPv6 mesh + no central authority   
 
 DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace
 is designed for IPv6: 128-bit addresses, global mesh, same security
@@ -59,39 +59,39 @@ Every first-class object in cyberspace. Names as defined.
 Table 0: Security Object Registry
 
 
-  Object              Defining RFC        Description         
-  Identity            
-  principal           RFC-004             Cryptographic identi
-  key                 RFC-022             Keypair with ceremon
-  attestation         RFC-041             Signed claim about i
-  Authorization       
-  certificate         RFC-004             SPKI capability gran
-  tag                 RFC-004             Authorization scope 
-  signature           RFC-004             Ed25519 attestation 
-  share               RFC-008             Shamir secret fragme
-  quorum              RFC-036             Voting threshold spe
-  Storage             
-  vault               RFC-006             Sovereign storage re
-  object              RFC-020             Content-addressed im
-  archive             RFC-018             Sealed, encrypted co
-  schema              RFC-033             Structure definition
-  Boundaries          
-  realm               RFC-040             Trust and sovereignt
-  wormhole            RFC-041             FUSE mount portal to
-  federation          RFC-010             Peer network of real
-  node                RFC-037             Network participant 
-  Execution           
-  agent               RFC-023             Sandboxed daemon    
-  topic               RFC-035             Pub/sub channel     
-  tunnel              RFC-035             Agent communication 
-  lock                RFC-035             Distributed mutex   
-  Observability       
-  audit-entry         RFC-003             Immutable log record
-  lamport-clock       RFC-012             Causal ordering time
-  query               RFC-025             Search expression   
-  Documentation       
-  memo                RFC-043             Scoped documentation
-  soup                RFC-040             The auditable collec
+  Object          Defining RFC   Description                                    
+  Identity        
+  principal       RFC-004        Cryptographic identity (ed25519 key or hash)   
+  key             RFC-022        Keypair with ceremony provenance               
+  attestation     RFC-041        Signed claim about identity or state           
+  Authorization   
+  certificate     RFC-004        SPKI capability grant                          
+  tag             RFC-004        Authorization scope (read, write, etc.)        
+  signature       RFC-004        Ed25519 attestation                            
+  share           RFC-008        Shamir secret fragment                         
+  quorum          RFC-036        Voting threshold specification                 
+  Storage         
+  vault           RFC-006        Sovereign storage realm                        
+  object          RFC-020        Content-addressed immutable data               
+  archive         RFC-018        Sealed, encrypted content package              
+  schema          RFC-033        Structure definition                           
+  Boundaries      
+  realm           RFC-040        Trust and sovereignty boundary                 
+  wormhole        RFC-041        FUSE mount portal to filesystem                
+  federation      RFC-010        Peer network of realms                         
+  node            RFC-037        Network participant with role                  
+  Execution       
+  agent           RFC-023        Sandboxed daemon                               
+  topic           RFC-035        Pub/sub channel                                
+  tunnel          RFC-035        Agent communication path                       
+  lock            RFC-035        Distributed mutex                              
+  Observability   
+  audit-entry     RFC-003        Immutable log record                           
+  lamport-clock   RFC-012        Causal ordering timestamp                      
+  query           RFC-025        Search expression                              
+  Documentation   
+  memo            RFC-043        Scoped documentation unit                      
+  soup            RFC-040        The auditable collection of all things         
 
 
 Object Properties
@@ -113,9 +113,9 @@ Object State
 All things in cyberspace exist in two states:
 
 
-  State               Meaning             Properties          
-  chaotic             In flux, being modifMutable, uncommitted
-  quiescent           At rest, stable     Immutable, signed, r
+  State       Meaning                   Properties                      
+  chaotic     In flux, being modified   Mutable, uncommitted, local     
+  quiescent   At rest, stable           Immutable, signed, replicable   
 
 Transitions:
 
@@ -138,9 +138,9 @@ Caching Implications
 State controls caching:
 
 
-  State               Cacheable           Reason              
-  quiescent           Forever             Hash is identity; im
-  chaotic             Never               Content may change; 
+  State       Cacheable   Reason                               
+  quiescent   Forever     Hash is identity; immutable          
+  chaotic     Never       Content may change; no stable hash   
 
 Quiescent things cache by content hash. Cache hit = identical content,
 guaranteed. Chaotic things bypass cache entirely. Every access reads current
@@ -153,16 +153,16 @@ Persistence
 Persistence is the guarantee of migration to the vault.
 
 
-  Durability          Meaning             
-  persistent          Guaranteed to migrat
-  ephemeral           May vanish; no durab
+  Durability   Meaning                             
+  persistent   Guaranteed to migrate to vault      
+  ephemeral    May vanish; no durability promise   
 
 State and durability are orthogonal:
 
 
-  Ephemeral           Persistent          
-  Chaotic             Scratch work        Draft being saved   
-  Quiescent           Cached result       Archived thing      
+  Ephemeral   Persistent      
+  Chaotic     Scratch work    Draft being saved   
+  Quiescent   Cached result   Archived thing      
 
 Persistent things survive restart. Ephemeral things don't.
 
@@ -339,11 +339,11 @@ Traditional formulations speak of "read up" and "write down" with respect to
 classification labels. We preserve the mathematics but speak differently:
 
 
-  Traditional         Cyberspace          Formal Statement    
-  "No read up"        Read requires capabi∀ read(P,O): P ∈
-  "No write down"     Write requires capab∀ write(P,O): P �
-  "No read down"      Integrity via proven∀ accept(P,O): ver
-  "No write up"       Attenuation only    ∀ delegate(P₁,P�
+  Traditional       Cyberspace                  Formal Statement                                      
+  "No read up"      Read requires capability    ∀ read(P,O): P ∈ holders(cap_read(O))             
+  "No write down"   Write requires capability   ∀ write(P,O): P ∈ holders(cap_write(O))           
+  "No read down"    Integrity via provenance    ∀ accept(P,O): verify(signature(O))                 
+  "No write up"     Attenuation only            ∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)   
 
 The capability graph IS the lattice. Delegation flows down. Authority cannot
 flow up.
@@ -406,11 +406,11 @@ every crossing:
       ;; 3. audit entry created
 
 
-  Operation           Required Capability Violation Type      
-  read, stat, readdir read                confidentiality     
-  write, create, chmodwrite               integrity           
-  delete, unlink      delete              integrity           
-  delegate            delegate            amplification       
+  Operation              Required Capability   Violation Type    
+  read, stat, readdir    read                  confidentiality   
+  write, create, chmod   write                 integrity         
+  delete, unlink         delete                integrity         
+  delegate               delegate              amplification     
 
 Denied operations raise typed errors: - no-ambient-authority — wormhole has
 no capabilities - read-denied — missing read capability - write-denied —
@@ -453,12 +453,12 @@ Erasure Requirements
 --------------------
 
 
-  What                How                 Verification        
-  Object content      Overwrite with randoRead-back verify    
-  Memory buffers      Secure memset, compiNot optimized away  
-  Key material        Zeroize immediately Audit trail entry   
-  Audit entries       Preserve hash chain,Chain integrity     
-  Capability certs    Revoke, then destroyRevocation published
+  What               How                                   Verification           
+  Object content     Overwrite with random, then zeros     Read-back verify       
+  Memory buffers     Secure memset, compiler barrier       Not optimized away     
+  Key material       Zeroize immediately after use         Audit trail entry      
+  Audit entries      Preserve hash chain, redact content   Chain integrity        
+  Capability certs   Revoke, then destroy                  Revocation published   
 
 
 Erasure Guarantees
@@ -529,10 +529,10 @@ What Cannot Be Erased
 Some things must persist:
 
 
-  Thing               Why                 
-  Audit chain structurHash links must veri
-  Revocation records  Must prove capabilit
-  Content hashes      May exist in other c
+  Thing                   Why                             
+  Audit chain structure   Hash links must verify          
+  Revocation records      Must prove capability invalid   
+  Content hashes          May exist in other chains       
 
 Redaction, not deletion: the fact that something existed remains, but the
 content is gone.
@@ -566,13 +566,13 @@ THE TRUSTED CORE
 What must work correctly for security to hold:
 
 
-  Component           What It Does        What We Trust       
-  Ed25519             Signatures          libsodium, math     
-  SHA-512             Object identity     libsodium, math     
-  Capability verifier Chain validation    Our code            
-  Vault storage       Object integrity    Local filesystem    
-  Audit chain         What happened       Hash chain, signatur
-  Soup                Object enumeration  Vault, audit        
+  Component             What It Does         What We Trust            
+  Ed25519               Signatures           libsodium, math          
+  SHA-512               Object identity      libsodium, math          
+  Capability verifier   Chain validation     Our code                 
+  Vault storage         Object integrity     Local filesystem         
+  Audit chain           What happened        Hash chain, signatures   
+  Soup                  Object enumeration   Vault, audit             
 
 The core is small. Objects are dumb content. Policy lives in certificates.
 Verification is stateless computation.
@@ -605,30 +605,30 @@ Storage Channels
 ----------------
 
 
-  Channel             How It Works        Bandwidth           Mitigation          
-  Object existence    Create/don't create ~1 bit/op           Bloom filter noise  
-  Object size         Encode in padding   ~10 bits/obj        Size quantization   
-  Object count        Number of objects in~4 bits/ns          Rate limiting       
+  Channel            How It Works                        Bandwidth      Mitigation           
+  Object existence   Create/don't create object as 1/0   ~1 bit/op      Bloom filter noise   
+  Object size        Encode in padding                   ~10 bits/obj   Size quantization    
+  Object count       Number of objects in namespace      ~4 bits/ns     Rate limiting        
 
 
 Timing Channels
 ---------------
 
 
-  Channel             How It Works        Bandwidth           Mitigation          
-  Verification time   Slow/fast response a~1 bit/100ms        Constant-time ops   
-  Network latency     Delay patterns      ~10 bits/sec        Batching, Tor       
-  Audit write time    When entries appear ~1 bit/sec          Async, batched      
+  Channel             How It Works                Bandwidth      Mitigation          
+  Verification time   Slow/fast response as 1/0   ~1 bit/100ms   Constant-time ops   
+  Network latency     Delay patterns              ~10 bits/sec   Batching, Tor       
+  Audit write time    When entries appear         ~1 bit/sec     Async, batched      
 
 
 Federation Channels
 -------------------
 
 
-  Channel             How It Works        Bandwidth           Mitigation          
-  Sync timing         When objects replica~1 bit/sync         Random delays       
-  Peer selection      Which realms to cont~4 bits/conn        Randomized peers    
-  Gossip patterns     Propagation paths   ~2 bits/round       Epidemic flooding   
+  Channel           How It Works              Bandwidth       Mitigation          
+  Sync timing       When objects replicate    ~1 bit/sync     Random delays       
+  Peer selection    Which realms to contact   ~4 bits/conn    Randomized peers    
+  Gossip patterns   Propagation paths         ~2 bits/round   Epidemic flooding   
 
 
 Analysis
@@ -723,29 +723,29 @@ What We Handle
 --------------
 
 
-  Threat              Defense             
-  Unauthorized access No capability = no a
-  Capability forgery  Ed25519 signatures  
-  Replay attacks      Timestamps, nonces, 
-  Stale capabilities  Expiration, revocati
-  Delegation abuse    Attenuation, propaga
-  Content tampering   SHA-512 content addr
-  Origin spoofing     Object signatures   
-  Audit tampering     Hash chain, distribu
+  Threat                Defense                              
+  Unauthorized access   No capability = no access            
+  Capability forgery    Ed25519 signatures                   
+  Replay attacks        Timestamps, nonces, Lamport clocks   
+  Stale capabilities    Expiration, revocation               
+  Delegation abuse      Attenuation, propagation flags       
+  Content tampering     SHA-512 content addressing           
+  Origin spoofing       Object signatures                    
+  Audit tampering       Hash chain, distribution             
 
 
 What We Don't Handle
 --------------------
 
 
-  Threat              Why                 
-  Compromised signing Fundamental limit. M
-  Endpoint compromise Your realm, your pro
-  Physical access     Out of scope for sof
-  Covert channels > 1 Residual risk, docum
-  Availability attacksFocus on integrity/c
-  Quantum computing   Ed25519 vulnerable. 
-  Coercion            Math doesn't help if
+  Threat                        Why                                                 
+  Compromised signing key       Fundamental limit. Mitigate: threshold, rotation.   
+  Endpoint compromise           Your realm, your problem.                           
+  Physical access               Out of scope for software.                          
+  Covert channels > 1 bit/sec   Residual risk, documented above.                    
+  Availability attacks          Focus on integrity/confidentiality.                 
+  Quantum computing             Ed25519 vulnerable. Migration path planned.         
+  Coercion                      Math doesn't help if you're forced to sign.         
 
 
 ------------------------------------------------------------------------------

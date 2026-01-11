@@ -73,23 +73,23 @@ family.
 Why SHAKE256:
 
 
-  Property            Value               
-  Security level      256-bit classical, 1
-  Output length       Variable (we use 256
-  Construction        Sponge (different fr
-  Standard            NIST FIPS 202       
-  Used by             SPHINCS+ (post-quant
-  In libsodium        No, but in OpenSSL, 
+  Property         Value                                             
+  Security level   256-bit classical, 128-bit quantum                
+  Output length    Variable (we use 256 bits)                        
+  Construction     Sponge (different from SHA-2's Merkle-Damgård)   
+  Standard         NIST FIPS 202                                     
+  Used by          SPHINCS+ (post-quantum signatures)                
+  In libsodium     No, but in OpenSSL, libgcrypt                     
 
 Alternative: BLAKE3
 
 
-  Property            Value               
-  Security level      256-bit classical, 1
-  Output length       Variable            
-  Construction        Merkle tree internal
-  Speed               Very fast, SIMD opti
-  Standard            Not NIST, but widely
+  Property         Value                                
+  Security level   256-bit classical, 128-bit quantum   
+  Output length    Variable                             
+  Construction     Merkle tree internally               
+  Speed            Very fast, SIMD optimized            
+  Standard         Not NIST, but widely trusted         
 
 BLAKE3 is faster and already tree-structured, but SHAKE256 has NIST blessing.
 We support both.
@@ -192,11 +192,11 @@ Canonical Parameters
 --------------------
 
 
-  Parameter           Default             Notes               
-  chunk-size          4096                4 KB, filesystem-fri
-  fanout              16                  Balance between dept
-  algorithm           shake256            NIST approved       
-  output-length       32                  256 bits            
+  Parameter       Default    Notes                             
+  chunk-size      4096       4 KB, filesystem-friendly         
+  fanout          16         Balance between depth and width   
+  algorithm       shake256   NIST approved                     
+  output-length   32         256 bits                          
 
 
 ------------------------------------------------------------------------------
@@ -333,12 +333,12 @@ PERFORMANCE
 ------------------------------------------------------------------------------
 
 
-  Operation           SHA-512 (flat)      SHAKE256 (Merkle)   Notes               
-  Hash 1 MB           2 ms                3 ms                Slightly slower     
-  Hash 1 GB           2000 ms             2500 ms             Tree overhead       
-  Update 4 KB in 1 GB 2000 ms             15 ms               Merkle wins         
-  Prove inclusion     N/A                 0.1 ms              New capability      
-  Streaming verify    N/A                 Per-chunk           New capability      
+  Operation             SHA-512 (flat)   SHAKE256 (Merkle)   Notes             
+  Hash 1 MB             2 ms             3 ms                Slightly slower   
+  Hash 1 GB             2000 ms          2500 ms             Tree overhead     
+  Update 4 KB in 1 GB   2000 ms          15 ms               Merkle wins       
+  Prove inclusion       N/A              0.1 ms              New capability    
+  Streaming verify      N/A              Per-chunk           New capability    
 
 The overhead is small. The benefits are large.
 

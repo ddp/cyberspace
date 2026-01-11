@@ -132,11 +132,11 @@ All key generation MUST use libsodium's key generation functions, which
 internally use randombytes_buf():
 
 
-  Operation           Function            
-  Ed25519 signing key cryptosignkeypair() 
-  X25519 key exchange cryptoboxkeypair()  
-  Symmetric key       cryptosecretboxkeyge
-  Generic random      randombytes_buf()   
+  Operation             Function                  
+  Ed25519 signing key   cryptosignkeypair()       
+  X25519 key exchange   cryptoboxkeypair()        
+  Symmetric key         cryptosecretboxkeygen()   
+  Generic random        randombytes_buf()         
 
 
 Nonce Generation
@@ -302,11 +302,11 @@ Labs
 Modern CPUs include hardware random number generators:
 
 
-  CPU                 Instruction         Mechanism           
-  Intel               RDRAND/RDSEED       Thermal noise + AES-
-  AMD                 RDRAND/RDSEED       Ring oscillator jitt
-  ARM                 TRNG                Metastable flip-flop
-  RISC-V              Zkr extension       Implementation-defin
+  CPU      Instruction     Mechanism                     
+  Intel    RDRAND/RDSEED   Thermal noise + AES-CBC-MAC   
+  AMD      RDRAND/RDSEED   Ring oscillator jitter        
+  ARM      TRNG            Metastable flip-flops         
+  RISC-V   Zkr extension   Implementation-defined        
 
 Security note: Intel's RDRAND has faced scrutiny. Mix with other sources.
 
@@ -353,13 +353,13 @@ HTTPS traffic.
 #### Other Environmental Sources
 
 
-  Source              Mechanism           Bandwidth           
-  Lava lamps          Fluid dynamics      ~100 Kbit/s         
-  Radioactive decay   Nuclear physics     ~1-10 Kbit/s        
-  Atmospheric noise   RF antenna          ~1 Mbit/s           
-  Thermal camera      Johnson-Nyquist nois~10 Kbit/s          
-  Double pendulum     Chaotic motion      ~100 bit/s          
-  Keyboard timing     Human unpredictabili~1-10 bit/keystroke 
+  Source              Mechanism                Bandwidth             
+  Lava lamps          Fluid dynamics           ~100 Kbit/s           
+  Radioactive decay   Nuclear physics          ~1-10 Kbit/s          
+  Atmospheric noise   RF antenna               ~1 Mbit/s             
+  Thermal camera      Johnson-Nyquist noise    ~10 Kbit/s            
+  Double pendulum     Chaotic motion           ~100 bit/s            
+  Keyboard timing     Human unpredictability   ~1-10 bit/keystroke   
 
 
 Public Randomness Beacons
@@ -421,11 +421,11 @@ Use in Cyberspace:
 #### Other Public Beacons
 
 
-  Beacon              Operator            Source              Interval            
-  NIST Beacon         US NIST             Quantum + photonic  60 seconds          
-  Chile UChile        University of Chile Seismic + radio     60 seconds          
-  Cloudflare drand    League of Entropy   Distributed threshol30 seconds          
-  IRISA               French research     Multiple physical   60 seconds          
+  Beacon             Operator              Source                  Interval     
+  NIST Beacon        US NIST               Quantum + photonic      60 seconds   
+  Chile UChile       University of Chile   Seismic + radio         60 seconds   
+  Cloudflare drand   League of Entropy     Distributed threshold   30 seconds   
+  IRISA              French research       Multiple physical       60 seconds   
 
 #### League of Entropy (drand)
 
@@ -476,12 +476,12 @@ Historical Entropy Failures
 Learning from disasters:
 
 
-  Incident            Year                Cause               Impact              
-  Netscape SSL        1995                PID + timestamp = prAll SSL broken      
-  Debian OpenSSL      2006-2008           Valgrind "fix" remov32,767 possible keys
-  Android SecureRandom2013                PRNG state reuse    Bitcoin wallets drai
-  DualECDRBG          2013                NSA backdoor in consUnknown surveillance
-  Taiwan smart cards  2013                Shared PRNG state   Factored RSA keys   
+  Incident               Year        Cause                            Impact                    
+  Netscape SSL           1995        PID + timestamp = predictable    All SSL broken            
+  Debian OpenSSL         2006-2008   Valgrind "fix" removed entropy   32,767 possible keys      
+  Android SecureRandom   2013        PRNG state reuse                 Bitcoin wallets drained   
+  DualECDRBG             2013        NSA backdoor in constants        Unknown surveillance      
+  Taiwan smart cards     2013        Shared PRNG state                Factored RSA keys         
 
 Lesson: Defense in depth. Mix multiple independent sources.
 
@@ -490,14 +490,14 @@ Entropy Requirements by Operation
 ---------------------------------
 
 
-  Operation           Entropy Needed      Notes               
-  Ed25519 keypair     32 bytes            Full key security   
-  X25519 keypair      32 bytes            Full key security   
-  XSalsa20 nonce      24 bytes            Random OK (large spa
-  AES-GCM nonce       12 bytes            Counter preferred (s
-  Argon2id salt       16 bytes            Unique per derivatio
-  Session ID          16-32 bytes         Unpredictable       
-  ECDSA k-value       32 bytes            CRITICAL - must not 
+  Operation         Entropy Needed   Notes                             
+  Ed25519 keypair   32 bytes         Full key security                 
+  X25519 keypair    32 bytes         Full key security                 
+  XSalsa20 nonce    24 bytes         Random OK (large space)           
+  AES-GCM nonce     12 bytes         Counter preferred (small space)   
+  Argon2id salt     16 bytes         Unique per derivation             
+  Session ID        16-32 bytes      Unpredictable                     
+  ECDSA k-value     32 bytes         CRITICAL - must not repeat        
 
 
 ------------------------------------------------------------------------------
@@ -550,10 +550,10 @@ Current Status
 --------------
 
 
-  Component           Entropy Source      Status              
-  crypto-ffi.scm      randombytes_buf()   Implemented         
-  vault.scm (keystore)random-bytes        Implemented         
-  OCaml core          TBD                 Open Issue          
+  Component              Entropy Source      Status        
+  crypto-ffi.scm         randombytes_buf()   Implemented   
+  vault.scm (keystore)   random-bytes        Implemented   
+  OCaml core             TBD                 Open Issue    
 
 
 Audit Trail
@@ -576,10 +576,10 @@ Hardware Entropy
 When available, hardware entropy sources enhance security:
 
 
-  Platform            Hardware RNG        
-  Intel/AMD           RDRAND, RDSEED instr
-  ARM                 TRNG (True Random Nu
-  Apple Silicon       Secure Enclave entro
+  Platform        Hardware RNG                          
+  Intel/AMD       RDRAND, RDSEED instructions           
+  ARM             TRNG (True Random Number Generator)   
+  Apple Silicon   Secure Enclave entropy                
 
 libsodium automatically uses hardware entropy when available.
 
