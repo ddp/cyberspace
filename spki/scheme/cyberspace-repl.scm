@@ -4411,6 +4411,7 @@ Cyberspace REPL - Available Commands
 
 ;; Single-char shortcuts
 (define |.| status)  ; status at a glance
+(define |?| help)    ; help
 
 ;; Quit shortcuts (don't shadow scheme's exit)
 (define quit goodbye)
