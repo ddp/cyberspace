@@ -3400,9 +3400,12 @@ Object Types:
     (if (not (ollama-available?))
         (begin
           (print "")
-          (print "Ollama not available at " *ollama-base*)
-          (print "Start with: ollama serve")
-          (print "Pull model: ollama pull " *ollama-model*))
+          (print "Local inference not available.")
+          (print "")
+          (print "  curl -fsSL https://ollama.com/install.sh | sh")
+          (print "  ollama pull " *ollama-model*)
+          (print "")
+          (print "Then (ask \"...\") works. No cloud, no API keys."))
         (let* ((context (soup-context))
                (system-prompt
                 (string-append
