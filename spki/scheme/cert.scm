@@ -205,14 +205,18 @@
         (make-tag sexp)))
 
   (define (validity->sexp validity)
-    (sexp-list (list
-                (sexp-atom "valid")
-                (sexp-list (list
-                            (sexp-atom "not-before")
-                            (sexp-atom (validity-not-before validity))))
-                (sexp-list (list
-                            (sexp-atom "not-after")
-                            (sexp-atom (validity-not-after validity)))))))
+    (let ((not-before (validity-not-before validity))
+          (not-after (validity-not-after validity)))
+      (sexp-list
+        (filter identity
+          (list
+            (sexp-atom "valid")
+            (and not-before
+                 (sexp-list (list (sexp-atom "not-before")
+                                  (sexp-atom (number->string not-before)))))
+            (and not-after
+                 (sexp-list (list (sexp-atom "not-after")
+                                  (sexp-atom (number->string not-after))))))))))
 
   (define (sexp->validity sexp)
     (if (not (sexp-list? sexp))

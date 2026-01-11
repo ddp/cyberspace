@@ -16,6 +16,7 @@
         (chicken repl)
         (chicken csi)      ; toplevel-command
         (chicken file)
+        (chicken pathname)
         (chicken io)
         (chicken port)     ; with-output-to-string
         (chicken pretty-print)  ; pp
@@ -2992,7 +2993,7 @@ Cyberspace REPL - Available Commands
       (print "│                                                                  │")
       (printf "│  ~a~a│~n" verify-str (make-string (max 0 (- 64 (string-length verify-str))) #\space))
       (print "│                                                                  │"))
-    (print "│  (pending)  (approve 'name)  (reject 'name)                      │")
+    (print "│  (pending)  (accept 'name)  (reject 'name)                       │")
     (print "└──────────────────────────────────────────────────────────────────┘")
     (print "")
     (display ": ")  ; re-display prompt
@@ -3033,7 +3034,7 @@ Cyberspace REPL - Available Commands
   (print "│  Waiting nodes should run (enroll-to \"host\" 'node-name)         │")
   (print "│  Requests will appear here with verification words.             │")
   (print "│                                                                  │")
-  (print "│  Use (pending) (approve 'name) (reject 'name) or (stop-enroll)  │")
+  (print "│  Use (pending) (accept 'name) (reject 'name) or (stop-enroll)   │")
   (print "│  Use (enroll-debug!) to enable verbose debugging                │")
   (print "└──────────────────────────────────────────────────────────────────┘")
 
@@ -3081,7 +3082,7 @@ Cyberspace REPL - Available Commands
               (printf "│  ~a~a│~n" verify-str (make-string (- 64 (string-length verify-str)) #\space))))
           (reverse *pending-enrollments*))
         (print "├──────────────────────────────────────────────────────────────────┤")
-        (print "│  Use (approve 'name) to accept or (reject 'name) to deny        │")
+        (print "│  Use (accept 'name) to accept or (reject 'name) to deny         │")
         (print "└──────────────────────────────────────────────────────────────────┘")))
   (void))
 
@@ -3106,8 +3107,8 @@ Cyberspace REPL - Available Commands
     (print "")
     (print "Handler test complete. Check (pending) to see if request was stored.")))
 
-(define (approve name)
-  "Approve pending enrollment request by name"
+(define (accept name)
+  "Accept pending enrollment request by name"
   (let ((req (find (lambda (r) (eq? (cadr (assq 'name r)) name)) *pending-enrollments*)))
     (if (not req)
         (printf "No pending request for '~a'. Use (pending) to see list.~n" name)
@@ -3119,15 +3120,14 @@ Cyberspace REPL - Available Commands
           (if (not signing-key)
               (print "Error: No signing key. Use (keystore-unlock \"passphrase\") first.")
               (begin
-                (printf "Approving ~a...~n" name)
+                (printf "Accepting ~a...~n" name)
                 ;; Create enrollment certificate
                 (let* ((now (current-seconds))
-                       (validity `(not-after ,(+ now (* 365 24 60 60))))  ; 1 year
-                       (tag '(tag (member)))  ; Basic membership
-                       (cert (create-cert
-                               `(public-key ed25519 ,master-pubkey)  ; issuer
-                               `(public-key ed25519 ,pubkey)         ; subject
-                               tag
+                       (validity (make-validity #f (+ now (* 365 24 60 60))))  ; 1 year
+                       (tag (make-tag (sexp-list (list (sexp-atom "member")))))
+                       (issuer-principal (make-key-principal master-pubkey))
+                       (subject-principal (make-key-principal pubkey))
+                       (cert (create-cert issuer-principal subject-principal tag
                                validity: validity))
                        (signed (sign-cert cert signing-key)))
                   ;; Store certificate in vault
@@ -3136,10 +3136,10 @@ Cyberspace REPL - Available Commands
                       (create-directory ".vault/keys" #t))
                     (with-output-to-file cert-path
                       (lambda ()
-                        (write (signed-cert->sexp signed))
+                        (display (sexp->string (signed-cert->sexp signed)))
                         (newline)))
                     (print "")
-                    (print "┌─ Enrollment Approved ───────────────────────────────────────────┐")
+                    (print "┌─ Enrollment Accepted ───────────────────────────────────────────┐")
                     (let ((node-str (sprintf "~a is now a member of this realm" name))
                           (cert-str (sprintf "Certificate: ~a" cert-path)))
                       (printf "│  ~a~a│~n" node-str (make-string (max 0 (- 64 (string-length node-str))) #\space))
