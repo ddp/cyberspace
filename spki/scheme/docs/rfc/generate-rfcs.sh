@@ -521,21 +521,16 @@ YOYODYNE_HOST="ddp@www.yoyodyne.com"
 YOYODYNE_BASE="/www/yoyodyne/ddp/cyberspace"
 YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
 
-# Two publish locations for compatibility
-YOYODYNE_PATHS=(
-  "$YOYODYNE_BASE/"                          # flat: /ddp/cyberspace/
-  "$YOYODYNE_BASE/spki/scheme/docs/rfc/"     # nested: /ddp/cyberspace/spki/scheme/docs/rfc/
-)
+# RFC publish location only - don't overwrite main Library index
+YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/rfc/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
-  for ypath in "${YOYODYNE_PATHS[@]}"; do
-    /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $ypath"
-    rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt "$YOYODYNE_HOST:$ypath"
-    echo "  -> $ypath"
-  done
+  /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_RFC_PATH"
+  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
+  echo "  -> $YOYODYNE_RFC_PATH"
   # Ensure directories are world-readable for browser indexing
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
-  echo "  Published to $YOYODYNE_URL"
+  echo "  Published RFCs to ${YOYODYNE_URL}spki/scheme/docs/rfc/"
 else
   echo "  [skip] Cannot reach yoyodyne"
 fi
