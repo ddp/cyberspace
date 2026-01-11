@@ -2,23 +2,103 @@
 # Cyberspace Scheme REPL with line editing via rlwrap
 #
 # Usage:
-#   cyberspace              - mirror then REPL
-#   cyberspace mirror       - just mirror (bin/sync)
-#   cyberspace --no-mirror  - skip mirror, straight to REPL
+#   cyberspace                     - mirror then REPL
+#   cyberspace mirror              - just mirror (bin/sync)
+#   cyberspace --no-mirror         - skip mirror, straight to REPL
+#   cyberspace listen              - start enrollment listener
+#   cyberspace enroll HOST NAME    - request enrollment from HOST as NAME
+#   cyberspace eval 'EXPR'         - evaluate expression and exit
+#   cyberspace status              - show node status
+#   cyberspace help                - show this help
 
 SCRIPT_DIR="$(dirname "$0")"
 CYBERSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# Helper to run scheme expression and exit
+run_expr() {
+    echo "$1" | csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm"
+}
+
+# Helper to run scheme expression then REPL
+run_then_repl() {
+    ( echo "$1"; cat ) | rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm"
+}
+
 case "$1" in
-    mirror|replicate)
+    mirror|replicate|sync)
         exec "$CYBERSPACE_ROOT/bin/sync"
         ;;
+
     --no-mirror|--offline)
         shift
         exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
         ;;
+
+    listen)
+        # Start enrollment listener then drop to REPL
+        PORT="${2:-7654}"
+        timeout 10 "$CYBERSPACE_ROOT/bin/sync" --quiet 2>/dev/null || true
+        run_then_repl "(enroll-listen $PORT)"
+        ;;
+
+    enroll)
+        # Request enrollment: cyberspace enroll HOST NAME
+        if [ -z "$2" ] || [ -z "$3" ]; then
+            echo "Usage: cyberspace enroll HOST NAME"
+            echo "  HOST: master node hostname (e.g., fluffy.local)"
+            echo "  NAME: name for this node (e.g., starlight)"
+            exit 1
+        fi
+        HOST="$2"
+        NAME="$3"
+        timeout 10 "$CYBERSPACE_ROOT/bin/sync" --quiet 2>/dev/null || true
+        run_then_repl "(enroll-to \"$HOST\" '$NAME)"
+        ;;
+
+    eval|exec|-e)
+        # Evaluate expression and exit
+        shift
+        run_expr "$1"
+        ;;
+
+    status)
+        # Show node status
+        timeout 10 "$CYBERSPACE_ROOT/bin/sync" --quiet 2>/dev/null || true
+        run_expr "(enrollment-status) (gossip-status)"
+        ;;
+
+    help|--help|-h|-?)
+        cat <<'HELP'
+Cyberspace Scheme - Library of Cyberspace
+
+Usage: cyberspace [command] [args]
+
+Commands:
+  (none)              Mirror then interactive REPL
+  mirror, sync        Mirror from master (bin/sync)
+  --no-mirror         Skip mirror, straight to REPL
+  listen [PORT]       Start enrollment listener (default: 7654)
+  enroll HOST NAME    Request enrollment from HOST as NAME
+  eval 'EXPR'         Evaluate Scheme expression and exit
+  status              Show enrollment and gossip status
+  help                Show this help
+
+Examples:
+  cyberspace                           # interactive REPL
+  cyberspace listen                    # master: listen for enrollments
+  cyberspace enroll fluffy.local me    # node: request enrollment
+  cyberspace eval '(soup)'             # show vault contents
+  cyberspace status                    # show node status
+
+Inside the REPL:
+  (help)              Show all available functions
+  (enroll-debug!)     Enable enrollment debugging
+  ,q                  Quit
+HELP
+        ;;
+
     *)
-        # Mirror first (quiet, with timeout), then REPL
+        # Default: mirror first (quiet, with timeout), then REPL
         timeout 10 "$CYBERSPACE_ROOT/bin/sync" --quiet 2>/dev/null || true
         exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
         ;;
