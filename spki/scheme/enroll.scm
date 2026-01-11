@@ -286,24 +286,37 @@
   ;; Enrollment Display Formatting
   ;; ============================================================
 
+  (define (make-box title w)
+    "Create a box drawing closure with given title and width"
+    (let* ((title-padded (string-append " " title " "))
+           (title-len (string-length title-padded))
+           (left-pad (quotient (- w title-len) 2))
+           (right-pad (- w title-len left-pad))
+           (header (string-append "┌" (make-string left-pad #\─) title-padded (make-string right-pad #\─) "┐\n"))
+           (footer (string-append "└" (make-string w #\─) "┘\n")))
+      (lambda (cmd . args)
+        (case cmd
+          ((header) header)
+          ((footer) footer)
+          ((line) (let* ((content (if (null? args) "" (car args)))
+                         (pad (- w (string-length content) 2)))
+                    (string-append "│ " content (make-string (max 0 pad) #\space) " │\n")))))))
+
   (define (format-enrollment-display name code)
     "Format enrollment request display for node"
     (let* ((code-str (verification-code->display code))
            (name-str (val->string name))
-           (w 48))  ; box width
+           (box (make-box "enroll" 50)))
       (string-append
        "\n"
-       "+" (make-string w #\-) "+\n"
-       "|" (make-string w #\space) "|\n"
-       "|  Requesting enrollment as: " (pad-right name-str (- w 29)) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|  Verification code (FIPS-181):" (make-string (- w 33) #\space) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|      " (pad-right code-str (- w 7)) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|  Waiting for master to approve..." (make-string (- w 35) #\space) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "+" (make-string w #\-) "+\n")))
+       (box 'header)
+       (box 'line (string-append "Requesting enrollment as: " name-str))
+       (box 'line)
+       (box 'line "Verification code (FIPS-181):")
+       (box 'line (string-append "    " code-str))
+       (box 'line)
+       (box 'line "Waiting for master to approve...")
+       (box 'footer))))
 
   (define (format-approval-display name code host hw)
     "Format enrollment approval display for master"
@@ -315,27 +328,24 @@
                          (substring cpu 0 30)
                          cpu))
            (mem (or (and hw (cadr (assq 'memory-gb (cdr hw)))) "?"))
-           (w 48))  ; box width
+           (box (make-box "approve" 50)))
       (string-append
        "\n"
-       "+" (make-string w #\-) "+\n"
-       "|" (make-string w #\space) "|\n"
-       "|  Enrollment request received" (make-string (- w 30) #\space) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|  Proposed name: " (pad-right name-str (- w 18)) "|\n"
-       "|  From: " (pad-right host-str (- w 9)) "|\n"
-       "|  Hardware: " (pad-right cpu-short (- w 13)) "|\n"
-       "|  Memory: " (pad-right (string-append (val->string mem) " GB") (- w 11)) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|  Verification code (FIPS-181):" (make-string (- w 33) #\space) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|      " (pad-right code-str (- w 7)) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|  Match what you see on " (pad-right (string-append name-str "?") (- w 25)) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "|  [y] Approve   [n] Reject   [?] Help" (make-string (- w 38) #\space) "|\n"
-       "|" (make-string w #\space) "|\n"
-       "+" (make-string w #\-) "+\n")))
+       (box 'header)
+       (box 'line "Enrollment request received")
+       (box 'line)
+       (box 'line (string-append "Name: " name-str))
+       (box 'line (string-append "From: " host-str))
+       (box 'line (string-append "Hardware: " cpu-short))
+       (box 'line (string-append "Memory: " (val->string mem) " GB"))
+       (box 'line)
+       (box 'line "Verification code (FIPS-181):")
+       (box 'line (string-append "    " code-str))
+       (box 'line)
+       (box 'line (string-append "Match what you see on " name-str "?"))
+       (box 'line)
+       (box 'line "[y] Approve   [n] Reject   [?] Help")
+       (box 'footer))))
 
   (define (val->string x)
     (cond ((string? x) x)
