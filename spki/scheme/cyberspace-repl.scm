@@ -4434,6 +4434,9 @@ Cyberspace REPL - Available Commands
                 date-str
                 (string-intersperse info-parts ", ")))
     (print "")
+    (flush-output)
+    ;; Drain any pending input to avoid escape codes leaking to shell
+    (let drain () (when (char-ready?) (read-char) (drain)))
     (exit 0)))
 
 (define (string-pad-left str len char)
