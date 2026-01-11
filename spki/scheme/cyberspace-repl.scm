@@ -3477,13 +3477,27 @@ Cyberspace REPL - Available Commands
          (platform (get-platform-stamp))
          (ipv4 (get-primary-ipv4))
          (ipv6 (get-primary-ipv6))
-         (hw (get-hardware-summary)))
+         (hw (get-hardware-summary))
+         ;; Full introspection
+         (info (introspect-system))
+         (code (assq 'codebase (cdr info)))
+         (realm (assq 'realm (cdr info)))
+         (loc (and code (cadr (assq 'loc (cdr code)))))
+         (modules (and code (cadr (assq 'modules (cdr code)))))
+         (rfcs (and code (cadr (assq 'rfcs (cdr code)))))
+         (vault-exists (and realm (cadr (assq 'vault-exists (cdr realm))))))
     (set-terminal-title window-title)
     (print "")
     (print "Cyberspace Scheme " version " (" date ")")
     (print "  " host " · " platform (if (not (string=? hw "")) (string-append " · " hw) ""))
     (when ipv4 (print "  IPv4: " ipv4))
-    (when ipv6 (print "  IPv6: " ipv6))))
+    (when ipv6 (print "  IPv6: " ipv6))
+    (print "  "
+           (if loc (string-append (number->string (quotient loc 1000)) "K loc") "")
+           (if modules (string-append ", " (number->string modules) " modules") "")
+           (if rfcs (string-append ", " (number->string rfcs) " rfcs") ""))
+    (when vault-exists
+      (print "  vault: " vault-exists))))
 
 ;;; ============================================================
 ;;; Cyberspace Channel Protocol
