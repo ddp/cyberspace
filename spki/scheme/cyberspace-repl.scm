@@ -111,39 +111,58 @@
          (inc-path (car paths))
          (lib-path (cadr paths))
          (src (string-append module ".scm")))
-    (print "")
-    (print "┌─ forge: " module " ─┐")
-    (let ((cmd (if (string=? module "crypto-ffi")
-                   ;; crypto-ffi needs libsodium
-                   (string-append "csc -shared -J -w " src
-                                  " -I" inc-path
-                                  " -L" lib-path
-                                  " -L -lsodium 2>&1")
-                   ;; other modules (vault, etc)
-                   (string-append "csc -shared -J -w " src " 2>&1"))))
-      (print "  " cmd)
-      (let ((result (with-input-from-pipe cmd
-                      (lambda ()
-                        (let loop ((lines '()))
-                          (let ((line (read-line)))
-                            (if (eof-object? line)
-                                (reverse lines)
-                                (loop (cons line lines)))))))))
-        ;; Print any output (warnings/errors)
-        (for-each (lambda (line) (print "  " line)) result)
-        ;; Check if .so was created
-        (if (file-exists? (string-append module ".so"))
-            (begin
-              (write-arch-stamp module stamp)
-              (print "  ✓ forged")
-              (print "└─────────────────────┘")
-              (print "")
-              #t)
-            (begin
-              (print "  ✗ failed")
-              (print "└─────────────────────┘")
-              (print "")
-              (exit 1)))))))
+    (let* ((w 50)
+           (title (string-append " forge: " module " "))
+           (title-len (string-length title))
+           (left-pad (quotient (- w title-len) 2))
+           (right-pad (- w title-len left-pad))
+           (start-time (current-milliseconds)))
+      (define (box-line content)
+        (let* ((clen (string-length content))
+               (pad (- w clen 2)))
+          (print "│ " content (make-string (max 0 pad) #\space) " │")))
+      (print "")
+      (print "┌" (make-string left-pad #\─) title (make-string right-pad #\─) "┐")
+      (let ((cmd (if (string=? module "crypto-ffi")
+                     (string-append "csc -shared -J -w " src " -I... -L... -lsodium")
+                     (string-append "csc -shared -J -w " src))))
+        (box-line cmd)
+        (let ((result (with-input-from-pipe
+                        (if (string=? module "crypto-ffi")
+                            (string-append "csc -shared -J -w " src
+                                           " -I" inc-path
+                                           " -L" lib-path
+                                           " -L -lsodium 2>&1")
+                            (string-append "csc -shared -J -w " src " 2>&1"))
+                        (lambda ()
+                          (let loop ((lines '()))
+                            (let ((line (read-line)))
+                              (if (eof-object? line)
+                                  (reverse lines)
+                                  (loop (cons line lines)))))))))
+          ;; Print any output (warnings/errors) - only if non-empty
+          (for-each (lambda (line)
+                      (when (> (string-length line) 0)
+                        (box-line line)))
+                    result)
+          ;; Check if .so was created
+          (let* ((elapsed (- (current-milliseconds) start-time))
+                 (so-file (string-append module ".so"))
+                 (so-size (if (file-exists? so-file)
+                              (file-size so-file)
+                              0)))
+            (if (file-exists? so-file)
+                (begin
+                  (write-arch-stamp module stamp)
+                  (box-line (sprintf "✓ ~aK in ~ams" (quotient so-size 1024) elapsed))
+                  (print "└" (make-string w #\─) "┘")
+                  (print "")
+                  #t)
+                (begin
+                  (box-line "✗ failed")
+                  (print "└" (make-string w #\─) "┘")
+                  (print "")
+                  (exit 1)))))))))
 
 (define (platform-stamp)
   "Return OS+arch stamp (e.g., 'Darwin-arm64', 'Linux-x86_64')"
