@@ -214,7 +214,7 @@ generate_formats() {
 }
 
 # Stop words for KWIC index
-STOP_WORDS="a an and for in of on or the to with"
+STOP_WORDS="a an and at for in of on or the to with"
 
 is_stop_word() {
   local word=$(echo "$1" | tr '[:upper:]' '[:lower:]')
@@ -231,6 +231,8 @@ generate_kwic_entries() {
     local title=$(get_title "$rfc")
     # Strip "RFC-NNN: " prefix for rotation
     local bare_title=$(echo "$title" | sed 's/^RFC-[0-9]*: //')
+    # Clean punctuation that breaks word boundaries
+    bare_title=$(echo "$bare_title" | sed 's/[()]//g; s/,//g')
     # zsh: use ${=var} for word splitting, arrays are 1-indexed
     local words=(${=bare_title})
     local num_words=${#words[@]}
@@ -516,12 +518,21 @@ echo ""
 echo "=== Publishing to yoyodyne ==="
 
 YOYODYNE_HOST="ddp@www.yoyodyne.com"
-YOYODYNE_PATH="/www/yoyodyne/ddp/cyberspace/"
+YOYODYNE_BASE="/www/yoyodyne/ddp/cyberspace"
 YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
 
-if ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
-  ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_PATH"
-  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt "$YOYODYNE_HOST:$YOYODYNE_PATH"
+# Two publish locations for compatibility
+YOYODYNE_PATHS=(
+  "$YOYODYNE_BASE/"                          # flat: /ddp/cyberspace/
+  "$YOYODYNE_BASE/spki/scheme/docs/rfc/"     # nested: /ddp/cyberspace/spki/scheme/docs/rfc/
+)
+
+if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
+  for ypath in "${YOYODYNE_PATHS[@]}"; do
+    /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $ypath"
+    rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt "$YOYODYNE_HOST:$ypath"
+    echo "  -> $ypath"
+  done
   echo "  Published to $YOYODYNE_URL"
 else
   echo "  [skip] Cannot reach yoyodyne"
