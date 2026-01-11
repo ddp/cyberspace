@@ -102,7 +102,25 @@ Discovery mechanisms:
 1. **Explicit configuration**: Known peer list
 2. **Git remotes**: Extract from repository
 3. **Directory service**: Optional, not required
-4. **mDNS/Bonjour**: Local network discovery
+4. **mDNS/Bonjour**: Local network discovery via `_cyberspace._tcp`
+
+### mDNS Service Discovery
+
+Cyberspace nodes announce themselves via mDNS using the `_cyberspace._tcp` service type:
+
+```scheme
+;; Announce this node
+(announce-presence 'starlight)
+;; Registers: starlight._cyberspace._tcp.local. port 7654
+
+;; Discover peers
+(discover-peers)
+;; Scans for _cyberspace._tcp services on local network
+```
+
+Platform support:
+- **macOS**: `dns-sd -R` for registration, `dns-sd -B` for browsing
+- **Linux**: `avahi-publish` for registration, `avahi-browse` for browsing
 
 ### Peer Registration
 
