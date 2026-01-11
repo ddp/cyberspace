@@ -3403,9 +3403,7 @@ Object Types:
           (print "Local inference not available.")
           (print "")
           (print "  curl -fsSL https://ollama.com/install.sh | sh")
-          (print "  ollama pull " *ollama-model*)
-          (print "")
-          (print "Then (ask \"...\") works. No cloud, no API keys."))
+          (print "  ollama pull " *ollama-model*))
         (let* ((context (soup-context))
                (system-prompt
                 (string-append
