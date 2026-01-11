@@ -110,9 +110,18 @@
 
         ((blockquote)
           (newline port)
-          (display "    \"" port)
-          (display (cadr elem) port)
-          (display "\"" port)
+          (let ((content (cadr elem)))
+            ;; Don't wrap in quotes if content already starts with a quote
+            (if (and (string? content)
+                     (> (string-length content) 0)
+                     (char=? (string-ref content 0) #\"))
+                (begin
+                  (display "    " port)
+                  (display content port))
+                (begin
+                  (display "    \"" port)
+                  (display content port)
+                  (display "\"" port))))
           (newline port)
           (when (and (pair? (cddr elem)) (eq? (caaddr elem) 'cite))
             (display "        -- " port)

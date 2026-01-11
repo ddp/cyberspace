@@ -29,6 +29,7 @@
         (chicken bitwise)
         (chicken string)
         (chicken sort)
+        (chicken irregex)  ; regex for audit time parsing
         srfi-18            ; threads (for background listeners)
         (chicken condition)
         srfi-1
@@ -64,6 +65,81 @@
                   (when (> ms 0)
                     (print (format "  ~a: ~ams" name ms)))))
               times)))
+
+;;; ============================================================
+;;; Session Statistics (tracked from boot)
+;;; ============================================================
+;;; Counters for session activity, displayed at goodbye.
+
+(define *session-stats*
+  (make-hash-table))
+
+(define (session-stat-init!)
+  "Initialize session statistics at boot."
+  (hash-table-set! *session-stats* 'boot-time (current-seconds))
+  (hash-table-set! *session-stats* 'boot-audit-count (length (audit-load-entries-raw)))
+  (hash-table-set! *session-stats* 'commands 0)
+  (hash-table-set! *session-stats* 'syncs 0)
+  (hash-table-set! *session-stats* 'commits 0)
+  (hash-table-set! *session-stats* 'signs 0)
+  (hash-table-set! *session-stats* 'verifies 0)
+  (hash-table-set! *session-stats* 'queries 0)
+  (hash-table-set! *session-stats* 'peers-discovered 0)
+  (hash-table-set! *session-stats* 'gossip-exchanges 0))
+
+(define (audit-load-entries-raw)
+  "Load audit entry count without parsing (for boot stats)."
+  (let ((dir ".vault/audit"))
+    (if (directory-exists? dir)
+        (filter (lambda (f) (string-suffix? ".sexp" f)) (directory dir))
+        '())))
+
+(define (session-stat! key #!optional (delta 1))
+  "Increment a session statistic."
+  (hash-table-set! *session-stats* key
+                   (+ delta (hash-table-ref/default *session-stats* key 0))))
+
+(define (session-stat key)
+  "Get a session statistic."
+  (hash-table-ref/default *session-stats* key 0))
+
+(define (session-uptime)
+  "Get session uptime in seconds."
+  (- (current-seconds) (session-stat 'boot-time)))
+
+(define (format-duration secs)
+  "Format seconds as human-readable duration."
+  (cond
+   ((< secs 60) (sprintf "~as" secs))
+   ((< secs 3600) (sprintf "~am ~as" (quotient secs 60) (modulo secs 60)))
+   ((< secs 86400) (sprintf "~ah ~am" (quotient secs 3600) (quotient (modulo secs 3600) 60)))
+   (else (sprintf "~ad ~ah" (quotient secs 86400) (quotient (modulo secs 86400) 3600)))))
+
+(define (session-summary)
+  "Generate session statistics summary for goodbye."
+  (let* ((uptime (session-uptime))
+         (new-audits (- (length (audit-load-entries-raw)) (session-stat 'boot-audit-count)))
+         (stats '()))
+    ;; Build list of notable stats - always show uptime
+    (set! stats (cons (format-duration uptime) stats))
+    (when (> (session-stat 'syncs) 0)
+      (set! stats (cons (sprintf "~a sync~a" (session-stat 'syncs)
+                                 (if (= 1 (session-stat 'syncs)) "" "s")) stats)))
+    (when (> (session-stat 'commits) 0)
+      (set! stats (cons (sprintf "~a commit~a" (session-stat 'commits)
+                                 (if (= 1 (session-stat 'commits)) "" "s")) stats)))
+    (when (> (session-stat 'signs) 0)
+      (set! stats (cons (sprintf "~a sign~a" (session-stat 'signs)
+                                 (if (= 1 (session-stat 'signs)) "" "s")) stats)))
+    (when (> (session-stat 'verifies) 0)
+      (set! stats (cons (sprintf "~a verif~a" (session-stat 'verifies)
+                                 (if (= 1 (session-stat 'verifies)) "y" "ies")) stats)))
+    (when (> (session-stat 'peers-discovered) 0)
+      (set! stats (cons (sprintf "~a peer~a" (session-stat 'peers-discovered)
+                                 (if (= 1 (session-stat 'peers-discovered)) "" "s")) stats)))
+    (when (> new-audits 0)
+      (set! stats (cons (sprintf "+~a audit" new-audits) stats)))
+    (reverse stats)))
 
 ;;; ============================================================
 ;;; Unicode Helpers
@@ -719,6 +795,7 @@
   (print "Syncing with " peer "...")
   (lazy-push peer)
   (lazy-pull peer)
+  (session-stat! 'syncs)
   `(synced ,peer))
 
 (define (lazy-status)
@@ -4301,17 +4378,38 @@ Cyberspace REPL - Available Commands
 ;; Helper for keys command
 (define (list-keys) (soup 'keys))
 
+;; Wrapped commands that track session statistics
+(define (tracked-commit . args)
+  (let ((result (apply seal-commit args)))
+    (session-stat! 'commits)
+    result))
+
+(define (tracked-sync . args)
+  (let ((result (apply seal-synchronize args)))
+    (session-stat! 'syncs)
+    result))
+
+(define (tracked-sign . args)
+  (let ((result (apply ed25519-sign args)))
+    (session-stat! 'signs)
+    result))
+
+(define (tracked-verify . args)
+  (let ((result (apply ed25519-verify args)))
+    (session-stat! 'verifies)
+    result))
+
 (define *command-aliases*
   '((status    . introspect-system)
-    (commit    . seal-commit)
+    (commit    . tracked-commit)
     (release   . seal-release)
     (archive   . seal-archive)
     (history   . seal-history)
-    (sync      . seal-synchronize)
+    (sync      . tracked-sync)
     (keys      . list-keys)
     (keygen    . ed25519-keypair)
-    (sign      . ed25519-sign)
-    (verify    . ed25519-verify)
+    (sign      . tracked-sign)
+    (verify    . tracked-verify)
     (hash      . sha512-hash)
     (put       . content-put)
     (get       . content-get)
@@ -4421,18 +4519,23 @@ Cyberspace REPL - Available Commands
                            (string-pad-left (number->string (vector-ref now 3)) 2 #\0)
                            (string-pad-left (number->string (vector-ref now 2)) 2 #\0)
                            (string-pad-left (number->string (vector-ref now 1)) 2 #\0)))
+         ;; Session statistics
+         (session-parts (session-summary))
+         ;; Vault state
          (obj-count (count-vault-items "objects"))
          (key-count (count-vault-items "keys"))
-         (info-parts (filter identity
-                       (list
-                         (and (> obj-count 0) (sprintf "~a objects" obj-count))
-                         (and (> key-count 0) (sprintf "~a keys" key-count))))))
+         (vault-parts (filter identity
+                        (list
+                          (and (> obj-count 0) (sprintf "~a objects" obj-count))
+                          (and (> key-count 0) (sprintf "~a keys" key-count)))))
+         ;; Combine session stats and vault state
+         (all-parts (append session-parts vault-parts)))
     (print "")
-    (if (null? info-parts)
+    (if (null? all-parts)
         (printf "Returning to objective reality, Cyberspace frozen at ~a.~n" date-str)
-        (printf "Returning to objective reality, Cyberspace frozen at ~a, ~a.~n"
+        (printf "Returning to objective reality, Cyberspace frozen at ~a.~n  Session: ~a~n"
                 date-str
-                (string-intersperse info-parts ", ")))
+                (string-intersperse all-parts " · ")))
     (print "")
     (flush-output)
     ;; Drain any pending input to avoid escape codes leaking to shell
@@ -4453,11 +4556,360 @@ Cyberspace REPL - Available Commands
 ;; English-friendly aliases (just call with parens)
 (define keys (lambda () (soup 'keys)))
 (define releases (lambda () (soup-releases)))
-(define audit (lambda () (soup 'audit)))
 (define peers discover-peers)
 (define gossip gossip-status)
 (define security security-summary)
 (define announce announce-presence)
+
+;;; ============================================================================
+;;; Audit Trail Query Interface (VMS ANALYZE/AUDIT style)
+;;; ============================================================================
+;;;
+;;; Works with actual on-disk audit entry format:
+;;; (audit-entry (type sync) (timestamp "...") (epoch N) (status S) ...)
+;;;
+;;; (audit)                        - summary view
+;;; (audit 'brief)                 - brief listing
+;;; (audit 'full)                  - detailed listing
+;;; (audit 'summary)               - counts by type
+;;; (audit 'plot)                  - ASCII histogram (24h)
+;;; (audit 'query '(type sync))    - filter by criteria
+;;; (audit 'analyze ...)           - combined VMS-style
+
+;; Helpers for accessing audit entry fields (sexp format)
+(define (audit-entry-field entry key #!optional default)
+  "Get field from audit entry sexp."
+  (let ((pair (assq key (cdr entry))))
+    (if pair (cadr pair) default)))
+
+(define (audit-load-entries)
+  "Load all audit entries from .vault/audit/*.sexp"
+  (let ((dir ".vault/audit"))
+    (if (directory-exists? dir)
+        (let ((files (sort (filter (lambda (f) (string-suffix? ".sexp" f))
+                                   (directory dir))
+                           string<?)))
+          (filter-map
+           (lambda (file)
+             (handle-exceptions exn
+               #f
+               (let ((entry (with-input-from-file (string-append dir "/" file) read)))
+                 (and (pair? entry) (eq? (car entry) 'audit-entry) entry))))
+           files))
+        '())))
+
+(define (audit-entry-timestamp entry)
+  (audit-entry-field entry 'timestamp "unknown"))
+
+(define (audit-entry-epoch entry)
+  (audit-entry-field entry 'epoch 0))
+
+(define (audit-entry-type entry)
+  (audit-entry-field entry 'type 'unknown))
+
+(define (audit-entry-status entry)
+  (audit-entry-field entry 'status 'unknown))
+
+(define (audit-entry-commit entry)
+  (audit-entry-field entry 'commit ""))
+
+(define (audit-entry-master entry)
+  (audit-entry-field entry 'master ""))
+
+(define (format-audit-timestamp ts)
+  "Format timestamp for brief display."
+  (if (and (string? ts) (> (string-length ts) 16))
+      (substring ts 0 16)
+      ts))
+
+(define (audit-brief-line entry)
+  "Print one audit entry in brief format."
+  (let ((ts (format-audit-timestamp (audit-entry-timestamp entry)))
+        (type (symbol->string (audit-entry-type entry)))
+        (status (symbol->string (audit-entry-status entry)))
+        (commit (audit-entry-commit entry)))
+    (printf "  ~a  ~a~a~a~a  ~a~%"
+            ts
+            type
+            (make-string (max 1 (- 10 (string-length type))) #\space)
+            status
+            (make-string (max 1 (- 10 (string-length status))) #\space)
+            commit)))
+
+(define (audit-full-box entry)
+  "Print one audit entry in full format."
+  (let ((width 56))
+    (printf "╭─ Audit Entry ─~a╮~%"
+            (make-string (- width 17) #\─))
+    (printf "│ Type:      ~a~a│~%"
+            (audit-entry-type entry)
+            (make-string (max 0 (- 44 (string-length (symbol->string (audit-entry-type entry))))) #\space))
+    (printf "│ Timestamp: ~a~a│~%"
+            (audit-entry-timestamp entry)
+            (make-string (max 0 (- 44 (string-length (audit-entry-timestamp entry)))) #\space))
+    (printf "│ Status:    ~a~a│~%"
+            (audit-entry-status entry)
+            (make-string (max 0 (- 44 (string-length (symbol->string (audit-entry-status entry))))) #\space))
+    (let ((master (audit-entry-master entry)))
+      (when (and (string? master) (> (string-length master) 0))
+        (printf "│ Master:    ~a~a│~%"
+                master
+                (make-string (max 0 (- 44 (string-length master))) #\space))))
+    (let ((commit (audit-entry-commit entry)))
+      (when (and (string? commit) (> (string-length commit) 0))
+        (printf "│ Commit:    ~a~a│~%"
+                commit
+                (make-string (max 0 (- 44 (string-length commit))) #\space))))
+    ;; Details
+    (let ((details (audit-entry-field entry 'details '())))
+      (when (not (null? details))
+        (printf "│ Details:~a│~%"
+                (make-string 46 #\space))
+        (for-each
+         (lambda (d)
+           (let* ((name (car d))
+                  (val (symbol->string (cadr d)))
+                  (line (sprintf "   ~a: ~a" name val)))
+             (printf "│~a~a│~%"
+                     line
+                     (make-string (max 0 (- 55 (string-length line))) #\space))))
+         details)))
+    (printf "╰~a╯~%~%" (make-string width #\─))))
+
+;; Time parsing for queries
+(define (audit-parse-time-spec spec)
+  "Parse time specification: '1h' '24h' '7d' or epoch number"
+  (let ((now (current-seconds)))
+    (cond
+     ((number? spec) spec)
+     ((string? spec)
+      (let ((match (irregex-match '(: (submatch (+ digit)) (submatch (or "h" "d" "m" "w"))) spec)))
+        (if match
+            (let ((n (string->number (irregex-match-substring match 1)))
+                  (unit (irregex-match-substring match 2)))
+              (- now (* n (case (string->symbol unit)
+                           ((h) 3600) ((d) 86400) ((m) 60) ((w) 604800)
+                           (else 3600)))))
+            (- now 86400))))  ; default: 24h ago
+     (else (- now 86400)))))
+
+;; Query filtering
+(define (audit-match-criterion entry criterion)
+  "Match entry against one criterion."
+  (let ((key (car criterion))
+        (val (cadr criterion)))
+    (case key
+      ((type) (eq? (audit-entry-type entry) val))
+      ((status) (eq? (audit-entry-status entry) val))
+      ((since after)
+       (>= (audit-entry-epoch entry) (audit-parse-time-spec val)))
+      ((before until)
+       (<= (audit-entry-epoch entry) (audit-parse-time-spec val)))
+      ((master)
+       (string=? (audit-entry-master entry) val))
+      ((commit)
+       (string-prefix? val (audit-entry-commit entry)))
+      (else #f))))
+
+(define (audit-filter-entries entries criteria)
+  "Filter entries by criteria list."
+  (if (null? criteria)
+      entries
+      (filter (lambda (e) (every (lambda (c) (audit-match-criterion e c)) criteria))
+              entries)))
+
+;; Grouping and summary
+(define (audit-group-entries entries field)
+  "Group entries by field, return ((key count) ...)"
+  (let ((groups (make-hash-table)))
+    (for-each
+     (lambda (e)
+       (let ((key (case field
+                   ((type) (audit-entry-type e))
+                   ((status) (audit-entry-status e))
+                   ((hour) (quotient (audit-entry-epoch e) 3600))
+                   ((day) (quotient (audit-entry-epoch e) 86400))
+                   (else 'other))))
+         (hash-table-set! groups key (+ 1 (hash-table-ref/default groups key 0)))))
+     entries)
+    (sort (map (lambda (k) (list k (hash-table-ref groups k)))
+               (hash-table-keys groups))
+          (lambda (a b) (> (cadr a) (cadr b))))))
+
+(define (audit-print-summary entries by)
+  "Print summary of audit entries."
+  (let* ((groups (audit-group-entries entries by))
+         (total (length entries))
+         (max-count (if (null? groups) 0 (apply max (map cadr groups)))))
+    (printf "~%Audit Summary: ~a entries~%~%" total)
+    (printf "By ~a:~%" by)
+    (for-each
+     (lambda (g)
+       (let* ((key (car g))
+              (count (cadr g))
+              (bar-width (if (zero? max-count) 0
+                            (inexact->exact (floor (* 24.0 (/ count max-count))))))
+              (bar (make-string bar-width #\█))
+              (key-str (if (symbol? key) (symbol->string key) (number->string key))))
+         (printf "  ~a~a~a  ~a~%"
+                 key-str
+                 (make-string (max 1 (- 12 (string-length key-str))) #\space)
+                 (string-pad-left (number->string count) 4 #\space)
+                 bar)))
+     groups)
+    (newline)))
+
+;; ASCII plotting - vertical bars
+(define *audit-vbars* '#("" "▁" "▂" "▃" "▄" "▅" "▆" "▇" "█"))
+
+(define (audit-print-histogram buckets height)
+  "Print ASCII histogram from bucket counts."
+  (let* ((counts (map cdr buckets))
+         (max-count (if (null? counts) 1 (apply max 1 counts)))
+         (scale (/ (- height 1.0) max-count)))
+    ;; Print rows from top to bottom
+    (do ((row (- height 1) (- row 1)))
+        ((< row 0))
+      (if (zero? (modulo row 2))
+          (printf "~a │" (string-pad-left (number->string (inexact->exact (round (* row (/ max-count (- height 1)))))) 4 #\space))
+          (display "     │"))
+      (for-each
+       (lambda (c)
+         (let ((h (* c scale)))
+           (display (cond ((> h row) "█")
+                         ((> h (- row 1))
+                          (vector-ref *audit-vbars* (min 8 (inexact->exact (floor (* (- h (floor h)) 8))))))
+                         (else " ")))))
+       counts)
+      (newline))
+    ;; X-axis
+    (printf "   0 └~a~%" (make-string (length buckets) #\─))
+    ;; Labels
+    (display "      ")
+    (for-each (lambda (b) (display (substring (car b) 0 (min 2 (string-length (car b)))))) buckets)
+    (newline)))
+
+(define (audit-print-plot entries bucket-spec span-spec)
+  "Plot audit activity as ASCII histogram."
+  (let* ((now (current-seconds))
+         (span-secs (- now (audit-parse-time-spec span-spec)))
+         (bucket-secs (let ((m (irregex-match '(: (submatch (+ digit)) (submatch (or "h" "d" "m"))) bucket-spec)))
+                       (if m
+                           (* (string->number (irregex-match-substring m 1))
+                              (case (string->symbol (irregex-match-substring m 2))
+                                ((h) 3600) ((d) 86400) ((m) 60) (else 3600)))
+                           3600)))
+         (num-buckets (max 1 (quotient span-secs bucket-secs)))
+         (bucket-counts (make-vector num-buckets 0))
+         (start-time (- now span-secs)))
+    ;; Count entries per bucket
+    (for-each
+     (lambda (e)
+       (let ((ts (audit-entry-epoch e)))
+         (when (and (>= ts start-time) (< ts now))
+           (let ((idx (min (- num-buckets 1) (max 0 (quotient (- ts start-time) bucket-secs)))))
+             (vector-set! bucket-counts idx (+ 1 (vector-ref bucket-counts idx)))))))
+     entries)
+    ;; Build bucket list
+    (let ((buckets (let loop ((i 0) (acc '()))
+                    (if (>= i num-buckets) (reverse acc)
+                        (loop (+ i 1) (cons (cons (number->string i) (vector-ref bucket-counts i)) acc))))))
+      (printf "~%Audit Activity (~a, ~a buckets)~%~%" span-spec bucket-spec)
+      (audit-print-histogram buckets 8))))
+
+(define (audit . args)
+  "Query and display audit trail.
+
+  (audit)                          Summary view (default)
+  (audit 'brief)                   Brief listing of entries
+  (audit 'full)                    Full details for each entry
+  (audit 'summary)                 Counts grouped by type
+  (audit 'summary 'hour)           Counts grouped by hour
+  (audit 'plot)                    ASCII histogram (24h, 1h buckets)
+  (audit 'plot '(span \"7d\"))       7-day plot
+  (audit 'query '(type sync))      Filter by action type
+  (audit 'query '(since \"1h\"))     Entries in last hour
+  (audit 'analyze ...)             Combined VMS-style analysis"
+
+  (let ((entries (audit-load-entries)))
+    (cond
+     ;; No args: summary view
+     ((null? args)
+      (let ((count (length entries)))
+        (print "")
+        (printf "Audit Trail: ~a entries~%" count)
+        (when (> count 0)
+          (print "")
+          (audit-print-summary entries 'type))
+        (void)))
+
+     ;; Brief listing
+     ((and (= 1 (length args)) (eq? (car args) 'brief))
+      (print "")
+      (printf "Audit Trail (~a entries)~%~%" (length entries))
+      (for-each audit-brief-line (take entries (min 20 (length entries))))
+      (when (> (length entries) 20)
+        (printf "  ... (~a more entries)~%" (- (length entries) 20)))
+      (void))
+
+     ;; Full listing
+     ((and (= 1 (length args)) (eq? (car args) 'full))
+      (print "")
+      (for-each audit-full-box entries)
+      (void))
+
+     ;; Summary by field
+     ((eq? (car args) 'summary)
+      (let ((by (if (> (length args) 1) (cadr args) 'type)))
+        (audit-print-summary entries by)))
+
+     ;; Plot
+     ((eq? (car args) 'plot)
+      (let ((bucket "1h")
+            (span "24h"))
+        ;; Parse optional params: '(span "7d") '(bucket "2h")
+        (for-each
+         (lambda (arg)
+           (when (and (list? arg) (>= (length arg) 2))
+             (case (car arg)
+               ((span) (set! span (cadr arg)))
+               ((bucket) (set! bucket (cadr arg))))))
+         (cdr args))
+        (audit-print-plot entries bucket span)))
+
+     ;; Query with criteria
+     ((eq? (car args) 'query)
+      (let ((filtered (audit-filter-entries entries (cdr args))))
+        (print "")
+        (printf "Query results: ~a entries~%~%" (length filtered))
+        (for-each audit-brief-line filtered)
+        (void)))
+
+     ;; VMS-style analyze (combined)
+     ((eq? (car args) 'analyze)
+      (let ((criteria '())
+            (show-summary #f)
+            (show-plot #f))
+        ;; Parse options
+        (for-each
+         (lambda (arg)
+           (when (list? arg)
+             (case (car arg)
+               ((select) (set! criteria (cons (cadr arg) criteria)))
+               ((since before) (set! criteria (cons arg criteria)))
+               ((summary) (set! show-summary (cadr arg)))
+               ((plot) (set! show-plot (cadr arg))))))
+         (cdr args))
+        (let ((filtered (audit-filter-entries entries criteria)))
+          (printf "~%ANALYZE/AUDIT: ~a entries selected~%" (length filtered))
+          (when show-summary
+            (audit-print-summary filtered 'type))
+          (when show-plot
+            (audit-print-plot filtered "1h" "24h")))))
+
+     ;; Unknown command
+     (else
+      (print "Unknown audit command. Try (audit) for help.")))))
 
 ;; Library of Cyberspace - RFC browser
 (define (library #!optional filter)
@@ -4801,6 +5253,9 @@ Cyberspace REPL - Available Commands
 (when (directory-exists? ".vault")
   (describe-vault)
   (node-hardware-refresh!))
+
+;; Initialize session statistics
+(session-stat-init!)
 
 ;; Report startup time
 (report-module-times)
