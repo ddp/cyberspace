@@ -466,17 +466,34 @@
           (display ".LP\n" port))
 
         ((table)
-          (display ".TS\n" port)
-          (display "center box;\n" port)
-          (display "l l l.\n" port)
-          (for-each (lambda (row)
-                      (when (pair? row)
+          ;; Find header and data rows
+          (let* ((rows (cdr elem))
+                 (header-row (find (lambda (r) (and (pair? r) (eq? (car r) 'header))) rows))
+                 (data-rows (filter (lambda (r) (and (pair? r) (eq? (car r) 'row))) rows))
+                 (ncols (if header-row (length (cdr header-row)) 3))
+                 (col-spec (string-intersperse (make-list ncols "l") " ")))
+            (display ".TS\n" port)
+            (display "center box;\n" port)
+            ;; Header row bold, data rows normal
+            (when header-row
+              (display (string-intersperse (make-list ncols "cb") " ") port)
+              (newline port))
+            (display col-spec port)
+            (display ".\n" port)
+            ;; Emit header
+            (when header-row
+              (display (string-intersperse
+                         (map (lambda (c) (ms-escape (->string c))) (cdr header-row))
+                         "\t") port)
+              (newline port))
+            ;; Emit data rows
+            (for-each (lambda (row)
                         (display (string-intersperse
                                    (map (lambda (c) (ms-escape (->string c))) (cdr row))
                                    "\t") port)
-                        (newline port)))
-                    (cdr elem))
-          (display ".TE\n" port))
+                        (newline port))
+                      data-rows)
+            (display ".TE\n" port)))
 
         ((code)
           ;; Code blocks - may have optional language tag
@@ -500,8 +517,8 @@
                     (cdr elem)))
 
         ((link)
-          ;; (link "url" "text") - in PS, show text with URL
-          (display (format ".PP\n~a\n.br\n\\fI~a\\fP\n"
+          ;; (link "url" "text") - in PS, show text with URL on next line, left-aligned
+          (display (format ".LP\n~a\n.br\n\\fI~a\\fP\n"
                            (ms-escape (caddr elem))
                            (ms-escape (cadr elem))) port))
 
@@ -573,7 +590,7 @@
   "Convert RFC S-expression to PostScript via groff."
   (let ((ms-file (string-append filename ".ms")))
     (rfc->ms doc ms-file)
-    (system (format "groff -ms -Tps ~a > ~a" ms-file filename))
+    (system (format "groff -t -ms -Tps ~a > ~a" ms-file filename))
     (delete-file ms-file)))
 
 ;;; ============================================================
