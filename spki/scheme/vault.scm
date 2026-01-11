@@ -1085,8 +1085,10 @@
 SOUP - Object Store Query Syntax
 ─────────────────────────────────────────────────────────────
 
-  (soup)                     List all objects in soup
-  (soup 'archives)           Filter by type
+  (soup)                     Compact tree view with summaries
+  (soup 'full)               Detailed listing of all objects
+
+  (soup 'archives)           Drill down to type
   (soup 'releases)
   (soup 'certs)
   (soup 'audit)
@@ -1355,22 +1357,183 @@ Object Types:
      ((< bytes (* 1024 1024 1024)) (sprintf "~aM" (quotient bytes (* 1024 1024))))
      (else (sprintf "~aG" (quotient bytes (* 1024 1024 1024))))))
 
+  ;;; ============================================================================
+  ;;; Soup Tree View - Compact display with smart summaries
+  ;;; ============================================================================
+
+  (define (pad-left str len #!optional (char #\space))
+    "Pad string on left to given length"
+    (let ((slen (string-length str)))
+      (if (>= slen len)
+          str
+          (string-append (make-string (- len slen) char) str))))
+
+  ;; Sparkline characters (Unicode block elements, as strings for UTF-8)
+  (define *sparkline-chars* '#("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█"))
+
+  (define (sparkline values width)
+    "Generate ASCII sparkline from values (list of numbers)"
+    (if (or (null? values) (every zero? values))
+        (make-string width #\─)
+        (let* ((max-val (apply max values))
+               (scale (if (zero? max-val) 1 (/ 7.0 max-val))))
+          (apply string-append
+                 (map (lambda (v)
+                        (vector-ref *sparkline-chars*
+                                    (inexact->exact (min 7 (floor (* v scale))))))
+                      (take-right-pad values width 0))))))
+
+  (define (take-right-pad lst n default)
+    "Take last n elements, pad with default if needed"
+    (let ((len (length lst)))
+      (if (>= len n)
+          (take-right lst n)
+          (append (make-list (- n len) default) lst))))
+
+  (define (soup-summary-archives objs)
+    "Smart summary for archives"
+    (if (null? objs)
+        ""
+        (let ((total (apply + (map caddr objs))))
+          (format-size total))))
+
+  (define (soup-summary-releases objs)
+    "Smart summary for releases - signed vs unsigned"
+    (if (null? objs)
+        ""
+        (let* ((signed (filter (lambda (o)
+                                 (let ((info (cadddr o)))
+                                   (not (member "unsigned" (if (list? info) info '())))))
+                               objs))
+               (unsigned (- (length objs) (length signed))))
+          (cond
+           ((zero? unsigned) (sprintf "~a signed" (length signed)))
+           ((zero? (length signed)) "unsigned")
+           (else (sprintf "~a signed, ~a pending" (length signed) unsigned))))))
+
+  (define (soup-summary-audit objs)
+    "Smart summary for audit - sparkline of activity"
+    (if (null? objs)
+        ""
+        (let* ((now (current-seconds))
+               (buckets 8)
+               (bucket-size 3600)  ; 1 hour per bucket
+               (counts (make-vector buckets 0)))
+          ;; Extract timestamps and bucket them
+          (for-each
+           (lambda (o)
+             (let* ((name (cadr o))
+                    ;; Extract timestamp from sync-TIMESTAMP.sexp
+                    (ts-match (irregex-search "sync-([0-9]+)" name)))
+               (when ts-match
+                 (let* ((ts (string->number (irregex-match-substring ts-match 1)))
+                        (age (- now ts))
+                        (bucket (min (- buckets 1) (max 0 (quotient age bucket-size)))))
+                   (vector-set! counts bucket (+ 1 (vector-ref counts bucket)))))))
+           objs)
+          ;; Reverse so newest is on right
+          (let ((vals (reverse (vector->list counts))))
+            (sprintf "~a (~ah)" (sparkline vals buckets) (* buckets (/ bucket-size 3600)))))))
+
+  (define (soup-summary-keys objs)
+    "Smart summary for keys - identity names"
+    (if (null? objs)
+        ""
+        (let* ((identities (filter-map
+                            (lambda (o)
+                              (let* ((info (cadddr o))
+                                     (id-str (find (lambda (s)
+                                                     (and (string? s)
+                                                          (string-prefix? "id:" s)))
+                                                   (if (list? info) info '()))))
+                                (and id-str (substring id-str 3))))
+                            objs))
+               (unique (delete-duplicates identities)))
+          (if (<= (length unique) 4)
+              (string-intersperse unique ", ")
+              (sprintf "~a identities" (length unique))))))
+
+  (define (soup-summary-metadata objs)
+    "Smart summary for metadata"
+    (if (null? objs)
+        ""
+        (sprintf "~a entries" (length objs))))
+
+  (define (soup-summary-certs objs)
+    "Smart summary for certificates"
+    (if (null? objs)
+        ""
+        (sprintf "~a certs" (length objs))))
+
+  (define (soup-summary-identity objs)
+    "Smart summary for identity"
+    (if (null? objs)
+        ""
+        (let ((info (cadddr (car objs))))
+          (if (and (list? info) (>= (length info) 2))
+              (sprintf "~a (~a)" (car info) (cadr info))
+              "configured"))))
+
+  (define (soup-get-summary type objs)
+    "Get smart summary for a type"
+    (case type
+      ((archives) (soup-summary-archives objs))
+      ((releases) (soup-summary-releases objs))
+      ((audit) (soup-summary-audit objs))
+      ((keys) (soup-summary-keys objs))
+      ((metadata) (soup-summary-metadata objs))
+      ((certs) (soup-summary-certs objs))
+      ((identity) (soup-summary-identity objs))
+      (else "")))
+
+  (define (soup-tree-view grouped types)
+    "Display compact tree view of soup"
+    (let* ((non-empty (filter (lambda (t)
+                                (not (null? (hash-table-ref/default grouped (car t) '()))))
+                              types))
+           (total (apply + (map (lambda (t)
+                                  (length (hash-table-ref/default grouped (car t) '())))
+                                types)))
+           (last-idx (- (length non-empty) 1)))
+      (printf "~%Soup (~a)~%" total)
+      (let loop ((remaining non-empty) (idx 0))
+        (unless (null? remaining)
+          (let* ((type-pair (car remaining))
+                 (type (car type-pair))
+                 (objs (reverse (hash-table-ref/default grouped type '())))
+                 (count (length objs))
+                 (summary (soup-get-summary type objs))
+                 (branch (if (= idx last-idx) "└─" "├─"))
+                 (type-str (symbol->string type))
+                 (padding (make-string (max 1 (- 12 (string-length type-str))) #\space)))
+            (printf "~a ~a/~a~a~a~a~%"
+                    branch
+                    type-str
+                    padding
+                    (pad-left (number->string count) 3)
+                    (if (string=? summary "") "" "   ")
+                    summary))
+          (loop (cdr remaining) (+ idx 1))))))
+
   (define (soup . args)
     "List objects in the soup with optional type filter and pattern
 
-     (soup)                   - all objects
-     (soup 'archives)         - filter by type
+     (soup)                   - compact tree view
+     (soup 'full)             - detailed listing of all objects
+     (soup 'archives)         - drill down to type
      (soup \"pattern\")         - glob pattern (* ?)
      (soup 'type \"pat\")       - type + pattern
      (soup #/regex/)          - regex match"
 
     (let ((type-filter #f)
-          (pattern #f))
+          (pattern #f)
+          (full-view #f))
 
       ;; Parse arguments
       (for-each
        (lambda (arg)
          (cond
+          ((eq? arg 'full) (set! full-view #t))
           ((symbol? arg) (set! type-filter arg))
           ((string? arg) (set! pattern arg))
           ((irregex? arg) (set! pattern arg))))
@@ -1396,54 +1559,62 @@ Object Types:
                                 (cons obj (hash-table-ref/default grouped type '())))))
            filtered)
 
-          ;; Print header
-          (let ((width 60)
-                (count (length filtered)))
-            (print "")
-            (print (repeat-string "─" width))
-            (printf " Soup Directory  ~a object~a~%"
-                    count (if (= count 1) "" "s"))
-            (print (repeat-string "─" width))
+          ;; Include identity type in the types list for display
+          (let ((all-types (append *soup-types* '((identity . "Node identity")))))
 
-            (if (zero? count)
-                (print " (empty)")
+            ;; Compact tree view (no args) vs detailed view (type/pattern/full)
+            (if (and (not type-filter) (not pattern) (not full-view))
+                ;; Compact tree view
+                (soup-tree-view grouped all-types)
 
-                ;; Print each type group
-                (for-each
-                 (lambda (type-pair)
-                   (let* ((type (car type-pair))
-                          (objs (reverse (hash-table-ref/default grouped type '()))))
-                     (unless (null? objs)
-                       (print "")
-                       (printf " ~a/~%" type)
-                       ;; Only columnify if 4+ items
-                       (let* ((use-cols (>= (length objs) 4))
-                              (max-name (if use-cols
-                                            (apply max (map (lambda (o) (string-length (cadr o))) objs))
-                                            0)))
-                         (for-each
-                          (lambda (obj)
-                            (let ((name (cadr obj))
-                                  (size (caddr obj))
-                                  (info (cadddr obj)))
-                              (let ((attrs (if (list? info)
-                                                (string-intersperse info " ")
-                                                info)))
-                                (if use-cols
-                                    (printf "   ~a,~a ~a, ~a~%"
-                                            name
-                                            (make-string (- max-name (string-length name)) #\space)
-                                            (format-size size)
-                                            attrs)
-                                    (printf "   ~a, ~a, ~a~%"
-                                            name
-                                            (format-size size)
-                                            attrs)))))
-                          objs)))))
-                 *soup-types*))
+                ;; Detailed view
+                (let ((width 60)
+                      (count (length filtered)))
+                  (print "")
+                  (print (repeat-string "─" width))
+                  (printf " Soup Directory  ~a object~a~%"
+                          count (if (= count 1) "" "s"))
+                  (print (repeat-string "─" width))
 
-            (print "")
-            (print (repeat-string "─" width)))))))
+                  (if (zero? count)
+                      (print " (empty)")
+
+                      ;; Print each type group
+                      (for-each
+                       (lambda (type-pair)
+                         (let* ((type (car type-pair))
+                                (objs (reverse (hash-table-ref/default grouped type '()))))
+                           (unless (null? objs)
+                             (print "")
+                             (printf " ~a/~%" type)
+                             ;; Only columnify if 4+ items
+                             (let* ((use-cols (>= (length objs) 4))
+                                    (max-name (if use-cols
+                                                  (apply max (map (lambda (o) (string-length (cadr o))) objs))
+                                                  0)))
+                               (for-each
+                                (lambda (obj)
+                                  (let ((name (cadr obj))
+                                        (size (caddr obj))
+                                        (info (cadddr obj)))
+                                    (let ((attrs (if (list? info)
+                                                      (string-intersperse info " ")
+                                                      info)))
+                                      (if use-cols
+                                          (printf "   ~a,~a ~a, ~a~%"
+                                                  name
+                                                  (make-string (- max-name (string-length name)) #\space)
+                                                  (format-size size)
+                                                  attrs)
+                                          (printf "   ~a, ~a, ~a~%"
+                                                  name
+                                                  (format-size size)
+                                                  attrs)))))
+                                objs)))))
+                       all-types))
+
+                  (print "")
+                  (print (repeat-string "─" width)))))))))
 
   (define (complete prefix)
     "Complete partial object name (JSYS ESC command)"
