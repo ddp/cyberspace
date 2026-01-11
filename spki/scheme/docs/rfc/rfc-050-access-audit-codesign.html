@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-050-access-audit-codesign</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<h1 id="rfc-050-access-control-and-audit-co-design">RFC-050: Access
+Control and Audit Co-Design</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a></p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This RFC establishes the principle that access control and auditing
+must be designed together, not separately. Every access control decision
+point produces three outputs: a decision, an effect, and a record. Audit
+policy is per-realm, with lean defaults.</p>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Security systems often treat auditing as an afterthought—bolted on
+after access control is designed. This leads to:</p>
+<ul>
+<li><strong>Incomplete coverage</strong>: Some decisions are never
+logged</li>
+<li><strong>Inconsistent records</strong>: Different formats at
+different points</li>
+<li><strong>Performance surprises</strong>: Auditing added late without
+cost analysis</li>
+<li><strong>Policy gaps</strong>: No framework for what to log when</li>
+</ul>
+<p>The solution: co-design access control and auditing from the
+start.</p>
+<hr />
+<h2 id="design-principle">Design Principle</h2>
+<p><strong>Access control and auditing are co-designed, not bolted
+on.</strong></p>
+<p>Every access control point has three outputs:</p>
+<pre><code>┌─────────────────────────────────────┐
+│         Access Control Point        │
+├─────────────────────────────────────┤
+│ Input:  principal, action, context  │
+├─────────────────────────────────────┤
+│ Output: decision (grant | refuse)   │
+│         effect   (what happens)     │
+│         record   (audit entry)      │
+│                  ↓                  │
+│         policy → lean: print        │
+│                  paranoid: append   │
+└─────────────────────────────────────┘</code></pre>
+<h3 id="the-three-outputs">The Three Outputs</h3>
+<ol type="1">
+<li><strong>Decision</strong>: Grant or refuse the requested action</li>
+<li><strong>Effect</strong>: The consequence of the decision (action
+performed, or refusal message)</li>
+<li><strong>Record</strong>: An audit entry capturing what happened</li>
+</ol>
+<h3 id="auditable-vs.-audited">Auditable vs. Audited</h3>
+<ul>
+<li><strong>Auditable</strong>: The mechanism exists to log the
+event</li>
+<li><strong>Audited</strong>: The event is actively being logged</li>
+</ul>
+<p>All access control decisions are <em>auditable</em>. Whether they are
+<em>audited</em> depends on realm policy.</p>
+<hr />
+<h2 id="per-realm-audit-policy">Per-Realm Audit Policy</h2>
+<p>Each realm configures its own audit policy. The default is lean.</p>
+<h3 id="policy-levels">Policy Levels</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lean</code></td>
+<td>Minimal auditing, low overhead (default)</td>
+</tr>
+<tr>
+<td><code>standard</code></td>
+<td>Security-relevant events audited</td>
+</tr>
+<tr>
+<td><code>paranoid</code></td>
+<td>All access decisions audited</td>
+</tr>
+</tbody>
+</table>
+<h3 id="event-categories">Event Categories</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Lean</th>
+<th>Standard</th>
+<th>Paranoid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Successful joins</td>
+<td>audit</td>
+<td>audit</td>
+<td>audit</td>
+</tr>
+<tr>
+<td>Join refusals</td>
+<td>print</td>
+<td>audit</td>
+<td>audit</td>
+</tr>
+<tr>
+<td>Delegations</td>
+<td>audit</td>
+<td>audit</td>
+<td>audit</td>
+</tr>
+<tr>
+<td>Revocations</td>
+<td>audit</td>
+<td>audit</td>
+<td>audit</td>
+</tr>
+<tr>
+<td>Capability grants</td>
+<td>audit</td>
+<td>audit</td>
+<td>audit</td>
+</tr>
+<tr>
+<td>Capability refusals</td>
+<td>print</td>
+<td>audit</td>
+<td>audit</td>
+</tr>
+<tr>
+<td>Object reads</td>
+<td>—</td>
+<td>—</td>
+<td>audit</td>
+</tr>
+<tr>
+<td>Object writes</td>
+<td>print</td>
+<td>audit</td>
+<td>audit</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration">Configuration</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(realm-audit-policy &#39;lean)      <span class="co">; default</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>(realm-audit-policy &#39;standard)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>(realm-audit-policy &#39;paranoid)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">;; Or fine-grained:</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>(realm-audit-policy</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  &#39;((joins <span class="op">.</span> audit)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    (refusals <span class="op">.</span> print)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    (delegations <span class="op">.</span> audit)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    (reads <span class="op">.</span> none)))</span></code></pre></div>
+<hr />
+<h2 id="implementation-pattern">Implementation Pattern</h2>
+<p>When implementing an access control point:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">access-control-point </span>principal action context)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Template for access control with co-designed auditing&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; 1. Make the decision</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((decision (evaluate-policy principal action context)))</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; 2. Record based on policy</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">case</span> (realm-audit-policy)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>      ((paranoid)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>       (audit-append</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>         actor: principal</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>         action: `(,action ,@context)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>         motivation: (<span class="kw">if</span> (<span class="kw">eq?</span> decision &#39;grant)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>                         <span class="st">&quot;Access granted&quot;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                         <span class="st">&quot;Access refused&quot;</span>)))</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>      ((standard)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>       (when (<span class="kw">or</span> (<span class="kw">eq?</span> decision &#39;grant)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>                 (security-relevant? action))</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>         (audit-append <span class="op">...</span>)))</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>      ((lean)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>       (when (<span class="kw">eq?</span> decision &#39;refuse)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>         (print (format <span class="st">&quot;~a Refused: ~a&quot;</span> action (refuse-reason))))))</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">;; 3. Effect</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span> (<span class="kw">eq?</span> decision &#39;grant)</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>        (perform-action action context)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        (refuse-with-reason action context))))</span></code></pre></div>
+<hr />
+<h2 id="vocabulary">Vocabulary</h2>
+<p>Consistent terminology for access control outcomes:</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 27%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr>
+<th>Outcome</th>
+<th>Verb</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Execution fails</td>
+<td><strong>Evaporated</strong></td>
+<td>“Execution Evaporated: Signature verification failed”</td>
+</tr>
+<tr>
+<td>Join denied</td>
+<td><strong>Refused</strong></td>
+<td>“Join Refused: No valid attestation”</td>
+</tr>
+<tr>
+<td>Capability denied</td>
+<td><strong>Refused</strong></td>
+<td>“Capability Refused: Insufficient authority”</td>
+</tr>
+<tr>
+<td>Operation blocked</td>
+<td><strong>Refused</strong></td>
+<td>“Operation Refused: Policy violation”</td>
+</tr>
+</tbody>
+</table>
+<p>Avoid: terminated, aborted, ended, failed (where possible).</p>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="refusal-patterns">Refusal Patterns</h3>
+<p>A pattern of refusals may indicate: - Misconfiguration (legitimate
+users being blocked) - Attack probing (malicious principals testing
+boundaries) - Policy too restrictive (needs adjustment)</p>
+<p>Standard and paranoid policies audit refusals to enable pattern
+detection.</p>
+<h3 id="audit-cost">Audit Cost</h3>
+<p>Each audit entry is: - Cryptographically signed (Ed25519) -
+Hash-chained to previous entry - Persisted to storage</p>
+<p>Lean policy minimizes this overhead for high-throughput realms.</p>
+<h3 id="audit-integrity">Audit Integrity</h3>
+<p>Audit entries themselves are tamper-evident. An attacker cannot: -
+Delete entries (breaks hash chain) - Modify entries (invalidates
+signature) - Reorder entries (violates sequence numbers)</p>
+<hr />
+<h2 id="references">References</h2>
+<ul>
+<li>RFC-003: Cryptographic Audit Trail</li>
+<li>RFC-004: SPKI Authorization</li>
+<li>RFC-046: Security Architecture</li>
+</ul>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li>2026-01-10: Initial draft</li>
+</ul>
+</body>
+</html>

@@ -3307,8 +3307,26 @@ Cyberspace REPL - Available Commands
         0)))
 
 (define (plural n singular)
-  "Return 'N thing' or 'N things' based on count"
-  (string-append (number->string n) " " singular (if (= n 1) "" "s")))
+  "Return 'N thing' or 'N things' based on count.
+   Handles irregular plurals: -y → -ies, -s/-x/-ch/-sh → -es"
+  (let ((suffix
+         (cond
+          ((= n 1) "")
+          ;; Words ending in consonant + y → ies
+          ((and (> (string-length singular) 1)
+                (char=? (string-ref singular (- (string-length singular) 1)) #\y)
+                (not (memv (string-ref singular (- (string-length singular) 2))
+                           '(#\a #\e #\i #\o #\u))))
+           (set! singular (substring singular 0 (- (string-length singular) 1)))
+           "ies")
+          ;; Words ending in s, x, ch, sh → es
+          ((or (string-suffix? "s" singular)
+               (string-suffix? "x" singular)
+               (string-suffix? "ch" singular)
+               (string-suffix? "sh" singular))
+           "es")
+          (else "s"))))
+    (string-append (number->string n) " " singular suffix)))
 
 (define (count-file-lines path)
   "Count lines in a file"
@@ -3370,14 +3388,86 @@ Cyberspace REPL - Available Commands
       (string-append (string (char-upcase (string-ref s 0)))
                      (substring s 1))))
 
+(define (get-primary-ipv4)
+  "Get primary IPv4 address (first non-loopback)"
+  (let ((result (with-input-from-pipe
+                 "ifconfig 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | head -1 | awk '{print $2}'"
+                 read-line)))
+    (if (or (eof-object? result) (string=? result ""))
+        #f
+        result)))
+
+(define (get-primary-ipv6)
+  "Get primary IPv6 address (first global, non-link-local)"
+  (let ((result (with-input-from-pipe
+                 "ifconfig 2>/dev/null | grep 'inet6 ' | grep -v 'fe80' | grep -v '::1' | head -1 | awk '{print $2}'"
+                 read-line)))
+    (if (or (eof-object? result) (string=? result ""))
+        #f
+        result)))
+
+(define (get-platform-stamp)
+  "Get platform stamp (e.g., Darwin-arm64)"
+  (let ((os (with-input-from-pipe "uname -s 2>/dev/null" read-line))
+        (arch (with-input-from-pipe "uname -m 2>/dev/null" read-line)))
+    (if (and (not (eof-object? os)) (not (eof-object? arch)))
+        (string-append os "-" arch)
+        "unknown")))
+
+(define (get-hardware-summary)
+  "Get brief hardware summary (cores, memory, chip)"
+  (let ((os (with-input-from-pipe "uname -s 2>/dev/null" read-line)))
+    (if (and (not (eof-object? os)) (string=? os "Darwin"))
+        (let* ((cores (with-input-from-pipe "sysctl -n hw.ncpu 2>/dev/null" read-line))
+               (mem-bytes (with-input-from-pipe "sysctl -n hw.memsize 2>/dev/null" read-line))
+               (chip (with-input-from-pipe "sysctl -n machdep.cpu.brand_string 2>/dev/null" read-line)))
+          (let ((mem-gb (if (and (not (eof-object? mem-bytes)) (not (string=? mem-bytes "")))
+                            (inexact->exact (round (/ (string->number mem-bytes) 1073741824)))
+                            0))
+                (chip-short (if (and (not (eof-object? chip)) (not (string=? chip "")))
+                                ;; Extract chip name (e.g., "Apple M4" from "Apple M4 Pro")
+                                (let ((idx (substring-index "Apple M" chip)))
+                                  (if idx
+                                      ;; Find end of chip name (M + digits + optional suffix)
+                                      (let loop ((i (+ idx 7)))
+                                        (if (or (>= i (string-length chip))
+                                                (char=? (string-ref chip i) #\space)
+                                                (char=? (string-ref chip i) #\,))
+                                            (string-trim-both (substring chip idx i))
+                                            (loop (+ i 1))))
+                                      chip))
+                                #f)))
+            (string-append
+             (if (and (not (eof-object? cores)) (not (string=? cores "")))
+                 (string-append cores " cores, ") "")
+             (if (> mem-gb 0) (string-append (number->string mem-gb) "GB") "")
+             (if chip-short (string-append ", " chip-short) ""))))
+        ;; Linux or other
+        (let* ((cores (with-input-from-pipe "nproc 2>/dev/null" read-line))
+               (mem-kb (with-input-from-pipe "grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}'" read-line)))
+          (let ((mem-gb (if (and (not (eof-object? mem-kb)) (not (string=? mem-kb "")))
+                            (inexact->exact (round (/ (string->number mem-kb) 1048576)))
+                            0)))
+            (string-append
+             (if (and (not (eof-object? cores)) (not (string=? cores "")))
+                 (string-append cores " cores, ") "")
+             (if (> mem-gb 0) (string-append (number->string mem-gb) "GB") "")))))))
+
 (define (banner)
   (let* ((host (capitalize-first (get-hostname)))
          (window-title (string-append host " Workstation"))
          (version (git-version))
-         (date (git-date)))
+         (date (git-date))
+         (platform (get-platform-stamp))
+         (ipv4 (get-primary-ipv4))
+         (ipv6 (get-primary-ipv6))
+         (hw (get-hardware-summary)))
     (set-terminal-title window-title)
     (print "")
-    (print "Cyberspace Scheme " version " (" date ")")))
+    (print "Cyberspace Scheme " version " (" date ")")
+    (print "  " host " · " platform (if (not (string=? hw "")) (string-append " · " hw) ""))
+    (when ipv4 (print "  IPv4: " ipv4))
+    (when ipv6 (print "  IPv6: " ipv6))))
 
 ;;; ============================================================
 ;;; Cyberspace Channel Protocol

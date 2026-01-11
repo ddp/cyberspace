@@ -428,120 +428,106 @@ gs_languagelevel 1 gt {
 _S
 24 24 translate
 /pagenum 1 def
-/fname (rfc-045-ccp.txt) def
+/fname (rfc-050-access-audit-codesign.txt) def
 /fdir (.) def
-/ftail (rfc-045-ccp.txt) def
+/ftail (rfc-050-access-audit-codesign.txt) def
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(RFC-045: Cookie-Capability Protocol \(CCP\)) s
+(RFC-050: Access Control and Audit Co-Design) s
 5 759 M
-(Status: Implemented) s
+(Status: Draft) s
 5 748 M
 (Date: January 2026) s
 5 737 M
-(Author: Library of Cyberspace Contributors) s
-5 726 M
-(Inspiration: PHOTURIS \(Karn/Simpson, RFC 2522\)) s
+(Author: Derrell Piper <ddp@eludom.net>) s
 5 715 M
-(Implementation: cyberspace-repl) s
+(------------------------------------------------------------------------------) s
 5 693 M
-(------------------------------------------------------------------------------) s
-5 671 M
 (Abstract) s
+5 671 M
+(This RFC establishes the principle that access control and auditing must be designed toge) s
+5 660 M
+(ther, not separately. Every access control decision point produces three outputs: a decis) s
 5 649 M
-(CCP establishes secure channels between Cyberspace nodes using stateless cookies for DoS ) s
-5 638 M
-(resistance, ephemeral key exchange for forward secrecy, and capability attestation for au) s
+(ion, an effect, and a record. Audit policy is per-realm, with lean defaults.) s
 5 627 M
-(thorization. No X.509. No CA hierarchy. No algorithm negotiation.) s
+(------------------------------------------------------------------------------) s
 5 605 M
-(------------------------------------------------------------------------------) s
-5 583 M
 (Motivation) s
-5 561 M
-(TLS is complex:) s
+5 583 M
+(Security systems often treat auditing as an afterthought\342\\200\\224bolted on after access c) s
+5 572 M
+(ontrol is designed. This leads to:) s
 5 550 M
-(- Certificate chains require PKI) s
+(- Incomplete coverage: Some decisions are never logged) s
 5 539 M
-(- Algorithm negotiation invites downgrade attacks) s
+(- Inconsistent records: Different formats at different points) s
 5 528 M
-(- State allocated before client proven real) s
+(- Performance surprises: Auditing added late without cost analysis) s
 5 517 M
-(- Identity exposed before encryption) s
+(- Policy gaps: No framework for what to log when) s
 5 495 M
-(PHOTURIS \(1995\) had better ideas:) s
-5 484 M
-(- Cookies before crypto) s
+(The solution: co-design access control and auditing from the start.) s
 5 473 M
-(- Identity under encryption) s
-5 462 M
-(- Simple state machine) s
-5 440 M
-(CCP resurrects these ideas with modern primitives.) s
-5 418 M
 (------------------------------------------------------------------------------) s
-5 396 M
-(Protocol Overview) s
+5 451 M
+(Design Principle) s
+5 429 M
+(Access control and auditing are co-designed, not bolted on.) s
+5 407 M
+(Every access control point has three outputs:) s
+5 385 M
+(+-------------------------------------+) s
 5 374 M
-(Initiator                          Responder) s
+(|         Access Control Point        |) s
 5 363 M
-(    |                                   |) s
+(+-------------------------------------+) s
 5 352 M
-(    |-------- KNOCK \(version\) -------->|  Stateless) s
+(| Input:  principal, action, context  |) s
 5 341 M
-(    |<-------- COOKIE -----------------|  Stateless) s
+(+-------------------------------------+) s
 5 330 M
-(    |                                   |) s
+(| Output: decision \(grant | refuse\)   |) s
 5 319 M
-(    |-------- EXCHANGE \(eph key\) ----->|  State committed) s
+(|         effect   \(what happens\)     |) s
 5 308 M
-(    |<------- EXCHANGE \(eph key\) ------|) s
+(|         record   \(audit entry\)      |) s
 5 297 M
-(    |                                   |) s
+(|                  \342\\206\\223                  |) s
 5 286 M
-(    |========= encrypted below ========|) s
+(|         policy \342\\206\\222 lean: print        |) s
 5 275 M
-(    |                                   |) s
+(|                  paranoid: append   |) s
 5 264 M
-(    |-------- ATTEST \(identity\) ------>|) s
-5 253 M
-(    |<------- ATTEST \(identity\) -------|) s
+(+-------------------------------------+) s
 5 242 M
-(    |                                   |) s
-5 231 M
-(    |-------- OFFER \(capabilities\) --->|) s
+(The Three Outputs) s
 5 220 M
-(    |<------- OFFER \(capabilities\) ----|) s
+(1. Decision: Grant or refuse the requested action) s
 5 209 M
-(    |                                   |) s
+(2. Effect: The consequence of the decision \(action performed, or refusal message\)) s
 5 198 M
-(    |-------- CONFIRM \(transcript\) --->|) s
-5 187 M
-(    |<------- CONFIRM \(transcript\) ----|) s
+(3. Record: An audit entry capturing what happened) s
 5 176 M
-(    |                                   |) s
-5 165 M
-(    |========= CHANNEL OPEN ===========|) s
+(Auditable vs. Audited) s
 5 154 M
-(    |                                   |) s
+(- Auditable: The mechanism exists to log the event) s
 5 143 M
-(    |<----------- DATA -------------->|) s
+(- Audited: The event is actively being logged) s
 5 121 M
-(10 messages to establish. Unlimited encrypted DATA after.) s
-5 99 M
+(All access control decisions are auditable. Whether they are audited depends on realm pol) s
+5 110 M
+(icy.) s
+5 88 M
 (------------------------------------------------------------------------------) s
-5 77 M
-(Message Format) s
-5 55 M
-(All messages use TLV encoding:) s
-5 33 M
-(+------+--------+------------------+) s
+5 66 M
+(Per-Realm Audit Policy) s
+5 44 M
+(Each realm configures its own audit policy. The default is lean.) s
 5 22 M
-(| Type | Length | Payload          |) s
-5 11 M
-(| 1B   | 4B BE  | variable         |) s
+(Policy Levels) s
 _R
 S
 %%Page: (2) 2
@@ -549,110 +535,124 @@ S
 _S
 24 24 translate
 /pagenum 2 def
-/fname (rfc-045-ccp.txt) def
+/fname (rfc-050-access-audit-codesign.txt) def
 /fdir (.) def
-/ftail (rfc-045-ccp.txt) def
+/ftail (rfc-050-access-audit-codesign.txt) def
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(+------+--------+------------------+) s
+(| Level | Description |) s
+5 770 M
+(|-------|-------------|) s
 5 759 M
-(Message Types) s
+(| lean | Minimal auditing, low overhead \(default\) |) s
+5 748 M
+(| standard | Security-relevant events audited |) s
 5 737 M
-(| Type | Name | Direction |) s
-5 726 M
-(|------|------|-----------|) s
+(| paranoid | All access decisions audited |) s
 5 715 M
-(| 0x01 | KNOCK | I \342\\206\\222 R |) s
-5 704 M
-(| 0x02 | COOKIE | R \342\\206\\222 I |) s
+(Event Categories) s
 5 693 M
-(| 0x03 | EXCHANGE | bidirectional |) s
+(| Event | Lean | Standard | Paranoid |) s
 5 682 M
-(| 0x04 | ATTEST | bidirectional |) s
+(|-------|------|----------|----------|) s
 5 671 M
-(| 0x05 | OFFER | bidirectional |) s
+(| Successful joins | audit | audit | audit |) s
 5 660 M
-(| 0x06 | CONFIRM | bidirectional |) s
+(| Join refusals | print | audit | audit |) s
 5 649 M
-(| 0x10 | DATA | bidirectional |) s
+(| Delegations | audit | audit | audit |) s
 5 638 M
-(| 0xFF | CLOSE | bidirectional |) s
+(| Revocations | audit | audit | audit |) s
+5 627 M
+(| Capability grants | audit | audit | audit |) s
 5 616 M
-(------------------------------------------------------------------------------) s
+(| Capability refusals | print | audit | audit |) s
+5 605 M
+(| Object reads | \342\\200\\224 | \342\\200\\224 | audit |) s
 5 594 M
-(Phase 1: KNOCK) s
+(| Object writes | print | audit | audit |) s
 5 572 M
-(Initiator announces intent and protocol version.) s
+(Configuration) s
 5 550 M
-(KNOCK payload:) s
+(\(realm-audit-policy 'lean\)      ; default) s
 5 539 M
-(  "CCP/" VERSIONMAJOR "." VERSIONMINOR) s
-5 517 M
-(Example: "CCP/1.0") s
+(\(realm-audit-policy 'standard\)) s
+5 528 M
+(\(realm-audit-policy 'paranoid\)) s
+5 506 M
+(;; Or fine-grained:) s
 5 495 M
-(Responder checks version compatibility:) s
+(\(realm-audit-policy) s
 5 484 M
-(- Major mismatch: reject \(incompatible suites\)) s
+(  '\(\(joins . audit\)) s
 5 473 M
-(- Minor mismatch: accept \(backward compatible\)) s
+(    \(refusals . print\)) s
+5 462 M
+(    \(delegations . audit\)) s
 5 451 M
-(Responder allocates no state.) s
+(    \(reads . none\)\)\)) s
 5 429 M
 (------------------------------------------------------------------------------) s
 5 407 M
-(Phase 2: COOKIE) s
+(Implementation Pattern) s
 5 385 M
-(Responder returns stateless cookie.) s
+(When implementing an access control point:) s
 5 363 M
-(\(define \(make-cookie remote-addr remote-port\)) s
+(\(define \(access-control-point principal action context\)) s
 5 352 M
-(  \(let* \(\(data \(string-append) s
-5 341 M
-(                \(blob->string cookie-secret\)) s
+(  "Template for access control with co-designed auditing") s
 5 330 M
-(                remote-addr) s
+(  ;; 1. Make the decision) s
 5 319 M
-(                \(number->string remote-port\)) s
-5 308 M
-(                \(number->string cookie-epoch\)\)\)) s
+(  \(let \(\(decision \(evaluate-policy principal action context\)\)\)) s
 5 297 M
-(         \(hash \(blake2b-hash \(string->blob data\)\)\)\)) s
+(    ;; 2. Record based on policy) s
 5 286 M
-(    \(substring hash 0 16\)\)\)) s
+(    \(case \(realm-audit-policy\)) s
+5 275 M
+(      \(\(paranoid\)) s
 5 264 M
-(Cookie properties:) s
+(       \(audit-append) s
 5 253 M
-(- Stateless: Responder doesn't store it) s
+(         actor: principal) s
 5 242 M
-(- Unforgeable: Requires server secret) s
+(         action: `\(,action ,@context\)) s
 5 231 M
-(- Expiring: Epoch rotation invalidates old cookies) s
+(         motivation: \(if \(eq? decision 'grant\)) s
 5 220 M
-(- Address-bound: Different address = different cookie) s
+(                         "Access granted") s
+5 209 M
+(                         "Access refused"\)\)\)) s
 5 198 M
-(Responder still allocates no state.) s
+(      \(\(standard\)) s
+5 187 M
+(       \(when \(or \(eq? decision 'grant\)) s
 5 176 M
-(------------------------------------------------------------------------------) s
+(                 \(security-relevant? action\)\)) s
+5 165 M
+(         \(audit-append ...\)\)\)) s
 5 154 M
-(Phase 3: EXCHANGE) s
+(      \(\(lean\)) s
+5 143 M
+(       \(when \(eq? decision 'refuse\)) s
 5 132 M
-(Both parties exchange ephemeral public keys.) s
+(         \(print \(format "~a Refused: ~a" action \(refuse-reason\)\)\)\)\)\)) s
 5 110 M
-(Initiator sends:) s
+(    ;; 3. Effect) s
 5 99 M
-(EXCHANGE payload:) s
+(    \(if \(eq? decision 'grant\)) s
 5 88 M
-(  cookie-r "|" cookie-i "|" ephemeral-public-hex) s
-5 66 M
-(- cookie-r: Echo of responder's cookie \(proves receipt\)) s
+(        \(perform-action action context\)) s
+5 77 M
+(        \(refuse-with-reason action context\)\)\)\)) s
 5 55 M
-(- cookie-i: Initiator's random cookie \(for key derivation\)) s
-5 44 M
-(- ephemeral-public: X25519 public key) s
-5 22 M
-(Responder verifies cookie echo, then responds with same format.) s
+(------------------------------------------------------------------------------) s
+5 33 M
+(Vocabulary) s
+5 11 M
+(Consistent terminology for access control outcomes:) s
 _R
 S
 %%Page: (3) 3
@@ -660,325 +660,83 @@ S
 _S
 24 24 translate
 /pagenum 3 def
-/fname (rfc-045-ccp.txt) def
+/fname (rfc-050-access-audit-codesign.txt) def
 /fdir (.) def
-/ftail (rfc-045-ccp.txt) def
+/ftail (rfc-050-access-audit-codesign.txt) def
 /user_header_p false def
 /user_footer_p false def
 %%EndPageSetup
-5 781 M
-(State now committed. Keys derived.) s
+5 770 M
+(| Outcome | Verb | Usage |) s
 5 759 M
-(Key Derivation) s
-5 737 M
-(\(define \(derive-session-keys shared-secret cookie-i cookie-r\)) s
-5 726 M
-(  \(let* \(\(ikm \(blob-append shared-secret) s
-5 715 M
-(                           \(string->blob cookie-i\)) s
-5 704 M
-(                           \(string->blob cookie-r\)\)\)) s
-5 693 M
-(         \(prk \(blake2b-hash ikm\)\)) s
-5 682 M
-(         \(k-ir \(blake2b-hash \(blob-append prk "initiator->responder"\)\)\)) s
-5 671 M
-(         \(k-ri \(blake2b-hash \(blob-append prk "responder->initiator"\)\)\)\)) s
-5 660 M
-(    \(values \(take k-ir 32\) \(take k-ri 32\)\)\)\)) s
-5 638 M
-(Directional keys prevent reflection attacks.) s
-5 616 M
-(------------------------------------------------------------------------------) s
-5 594 M
-(Phase 4: ATTEST) s
-5 572 M
-(All subsequent messages encrypted.) s
-5 550 M
-(Both parties prove identity using SPKI principals.) s
-5 528 M
-(ATTEST payload \(encrypted\):) s
-5 517 M
-(  principal-hash "|" signature) s
-5 495 M
-(- principal-hash: SPKI principal \(hex-encoded public key hash\)) s
-5 484 M
-(- signature: Ed25519 signature over transcript) s
-5 462 M
-(Identity is cryptographic, not nominal. A principal is identified solely by its public ke) s
-5 451 M
-(y hash, never by a human-readable name. This is a prime directive.) s
-5 429 M
-(Transcript for signing:) s
-5 418 M
-(cookie-i || cookie-r || ephemeral-public) s
-5 396 M
-(Anonymous Attestation \(Optional\)) s
-5 374 M
-(For privacy, use Chaum-style blind signatures:) s
-5 352 M
-(\(define \(blind-attest capability-hash\)) s
-5 341 M
-(  ;; Prove authorization without revealing identity) s
-5 330 M
-(  \(blind-sign capability-hash \(blind-factor\)\)\)) s
-5 308 M
-(------------------------------------------------------------------------------) s
-5 286 M
-(Phase 5: OFFER) s
-5 264 M
-(Exchange authorized capabilities as SPKI tags.) s
-5 242 M
-(OFFER payload \(encrypted\):) s
-5 231 M
-(  \(tag \(* set capability ...\)\)) s
-5 209 M
-(Example: "\(tag \(* set read write replicate\)\)") s
-5 187 M
-(Capabilities follow RFC-021 \(Capability Delegation\):) s
-5 176 M
-(- Only offer what you hold) s
-5 165 M
-(- Attenuation only, no amplification) s
-5 154 M
-(- Explicit, not ambient) s
-5 143 M
-(- Expressed as SPKI tag s-expressions) s
-5 121 M
-(Future: Full SPKI auth-certs with issuer signatures.) s
-5 99 M
-(------------------------------------------------------------------------------) s
-5 77 M
-(Phase 6: CONFIRM) s
-5 55 M
-(Bind entire transcript.) s
-5 33 M
-(CONFIRM payload \(encrypted\):) s
-5 22 M
-(  BLAKE2b\(cookie-i || cookie-r || their-principal\)) s
-_R
-S
-%%Page: (4) 4
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 4 def
-/fname (rfc-045-ccp.txt) def
-/fdir (.) def
-/ftail (rfc-045-ccp.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(Both parties must produce matching hashes. Any tampering detected.) s
-5 759 M
-(------------------------------------------------------------------------------) s
-5 737 M
-(DATA Phase) s
-5 715 M
-(Channel open. Encrypted messaging.) s
-5 693 M
-(DATA payload:) s
-5 682 M
-(  ChaCha20-Poly1305\(key, nonce, plaintext\)) s
-5 660 M
-(Nonce construction:) s
-5 649 M
-(nonce = sequence-number \(8 bytes\) || 0x00000000 \(4 bytes\)) s
-5 627 M
-(Sequence numbers:) s
-5 616 M
-(- Start at 0) s
-5 605 M
-(- Increment per message) s
-5 594 M
-(- Prevent replay) s
-5 583 M
-(- Separate counters per direction) s
-5 561 M
-(------------------------------------------------------------------------------) s
-5 539 M
-(Algorithm Suites) s
-5 517 M
-(No runtime negotiation. Version determines suite.) s
-5 495 M
-(CCP/1.x \(Current\)) s
-5 473 M
-(| Function | Algorithm |) s
-5 462 M
-(|----------|-----------|) s
-5 451 M
-(| Key Exchange | X25519 |) s
-5 440 M
-(| Signatures | Ed25519 |) s
-5 429 M
-(| AEAD | ChaCha20-Poly1305 |) s
-5 418 M
-(| Hash | BLAKE2b |) s
-5 407 M
-(| KDF | HKDF-BLAKE2b |) s
-5 385 M
-(CCP/2.x \(Reserved: Post-Quantum\)) s
-5 363 M
-(| Function | Algorithm |) s
-5 352 M
-(|----------|-----------|) s
-5 341 M
-(| Key Exchange | Kyber-1024 |) s
-5 330 M
-(| Signatures | Dilithium3 |) s
-5 319 M
-(| AEAD | ChaCha20-Poly1305 |) s
-5 308 M
-(| Hash | BLAKE2b |) s
-5 286 M
-(CCP/3.x \(Reserved: Hybrid\)) s
-5 264 M
-(| Function | Algorithm |) s
-5 253 M
-(|----------|-----------|) s
-5 242 M
-(| Key Exchange | X25519 + Kyber |) s
-5 231 M
-(| Signatures | Ed25519 + Dilithium |) s
-5 209 M
-(------------------------------------------------------------------------------) s
-5 187 M
-(Security Properties) s
-5 165 M
-(DoS Resistance) s
-5 143 M
-(| Attack | Defense |) s
-5 132 M
-(|--------|---------|) s
-5 121 M
-(| SYN flood | Cookie proves return path |) s
-5 110 M
-(| Amplification | No response until cookie echo |) s
-5 99 M
-(| State exhaustion | No state until Phase 3 |) s
-5 77 M
-(Forward Secrecy) s
-5 55 M
-(Ephemeral X25519 keys:) s
-5 44 M
-(- Generated per session) s
-5 33 M
-(- Destroyed after key derivation) s
-5 22 M
-(- Compromise of long-term key doesn't expose past sessions) s
-_R
-S
-%%Page: (5) 5
-%%BeginPageSetup
-_S
-24 24 translate
-/pagenum 5 def
-/fname (rfc-045-ccp.txt) def
-/fdir (.) def
-/ftail (rfc-045-ccp.txt) def
-/user_header_p false def
-/user_footer_p false def
-%%EndPageSetup
-5 781 M
-(Identity Protection \(SPKI Native\)) s
-5 759 M
-(Principal identity:) s
+(|---------|------|-------|) s
 5 748 M
-(- Is the public key hash \(not a name, not a certificate\)) s
+(| Execution fails | Evaporated | "Execution Evaporated: Signature verification failed" |) s
 5 737 M
-(- Only revealed after encryption established) s
+(| Join denied | Refused | "Join Refused: No valid attestation" |) s
 5 726 M
-(- Only revealed to authenticated peer) s
+(| Capability denied | Refused | "Capability Refused: Insufficient authority" |) s
 5 715 M
-(- Never in plaintext on wire) s
-5 704 M
-(- Self-certifying: principal = hash\(public_key\)) s
-5 682 M
-(Replay Protection) s
-5 660 M
-(- Sequence numbers per direction) s
+(| Operation blocked | Refused | "Operation Refused: Policy violation" |) s
+5 693 M
+(Avoid: terminated, aborted, ended, failed \(where possible\).) s
+5 671 M
+(------------------------------------------------------------------------------) s
 5 649 M
-(- Nonce never reused \(fatal if violated\)) s
-5 638 M
-(- AEAD authentication fails on replay) s
-5 616 M
-(------------------------------------------------------------------------------) s
+(Security Considerations) s
+5 627 M
+(Refusal Patterns) s
+5 605 M
+(A pattern of refusals may indicate:) s
 5 594 M
-(Comparison) s
+(- Misconfiguration \(legitimate users being blocked\)) s
+5 583 M
+(- Attack probing \(malicious principals testing boundaries\)) s
 5 572 M
-(| Property | TLS 1.3 | IKEv2 | CCP |) s
-5 561 M
-(|----------|---------|-------|-----|) s
+(- Policy too restrictive \(needs adjustment\)) s
 5 550 M
-(| Messages to establish | 2-3 | 4+ | 10 |) s
-5 539 M
-(| DoS resistance | Limited | Cookies | Cookies |) s
+(Standard and paranoid policies audit refusals to enable pattern detection.) s
 5 528 M
-(| Algorithm negotiation | Yes | Yes | No |) s
-5 517 M
-(| Certificate required | Yes | Yes | No |) s
+(Audit Cost) s
 5 506 M
-(| Identity protection | Partial | Yes | Yes |) s
+(Each audit entry is:) s
 5 495 M
-(| Capability binding | No | No | Yes |) s
+(- Cryptographically signed \(Ed25519\)) s
+5 484 M
+(- Hash-chained to previous entry) s
 5 473 M
-(CCP trades fewer round-trips for simplicity and capability integration.) s
+(- Persisted to storage) s
 5 451 M
-(------------------------------------------------------------------------------) s
+(Lean policy minimizes this overhead for high-throughput realms.) s
 5 429 M
-(Implementation) s
+(Audit Integrity) s
 5 407 M
-(;; Initiator) s
+(Audit entries themselves are tamper-evident. An attacker cannot:) s
 5 396 M
-(\(define ch \(node-connect "remote.host" 4433\)\)) s
+(- Delete entries \(breaks hash chain\)) s
 5 385 M
-(\(channel-send ch '\(request object-hash\)\)) s
+(- Modify entries \(invalidates signature\)) s
 5 374 M
-(\(channel-recv ch\)) s
+(- Reorder entries \(violates sequence numbers\)) s
 5 352 M
-(;; Responder) s
-5 341 M
-(\(node-listen 4433 "my-node"\)) s
+(------------------------------------------------------------------------------) s
 5 330 M
-(\(define ch \(node-accept\)\)) s
-5 319 M
-(\(let \(\(msg \(channel-recv ch\)\)\)) s
-5 308 M
-(  \(channel-send ch \(process msg\)\)\)) s
-5 286 M
-(------------------------------------------------------------------------------) s
-5 264 M
 (References) s
+5 308 M
+(- RFC-003: Cryptographic Audit Trail) s
+5 297 M
+(- RFC-004: SPKI Authorization) s
+5 286 M
+(- RFC-046: Security Architecture) s
+5 264 M
+(------------------------------------------------------------------------------) s
 5 242 M
-(1. Karn, P. & Simpson, W. \(1999\). PHOTURIS. RFC 2522.) s
-5 231 M
-(2. Karn, P. & Simpson, W. \(1999\). PHOTURIS Extended Schemes. RFC 2523.) s
-5 220 M
-(3. Bernstein, D.J. \(2006\). Curve25519.) s
-5 209 M
-(4. Bernstein, D.J. \(2008\). ChaCha20.) s
-5 198 M
-(5. RFC-021: Capability Delegation) s
-5 187 M
-(6. RFC-040: Security Architecture) s
-5 165 M
-(------------------------------------------------------------------------------) s
-5 143 M
 (Changelog) s
-5 121 M
-(- 2026-01-07: Initial specification) s
-5 99 M
-(------------------------------------------------------------------------------) s
-5 77 M
-(Implementation Status: Complete \(placeholder crypto\)) s
-5 66 M
-(Test Status: Passing \(two-node handshake + messaging\)) s
-5 55 M
-(Next: Real libsodium AEAD bindings) s
+5 220 M
+(- 2026-01-10: Initial draft) s
 _R
 S
 %%Trailer
-%%Pages: 5
+%%Pages: 3
 %%DocumentNeededResources: font Courier-Bold Courier 
 %%EOF

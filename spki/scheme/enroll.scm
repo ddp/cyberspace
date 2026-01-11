@@ -182,34 +182,54 @@
              (else `((model ,model))))))))
 
   (define (introspect-network)
-    "Introspect network configuration"
+    "Introspect network configuration (IPv4 and IPv6)"
     (let ((os (shell-command "uname -s")))
       `(network
         ,@(cond
-           ;; macOS - get active interfaces
+           ;; macOS - get active interfaces with both IPv4 and IPv6
            ((and os (string=? os "Darwin"))
             (let ((interfaces (shell-lines "ifconfig -l")))
               `((interfaces
                  ,@(filter-map
                     (lambda (iface)
-                      (let ((addr (shell-command
-                                   (string-append "ifconfig " iface " 2>/dev/null | grep 'inet ' | awk '{print $2}'"))))
-                        (and addr (not (string=? addr ""))
-                             `(,iface ,addr))))
+                      (let* ((ipv4 (shell-command
+                                    (string-append "ifconfig " iface " 2>/dev/null | grep 'inet ' | awk '{print $2}'")))
+                             (ipv6 (shell-command
+                                    (string-append "ifconfig " iface " 2>/dev/null | grep 'inet6 ' | grep -v '%' | grep -v 'fe80' | awk '{print $2}'")))
+                             (ipv6-link (shell-command
+                                         (string-append "ifconfig " iface " 2>/dev/null | grep 'inet6 fe80' | awk '{print $2}' | cut -d% -f1"))))
+                        (and (or (and ipv4 (not (string=? ipv4 "")))
+                                 (and ipv6 (not (string=? ipv6 ""))))
+                             `(,(string->symbol iface)
+                               ,@(if (and ipv4 (not (string=? ipv4 ""))) `((ipv4 ,ipv4)) '())
+                               ,@(if (and ipv6 (not (string=? ipv6 ""))) `((ipv6 ,ipv6)) '())
+                               ,@(if (and ipv6-link (not (string=? ipv6-link ""))) `((ipv6-link ,ipv6-link)) '())))))
                     (if (pair? interfaces)
                         (string-split (car interfaces))
                         '())))
-                (gateway ,(shell-command "route -n get default 2>/dev/null | grep gateway | awk '{print $2}'")))))
-           ;; Linux
+                (gateway ,(shell-command "route -n get default 2>/dev/null | grep gateway | awk '{print $2}'"))
+                (gateway6 ,(shell-command "route -n get -inet6 default 2>/dev/null | grep gateway | awk '{print $2}'")))))
+           ;; Linux - get both IPv4 and IPv6
            ((and os (string=? os "Linux"))
             `((interfaces
-               ,@(filter-map
-                  (lambda (line)
-                    (let ((parts (string-split line)))
-                      (and (>= (length parts) 2)
-                           `(,(string->symbol (car parts)) ,(cadr parts)))))
-                  (shell-lines "ip -4 addr show | grep inet | awk '{print $NF, $2}' | cut -d/ -f1")))
-              (gateway ,(shell-command "ip route | grep default | awk '{print $3}'"))))
+               ,@(let ((ifaces (shell-lines "ip link show | grep '^[0-9]' | awk -F': ' '{print $2}'")))
+                   (filter-map
+                    (lambda (iface)
+                      (let* ((ipv4 (shell-command
+                                    (string-append "ip -4 addr show " iface " 2>/dev/null | grep inet | awk '{print $2}' | cut -d/ -f1")))
+                             (ipv6 (shell-command
+                                    (string-append "ip -6 addr show " iface " scope global 2>/dev/null | grep inet6 | awk '{print $2}' | cut -d/ -f1")))
+                             (ipv6-link (shell-command
+                                         (string-append "ip -6 addr show " iface " scope link 2>/dev/null | grep inet6 | awk '{print $2}' | cut -d/ -f1"))))
+                        (and (or (and ipv4 (not (string=? ipv4 "")))
+                                 (and ipv6 (not (string=? ipv6 ""))))
+                             `(,(string->symbol iface)
+                               ,@(if (and ipv4 (not (string=? ipv4 ""))) `((ipv4 ,ipv4)) '())
+                               ,@(if (and ipv6 (not (string=? ipv6 ""))) `((ipv6 ,ipv6)) '())
+                               ,@(if (and ipv6-link (not (string=? ipv6-link ""))) `((ipv6-link ,ipv6-link)) '())))))
+                    ifaces)))
+              (gateway ,(shell-command "ip route | grep default | awk '{print $3}'"))
+              (gateway6 ,(shell-command "ip -6 route | grep default | awk '{print $3}'"))))
            (else '())))))
 
   (define (introspect-storage)

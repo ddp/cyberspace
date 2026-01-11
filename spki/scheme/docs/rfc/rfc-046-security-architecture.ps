@@ -3,7 +3,7 @@
 %%Title: Enscript Output
 %%For: Derrell Piper
 %%Creator: GNU Enscript 1.6.6
-%%CreationDate: Fri Jan  9 12:12:51 2026
+%%CreationDate: Sat Jan 10 21:36:24 2026
 %%Orientation: Portrait
 %%Pages: (atend)
 %%DocumentMedia: A4 595 842 0 () ()
@@ -1319,60 +1319,60 @@ _S
 (| Vault storage | Object integrity | Local filesystem |) s
 5 462 M
 (| Audit chain | What happened | Hash chain, signatures |) s
-5 440 M
-(The core is small. Objects are dumb content. Policy lives in certificates. Verification i) s
+5 451 M
+(| Soup | Object enumeration | Vault, audit |) s
 5 429 M
+(The core is small. Objects are dumb content. Policy lives in certificates. Verification i) s
+5 418 M
 (s stateless computation.) s
-5 407 M
-(------------------------------------------------------------------------------) s
-5 385 M
-(Covert Channels) s
+5 396 M
+(Authoritative Counts) s
+5 374 M
+(Object counts MUST come from the TCB. The soup is the authoritative source for object enu) s
 5 363 M
-(This is where we get serious.) s
-5 341 M
-(A covert channel is information flow that violates policy - a way to leak data that bypas) s
+(meration - it walks the vault and audit trail. Counts displayed outside the TCB \(prompts,) s
+5 352 M
+( status displays, dashboards\) are advisory only and could be stale or spoofed.) s
 5 330 M
-(ses the capability model. They exist in every system. We analyze ours.) s
-5 308 M
-(Storage Channels) s
-5 286 M
-(| Channel | How It Works | Bandwidth | Mitigation |) s
+(If you need to know how many objects exist, ask the soup. Don't cache counts outside the ) s
+5 319 M
+(TCB.) s
+5 297 M
+(------------------------------------------------------------------------------) s
 5 275 M
-(|---------|-------------|-----------|------------|) s
-5 264 M
-(| Object existence | Create/don't create object as 1/0 | ~1 bit/op | Bloom filter noise |) s
+(Covert Channels) s
 5 253 M
-(| Object size | Encode in padding | ~10 bits/obj | Size quantization |) s
-5 242 M
-(| Object count | Number of objects in namespace | ~4 bits/ns | Rate limiting |) s
+(This is where we get serious.) s
+5 231 M
+(A covert channel is information flow that violates policy - a way to leak data that bypas) s
 5 220 M
-(Timing Channels) s
+(ses the capability model. They exist in every system. We analyze ours.) s
 5 198 M
-(| Channel | How It Works | Bandwidth | Mitigation |) s
-5 187 M
-(|---------|-------------|-----------|------------|) s
+(Storage Channels) s
 5 176 M
-(| Verification time | Slow/fast response as 1/0 | ~1 bit/100ms | Constant-time ops |) s
-5 165 M
-(| Network latency | Delay patterns | ~10 bits/sec | Batching, Tor |) s
-5 154 M
-(| Audit write time | When entries appear | ~1 bit/sec | Async, batched |) s
-5 132 M
-(Federation Channels) s
-5 110 M
 (| Channel | How It Works | Bandwidth | Mitigation |) s
-5 99 M
+5 165 M
 (|---------|-------------|-----------|------------|) s
+5 154 M
+(| Object existence | Create/don't create object as 1/0 | ~1 bit/op | Bloom filter noise |) s
+5 143 M
+(| Object size | Encode in padding | ~10 bits/obj | Size quantization |) s
+5 132 M
+(| Object count | Number of objects in namespace | ~4 bits/ns | Rate limiting |) s
+5 110 M
+(Timing Channels) s
 5 88 M
-(| Sync timing | When objects replicate | ~1 bit/sync | Random delays |) s
+(| Channel | How It Works | Bandwidth | Mitigation |) s
 5 77 M
-(| Peer selection | Which realms to contact | ~4 bits/conn | Randomized peers |) s
+(|---------|-------------|-----------|------------|) s
 5 66 M
-(| Gossip patterns | Propagation paths | ~2 bits/round | Epidemic flooding |) s
+(| Verification time | Slow/fast response as 1/0 | ~1 bit/100ms | Constant-time ops |) s
+5 55 M
+(| Network latency | Delay patterns | ~10 bits/sec | Batching, Tor |) s
 5 44 M
-(Analysis) s
+(| Audit write time | When entries appear | ~1 bit/sec | Async, batched |) s
 5 22 M
-(Scenario: Alice has SECRET access. Bob has UNCLASSIFIED. Alice wants to leak to Bob.) s
+(Federation Channels) s
 _R
 S
 %%Page: (9) 9
@@ -1387,117 +1387,111 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(Via storage:) s
+(| Channel | How It Works | Bandwidth | Mitigation |) s
 5 770 M
-(Alice creates/deletes objects Bob can see. Each operation signals one bit. Rate: maybe 1 ) s
+(|---------|-------------|-----------|------------|) s
 5 759 M
-(bit/second with careful timing.) s
+(| Sync timing | When objects replicate | ~1 bit/sync | Random delays |) s
+5 748 M
+(| Peer selection | Which realms to contact | ~4 bits/conn | Randomized peers |) s
 5 737 M
-(Via timing:) s
-5 726 M
-(Alice influences verification time of requests Bob makes. Bob measures. Rate: maybe 0.1 b) s
+(| Gossip patterns | Propagation paths | ~2 bits/round | Epidemic flooding |) s
 5 715 M
-(it/second, noisy.) s
+(Analysis) s
 5 693 M
-(Via federation:) s
-5 682 M
-(Alice causes sync events Bob can observe. Rate: depends on federation config, maybe 0.01 ) s
+(Scenario: Alice has SECRET access. Bob has UNCLASSIFIED. Alice wants to leak to Bob.) s
 5 671 M
-(bit/second.) s
+(Via storage:) s
+5 660 M
+(Alice creates/deletes objects Bob can see. Each operation signals one bit. Rate: maybe 1 ) s
 5 649 M
-(Assessment:) s
-5 638 M
-(Total covert bandwidth: ~1-2 bits/second under ideal conditions. Not enough for bulk data) s
+(bit/second with careful timing.) s
 5 627 M
-(. Enough for short signals. Acceptable residual risk for our threat model.) s
+(Via timing:) s
+5 616 M
+(Alice influences verification time of requests Bob makes. Bob measures. Rate: maybe 0.1 b) s
 5 605 M
-(Mitigation Principles) s
+(it/second, noisy.) s
 5 583 M
-(1. Add noise where practical \(bloom filters, random delays\)) s
+(Via federation:) s
 5 572 M
-(2. Quantize where observable \(object sizes, batch windows\)) s
+(Alice causes sync events Bob can observe. Rate: depends on federation config, maybe 0.01 ) s
 5 561 M
-(3. Rate limit where controllable \(operations per time\)) s
-5 550 M
-(4. Accept what remains \(document it, move on\)) s
+(bit/second.) s
+5 539 M
+(Assessment:) s
 5 528 M
-(------------------------------------------------------------------------------) s
-5 506 M
-(Audit) s
-5 484 M
-(Everything important gets logged.) s
+(Total covert bandwidth: ~1-2 bits/second under ideal conditions. Not enough for bulk data) s
+5 517 M
+(. Enough for short signals. Acceptable residual risk for our threat model.) s
+5 495 M
+(Mitigation Principles) s
+5 473 M
+(1. Add noise where practical \(bloom filters, random delays\)) s
 5 462 M
-(\(audit-entry) s
+(2. Quantize where observable \(object sizes, batch windows\)) s
 5 451 M
-(  \(sequence 12345\)) s
+(3. Rate limit where controllable \(operations per time\)) s
 5 440 M
-(  \(timestamp 1736300000\)) s
-5 429 M
-(  \(lamport 67890\)) s
+(4. Accept what remains \(document it, move on\)) s
 5 418 M
-(  \(type capability-exercise\)) s
-5 407 M
-(  \(actor "ed25519:subject..."\)) s
-5 396 M
-(  \(action \(read "sha512:object..."\)\)) s
-5 385 M
-(  \(capability "sha512:cert..."\)) s
-5 374 M
-(  \(previous "sha512:prev-entry..."\)) s
-5 363 M
-(  \(signature "ed25519:auditor..."\)\)) s
-5 341 M
-(Properties:) s
-5 330 M
-(- Hash-chained: tamper-evident) s
-5 319 M
-(- Signed: non-repudiable) s
-5 308 M
-(- Monotonic: gaps detected) s
-5 297 M
-(- Distributed: witnesses replicate) s
-5 275 M
-(What gets logged:) s
-5 264 M
-(- Capability creation) s
-5 253 M
-(- Capability exercise \(access\)) s
-5 242 M
-(- Capability revocation) s
-5 231 M
-(- Access denials) s
-5 220 M
-(- Object creation) s
-5 209 M
-(- Realm events \(role changes, federation\)) s
-5 187 M
 (------------------------------------------------------------------------------) s
+5 396 M
+(Audit) s
+5 374 M
+(Everything important gets logged.) s
+5 352 M
+(\(audit-entry) s
+5 341 M
+(  \(sequence 12345\)) s
+5 330 M
+(  \(timestamp 1736300000\)) s
+5 319 M
+(  \(lamport 67890\)) s
+5 308 M
+(  \(type capability-exercise\)) s
+5 297 M
+(  \(actor "ed25519:subject..."\)) s
+5 286 M
+(  \(action \(read "sha512:object..."\)\)) s
+5 275 M
+(  \(capability "sha512:cert..."\)) s
+5 264 M
+(  \(previous "sha512:prev-entry..."\)) s
+5 253 M
+(  \(signature "ed25519:auditor..."\)\)) s
+5 231 M
+(Properties:) s
+5 220 M
+(- Hash-chained: tamper-evident) s
+5 209 M
+(- Signed: non-repudiable) s
+5 198 M
+(- Monotonic: gaps detected) s
+5 187 M
+(- Distributed: witnesses replicate) s
 5 165 M
-(Trusted Path) s
+(What gets logged:) s
+5 154 M
+(- Capability creation) s
 5 143 M
-(When it matters, talk directly to the core.) s
+(- Capability exercise \(access\)) s
+5 132 M
+(- Capability revocation) s
 5 121 M
-(+--------------------------------------+) s
+(- Access denials) s
 5 110 M
-(|           HUMAN OPERATOR              |) s
+(- Object creation) s
 5 99 M
-(+-----------------+--------------------+) s
-5 88 M
-(                  | Local terminal, no network) s
+(- Realm events \(role changes, federation\)) s
 5 77 M
-(+-----------------v--------------------+) s
-5 66 M
-(|          CYBERSPACE REPL              |) s
+(------------------------------------------------------------------------------) s
 5 55 M
-(|    \342\\225\\224\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342) s
-5 44 M
-(\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220) s
+(Trusted Path) s
 5 33 M
-(\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225) s
-5 22 M
-(\\220\342\\225\\220\342\\225\\227   |) s
+(When it matters, talk directly to the core.) s
 5 11 M
-(|    \342\\225\\221  TRUSTED PATH ACTIVE        \342\\225\\221   |) s
+(+--------------------------------------+) s
 _R
 S
 %%Page: (10) 10
@@ -1512,113 +1506,119 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(|    \342\\225\\232\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342) s
+(|           HUMAN OPERATOR              |) s
 5 770 M
-(\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220) s
-5 759 M
-(\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225) s
-5 748 M
-(\\220\342\\225\\220\342\\225\\235   |) s
-5 737 M
 (+-----------------+--------------------+) s
-5 726 M
-(                  |) s
-5 715 M
+5 759 M
+(                  | Local terminal, no network) s
+5 748 M
 (+-----------------v--------------------+) s
+5 737 M
+(|          CYBERSPACE REPL              |) s
+5 726 M
+(|    \342\\225\\224\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342) s
+5 715 M
+(\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220) s
 5 704 M
-(|           TRUSTED CORE                |) s
+(\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225) s
 5 693 M
-(+--------------------------------------+) s
+(\\220\342\\225\\220\342\\225\\227   |) s
+5 682 M
+(|    \342\\225\\221  TRUSTED PATH ACTIVE        \342\\225\\221   |) s
 5 671 M
-(Operations requiring trusted path:) s
+(|    \342\\225\\232\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342) s
 5 660 M
-(- \(ed25519-keypair\) - key generation) s
+(\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220) s
 5 649 M
-(- \(node-role 'coordinator\) - role assignment) s
+(\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225\\220\342\\225) s
 5 638 M
-(- \(seal-release "1.0.0"\) - signing releases) s
+(\\220\342\\225\\220\342\\225\\235   |) s
 5 627 M
-(- Key ceremony \(RFC-022\)) s
+(+-----------------+--------------------+) s
+5 616 M
+(                  |) s
 5 605 M
-(------------------------------------------------------------------------------) s
+(+-----------------v--------------------+) s
+5 594 M
+(|           TRUSTED CORE                |) s
 5 583 M
-(Threats) s
+(+--------------------------------------+) s
 5 561 M
-(What We Handle) s
+(Operations requiring trusted path:) s
+5 550 M
+(- \(ed25519-keypair\) - key generation) s
 5 539 M
-(| Threat | Defense |) s
+(- \(node-role 'coordinator\) - role assignment) s
 5 528 M
-(|--------|---------|) s
+(- \(seal-release "1.0.0"\) - signing releases) s
 5 517 M
-(| Unauthorized access | No capability = no access |) s
-5 506 M
-(| Capability forgery | Ed25519 signatures |) s
+(- Key ceremony \(RFC-022\)) s
 5 495 M
-(| Replay attacks | Timestamps, nonces, Lamport clocks |) s
-5 484 M
-(| Stale capabilities | Expiration, revocation |) s
-5 473 M
-(| Delegation abuse | Attenuation, propagation flags |) s
-5 462 M
-(| Content tampering | SHA-512 content addressing |) s
-5 451 M
-(| Origin spoofing | Object signatures |) s
-5 440 M
-(| Audit tampering | Hash chain, distribution |) s
-5 418 M
-(What We Don't Handle) s
-5 396 M
-(| Threat | Why |) s
-5 385 M
-(|--------|-----|) s
-5 374 M
-(| Compromised signing key | Fundamental limit. Mitigate: threshold, rotation. |) s
-5 363 M
-(| Endpoint compromise | Your realm, your problem. |) s
-5 352 M
-(| Physical access | Out of scope for software. |) s
-5 341 M
-(| Covert channels > 1 bit/sec | Residual risk, documented above. |) s
-5 330 M
-(| Availability attacks | Focus on integrity/confidentiality. |) s
-5 319 M
-(| Quantum computing | Ed25519 vulnerable. Migration path planned. |) s
-5 308 M
-(| Coercion | Math doesn't help if you're forced to sign. |) s
-5 286 M
 (------------------------------------------------------------------------------) s
+5 473 M
+(Threats) s
+5 451 M
+(What We Handle) s
+5 429 M
+(| Threat | Defense |) s
+5 418 M
+(|--------|---------|) s
+5 407 M
+(| Unauthorized access | No capability = no access |) s
+5 396 M
+(| Capability forgery | Ed25519 signatures |) s
+5 385 M
+(| Replay attacks | Timestamps, nonces, Lamport clocks |) s
+5 374 M
+(| Stale capabilities | Expiration, revocation |) s
+5 363 M
+(| Delegation abuse | Attenuation, propagation flags |) s
+5 352 M
+(| Content tampering | SHA-512 content addressing |) s
+5 341 M
+(| Origin spoofing | Object signatures |) s
+5 330 M
+(| Audit tampering | Hash chain, distribution |) s
+5 308 M
+(What We Don't Handle) s
+5 286 M
+(| Threat | Why |) s
+5 275 M
+(|--------|-----|) s
 5 264 M
-(The Invariants) s
+(| Compromised signing key | Fundamental limit. Mitigate: threshold, rotation. |) s
+5 253 M
+(| Endpoint compromise | Your realm, your problem. |) s
 5 242 M
-(These must always hold:) s
+(| Physical access | Out of scope for software. |) s
+5 231 M
+(| Covert channels > 1 bit/sec | Residual risk, documented above. |) s
 5 220 M
-(I1. No access without valid capability) s
+(| Availability attacks | Focus on integrity/confidentiality. |) s
 5 209 M
-(    access\(s,o,r\) \342\\206\\222 \342\\210\\203c: valid_chain\(s,o,r,c\)) s
-5 187 M
-(I2. Delegation cannot amplify) s
+(| Quantum computing | Ed25519 vulnerable. Migration path planned. |) s
+5 198 M
+(| Coercion | Math doesn't help if you're forced to sign. |) s
 5 176 M
-(    delegated\(c\342\\202\\202,c\342\\202\\201\) \342\\206\\222 rights\(c\342\\202\\202\) \342\\212\\206 rights\(c\342\\202) s
-5 165 M
-(\\201\)) s
-5 143 M
-(I3. Object identity is content hash) s
+(------------------------------------------------------------------------------) s
+5 154 M
+(The Invariants) s
 5 132 M
-(    id\(o\) = sha512\(content\(o\)\)) s
+(These must always hold:) s
 5 110 M
-(I4. Audit is ordered) s
+(I1. No access without valid capability) s
 5 99 M
-(    sequence\(e\342\\202\\201\) < sequence\(e\342\\202\\202\) \342\\206\\222 time\(e\342\\202\\201\) \342\\211\244 time\(e\342) s
-5 88 M
-(\\202\\202\)) s
+(    access\(s,o,r\) \342\\206\\222 \342\\210\\203c: valid_chain\(s,o,r,c\)) s
+5 77 M
+(I2. Delegation cannot amplify) s
 5 66 M
-(I5. Revocation is permanent) s
+(    delegated\(c\342\\202\\202,c\342\\202\\201\) \342\\206\\222 rights\(c\342\\202\\202\) \342\\212\\206 rights\(c\342\\202) s
 5 55 M
-(    revoked\(c,t\) \342\\206\\222 \342\\210\\200t' > t: \302\254valid\(c,t'\)) s
+(\\201\)) s
 5 33 M
-(I6. No ambient authority) s
+(I3. Object identity is content hash) s
 5 22 M
-(    \302\254\342\\210\\203c: grants\(c,,\)) s
+(    id\(o\) = sha512\(content\(o\)\)) s
 _R
 S
 %%Page: (11) 11
@@ -1633,34 +1633,48 @@ _S
 /user_footer_p false def
 %%EndPageSetup
 5 781 M
-(------------------------------------------------------------------------------) s
+(I4. Audit is ordered) s
+5 770 M
+(    sequence\(e\342\\202\\201\) < sequence\(e\342\\202\\202\) \342\\206\\222 time\(e\342\\202\\201\) \342\\211\244 time\(e\342) s
 5 759 M
-(References) s
+(\\202\\202\)) s
 5 737 M
-(1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999) s
+(I5. Revocation is permanent) s
 5 726 M
-(2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 196) s
-5 715 M
-(6) s
+(    revoked\(c,t\) \342\\206\\222 \342\\210\\200t' > t: \302\254valid\(c,t'\)) s
 5 704 M
-(3. Miller, M., Robust Composition, 2006) s
+(I6. No ambient authority) s
 5 693 M
-(4. Lampson, B., A Note on the Confinement Problem, 1973) s
-5 682 M
-(5. DoD 5200.28-STD \(Orange Book\), 1985 - for the covert channel lens) s
+(    \302\254\342\\210\\203c: grants\(c,,\)) s
 5 671 M
-(6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 -) s
-5 660 M
-( confidentiality model) s
-5 649 M
-(7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity mod) s
-5 638 M
-(el) s
-5 616 M
 (------------------------------------------------------------------------------) s
+5 649 M
+(References) s
+5 627 M
+(1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999) s
+5 616 M
+(2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 196) s
+5 605 M
+(6) s
 5 594 M
-(Changelog) s
+(3. Miller, M., Robust Composition, 2006) s
+5 583 M
+(4. Lampson, B., A Note on the Confinement Problem, 1973) s
 5 572 M
+(5. DoD 5200.28-STD \(Orange Book\), 1985 - for the covert channel lens) s
+5 561 M
+(6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 -) s
+5 550 M
+( confidentiality model) s
+5 539 M
+(7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity mod) s
+5 528 M
+(el) s
+5 506 M
+(------------------------------------------------------------------------------) s
+5 484 M
+(Changelog) s
+5 462 M
 (- 2026-01-08 - Initial draft) s
 _R
 S
