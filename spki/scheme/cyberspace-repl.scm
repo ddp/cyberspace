@@ -4366,7 +4366,48 @@ Cyberspace REPL - Available Commands
 ;; English-friendly aliases (just call with parens)
 (define keys (lambda () (soup 'keys)))
 (define releases (lambda () (soup-releases)))
-(define status (lambda () (introspect-system)))
+
+;; Status - compact tree view
+(define (status)
+  (define (safe-ref lst key)
+    (let ((pair (and (pair? lst) (assq key (if (pair? (cdr lst)) (cdr lst) '())))))
+      (and pair (pair? (cdr pair)) (cadr pair))))
+  (define (get-en0-ip net type)
+    ;; Extract IP from (network (interfaces (en0 (ipv4 "x") (ipv6 "y"))))
+    (let* ((ifaces (and net (assq 'interfaces (cdr net))))
+           (en0 (and ifaces (assq 'en0 (cdr ifaces))))
+           (ip-pair (and en0 (assq type (cdr en0)))))
+      (and ip-pair (cadr ip-pair))))
+  (let* ((info (introspect-system))
+         (hw (assq 'hardware (cdr info)))
+         (net (assq 'network (cdr info)))
+         (realm (assq 'realm (cdr info)))
+         (uptime (safe-ref info 'uptime))
+         (cores (safe-ref hw 'cores))
+         (mem (safe-ref hw 'memory-gb))
+         (chip (safe-ref hw 'cpu))
+         (ipv4 (get-en0-ip net 'ipv4))
+         (ipv6 (get-en0-ip net 'ipv6))
+         (vault-exists (safe-ref realm 'vault-exists))
+         (keystore (safe-ref realm 'has-keystore))
+         (audit (safe-ref realm 'has-audit)))
+    (printf "~%~a · up ~a~%" (get-hostname) (or uptime "?"))
+    (printf "├─ ~a cores, ~aGB~a~%"
+            (or cores "?")
+            (or mem "?")
+            (if chip (string-append ", " chip) ""))
+    (printf "├─ ~a~a~%"
+            (or ipv4 "no ipv4")
+            (if (and ipv6 (string? ipv6))
+                (string-append " / " (substring ipv6 0 (min 20 (string-length ipv6))) "...")
+                ""))
+    (printf "└─ ~a~%"
+            (if vault-exists
+                (string-append "vault: " vault-exists
+                               (if keystore " (keys)" "")
+                               (if audit " (audit)" ""))
+                "no vault"))
+    (void)))
 
 ;; Single-char shortcuts
 (define |.| status)  ; status at a glance
