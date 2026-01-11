@@ -4346,7 +4346,8 @@ Cyberspace REPL - Available Commands
   (print "Federation:")
   (print "  (status)            - Node status")
   (print "  (enrollment-status) - Enrollment state")
-  (print "  (discover-peers)    - Find peers via mDNS")
+  (print "  (announce-presence 'name) - Register on mDNS")
+  (print "  (discover-peers)    - Find _cyberspace._tcp peers")
   (print "  (gossip-status)     - Gossip daemon status")
   (print "")
   (print "Audit:")
@@ -4404,6 +4405,7 @@ Cyberspace REPL - Available Commands
 (define peers discover-peers)
 (define gossip gossip-status)
 (define security security-summary)
+(define announce announce-presence)
 
 ;; Library of Cyberspace - RFC browser
 (define (library #!optional filter)
