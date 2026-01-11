@@ -2922,7 +2922,8 @@ Cyberspace REPL - Available Commands
 ;;; Enrollment Listener (Master Side)
 ;;; ============================================================
 
-(define *pending-enrollments* '())
+(define *pending-enrollments* '())      ; incoming requests (master side)
+(define *outgoing-enrollments* '())     ; outgoing requests (requestor side)
 (define *enrollment-listener* #f)
 
 (define (enrollment-handler name pubkey host port)
@@ -2935,6 +2936,7 @@ Cyberspace REPL - Available Commands
                     (words ,words)
                     (timestamp ,(current-seconds)))))
     (set! *pending-enrollments* (cons request *pending-enrollments*))
+    (print "[handler] stored request, now " (length *pending-enrollments*) " pending")
     (print "")
     (print "┌─ New Enrollment Request ─────────────────────────────────────────┐")
     (let* ((node-str (sprintf "Node ~a wants to enroll" name))
