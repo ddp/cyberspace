@@ -125,14 +125,24 @@ The command layer is syntactic sugar. The Scheme layer is substrate. Users start
 forge → eggs → soup → vault
 ```
 
+```
+       forge
+         ↓
+       eggs
+         ↓
+       soup ──┬──→ vault (persist)
+              │
+              └──→ ∅ (evaporate)
+```
+
 | Stage | What | How |
 |-------|------|-----|
 | **forge** | Compilation | Source newer than `.so`? Rebuild. Arch changed? Rebuild. |
 | **eggs** | Modules | Chicken Scheme's dynamically compiled units |
-| **soup** | Cache | Newton-style queryable view of vault (in memory) |
-| **vault** | Storage | Content-addressed persistence (on disk) |
+| **soup** | Workspace | Newton-style queryable objects (in memory, transient) |
+| **vault** | Storage | Content-addressed persistence (on disk, permanent) |
 
-The system is lazy. Modules compile on demand. The soup is the vault cache—query the soup, persist to the vault. The whole thing simmers together.
+The soup is the workspace. Commit it or lose it. Modules compile on demand. Objects simmer in memory until you seal them to the vault—or they evaporate when you quit.
 
 ---
 
