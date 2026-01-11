@@ -2953,18 +2953,25 @@ Cyberspace REPL - Available Commands
     (when *enrollment-debug*
       (print "[debug] after set!, pending=" (length *pending-enrollments*))
       (print "[debug] request=" request))
+    ;; Alert user with bell and visible output
+    (display "\a")  ; bell
+    (flush-output)
+    (print "")
     (print "")
     (print "┌─ New Enrollment Request ─────────────────────────────────────────┐")
     (let* ((node-str (sprintf "Node ~a wants to enroll" name))
            (from-str (sprintf "Connecting from ~a on port ~a" host port))
-           (verify-str (sprintf "Verification words are ~a" words)))
-      (printf "│  ~a~a│~n" node-str (make-string (- 64 (string-length node-str)) #\space))
-      (printf "│  ~a~a│~n" from-str (make-string (- 64 (string-length from-str)) #\space))
+           (verify-str (sprintf "Verification words: ~a" words)))
+      (printf "│  ~a~a│~n" node-str (make-string (max 0 (- 64 (string-length node-str))) #\space))
+      (printf "│  ~a~a│~n" from-str (make-string (max 0 (- 64 (string-length from-str))) #\space))
       (print "│                                                                  │")
-      (printf "│  ~a~a│~n" verify-str (make-string (- 64 (string-length verify-str)) #\space))
+      (printf "│  ~a~a│~n" verify-str (make-string (max 0 (- 64 (string-length verify-str))) #\space))
       (print "│                                                                  │"))
-    (print "│  Use (pending), (approve 'name), or (reject 'name)              │")
+    (print "│  (pending)  (approve 'name)  (reject 'name)                      │")
     (print "└──────────────────────────────────────────────────────────────────┘")
+    (print "")
+    (display ": ")  ; re-display prompt
+    (flush-output)
     (void)))
 
 (define (generate-verification-words pubkey)
