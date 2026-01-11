@@ -49,6 +49,7 @@
    soup-collect-objects
    hex-abbrev
    complete
+   ask
 
    ;; Node Roles (RFC-037)
    node-probe
@@ -3299,6 +3300,125 @@ Object Types:
                     (substring name 0 (- (string-length name) 4)))))
            files))
         '()))
+
+  ;;; ============================================================================
+  ;;; Natural Language Soup Query (RFC-038)
+  ;;; ============================================================================
+
+  (define *ollama-base* "http://localhost:11434")
+  (define *ollama-model* "llama3.2")
+
+  (define (ollama-available?)
+    "Check if Ollama is running"
+    (handle-exceptions exn #f
+      (let ((result (with-input-from-pipe
+                     (sprintf "curl -s -o /dev/null -w '%{http_code}' ~a/api/tags 2>/dev/null"
+                              *ollama-base*)
+                     read-line)))
+        (and result (string=? result "200")))))
+
+  (define (ollama-chat model system-prompt user-message)
+    "Send chat request to Ollama, return response text"
+    (let* ((payload (sprintf "{\"model\":\"~a\",\"messages\":[{\"role\":\"system\",\"content\":~s},{\"role\":\"user\",\"content\":~s}],\"stream\":false}"
+                             model system-prompt user-message))
+           (cmd (sprintf "curl -s -X POST ~a/api/chat -H 'Content-Type: application/json' -d '~a' 2>/dev/null"
+                         *ollama-base*
+                         (string-translate* payload '(("'" . "'\"'\"'")))))
+           (response (with-input-from-pipe cmd read-string)))
+      (if (and response (> (string-length response) 0))
+          ;; Extract content from JSON response
+          (let ((start (string-contains response "\"content\":\"")))
+            (if start
+                (let* ((content-start (+ start 11))
+                       (rest (substring response content-start))
+                       ;; Find end of content string (unescaped quote)
+                       (content-end (find-json-string-end rest)))
+                  (if content-end
+                      (let ((content (substring rest 0 content-end)))
+                        ;; Unescape JSON string
+                        (string-translate* content
+                                           '(("\\n" . "\n")
+                                             ("\\\"" . "\"")
+                                             ("\\\\" . "\\"))))
+                      response))
+                response))
+          #f)))
+
+  (define (find-json-string-end str)
+    "Find end of JSON string (unescaped quote)"
+    (let loop ((i 0) (escaped #f))
+      (if (>= i (string-length str))
+          #f
+          (let ((c (string-ref str i)))
+            (cond
+             (escaped (loop (+ i 1) #f))
+             ((char=? c #\\) (loop (+ i 1) #t))
+             ((char=? c #\") i)
+             (else (loop (+ i 1) #f)))))))
+
+  (define (soup-context)
+    "Generate soup context for LLM"
+    (let* ((objects (soup-collect-objects))
+           (grouped (make-hash-table)))
+      ;; Group by type
+      (for-each
+       (lambda (obj)
+         (hash-table-set! grouped (car obj)
+                          (cons obj (hash-table-ref/default grouped (car obj) '()))))
+       objects)
+      ;; Build context string
+      (with-output-to-string
+        (lambda ()
+          (printf "Vault soup contents (~a objects):~%~%" (length objects))
+          (for-each
+           (lambda (type-pair)
+             (let* ((type (car type-pair))
+                    (objs (reverse (hash-table-ref/default grouped type '()))))
+               (unless (null? objs)
+                 (printf "~a/ (~a items):~%" type (length objs))
+                 (for-each
+                  (lambda (obj)
+                    (let ((name (cadr obj))
+                          (size (caddr obj))
+                          (info (cadddr obj)))
+                      (printf "  - ~a (~a) ~a~%"
+                              name
+                              (format-size size)
+                              (if (list? info) (string-intersperse info " ") info))))
+                  (if (> (length objs) 10)
+                      (append (take objs 5) (list '(... ... ... ("..."))) (take-right objs 3))
+                      objs))
+                 (newline))))
+           (append *soup-types* '((identity . "Node identity"))))))))
+
+  (define (ask question)
+    "Ask a natural language question about the soup
+
+     (ask \"what synced recently?\")
+     (ask \"who can sign releases?\")
+     (ask \"show me unsigned releases\")"
+    (if (not (ollama-available?))
+        (begin
+          (print "")
+          (print "Ollama not available at " *ollama-base*)
+          (print "Start with: ollama serve")
+          (print "Pull model: ollama pull " *ollama-model*))
+        (let* ((context (soup-context))
+               (system-prompt
+                (string-append
+                 "You are a helpful assistant for the Library of Cyberspace vault system. "
+                 "Answer questions about the vault contents based on the context provided. "
+                 "Be concise and direct. Use the exact names from the context. "
+                 "If asked about timestamps, convert Unix timestamps to readable dates. "
+                 "Here is the current vault state:\n\n"
+                 context))
+               (response (ollama-chat *ollama-model* system-prompt question)))
+          (if response
+              (begin
+                (print "")
+                (print response)
+                (print ""))
+              (print "No response from inference server")))))
 
   ) ;; end module vault
 
