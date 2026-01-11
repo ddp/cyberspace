@@ -19,9 +19,16 @@ run_expr() {
     echo "$1" | csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm"
 }
 
+# Run REPL with terminal cleanup on exit
+run_repl() {
+    rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
+    echo  # newline to clear any pending rlwrap state
+}
+
 # Helper to run scheme expression then REPL
 run_then_repl() {
     ( echo "$1"; cat ) | rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm"
+    echo  # newline to clear any pending rlwrap state
 }
 
 case "$1" in
@@ -31,7 +38,7 @@ case "$1" in
 
     --no-mirror|--offline)
         shift
-        exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
+        run_repl "$@"
         ;;
 
     listen)
@@ -100,6 +107,6 @@ HELP
     *)
         # Default: mirror first (quiet, with timeout), then REPL
         timeout 10 "$CYBERSPACE_ROOT/bin/sync" --quiet 2>/dev/null || true
-        exec rlwrap -q '"' -H ~/.cyberspace_history csi -n -q -w "$SCRIPT_DIR/cyberspace-repl.scm" "$@"
+        run_repl "$@"
         ;;
 esac
