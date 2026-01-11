@@ -4368,6 +4368,9 @@ Cyberspace REPL - Available Commands
 (define releases (lambda () (soup-releases)))
 (define status (lambda () (introspect-system)))
 
+;; Single-char shortcuts
+(define |.| status)  ; status at a glance
+
 ;; Quit shortcuts (don't shadow scheme's exit)
 (define quit goodbye)
 (define q goodbye)
