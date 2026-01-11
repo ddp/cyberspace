@@ -69,18 +69,55 @@
   "Find non-RFC document files."
   (filter file-exists? '("README.scm")))
 
+;;; Validation checks
+(define (validate-txt-file txt-file)
+  "Validate a generated txt file for common issues."
+  (let ((content (with-input-from-file txt-file read-string))
+        (errors '()))
+    ;; Check for embedded markdown list syntax
+    (when (irregex-search "\\(p \"- [^\"]+\"\\)" content)
+      (set! errors (cons "embedded markdown list syntax" errors)))
+    ;; Check for truncated table cells (20 char fixed width artifact)
+    (when (irregex-search "  [^ ]{20} [^ ]{20} [^ ]{18,20}$" content)
+      (set! errors (cons "possible truncated table cells" errors)))
+    ;; Check for minimum content length
+    (when (< (string-length content) 500)
+      (set! errors (cons "suspiciously short content" errors)))
+    errors))
+
+(define (validate-outputs base)
+  "Validate all output files for an RFC."
+  (let* ((txt-file (string-append base ".txt"))
+         (errors (if (file-exists? txt-file)
+                     (validate-txt-file txt-file)
+                     '("txt file missing"))))
+    (when (not (null? errors))
+      (print "  [WARN] " base ": " (string-intersperse errors ", ")))
+    (null? errors)))
+
 (define (main)
   (print "=== RFC Generation (S-expression Pipeline) ===")
   (print "")
 
   (let* ((start-time (current-milliseconds))
          (rfcs (discover-rfcs))
-         (docs (discover-docs)))
+         (docs (discover-docs))
+         (all-files (append rfcs docs)))
     (print "Found " (length rfcs) " RFCs, " (length docs) " docs")
     (print "")
 
-    (for-each generate-rfc rfcs)
-    (for-each generate-rfc docs)
+    (for-each generate-rfc all-files)
+
+    ;; Validation pass
+    (print "")
+    (print "=== Validation ===")
+    (let* ((bases (map pathname-strip-extension all-files))
+           (results (map validate-outputs bases))
+           (passed (length (filter identity results)))
+           (failed (- (length results) passed)))
+      (if (= failed 0)
+          (print "  All " passed " files passed validation")
+          (print "  " failed " file(s) have warnings")))
 
     (let* ((end-time (current-milliseconds))
            (elapsed-ms (- end-time start-time))
