@@ -104,7 +104,7 @@ HEADER
 # Generate RFC table
 for rfc in "${RFCS[@]}"; do
   title=$(get_title "$rfc")
-  num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
+  num=$(echo "$rfc" | sed -E 's/rfc-0*([0-9]+)-.*/\1/')
   formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
   cat >> index.html << EOF
@@ -151,7 +151,7 @@ for rfc in "${RFCS[@]}"; do
       right="$right ${words[$j]}"
     done
 
-    num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
+    num=$(echo "$rfc" | sed -E 's/rfc-0*([0-9]+)-.*/\1/')
     echo "${word}|${left}|${right}|${rfc}|${num}"
   done
 done | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc num; do
