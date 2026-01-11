@@ -38,6 +38,16 @@
         (chicken tcp))
 
 ;;; ============================================================
+;;; Unicode Helpers
+;;; ============================================================
+;;; make-string doesn't work with multi-byte Unicode chars.
+;;; Use string-repeat for box-drawing characters.
+
+(define (string-repeat s n)
+  "Repeat string s n times (Unicode-safe)."
+  (apply string-append (make-list n s)))
+
+;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
 ;;; ============================================================
 ;;; Ensures compiled modules match current architecture.
@@ -122,7 +132,7 @@
                (pad (- w clen 2)))
           (print "│ " content (make-string (max 0 pad) #\space) " │")))
       (print "")
-      (print "┌" (make-string left-pad #\─) title (make-string right-pad #\─) "┐")
+      (print "┌" (string-repeat "─" left-pad) title (string-repeat "─" right-pad) "┐")
       (let ((cmd (if (string=? module "crypto-ffi")
                      (string-append "csc -shared -J -w " src " -I... -L... -lsodium")
                      (string-append "csc -shared -J -w " src))))
@@ -155,12 +165,12 @@
                 (begin
                   (write-arch-stamp module stamp)
                   (box-line (sprintf "✓ ~aK in ~ams" (quotient so-size 1024) elapsed))
-                  (print "└" (make-string w #\─) "┘")
+                  (print "└" (string-repeat "─" w) "┘")
                   (print "")
                   #t)
                 (begin
                   (box-line "✗ failed")
-                  (print "└" (make-string w #\─) "┘")
+                  (print "└" (string-repeat "─" w) "┘")
                   (print "")
                   (exit 1)))))))))
 
