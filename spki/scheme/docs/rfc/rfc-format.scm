@@ -16,7 +16,253 @@
         (chicken file)
         (chicken pathname)
         (chicken process)
+        (chicken irregex)
+        srfi-1
         srfi-13)
+
+;;; ============================================================
+;;; Box-Drawing to SVG Conversion
+;;; ============================================================
+;;; Browsers don't render box-drawing characters at proper monospace
+;;; widths. This converts them to SVG at generation time.
+
+;; Box-drawing character detection using regex for UTF-8 strings
+;; Chicken's string->list returns UTF-8 bytes, not codepoints
+;; So we use irregex for detection
+(define box-char-pattern
+  (irregex "[\u2500-\u257F\u2580-\u259F\u2190-\u21FF\u2200-\u22FF]"))
+
+(define (string-has-box-chars? str)
+  "Check if string contains box-drawing/arrow/math characters."
+  (and (irregex-search box-char-pattern str) #t))
+
+;; Helper for 5th element access
+(define (cddddr x) (cdr (cdddr x)))
+
+;; UTF-8 decoding helper
+;; Returns list of (codepoint . char-string) pairs
+(define (utf8-chars str)
+  "Extract Unicode characters from UTF-8 string as (codepoint . char-string) pairs."
+  (let ((bytes (map char->integer (string->list str))))
+    (let loop ((bytes bytes) (result '()))
+      (if (null? bytes)
+          (reverse result)
+          (let ((b0 (car bytes)))
+            (cond
+              ;; ASCII (0xxxxxxx)
+              ((< b0 128)
+               (loop (cdr bytes)
+                     (cons (cons b0 (string (integer->char b0))) result)))
+              ;; 2-byte (110xxxxx 10xxxxxx)
+              ((and (>= b0 192) (< b0 224) (>= (length bytes) 2))
+               (let* ((b1 (cadr bytes))
+                      (cp (+ (* (- b0 192) 64) (- b1 128)))
+                      (s (list->string (map integer->char (list b0 b1)))))
+                 (loop (cddr bytes) (cons (cons cp s) result))))
+              ;; 3-byte (1110xxxx 10xxxxxx 10xxxxxx)
+              ((and (>= b0 224) (< b0 240) (>= (length bytes) 3))
+               (let* ((b1 (cadr bytes))
+                      (b2 (caddr bytes))
+                      (cp (+ (* (- b0 224) 4096) (* (- b1 128) 64) (- b2 128)))
+                      (s (list->string (map integer->char (list b0 b1 b2)))))
+                 (loop (cdddr bytes) (cons (cons cp s) result))))
+              ;; 4-byte (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
+              ((and (>= b0 240) (>= (length bytes) 4))
+               (let* ((b1 (cadr bytes))
+                      (b2 (caddr bytes))
+                      (b3 (cadddr bytes))
+                      (cp (+ (* (- b0 240) 262144) (* (- b1 128) 4096) (* (- b2 128) 64) (- b3 128)))
+                      (s (list->string (map integer->char (list b0 b1 b2 b3)))))
+                 (loop (cddddr bytes) (cons (cons cp s) result))))
+              ;; Invalid - skip byte
+              (else
+               (loop (cdr bytes) result))))))))
+
+;; Character cell dimensions (in SVG units)
+(define cell-width 9.6)   ; Width of monospace char
+(define cell-height 19.2) ; Height including line spacing
+
+;; Convert box character codepoint to SVG path segments
+;; Returns list of (type x1 y1 x2 y2) where type is 'line or 'text
+(define (codepoint->svg cp cx cy)
+  "Convert a codepoint at grid position to SVG elements.
+   cx, cy are center coordinates of the cell."
+  (let ((hw (/ cell-width 2))    ; half width
+        (hh (/ cell-height 2)))  ; half height
+    (cond
+      ;; Horizontal lines: ─ (2500), ═ (2550)
+      ((or (= cp #x2500) (= cp #x2550))
+       `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)))
+
+      ;; Vertical lines: │ (2502), ║ (2551)
+      ((or (= cp #x2502) (= cp #x2551))
+       `((line ,cx ,(- cy hh) ,cx ,(+ cy hh))))
+
+      ;; Top-left corners: ┌ (250C), ╭ (256D), ╔ (2554)
+      ((or (= cp #x250C) (= cp #x256D) (= cp #x2554))
+       `((line ,cx ,cy ,(+ cx hw) ,cy)
+         (line ,cx ,cy ,cx ,(+ cy hh))))
+
+      ;; Top-right corners: ┐ (2510), ╮ (256E), ╗ (2557)
+      ((or (= cp #x2510) (= cp #x256E) (= cp #x2557))
+       `((line ,(- cx hw) ,cy ,cx ,cy)
+         (line ,cx ,cy ,cx ,(+ cy hh))))
+
+      ;; Bottom-left corners: └ (2514), ╰ (2570), ╚ (255A)
+      ((or (= cp #x2514) (= cp #x2570) (= cp #x255A))
+       `((line ,cx ,cy ,(+ cx hw) ,cy)
+         (line ,cx ,(- cy hh) ,cx ,cy)))
+
+      ;; Bottom-right corners: ┘ (2518), ╯ (256F), ╝ (255D)
+      ((or (= cp #x2518) (= cp #x256F) (= cp #x255D))
+       `((line ,(- cx hw) ,cy ,cx ,cy)
+         (line ,cx ,(- cy hh) ,cx ,cy)))
+
+      ;; T-junctions
+      ((= cp #x251C)  ; ├
+       `((line ,cx ,(- cy hh) ,cx ,(+ cy hh))
+         (line ,cx ,cy ,(+ cx hw) ,cy)))
+      ((= cp #x2524)  ; ┤
+       `((line ,cx ,(- cy hh) ,cx ,(+ cy hh))
+         (line ,(- cx hw) ,cy ,cx ,cy)))
+      ((= cp #x252C)  ; ┬
+       `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)
+         (line ,cx ,cy ,cx ,(+ cy hh))))
+      ((= cp #x2534)  ; ┴
+       `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)
+         (line ,cx ,(- cy hh) ,cx ,cy)))
+
+      ;; Cross: ┼ (253C)
+      ((= cp #x253C)
+       `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)
+         (line ,cx ,(- cy hh) ,cx ,(+ cy hh))))
+
+      ;; Arrows - render as SVG text
+      ((or (= cp #x2192) (= cp #x25BA) (= cp #x25B6))  ; → ► ▶
+       `((text ,cx ,cy "→")))
+      ((or (= cp #x2190) (= cp #x25C0))  ; ← ◀
+       `((text ,cx ,cy "←")))
+      ((or (= cp #x2191) (= cp #x25B2))  ; ↑ ▲
+       `((text ,cx ,cy "↑")))
+      ((or (= cp #x2193) (= cp #x25BC))  ; ↓ ▼
+       `((text ,cx ,cy "↓")))
+
+      ;; Block elements
+      ((= cp #x2588) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 1.0)))       ; █
+      ((= cp #x2587) `((rect ,(- cx hw) ,(- cy (* hh 0.75)) ,cell-width ,(* cell-height 0.875) 1.0)))
+      ((= cp #x2586) `((rect ,(- cx hw) ,(- cy (* hh 0.5)) ,cell-width ,(* cell-height 0.75) 1.0)))
+      ((= cp #x2585) `((rect ,(- cx hw) ,(- cy (* hh 0.25)) ,cell-width ,(* cell-height 0.625) 1.0)))
+      ((= cp #x2584) `((rect ,(- cx hw) ,cy ,cell-width ,(* cell-height 0.5) 1.0)))      ; ▄
+      ((= cp #x2583) `((rect ,(- cx hw) ,(+ cy (* hh 0.25)) ,cell-width ,(* cell-height 0.375) 1.0)))
+      ((= cp #x2582) `((rect ,(- cx hw) ,(+ cy (* hh 0.5)) ,cell-width ,(* cell-height 0.25) 1.0)))
+      ((= cp #x2581) `((rect ,(- cx hw) ,(+ cy (* hh 0.75)) ,cell-width ,(* cell-height 0.125) 1.0)))
+
+      ;; Math symbols - render as text
+      ((= cp #x2205) `((text ,cx ,cy "∅")))  ; ∅
+
+      (else '()))))  ; Unknown box char - skip
+
+(define (text->svg-diagram text)
+  "Convert multi-line text with box-drawing to SVG string."
+  (let* ((lines (string-split text "\n" #t))
+         ;; Parse each line into Unicode chars (codepoint . char-string)
+         (parsed-lines (map utf8-chars lines))
+         (nrows (length lines))
+         (ncols (apply max 1 (map length parsed-lines)))
+         (width (* ncols cell-width))
+         (height (* nrows cell-height))
+         (svg-lines '())
+         (svg-texts '()))
+
+    ;; Process each character
+    (let loop-rows ((parsed-lines parsed-lines) (row 0))
+      (when (pair? parsed-lines)
+        (let ((chars (car parsed-lines)))  ; list of (codepoint . char-string)
+          (let loop-cols ((chars chars) (col 0))
+            (when (pair? chars)
+              (let* ((char-pair (car chars))
+                     (cp (car char-pair))
+                     (char-str (cdr char-pair))
+                     (cx (+ (* col cell-width) (/ cell-width 2)))
+                     (cy (+ (* row cell-height) (/ cell-height 2)))
+                     (elems (codepoint->svg cp cx cy)))
+                (if (null? elems)
+                    ;; Regular character - emit as text if not space
+                    (when (not (= cp 32))  ; space
+                      (set! svg-texts
+                            (cons (format "<text x=\"~a\" y=\"~a\" text-anchor=\"middle\" dominant-baseline=\"central\">~a</text>"
+                                         cx cy (html-escape char-str))
+                                  svg-texts)))
+                    ;; Box character - emit SVG elements
+                    (for-each
+                      (lambda (elem)
+                        (case (car elem)
+                          ((line)
+                           (set! svg-lines
+                                 (cons (format "<line x1=\"~a\" y1=\"~a\" x2=\"~a\" y2=\"~a\"/>"
+                                              (cadr elem) (caddr elem)
+                                              (cadddr elem) (car (cddddr elem)))
+                                       svg-lines)))
+                          ((text)
+                           (set! svg-texts
+                                 (cons (format "<text x=\"~a\" y=\"~a\" text-anchor=\"middle\" dominant-baseline=\"central\">~a</text>"
+                                              (cadr elem) (caddr elem) (cadddr elem))
+                                       svg-texts)))
+                          ((rect)
+                           (set! svg-lines
+                                 (cons (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\" fill=\"currentColor\" opacity=\"~a\"/>"
+                                              (cadr elem) (caddr elem)
+                                              (cadddr elem) (car (cddddr elem))
+                                              (cadr (cddddr elem)))
+                                       svg-lines)))))
+                      elems)))
+              (loop-cols (cdr chars) (+ col 1)))))
+        (loop-rows (cdr parsed-lines) (+ row 1))))
+
+    ;; Build SVG
+    (string-append
+      (format "<svg class=\"diagram\" viewBox=\"0 0 ~a ~a\" width=\"~a\" height=\"~a\" xmlns=\"http://www.w3.org/2000/svg\">\n"
+              width height width height)
+      "<style>\n"
+      "  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }\n"
+      "  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }\n"
+      "</style>\n"
+      (string-intersperse (reverse svg-lines) "\n")
+      "\n"
+      (string-intersperse (reverse svg-texts) "\n")
+      "\n</svg>")))
+
+;; ASCII conversion for text output (using codepoints)
+(define (codepoint->ascii cp)
+  "Convert codepoint to ASCII equivalent character."
+  (cond
+    ;; Horizontal lines: ─ ═
+    ((or (= cp #x2500) (= cp #x2550)) "-")
+    ;; Vertical lines: │ ║
+    ((or (= cp #x2502) (= cp #x2551)) "|")
+    ;; Corners and T-junctions: all become +
+    ((and (>= cp #x250C) (<= cp #x254B)) "+")
+    ((and (>= cp #x2554) (<= cp #x256C)) "+")
+    ((and (>= cp #x256D) (<= cp #x2570)) "+")
+    ;; Arrows
+    ((or (= cp #x2192) (= cp #x25BA) (= cp #x25B6)) ">")  ; → ► ▶
+    ((or (= cp #x2190) (= cp #x25C0)) "<")               ; ← ◀
+    ((or (= cp #x2191) (= cp #x25B2)) "^")               ; ↑ ▲
+    ((or (= cp #x2193) (= cp #x25BC)) "v")               ; ↓ ▼
+    ;; Block elements - use # for filled
+    ((and (>= cp #x2581) (<= cp #x2588)) "#")
+    ;; Math: ∅
+    ((= cp #x2205) "0")
+    (else #f)))  ; Return #f for non-box chars
+
+(define (text->ascii text)
+  "Convert box-drawing characters in text to ASCII."
+  (apply string-append
+    (map (lambda (char-pair)
+           (let ((cp (car char-pair))
+                 (char-str (cdr char-pair)))
+             (or (codepoint->ascii cp) char-str)))
+         (utf8-chars text))))
 
 ;; Zero-pad a number to width
 (define (zero-pad n width)
@@ -169,10 +415,12 @@
 
         ((code)
           ;; Code blocks - may have optional language tag
-          (let ((content (if (and (pair? (cdr elem))
-                                  (symbol? (cadr elem)))
-                             (caddr elem)  ; (code lang "...")
-                             (cadr elem)))) ; (code "...")
+          ;; Convert box-drawing to ASCII for plain text output
+          (let* ((raw-content (if (and (pair? (cdr elem))
+                                       (symbol? (cadr elem)))
+                                  (caddr elem)  ; (code lang "...")
+                                  (cadr elem))) ; (code "...")
+                 (content (text->ascii raw-content)))
             (newline port)
             (for-each (lambda (line)
                         (display "    " port)
@@ -334,15 +582,24 @@
 
         ((code)
           ;; Code blocks - may have optional language tag
+          ;; If content has box-drawing chars, render as SVG for proper alignment
           (let* ((has-lang (and (pair? (cdr elem)) (symbol? (cadr elem))))
                  (lang (if has-lang (symbol->string (cadr elem)) ""))
                  (content (if has-lang (caddr elem) (cadr elem))))
-            (display (format "<pre~a>\n"
-                           (if (string-null? lang)
-                               ""
-                               (format " class=\"language-~a\"" lang))) port)
-            (display (html-escape content) port)
-            (display "\n</pre>\n" port)))
+            (if (string-has-box-chars? content)
+                ;; Box-drawing detected - render as SVG
+                (begin
+                  (display "<div class=\"diagram-container\">\n" port)
+                  (display (text->svg-diagram content) port)
+                  (display "\n</div>\n" port))
+                ;; Regular code - use pre
+                (begin
+                  (display (format "<pre~a>\n"
+                                 (if (string-null? lang)
+                                     ""
+                                     (format " class=\"language-~a\"" lang))) port)
+                  (display (html-escape content) port)
+                  (display "\n</pre>\n" port)))))
 
         ((diagram)
           (display "<pre class=\"diagram\">\n" port)
@@ -524,9 +781,11 @@
 
         ((code)
           ;; Code blocks - may have optional language tag
-          (let ((content (if (and (pair? (cdr elem)) (symbol? (cadr elem)))
-                             (caddr elem)
-                             (cadr elem))))
+          ;; Convert box-drawing to ASCII for PostScript
+          (let* ((raw-content (if (and (pair? (cdr elem)) (symbol? (cadr elem)))
+                                  (caddr elem)
+                                  (cadr elem)))
+                 (content (text->ascii raw-content)))
             (display ".DS\n.ft CW\n.ps 8\n" port)
             (display (ms-escape content) port)
             (display "\n.ps\n.ft\n.DE\n" port)))
