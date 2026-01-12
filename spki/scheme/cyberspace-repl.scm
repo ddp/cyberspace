@@ -1290,6 +1290,7 @@
                             *wormholes*))
     (set! *wormhole-rate-limits* (cons (cons abs-path rate-limit) *wormhole-rate-limits*))
     (wormhole-audit 'wormhole-open abs-path `((vault ,vault-path) (capabilities ,(length capabilities))))
+    (session-stat! 'wormholes)
     (print "  (wormhole simulated - full implementation requires libfuse)")
     `(wormhole ,abs-path ,vault-path)))
 

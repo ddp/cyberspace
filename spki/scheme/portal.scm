@@ -66,6 +66,7 @@
     (hash-table-set! *session-stats* 'packets-ipv4 0)
     (hash-table-set! *session-stats* 'packets-ipv6 0)
     (hash-table-set! *session-stats* 'mdns-messages 0)
+    (hash-table-set! *session-stats* 'wormholes 0)
     (hash-table-set! *session-stats* 'boot-vups 0))
 
   (define (audit-load-entries-raw)
@@ -153,6 +154,9 @@
       (when (> (session-stat 'federation-changes) 0)
         (set! stats (cons (sprintf "~a fed~a" (session-stat 'federation-changes)
                                    (if (= 1 (session-stat 'federation-changes)) "" "s")) stats)))
+      (when (> (session-stat 'wormholes) 0)
+        (set! stats (cons (sprintf "~a wormhole~a" (session-stat 'wormholes)
+                                   (if (= 1 (session-stat 'wormholes)) "" "s")) stats)))
       ;; Network I/O - show as "↓NN ↑NN" if any traffic
       (let ((bytes-in (session-stat 'bytes-in))
             (bytes-out (session-stat 'bytes-out)))
