@@ -43,7 +43,8 @@
           (chicken condition)
           srfi-1      ; list utilities
           srfi-18     ; threads
-          srfi-4)     ; u8vectors
+          srfi-4      ; u8vectors
+          portal)     ; for session-stat!
 
   ;; ============================================================
   ;; Constants
@@ -123,7 +124,8 @@
                             (let-values (((in out) (tcp-connect host enrollment-port)))
                               (display packet out)
                               (close-output-port out)
-                              (close-input-port in))))
+                              (close-input-port in)
+                              (session-stat! 'mdns-messages))))
                         (local-broadcast-targets)))
                     (thread-sleep! announce-interval)
                     (loop))))))))
@@ -189,6 +191,7 @@
                             (print "[enroll] parse error: " (get-condition-property exn 'exn 'message "?"))
                             (let ((request (with-input-from-string data read)))
                               (print "[enroll] parsed request: " (if (pair? request) (car request) request))
+                              (session-stat! 'mdns-messages)  ; Track received mDNS message
                               (when (and (pair? request)
                                         (eq? (car request) 'enrollment-request))
                                 (let* ((fields (cdr request))

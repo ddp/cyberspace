@@ -65,6 +65,7 @@
     (hash-table-set! *session-stats* 'bytes-out 0)
     (hash-table-set! *session-stats* 'packets-ipv4 0)
     (hash-table-set! *session-stats* 'packets-ipv6 0)
+    (hash-table-set! *session-stats* 'mdns-messages 0)
     (hash-table-set! *session-stats* 'boot-vups 0))
 
   (define (audit-load-entries-raw)
@@ -144,6 +145,8 @@
                                    (if (= 1 (session-stat 'votes)) "" "s")) stats)))
       (when (> (session-stat 'gossip-exchanges) 0)
         (set! stats (cons (sprintf "~a gossip" (session-stat 'gossip-exchanges)) stats)))
+      (when (> (session-stat 'mdns-messages) 0)
+        (set! stats (cons (sprintf "~a mDNS" (session-stat 'mdns-messages)) stats)))
       (when (> (session-stat 'seals) 0)
         (set! stats (cons (sprintf "~a seal~a" (session-stat 'seals)
                                    (if (= 1 (session-stat 'seals)) "" "s")) stats)))

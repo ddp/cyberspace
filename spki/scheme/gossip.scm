@@ -45,11 +45,13 @@
           (chicken condition)
           srfi-1      ; list utilities
           srfi-4      ; u8vectors
+          srfi-13     ; string-contains
           srfi-18     ; threads
           srfi-69     ; hash tables
           bloom
           catalog
-          crypto-ffi)
+          crypto-ffi
+          portal)     ; for session-stat!
 
   ;; ============================================================
   ;; Configuration
@@ -136,6 +138,37 @@
         (merkle-diffs . 0)
         (false-positives . 0)
         (last-round . #f))))
+
+  ;; ============================================================
+  ;; Byte-Counted I/O
+  ;; ============================================================
+
+  (define (gossip-write data out)
+    "Write data and track bytes sent."
+    (let* ((str (with-output-to-string (lambda () (write data))))
+           (len (string-length str)))
+      (display str out)
+      (newline out)
+      (flush-output out)
+      (stat-inc! 'bytes-sent (+ len 1))  ; +1 for newline
+      (session-stat! 'bytes-out (+ len 1))
+      len))
+
+  (define (gossip-read in)
+    "Read data and track bytes received."
+    (let* ((data (read in))
+           ;; Estimate received bytes from data size
+           (str (with-output-to-string (lambda () (write data))))
+           (len (string-length str)))
+      (stat-inc! 'bytes-received len)
+      (session-stat! 'bytes-in len)
+      data))
+
+  (define (track-connection-type host)
+    "Track IPv4 vs IPv6 based on host address."
+    (if (string-contains host ":")
+        (session-stat! 'packets-ipv6)
+        (session-stat! 'packets-ipv4)))
 
   ;; ============================================================
   ;; Peer Management
@@ -287,6 +320,8 @@
         (peer-status-set! peer 'unreachable)
         #f)
       (let-values (((in out) (tcp-connect (peer-host peer) (peer-port peer))))
+        ;; Track connection protocol
+        (track-connection-type (peer-host peer))
         (dynamic-wind
           (lambda () #f)
           (lambda ()
@@ -338,12 +373,10 @@
      4. Return objects remote has that we might not"
 
     ;; Send our Bloom filter
-    (write (blocked-bloom-serialize *local-bloom*) out)
-    (newline out)
-    (flush-output out)
+    (gossip-write (blocked-bloom-serialize *local-bloom*) out)
 
     ;; Receive remote Bloom filter
-    (let* ((remote-data (read in))
+    (let* ((remote-data (gossip-read in))
            (remote-bloom (blocked-bloom-deserialize remote-data))
            (local-hashes (catalog->list *local-catalog*)))
 
@@ -372,12 +405,10 @@
      4. Return exact list of missing object hashes"
 
     ;; Send our Merkle root
-    (write `(merkle-root ,(catalog-root *local-catalog*)) out)
-    (newline out)
-    (flush-output out)
+    (gossip-write `(merkle-root ,(catalog-root *local-catalog*)) out)
 
     ;; Receive remote Merkle root
-    (let ((remote-response (read in)))
+    (let ((remote-response (gossip-read in)))
       (if (and (pair? remote-response)
                (eq? (car remote-response) 'merkle-root))
           (let ((remote-root (cadr remote-response)))
@@ -405,14 +436,12 @@
      4. Return list of successfully received hashes"
 
     ;; Request missing objects
-    (write `(request-objects ,(take missing-hashes
-                                    (min (length missing-hashes)
-                                         *max-transfer-batch*))) out)
-    (newline out)
-    (flush-output out)
+    (gossip-write `(request-objects ,(take missing-hashes
+                                           (min (length missing-hashes)
+                                                *max-transfer-batch*))) out)
 
     ;; Receive objects
-    (let ((response (read in)))
+    (let ((response (gossip-read in)))
       (if (and (pair? response)
                (eq? (car response) 'objects))
           (let ((objects (cdr response)))
