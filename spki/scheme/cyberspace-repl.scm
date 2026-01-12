@@ -67,93 +67,9 @@
               times)))
 
 ;;; ============================================================
-;;; Session Statistics (tracked from boot)
-;;; ============================================================
-;;; Counters for session activity, displayed at goodbye.
-
-(define *session-stats*
-  (make-hash-table))
-
-(define (session-stat-init!)
-  "Initialize session statistics at boot."
-  (hash-table-set! *session-stats* 'boot-time (current-seconds))
-  (hash-table-set! *session-stats* 'boot-audit-count (length (audit-load-entries-raw)))
-  (hash-table-set! *session-stats* 'commands 0)
-  (hash-table-set! *session-stats* 'syncs 0)
-  (hash-table-set! *session-stats* 'commits 0)
-  (hash-table-set! *session-stats* 'signs 0)
-  (hash-table-set! *session-stats* 'verifies 0)
-  (hash-table-set! *session-stats* 'queries 0)
-  (hash-table-set! *session-stats* 'peers-discovered 0)
-  (hash-table-set! *session-stats* 'gossip-exchanges 0)
-  (hash-table-set! *session-stats* 'votes 0)
-  (hash-table-set! *session-stats* 'seals 0)
-  (hash-table-set! *session-stats* 'federation-changes 0))
-
-(define (audit-load-entries-raw)
-  "Load audit entry count without parsing (for boot stats)."
-  (let ((dir ".vault/audit"))
-    (if (directory-exists? dir)
-        (filter (lambda (f) (string-suffix? ".sexp" f)) (directory dir))
-        '())))
-
-(define (session-stat! key #!optional (delta 1))
-  "Increment a session statistic."
-  (hash-table-set! *session-stats* key
-                   (+ delta (hash-table-ref/default *session-stats* key 0))))
-
-(define (session-stat key)
-  "Get a session statistic."
-  (hash-table-ref/default *session-stats* key 0))
-
-(define (session-uptime)
-  "Get session uptime in seconds."
-  (- (current-seconds) (session-stat 'boot-time)))
-
-(define (format-duration secs)
-  "Format seconds as human-readable duration."
-  (cond
-   ((< secs 60) (sprintf "~as" secs))
-   ((< secs 3600) (sprintf "~am ~as" (quotient secs 60) (modulo secs 60)))
-   ((< secs 86400) (sprintf "~ah ~am" (quotient secs 3600) (quotient (modulo secs 3600) 60)))
-   (else (sprintf "~ad ~ah" (quotient secs 86400) (quotient (modulo secs 86400) 3600)))))
-
-(define (session-summary)
-  "Generate session statistics summary for goodbye."
-  (let* ((uptime (session-uptime))
-         (new-audits (- (length (audit-load-entries-raw)) (session-stat 'boot-audit-count)))
-         (stats '()))
-    ;; Build list of notable stats - always show uptime
-    (set! stats (cons (format-duration uptime) stats))
-    (when (> (session-stat 'syncs) 0)
-      (set! stats (cons (sprintf "~a sync~a" (session-stat 'syncs)
-                                 (if (= 1 (session-stat 'syncs)) "" "s")) stats)))
-    (when (> (session-stat 'commits) 0)
-      (set! stats (cons (sprintf "~a commit~a" (session-stat 'commits)
-                                 (if (= 1 (session-stat 'commits)) "" "s")) stats)))
-    (when (> (session-stat 'signs) 0)
-      (set! stats (cons (sprintf "~a sign~a" (session-stat 'signs)
-                                 (if (= 1 (session-stat 'signs)) "" "s")) stats)))
-    (when (> (session-stat 'verifies) 0)
-      (set! stats (cons (sprintf "~a verif~a" (session-stat 'verifies)
-                                 (if (= 1 (session-stat 'verifies)) "y" "ies")) stats)))
-    (when (> (session-stat 'peers-discovered) 0)
-      (set! stats (cons (sprintf "~a peer~a" (session-stat 'peers-discovered)
-                                 (if (= 1 (session-stat 'peers-discovered)) "" "s")) stats)))
-    (when (> (session-stat 'votes) 0)
-      (set! stats (cons (sprintf "~a vote~a" (session-stat 'votes)
-                                 (if (= 1 (session-stat 'votes)) "" "s")) stats)))
-    (when (> (session-stat 'gossip-exchanges) 0)
-      (set! stats (cons (sprintf "~a gossip" (session-stat 'gossip-exchanges)) stats)))
-    (when (> (session-stat 'seals) 0)
-      (set! stats (cons (sprintf "~a seal~a" (session-stat 'seals)
-                                 (if (= 1 (session-stat 'seals)) "" "s")) stats)))
-    (when (> (session-stat 'federation-changes) 0)
-      (set! stats (cons (sprintf "~a fed~a" (session-stat 'federation-changes)
-                                 (if (= 1 (session-stat 'federation-changes)) "" "s")) stats)))
-    (when (> new-audits 0)
-      (set! stats (cons (sprintf "+~a audit" new-audits) stats)))
-    (reverse stats)))
+;;; Session Statistics - see portal.scm
+;;; (session-stat-init!, session-stat!, session-stat, session-uptime,
+;;;  session-summary, format-duration, format-bytes, goodbye)
 
 ;;; ============================================================
 ;;; Unicode Helpers
@@ -335,7 +251,7 @@
         (modules '("os" "crypto-ffi" "sexp" "mdns"
                    "audit" "wordlist" "bloom" "catalog" "keyring"
                    "cert" "enroll" "gossip" "security" "capability"
-                   "vault" "auto-enroll" "ui")))
+                   "vault" "auto-enroll" "ui" "portal")))
     (let ((rebuilt (fold
                     (lambda (module count)
                       (if (needs-rebuild? module stamp)
@@ -369,6 +285,7 @@
 (import capability)
 (import auto-enroll)
 (import ui)
+(import portal)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -882,6 +799,7 @@
 
 (define (consensus-vote proposal-id vote #!key (signature #f))
   "Vote on a consensus proposal (vote: 'accept | 'reject)"
+  (session-stat! 'votes)
   (print "Vote " vote " recorded for " (short-id proposal-id))
   `(vote-recorded ,vote))
 
@@ -1218,6 +1136,7 @@
 
 (define (quorum-vote prop-id choice #!key (encrypted #t))
   "Cast a vote (optionally homomorphically encrypted)"
+  (session-stat! 'votes)
   (print "Vote cast for " (short-id prop-id) " [" (if encrypted "encrypted" "plain") "]")
   `(vote-recorded ,choice))
 
@@ -4396,6 +4315,7 @@ Cyberspace REPL - Available Commands
 (define (tracked-commit . args)
   (let ((result (apply seal-commit args)))
     (session-stat! 'commits)
+    (session-stat! 'seals)
     result))
 
 (define (tracked-sync . args)
@@ -4413,11 +4333,26 @@ Cyberspace REPL - Available Commands
     (session-stat! 'verifies)
     result))
 
+(define (tracked-release . args)
+  (let ((result (apply seal-release args)))
+    (session-stat! 'seals)
+    result))
+
+(define (tracked-archive . args)
+  (let ((result (apply seal-archive args)))
+    (session-stat! 'seals)
+    result))
+
+(define (tracked-enroll-approve . args)
+  (let ((result (apply enroll-approve args)))
+    (session-stat! 'federation-changes)
+    result))
+
 (define *command-aliases*
   '((status    . introspect-system)
     (commit    . tracked-commit)
-    (release   . seal-release)
-    (archive   . seal-archive)
+    (release   . tracked-release)
+    (archive   . tracked-archive)
     (history   . seal-history)
     (sync      . tracked-sync)
     (keys      . list-keys)
@@ -4438,7 +4373,7 @@ Cyberspace REPL - Available Commands
     (connect   . node-connect)
     (ping      . node-ping)
     (enroll    . enroll-request)
-    (approve   . enroll-approve)
+    (approve   . tracked-enroll-approve)
     (discover  . discover-peers)
     (gossip    . gossip-status)
     (audit     . audit-read)
@@ -4523,38 +4458,10 @@ Cyberspace REPL - Available Commands
   (print vt100-normal)
   (void))
 
-;; Friendly exit
-(define (goodbye)
-  (repl-history-save)
-  (let* ((now (seconds->local-time (current-seconds)))
-         (date-str (sprintf "~a-~a-~a ~a:~a"
-                           (+ 1900 (vector-ref now 5))
-                           (string-pad-left (number->string (+ 1 (vector-ref now 4))) 2 #\0)
-                           (string-pad-left (number->string (vector-ref now 3)) 2 #\0)
-                           (string-pad-left (number->string (vector-ref now 2)) 2 #\0)
-                           (string-pad-left (number->string (vector-ref now 1)) 2 #\0)))
-         ;; Session statistics
-         (session-parts (session-summary))
-         ;; Vault state
-         (obj-count (count-vault-items "objects"))
-         (key-count (count-vault-items "keys"))
-         (vault-parts (filter identity
-                        (list
-                          (and (> obj-count 0) (sprintf "~a objects" obj-count))
-                          (and (> key-count 0) (sprintf "~a keys" key-count)))))
-         ;; Combine session stats and vault state
-         (all-parts (append session-parts vault-parts)))
-    (print "")
-    (if (null? all-parts)
-        (printf "Returning to objective reality, Cyberspace frozen at ~a.~n" date-str)
-        (printf "Returning to objective reality, Cyberspace frozen at ~a.~n  Session: ~a~n"
-                date-str
-                (string-intersperse all-parts " · ")))
-    (print "")
-    (flush-output)
-    ;; Drain any pending input to avoid escape codes leaking to shell
-    (let drain () (when (char-ready?) (read-char) (drain)))
-    (exit 0)))
+;; Friendly exit - delegates to portal module
+;; (portal.scm: inspired by VMS SYS$SYSTEM:LOGINOUT.EXE)
+(define (repl-goodbye)
+  (goodbye repl-history-save))
 
 (define (string-pad-left str len char)
   (let ((slen (string-length str)))
@@ -4570,8 +4477,19 @@ Cyberspace REPL - Available Commands
 ;; English-friendly aliases (just call with parens)
 (define keys (lambda () (soup 'keys)))
 (define releases (lambda () (soup-releases)))
-(define peers discover-peers)
+(define (peers)
+  (let ((result (discover-peers)))
+    (when (and (list? result) (not (null? result)))
+      (session-stat! 'peers-discovered (length result)))
+    result))
 (define gossip gossip-status)
+(define (gossip-sync . peers-arg)
+  "Run gossip round with peers (tracks stats)."
+  (let ((result (if (null? peers-arg)
+                    (gossip-round)
+                    (gossip-round (car peers-arg)))))
+    (session-stat! 'gossip-exchanges)
+    result))
 (define security security-summary)
 (define announce announce-presence)
 
@@ -4845,6 +4763,7 @@ Cyberspace REPL - Available Commands
   (audit 'query '(since \"1h\"))     Entries in last hour
   (audit 'analyze ...)             Combined VMS-style analysis"
 
+  (session-stat! 'queries)
   (let ((entries (audit-load-entries)))
     (cond
      ;; No args: summary view
@@ -5100,9 +5019,9 @@ Cyberspace REPL - Available Commands
 (define |?| help)    ; help
 
 ;; Quit shortcuts (don't shadow scheme's exit)
-(define quit goodbye)
-(define q goodbye)
-(define bye goodbye)
+(define quit repl-goodbye)
+(define q repl-goodbye)
+(define bye repl-goodbye)
 
 ;; Settable prompt
 (define *prompt* ": ")
@@ -5270,6 +5189,8 @@ Cyberspace REPL - Available Commands
 
 ;; Initialize session statistics
 (session-stat-init!)
+;; Measure boot-time VUPS (must be after vault import)
+(hash-table-set! *session-stats* 'boot-vups (measure-vups))
 
 ;; Report startup time
 (report-module-times)
