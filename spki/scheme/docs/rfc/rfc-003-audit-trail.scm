@@ -30,13 +30,13 @@
     "Specification"
     (subsection
       "Entry Structure"
-      (code scheme "(audit-entry\n  (id \"sha512:b14471cd57ea557f...\")\n  (timestamp \"Mon Jan 5 23:38:20 2026\")\n  (sequence 1)\n  (parent-id \"sha512:previous...\")\n  (actor\n    (principal #${public-key-blob})\n    (authorization-chain))\n  (action\n    (verb seal-publish)\n    (object \"1.0.0\")\n    (parameters \"/path/to/remote\"))\n  (context\n    (motivation \"Published to filesystem\")\n    (language \"en\"))\n  (environment\n    (platform \"darwin\")\n    (timestamp 1767685100))\n  (seal\n    (algorithm \"ed25519-sha512\")\n    (content-hash \"...\")\n    (signature \"...\")))"))
+      (code scheme "(audit-entry\n  (id \"sha512:b14471cd57ea557f...\")\n  (timestamp \"2026-01-05 23:38:20Z\")\n  (sequence 1)\n  (parent-id \"sha512:previous...\")\n  (actor\n    (principal #${public-key-blob})\n    (authorization-chain))\n  (action\n    (verb seal-publish)\n    (object \"1.0.0\")\n    (parameters \"/path/to/remote\"))\n  (context\n    (motivation \"Published to filesystem\")\n    (language \"en\"))\n  (environment\n    (platform \"darwin\")\n    (timestamp 1767685100))\n  (seal\n    (algorithm \"ed25519-sha512\")\n    (content-hash \"...\")\n    (signature \"...\")))"))
     (subsection
       "Core Fields"
       (table
         (header "Field " "Type " "Description ")
         (row "id " "string " "Content-addressed hash (SHA-512, first 32 hex chars) ")
-        (row "timestamp " "string " "Human-readable time ")
+        (row "timestamp " "string " "ISO 8601 UTC (YYYY-MM-DD HH:MM:SSZ) ")
         (row "sequence " "integer " "Monotonic counter within audit trail ")
         (row "parent-id " "string/nil " "ID of previous entry (hash chain) ")
         (row "actor " "record " "SPKI principal who performed action ")
@@ -129,7 +129,7 @@
       "Human-readable Export"
       (code scheme "(audit-export-human output: \"audit-export.txt\")")
       (p "Produces:")
-      (code "AUDIT TRAIL - Library of Cyberspace\n===================================\n\nEntry #1\n  ID: sha512:b14471cd57ea557f...\n  Time: Mon Jan 5 23:38:20 2026\n  Action: seal-publish\n  Why: Published release to filesystem\n\nEntry #2\n  ...")))
+      (code "AUDIT TRAIL - Library of Cyberspace\n===================================\n\nEntry #1\n  ID: sha512:b14471cd57ea557f...\n  Time: 2026-01-05 23:38:20Z\n  Action: seal-publish\n  Why: Published release to filesystem\n\nEntry #2\n  ...")))
   (section
     "Implementation Notes"
     (subsection

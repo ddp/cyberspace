@@ -246,14 +246,22 @@
     "Exit Cyberspace with farewell message and session summary."
     ;; Save history if callback provided
     (when history-save-proc (history-save-proc))
-    (let* ((now (seconds->utc-time (current-seconds)))
-           (date-str (sprintf "~a-~a-~a ~a:~a:~aZ"
-                             (+ 1900 (vector-ref now 5))
-                             (string-pad-left (number->string (+ 1 (vector-ref now 4))) 2 #\0)
-                             (string-pad-left (number->string (vector-ref now 3)) 2 #\0)
-                             (string-pad-left (number->string (vector-ref now 2)) 2 #\0)
-                             (string-pad-left (number->string (vector-ref now 1)) 2 #\0)
-                             (string-pad-left (number->string (vector-ref now 0)) 2 #\0)))
+    (let* ((secs (current-seconds))
+           (utc (seconds->utc-time secs))
+           (local (seconds->local-time secs))
+           (utc-str (sprintf "~a-~a-~a ~a:~a:~aZ"
+                            (+ 1900 (vector-ref utc 5))
+                            (string-pad-left (number->string (+ 1 (vector-ref utc 4))) 2 #\0)
+                            (string-pad-left (number->string (vector-ref utc 3)) 2 #\0)
+                            (string-pad-left (number->string (vector-ref utc 2)) 2 #\0)
+                            (string-pad-left (number->string (vector-ref utc 1)) 2 #\0)
+                            (string-pad-left (number->string (vector-ref utc 0)) 2 #\0)))
+           (local-str (sprintf "~a:~a:~a ~a"
+                              (string-pad-left (number->string (vector-ref local 2)) 2 #\0)
+                              (string-pad-left (number->string (vector-ref local 1)) 2 #\0)
+                              (string-pad-left (number->string (vector-ref local 0)) 2 #\0)
+                              (time->string local "%Z")))
+           (date-str (sprintf "~a (~a)" utc-str local-str))
            ;; Session statistics
            (session-parts (session-summary))
            ;; Vault state

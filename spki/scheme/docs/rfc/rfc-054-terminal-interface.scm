@@ -121,12 +121,17 @@
     "9. Messages"
     (subsection
       "9.1 Welcome Banner"
-      (code "Cyberspace Scheme v0.59 (2026-01-11)\n  Starlight · Darwin-arm64 · 10 cores, 64GB, Apple M4\n  IPv4: 192.168.1.100\n  IPv6: 2001:db8::1"))
+      (code "Cyberspace Scheme v0.59 (2026-01-11)\n  Starlight · Darwin-arm64 · 10 cores, 64GB, Apple M4\n  boot: 2026-01-11 22:30:45Z (14:30:45 PST)\n  IPv4: 192.168.1.100\n  IPv6: 2001:db8::1"))
     (subsection
       "9.2 Goodbye Message"
-      (code "Returning to objective reality, Cyberspace frozen at 2026-01-11 14:30,\n47 objects, 2 keys."))
+      (code "Returning to objective reality, Cyberspace frozen at 2026-01-11 22:35:22Z (14:35:22 PST).\n  Session: 4m 37s · 2 syncs · 47 objects · 2 keys"))
     (subsection
-      "9.3 Error Messages"
+      "9.3 Timestamp Convention"
+      (p "All timestamps in Cyberspace use ISO 8601 UTC format with Z suffix, followed by local time reference for operators:")
+      (code "YYYY-MM-DD HH:MM:SSZ (HH:MM:SS TZ)")
+      (p "UTC is canonical for storage, audit trails, and cross-node operations. The local time reference aids operators without affecting data integrity."))
+    (subsection
+      "9.4 Error Messages"
       (p "Errors should be clear and actionable:")
       (code "No signing key configured. Generate with (ed25519-keypair)")
       (p "Not:")
