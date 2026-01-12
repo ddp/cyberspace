@@ -15,12 +15,12 @@
     "2. Box Drawing"
     (subsection
       "2.1 Unicode Box Characters"
-      (p "All boxes MUST use Unicode box-drawing characters:")
-      (code "┌ U+250C  ─ U+2500  ┐ U+2510\n│ U+2502            │ U+2502\n└ U+2514  ─ U+2500  ┘ U+2518")
+      (p "All boxes MUST use Unicode box-drawing characters. Single-line (standard):")
+      (code "┌  U+250C  Top-left corner\n┐  U+2510  Top-right corner\n└  U+2514  Bottom-left corner\n┘  U+2518  Bottom-right corner\n│  U+2502  Vertical line\n─  U+2500  Horizontal line\n├  U+251C  Left tee (tree branch)\n┤  U+2524  Right tee\n┬  U+252C  Top tee\n┴  U+2534  Bottom tee\n┼  U+253C  Cross")
       (p "Double-line boxes for emphasis:")
-      (code "╔ U+2554  ═ U+2550  ╗ U+2557\n║ U+2551            ║ U+2551\n╚ U+255A  ═ U+2550  ╝ U+255D")
+      (code "╔  U+2554  Top-left corner\n╗  U+2557  Top-right corner\n╚  U+255A  Bottom-left corner\n╝  U+255D  Bottom-right corner\n║  U+2551  Vertical line\n═  U+2550  Horizontal line")
       (p "Rounded corners for certificates and sealed objects:")
-      (code "╭ U+256D  ─ U+2500  ╮ U+256E\n│ U+2502            │ U+2502\n╰ U+2570  ─ U+2500  ╯ U+256F"))
+      (code "╭  U+256D  Top-left corner\n╮  U+256E  Top-right corner\n╰  U+2570  Bottom-left corner\n╯  U+256F  Bottom-right corner"))
     (subsection
       "2.2 Box Construction Pattern"
       (p "Use closures to encapsulate box state:")
@@ -36,7 +36,7 @@
     "3. Tree Display"
     (subsection
       "3.1 Tree Characters"
-      (code "├─  U+251C + U+2500  branch with more siblings\n└─  U+2514 + U+2500  final branch (no more siblings)\n│   U+2502           vertical continuation"))
+      (code "├─  U+251C + U+2500  Branch with more siblings\n└─  U+2514 + U+2500  Final branch (no more siblings)\n│   U+2502           Vertical continuation\n▶   U+25B6           Collapsed/expandable indicator\n▼   U+25BC           Expanded indicator"))
     (subsection
       "3.2 Tree Example"
       (code "hostname · up 3d 12:45:03\n├─ 10 cores, 64GB, Apple M4\n├─ 192.168.1.100 / 2001:db8::1...\n└─ vault: .vault/ (keys) (audit)"))
@@ -81,7 +81,13 @@
       "6.1 Checkmarks and Crosses"
       (code "✓ U+2713  Success\n✗ U+2717  Failure\n• U+2022  Bullet point\n→ U+2192  Arrow, implies"))
     (subsection
-      "6.2 Sparklines"
+      "6.2 Inline Separators"
+      (p "For separating items in compact displays (session stats, status lines):")
+      (code "·  U+00B7  Middle dot separator (preferred)\n|  U+007C  Pipe (more intrusive, use sparingly)\n↓  U+2193  Down arrow (bytes/data in)\n↑  U+2191  Up arrow (bytes/data out)")
+      (p "Example session summary:")
+      (code "Session: 4m 24s · 2 syncs · 3 seals · ↓1.2K ↑856B · 1247 VUPS"))
+    (subsection
+      "6.3 Sparklines"
       (p "For activity visualization over time:")
       (code "▁▂▃▄▅▆▇█  U+2581 through U+2588")
       (p "Eight levels map to normalized data:")
