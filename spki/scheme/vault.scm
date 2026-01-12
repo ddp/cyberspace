@@ -72,6 +72,10 @@
    keystore-path
    keystore-exists?
 
+   ;; Realm naming
+   realm-name
+   set-realm-name!
+
    ;; Address parsing (RFC-041)
    parse-address
    address?
@@ -352,6 +356,32 @@
     (if (keystore-exists?)
         (with-input-from-file (keystore-pub-path) read)
         (error "No keystore found")))
+
+  ;;; ============================================================================
+  ;;; Realm Naming
+  ;;; ============================================================================
+  ;;;
+  ;;; Realms can have human-readable names (like hostnames for IP addresses).
+  ;;; The name is stored in .vault/realm-name as a simple string.
+
+  (define (realm-name-path)
+    ".vault/realm-name")
+
+  (define (realm-name)
+    "Get the realm's human-readable name, or #f if unnamed"
+    (let ((path (realm-name-path)))
+      (if (file-exists? path)
+          (string-trim-both (with-input-from-file path read-string))
+          #f)))
+
+  (define (set-realm-name! name)
+    "Set the realm's human-readable name"
+    (unless (directory-exists? ".vault")
+      (error "No vault found. Create one first."))
+    (with-output-to-file (realm-name-path)
+      (lambda () (display name) (newline)))
+    (print "Realm named: " name)
+    name)
 
   ;;; ============================================================================
   ;;; Utility Functions (must be defined before use)
