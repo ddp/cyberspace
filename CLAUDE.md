@@ -1,5 +1,12 @@
 # Claude Code Project Configuration
 
+## Session Start
+
+When starting a new conversation, provide a brief project overview using the
+cyberspace-digest agent. This gives context about the architecture (Chicken
+Scheme + OCaml TCB), key components (SPKI, vaults, gossip, RFCs), and design
+philosophy (research-driven, s-expressions, minimal TCB).
+
 ## Commit Attribution
 
 RFC-040 is authoritative for AI co-authorship for the entire project.
