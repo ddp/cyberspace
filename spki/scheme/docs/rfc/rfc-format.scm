@@ -649,13 +649,15 @@
             (author (assq 'author (cdr doc))))
 
         ;; HTML header
-        (display "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n" port)
+        (display "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"dark\">\n<head>\n" port)
         (display "  <meta charset=\"UTF-8\">\n" port)
         (if is-rfc
             (display (format "  <title>RFC-~a: ~a</title>\n" (zero-pad num 3) (html-escape title)) port)
             (display (format "  <title>~a</title>\n" (html-escape title)) port))
         (display "  <link rel=\"stylesheet\" href=\"rfc.css\">\n" port)
         (display "</head>\n<body>\n" port)
+        ;; Theme toggle
+        (display "<span class=\"theme-toggle\" onclick=\"toggleTheme()\" title=\"Toggle light/dark\">[theme]</span>\n" port)
 
         ;; Title block
         (if is-rfc
@@ -694,6 +696,24 @@
           (when footer
             (html-emit-element footer port)))
 
+        ;; Theme toggle script
+        (display "<script>\n" port)
+        (display "function toggleTheme() {\n" port)
+        (display "  const html = document.documentElement;\n" port)
+        (display "  const current = html.getAttribute('data-theme');\n" port)
+        (display "  const next = current === 'dark' ? 'light' : 'dark';\n" port)
+        (display "  html.setAttribute('data-theme', next);\n" port)
+        (display "  localStorage.setItem('theme', next);\n" port)
+        (display "}\n" port)
+        (display "(function() {\n" port)
+        (display "  const saved = localStorage.getItem('theme');\n" port)
+        (display "  if (saved) {\n" port)
+        (display "    document.documentElement.setAttribute('data-theme', saved);\n" port)
+        (display "  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {\n" port)
+        (display "    document.documentElement.setAttribute('data-theme', 'light');\n" port)
+        (display "  }\n" port)
+        (display "})();\n" port)
+        (display "</script>\n" port)
         (display "</body>\n</html>\n" port)))))
 
 ;;; ============================================================
