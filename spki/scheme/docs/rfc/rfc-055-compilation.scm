@@ -204,7 +204,7 @@
       (code "+---------------- forge: portal ----------------+
 | csc -shared -J -strict-types portal.scm      |
 | > 241K + 677B import in 921ms                |
-+----------------------------------------------+"))
++-----------------------------------------------+"))
     (subsection
       "4.2 Compiler Invocation"
       (p "The forge invokes csc (Chicken Scheme Compiler) with these flags:")
