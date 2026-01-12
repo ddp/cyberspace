@@ -696,7 +696,7 @@
           (when footer
             (html-emit-element footer port)))
 
-        ;; Theme toggle script
+        ;; Theme toggle script (supports ?theme=dark|light query param for REPL integration)
         (display "<script>\n" port)
         (display "function toggleTheme() {\n" port)
         (display "  const html = document.documentElement;\n" port)
@@ -706,6 +706,15 @@
         (display "  localStorage.setItem('theme', next);\n" port)
         (display "}\n" port)
         (display "(function() {\n" port)
+        (display "  // Query param override (for REPL: ?theme=dark or ?theme=light)\n" port)
+        (display "  const params = new URLSearchParams(window.location.search);\n" port)
+        (display "  const param = params.get('theme');\n" port)
+        (display "  if (param === 'dark' || param === 'light') {\n" port)
+        (display "    document.documentElement.setAttribute('data-theme', param);\n" port)
+        (display "    localStorage.setItem('theme', param);\n" port)
+        (display "    return;\n" port)
+        (display "  }\n" port)
+        (display "  // localStorage preference\n" port)
         (display "  const saved = localStorage.getItem('theme');\n" port)
         (display "  if (saved) {\n" port)
         (display "    document.documentElement.setAttribute('data-theme', saved);\n" port)
