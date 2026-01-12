@@ -202,8 +202,8 @@
       (code scheme "(bootstrap-modules!)  ; Called automatically at REPL start")
       (p "Output format:")
       (code "+---------------- forge: portal ----------------+
-| csc -shared -J -strict-types portal.scm      |
-| > 241K + 677B import in 921ms                |
+| csc -shared -J -strict-types portal.scm       |
+| > 241K + 677B import in 921ms                 |
 +-----------------------------------------------+"))
     (subsection
       "4.2 Compiler Invocation"
