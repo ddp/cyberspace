@@ -259,6 +259,14 @@
                   '())))
            (else '())))))
 
+  (define (count-vault-subdir vault-path subdir)
+    "Count non-hidden items in vault subdirectory"
+    (let ((path (make-pathname vault-path subdir)))
+      (if (directory-exists? path)
+          (length (filter (lambda (f) (not (string-prefix? "." f)))
+                          (directory path)))
+          0)))
+
   (define (introspect-realm)
     "Introspect realm/vault configuration"
     (let* ((vault-path (or (get-environment-variable "VAULT_PATH") ".vault"))
@@ -267,8 +275,16 @@
         (vault-path ,vault-path)
         (vault-exists ,vault-exists)
         ,@(if vault-exists
-              `((has-keystore ,(directory-exists? (make-pathname vault-path "keystore")))
-                (has-audit ,(directory-exists? (make-pathname vault-path "audit"))))
+              (let ((obj-count (count-vault-subdir vault-path "objects"))
+                    (key-count (count-vault-subdir vault-path "keys"))
+                    (release-count (count-vault-subdir vault-path "releases"))
+                    (audit-count (count-vault-subdir vault-path "audit")))
+                `((has-keystore ,(directory-exists? (make-pathname vault-path "keystore")))
+                  (has-audit ,(directory-exists? (make-pathname vault-path "audit")))
+                  (objects ,obj-count)
+                  (keys ,key-count)
+                  (releases ,release-count)
+                  (audits ,audit-count)))
               '()))))
 
   (define (introspect-codebase)

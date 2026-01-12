@@ -3555,7 +3555,14 @@ Cyberspace REPL - Available Commands
          (tcb (and code (assq 'tcb (cdr code)) (cadr (assq 'tcb (cdr code)))))
          (modules (and code (cadr (assq 'modules (cdr code)))))
          (rfcs (and code (cadr (assq 'rfcs (cdr code)))))
-         (vault-exists (and realm (cadr (assq 'vault-exists (cdr realm))))))
+         (vault-exists (and realm (cadr (assq 'vault-exists (cdr realm)))))
+         ;; Vault contents
+         (vault-objects (and realm (assq 'objects (cdr realm)) (cadr (assq 'objects (cdr realm)))))
+         (vault-keys (and realm (assq 'keys (cdr realm)) (cadr (assq 'keys (cdr realm)))))
+         (vault-releases (and realm (assq 'releases (cdr realm)) (cadr (assq 'releases (cdr realm)))))
+         (vault-audits (and realm (assq 'audits (cdr realm)) (cadr (assq 'audits (cdr realm)))))
+         ;; Identity
+         (identity (read-node-identity)))
     (set-terminal-title window-title)
     (print "")
     (print "Cyberspace Scheme " version " (" date ")")
@@ -3573,7 +3580,25 @@ Cyberspace REPL - Available Commands
                                   ""))
                ""))
     (when vault-exists
-      (print "  vault: " vault-exists))))
+      ;; Build comma-separated vault summary
+      (let* ((parts (filter identity
+                     (list
+                       (and vault-objects (> vault-objects 0)
+                            (string-append (number->string vault-objects) " objects"))
+                       (and vault-releases (> vault-releases 0)
+                            (string-append (number->string vault-releases) " releases"))
+                       (and vault-keys (> vault-keys 0)
+                            (string-append (number->string vault-keys) " keys"))
+                       (and vault-audits (> vault-audits 0)
+                            (string-append (number->string vault-audits) " audits")))))
+             (summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
+        (print "  vault: " vault-exists summary)))
+    ;; Show identity if enrolled
+    (when identity
+      (let ((name (cond ((assq 'name identity) => cadr) (else #f)))
+            (role (cond ((assq 'role identity) => cadr) (else #f))))
+        (when (and name role)
+          (print "  identity: " name " (" role ")"))))))
 
 ;;; ============================================================
 ;;; Cyberspace Channel Protocol
@@ -4454,6 +4479,7 @@ Cyberspace REPL - Available Commands
   (print "  (rfc 54 'html)      - Open in browser")
   (print "")
   (print "Security:")
+  (print "  (principals)        - Show identity and keys")
   (print "  (keyring-list)      - List keys in keyring")
   (print "  (keyring-generate)  - Generate new keypair")
   (print "  (security-summary)  - Security overview")
@@ -4473,7 +4499,8 @@ Cyberspace REPL - Available Commands
   (print "Shortcuts:")
   (print "  (|.|)               - Status at a glance")
   (print "  (|?|)               - This help")
-  (print "  (quit)              - Exit")
+  (print "  (banner)            - Redisplay startup banner")
+  (print "  (bye)               - Exit with session summary")
   (print "")
   (print vt100-normal)
   (void))
@@ -4512,6 +4539,34 @@ Cyberspace REPL - Available Commands
     result))
 (define security security-summary)
 (define announce announce-presence)
+
+;; Show principals (identity + keys)
+(define (principals)
+  "Display identity and signing keys"
+  (let ((identity (read-node-identity)))
+    (print "")
+    (if identity
+        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
+              (role (cond ((assq 'role identity) => cadr) (else "unknown"))))
+          (print "Identity: " name " (" role ")"))
+        (print "Identity: not enrolled"))
+    (print "")
+    ;; List keys from keyring
+    (let* ((key-path ".vault/keys")
+           (key-files (if (directory-exists? key-path)
+                          (filter (lambda (f) (string-suffix? ".pub" f))
+                                  (directory key-path))
+                          '())))
+      (if (null? key-files)
+          (print "Keys: none")
+          (begin
+            (print "Keys:")
+            (for-each
+             (lambda (f)
+               (print "  " (pathname-strip-extension f)))
+             (sort key-files string<?)))))
+    (print "")
+    (void)))
 
 ;;; ============================================================================
 ;;; Audit Trail Query Interface (VMS ANALYZE/AUDIT style)
