@@ -221,53 +221,39 @@
 
 (define (bootstrap-modules!)
   "Ensure all required modules are built for current platform.
+   Parallel builds by dependency level for speed.
    Pristine builds: -w enables all warnings, expect zero output."
   (let ((stamp (platform-stamp))
         (arch (current-arch))
         ;; Build order: strict topological sort by dependency level
-        ;;
-        ;; Level 0 (no cyberspace deps):
-        ;;   os          - OS introspection ("know thyself")
-        ;;   crypto-ffi  - libsodium foundation
-        ;;   sexp        - s-expression parser
-        ;;   mdns        - network discovery
-        ;;   app-bundle  - macOS bundling (shell only)
-        ;;   codesign    - macOS signing (shell only)
-        ;;
-        ;; Level 1 (crypto-ffi only):
-        ;;   fips        - FIPS self-tests (KATs)
-        ;;   audit       - tamper-evident logging
-        ;;   wordlist    - FIPS-181 verification codes
-        ;;   bloom       - probabilistic set membership
-        ;;   catalog     - Merkle tree inventory
-        ;;   keyring     - key management
-        ;;
-        ;; Level 2 (Levels 0+1):
-        ;;   cert        ← sexp + crypto-ffi
-        ;;   enroll      ← crypto-ffi + wordlist
-        ;;   gossip      ← bloom + catalog + crypto-ffi
-        ;;   security    ← cert + sexp + crypto-ffi (soup inspector)
-        ;;   capability  ← (standalone)
-        ;;
-        ;; Level 3:
-        ;;   vault       ← cert + crypto-ffi + audit
-        ;;   auto-enroll ← enroll + capability + mdns + gossip
-        ;;   ui          ← enroll + capability + auto-enroll
-        ;;
-        (modules '("os" "crypto-ffi" "sexp" "mdns"
-                   "fips" "audit" "wordlist" "bloom" "catalog" "keyring"
-                   "cert" "enroll" "gossip" "security" "capability"
-                   "vault" "auto-enroll" "ui" "portal")))
-    (let ((rebuilt (fold
-                    (lambda (module count)
-                      (if (needs-rebuild? module stamp)
-                          (begin
-                            (rebuild-module! module arch stamp)
-                            (+ count 1))
-                          count))
-                    0
-                    modules)))
-      (when (= rebuilt 0)
+        ;; Modules within each level can build in parallel
+        (levels '(;; Level 0 (no cyberspace deps)
+                  ("os" "crypto-ffi" "sexp" "mdns")
+                  ;; Level 1 (crypto-ffi only)
+                  ("fips" "audit" "wordlist" "bloom" "catalog" "keyring")
+                  ;; Level 2 (Levels 0+1)
+                  ("cert" "enroll" "gossip" "security" "capability")
+                  ;; Level 3 (all prior levels)
+                  ("vault" "auto-enroll" "ui" "portal"))))
+
+    (define (rebuild-level-parallel! modules-in-level)
+      "Rebuild all modules in level in parallel, return count rebuilt"
+      (let* ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level))
+             (pids (map (lambda (module)
+                          (process-fork
+                           (lambda ()
+                             (rebuild-module! module arch stamp)
+                             (exit 0))))
+                        to-build)))
+        ;; Wait for all children
+        (for-each (lambda (pid) (process-wait pid)) pids)
+        (length to-build)))
+
+    (let ((total-rebuilt (fold (lambda (level count)
+                                 (+ count (rebuild-level-parallel! level)))
+                               0
+                               levels)))
+      (when (= total-rebuilt 0)
         (print "All tomes current for " stamp)))))
 
 ;; Run bootstrap before loading modules
