@@ -3530,6 +3530,20 @@ Cyberspace REPL - Available Commands
                  (string-append cores " cores, ") "")
              (if (> mem-gb 0) (string-append (number->string mem-gb) "GB") "")))))))
 
+(define (get-connection-origin)
+  "Get the origin of the current connection (SSH client or local).
+   Returns #f for local sessions, hostname/IP for remote."
+  (let ((ssh-client (get-environment-variable "SSH_CLIENT"))
+        (ssh-conn (get-environment-variable "SSH_CONNECTION")))
+    (cond
+     ;; SSH_CLIENT format: "IP port port"
+     ((and ssh-client (> (string-length ssh-client) 0))
+      (car (string-split ssh-client " ")))
+     ;; SSH_CONNECTION format: "client_IP client_port server_IP server_port"
+     ((and ssh-conn (> (string-length ssh-conn) 0))
+      (car (string-split ssh-conn " ")))
+     (else #f))))
+
 (define (banner)
   (let* ((host (capitalize-first (get-hostname)))
          (window-title (string-append host " Workstation"))
@@ -3554,13 +3568,16 @@ Cyberspace REPL - Available Commands
          (vault-releases (or (and realm (assq 'releases (cdr realm)) (cadr (assq 'releases (cdr realm)))) 0))
          (vault-audits (or (and realm (assq 'audits (cdr realm)) (cadr (assq 'audits (cdr realm)))) 0))
          ;; Identity
-         (identity (read-node-identity)))
+         (identity (read-node-identity))
+         ;; Connection origin (SSH client)
+         (origin (get-connection-origin)))
     (set-terminal-title window-title)
     (print "")
     (print "Cyberspace Scheme " version " (" date ")")
     (print "  " host " · " platform (if (not (string=? hw "")) (string-append " · " hw) ""))
     (when ipv4 (print "  IPv4: " ipv4))
     (when ipv6 (print "  IPv6: " ipv6))
+    (when origin (print "  from: " origin))
     (print "  "
            (if loc (string-append (number->string (quotient loc 1000)) "K loc") "")
            (if modules (string-append ", " (number->string modules) " modules") "")
