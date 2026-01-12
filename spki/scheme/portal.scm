@@ -247,12 +247,13 @@
     ;; Save history if callback provided
     (when history-save-proc (history-save-proc))
     (let* ((now (seconds->local-time (current-seconds)))
-           (date-str (sprintf "~a-~a-~a ~a:~a"
+           (date-str (sprintf "~a-~a-~a ~a:~a:~a"
                              (+ 1900 (vector-ref now 5))
                              (string-pad-left (number->string (+ 1 (vector-ref now 4))) 2 #\0)
                              (string-pad-left (number->string (vector-ref now 3)) 2 #\0)
                              (string-pad-left (number->string (vector-ref now 2)) 2 #\0)
-                             (string-pad-left (number->string (vector-ref now 1)) 2 #\0)))
+                             (string-pad-left (number->string (vector-ref now 1)) 2 #\0)
+                             (string-pad-left (number->string (vector-ref now 0)) 2 #\0)))
            ;; Session statistics
            (session-parts (session-summary))
            ;; Vault state
