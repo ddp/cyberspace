@@ -3580,19 +3580,18 @@ Cyberspace REPL - Available Commands
                                   ""))
                ""))
     (when vault-exists
-      ;; Build comma-separated vault summary (values are always numbers now)
-      (let* ((parts (filter identity
-                     (list
-                       (and (> vault-objects 0)
-                            (string-append (number->string vault-objects) " objects"))
-                       (and (> vault-releases 0)
-                            (string-append (number->string vault-releases) " releases"))
-                       (and (> vault-keys 0)
-                            (string-append (number->string vault-keys) " keys"))
-                       (and (> vault-audits 0)
-                            (string-append (number->string vault-audits) " audits")))))
-             (summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
-        (print "  vault: " vault-exists summary)))
+      ;; Build comma-separated vault summary
+      (let ((parts '()))
+        (when (> vault-audits 0)
+          (set! parts (cons (string-append (number->string vault-audits) " audits") parts)))
+        (when (> vault-keys 0)
+          (set! parts (cons (string-append (number->string vault-keys) " keys") parts)))
+        (when (> vault-releases 0)
+          (set! parts (cons (string-append (number->string vault-releases) " releases") parts)))
+        (when (> vault-objects 0)
+          (set! parts (cons (string-append (number->string vault-objects) " objects") parts)))
+        (let ((summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
+          (print "  vault: " vault-exists summary))))
     ;; Show identity if enrolled
     (when identity
       (let ((name (cond ((assq 'name identity) => cadr) (else #f)))
