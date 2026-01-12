@@ -3553,9 +3553,9 @@ Cyberspace REPL - Available Commands
          (ipv4 (get-primary-ipv4))
          (ipv6 (get-primary-ipv6))
          (hw (get-hardware-summary))
-         ;; Boot timestamp with seconds
-         (now (seconds->local-time (current-seconds)))
-         (boot-time (sprintf "~a-~a-~a ~a:~a:~a"
+         ;; Boot timestamp with seconds (UTC)
+         (now (seconds->utc-time (current-seconds)))
+         (boot-time (sprintf "~a-~a-~a ~a:~a:~aZ"
                             (+ 1900 (vector-ref now 5))
                             (string-pad-left (number->string (+ 1 (vector-ref now 4))) 2 #\0)
                             (string-pad-left (number->string (vector-ref now 3)) 2 #\0)

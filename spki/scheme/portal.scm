@@ -246,8 +246,8 @@
     "Exit Cyberspace with farewell message and session summary."
     ;; Save history if callback provided
     (when history-save-proc (history-save-proc))
-    (let* ((now (seconds->local-time (current-seconds)))
-           (date-str (sprintf "~a-~a-~a ~a:~a:~a"
+    (let* ((now (seconds->utc-time (current-seconds)))
+           (date-str (sprintf "~a-~a-~a ~a:~a:~aZ"
                              (+ 1900 (vector-ref now 5))
                              (string-pad-left (number->string (+ 1 (vector-ref now 4))) 2 #\0)
                              (string-pad-left (number->string (vector-ref now 3)) 2 #\0)
