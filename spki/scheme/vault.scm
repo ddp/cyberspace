@@ -497,6 +497,10 @@
           (lambda ()
             (write metadata)
             (newline)))
+        ;; Track bytes written
+        (when (file-exists? metadata-file)
+          (session-stat! 'writes)
+          (session-stat! 'bytes-written (file-size metadata-file)))
 
         ;; Stage metadata file for next commit (optional)
         (when (vault-config 'track-metadata)
@@ -2803,6 +2807,10 @@ Object Types:
         (else
          (error "Unknown archive format" fmt)))
 
+      ;; Track bytes written
+      (when (file-exists? out)
+        (session-stat! 'writes)
+        (session-stat! 'bytes-written (file-size out)))
       (print "Archive sealed: " out)
       out))
 

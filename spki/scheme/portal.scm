@@ -71,6 +71,7 @@
     (hash-table-set! *session-stats* 'unlocks 0)
     (hash-table-set! *session-stats* 'reads 0)
     (hash-table-set! *session-stats* 'writes 0)
+    (hash-table-set! *session-stats* 'bytes-written 0)
     (hash-table-set! *session-stats* 'deletes 0)
     (hash-table-set! *session-stats* 'queries 0)
     ;; Crypto operations
@@ -199,6 +200,8 @@
           (format-stat 'unlocks "unlock" "s")
           (format-stat 'reads "read" "s")
           (format-stat 'writes "write" "s")
+          (let ((bw (session-stat 'bytes-written)))
+            (and (> bw 0) (string-append (format-bytes bw) " written")))
           (format-stat-irregular 'queries "query" "queries")
           ;; Crypto ops
           (format-stat 'hashes "hash" "es")
