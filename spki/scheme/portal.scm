@@ -171,10 +171,6 @@
           (set! stats (cons (sprintf "~a v6" ipv6) stats))))
       (when (> new-audits 0)
         (set! stats (cons (sprintf "+~a audit" new-audits) stats)))
-      ;; VUPS - always show boot-time benchmark
-      (let ((vups (session-stat 'boot-vups)))
-        (when (> vups 0)
-          (set! stats (cons (sprintf "~a VUPS" vups) stats))))
       (reverse stats)))
 
   ;;; ============================================================
