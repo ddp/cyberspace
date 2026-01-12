@@ -105,11 +105,7 @@ generate_kwic_entries() {
     kwic_for_doc "$rfc" "$(get_title "$rfc")"
   done
 
-  # README
-  if [[ -f "README.scm" ]]; then
-    local readme_title=$(grep -o '(title "[^"]*")' README.scm | sed 's/(title "//; s/")//' | head -1)
-    kwic_for_doc "README" "$readme_title"
-  fi
+  # README excluded from KWIC - it's not an RFC
 }
 
 # Generate index.html catalog
