@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RFC-055: Compilation and Type Inference Conventions</title>
+  <link rel="stylesheet" href="rfc.css">
+</head>
+<body>
+<h1>RFC-055: Compilation and Type Inference Conventions</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies compilation conventions for Cyberspace Scheme modules: type declarations for tractable inference, build dependency levels, beta vs production flags, and the forge build system. The guiding principle is Ada's "declare everything, infer nothing."</p>
+</section>
+<section>
+<h2>1. The Inference Problem</h2>
+<p>Whole-program type inference without declarations can exhibit exponential complexity. Chicken Scheme's scrutinizer with -strict-types performs flow-sensitive analysis that becomes intractable when:</p>
+<ul>
+<li>Functions contain many conditional branches with side effects</li>
+<li>Format strings (sprintf) create implicit polymorphic constraints</li>
+<li>Type information cannot flow through set! mutations</li>
+</ul>
+<p>A function with 30 conditional sprintf calls can take 5+ minutes to analyze. The same function with type declarations compiles in under 1 second.</p>
+</section>
+<section>
+<h2>2. The Ada Principle</h2>
+<p>Ada's compilation model requires explicit type declarations everywhere. The compiler is a checker, not a guesser. This trades verbosity for predictability.</p>
+<p>For Cyberspace modules, we adopt a hybrid approach:</p>
+<ul>
+<li>Functions with complex control flow MUST have type declarations</li>
+<li>Simple leaf functions MAY rely on inference</li>
+<li>Public API functions SHOULD have declarations for documentation</li>
+</ul>
+<pre class="language-scheme">
+;; Required: complex function with many branches
+(: session-summary (-&gt; (list-of string)))
+(define (session-summary) ...)
+
+;; Optional: simple leaf function
+(define (format-size bytes)
+  (cond ...))
+</pre>
+</section>
+<section>
+<h2>3. Type Declaration Patterns</h2>
+<h3>3.1 Import chicken.type</h3>
+<p>Modules using type declarations must import the type system:</p>
+<pre class="language-scheme">
+(import (chicken type))
+</pre>
+<h3>3.2 Declaration Syntax</h3>
+<p>Type declarations precede function definitions:</p>
+<pre class="language-scheme">
+(: function-name (arg-type ... -&gt; return-type))
+
+;; Examples:
+(: format-stat (symbol string string -&gt; (or string false)))
+(: session-uptime (-&gt; fixnum))
+(: goodbye (#!optional (or false procedure) -&gt; noreturn))
+</pre>
+<h3>3.3 Typed Helper Pattern</h3>
+<p>Break large functions into small typed helpers:</p>
+<pre class="language-scheme">
+;; BAD: One large function with 30 sprintf calls
+(define (session-summary)
+  (let ((stats '()))
+    (when (&gt; (session-stat 'reads) 0)
+      (set! stats (cons (sprintf "~a reads" ...) stats)))
+    ... ;; 29 more similar blocks
+    (reverse stats)))
+
+;; GOOD: Small typed helpers composed via filter
+(: format-stat (symbol string string -&gt; (or string false)))
+(define (format-stat key singular plural-suffix)
+  (let ((n (session-stat key)))
+    (if (&gt; n 0)
+        (string-append (number-&gt;string n) " " singular
+                       (if (= n 1) "" plural-suffix))
+        #f)))
+
+(define (session-summary)
+  (filter identity
+    (list (format-stat 'reads "read" "s")
+          (format-stat 'writes "write" "s")
+          ...)))
+</pre>
+<p>Each helper is independently typed. The type checker analyzes them separately, avoiding combinatorial explosion.</p>
+</section>
+<section>
+<h2>4. Build Dependency Levels</h2>
+<p>Modules are organized into dependency levels for parallel compilation. Modules within a level have no mutual dependencies and can build concurrently.</p>
+<pre class="language-scheme">
+;; Level 0: No cyberspace dependencies
+("os" "crypto-ffi" "sexp" "capability")
+
+;; Level 1: Single dependencies from Level 0
+("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
+
+;; Level 2: Dependencies on Levels 0+1
+("cert" "enroll")
+
+;; Level 3: Dependencies on Level 2
+("gossip" "security")
+
+;; Level 4: Dependencies on Level 3
+("vault" "auto-enroll")
+
+;; Level 5: Final layer
+("ui")
+</pre>
+<p>Adding a new module requires analyzing its imports to determine the correct level. A module importing from level N must be placed in level N+1 or higher.</p>
+</section>
+<section>
+<h2>5. Beta vs Production Builds</h2>
+<h3>5.1 Beta Mode</h3>
+<p>During development and beta testing, enable strict type checking:</p>
+<pre class="language-scheme">
+(define *beta-build* #t)
+
+;; Results in: csc -shared -J -strict-types module.scm
+</pre>
+<p>Benefits:</p>
+<ul>
+<li>Catches type errors at compile time</li>
+<li>Validates type declaration accuracy</li>
+<li>Identifies functions needing refactoring</li>
+</ul>
+<h3>5.2 Production Mode</h3>
+<p>For release builds, disable strict checking for faster compilation:</p>
+<pre class="language-scheme">
+(define *beta-build* #f)
+
+;; Results in: csc -shared -J module.scm
+</pre>
+<p>Type declarations remain as documentation but are not enforced.</p>
+</section>
+<section>
+<h2>6. The Forge Build System</h2>
+<h3>6.1 Forge Output</h3>
+<p>The forge displays compilation status in boxes:</p>
+<pre>
++---------------- forge: portal ----------------+
+| csc -shared -J -strict-types portal.scm      |
+| &gt; 241K + 677B import in 921ms                |
++----------------------------------------------+
+</pre>
+<h3>6.2 Parallel Level Compilation</h3>
+<p>Each dependency level compiles in parallel using process-fork. The build waits for all processes in a level before starting the next level.</p>
+<pre class="language-scheme">
+(define (rebuild-level-parallel! modules-in-level)
+  (let* ((pids (map (lambda (module)
+                      (process-fork
+                        (lambda ()
+                          (rebuild-module! module)
+                          (exit 0))))
+                    modules-in-level)))
+    (for-each process-wait pids)))
+</pre>
+<h3>6.3 Rebuild Detection</h3>
+<p>A module needs rebuilding when:</p>
+<ul>
+<li>The .so file is missing</li>
+<li>The .import.scm file is missing</li>
+<li>The source .scm is newer than the .so</li>
+<li>The architecture stamp doesn't match</li>
+</ul>
+</section>
+<section>
+<h2>7. Compiler Warnings</h2>
+<p>With -strict-types, the scrutinizer reports:</p>
+<ul>
+<li>Type mismatches (argument types don't match declarations)</li>
+<li>Invalid arguments (e.g., passing #f where struct expected)</li>
+<li>Deprecated identifiers</li>
+<li>Format string errors</li>
+</ul>
+<p>All warnings should be addressed. A warning-free build indicates type-safe code.</p>
+<pre>
+;; Example warning:
+Warning: Invalid argument
+  In procedure `discover-and-elect',
+  Argument #1 to procedure `tcp-accept' has an invalid type:
+    false
+  The expected type is:
+    (struct tcp-listener)
+</pre>
+</section>
+<section>
+<h2>8. Performance Expectations</h2>
+<table>
+<tr><th>Module Size</th><th>Without Types</th><th>With Types</th><th>With Declarations</th></tr>
+<tr><td>Small (&lt;500 LOC)</td><td>~500ms</td><td>~700ms</td><td>~700ms</td></tr>
+<tr><td>Medium (500-2000 LOC)</td><td>~1s</td><td>~2s</td><td>~2s</td></tr>
+<tr><td>Large (&gt;2000 LOC)</td><td>~2s</td><td>exponential*</td><td>~7s</td></tr>
+</table>
+<p>* Without type declarations, large modules with complex control flow can take minutes or fail to complete.</p>
+</section>
+<section>
+<h2>9. References</h2>
+<ul>
+<li>Chicken Scheme User's Manual: Types</li>
+<li>RFC-054 Terminal Interface Conventions (forge display)</li>
+<li>Ada Reference Manual: Type Declarations</li>
+<li>Hindley-Milner Type Inference (theoretical background)</li>
+</ul>
+</section>
+</body>
+</html>
