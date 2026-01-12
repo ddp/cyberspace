@@ -3556,11 +3556,11 @@ Cyberspace REPL - Available Commands
          (modules (and code (cadr (assq 'modules (cdr code)))))
          (rfcs (and code (cadr (assq 'rfcs (cdr code)))))
          (vault-exists (and realm (cadr (assq 'vault-exists (cdr realm)))))
-         ;; Vault contents
-         (vault-objects (and realm (assq 'objects (cdr realm)) (cadr (assq 'objects (cdr realm)))))
-         (vault-keys (and realm (assq 'keys (cdr realm)) (cadr (assq 'keys (cdr realm)))))
-         (vault-releases (and realm (assq 'releases (cdr realm)) (cadr (assq 'releases (cdr realm)))))
-         (vault-audits (and realm (assq 'audits (cdr realm)) (cadr (assq 'audits (cdr realm)))))
+         ;; Vault contents - default to 0 if not present
+         (vault-objects (or (and realm (assq 'objects (cdr realm)) (cadr (assq 'objects (cdr realm)))) 0))
+         (vault-keys (or (and realm (assq 'keys (cdr realm)) (cadr (assq 'keys (cdr realm)))) 0))
+         (vault-releases (or (and realm (assq 'releases (cdr realm)) (cadr (assq 'releases (cdr realm)))) 0))
+         (vault-audits (or (and realm (assq 'audits (cdr realm)) (cadr (assq 'audits (cdr realm)))) 0))
          ;; Identity
          (identity (read-node-identity)))
     (set-terminal-title window-title)
@@ -3580,16 +3580,16 @@ Cyberspace REPL - Available Commands
                                   ""))
                ""))
     (when vault-exists
-      ;; Build comma-separated vault summary
+      ;; Build comma-separated vault summary (values are always numbers now)
       (let* ((parts (filter identity
                      (list
-                       (and vault-objects (> vault-objects 0)
+                       (and (> vault-objects 0)
                             (string-append (number->string vault-objects) " objects"))
-                       (and vault-releases (> vault-releases 0)
+                       (and (> vault-releases 0)
                             (string-append (number->string vault-releases) " releases"))
-                       (and vault-keys (> vault-keys 0)
+                       (and (> vault-keys 0)
                             (string-append (number->string vault-keys) " keys"))
-                       (and vault-audits (> vault-audits 0)
+                       (and (> vault-audits 0)
                             (string-append (number->string vault-audits) " audits")))))
              (summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
         (print "  vault: " vault-exists summary)))
