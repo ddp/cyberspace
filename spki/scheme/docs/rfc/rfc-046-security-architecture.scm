@@ -273,6 +273,62 @@
     (p "Properties: - Hash-chained: tamper-evident - Signed: non-repudiable - Monotonic: gaps detected - Distributed: witnesses replicate")
     (p "What gets logged: - Capability creation - Capability exercise (access) - Capability revocation - Access denials - Object creation - Realm events (role changes, federation)"))
   (section
+    "Session Observability"
+    (p "The portal module manages session lifecycle: crossing into and out of cyberspace. Every session provides observability through the banner, session statistics, and the goodbye summary.")
+    (subsection
+      "The Banner"
+      (p "At session start, the banner attests system state. Every line is meaningful:")
+      (code "Cyberspace Scheme v0.9.17 (2026-01-11)\n  Om · Darwin-arm64 · 16 cores, 128GB, Apple M4\n  IPv4: 192.168.0.105\n  IPv6: fd0f:a8ba:61a3:42ce:1856:f4d9:e25:998e\n  37K loc, 21 modules, 0 rfcs, 1K tcb (1:32)\n  vault: .vault (1 releases, 23 audits)\n  realm: om (ecefca39...)\n  entropy: /dev/urandom (sysrandom)\n  FIPS: passed")
+      (table
+        (header "Line " "Security Purpose ")
+        (row "Version, date " "Identifies build, detects stale installations ")
+        (row "Hostname, arch " "Confirms you're on the expected machine ")
+        (row "IPv4/IPv6 " "Network identity for federation, peer verification ")
+        (row "loc, modules, tcb " "Codebase size, attack surface visibility ")
+        (row "vault " "Confirms vault exists, shows releases and audit count ")
+        (row "realm " "Your cryptographic identity (abbreviated principal) ")
+        (row "entropy " "Entropy source attestation for key generation ")
+        (row "FIPS " "Cryptographic self-test status (must pass) "))
+      (p "The FIPS line is critical. Before trusting any cryptographic operation, the system runs Known-Answer Tests (KATs) against SHA-256, SHA-512, Ed25519, and the RNG. If any test fails, the system displays FAILED and should not be trusted for security operations."))
+    (subsection
+      "Realm Naming"
+      (p "Realms can have human-readable names, analogous to hostnames for IP addresses:")
+      (code scheme "(set-realm-name! \"om\")     ; Name this realm\n(realm-name)               ; => \"om\"")
+      (p "The name appears in the banner: `realm: om (ecefca39...)` The abbreviated principal (first 8 hex chars) provides cryptographic identity while the name provides human recognition. Names are stored in `.vault/realm-name`."))
+    (subsection
+      "Session Statistics"
+      (p "Every operation is counted. Statistics track session activity for monitoring and forensics:")
+      (table
+        (header "Category " "Stats " "Purpose ")
+        (row "Vault I/O " "unlocks, reads, writes, deletes, queries " "Storage activity profile ")
+        (row "Crypto ops " "hashes, signs, verifies, encrypts, decrypts " "Cryptographic workload ")
+        (row "Seal ops " "commits, seals, syncs " "Version control activity ")
+        (row "Federation " "peers-discovered, gossip-exchanges, votes " "Network participation ")
+        (row "Network I/O " "bytes-in, bytes-out, packets-ipv4/ipv6 " "Traffic volume ")
+        (row "Errors " "verify-fails, auth-fails, timeouts " "Security-relevant failures "))
+      (p "Statistics are initialized at session start and accumulated during operation. The primitives live in the `os` module (level 0) so all modules can instrument themselves without circular dependencies.")
+      (code scheme "(session-stat! 'unlocks)           ; Increment unlock counter\n(session-stat! 'bytes-in 1024)     ; Add 1024 to bytes-in\n(session-stat 'reads)              ; Get current read count"))
+    (subsection
+      "The Portal"
+      (p "Entry and exit are symmetric. The goodbye message mirrors the banner's attestation style:")
+      (code "Cyberspace frozen at 2026-01-11 20:32 on om.\n  Session: 0s · 5000 weave · 1 unlock · 3 reads · 2 queries")
+      (p "The session summary shows:")
+      (list
+        (item "Duration (human-readable: 0s, 5m, 2h 30m, 1d 4h)")
+        (item "Weave - crypto benchmark from boot")
+        (item "Notable operations (non-zero counts)")
+        (item "Errors if any occurred (verify-fails, auth-fails, timeouts)"))
+      (p "The hostname in the goodbye message confirms which realm you're leaving - important when operating multiple realms via SSH."))
+    (subsection
+      "Monitoring Philosophy"
+      (p "\"You can always assert() it away.\" Statistics are conditional instrumentation:")
+      (list
+        (item "Always present in source - documents what's measurable")
+        (item "Minimal overhead - hash table increment")
+        (item "No persistence - session-scoped, vanishes on exit")
+        (item "Extensible - add new stats by instrumenting operations"))
+      (p "The pattern comes from IKE clustering code: conditional asserts for QA builds, compiled out for production. Here we keep the counters but the cost is negligible.")))
+  (section
     "Trusted Path"
     (p "When it matters, talk directly to the core.")
     (code "┌──────────────────────────────────────┐\n│           HUMAN OPERATOR              │\n└─────────────────┬────────────────────┘\n                  │ Local terminal, no network\n┌─────────────────▼────────────────────┐\n│          CYBERSPACE REPL              │\n│    ╔═════════════════════════════╗   │\n│    ║  TRUSTED PATH ACTIVE        ║   │\n│    ╚═════════════════════════════╝   │\n└─────────────────┬────────────────────┘\n                  │\n┌─────────────────▼────────────────────┐\n│           TRUSTED CORE                │\n└──────────────────────────────────────┘")

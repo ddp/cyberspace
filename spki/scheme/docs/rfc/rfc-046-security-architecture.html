@@ -495,6 +495,82 @@ E4. Revocation propagates
 <p>What gets logged: - Capability creation - Capability exercise (access) - Capability revocation - Access denials - Object creation - Realm events (role changes, federation)</p>
 </section>
 <section>
+<h2>Session Observability</h2>
+<p>The portal module manages session lifecycle: crossing into and out of cyberspace. Every session provides observability through the banner, session statistics, and the goodbye summary.</p>
+<h3>The Banner</h3>
+<p>At session start, the banner attests system state. Every line is meaningful:</p>
+<pre>
+Cyberspace Scheme v0.9.17 (2026-01-11)
+  Om · Darwin-arm64 · 16 cores, 128GB, Apple M4
+  IPv4: 192.168.0.105
+  IPv6: fd0f:a8ba:61a3:42ce:1856:f4d9:e25:998e
+  37K loc, 21 modules, 0 rfcs, 1K tcb (1:32)
+  vault: .vault (1 releases, 23 audits)
+  realm: om (ecefca39...)
+  entropy: /dev/urandom (sysrandom)
+  FIPS: passed
+</pre>
+<table>
+<tr><th>Line </th><th>Security Purpose </th></tr>
+<tr><td>Version, date </td><td>Identifies build, detects stale installations </td></tr>
+<tr><td>Hostname, arch </td><td>Confirms you're on the expected machine </td></tr>
+<tr><td>IPv4/IPv6 </td><td>Network identity for federation, peer verification </td></tr>
+<tr><td>loc, modules, tcb </td><td>Codebase size, attack surface visibility </td></tr>
+<tr><td>vault </td><td>Confirms vault exists, shows releases and audit count </td></tr>
+<tr><td>realm </td><td>Your cryptographic identity (abbreviated principal) </td></tr>
+<tr><td>entropy </td><td>Entropy source attestation for key generation </td></tr>
+<tr><td>FIPS </td><td>Cryptographic self-test status (must pass) </td></tr>
+</table>
+<p>The FIPS line is critical. Before trusting any cryptographic operation, the system runs Known-Answer Tests (KATs) against SHA-256, SHA-512, Ed25519, and the RNG. If any test fails, the system displays FAILED and should not be trusted for security operations.</p>
+<h3>Realm Naming</h3>
+<p>Realms can have human-readable names, analogous to hostnames for IP addresses:</p>
+<pre class="language-scheme">
+(set-realm-name! "om")     ; Name this realm
+(realm-name)               ; =&gt; "om"
+</pre>
+<p>The name appears in the banner: `realm: om (ecefca39...)` The abbreviated principal (first 8 hex chars) provides cryptographic identity while the name provides human recognition. Names are stored in `.vault/realm-name`.</p>
+<h3>Session Statistics</h3>
+<p>Every operation is counted. Statistics track session activity for monitoring and forensics:</p>
+<table>
+<tr><th>Category </th><th>Stats </th><th>Purpose </th></tr>
+<tr><td>Vault I/O </td><td>unlocks, reads, writes, deletes, queries </td><td>Storage activity profile </td></tr>
+<tr><td>Crypto ops </td><td>hashes, signs, verifies, encrypts, decrypts </td><td>Cryptographic workload </td></tr>
+<tr><td>Seal ops </td><td>commits, seals, syncs </td><td>Version control activity </td></tr>
+<tr><td>Federation </td><td>peers-discovered, gossip-exchanges, votes </td><td>Network participation </td></tr>
+<tr><td>Network I/O </td><td>bytes-in, bytes-out, packets-ipv4/ipv6 </td><td>Traffic volume </td></tr>
+<tr><td>Errors </td><td>verify-fails, auth-fails, timeouts </td><td>Security-relevant failures </td></tr>
+</table>
+<p>Statistics are initialized at session start and accumulated during operation. The primitives live in the `os` module (level 0) so all modules can instrument themselves without circular dependencies.</p>
+<pre class="language-scheme">
+(session-stat! 'unlocks)           ; Increment unlock counter
+(session-stat! 'bytes-in 1024)     ; Add 1024 to bytes-in
+(session-stat 'reads)              ; Get current read count
+</pre>
+<h3>The Portal</h3>
+<p>Entry and exit are symmetric. The goodbye message mirrors the banner's attestation style:</p>
+<pre>
+Cyberspace frozen at 2026-01-11 20:32 on om.
+  Session: 0s · 5000 weave · 1 unlock · 3 reads · 2 queries
+</pre>
+<p>The session summary shows:</p>
+<ul>
+<li>Duration (human-readable: 0s, 5m, 2h 30m, 1d 4h)</li>
+<li>Weave - crypto benchmark from boot</li>
+<li>Notable operations (non-zero counts)</li>
+<li>Errors if any occurred (verify-fails, auth-fails, timeouts)</li>
+</ul>
+<p>The hostname in the goodbye message confirms which realm you're leaving - important when operating multiple realms via SSH.</p>
+<h3>Monitoring Philosophy</h3>
+<p>"You can always assert() it away." Statistics are conditional instrumentation:</p>
+<ul>
+<li>Always present in source - documents what's measurable</li>
+<li>Minimal overhead - hash table increment</li>
+<li>No persistence - session-scoped, vanishes on exit</li>
+<li>Extensible - add new stats by instrumenting operations</li>
+</ul>
+<p>The pattern comes from IKE clustering code: conditional asserts for QA builds, compiled out for production. Here we keep the counters but the cost is negligible.</p>
+</section>
+<section>
 <h2>Trusted Path</h2>
 <p>When it matters, talk directly to the core.</p>
 <pre>
