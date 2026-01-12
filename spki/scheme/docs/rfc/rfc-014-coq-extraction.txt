@@ -1,36 +1,37 @@
 RFC-014: Coq Extraction for TCB
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This RFC specifies the use of Coq proof assistant for verified implementation
-of the Trusted Computing Base, with extraction to OCaml for production use.
-Prove once, trust forever.
+This RFC specifies the use of Coq proof assistant for verified
+implementation of the Trusted Computing Base, with extraction to OCaml
+for production use. Prove once, trust forever.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 The Prime Directive (RFC-002):
 
 
     "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme."
 
-But even OCaml can have bugs. The TCB handles: - Ed25519 signatures - SHA-512
-hashing - Signature chain verification
+But even OCaml can have bugs. The TCB handles: - Ed25519 signatures -
+SHA-512 hashing - Signature chain verification
 
 A single bug breaks everything.
 
 Coq provides:
 
 1. Machine-checked proofs: Theorems verified by computer 2. Extraction:
-Generate OCaml from proofs 3. Correctness by construction: Implementation
-matches specification 4. Eternal validity: Proofs don't expire
+Generate OCaml from proofs 3. Correctness by construction:
+Implementation matches specification 4. Eternal validity: Proofs don't
+expire
 
 From the Coq motto:
 
@@ -38,40 +39,40 @@ From the Coq motto:
     "The proof is in the code."
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SPECIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Trusted Computing Base
 ----------------------
 
 
-    ┌─────────────────────────────────────────────────────────────┐
-    │                    CYBERSPACE TCB                           │
-    │                                                             │
-    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-    │   │   Ed25519   │  │   SHA-512   │  │   Verify    │        │
-    │   │   Proven    │  │   Proven    │  │   Proven    │        │
-    │   └──────┬──────┘  └──────┬──────┘  └──────┬──────┘        │
-    │          │                │                │                │
-    │          └────────────────┼────────────────┘                │
-    │                           │                                 │
-    │                    Coq Extraction                           │
-    │                           │                                 │
-    │                    ┌──────▼──────┐                          │
-    │                    │    OCaml    │                          │
-    │                    │   ~1000 LOC │                          │
-    │                    └─────────────┘                          │
-    │                                                             │
-    │   Proven in Coq. Extracted to OCaml. Called from Scheme.   │
-    │                                                             │
-    └─────────────────────────────────────────────────────────────┘
+    +-------------------------------------------------------------+
+    |                    CYBERSPACE TCB                           |
+    |                                                             |
+    |   +-------------+  +-------------+  +-------------+        |
+    |   |   Ed25519   |  |   SHA-512   |  |   Verify    |        |
+    |   |   Proven    |  |   Proven    |  |   Proven    |        |
+    |   +------+------+  +------+------+  +------+------+        |
+    |          |                |                |                |
+    |          +----------------+----------------+                |
+    |                           |                                 |
+    |                    Coq Extraction                           |
+    |                           |                                 |
+    |                    +------v------+                          |
+    |                    |    OCaml    |                          |
+    |                    |   ~1000 LOC |                          |
+    |                    +-------------+                          |
+    |                                                             |
+    |   Proven in Coq. Extracted to OCaml. Called from Scheme.   |
+    |                                                             |
+    +-------------------------------------------------------------+
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COQ SPECIFICATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Types
@@ -175,9 +176,9 @@ Chain Verification
     Qed.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 EXTRACTION TO OCAML
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Extraction Directives
@@ -216,9 +217,9 @@ Generated OCaml
            |  -> verifychain subjectkey rest targettag)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INTEGRATION WITH SCHEME
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 FFI Layer
@@ -250,25 +251,26 @@ Scheme Bindings
       ...)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PROOF OBLIGATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 What We Prove
 -------------
 
-1. Signature correctness: Valid signatures verify 2. Chain soundness: Valid
-chain implies authorization 3. Hash properties: Determinism, length
-preservation 4. Type safety: No buffer overflows, no null pointers
+1. Signature correctness: Valid signatures verify 2. Chain soundness:
+Valid chain implies authorization 3. Hash properties: Determinism,
+length preservation 4. Type safety: No buffer overflows, no null
+pointers
 
 
 What We Assume
 --------------
 
-1. Cryptographic hardness: Ed25519 unforgeability 2. libsodium correctness:
-Implementation matches spec 3. OCaml runtime: Extraction target is correct 4.
-Hardware: CPU executes instructions correctly
+1. Cryptographic hardness: Ed25519 unforgeability 2. libsodium
+correctness: Implementation matches spec 3. OCaml runtime: Extraction
+target is correct 4. Hardware: CPU executes instructions correctly
 
 
 Trust Chain
@@ -276,19 +278,19 @@ Trust Chain
 
 
     Mathematical proof (Coq)
-        ↓
+        v
     Extraction (verified by Coq)
-        ↓
+        v
     OCaml code (typed, memory-safe)
-        ↓
+        v
     libsodium (audited, widely deployed)
-        ↓
+        v
     CPU instructions (trust hardware)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DEVELOPMENT WORKFLOW
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 1. Specify in Coq
@@ -333,9 +335,9 @@ DEVELOPMENT WORKFLOW
     (ed25519-sign key message)  ; Calls verified code
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 EXISTING VERIFIED LIBRARIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Fiat-Crypto
@@ -362,9 +364,9 @@ Potential Use
     ( Use pre-verified Ed25519 implementation )
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Verified Components
@@ -391,22 +393,22 @@ Audit Surface
     Trusted:       ~200 lines (FFI, bindings)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2. Erbsen,
-A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic. 3.
-Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*.
-4. Chlipala, A. (2013). Certified Programming with Dependent Types. 5.
-RFC-002: Cyberspace Architecture
+1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2.
+Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic
+Arithmetic. 3. Protzenko, J., et al. (2017). Verified Low-Level
+Programming Embedded in F*. 4. Chlipala, A. (2013). Certified
+Programming with Dependent Types. 5. RFC-002: Cyberspace Architecture
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

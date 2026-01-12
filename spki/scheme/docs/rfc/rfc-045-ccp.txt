@@ -1,35 +1,35 @@
 RFC-045: Cookie-Capability Protocol (CCP)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 CCP establishes secure channels between Cyberspace nodes using stateless
-cookies for DoS resistance, ephemeral key exchange for forward secrecy, and
-capability attestation for authorization. No X.509. No CA hierarchy. No
-algorithm negotiation.
+cookies for DoS resistance, ephemeral key exchange for forward secrecy,
+and capability attestation for authorization. No X.509. No CA hierarchy.
+No algorithm negotiation.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 TLS is complex: - Certificate chains require PKI - Algorithm negotiation
 invites downgrade attacks - State allocated before client proven real -
 Identity exposed before encryption
 
-PHOTURIS (1995) had better ideas: - Cookies before crypto - Identity under
-encryption - Simple state machine
+PHOTURIS (1995) had better ideas: - Cookies before crypto - Identity
+under encryption - Simple state machine
 
 CCP resurrects these ideas with modern primitives.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PROTOCOL OVERVIEW
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     Initiator                          Responder
@@ -58,9 +58,9 @@ PROTOCOL OVERVIEW
 10 messages to establish. Unlimited encrypted DATA after.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MESSAGE FORMAT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 All messages use TLV encoding:
 
@@ -76,8 +76,8 @@ Message Types
 
 
   Type   Name       Direction       
-  0x01   KNOCK      I → R         
-  0x02   COOKIE     R → I         
+  0x01   KNOCK      I > R           
+  0x02   COOKIE     R > I           
   0x03   EXCHANGE   bidirectional   
   0x04   ATTEST     bidirectional   
   0x05   OFFER      bidirectional   
@@ -86,9 +86,9 @@ Message Types
   0xFF   CLOSE      bidirectional   
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PHASE 1: KNOCK
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Initiator announces intent and protocol version.
 
@@ -97,15 +97,15 @@ Initiator announces intent and protocol version.
       "CCP/" VERSIONMAJOR "." VERSIONMINOR
     Example: "CCP/1.0"
 
-Responder checks version compatibility: - Major mismatch: reject (incompatible
-suites) - Minor mismatch: accept (backward compatible)
+Responder checks version compatibility: - Major mismatch: reject
+(incompatible suites) - Minor mismatch: accept (backward compatible)
 
 Responder allocates no state.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PHASE 2: COOKIE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Responder returns stateless cookie.
 
@@ -119,16 +119,17 @@ Responder returns stateless cookie.
              (hash (blake2b-hash (string->blob data))))
         (substring hash 0 16)))
 
-Cookie properties: - Stateless: Responder doesn't store it - Unforgeable:
-Requires server secret - Expiring: Epoch rotation invalidates old cookies -
-Address-bound: Different address = different cookie
+Cookie properties: - Stateless: Responder doesn't store it -
+Unforgeable: Requires server secret - Expiring: Epoch rotation
+invalidates old cookies - Address-bound: Different address = different
+cookie
 
 Responder still allocates no state.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PHASE 3: EXCHANGE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Both parties exchange ephemeral public keys.
 
@@ -139,8 +140,8 @@ Initiator sends:
       cookie-r "|" cookie-i "|" ephemeral-public-hex
 
 - cookie-r: Echo of responder's cookie (proves receipt) - cookie-i:
-Initiator's random cookie (for key derivation) - ephemeral-public: X25519
-public key
+Initiator's random cookie (for key derivation) - ephemeral-public:
+X25519 public key
 
 Responder verifies cookie echo, then responds with same format.
 
@@ -163,9 +164,9 @@ Key Derivation
 Directional keys prevent reflection attacks.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PHASE 4: ATTEST
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 All subsequent messages encrypted.
 
@@ -175,11 +176,11 @@ Both parties prove identity using SPKI principals.
     ATTEST payload (encrypted):
       principal-hash "|" signature
 
-- principal-hash: SPKI principal (hex-encoded public key hash) - signature:
-Ed25519 signature over transcript
+- principal-hash: SPKI principal (hex-encoded public key hash) -
+signature: Ed25519 signature over transcript
 
-Identity is cryptographic, not nominal. A principal is identified solely by
-its public key hash, never by a human-readable name. This is a prime
+Identity is cryptographic, not nominal. A principal is identified solely
+by its public key hash, never by a human-readable name. This is a prime
 directive.
 
 Transcript for signing:
@@ -199,9 +200,9 @@ For privacy, use Chaum-style blind signatures:
       (blind-sign capability-hash (blind-factor)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PHASE 5: OFFER
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Exchange authorized capabilities as SPKI tags.
 
@@ -210,16 +211,16 @@ Exchange authorized capabilities as SPKI tags.
       (tag ( set capability ...))
     Example: "(tag ( set read write replicate))"
 
-Capabilities follow RFC-021 (Capability Delegation): - Only offer what you
-hold - Attenuation only, no amplification - Explicit, not ambient - Expressed
-as SPKI tag s-expressions
+Capabilities follow RFC-021 (Capability Delegation): - Only offer what
+you hold - Attenuation only, no amplification - Explicit, not ambient -
+Expressed as SPKI tag s-expressions
 
 Future: Full SPKI auth-certs with issuer signatures.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PHASE 6: CONFIRM
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Bind entire transcript.
 
@@ -230,9 +231,9 @@ Bind entire transcript.
 Both parties must produce matching hashes. Any tampering detected.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DATA PHASE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Channel open. Encrypted messaging.
 
@@ -245,13 +246,13 @@ Nonce construction:
 
     nonce = sequence-number (8 bytes) || 0x00000000 (4 bytes)
 
-Sequence numbers: - Start at 0 - Increment per message - Prevent replay -
-Separate counters per direction
+Sequence numbers: - Start at 0 - Increment per message - Prevent replay
+- Separate counters per direction
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ALGORITHM SUITES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 No runtime negotiation. Version determines suite.
 
@@ -288,9 +289,9 @@ CCP/3.x (Reserved: Hybrid)
   Signatures     Ed25519 + Dilithium   
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY PROPERTIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 DoS Resistance
@@ -313,10 +314,10 @@ derivation - Compromise of long-term key doesn't expose past sessions
 Identity Protection (SPKI Native)
 ---------------------------------
 
-Principal identity: - Is the public key hash (not a name, not a certificate) -
-Only revealed after encryption established - Only revealed to authenticated
-peer - Never in plaintext on wire - Self-certifying: principal =
-hash(public_key)
+Principal identity: - Is the public key hash (not a name, not a
+certificate) - Only revealed after encryption established - Only
+revealed to authenticated peer - Never in plaintext on wire -
+Self-certifying: principal = hash(public_key)
 
 
 Replay Protection
@@ -327,9 +328,9 @@ Replay Protection
   * AEAD authentication fails on replay
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COMPARISON
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
   Property                TLS 1.3   IKEv2     CCP       
@@ -343,9 +344,9 @@ COMPARISON
 CCP trades fewer round-trips for simplicity and capability integration.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     ;; Initiator
@@ -359,20 +360,20 @@ IMPLEMENTATION
       (channel-send ch (process msg)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Karn, P. & Simpson, W. (1999). PHOTURIS. RFC 2522. 2. Karn, P. & Simpson,
-W. (1999). PHOTURIS Extended Schemes. RFC 2523. 3. Bernstein, D.J. (2006).
-Curve25519. 4. Bernstein, D.J. (2008). ChaCha20. 5. RFC-021: Capability
-Delegation 6. RFC-040: Security Architecture
+1. Karn, P. & Simpson, W. (1999). PHOTURIS. RFC 2522. 2. Karn, P. &
+Simpson, W. (1999). PHOTURIS Extended Schemes. RFC 2523. 3. Bernstein,
+D.J. (2006). Curve25519. 4. Bernstein, D.J. (2008). ChaCha20. 5.
+RFC-021: Capability Delegation 6. RFC-040: Security Architecture
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 - 2026-01-07: Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

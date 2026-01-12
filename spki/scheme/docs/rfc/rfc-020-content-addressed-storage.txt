@@ -1,21 +1,21 @@
 RFC-020: Content-Addressed Storage
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC specifies content-addressed storage (CAS) for the Library of
-Cyberspace: a storage model where data is addressed by its cryptographic hash
-rather than by location. Content addressing provides immutability guarantees,
-automatic deduplication, and tamper-evident storage.
+Cyberspace: a storage model where data is addressed by its cryptographic
+hash rather than by location. Content addressing provides immutability
+guarantees, automatic deduplication, and tamper-evident storage.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Traditional storage systems use location-based addressing:
 
@@ -26,25 +26,25 @@ Traditional storage systems use location-based addressing:
 
 Location-based addressing has fundamental problems:
 
-1. Mutability - Same address can point to different content over time 2. Link
-rot - Addresses become invalid when content moves 3. Duplication - Identical
-content stored multiple times 4. No verification - Address doesn't prove
-content integrity
+1. Mutability - Same address can point to different content over time 2.
+Link rot - Addresses become invalid when content moves 3. Duplication -
+Identical content stored multiple times 4. No verification - Address
+doesn't prove content integrity
 
 Content-addressed storage inverts this:
 
 
-    Location-based:  address → content (many-to-one, mutable)
-    Content-based:   content → address (one-to-one, immutable)
+    Location-based:  address > content (many-to-one, mutable)
+    Content-based:   content > address (one-to-one, immutable)
 
 The address IS the content's cryptographic fingerprint. If the content
-changes, the address changes. If two files have the same address, they are
-byte-for-byte identical.
+changes, the address changes. If two files have the same address, they
+are byte-for-byte identical.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CONTENT ADDRESSING MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Hash as Address
@@ -84,10 +84,10 @@ Hash Function Requirements
 
 The hash function MUST be:
 
-1. Collision-resistant - Computationally infeasible to find two inputs with
-same hash 2. Preimage-resistant - Cannot derive content from hash 3.
-Deterministic - Same content always produces same hash 4. Fast - Practical for
-large objects
+1. Collision-resistant - Computationally infeasible to find two inputs
+with same hash 2. Preimage-resistant - Cannot derive content from hash
+3. Deterministic - Same content always produces same hash 4. Fast -
+Practical for large objects
 
 Specified hash: SHA-256 (32 bytes, 64 hex characters)
 
@@ -97,9 +97,9 @@ Specified hash: SHA-256 (32 bytes, 64 hex characters)
     ;; This is the SHA-256 of the empty string
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 STORAGE ARCHITECTURE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Object Store
@@ -107,18 +107,19 @@ Object Store
 
 
     .cas/
-    ├── objects/
-    │   ├── e3/
-    │   │   └── b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-    │   ├── a7/
-    │   │   └── ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a
-    │   └── ...
-    ├── refs/
-    │   ├── HEAD
-    │   └── tags/
-    └── index
+    +-- objects/
+    |   +-- e3/
+    |   |   +-- b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    |   +-- a7/
+    |   |   +-- ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a
+    |   +-- ...
+    +-- refs/
+    |   +-- HEAD
+    |   +-- tags/
+    +-- index
 
-Sharding: First two hex characters of hash form directory name (256 buckets).
+Sharding: First two hex characters of hash form directory name (256
+buckets).
 
 
 Object Types
@@ -163,9 +164,9 @@ Directories are trees of hashes. The root hash commits to all content:
 Changing ANY file changes ALL parent hashes up to root.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 OPERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Store
@@ -223,11 +224,12 @@ Delete
 Note: Deletion requires garbage collection from known roots.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 NAMING LAYER
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Content addresses are not human-friendly. A naming layer maps names to hashes:
+Content addresses are not human-friendly. A naming layer maps names to
+hashes:
 
 
 References
@@ -270,20 +272,20 @@ Directory Entries
         ("RFC-002" . "sha256:b94d27b...")))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE SOUP: OBJECT DIRECTORY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Content-addressed storage provides retrieval by hash, but discovery requires
-an object directory. The Soup (inspired by NewtonOS) provides a unified view
-of all objects with rich metadata.
+Content-addressed storage provides retrieval by hash, but discovery
+requires an object directory. The Soup (inspired by NewtonOS) provides a
+unified view of all objects with rich metadata.
 
 
 Philosophy
 ----------
 
 
-    ""The soup is infinite." - Objects swim in a queryable sea of metadata."
+    "The soup is infinite." - Objects swim in a queryable sea of metadata.
 
 The Soup inverts the traditional filesystem model:
 
@@ -308,7 +310,8 @@ Object Enumeration
 Rich Metadata
 -------------
 
-Every object carries crypto metadata - the ciphers, hashes, and keys involved:
+Every object carries crypto metadata - the ciphers, hashes, and keys
+involved:
 
 
     ;; Archive object
@@ -375,14 +378,14 @@ The Soup can be serialized as a content-addressed index:
         (ref-set "soup/HEAD" hash)
         hash))
 
-This enables: - Time travel: Load historical soup snapshots - Replication:
-Sync soup indexes between vaults - Verification: Prove soup state at a point
-in time
+This enables: - Time travel: Load historical soup snapshots -
+Replication: Sync soup indexes between vaults - Verification: Prove soup
+state at a point in time
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INTEGRATION WITH LIBRARY OF CYBERSPACE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Vault Integration
@@ -440,14 +443,14 @@ Content hashes can be authorization subjects (RFC-004):
       (validity (not-after "2027-01-01")))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHUNKING FOR LARGE OBJECTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Large files are split into chunks for:
 
-1. Deduplication at sub-file granularity 2. Parallel transfer 3. Incremental
-updates
+1. Deduplication at sub-file granularity 2. Parallel transfer 3.
+Incremental updates
 
 
 Fixed-Size Chunking
@@ -492,12 +495,12 @@ Chunk Tree
         ...))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INTROSPECTION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-The Library is fully introspective: it stores, addresses, and reasons about
-itself.
+The Library is fully introspective: it stores, addresses, and reasons
+about itself.
 
 
 Self-Hosting
@@ -617,24 +620,24 @@ The Library Contains Itself
 ---------------------------
 
 
-    ╭─────────────────────────────────────────╮
-    │            LIBRARY OF CYBERSPACE        │
-    │  ╭───────────────────────────────────╮  │
-    │  │     Content-Addressed Storage     │  │
-    │  │  ╭─────────────────────────────╮  │  │
-    │  │  │    RFC-020 (this document)  │  │  │
-    │  │  │    describing CAS           │  │  │
-    │  │  │    stored in CAS            │  │  │
-    │  │  ╰─────────────────────────────╯  │  │
-    │  ╰───────────────────────────────────╯  │
-    ╰─────────────────────────────────────────╯
+    +-----------------------------------------+
+    |            LIBRARY OF CYBERSPACE        |
+    |  +-----------------------------------+  |
+    |  |     Content-Addressed Storage     |  |
+    |  |  +-----------------------------+  |  |
+    |  |  |    RFC-020 (this document)  |  |  |
+    |  |  |    describing CAS           |  |  |
+    |  |  |    stored in CAS            |  |  |
+    |  |  +-----------------------------+  |  |
+    |  +-----------------------------------+  |
+    +-----------------------------------------+
 
 Homoiconic storage: the description is the thing.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TOMBSTONES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Objects are never truly deleted - they are marked with tombstones.
 
@@ -697,9 +700,9 @@ Garbage Collection with Tombstones
           (all-objects))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PINNING
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Pinned objects are protected from garbage collection.
 
@@ -751,9 +754,9 @@ Certain objects are implicitly pinned:
         "schema/"))     ; All schemas
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 BLOOM FILTERS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Compact probabilistic set membership for efficient replication.
 
@@ -761,20 +764,20 @@ Compact probabilistic set membership for efficient replication.
 Multi-Level Existence Check
 ---------------------------
 
-For the distributed soup, existence checks dominate replication overhead. A
-tiered approach minimizes latency:
+For the distributed soup, existence checks dominate replication
+overhead. A tiered approach minimizes latency:
 
 
-    ┌─────────────────────────────────────────────────────────┐
-    │ L1: Hot Set Cache (1000 items, O(1), microseconds)     │
-    ├─────────────────────────────────────────────────────────┤
-    │ L2: Blocked Bloom Filter (100K items, O(k), cache-     │
-    │     friendly memory layout)                             │
-    ├─────────────────────────────────────────────────────────┤
-    │ L3: Quotient Filter (1M items, supports deletion)      │
-    ├─────────────────────────────────────────────────────────┤
-    │ L4: Disk/Network (authoritative, milliseconds)         │
-    └─────────────────────────────────────────────────────────┘
+    +---------------------------------------------------------+
+    | L1: Hot Set Cache (1000 items, O(1), microseconds)     |
+    +---------------------------------------------------------+
+    | L2: Blocked Bloom Filter (100K items, O(k), cache-     |
+    |     friendly memory layout)                             |
+    +---------------------------------------------------------+
+    | L3: Quotient Filter (1M items, supports deletion)      |
+    +---------------------------------------------------------+
+    | L4: Disk/Network (authoritative, milliseconds)         |
+    +---------------------------------------------------------+
 
 
 Blocked Bloom Filters
@@ -854,7 +857,8 @@ support removal:
 Quotient Filters
 ----------------
 
-Better space efficiency than Bloom, supports deletion, and can be resized:
+Better space efficiency than Bloom, supports deletion, and can be
+resized:
 
 
     ;; Quotient filter: fingerprint stored in quotient/remainder form
@@ -933,9 +937,9 @@ Soup Integration
       (load-factor 0.47))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CONTENT TYPES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Typed objects with schema validation.
 
@@ -1010,11 +1014,12 @@ MIME Detection
         (else 'blob)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 OBJECT CAPABILITIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Content addresses as capabilities: if you know the hash, you can retrieve it.
+Content addresses as capabilities: if you know the hash, you can
+retrieve it.
 
 
 Hash as Capability
@@ -1081,9 +1086,9 @@ Capability Revocation
          (revoked-at 1767700000))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 HASH MIGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 When cryptographic algorithms weaken, the system must migrate.
 
@@ -1156,9 +1161,9 @@ Verification During Migration
                      new-hash))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COMPARISON WITH RELATED SYSTEMS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
   System        Hash                Chunking       Naming          
@@ -1168,15 +1173,16 @@ COMPARISON WITH RELATED SYSTEMS
   Library CAS   SHA-256             Configurable   Vault refs      
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Hash Collision Attacks
 ----------------------
 
-SHA-256 provides 128-bit collision resistance. No practical attacks known.
+SHA-256 provides 128-bit collision resistance. No practical attacks
+known.
 
 If SHA-256 is ever broken:
 
@@ -1213,9 +1219,9 @@ Hash comparison MUST be constant-time:
                         (bitwise-xor (blob-ref a i) (blob-ref b i)))))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PERFORMANCE CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Caching
@@ -1251,9 +1257,9 @@ Random access pattern. Use write-ahead log for durability:
         hash))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Dependencies
@@ -1279,23 +1285,24 @@ Error Handling
       cas-corrupt?)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Merkle, R. (1987), "A Digital Signature Based on a Conventional Encryption
-Function" 2. Git Internals - Git Objects 3. IPFS Content Addressing 4. Putze,
-Sanders, Singler (2007), "Cache-, Hash-, and Space-Efficient Bloom Filters" 5.
-Bender et al. (2012), "Don't Thrash: How to Cache Your Hash on Flash" 6.
-RFC-006: Vault System Architecture 7. RFC-018: Sealed Archive Format
+1. Merkle, R. (1987), "A Digital Signature Based on a Conventional
+Encryption Function" 2. Git Internals - Git Objects 3. IPFS Content
+Addressing 4. Putze, Sanders, Singler (2007), "Cache-, Hash-, and
+Space-Efficient Bloom Filters" 5. Bender et al. (2012), "Don't Thrash:
+How to Cache Your Hash on Flash" 6. RFC-006: Vault System Architecture
+7. RFC-018: Sealed Archive Format
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-09
   * Advanced probabilistic data structures: blocked Bloom filters, counting Bloom filters, quotient filters, hierarchical existence checking - 2026-01-07
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

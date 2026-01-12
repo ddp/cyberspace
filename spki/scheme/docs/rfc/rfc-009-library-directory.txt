@@ -1,34 +1,35 @@
 RFC-009: Library Directory System
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This RFC specifies the Library Directory System for the Library of Cyberspace:
-a searchable catalog of research papers with natural language queries, fuzzy
-matching, and beautiful output. Finding knowledge should be delightful.
+This RFC specifies the Library Directory System for the Library of
+Cyberspace: a searchable catalog of research papers with natural
+language queries, fuzzy matching, and beautiful output. Finding
+knowledge should be delightful.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 E PLURIBUS UNUM
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║  📚 Cyberspace Library Directory                               ║
-    ║  Finding knowledge should be joyful                            ║
-    ╚═══════════════════════════════════════════════════════════════╝
+    +---------------------------------------------------------------+
+    |  📚 Cyberspace Library Directory                               |
+    |  Finding knowledge should be joyful                            |
+    +---------------------------------------------------------------+
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-The Library of Cyberspace contains 421+ research papers spanning 50 years of
-computing history. Without a catalog:
+The Library of Cyberspace contains 421+ research papers spanning 50
+years of computing history. Without a catalog:
 
   * Discoverability: How to find Lamport's clock paper?
   * Connections: What relates to SPKI?
@@ -37,14 +38,15 @@ computing history. Without a catalog:
 The Directory System provides:
 
 1. Natural language search - "papers by Lampson about protection" 2.
-Multi-index access - By author, topic, year, collection 3. Fuzzy matching -
-"Lamp" finds Lampson and Lamport 4. Beautiful output - Unicode, emoji,
-formatted results 5. S-expression export - Machine-readable catalogs
+Multi-index access - By author, topic, year, collection 3. Fuzzy
+matching - "Lamp" finds Lampson and Lamport 4. Beautiful output -
+Unicode, emoji, formatted results 5. S-expression export -
+Machine-readable catalogs
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DATA MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Document Record
@@ -94,17 +96,17 @@ Library Record
       (collection-index library-collection-index))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INDEX SYSTEM
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Four hash table indexes for O(1) lookup:
 
 
-    author-index:     "Lamport" → [doc1, doc2, doc5, ...]
-    topic-index:      "cryptography" → [doc3, doc7, doc12, ...]
-    year-index:       1978 → [doc1, doc4, ...]
-    collection-index: "lampson" → <collection>
+    author-index:     "Lamport" > [doc1, doc2, doc5, ...]
+    topic-index:      "cryptography" > [doc3, doc7, doc12, ...]
+    year-index:       1978 > [doc1, doc4, ...]
+    collection-index: "lampson" > <collection>
 
 
 Building Indexes
@@ -127,9 +129,9 @@ Building Indexes
         index))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUERY INTERFACE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Natural Language Parsing
@@ -143,9 +145,9 @@ Natural Language Parsing
     (parse-query "SPKI certificates")
     ;; => (query (topic "SPKI") (topic "certificates"))
 
-Recognized Patterns: - by <name> → author search - about <topic> → topic
-search - from <year> → year search - in <collection> → collection filter -
-Bare words → topic search
+Recognized Patterns: - by <name> > author search - about <topic> > topic
+search - from <year> > year search - in <collection> > collection filter
+- Bare words > topic search
 
 
 Fuzzy Matching
@@ -157,8 +159,8 @@ Fuzzy Matching
     (fuzzy-match "crypto" topic-list)
     ;; => ("cryptography" "cryptographic" "encryption")
 
-Matching strategies: 1. Exact match (highest priority) 2. Case-insensitive
-match 3. Prefix match 4. Substring match
+Matching strategies: 1. Exact match (highest priority) 2.
+Case-insensitive match 3. Prefix match 4. Substring match
 
 
 Query Functions
@@ -172,9 +174,9 @@ Query Functions
     (find-related library document)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REPL INTERFACE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Interactive Session
@@ -182,10 +184,10 @@ Interactive Session
 
 
     $ csi -s directory-repl.scm
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║  📚 Cyberspace Library Directory                               ║
-    ║  "E Pluribus Unum" - Finding knowledge should be joyful        ║
-    ╚═══════════════════════════════════════════════════════════════╝
+    +---------------------------------------------------------------+
+    |  📚 Cyberspace Library Directory                               |
+    |  "E Pluribus Unum" - Finding knowledge should be joyful        |
+    +---------------------------------------------------------------+
     Loaded 312 documents from 18 collections
     Type 'help' for search tips, 'quit' to exit
     📖 > papers by Rivest
@@ -224,9 +226,9 @@ Commands
   quit          Exit REPL                
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INDEX.MD PARSER
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Each collection contains an INDEX.md with paper listings:
 
@@ -261,9 +263,9 @@ Parser Output
         ...))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 EXPORT FORMATS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 S-expression Export
@@ -299,8 +301,8 @@ HTML Export
 
     (export-to-html library "catalog.html")
 
-Generates browsable web catalog with: - Alphabetical author index - Topic tag
-cloud - Year timeline - Search functionality
+Generates browsable web catalog with: - Alphabetical author index -
+Topic tag cloud - Year timeline - Search functionality
 
 
 Markdown Export
@@ -312,9 +314,9 @@ Markdown Export
 Documentation-friendly format for README files.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DESIGN PHILOSOPHY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Super Nice and Helpful
@@ -329,7 +331,7 @@ Super Nice and Helpful
 Beautiful Output
 ----------------
 
-  * Unicode box drawing (╔═══╗)
+  * Unicode box drawing (+---+)
   * Emoji visual markers (📖 📚 👤 📅)
   * Consistent formatting
   * Progressive disclosure
@@ -344,16 +346,16 @@ Hone In On What You Need
   * Related paper discovery
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 No Execution
 ------------
 
-The directory system is read-only: - Parses INDEX.md files (trusted) - No code
-execution - No network access - No file modification
+The directory system is read-only: - Parses INDEX.md files (trusted) -
+No code execution - No network access - No file modification
 
 
 Path Traversal
@@ -363,9 +365,9 @@ File paths validated: - Must be within library root - No .. components -
 Normalized before use
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Dependencies
@@ -394,19 +396,20 @@ Citation graph visualization - BibTeX export - Web API server - Semantic
 search with embeddings
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Dublin Core Metadata Initiative 2. Library of Congress Subject Headings 3.
-BibTeX format specification 4. Unicode Standard for box drawing
+1. Dublin Core Metadata Initiative 2. Library of Congress Subject
+Headings 3. BibTeX format specification 4. Unicode Standard for box
+drawing
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

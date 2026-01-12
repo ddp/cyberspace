@@ -1,22 +1,22 @@
 RFC-049: Post-Quantum Signatures
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Ed25519 won't survive. Shor's algorithm breaks elliptic curve cryptography in
-polynomial time. When quantum computers arrive, every capability ever signed,
-every realm identity ever created, becomes forgeable. This RFC specifies the
-transition from Ed25519 to post-quantum signature schemes: SPHINCS+ and
-CRYSTALS-Dilithium.
+Ed25519 won't survive. Shor's algorithm breaks elliptic curve
+cryptography in polynomial time. When quantum computers arrive, every
+capability ever signed, every realm identity ever created, becomes
+forgeable. This RFC specifies the transition from Ed25519 to
+post-quantum signature schemes: SPHINCS+ and CRYSTALS-Dilithium.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE THREAT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Ed25519 security relies on the hardness of the elliptic curve discrete
 logarithm problem. Shor's algorithm solves this in polynomial time on a
@@ -29,18 +29,19 @@ quantum computer.
   SPHINCS+-256   256 bits             128 bits           
   Dilithium3     192 bits             128 bits           
 
-When Q-Day arrives: - Every Ed25519 signature becomes forgeable - Every SPKI
-certificate can be counterfeited - Every realm identity can be stolen - Every
-sealed release can be replaced
+When Q-Day arrives: - Every Ed25519 signature becomes forgeable - Every
+SPKI certificate can be counterfeited - Every realm identity can be
+stolen - Every sealed release can be replaced
 
-The capability chain breaks. The sealed closure unseals. Cyberspace falls.
+The capability chain breaks. The sealed closure unseals. Cyberspace
+falls.
 
 We must migrate before Q-Day.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE CANDIDATES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 NIST Post-Quantum Cryptography standardization selected:
 
@@ -57,8 +58,8 @@ SPHINCS+ (Hash-Based)
     Maturity:       Conservative, well-understood
 
 Why SPHINCS+: - Security reduces to hash function security - No
-number-theoretic assumptions - Stateless (no state management headaches) -
-Uses SHAKE256 (same as our Merkle trees)
+number-theoretic assumptions - Stateless (no state management headaches)
+- Uses SHAKE256 (same as our Merkle trees)
 
 Tradeoff: Large signatures. A SPHINCS+-256s signature is ~8 KB.
 
@@ -74,15 +75,16 @@ CRYSTALS-Dilithium (Lattice-Based)
     Speed:          Fast signing, fast verification
     Maturity:       Newer, but extensively analyzed
 
-Why Dilithium: - Smaller signatures than SPHINCS+ - Faster operations - NIST
-primary recommendation
+Why Dilithium: - Smaller signatures than SPHINCS+ - Faster operations -
+NIST primary recommendation
 
-Tradeoff: Relies on lattice assumptions (less conservative than hash-based).
+Tradeoff: Relies on lattice assumptions (less conservative than
+hash-based).
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CYBERSPACE STRATEGY: BOTH
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 We support both. Different use cases, different tradeoffs:
 
@@ -106,9 +108,9 @@ The keystore can hold multiple key types:
       (accept-verification '(sphincs+ dilithium ed25519)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CERTIFICATE FORMAT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Current (Ed25519)
@@ -160,12 +162,13 @@ During transition, sign with both:
         (ed25519 #${64-byte-sig})              ; Legacy
         (sphincs+ #${7856-byte-sig})))         ; Post-quantum
 
-Both signatures must verify. If Ed25519 is later broken, SPHINCS+ still holds.
+Both signatures must verify. If Ed25519 is later broken, SPHINCS+ still
+holds.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 KEY GENERATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 SPHINCS+-SHAKE-256s
@@ -218,9 +221,9 @@ Dilithium3
       (ciphertext #${encrypted-sk}))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SIGNING OPERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 SPHINCS+ Signing
@@ -259,9 +262,9 @@ Hybrid Signing
           (sphincs+ ,sphincs+-sig))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 VERIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Multi-Algorithm Verification
@@ -283,9 +286,9 @@ Multi-Algorithm Verification
            (sphincs+-verify message (hybrid-sphincs+ signature) (keys-sphincs+ public-keys))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REALM IDENTITY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 A realm's principal expands to include algorithm:
 
@@ -295,13 +298,14 @@ A realm's principal expands to include algorithm:
                dilithium:4e5f6a7b8c9d...
                hybrid:7f3a2b4c|8a9b0c1d...
 
-The principal is still coordinates in cyberspace - a place you can teleport
-to. The algorithm prefix tells you what cryptography guards the gate.
+The principal is still coordinates in cyberspace - a place you can
+teleport to. The algorithm prefix tells you what cryptography guards the
+gate.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CAPABILITY CHAIN IMPLICATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Capability chains must handle mixed algorithms:
 
@@ -318,13 +322,13 @@ Capability chains must handle mixed algorithms:
         (signature #${dilithium-sig})))
 
 Each link verified with its own algorithm. The chain is as strong as its
-weakest link - but even one post-quantum link prevents total collapse after
-Q-Day.
+weakest link - but even one post-quantum link prevents total collapse
+after Q-Day.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MIGRATION TIMELINE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Phase 1: Preparation (Now)
@@ -367,9 +371,9 @@ Phase 5: Pure Post-Quantum (Q-Day + 2 years)
   * Cyberspace survives
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 STORAGE IMPLICATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Post-quantum signatures are larger:
 
@@ -386,9 +390,9 @@ SPHINCS+: ~81 MB
 Storage is cheap. Quantum resistance is not.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PERFORMANCE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
   Operation   Ed25519   Dilithium3   SPHINCS+-256s   
@@ -396,16 +400,16 @@ PERFORMANCE
   Sign        0.05 ms   0.5 ms       50 ms           
   Verify      0.1 ms    0.3 ms       1 ms            
 
-SPHINCS+ signing is slow (50ms). Acceptable for: - Realm identity (rare) -
-Sealed releases (rare) - Capability grants (occasional)
+SPHINCS+ signing is slow (50ms). Acceptable for: - Realm identity (rare)
+- Sealed releases (rare) - Capability grants (occasional)
 
-Use Dilithium for: - Agent delegation (frequent) - Audit entries (constant) -
-Bulk operations
+Use Dilithium for: - Agent delegation (frequent) - Audit entries
+(constant) - Bulk operations
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 LIBRARY SUPPORT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Required Libraries
@@ -418,8 +422,8 @@ Required Libraries
   OpenSSL 3.x   Provider   Provider    Via oqsprovider             
   BoringSSL     No         Partial     Google internal             
 
-Recommended: liboqs (Open Quantum Safe) - Reference implementations - Actively
-maintained - C library, easy FFI
+Recommended: liboqs (Open Quantum Safe) - Reference implementations -
+Actively maintained - C library, easy FFI
 
 
     ;; crypto-ffi.scm addition
@@ -429,9 +433,9 @@ maintained - C library, easy FFI
     (define dilithium-verify (foreign-lambda ...))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Algorithm Agility
@@ -461,22 +465,23 @@ Post-quantum implementations must be constant-time: - SPHINCS+: Hash
 operations are naturally constant-time - Dilithium: Requires careful NTT
 implementation
 
-Use only audited implementations (liboqs reference, or formally verified).
+Use only audited implementations (liboqs reference, or formally
+verified).
 
 
 Hybrid Security
 ---------------
 
-During transition, hybrid signatures provide defense in depth: - If Ed25519 is
-broken → SPHINCS+ holds - If SPHINCS+ has unknown flaw → Ed25519 holds
-(pre-Q-Day)
+During transition, hybrid signatures provide defense in depth: - If
+Ed25519 is broken > SPHINCS+ holds - If SPHINCS+ has unknown flaw >
+Ed25519 holds (pre-Q-Day)
 
 Both must be broken to forge. Belt and suspenders.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INVARIANTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     S1. Post-quantum signatures are unforgeable (given hash security)
@@ -488,43 +493,44 @@ INVARIANTS
     S4. Key algorithm matches signature algorithm
         sign(sphincs+-key, msg) produces sphincs+-signature
     S5. Migration preserves capability validity
-        valid-pre-migration(cert) → valid-post-migration(cert) [during transition]
+        valid-pre-migration(cert) > valid-post-migration(cert) [during transition]
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE QUANTUM WINTER
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Q-Day is coming. We don't know when - estimates range from 2030 to 2040. But
-the harvest-now-decrypt-later threat is real today. Every Ed25519 signature
-captured now can be forged after Q-Day.
+Q-Day is coming. We don't know when - estimates range from 2030 to 2040.
+But the harvest-now-decrypt-later threat is real today. Every Ed25519
+signature captured now can be forged after Q-Day.
 
-Cyberspace is built to last. The Library of Alexandria must not burn twice.
+Cyberspace is built to last. The Library of Alexandria must not burn
+twice.
 
 When the quantum winter comes: - Merkle trees (RFC-042) protect object
-identity - SPHINCS+/Dilithium protect signatures - The sealed closure remains
-sealed - The wilderness of mirrors endures
+identity - SPHINCS+/Dilithium protect signatures - The sealed closure
+remains sealed - The wilderness of mirrors endures
 
 Prepare now. Migrate early. Survive.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. NIST Post-Quantum Cryptography Standardization 2. SPHINCS+ specification -
-https://sphincs.org/ 3. CRYSTALS-Dilithium specification -
-https://pq-crystals.org/dilithium/ 4. Open Quantum Safe project -
+1. NIST Post-Quantum Cryptography Standardization 2. SPHINCS+
+specification - https://sphincs.org/ 3. CRYSTALS-Dilithium specification
+- https://pq-crystals.org/dilithium/ 4. Open Quantum Safe project -
 https://openquantumsafe.org/ 5. Shor, P., "Algorithms for Quantum
 Computation", 1994 6. RFC-041 - Keystore and Attestation 7. RFC-042 -
 Quantum-Resistant Merkle Trees
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-08
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

@@ -1,28 +1,29 @@
 RFC-021: Capability Delegation Patterns
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC specifies capability delegation patterns for the Library of
-Cyberspace: how principals grant, attenuate, and revoke capabilities using
-SPKI certificates, content-addressed objects, and the soup metadata layer.
-Capabilities flow through delegation chains with monotonically decreasing
-authority.
+Cyberspace: how principals grant, attenuate, and revoke capabilities
+using SPKI certificates, content-addressed objects, and the soup
+metadata layer. Capabilities flow through delegation chains with
+monotonically decreasing authority.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Authorization in distributed systems is hard:
 
-- ACLs don't scale - Central lists become bottlenecks - Identity is fragile -
-Names change, keys rotate - Ambient authority is dangerous - "Run as root" is
-not a security model - Revocation is an afterthought - Usually bolted on badly
+- ACLs don't scale - Central lists become bottlenecks - Identity is
+fragile - Names change, keys rotate - Ambient authority is dangerous -
+"Run as root" is not a security model - Revocation is an afterthought -
+Usually bolted on badly
 
 SPKI (Simple Public Key Infrastructure) solved this decades ago:
 
@@ -39,9 +40,9 @@ The Library integrates SPKI with content-addressed storage, creating
 capabilities that are themselves content-addressed and introspectable.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CAPABILITY MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Principals
@@ -110,9 +111,9 @@ SPKI certificates bind capabilities to principals:
       (delegation #t))  ; Alice can re-delegate
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DELEGATION CHAINS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Chain Structure
@@ -122,14 +123,14 @@ Authority flows through certificate chains:
 
 
     Master Key
-        │
-        ▼ (cert: full access to vault)
+        |
+        v (cert: full access to vault)
     Admin Key
-        │
-        ▼ (cert: read/write to docs/, can delegate)
+        |
+        v (cert: read/write to docs/, can delegate)
     Developer Key
-        │
-        ▼ (cert: read-only to docs/public/, cannot delegate)
+        |
+        v (cert: read-only to docs/public/, cannot delegate)
     Contractor Key
 
 
@@ -187,9 +188,9 @@ Delegated capabilities can only decrease:
       (delegation #f))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DELEGATION PATTERNS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Pattern 1: Direct Delegation
@@ -308,9 +309,9 @@ Delegate through intermediary:
     ;; but chain shows Alice as original authority
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CONTENT-ADDRESSED CAPABILITIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Hash as Capability
@@ -377,9 +378,9 @@ Encrypt capability for specific recipient:
         cap))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REVOCATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Revocation Lists
@@ -439,9 +440,9 @@ Avoid revocation by using short validity:
       (delegation #f))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SOUP INTEGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Certificates in the Soup
@@ -498,9 +499,9 @@ Capability Introspection
              certs)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 AUTHORIZATION DECISIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Simple Check
@@ -545,9 +546,9 @@ Cached Authorization
               result))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DELEGATION CEREMONIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Key Ceremony
@@ -604,9 +605,9 @@ Emergency Revocation
         (notify-revocation cert-hash)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Capability Leakage
@@ -657,9 +658,9 @@ Delegation Depth Limits
         (error "Delegation chain too deep")))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Certificate Storage
@@ -683,21 +684,22 @@ Performance
   * Revocation checks add latency - use short-lived certs when possible
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 1. SPKI/SDSI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication -
-Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller,
-Yee, Shapiro (preserved) 4. RFC-004: SPKI Authorization 5. RFC-020:
-Content-Addressed Storage 6. RFC-007: Threshold Signature Governance
+Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished -
+Miller, Yee, Shapiro (preserved) 4. RFC-004: SPKI Authorization 5.
+RFC-020: Content-Addressed Storage 6. RFC-007: Threshold Signature
+Governance
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-07
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

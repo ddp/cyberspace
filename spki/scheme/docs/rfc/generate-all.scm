@@ -51,10 +51,11 @@
          (html-file (string-append base ".html"))
          (ps-file (string-append base ".ps")))
 
-    ;; Check if regeneration needed
+    ;; Check if regeneration needed (also check formatter itself)
     (when (or (file-newer? rfc-file txt-file)
               (file-newer? rfc-file html-file)
-              (file-newer? rfc-file ps-file))
+              (file-newer? rfc-file ps-file)
+              (file-newer? "rfc-format.scm" txt-file))
 
       (condition-case
         (let ((doc (read-rfc rfc-file)))

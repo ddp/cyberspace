@@ -1,36 +1,37 @@
 RFC-046: Cyberspace Security Architecture
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This document defines how cyberspace protects itself. The model is simple:
-capabilities all the way down. Objects are content. Authorization flows
-through signed certificates. No labels, no ACLs, no ambient authority. You
-hold a capability or you don't.
+This document defines how cyberspace protects itself. The model is
+simple: capabilities all the way down. Objects are content.
+Authorization flows through signed certificates. No labels, no ACLs, no
+ambient authority. You hold a capability or you don't.
 
 We use the rigor of TCSEC B2 as a lens - particularly for covert channel
-analysis - but cyberspace is its own thing. This is our security architecture,
-in our language.
+analysis - but cyberspace is its own thing. This is our security
+architecture, in our language.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE MANIFESTO
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     "Authorized capability set with auditing. No central authority."
 
-You can have a central authority if you want one. That's up to you. But you
-don't need one. The architecture doesn't require it. Trust flows from keys you
-choose to trust, not from a hierarchy imposed upon you.
+You can have a central authority if you want one. That's up to you. But
+you don't need one. The architecture doesn't require it. Trust flows
+from keys you choose to trust, not from a hierarchy imposed upon you.
 
-These principles were proven in VAXcluster security (1984-1994), proposed in
-SDSI at IETF 29 Seattle (1994), and implemented partially in products that
-didn't survive their parent companies. Cyberspace completes what was started.
+These principles were proven in VAXcluster security (1984-1994),
+proposed in SDSI at IETF 29 Seattle (1994), and implemented partially in
+products that didn't survive their parent companies. Cyberspace
+completes what was started.
 
 
 Design Lineage
@@ -45,14 +46,14 @@ Design Lineage
   1999   SPKI         Authorization certificates, capability delegation            
   2026   Cyberspace   Synthesis: SPKI + audit + IPv6 mesh + no central authority   
 
-DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace
-is designed for IPv6: 128-bit addresses, global mesh, same security
-principles.
+DECnet Phase IV had 24-bit addressing—fatal for internet scale.
+Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same
+security principles.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY OBJECT TYPES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Every first-class object in cyberspace. Names as defined.
 
@@ -120,16 +121,17 @@ All things in cyberspace exist in two states:
 Transitions:
 
 
-    chaotic ──commit──▶ quiescent
-        ▲                   │
-        │                   │
-        └───── fork ────────┘
+    chaotic --commit--> quiescent
+        ^                   |
+        |                   |
+        +----- fork --------+
 
-Only quiescent objects: - Have stable content hashes - Can be signed - Can be
-replicated - Can be delegated
+Only quiescent objects: - Have stable content hashes - Can be signed -
+Can be replicated - Can be delegated
 
-Chaotic things: - Exist only in the realm's store - Have provisional identity
-- Cannot be shared - Must settle before federation - Cannot be cached
+Chaotic things: - Exist only in the realm's store - Have provisional
+identity - Cannot be shared - Must settle before federation - Cannot be
+cached
 
 
 Caching Implications
@@ -143,8 +145,8 @@ State controls caching:
   chaotic     Never       Content may change; no stable hash   
 
 Quiescent things cache by content hash. Cache hit = identical content,
-guaranteed. Chaotic things bypass cache entirely. Every access reads current
-state.
+guaranteed. Chaotic things bypass cache entirely. Every access reads
+current state.
 
 
 Persistence
@@ -166,9 +168,9 @@ State and durability are orthogonal:
 
 Persistent things survive restart. Ephemeral things don't.
 
-Vault takes cataloging and effort. Not all things need persistence. Ephemeral
-is not failure—it's deliberate economy. Cache results, scratch work,
-intermediate computations: let them vanish.
+Vault takes cataloging and effort. Not all things need persistence.
+Ephemeral is not failure—it's deliberate economy. Cache results,
+scratch work, intermediate computations: let them vanish.
 
 Marking a thing persistent schedules vault migration.
 
@@ -181,21 +183,21 @@ Object Relationships
 --------------------
 
 
-    principal ──creates──▶ certificate ──grants──▶ tag
-        │                      │
-        │                      ▼
-        │                   object ◀──stores── vault
-        │                      │
-        ▼                      ▼
-      agent ──operates──▶ wormhole ──bridges──▶ realm
-        │                                         │
-        │                                         ▼
-        └──────────────────────────────────▶ federation
+    principal --creates--> certificate --grants--> tag
+        |                      |
+        |                      v
+        |                   object <--stores-- vault
+        |                      |
+        v                      v
+      agent --operates--> wormhole --bridges--> realm
+        |                                         |
+        |                                         v
+        +----------------------------------> federation
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE AXIOMS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     A1. No Ambient Authority
@@ -213,37 +215,37 @@ THE AXIOMS
         Objects don't know who can access them.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE REALM
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 A realm is your place in cyberspace. It is sovereign.
 
 
-    ┌─────────────────────────────────────────────────────────────┐
-    │                        YOUR REALM                            │
-    │                                                              │
-    │   Principal: ed25519:a1b2c3...  (this is you)               │
-    │                                                              │
-    │   ┌──────────────────────────────────────────────────────┐  │
-    │   │                      VAULT                            │  │
-    │   │  Objects:     content-addressed, signed               │  │
-    │   │  Capabilities: certificates you hold                  │  │
-    │   │  Audit:       what happened here                      │  │
-    │   └──────────────────────────────────────────────────────┘  │
-    │                                                              │
-    │   Trust boundary: your signing key                          │
-    │   You decide: what to store, who to trust, what to share    │
-    └─────────────────────────────────────────────────────────────┘
+    +-------------------------------------------------------------+
+    |                        YOUR REALM                            |
+    |                                                              |
+    |   Principal: ed25519:a1b2c3...  (this is you)               |
+    |                                                              |
+    |   +------------------------------------------------------+  |
+    |   |                      VAULT                            |  |
+    |   |  Objects:     content-addressed, signed               |  |
+    |   |  Capabilities: certificates you hold                  |  |
+    |   |  Audit:       what happened here                      |  |
+    |   +------------------------------------------------------+  |
+    |                                                              |
+    |   Trust boundary: your signing key                          |
+    |   You decide: what to store, who to trust, what to share    |
+    +-------------------------------------------------------------+
 
-Your realm is local-first. Federation is optional. When you federate, realms
-overlap - objects flow according to capability chains. But your realm remains
-yours.
+Your realm is local-first. Federation is optional. When you federate,
+realms overlap - objects flow according to capability chains. But your
+realm remains yours.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CAPABILITIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 The Certificate
@@ -297,11 +299,12 @@ Bob can give Carol read access (because Alice allowed propagation):
 Carol cannot give anyone else access. The chain stops.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CLASSIFICATION WITHOUT LABELS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP SECRET.
+Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP
+SECRET.
 
 In cyberspace, classification is a capability you hold:
 
@@ -325,9 +328,9 @@ capabilities
 The object has no labels. The policy lives in the certificates.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INFORMATION FLOW
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 The mathematics of multilevel security, expressed in capabilities.
 
@@ -335,8 +338,9 @@ The mathematics of multilevel security, expressed in capabilities.
 The Properties
 --------------
 
-Traditional formulations speak of "read up" and "write down" with respect to
-classification labels. We preserve the mathematics but speak differently:
+Traditional formulations speak of "read up" and "write down" with
+respect to classification labels. We preserve the mathematics but speak
+differently:
 
 
   Traditional       Cyberspace                  Formal Statement                                      
@@ -345,8 +349,8 @@ classification labels. We preserve the mathematics but speak differently:
   "No read down"    Integrity via provenance    ∀ accept(P,O): verify(signature(O))                 
   "No write up"     Attenuation only            ∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)   
 
-The capability graph IS the lattice. Delegation flows down. Authority cannot
-flow up.
+The capability graph IS the lattice. Delegation flows down. Authority
+cannot flow up.
 
 
 Confidentiality
@@ -360,8 +364,8 @@ Information flows only through capabilities:
     ∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)
 
 A principal without read capability cannot observe content. A principal
-without write capability cannot exfiltrate via storage. Delegation cannot
-grant what you don't hold.
+without write capability cannot exfiltrate via storage. Delegation
+cannot grant what you don't hold.
 
 
 Integrity
@@ -374,8 +378,8 @@ Modification flows only through capabilities:
     ∀ delegate(P₁,P₂,C'): integrity(C') ≤ integrity(C)
     ∀ capability C: provenance(C) ⊆ audittrail
 
-Objects cannot be corrupted without write capability. Delegated capabilities
-cannot exceed held capabilities. All grants are traceable.
+Objects cannot be corrupted without write capability. Delegated
+capabilities cannot exceed held capabilities. All grants are traceable.
 
 
 Confinement
@@ -388,15 +392,16 @@ The capability discipline eliminates ambient authority:
     ∀ C: unforgeable(C)
     ∀ acquire(P,C): ∃ P': delegate(P',P,C) ∨ create(P,O)
 
-No access without explicit capability. Capabilities cannot be manufactured.
-The only paths: receive via delegation, or create the object.
+No access without explicit capability. Capabilities cannot be
+manufactured. The only paths: receive via delegation, or create the
+object.
 
 
 Wormhole Enforcement
 --------------------
 
-Wormholes (RFC-041) are channel boundaries. Information flow is enforced at
-every crossing:
+Wormholes (RFC-041) are channel boundaries. Information flow is enforced
+at every crossing:
 
 
     (wormhole-flow-guard wormhole operation object)
@@ -412,10 +417,10 @@ every crossing:
   delete, unlink         delete                integrity         
   delegate               delegate              amplification     
 
-Denied operations raise typed errors: - no-ambient-authority — wormhole has
-no capabilities - read-denied — missing read capability - write-denied —
-missing write capability - capability-amplification — delegation exceeds
-held
+Denied operations raise typed errors: - no-ambient-authority —
+wormhole has no capabilities - read-denied — missing read capability -
+write-denied — missing write capability - capability-amplification —
+delegation exceeds held
 
 
 The Lattice
@@ -425,26 +430,27 @@ Capabilities form a partial order. The lattice:
 
 
             full
-              │
-        ┌─────┼─────┐
-        │     │     │
+              |
+        +-----+-----+
+        |     |     |
       admin synch read-write
-        │     │     │
-        └─────┼─────┘
-              │
+        |     |     |
+        +-----+-----+
+              |
           read-only
-              │
+              |
             none
 
-Delegation can only move DOWN the lattice. This is attenuation. You cannot
-delegate admin if you hold read-only. You cannot grant write if you hold read.
+Delegation can only move DOWN the lattice. This is attenuation. You
+cannot delegate admin if you hold read-only. You cannot grant write if
+you hold read.
 
 The math is sound. We just speak it in capabilities.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURE ERASURE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 When sensitive data must be destroyed, it must be destroyed completely.
 
@@ -466,13 +472,13 @@ Erasure Guarantees
 
 
     E1. Zeroization is atomic
-        erase(o) → ¬recoverable(o)
+        erase(o) > ¬recoverable(o)
     E2. Memory clearing defeats inspection
-        clear(buffer) → ∀ address ∈ buffer: read(address) = 0
+        clear(buffer) > ∀ address ∈ buffer: read(address) = 0
     E3. Key destruction is immediate
-        destroy(key) → ¬usable(key) ∧ audit(destroyed, key)
+        destroy(key) > ¬usable(key) ∧ audit(destroyed, key)
     E4. Revocation propagates
-        revoke(cert) → ∀ delegate(cert, c'): revoke(c')
+        revoke(cert) > ∀ delegate(cert, c'): revoke(c')
 
 
 Implementation
@@ -534,8 +540,8 @@ Some things must persist:
   Revocation records      Must prove capability invalid   
   Content hashes          May exist in other chains       
 
-Redaction, not deletion: the fact that something existed remains, but the
-content is gone.
+Redaction, not deletion: the fact that something existed remains, but
+the content is gone.
 
 
 SSD/Flash Considerations
@@ -559,9 +565,9 @@ Our answer: Encrypt at rest (RFC-030). Erasing the key erases the data.
         'erased-via-key-destruction))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE TRUSTED CORE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 What must work correctly for security to hold:
 
@@ -574,31 +580,31 @@ What must work correctly for security to hold:
   Audit chain           What happened        Hash chain, signatures   
   Soup                  Object enumeration   Vault, audit             
 
-The core is small. Objects are dumb content. Policy lives in certificates.
-Verification is stateless computation.
+The core is small. Objects are dumb content. Policy lives in
+certificates. Verification is stateless computation.
 
 
 Authoritative Counts
 --------------------
 
-Object counts MUST come from the TCB. The soup is the authoritative source for
-object enumeration - it walks the vault and audit trail. Counts displayed
-outside the TCB (prompts, status displays, dashboards) are advisory only and
-could be stale or spoofed.
+Object counts MUST come from the TCB. The soup is the authoritative
+source for object enumeration - it walks the vault and audit trail.
+Counts displayed outside the TCB (prompts, status displays, dashboards)
+are advisory only and could be stale or spoofed.
 
-If you need to know how many objects exist, ask the soup. Don't cache counts
-outside the TCB.
+If you need to know how many objects exist, ask the soup. Don't cache
+counts outside the TCB.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COVERT CHANNELS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This is where we get serious.
 
-A covert channel is information flow that violates policy - a way to leak data
-that bypasses the capability model. They exist in every system. We analyze
-ours.
+A covert channel is information flow that violates policy - a way to
+leak data that bypasses the capability model. They exist in every
+system. We analyze ours.
 
 
 Storage Channels
@@ -634,21 +640,21 @@ Federation Channels
 Analysis
 --------
 
-Scenario: Alice has SECRET access. Bob has UNCLASSIFIED. Alice wants to leak
-to Bob.
+Scenario: Alice has SECRET access. Bob has UNCLASSIFIED. Alice wants to
+leak to Bob.
 
-Via storage: Alice creates/deletes objects Bob can see. Each operation signals
-one bit. Rate: maybe 1 bit/second with careful timing.
+Via storage: Alice creates/deletes objects Bob can see. Each operation
+signals one bit. Rate: maybe 1 bit/second with careful timing.
 
-Via timing: Alice influences verification time of requests Bob makes. Bob
-measures. Rate: maybe 0.1 bit/second, noisy.
+Via timing: Alice influences verification time of requests Bob makes.
+Bob measures. Rate: maybe 0.1 bit/second, noisy.
 
-Via federation: Alice causes sync events Bob can observe. Rate: depends on
-federation config, maybe 0.01 bit/second.
+Via federation: Alice causes sync events Bob can observe. Rate: depends
+on federation config, maybe 0.01 bit/second.
 
-Assessment: Total covert bandwidth: ~1-2 bits/second under ideal conditions.
-Not enough for bulk data. Enough for short signals. Acceptable residual risk
-for our threat model.
+Assessment: Total covert bandwidth: ~1-2 bits/second under ideal
+conditions. Not enough for bulk data. Enough for short signals.
+Acceptable residual risk for our threat model.
 
 
 Mitigation Principles
@@ -661,9 +667,9 @@ Mitigation Principles
     4. Accept what remains (document it, move on)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 AUDIT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Everything important gets logged.
 
@@ -683,23 +689,24 @@ Properties: - Hash-chained: tamper-evident - Signed: non-repudiable -
 Monotonic: gaps detected - Distributed: witnesses replicate
 
 What gets logged: - Capability creation - Capability exercise (access) -
-Capability revocation - Access denials - Object creation - Realm events (role
-changes, federation)
+Capability revocation - Access denials - Object creation - Realm events
+(role changes, federation)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SESSION OBSERVABILITY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 The portal module manages session lifecycle: crossing into and out of
-cyberspace. Every session provides observability through the banner, session
-statistics, and the goodbye summary.
+cyberspace. Every session provides observability through the banner,
+session statistics, and the goodbye summary.
 
 
 The Banner
 ----------
 
-At session start, the banner attests system state. Every line is meaningful:
+At session start, the banner attests system state. Every line is
+meaningful:
 
 
     Cyberspace Scheme v0.9.17 (2026-01-11)
@@ -723,31 +730,33 @@ At session start, the banner attests system state. Every line is meaningful:
   entropy             Entropy source attestation for key generation           
   FIPS                Cryptographic self-test status (must pass)              
 
-The FIPS line is critical. Before trusting any cryptographic operation, the
-system runs Known-Answer Tests (KATs) against SHA-256, SHA-512, Ed25519, and
-the RNG. If any test fails, the system displays FAILED and should not be
-trusted for security operations.
+The FIPS line is critical. Before trusting any cryptographic operation,
+the system runs Known-Answer Tests (KATs) against SHA-256, SHA-512,
+Ed25519, and the RNG. If any test fails, the system displays FAILED and
+should not be trusted for security operations.
 
 
 Realm Naming
 ------------
 
-Realms can have human-readable names, analogous to hostnames for IP addresses:
+Realms can have human-readable names, analogous to hostnames for IP
+addresses:
 
 
     (set-realm-name! "om")     ; Name this realm
     (realm-name)               ; => "om"
 
-The name appears in the banner: `realm: om (ecefca39...)` The abbreviated
-principal (first 8 hex chars) provides cryptographic identity while the name
-provides human recognition. Names are stored in `.vault/realm-name`.
+The name appears in the banner: `realm: om (ecefca39...)` The
+abbreviated principal (first 8 hex chars) provides cryptographic
+identity while the name provides human recognition. Names are stored in
+`.vault/realm-name`.
 
 
 Session Statistics
 ------------------
 
-Every operation is counted. Statistics track session activity for monitoring
-and forensics:
+Every operation is counted. Statistics track session activity for
+monitoring and forensics:
 
 
   Category      Stats                                         Purpose                      
@@ -758,9 +767,9 @@ and forensics:
   Network I/O   bytes-in, bytes-out, packets-ipv4/ipv6        Traffic volume               
   Errors        verify-fails, auth-fails, timeouts            Security-relevant failures   
 
-Statistics are initialized at session start and accumulated during operation.
-The primitives live in the `os` module (level 0) so all modules can instrument
-themselves without circular dependencies.
+Statistics are initialized at session start and accumulated during
+operation. The primitives live in the `os` module (level 0) so all
+modules can instrument themselves without circular dependencies.
 
 
     (session-stat! 'unlocks)           ; Increment unlock counter
@@ -785,33 +794,34 @@ The session summary shows:
   * Notable operations (non-zero counts)
   * Errors if any occurred (verify-fails, auth-fails, timeouts)
 
-The hostname in the goodbye message confirms which realm you're leaving -
-important when operating multiple realms via SSH.
+The hostname in the goodbye message confirms which realm you're leaving
+- important when operating multiple realms via SSH.
 
 
 Monitoring Philosophy
 ---------------------
 
-"You can always assert() it away." Statistics are conditional instrumentation:
+"You can always assert() it away." Statistics are conditional
+instrumentation:
 
   * Always present in source - documents what's measurable
   * Minimal overhead - hash table increment
   * No persistence - session-scoped, vanishes on exit
   * Extensible - add new stats by instrumenting operations
 
-The pattern comes from IKE clustering code: conditional asserts for QA builds,
-compiled out for production. Here we keep the counters but the cost is
-negligible.
+The pattern comes from IKE clustering code: conditional asserts for QA
+builds, compiled out for production. Here we keep the counters but the
+cost is negligible.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 KERNEL ASSERTIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-The kernel enforces security through typed assertions. Every assertion is
-cataloged automatically by `extract-assertions.sh` as part of the RFC
-generation pipeline. The catalog is regenerated on every build - if you add an
-assertion, it appears in the documentation.
+The kernel enforces security through typed assertions. Every assertion
+is cataloged automatically by `extract-assertions.sh` as part of the RFC
+generation pipeline. The catalog is regenerated on every build - if you
+add an assertion, it appears in the documentation.
 
 
 Assertion Categories
@@ -879,9 +889,9 @@ Conditional assertions via macros with compile-time flags:
         ((_ key)
          (when +instrumented+ (session-stat! key)))))
 
-With `+instrumented+` false, CHICKEN's optimizer eliminates the dead branch
-entirely. This is the Scheme equivalent of BLISS `%IF DEBUG %THEN %assert(...)
-%FI`.
+With `+instrumented+` false, CHICKEN's optimizer eliminates the dead
+branch entirely. This is the Scheme equivalent of BLISS `%IF DEBUG %THEN
+%assert(...) %FI`.
 
 
 Catalog Generation
@@ -894,7 +904,8 @@ The assertion catalog is generated automatically:
       -> docs/rfc/assertion-catalog.scm
          18 instrumentation, 10 security errors, 12 guards (40 total)
 
-The catalog is a first-class S-expression that can be loaded and queried:
+The catalog is a first-class S-expression that can be loaded and
+queried:
 
 
     (load "assertion-catalog.scm")
@@ -904,40 +915,40 @@ The catalog is a first-class S-expression that can be loaded and queried:
     ;;     (precondition-guards . 12)
     ;;     (total . 40))
 
-Adding assertions to code automatically updates the documentation on next
-regeneration.
+Adding assertions to code automatically updates the documentation on
+next regeneration.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TRUSTED PATH
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 When it matters, talk directly to the core.
 
 
-    ┌──────────────────────────────────────┐
-    │           HUMAN OPERATOR              │
-    └─────────────────┬────────────────────┘
-                      │ Local terminal, no network
-    ┌─────────────────▼────────────────────┐
-    │          CYBERSPACE REPL              │
-    │    ╔═════════════════════════════╗   │
-    │    ║  TRUSTED PATH ACTIVE        ║   │
-    │    ╚═════════════════════════════╝   │
-    └─────────────────┬────────────────────┘
-                      │
-    ┌─────────────────▼────────────────────┐
-    │           TRUSTED CORE                │
-    └──────────────────────────────────────┘
+    +--------------------------------------+
+    |           HUMAN OPERATOR              |
+    +-----------------+--------------------+
+                      | Local terminal, no network
+    +-----------------v--------------------+
+    |          CYBERSPACE REPL              |
+    |    +-----------------------------+   |
+    |    |  TRUSTED PATH ACTIVE        |   |
+    |    +-----------------------------+   |
+    +-----------------+--------------------+
+                      |
+    +-----------------v--------------------+
+    |           TRUSTED CORE                |
+    +--------------------------------------+
 
-Operations requiring trusted path: - (ed25519-keypair) - key generation -
-(node-role 'coordinator) - role assignment - (seal-release "1.0.0") - signing
-releases - Key ceremony (RFC-022)
+Operations requiring trusted path: - (ed25519-keypair) - key generation
+- (node-role 'coordinator) - role assignment - (seal-release "1.0.0") -
+signing releases - Key ceremony (RFC-022)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THREATS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 What We Handle
@@ -969,45 +980,46 @@ What We Don't Handle
   Coercion                      Math doesn't help if you're forced to sign.         
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE INVARIANTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 These must always hold:
 
 
     I1. No access without valid capability
-        access(s,o,r) → ∃c: valid_chain(s,o,r,c)
+        access(s,o,r) > ∃c: valid_chain(s,o,r,c)
     I2. Delegation cannot amplify
-        delegated(c₂,c₁) → rights(c₂) ⊆ rights(c₁)
+        delegated(c₂,c₁) > rights(c₂) ⊆ rights(c₁)
     I3. Object identity is content hash
         id(o) = sha512(content(o))
     I4. Audit is ordered
-        sequence(e₁) < sequence(e₂) → time(e₁) ≤ time(e₂)
+        sequence(e₁) < sequence(e₂) > time(e₁) ≤ time(e₂)
     I5. Revocation is permanent
-        revoked(c,t) → ∀t' > t: ¬valid(c,t')
+        revoked(c,t) > ∀t' > t: ¬valid(c,t')
     I6. No ambient authority
         ¬∃c: grants(c,,)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. &
-Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3.
-Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement
-Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel
-lens 6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical
-Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity
-Considerations for Secure Computer Systems, 1977 - integrity model
+1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2.
+Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed
+Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson,
+B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange
+Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula,
+L.J., Secure Computer Systems: Mathematical Foundations, 1973 -
+confidentiality model 7. Biba, K.J., Integrity Considerations for Secure
+Computer Systems, 1977 - integrity model
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-08
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

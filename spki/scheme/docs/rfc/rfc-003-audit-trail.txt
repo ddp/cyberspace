@@ -1,30 +1,31 @@
 RFC-003: Cryptographic Audit Trail
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This RFC specifies the cryptographic audit trail system for the Library of
-Cyberspace, providing tamper-evident, hash-chained logging with SPKI principal
-attribution and Ed25519 signatures.
+This RFC specifies the cryptographic audit trail system for the Library
+of Cyberspace, providing tamper-evident, hash-chained logging with SPKI
+principal attribution and Ed25519 signatures.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Distributed systems require accountability. Who did what, when, and under
-whose authority?
+Distributed systems require accountability. Who did what, when, and
+under whose authority?
 
 
 Heritage: VMS Cluster-Wide Audit
 --------------------------------
 
-This audit trail descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide
-security infrastructure of VMS 6.0 (1993). That system introduced:
+This audit trail descends from VMS SECURITY.AUDIT$JOURNAL and the
+cluster-wide security infrastructure of VMS 6.0 (1993). That system
+introduced:
 
   * SECURITYPOLICY bit 7 propagation
   * Intrusion detection state replicated cluster-wide
@@ -33,9 +34,9 @@ security infrastructure of VMS 6.0 (1993). That system introduced:
   * TLV-encoded object store
   * The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records
 
-The design principle then, as now: cluster nodes behave identically. N nodes,
-one security domain. Every significant action audited, every audit record
-signed.
+The design principle then, as now: cluster nodes behave identically. N
+nodes, one security domain. Every significant action audited, every
+audit record signed.
 
 Cyberspace audit trails apply the same principle at IPv6 scale.
 
@@ -44,19 +45,19 @@ The Problem
 -----------
 
 Traditional logging fails on all counts: - Tamperable: Text files can be
-edited - Anonymous: No cryptographic identity - Disconnected: No provable
-ordering - Unverifiable: No mathematical proof of integrity
+edited - Anonymous: No cryptographic identity - Disconnected: No
+provable ordering - Unverifiable: No mathematical proof of integrity
 
-Cyberspace audit trails provide: 1. Content-addressed entries - Tamper-evident
-by hash 2. Hash-chained structure - Append-only ordering 3. SPKI attribution -
-Cryptographic actor identity 4. Ed25519 seals - Mathematical proof of
-authenticity 5. Dual context - Human-readable motivation + machine-parseable
-environment
+Cyberspace audit trails provide: 1. Content-addressed entries -
+Tamper-evident by hash 2. Hash-chained structure - Append-only ordering
+3. SPKI attribution - Cryptographic actor identity 4. Ed25519 seals -
+Mathematical proof of authenticity 5. Dual context - Human-readable
+motivation + machine-parseable environment
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SPECIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Entry Structure
@@ -144,9 +145,9 @@ Context Record
       (relates-to context-relates-to)    ; Related entries
       (language context-language))       ; ISO 639-1 code
 
-Context provides: - Motivation: Why the action was taken (human-readable) -
-Relates-to: Cross-references to related audit entries - Language: For
-internationalization
+Context provides: - Motivation: Why the action was taken
+(human-readable) - Relates-to: Cross-references to related audit entries
+- Language: For internationalization
 
 
 Seal Record
@@ -161,9 +162,9 @@ Seal Record
       (signature seal-signature))       ; Ed25519 signature
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 OPERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 audit-init
@@ -187,10 +188,10 @@ Create and sign a new audit entry.
       motivation: "Added new feature"
       signing-key: private-key-blob)
 
-Process: 1. Increment sequence counter 2. Get parent entry ID (hash chain
-link) 3. Build unsealed entry structure 4. Compute SHA-512 hash of canonical
-S-expression 5. Sign hash with Ed25519 6. Create seal record 7. Save entry to
-disk
+Process: 1. Increment sequence counter 2. Get parent entry ID (hash
+chain link) 3. Build unsealed entry structure 4. Compute SHA-512 hash of
+canonical S-expression 5. Sign hash with Ed25519 6. Create seal record
+7. Save entry to disk
 
 
 audit-verify
@@ -201,8 +202,8 @@ Verify cryptographic seal on an entry.
 
     (audit-verify entry public-key: key)
 
-Verification steps: 1. Reconstruct unsealed entry 2. Compute SHA-512 hash 3.
-Compare with stored content-hash 4. Verify Ed25519 signature
+Verification steps: 1. Reconstruct unsealed entry 2. Compute SHA-512
+hash 3. Compare with stored content-hash 4. Verify Ed25519 signature
 
 
 audit-chain
@@ -213,8 +214,8 @@ Verify entire audit chain.
 
     (audit-chain verify-key: public-key)
 
-Verifies: - Each entry's signature is valid - Parent-id references form valid
-chain - Sequence numbers are monotonic
+Verifies: - Each entry's signature is valid - Parent-id references form
+valid chain - Sequence numbers are monotonic
 
 
 audit-read
@@ -227,9 +228,9 @@ Read specific audit entry.
     (audit-read id: "sha512:...")
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 STORAGE FORMAT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Entries stored as individual S-expression files:
 
@@ -240,13 +241,13 @@ Entries stored as individual S-expression files:
       3.sexp
       ...
 
-File naming by sequence number enables efficient: - Sequential reads - Range
-queries - Latest entry lookup
+File naming by sequence number enables efficient: - Sequential reads -
+Range queries - Latest entry lookup
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Threat Model
@@ -274,14 +275,14 @@ Attack Mitigations
 Non-Repudiation
 ---------------
 
-Once an entry is signed and published: - Actor cannot deny performing the
-action - Timestamp cannot be backdated - Content cannot be altered - Signature
-mathematically proves authorship
+Once an entry is signed and published: - Actor cannot deny performing
+the action - Timestamp cannot be backdated - Content cannot be altered -
+Signature mathematically proves authorship
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INTEGRATION POINTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Vault Operations
@@ -290,9 +291,9 @@ Vault Operations
 All vault operations record audit entries:
 
 
-    (seal-commit "message")     → (action (verb seal-commit) ...)
-    (seal-publish "1.0.0" ...)  → (action (verb seal-publish) ...)
-    (seal-subscribe remote ...) → (action (verb seal-subscribe) ...)
+    (seal-commit "message")     > (action (verb seal-commit) ...)
+    (seal-publish "1.0.0" ...)  > (action (verb seal-publish) ...)
+    (seal-subscribe remote ...) > (action (verb seal-subscribe) ...)
 
 
 SPKI Authorization
@@ -310,9 +311,9 @@ Audit entries can include authorization chains:
 This proves not just who acted, but under whose authority.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 EXPORT FORMATS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 S-expression Export
@@ -350,9 +351,9 @@ Produces:
       ...
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Dependencies
@@ -372,21 +373,22 @@ Performance Considerations
   * Lazy verification: verify on read, not on load
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document.
-2. Merkle, R. C. (1987). A digital signature based on a conventional
-encryption function. 3. Bernstein, D. J. (2006). Curve25519: new
-Diffie-Hellman speed records. 4. SPKI/SDSI - RFC 2693, RFC 2692
+1. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital
+document. 2. Merkle, R. C. (1987). A digital signature based on a
+conventional encryption function. 3. Bernstein, D. J. (2006).
+Curve25519: new Diffie-Hellman speed records. 4. SPKI/SDSI - RFC 2693,
+RFC 2692
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

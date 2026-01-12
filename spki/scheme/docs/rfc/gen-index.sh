@@ -165,7 +165,7 @@ done | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc num; d
 EOF
 done
 
-TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+TIMESTAMP="$(date -u +'%Y-%m-%d %H:%MZ') ($(date +'%H:%M %Z'))"
 HOSTNAME=$(hostname -s)
 cat >> index.html << EOF
     </tbody>

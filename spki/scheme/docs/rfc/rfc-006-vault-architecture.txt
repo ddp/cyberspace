@@ -1,26 +1,27 @@
 RFC-006: Vault System Architecture
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC specifies the Vault system for the Library of Cyberspace:
-cryptographically sealed version control with SPKI authorization, progressive
-metadata, archival support, and integrated audit trails.
+cryptographically sealed version control with SPKI authorization,
+progressive metadata, archival support, and integrated audit trails.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Git is powerful but lacks:
 
 1. Cryptographic sealing - GPG signing is optional and awkward 2.
-Authorization model - Anyone with access can commit 3. Archival features - No
-first-class backup/restore 4. Audit integration - History is mutable
+Authorization model - Anyone with access can commit 3. Archival features
+- No first-class backup/restore 4. Audit integration - History is
+mutable
 
 The Vault wraps Git with:
 
@@ -30,24 +31,24 @@ The Vault wraps Git with:
   * Integrated audit trail for non-repudiation
 
 
-                        ╭────────────────────────────────╮
-                        │         CYBERSPACE VAULT       │
-                        ├────────────────────────────────┤
-                        │  seal-commit    seal-release   │
-                        │  seal-archive   seal-publish   │
-                        │  seal-verify    seal-subscribe │
-                        ├────────────────────────────────┤
-                        │         Audit Trail            │
-                        ├────────────────────────────────┤
-                        │         SPKI Certs             │
-                        ├────────────────────────────────┤
-                        │            Git                 │
-                        ╰────────────────────────────────╯
+                        +--------------------------------+
+                        |         CYBERSPACE VAULT       |
+                        +--------------------------------+
+                        |  seal-commit    seal-release   |
+                        |  seal-archive   seal-publish   |
+                        |  seal-verify    seal-subscribe |
+                        +--------------------------------+
+                        |         Audit Trail            |
+                        +--------------------------------+
+                        |         SPKI Certs             |
+                        +--------------------------------+
+                        |            Git                 |
+                        +--------------------------------+
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CORE OPERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 seal-commit
@@ -59,14 +60,14 @@ Stage and commit changes in one operation.
     (seal-commit message
       #!key files catalog subjects keywords description preserve)
 
-Parameters: - message - Commit message (required) - files - Specific files to
-stage (optional) - catalog - Enable catalog metadata - subjects - Subject
-headings - keywords - Search keywords - description - Extended description -
-preserve - Enable preservation metadata
+Parameters: - message - Commit message (required) - files - Specific
+files to stage (optional) - catalog - Enable catalog metadata - subjects
+- Subject headings - keywords - Search keywords - description - Extended
+description - preserve - Enable preservation metadata
 
-Process: 1. Stage specified files (or all modified) 2. Create git commit 3.
-Save metadata (if catalog or preserve) 4. Record in audit trail (if signing
-key configured)
+Process: 1. Stage specified files (or all modified) 2. Create git commit
+3. Save metadata (if catalog or preserve) 4. Record in audit trail (if
+signing key configured)
 
 Example:
 
@@ -123,9 +124,9 @@ Branch and merge operations.
     (seal-merge "feature-auth" #!key strategy)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 VERSION MANAGEMENT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 seal-release
@@ -136,12 +137,12 @@ Create cryptographically sealed release.
 
     (seal-release version #!key message migrate-from)
 
-Parameters: - version - Semantic version (X.Y.Z required) - message - Release
-notes - migrate-from - Previous version for migration tracking
+Parameters: - version - Semantic version (X.Y.Z required) - message -
+Release notes - migrate-from - Previous version for migration tracking
 
-Process: 1. Validate semantic version format 2. Get current commit hash 3.
-Create annotated git tag 4. Sign with SPKI (if configured) 5. Create migration
-marker (if migrate-from specified)
+Process: 1. Validate semantic version format 2. Get current commit hash
+3. Create annotated git tag 4. Sign with SPKI (if configured) 5. Create
+migration marker (if migrate-from specified)
 
 Signature Storage:
 
@@ -162,13 +163,13 @@ Verify release signature.
 
     (seal-verify version #!key verify-key)
 
-Process: 1. Load signature file 2. Recompute manifest hash 3. Verify Ed25519
-signature
+Process: 1. Load signature file 2. Recompute manifest hash 3. Verify
+Ed25519 signature
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ARCHIVAL SYSTEM
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 seal-archive
@@ -263,18 +264,18 @@ Restore from sealed archive.
 
     (seal-restore archive #!key verify-key target identity)
 
-Parameters: - verify-key - SPKI public key for signature verification - target
-- Extraction directory - identity - Age identity file for decryption (zstd-age
-format)
+Parameters: - verify-key - SPKI public key for signature verification -
+target - Extraction directory - identity - Age identity file for
+decryption (zstd-age format)
 
 Process: 1. Read manifest 2. Verify hash (archive integrity) 3. Verify
-signature (if key provided) 4. Decrypt (zstd-age only, requires identity) 5.
-Extract to target directory
+signature (if key provided) 4. Decrypt (zstd-age only, requires
+identity) 5. Extract to target directory
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REPLICATION LAYER
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 See RFC-001 for complete specification.
 
@@ -287,8 +288,8 @@ Publish release to remote.
 
     (seal-publish version #!key remote archive-format message)
 
-Supports: - Git remotes (push tags) - HTTP endpoints (POST) - Filesystem paths
-(copy)
+Supports: - Git remotes (push tags) - HTTP endpoints (POST) - Filesystem
+paths (copy)
 
 
 seal-subscribe
@@ -311,9 +312,9 @@ Bidirectional sync.
     (seal-synchronize remote #!key direction verify-key)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CONFIGURATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 vault-init
@@ -352,32 +353,32 @@ Configuration Options:
   subscribe-dir    string    Directory for subscriptions                            
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DIRECTORY STRUCTURE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     project/
-    ├── .vault/
-    │   ├── metadata/           # Commit metadata files
-    │   │   ├── abc123.sexp
-    │   │   └── def456.sexp
-    │   ├── releases/           # Release signatures
-    │   │   ├── 1.0.0.sig
-    │   │   └── 1.1.0.sig
-    │   ├── audit/              # Audit trail
-    │   │   ├── 1.sexp
-    │   │   └── 2.sexp
-    │   └── subscriptions/      # Downloaded releases
-    │       └── vault-1.0.0.archive
-    ├── migrations/             # Version migration scripts
-    │   └── 1.0.0-to-2.0.0.scm
-    └── .git/                   # Git repository
+    +-- .vault/
+    |   +-- metadata/           # Commit metadata files
+    |   |   +-- abc123.sexp
+    |   |   +-- def456.sexp
+    |   +-- releases/           # Release signatures
+    |   |   +-- 1.0.0.sig
+    |   |   +-- 1.1.0.sig
+    |   +-- audit/              # Audit trail
+    |   |   +-- 1.sexp
+    |   |   +-- 2.sexp
+    |   +-- subscriptions/      # Downloaded releases
+    |       +-- vault-1.0.0.archive
+    +-- migrations/             # Version migration scripts
+    |   +-- 1.0.0-to-2.0.0.scm
+    +-- .git/                   # Git repository
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MIGRATION SUPPORT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Creating Migrations
@@ -405,9 +406,9 @@ Running Migrations
     (seal-migrate "1.0.0" "2.0.0" #!key script dry-run)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INTEGRITY CHECKING
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 seal-check
@@ -418,13 +419,13 @@ Verify vault integrity.
 
     (seal-check #!key deep)
 
-Checks: - Git repository health (git fsck) - Release signature validity (if
-deep) - Audit trail chain (if deep)
+Checks: - Git repository health (git fsck) - Release signature validity
+(if deep) - Audit trail chain (if deep)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Signing Key Handling
@@ -442,9 +443,9 @@ Signing Key Handling
 Authorization Flow
 ------------------
 
-1. Configure: (vault-init signing-key: key) 2. Operate: (seal-commit ...)
-signs with configured key 3. Audit: Entry includes actor's public key 4.
-Verify: (seal-verify ...) checks signature
+1. Configure: (vault-init signing-key: key) 2. Operate: (seal-commit
+...) signs with configured key 3. Audit: Entry includes actor's public
+key 4. Verify: (seal-verify ...) checks signature
 
 
 Threat Mitigations
@@ -458,9 +459,9 @@ Threat Mitigations
   Archive corruption     SHA-512 hash verification     
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INTEGRATION POINTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 With Audit Trail (RFC-003)
@@ -493,9 +494,9 @@ Progressive metadata via seal-commit parameters:
     (seal-commit "msg" preserve: #t)  ; Full preservation
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 USAGE EXAMPLES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Basic Workflow
@@ -528,9 +529,9 @@ Federation Workflow
     (seal-synchronize peer-remote direction: 'both)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DOCUMENT FORMATS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 The Vault preserves documents in canonical open formats:
 
@@ -545,21 +546,21 @@ SHOULD be published in all three formats for maximum preservation and
 accessibility. No proprietary formats.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Git Internals - Plumbing and Porcelain 2. RFC-001: Replication Layer 3.
-RFC-003: Cryptographic Audit Trail 4. RFC-004: SPKI Authorization 5. RFC-005:
-Progressive Metadata Levels 6. RFC-018: Sealed Archive Format 7. Semantic
-Versioning 2.0.0
+1. Git Internals - Plumbing and Porcelain 2. RFC-001: Replication Layer
+3. RFC-003: Cryptographic Audit Trail 4. RFC-004: SPKI Authorization 5.
+RFC-005: Progressive Metadata Levels 6. RFC-018: Sealed Archive Format
+7. Semantic Versioning 2.0.0
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

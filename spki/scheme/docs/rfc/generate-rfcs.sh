@@ -317,7 +317,9 @@ sanity_check() {
 }
 
 # Main
+START_TIME=$(date +%s)
 echo "=== RFC Documentation Pipeline (S-expression) ==="
+echo "Started: $(date -u '+%Y-%m-%d %H:%M:%SZ') ($(date '+%H:%M:%S %Z'))"
 echo ""
 
 # Extract kernel assertions (for RFC-046)
@@ -327,7 +329,12 @@ echo "Extracting assertions..."
 # Generate all formats via Scheme
 echo ""
 echo "Generating formats..."
-csi -q generate-all.scm 2>/dev/null
+csi -q generate-all.scm
+GEN_STATUS=$?
+if [[ $GEN_STATUS -ne 0 ]]; then
+  echo "  [FAIL] Scheme generation failed with status $GEN_STATUS"
+  exit 1
+fi
 
 # Generate index
 generate_index
@@ -361,3 +368,9 @@ if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>
 else
   echo "  [skip] Cannot reach yoyodyne"
 fi
+
+# Report elapsed time
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+echo ""
+echo "Completed: $(date -u '+%Y-%m-%d %H:%M:%SZ') ($(date '+%H:%M:%S %Z')) [${ELAPSED}s]"

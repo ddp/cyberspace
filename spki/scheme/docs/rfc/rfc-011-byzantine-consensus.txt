@@ -1,21 +1,21 @@
 RFC-011: Byzantine Consensus
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC specifies Byzantine fault-tolerant consensus for Cyberspace
 federation, enabling agreement among distributed vaults even when some
-participants are faulty or malicious. N nodes tolerate up to f failures where
-N ≥ 3f + 1.
+participants are faulty or malicious. N nodes tolerate up to f failures
+where N ≥ 3f + 1.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Federation (RFC-010) assumes honest peers. Reality differs:
 
@@ -26,8 +26,9 @@ Federation (RFC-010) assumes honest peers. Reality differs:
 
 Byzantine consensus provides:
 
-1. Safety: Honest nodes agree on same value 2. Liveness: System makes progress
-despite failures 3. Fault tolerance: Survives f failures with 3f+1 nodes
+1. Safety: Honest nodes agree on same value 2. Liveness: System makes
+progress despite failures 3. Fault tolerance: Survives f failures with
+3f+1 nodes
 
 From Lamport, Shostak, and Pease (1982):
 
@@ -35,9 +36,9 @@ From Lamport, Shostak, and Pease (1982):
     "The Byzantine Generals Problem: reaching agreement in the presence of traitors."
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SPECIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 System Model
@@ -101,9 +102,9 @@ Message Formats
       (signature #${ed25519-sig}))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 VIEW CHANGE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 When primary fails or is Byzantine:
 
@@ -115,9 +116,9 @@ When primary fails or is Byzantine:
     5. Resume protocol in new view
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 APPLICATION TO CYBERSPACE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Federation Ordering
@@ -139,8 +140,8 @@ Federation Ordering
 Threshold Governance Integration
 --------------------------------
 
-Combine with RFC-007: - Consensus on what to do - Threshold signatures on
-authorization
+Combine with RFC-007: - Consensus on what to do - Threshold signatures
+on authorization
 
 
     (governance-decision
@@ -150,9 +151,9 @@ authorization
       (signers (alice carol dave)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 OPTIMIZATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Speculation
@@ -189,9 +190,9 @@ When all replicas agree initially:
     Direct to COMMIT with 3f+1 matching responses
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Threat Model
@@ -200,8 +201,8 @@ Threat Model
 Tolerates: - f Byzantine nodes (arbitrary behavior) - Network delays and
 reordering - Message loss (with retransmission)
 
-Requires: - N ≥ 3f + 1 total nodes - Authenticated channels (signatures) -
-Eventual message delivery
+Requires: - N ≥ 3f + 1 total nodes - Authenticated channels
+(signatures) - Eventual message delivery
 
 
 Attack Resistance
@@ -215,9 +216,9 @@ Attack Resistance
   Sybil               SPKI admission control           
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COMPLEXITY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
   Metric                     Value                      
@@ -226,9 +227,9 @@ COMPLEXITY
   Cryptographic operations   O(N) signatures/verifies   
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 State Machine
@@ -240,9 +241,9 @@ State Machine
       pbft-state?
       (view pbft-view)
       (sequence pbft-sequence)
-      (log pbft-log)              ; sequence → messages
-      (prepared pbft-prepared)    ; sequence → value
-      (committed pbft-committed)) ; sequence → value
+      (log pbft-log)              ; sequence > messages
+      (prepared pbft-prepared)    ; sequence > value
+      (committed pbft-committed)) ; sequence > value
 
 
 Dependencies
@@ -254,22 +255,22 @@ Dependencies
   * Network transport (TCP, QUIC)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 1. Lamport, L., Shostak, R., & Pease, M. (1982). The Byzantine Generals
 Problem. 2. Castro, M., & Liskov, B. (1999). Practical Byzantine Fault
-Tolerance. 3. Yin, M., et al. (2019). HotStuff: BFT Consensus with Linearity
-and Responsiveness. 4. RFC-007: Threshold Signature Governance 5. RFC-010:
-Federation Protocol
+Tolerance. 3. Yin, M., et al. (2019). HotStuff: BFT Consensus with
+Linearity and Responsiveness. 4. RFC-007: Threshold Signature Governance
+5. RFC-010: Federation Protocol
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

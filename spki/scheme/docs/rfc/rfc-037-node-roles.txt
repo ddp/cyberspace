@@ -1,78 +1,79 @@
 RFC-037: Node Roles and Capabilities
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC defines functional roles for nodes in a Library of Cyberspace
-confederation based on compute, storage, network, and security capabilities.
-Roles determine what operations a node can perform and how it participates in
-the distributed system.
+confederation based on compute, storage, network, and security
+capabilities. Roles determine what operations a node can perform and how
+it participates in the distributed system.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TERMINOLOGY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-Realm: A node's place in cyberspace. A realm encompasses: - The node's vault
-(local content-addressed object store) - The node's principal (Ed25519
-identity) - The node's capabilities (hardware, network, security) - The node's
-objects (what it stores and serves)
+Realm: A node's place in cyberspace. A realm encompasses: - The node's
+vault (local content-addressed object store) - The node's principal
+(Ed25519 identity) - The node's capabilities (hardware, network,
+security) - The node's objects (what it stores and serves)
 
-A realm is local-first and sovereign. The node controls what to share, who to
-trust, what to replicate. When nodes federate, their realms overlap - objects
-flow between them according to trust relationships.
+A realm is local-first and sovereign. The node controls what to share,
+who to trust, what to replicate. When nodes federate, their realms
+overlap - objects flow between them according to trust relationships.
 
-The hardware manifest stored at .vault/node-hardware declares what kind of
-place this realm occupies in cyberspace.
+The hardware manifest stored at .vault/node-hardware declares what kind
+of place this realm occupies in cyberspace.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 RFC-010 (Federation Protocol) defines trust relationships between peers
 (publisher, subscriber, peer). However, it does not address functional
-capabilities - what operations each node can actually perform based on its
-hardware and network constraints.
+capabilities - what operations each node can actually perform based on
+its hardware and network constraints.
 
-A Raspberry Pi on a solar-powered satellite uplink has different capabilities
-than a rack-mounted server in a datacenter. The system should:
+A Raspberry Pi on a solar-powered satellite uplink has different
+capabilities than a rack-mounted server in a datacenter. The system
+should:
 
-1. Self-assess - Nodes should know their own capabilities 2. Declare - Nodes
-should advertise their role to peers 3. Adapt - Operations should degrade
-gracefully based on available roles 4. Persist - Role assignments should
-survive restarts
+1. Self-assess - Nodes should know their own capabilities 2. Declare -
+Nodes should advertise their role to peers 3. Adapt - Operations should
+degrade gracefully based on available roles 4. Persist - Role
+assignments should survive restarts
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 NODE ROLES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Role Hierarchy
 --------------
 
 
-                        ┌─────────────┐
-                        │ COORDINATOR │  Byzantine consensus, threshold signing
-                        │   (rare)    │  Always-on, high compute
-                        └──────┬──────┘
-                               │
-                  ┌────────────┼────────────┐
-                  ▼            ▼            ▼
-           ┌───────────┐ ┌───────────┐ ┌───────────┐
-           │   FULL    │ │  WITNESS  │ │ ARCHIVER  │
-           │   NODE    │ │           │ │           │
-           └─────┬─────┘ └───────────┘ └───────────┘
-                 │
-                 ▼
-           ┌───────────┐
-           │   EDGE    │  Read-only, mobile, intermittent
-           └───────────┘
+                        +-------------+
+                        | COORDINATOR |  Byzantine consensus, threshold signing
+                        |   (rare)    |  Always-on, high compute
+                        +------+------+
+                               |
+                  +------------+------------+
+                  v            v            v
+           +-----------+ +-----------+ +-----------+
+           |   FULL    | |  WITNESS  | | ARCHIVER  |
+           |   NODE    | |           | |           |
+           +-----+-----+ +-----------+ +-----------+
+                 |
+                 v
+           +-----------+
+           |   EDGE    |  Read-only, mobile, intermittent
+           +-----------+
 
 
 Role Definitions
@@ -119,9 +120,9 @@ Capability Requirements
         (security   (read-only #t))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ROLE DETECTION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Automatic Probing
@@ -177,9 +178,9 @@ Role Assignment
          (else 'edge))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ROLE DECLARATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Local Configuration
@@ -217,9 +218,9 @@ Role Announcement
              (sign-announcement announcement key))))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ROLE-BASED OPERATION CONSTRAINTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Operation Matrix
@@ -258,9 +259,9 @@ Graceful Degradation
             (list-index hierarchy required))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 STARLINK CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Per RFC-016, the system is optimized for satellite links:
 
@@ -288,15 +289,15 @@ Per RFC-016, the system is optimized for satellite links:
 Role Implications for Satellite Nodes
 -------------------------------------
 
-- coordinator: Generally NOT suitable for satellite (latency too variable for
-consensus) - full: Marginal (can work with lazy clustering) - witness: IDEAL
-(passive, tolerates latency) - archiver: IDEAL (batch operations) - edge:
-IDEAL (intermittent by design)
+- coordinator: Generally NOT suitable for satellite (latency too
+variable for consensus) - full: Marginal (can work with lazy clustering)
+- witness: IDEAL (passive, tolerates latency) - archiver: IDEAL (batch
+operations) - edge: IDEAL (intermittent by design)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 REPL Commands
@@ -325,8 +326,8 @@ Role configuration stored in the realm:
     .vault/node-role             ; Realm-specific role
     .vault/node-hardware         ; Hardware manifest (auto-refreshed)
 
-The hardware manifest is automatically updated on REPL startup, declaring the
-realm's capabilities to federated peers.
+The hardware manifest is automatically updated on REPL startup,
+declaring the realm's capabilities to federated peers.
 
 
 Audit Trail
@@ -344,19 +345,20 @@ Role changes are auditable events:
       (actor #${principal}))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Role Spoofing
 -------------
 
-A node could claim a higher role than its capabilities warrant. Mitigations:
+A node could claim a higher role than its capabilities warrant.
+Mitigations:
 
-1. Capability proofs: Require benchmark results 2. Peer validation: Other
-nodes can challenge claims 3. Reputation: Track role fulfillment history 4.
-Threshold trust: Multiple witnesses needed
+1. Capability proofs: Require benchmark results 2. Peer validation:
+Other nodes can challenge claims 3. Reputation: Track role fulfillment
+history 4. Threshold trust: Multiple witnesses needed
 
 
 Role Downgrade Attacks
@@ -364,23 +366,23 @@ Role Downgrade Attacks
 
 An attacker could force nodes to operate at lower roles:
 
-1. Signed role declarations: Can't forge 2. Local override: Node controls own
-role 3. Audit trail: Role changes are logged
+1. Signed role declarations: Can't forge 2. Local override: Node
+controls own role 3. Audit trail: Role changes are logged
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. RFC-010: Federation Protocol 2. RFC-011: Byzantine Consensus 3. RFC-016:
-Lazy Clustering 4. RFC-017: Security Considerations
+1. RFC-010: Federation Protocol 2. RFC-011: Byzantine Consensus 3.
+RFC-016: Lazy Clustering 4. RFC-017: Security Considerations
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-07
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

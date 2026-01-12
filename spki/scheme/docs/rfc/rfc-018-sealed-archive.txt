@@ -1,20 +1,20 @@
 RFC-018: Sealed Archive Format
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This RFC specifies the Zstd+Age archive format for the Library of Cyberspace:
-a modern archive format combining Zstd compression with Age encryption,
-replacing gzip for cryptographic archives.
+This RFC specifies the Zstd+Age archive format for the Library of
+Cyberspace: a modern archive format combining Zstd compression with Age
+encryption, replacing gzip for cryptographic archives.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 The legacy cryptographic archive format uses gzip compression without
 encryption:
@@ -29,15 +29,16 @@ encryption:
 
 Why change?
 
-1. Encryption at rest - Archives contain potentially sensitive data 2. Faster
-compression - Zstd is 3-5x faster than gzip 3. Better ratios - Zstd typically
-achieves 10-20% better compression 4. Key alignment - Age uses X25519/Ed25519,
-same curve family as SPKI 5. Parallel support - zstd -T0 uses all cores
+1. Encryption at rest - Archives contain potentially sensitive data 2.
+Faster compression - Zstd is 3-5x faster than gzip 3. Better ratios -
+Zstd typically achieves 10-20% better compression 4. Key alignment - Age
+uses X25519/Ed25519, same curve family as SPKI 5. Parallel support -
+zstd -T0 uses all cores
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SPECIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Archive Creation Pipeline
@@ -97,9 +98,9 @@ Configuration
     (vault-config 'archive-format 'zstd-age)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PERFORMANCE CHARACTERISTICS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Compression
@@ -160,9 +161,9 @@ Total Pipeline
     Speedup: ~8x
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Encryption Layer (Age)
@@ -185,9 +186,9 @@ Signature Layer (SPKI)
 Verification Order
 ------------------
 
-1. Verify signature - Before decryption (fail fast on tampering) 2. Verify
-hash - Encrypted archive integrity 3. Decrypt - Only after signature verified
-4. Extract - Only after successful decryption
+1. Verify signature - Before decryption (fail fast on tampering) 2.
+Verify hash - Encrypted archive integrity 3. Decrypt - Only after
+signature verified 4. Extract - Only after successful decryption
 
 
 Threat Mitigations
@@ -202,9 +203,9 @@ Threat Mitigations
   Chosen ciphertext   Poly1305 authentication              
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COMPATIBILITY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Age Identity Types
@@ -241,9 +242,9 @@ If zstd or age unavailable, fall back to cryptographic format:
         (seal-archive version format: 'cryptographic))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 seal-archive-zstd-age
@@ -317,9 +318,9 @@ seal-restore-zstd-age
                         id-file archive-file target-dir))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 USAGE EXAMPLES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Create Encrypted Archive
@@ -362,9 +363,9 @@ Command Line Equivalents
       tar -xf -
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MIGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 From Cryptographic to Zstd-Age
@@ -381,26 +382,27 @@ From Cryptographic to Zstd-Age
 Backward Compatibility
 ----------------------
 
-Both formats can coexist. The manifest format field determines restoration
-method: - (format cryptographic) → seal-restore-cryptographic - (format
-zstd-age) → seal-restore-zstd-age
+Both formats can coexist. The manifest format field determines
+restoration method: - (format cryptographic) >
+seal-restore-cryptographic - (format zstd-age) > seal-restore-zstd-age
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm
-2. [Age](https://age-encryption.org/) - Modern encryption tool 3.
-[RFC-006](rfc-006-vault-architecture.html) - Vault System Architecture 4.
-[RFC-004](rfc-004-spki-authorization.html) - SPKI Authorization
+1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression
+algorithm 2. [Age](https://age-encryption.org/) - Modern encryption tool
+3. [RFC-006](rfc-006-vault-architecture.html) - Vault System
+Architecture 4. [RFC-004](rfc-004-spki-authorization.html) - SPKI
+Authorization
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

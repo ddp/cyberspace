@@ -1,22 +1,22 @@
 RFC-035: Mobile Agents and Pub/Sub
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC specifies the mobile agent architecture for the Library of
-Cyberspace: Telescript-inspired agents that migrate between realms, carry SPKI
-credentials, communicate via pub/sub channels, and operate under realm
-coordinator supervision. Agents are first-class citizens with cryptographic
-identity.
+Cyberspace: Telescript-inspired agents that migrate between realms,
+carry SPKI credentials, communicate via pub/sub channels, and operate
+under realm coordinator supervision. Agents are first-class citizens
+with cryptographic identity.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Distributed computation requires mobile code:
 
@@ -29,13 +29,14 @@ Distributed computation requires mobile code:
   * Accountability
   * Every agent action is auditable
 
-General Magic's Telescript (1994) pioneered these ideas. We preserve the good
-parts while integrating with SPKI capabilities and content-addressed storage.
+General Magic's Telescript (1994) pioneered these ideas. We preserve the
+good parts while integrating with SPKI capabilities and
+content-addressed storage.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 AGENT MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 What is an Agent?
@@ -44,9 +45,9 @@ What is an Agent?
 An agent is:
 
 1. Mobile code - Scheme closures that can serialize and migrate 2.
-Credentialed - Carries SPKI certificates granting capabilities 3. Accountable
-- Every action recorded in audit trail 4. Supervised - Realm coordinator can
-inspect, suspend, terminate
+Credentialed - Carries SPKI certificates granting capabilities 3.
+Accountable - Every action recorded in audit trail 4. Supervised - Realm
+coordinator can inspect, suspend, terminate
 
 
     (define-record-type <agent>
@@ -64,10 +65,10 @@ Agent Lifecycle
 ---------------
 
 
-    entangle → running → [teleport] → running → ... → decohere
-                 ↓                       ↓
+    entangle > running > [teleport] > running > ... > decohere
+                 v                       v
               suspend               superpose
-                 ↓                       ↓
+                 v                       v
               resume                  collapse
 
 
@@ -101,15 +102,15 @@ The fabric of cyberspace uses quantum metaphors:
 
 "A wilderness of mirrors" - James Angleton
 
-Agents live in a cryptographic wilderness where: - They cannot see plaintext
-(HE encryption) - They cannot trust other agents (capability-restricted) -
-Every interaction is mediated by certificates - Identity is what you can
-prove, not who you claim
+Agents live in a cryptographic wilderness where: - They cannot see
+plaintext (HE encryption) - They cannot trust other agents
+(capability-restricted) - Every interaction is mediated by certificates
+- Identity is what you can prove, not who you claim
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 AGENT OPERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 entangle (spawn)
@@ -125,8 +126,9 @@ Create a new agent in the current realm:
       #!key name timeout)
     ;; Returns agent-id (content hash)
 
-The spawning principal's key signs the agent, establishing provenance. The new
-agent is entangled with its creator - correlated through shared lineage.
+The spawning principal's key signs the agent, establishing provenance.
+The new agent is entangled with its creator - correlated through shared
+lineage.
 
 
 teleport (migrate)
@@ -139,8 +141,8 @@ Move agent to another realm:
       #!key superpose)  ; checkpoint before teleport
 
 Process: 1. Serialize agent code + state 2. Create migration certificate
-(signed by current realm) 3. Transmit to target realm 4. Target validates
-credentials against its policy 5. Resume execution
+(signed by current realm) 3. Transmit to target realm 4. Target
+validates credentials against its policy 5. Resume execution
 
 Migration Certificate:
 
@@ -179,19 +181,20 @@ Save and restore agent state:
     ;; Resurrects agent from superposition
     ;; Wave function collapses to specific state
 
-Checkpoints are content-addressed, enabling: - Fault recovery - Time travel
-debugging - Forking (spawn from checkpoint)
+Checkpoints are content-addressed, enabling: - Fault recovery - Time
+travel debugging - Forking (spawn from checkpoint)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUANTUM MESSAGING
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Topics (Observation Points)
 ---------------------------
 
-Topics are hierarchical, content-addressed channels where agents observe:
+Topics are hierarchical, content-addressed channels where agents
+observe:
 
 
     (define-record-type <topic>
@@ -213,7 +216,8 @@ observe (subscribe)
     ;; filter: Predicate for message selection
     ;; replay-from: Sequence number for replay
 
-When you observe, you collapse potential messages into actual received values.
+When you observe, you collapse potential messages into actual received
+values.
 
 
 tunnel (publish/send)
@@ -226,8 +230,8 @@ tunnel (publish/send)
     ;; ttl: Time-to-live in seconds
     ;; priority: 'normal | 'high | 'critical
 
-Messages tunnel through the fabric of cyberspace, passing barriers that would
-block classical communication.
+Messages tunnel through the fabric of cyberspace, passing barriers that
+would block classical communication.
 
 
 Message Structure
@@ -256,9 +260,9 @@ Delivery Guarantees
   exactly-once    Deduplication + ack         
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REALM COORDINATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 What is a Realm?
@@ -351,14 +355,14 @@ Kill Signal:
       (grace-period 5)  ; seconds to superpose
       (signature #${ed25519-sig}))
 
-Agents MUST honor kill signals. Failure to terminate results in: 1. Resource
-revocation (network, storage access removed) 2. Forced decoherence by runtime
-3. Blacklisting of spawning principal
+Agents MUST honor kill signals. Failure to terminate results in: 1.
+Resource revocation (network, storage access removed) 2. Forced
+decoherence by runtime 3. Blacklisting of spawning principal
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DISTRIBUTED LOCKING (SCS-STYLE)
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Lock Manager
@@ -371,8 +375,8 @@ Each realm has a lock manager for coordination:
       (make-lock-manager realm locks waiters)
       lock-manager?
       (realm lm-realm)
-      (locks lm-locks)      ; Hash table: resource → holder
-      (waiters lm-waiters)) ; Hash table: resource → queue
+      (locks lm-locks)      ; Hash table: resource > holder
+      (waiters lm-waiters)) ; Hash table: resource > queue
 
 
 Lock Operations
@@ -383,8 +387,8 @@ Lock Operations
       #!key timeout mode)
     ;; mode: 'exclusive | 'shared
     (lock-release resource)
-    (lock-upgrade resource)  ; shared → exclusive
-    (lock-downgrade resource)  ; exclusive → shared
+    (lock-upgrade resource)  ; shared > exclusive
+    (lock-downgrade resource)  ; exclusive > shared
 
 
 Distributed Locks (Cross-Realm)
@@ -396,8 +400,8 @@ For resources spanning realms:
     (distributed-lock resource realms
       #!key timeout coordinator)
 
-Uses two-phase locking: 1. Prepare - All realms vote to grant lock 2. Commit -
-Lock granted if all vote yes 3. Abort - Any no vote aborts
+Uses two-phase locking: 1. Prepare - All realms vote to grant lock 2.
+Commit - Lock granted if all vote yes 3. Abort - Any no vote aborts
 
 
 Deadlock Detection
@@ -414,9 +418,9 @@ Lock manager maintains wait-for graph:
 Resolution: Youngest agent in cycle is aborted.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 TCSEC B2 Channel Security
@@ -435,8 +439,8 @@ Credential Validation
 ---------------------
 
 On every operation: 1. Verify agent's SPKI certificate chain 2. Check
-capability grants requested action 3. Validate certificates not revoked 4.
-Enforce monotonic attenuation
+capability grants requested action 3. Validate certificates not revoked
+4. Enforce monotonic attenuation
 
 
 Migration Security
@@ -462,9 +466,9 @@ All agent actions recorded:
       motivation: "data locality optimization")
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 HOMOMORPHIC ENCRYPTION INTEGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 When to Use HE
@@ -499,23 +503,23 @@ The agent computes on encrypted data, returns encrypted result. Only the
 principal with the decryption key can read the result.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Telescript Language Reference - General Magic (preserved) 2. Mobile Agents
-- Lange & Oshima (preserved) 3. Distributed Lock Manager - VAX/VMS SCS
-(preserved) 4. Concurrency Oriented Programming in Termite Scheme - Germain
-(preserved) 5. RFC-003: Cryptographic Audit Trail 6. RFC-004: SPKI
-Authorization 7. RFC-010: Federation Protocol 8. RFC-021: Capability
-Delegation 9. RFC-023: Agent Sandboxing
+1. Telescript Language Reference - General Magic (preserved) 2. Mobile
+Agents - Lange & Oshima (preserved) 3. Distributed Lock Manager -
+VAX/VMS SCS (preserved) 4. Concurrency Oriented Programming in Termite
+Scheme - Germain (preserved) 5. RFC-003: Cryptographic Audit Trail 6.
+RFC-004: SPKI Authorization 7. RFC-010: Federation Protocol 8. RFC-021:
+Capability Delegation 9. RFC-023: Agent Sandboxing
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-07
   * Initial draft with quantum vocabulary
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

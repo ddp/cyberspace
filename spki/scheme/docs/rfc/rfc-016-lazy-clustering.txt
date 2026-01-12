@@ -1,20 +1,20 @@
 RFC-016: Lazy Clustering
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC specifies Lazy Clustering for Cyberspace federation: a relaxed
-synchronization model where nodes sync when convenient, not continuously.
-Optimized for the "loose confederacy of friends" model.
+synchronization model where nodes sync when convenient, not
+continuously. Optimized for the "loose confederacy of friends" model.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Not every deployment needs Byzantine consensus:
 
@@ -25,35 +25,35 @@ Not every deployment needs Byzantine consensus:
 
 Lazy Clustering provides:
 
-1. Sync when ready: Push/pull at human pace 2. Offline-first: Work without
-network 3. Conflict detection: Know when divergence happens 4. Manual
-resolution: Humans resolve, not algorithms 5. Audit everything: Full history
-preserved
+1. Sync when ready: Push/pull at human pace 2. Offline-first: Work
+without network 3. Conflict detection: Know when divergence happens 4.
+Manual resolution: Humans resolve, not algorithms 5. Audit everything:
+Full history preserved
 
 
     "The best protocol is the one you don't run."
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SPECIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Cluster Model
 -------------
 
 
-         ┌─────────┐
-         │  Alice  │
-         │ (lazy)  │
-         └────┬────┘
-              │
-              │ sync when ready @ 10Gb/s
-              │
-         ┌────▼────┐         ┌─────────┐
-         │   Bob   │◄───────►│  Carol  │
-         │ (lazy)  │ 10Gb/s  │ (lazy)  │
-         └─────────┘         └─────────┘
+         +---------+
+         |  Alice  |
+         | (lazy)  |
+         +----+----+
+              |
+              | sync when ready @ 10Gb/s
+              |
+         +----v----+         +---------+
+         |   Bob   |<------->|  Carol  |
+         | (lazy)  | 10Gb/s  | (lazy)  |
+         +---------+         +---------+
     No heartbeats. No leader election. No quorum.
     Just friends sharing when they're ready.
     At line speed when they do.
@@ -90,9 +90,9 @@ Crypto overhead (constant):
 
 "Lazy" means when, not how fast. When you sync, it saturates the pipe.
 
-Design priorities: 1. Optimized for Starlink and satellite links 2. Tolerant
-of high latency (no chatty protocols) 3. Graceful degradation to minimum
-bandwidth 4. Bursty transfer patterns (sync then idle)
+Design priorities: 1. Optimized for Starlink and satellite links 2.
+Tolerant of high latency (no chatty protocols) 3. Graceful degradation
+to minimum bandwidth 4. Bursty transfer patterns (sync then idle)
 
 
 Heartbeat and Timekeeping
@@ -101,16 +101,16 @@ Heartbeat and Timekeeping
 No mandatory heartbeat. That's the design.
 
 
-    Traditional cluster:  ping → pong → ping → pong → ...
+    Traditional cluster:  ping > pong > ping > pong > ...
     Lazy cluster:         ... silence ... (sync) ... silence ...
 
-Timekeeping: Lamport clocks (RFC-012), not wall clocks. - Causality without
-synchronization - No NTP dependency - No GPS required - Works across time
-zones, planets
+Timekeeping: Lamport clocks (RFC-012), not wall clocks. - Causality
+without synchronization - No NTP dependency - No GPS required - Works
+across time zones, planets
 
-When you need consensus: Byzantine consensus (RFC-011) + Lamport clocks. -
-Lazy clustering for everyday sync - Byzantine consensus for critical decisions
-- Same Lamport clock across both modes
+When you need consensus: Byzantine consensus (RFC-011) + Lamport clocks.
+- Lazy clustering for everyday sync - Byzantine consensus for critical
+decisions - Same Lamport clock across both modes
 
 Optional presence beacon:
 
@@ -163,9 +163,9 @@ No automatic resolution. Conflicts flagged for humans.
 No urgency. Sync happens when convenient.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 STATE TRACKING
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Version Vector
@@ -177,7 +177,7 @@ Each node tracks what it knows about others:
     (define-record-type <version-vector>
       (make-version-vector entries)
       version-vector?
-      (entries vv-entries))  ; Hash: node-id → latest-sequence
+      (entries vv-entries))  ; Hash: node-id > latest-sequence
     ;; Alice's view:
     ;; { alice: 42, bob: 37, carol: 29 }
 
@@ -203,9 +203,9 @@ Sync Calculation
         (values to-send to-receive)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CONFLICT DETECTION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Divergence
@@ -250,9 +250,9 @@ Manual resolution required:
     (lazy-resolve "2.1.0" merged: "2.1.0-merged")
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 OFFLINE OPERATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Work Offline
@@ -287,9 +287,9 @@ Reconnect and Sync
     ;; Reports any conflicts
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CLUSTER OPERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Join Cluster
@@ -334,9 +334,9 @@ Cluster Status
     ;; Local: 2.2.0 (2 ahead of cluster)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SYNC STRATEGIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Manual (Default)
@@ -374,9 +374,9 @@ On-Release
     ;; Most conservative
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CONSISTENCY GUARANTEES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 What We Guarantee
@@ -415,9 +415,9 @@ CAP Theorem Position
 We choose AP: Available and Partition-tolerant, eventually consistent.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COMPARISON WITH OTHER MODES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
   Aspect       Lazy Cluster      Federation (RFC-010)   Byzantine (RFC-011)   
@@ -429,9 +429,9 @@ COMPARISON WITH OTHER MODES
   Use case     Small groups      Organizations          Critical systems      
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 EXAMPLE SESSION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     ;; Morning: Alice works offline
@@ -450,9 +450,9 @@ EXAMPLE SESSION
     ;; => ⚠ Carol has unsynced commits (not our concern)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Trust Model
@@ -492,9 +492,9 @@ Mitigation: - Conflicts flagged, not auto-resolved - Full audit trail of
 conflict - Peer reputation tracking
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Dependencies
@@ -518,22 +518,22 @@ Storage
         queue/            # Pending pushes
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Saito, Y., & Shapiro, M. (2005). Optimistic Replication. 2. Terry, D., et
-al. (1995). Managing Update Conflicts in Bayou. 3. DeCandia, G., et al.
-(2007). Dynamo: Amazon's Key-Value Store. 4. RFC-010: Federation Protocol 5.
-RFC-012: Lamport Logical Clocks
+1. Saito, Y., & Shapiro, M. (2005). Optimistic Replication. 2. Terry,
+D., et al. (1995). Managing Update Conflicts in Bayou. 3. DeCandia, G.,
+et al. (2007). Dynamo: Amazon's Key-Value Store. 4. RFC-010: Federation
+Protocol 5. RFC-012: Lamport Logical Clocks
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Set minimum bandwidth: 128 Kb/s floor (dual-ISDN), 1 Mb/s target (T1) - 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

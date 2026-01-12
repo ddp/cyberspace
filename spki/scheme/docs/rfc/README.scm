@@ -24,7 +24,7 @@
   (section
     "The Simple Idea"
     (p "What if preserving things worked like borrowing books from friends?")
-    (code "    You <----> Friend <----> Friend\n     |           |             |\n     +-----------+-------------+\n\n      Everyone helps everyone.\n      Like a neighborhood library,\n      but for anything digital.")
+    (code "    You <----> Friend <----> Friend\n     |           |             |\n     +-----------+-------------+\n                 |\n      Everyone helps everyone.\n      Like a neighborhood library,\n      but for anything digital.")
     (p "That's really all this is."))
 
   (section

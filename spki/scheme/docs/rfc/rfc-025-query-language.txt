@@ -1,24 +1,24 @@
 RFC-025: Soup Query Language
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This RFC specifies the query language for the Library of Cyberspace soup: how
-principals search, filter, and retrieve objects from the content-addressed
-store using the rich metadata layer. Queries are themselves content-addressed
-and auditable.
+This RFC specifies the query language for the Library of Cyberspace
+soup: how principals search, filter, and retrieve objects from the
+content-addressed store using the rich metadata layer. Queries are
+themselves content-addressed and auditable.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-The soup contains infinite metadata. Finding needles requires a query language
-that is:
+The soup contains infinite metadata. Finding needles requires a query
+language that is:
 
   * Expressive
   * Complex predicates, joins across objects
@@ -29,13 +29,13 @@ that is:
   * Auditable
   * Query patterns reveal access patterns
 
-Newton's soup had cursor-based queries. We extend this with content-addressed
-semantics.
+Newton's soup had cursor-based queries. We extend this with
+content-addressed semantics.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUERY MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Basic Queries
@@ -89,9 +89,9 @@ Predicates
     (soup-query (missing 'expires))          ; lacks attribute
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ADVANCED QUERIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Range Queries
@@ -147,9 +147,9 @@ Temporal Queries
     (soup-query (versions-of "sha256:current..."))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUERY COMPOSITION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Subqueries
@@ -206,9 +206,9 @@ Ordering and Pagination
                 after: "sha256:last-seen...")
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CAPABILITY-AWARE QUERIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Query Filtering
@@ -257,9 +257,9 @@ Query Authorization
       (validity (not-after "2027-01-01")))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INDEXES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Index Types
@@ -293,8 +293,8 @@ Index Types
 Cost-Based Index Selection
 --------------------------
 
-Query planning uses Selinger-style cost estimation to select optimal execution
-plans. The optimizer considers:
+Query planning uses Selinger-style cost estimation to select optimal
+execution plans. The optimizer considers:
 
   * Cardinality estimation: How many rows will each predicate return?
   * Index selectivity: How discriminating is each index?
@@ -430,9 +430,9 @@ Index Maintenance
       (for-each index-compact! (all-indexes)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUERY EXECUTION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Query Planning
@@ -478,7 +478,8 @@ Execution Strategies
 Query Caching
 -------------
 
-The soup is archival - objects rarely change, making aggressive caching safe.
+The soup is archival - objects rarely change, making aggressive caching
+safe.
 
 
     ;; Multi-tier cache: L1 hot results, L2 warm, L3 persistent
@@ -551,9 +552,9 @@ For the soup's archival nature, implement copy-on-write cache entries:
         ((ephemeral) 0)))         ; No caching
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DISTRIBUTED QUERIES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Federated Query
@@ -592,9 +593,9 @@ Result Merging
         (merge-sorted-streams streams (order->comparator order))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUERY AUDIT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Audit Trail
@@ -633,9 +634,9 @@ Query Analysis
       aggregate: (count))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUERY LANGUAGE GRAMMAR
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     query       ::= (soup-query clause)
@@ -652,9 +653,9 @@ QUERY LANGUAGE GRAMMAR
     value       ::= string | number | boolean | hash | query
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Query Injection
@@ -703,9 +704,9 @@ Information Leakage
             (constant-time-not-found))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Performance
@@ -725,23 +726,24 @@ Compatibility
   * S-expression syntax for Scheme integration
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. Newton Programmer's Guide - Soup and cursor APIs 2. SQLite Query Planner -
-Query optimization 3. Selinger et al., "Access Path Selection in a Relational
-Database Management System" (1979) - Cost-based optimization 4. RFC-020:
-Content-Addressed Storage 5. RFC-021: Capability Delegation 6. RFC-026:
-Garbage Collection (generation-aware caching)
+1. Newton Programmer's Guide - Soup and cursor APIs 2. SQLite Query
+Planner - Query optimization 3. Selinger et al., "Access Path Selection
+in a Relational Database Management System" (1979) - Cost-based
+optimization 4. RFC-020: Content-Addressed Storage 5. RFC-021:
+Capability Delegation 6. RFC-026: Garbage Collection (generation-aware
+caching)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-09
   * Cost-based query optimization: Selinger algorithm, cardinality estimation, histograms, multi-tier caching with generation-aware TTL - 2026-01-07
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

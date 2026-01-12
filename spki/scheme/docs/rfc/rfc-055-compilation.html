@@ -2,208 +2,686 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>RFC-055: Compilation and Type Inference Conventions</title>
+  <title>RFC-055: Compilation and Debugging Manual</title>
   <link rel="stylesheet" href="rfc.css">
 </head>
 <body>
-<h1>RFC-055: Compilation and Type Inference Conventions</h1>
+<h1>RFC-055: Compilation and Debugging Manual</h1>
 <dl class="metadata">
 </dl>
 <hr>
 <section>
 <h2>Abstract</h2>
-<p>This RFC specifies compilation conventions for Cyberspace Scheme modules: type declarations for tractable inference, build dependency levels, beta vs production flags, and the forge build system. The guiding principle is Ada's "declare everything, infer nothing."</p>
+<p>This RFC is the compilation and debugging manual for Cyberspace Scheme. It specifies type inference conventions, build system architecture, debugging infrastructure, exception handling, and inspector design. The guiding principles are Ada's "declare everything, infer nothing" and Dylan's "inspect everything, hide nothing."</p>
 </section>
 <section>
-<h2>1. The Inference Problem</h2>
-<p>Whole-program type inference without declarations can exhibit exponential complexity. Chicken Scheme's scrutinizer with -strict-types performs flow-sensitive analysis that becomes intractable when:</p>
+<h2>Part I: Compilation</h2>
+<p></p>
+</section>
+<section>
+<h2>1. Type System Overview</h2>
+<h3>1.1 Chicken's Scrutinizer</h3>
+<p>Chicken Scheme includes a flow-sensitive type analyzer called the scrutinizer. When invoked with -strict-types, it performs whole-program type inference and reports errors when types cannot be proven safe.</p>
+<p>The scrutinizer tracks type information through:</p>
+<ul>
+<li>Variable bindings and assignments</li>
+<li>Conditional branches (if, cond, case)</li>
+<li>Procedure calls and returns</li>
+<li>Special forms (let, let*, letrec)</li>
+</ul>
+<h3>1.2 The Inference Problem</h3>
+<p>Whole-program type inference without declarations can exhibit exponential complexity. The scrutinizer's flow-sensitive analysis becomes intractable when:</p>
 <ul>
 <li>Functions contain many conditional branches with side effects</li>
 <li>Format strings (sprintf) create implicit polymorphic constraints</li>
 <li>Type information cannot flow through set! mutations</li>
+<li>Multiple paths merge with incompatible inferred types</li>
 </ul>
-<p>A function with 30 conditional sprintf calls can take 5+ minutes to analyze. The same function with type declarations compiles in under 1 second.</p>
-</section>
-<section>
-<h2>2. The Ada Principle</h2>
-<p>Ada's compilation model requires explicit type declarations everywhere. The compiler is a checker, not a guesser. This trades verbosity for predictability.</p>
-<p>For Cyberspace modules, we adopt a hybrid approach:</p>
-<ul>
-<li>Functions with complex control flow MUST have type declarations</li>
-<li>Simple leaf functions MAY rely on inference</li>
-<li>Public API functions SHOULD have declarations for documentation</li>
-</ul>
-<pre class="language-scheme">
-;; Required: complex function with many branches
-(: session-summary (-&gt; (list-of string)))
-(define (session-summary) ...)
-
-;; Optional: simple leaf function
-(define (format-size bytes)
-  (cond ...))
+<p>Empirical observation: A function with 30 conditional sprintf calls can take 5+ minutes to analyze. The same function with type declarations compiles in under 1 second.</p>
+<h3>1.3 The Ada Principle</h3>
+<p>Ada's compilation model requires explicit type declarations everywhere. The compiler is a checker, not a guesser. Jean Ichbiah's design traded verbosity for predictability - when Ada compiles, it tends to run correctly.</p>
+<p>For Cyberspace modules, we adopt this principle:</p>
+<pre>
+DECLARE EVERYTHING, INFER NOTHING
 </pre>
+<p>Benefits:</p>
+<ul>
+<li>Predictable compilation times</li>
+<li>Better error messages (mismatch against declaration, not inference)</li>
+<li>Documentation of programmer intent</li>
+<li>Enables separate compilation</li>
+</ul>
 </section>
 <section>
-<h2>3. Type Declaration Patterns</h2>
-<h3>3.1 Import chicken.type</h3>
+<h2>2. Type Declaration Conventions</h2>
+<h3>2.1 Required Import</h3>
 <p>Modules using type declarations must import the type system:</p>
 <pre class="language-scheme">
 (import (chicken type))
 </pre>
-<h3>3.2 Declaration Syntax</h3>
-<p>Type declarations precede function definitions:</p>
+<p>Place this import with other chicken imports, before srfi and cyberspace modules.</p>
+<h3>2.2 Declaration Placement</h3>
+<p>Type declarations are placed in a dedicated section after imports, before any function definitions:</p>
 <pre class="language-scheme">
-(: function-name (arg-type ... -&gt; return-type))
+(module example
+  (export1 export2)
 
-;; Examples:
-(: format-stat (symbol string string -&gt; (or string false)))
-(: session-uptime (-&gt; fixnum))
-(: goodbye (#!optional (or false procedure) -&gt; noreturn))
+  (import scheme
+          (chicken base)
+          (chicken type)
+          ...)
+
+  ;;; ============================================================
+  ;;; Type Declarations
+  ;;; ============================================================
+
+  (: export1 (string -&gt; boolean))
+  (: export2 (fixnum fixnum -&gt; fixnum))
+  (: internal-helper (list -&gt; (or string false)))
+
+  ;;; ============================================================
+  ;;; Implementation
+  ;;; ============================================================
+
+  (define (export1 s) ...)
+  ...)
 </pre>
-<h3>3.3 Typed Helper Pattern</h3>
-<p>Break large functions into small typed helpers:</p>
+<h3>2.3 Declaration Syntax</h3>
+<p>The (: name type) form declares the type of a binding:</p>
 <pre class="language-scheme">
-;; BAD: One large function with 30 sprintf calls
+;; Simple function types
+(: add1 (fixnum -&gt; fixnum))
+(: string-empty? (string -&gt; boolean))
+
+;; Multiple arguments
+(: substring (string fixnum fixnum -&gt; string))
+
+;; Optional arguments
+(: open-file (string #!optional symbol -&gt; port))
+
+;; Rest arguments
+(: format (string #!rest * -&gt; string))
+
+;; Union types
+(: find-item (symbol -&gt; (or item false)))
+
+;; Procedures as arguments
+(: map-items ((item -&gt; result) (list-of item) -&gt; (list-of result)))
+
+;; No return (exits or loops forever)
+(: fatal-error (string -&gt; noreturn))
+</pre>
+<h3>2.4 Common Type Names</h3>
+<table>
+<tr><th>Type</th><th>Description</th><th>Example Values</th></tr>
+<tr><td>fixnum</td><td>Small exact integer</td><td>0, 42, -17</td></tr>
+<tr><td>flonum</td><td>Floating point</td><td>3.14, -2.5e10</td></tr>
+<tr><td>number</td><td>Any number</td><td>fixnum or flonum</td></tr>
+<tr><td>string</td><td>Character string</td><td>"hello"</td></tr>
+<tr><td>symbol</td><td>Symbolic atom</td><td>'foo, 'bar</td></tr>
+<tr><td>boolean</td><td>Truth value</td><td>#t, #f</td></tr>
+<tr><td>char</td><td>Single character</td><td>#\a, #\newline</td></tr>
+<tr><td>list</td><td>Proper list</td><td>'(1 2 3)</td></tr>
+<tr><td>(list-of T)</td><td>Homogeneous list</td><td>(list-of string)</td></tr>
+<tr><td>pair</td><td>Cons cell</td><td>'(a . b)</td></tr>
+<tr><td>vector</td><td>Fixed-size array</td><td>#(1 2 3)</td></tr>
+<tr><td>blob</td><td>Byte vector</td><td>(make-blob 16)</td></tr>
+<tr><td>port</td><td>I/O port</td><td>(current-input-port)</td></tr>
+<tr><td>procedure</td><td>Any procedure</td><td>car, +</td></tr>
+<tr><td>(T1 -&gt; T2)</td><td>Specific procedure</td><td>(string -&gt; fixnum)</td></tr>
+<tr><td>(or T1 T2)</td><td>Union type</td><td>(or string false)</td></tr>
+<tr><td>(struct name)</td><td>C struct wrapper</td><td>(struct tcp-listener)</td></tr>
+<tr><td>false</td><td>The #f value</td><td>#f</td></tr>
+<tr><td>*</td><td>Any type</td><td>anything</td></tr>
+<tr><td>noreturn</td><td>Never returns</td><td>for exit, error</td></tr>
+</table>
+<h3>2.5 When Declarations Are Required</h3>
+<p>Type declarations are REQUIRED for:</p>
+<ul>
+<li>Functions with more than 5 conditional branches</li>
+<li>Functions using set! on local variables</li>
+<li>Functions with multiple sprintf/format calls</li>
+<li>All exported (public API) functions</li>
+<li>Functions that call other modules' exported functions</li>
+</ul>
+<p>Type declarations are OPTIONAL for:</p>
+<ul>
+<li>Simple leaf functions (&lt; 5 lines, no branching)</li>
+<li>Local helper functions with obvious types</li>
+<li>Functions used only in one place</li>
+</ul>
+</section>
+<section>
+<h2>3. Typed Helper Pattern</h2>
+<h3>3.1 The Problem</h3>
+<p>A common pattern causes exponential inference:</p>
+<pre class="language-scheme">
+;; BAD: Exponential type inference
 (define (session-summary)
   (let ((stats '()))
     (when (&gt; (session-stat 'reads) 0)
-      (set! stats (cons (sprintf "~a reads" ...) stats)))
-    ... ;; 29 more similar blocks
+      (set! stats (cons (sprintf "~a read~a"
+                                  (session-stat 'reads)
+                                  (if (= 1 (session-stat 'reads)) "" "s"))
+                        stats)))
+    (when (&gt; (session-stat 'writes) 0)
+      (set! stats (cons (sprintf "~a write~a" ...) stats)))
+    ;; ... 28 more similar blocks ...
     (reverse stats)))
-
-;; GOOD: Small typed helpers composed via filter
+</pre>
+<p>The scrutinizer must analyze all 2^30 possible paths through this function.</p>
+<h3>3.2 The Solution</h3>
+<p>Factor into small typed helpers:</p>
+<pre class="language-scheme">
+;; GOOD: Linear type inference
 (: format-stat (symbol string string -&gt; (or string false)))
 (define (format-stat key singular plural-suffix)
+  "Format a session stat with pluralization, or #f if zero."
   (let ((n (session-stat key)))
     (if (&gt; n 0)
         (string-append (number-&gt;string n) " " singular
                        (if (= n 1) "" plural-suffix))
         #f)))
 
+(: format-stat-irregular (symbol string string -&gt; (or string false)))
+(define (format-stat-irregular key singular plural)
+  "Format with irregular plural."
+  (let ((n (session-stat key)))
+    (if (&gt; n 0)
+        (string-append (number-&gt;string n) " "
+                       (if (= n 1) singular plural))
+        #f)))
+
+(: session-summary (-&gt; (list-of string)))
 (define (session-summary)
+  "Generate session statistics summary."
   (filter identity
-    (list (format-stat 'reads "read" "s")
-          (format-stat 'writes "write" "s")
-          ...)))
+    (list
+      (format-stat 'reads "read" "s")
+      (format-stat 'writes "write" "s")
+      (format-stat-irregular 'queries "query" "queries")
+      ...)))
 </pre>
-<p>Each helper is independently typed. The type checker analyzes them separately, avoiding combinatorial explosion.</p>
+<p>Each helper is independently typed. The scrutinizer analyzes them separately, giving O(n) instead of O(2^n) complexity.</p>
+<h3>3.3 Composition via filter</h3>
+<p>The pattern (filter identity (list ...)) collects non-#f results:</p>
+<pre class="language-scheme">
+(filter identity (list "a" #f "b" #f "c"))
+;; =&gt; ("a" "b" "c")
+</pre>
+<p>This replaces imperative set!/cons accumulation with functional composition.</p>
 </section>
 <section>
-<h2>4. Build Dependency Levels</h2>
-<p>Modules are organized into dependency levels for parallel compilation. Modules within a level have no mutual dependencies and can build concurrently.</p>
+<h2>4. Build System Architecture</h2>
+<h3>4.1 The Forge</h3>
+<p>The forge is the build system for Cyberspace modules. It compiles Scheme to shared libraries (.so) with import specifications (.import.scm).</p>
+<p>Invocation:</p>
 <pre class="language-scheme">
-;; Level 0: No cyberspace dependencies
-("os" "crypto-ffi" "sexp" "capability")
-
-;; Level 1: Single dependencies from Level 0
-("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
-
-;; Level 2: Dependencies on Levels 0+1
-("cert" "enroll")
-
-;; Level 3: Dependencies on Level 2
-("gossip" "security")
-
-;; Level 4: Dependencies on Level 3
-("vault" "auto-enroll")
-
-;; Level 5: Final layer
-("ui")
+(bootstrap-modules!)  ; Called automatically at REPL start
 </pre>
-<p>Adding a new module requires analyzing its imports to determine the correct level. A module importing from level N must be placed in level N+1 or higher.</p>
-</section>
-<section>
-<h2>5. Beta vs Production Builds</h2>
-<h3>5.1 Beta Mode</h3>
-<p>During development and beta testing, enable strict type checking:</p>
-<pre class="language-scheme">
-(define *beta-build* #t)
-
-;; Results in: csc -shared -J -strict-types module.scm
-</pre>
-<p>Benefits:</p>
-<ul>
-<li>Catches type errors at compile time</li>
-<li>Validates type declaration accuracy</li>
-<li>Identifies functions needing refactoring</li>
-</ul>
-<h3>5.2 Production Mode</h3>
-<p>For release builds, disable strict checking for faster compilation:</p>
-<pre class="language-scheme">
-(define *beta-build* #f)
-
-;; Results in: csc -shared -J module.scm
-</pre>
-<p>Type declarations remain as documentation but are not enforced.</p>
-</section>
-<section>
-<h2>6. The Forge Build System</h2>
-<h3>6.1 Forge Output</h3>
-<p>The forge displays compilation status in boxes:</p>
+<p>Output format:</p>
 <pre>
 +---------------- forge: portal ----------------+
 | csc -shared -J -strict-types portal.scm      |
 | &gt; 241K + 677B import in 921ms                |
 +----------------------------------------------+
 </pre>
-<h3>6.2 Parallel Level Compilation</h3>
-<p>Each dependency level compiles in parallel using process-fork. The build waits for all processes in a level before starting the next level.</p>
-<pre class="language-scheme">
-(define (rebuild-level-parallel! modules-in-level)
-  (let* ((pids (map (lambda (module)
-                      (process-fork
-                        (lambda ()
-                          (rebuild-module! module)
-                          (exit 0))))
-                    modules-in-level)))
-    (for-each process-wait pids)))
+<h3>4.2 Compiler Invocation</h3>
+<p>The forge invokes csc (Chicken Scheme Compiler) with these flags:</p>
+<table>
+<tr><th>Flag</th><th>Purpose</th></tr>
+<tr><td>-shared</td><td>Produce shared library (.so)</td></tr>
+<tr><td>-J</td><td>Generate import library (.import.scm)</td></tr>
+<tr><td>-strict-types</td><td>Enable scrutinizer type checking (beta)</td></tr>
+<tr><td>-I path</td><td>Add include path (for FFI)</td></tr>
+<tr><td>-L path</td><td>Add library path (for FFI)</td></tr>
+<tr><td>-l lib</td><td>Link library (e.g., -lsodium)</td></tr>
+</table>
+<p>Example invocations:</p>
+<pre class="language-shell">
+# Standard module
+csc -shared -J -strict-types portal.scm
+
+# FFI module with libsodium
+csc -shared -J -strict-types crypto-ffi.scm \
+    -I/opt/homebrew/include -L/opt/homebrew/lib -lsodium
 </pre>
-<h3>6.3 Rebuild Detection</h3>
-<p>A module needs rebuilding when:</p>
+<h3>4.3 Dependency Levels</h3>
+<p>Modules are organized into dependency levels. Modules within a level have no mutual dependencies and compile in parallel.</p>
+<pre class="language-scheme">
+;; Level 0: Foundation (no cyberspace dependencies)
+("os" "crypto-ffi" "sexp" "capability")
+
+;; Level 1: Core utilities (depend on Level 0 only)
+("mdns" "fips" "audit" "wordlist" "bloom"
+ "catalog" "keyring" "portal")
+
+;; Level 2: Certificates and enrollment (depend on Levels 0-1)
+("cert" "enroll")
+
+;; Level 3: Protocols (depend on Levels 0-2)
+("gossip" "security")
+
+;; Level 4: High-level operations (depend on Levels 0-3)
+("vault" "auto-enroll")
+
+;; Level 5: User interface (depend on all prior)
+("ui")
+</pre>
+<p>To determine a module's level, examine its imports:</p>
 <ul>
-<li>The .so file is missing</li>
-<li>The .import.scm file is missing</li>
-<li>The source .scm is newer than the .so</li>
-<li>The architecture stamp doesn't match</li>
+<li>If it imports only chicken/srfi modules: Level 0</li>
+<li>If it imports Level 0 modules: Level 1</li>
+<li>If it imports Level N modules: Level N+1 or higher</li>
 </ul>
+<h3>4.4 Parallel Compilation</h3>
+<p>Each level compiles in parallel using process-fork:</p>
+<pre class="language-scheme">
+(define (rebuild-level-parallel! modules)
+  (let ((pids (map (lambda (module)
+                     (process-fork
+                       (lambda ()
+                         (rebuild-module! module)
+                         (exit 0))))
+                   modules)))
+    (for-each process-wait pids)
+    (length modules)))
+</pre>
+<p>The build blocks until all processes in a level complete before starting the next level. This ensures dependencies are satisfied.</p>
+<h3>4.5 Rebuild Detection</h3>
+<p>A module needs rebuilding when any of these conditions hold:</p>
+<ul>
+<li>The .so file does not exist</li>
+<li>The .import.scm file does not exist</li>
+<li>The source .scm is newer than the .so (mtime comparison)</li>
+<li>The platform stamp doesn't match (e.g., Darwin-arm64 vs Linux-x86_64)</li>
+</ul>
+<pre class="language-scheme">
+(define (needs-rebuild? module)
+  (or (not (file-exists? (string-append module ".so")))
+      (not (file-exists? (string-append module ".import.scm")))
+      (&gt; (file-mtime (string-append module ".scm"))
+         (file-mtime (string-append module ".so")))
+      (not (string=? (read-arch-stamp module) (current-arch)))))
+</pre>
 </section>
 <section>
-<h2>7. Compiler Warnings</h2>
-<p>With -strict-types, the scrutinizer reports:</p>
+<h2>5. Beta vs Production Builds</h2>
+<h3>5.1 Build Mode Flag</h3>
+<p>The *beta-build* flag controls strict type checking:</p>
+<pre class="language-scheme">
+;; In cyberspace-repl.scm
+(define *beta-build* #t)  ; Enable for development
+(define *beta-build* #f)  ; Disable for release
+</pre>
+<h3>5.2 Beta Mode Benefits</h3>
+<p>With *beta-build* = #t:</p>
 <ul>
-<li>Type mismatches (argument types don't match declarations)</li>
-<li>Invalid arguments (e.g., passing #f where struct expected)</li>
-<li>Deprecated identifiers</li>
-<li>Format string errors</li>
+<li>All modules compile with -strict-types</li>
+<li>Type mismatches are compile-time errors</li>
+<li>Invalid arguments are detected</li>
+<li>Deprecated identifiers are flagged</li>
+<li>Format string errors are caught</li>
 </ul>
-<p>All warnings should be addressed. A warning-free build indicates type-safe code.</p>
+<p>Build time impact: ~20-25 seconds for full rebuild</p>
+<h3>5.3 Production Mode</h3>
+<p>With *beta-build* = #f:</p>
+<ul>
+<li>Modules compile without -strict-types</li>
+<li>Type declarations remain as documentation</li>
+<li>Faster compilation</li>
+<li>Smaller binaries (no type metadata)</li>
+</ul>
+<p>Build time impact: ~10-15 seconds for full rebuild</p>
+<h3>5.4 When to Use Each Mode</h3>
+<table>
+<tr><th>Scenario</th><th>Mode</th><th>Rationale</th></tr>
+<tr><td>Active development</td><td>Beta</td><td>Catch type errors early</td></tr>
+<tr><td>CI/CD pipeline</td><td>Beta</td><td>Prevent type regressions</td></tr>
+<tr><td>Release builds</td><td>Production</td><td>Optimize for users</td></tr>
+<tr><td>Debugging issues</td><td>Beta</td><td>Better error context</td></tr>
+<tr><td>Performance testing</td><td>Production</td><td>Measure real performance</td></tr>
+</table>
+</section>
+<section>
+<h2>Part II: Debugging</h2>
+<p></p>
+</section>
+<section>
+<h2>6. Exception Handling</h2>
+<h3>6.1 Condition System</h3>
+<p>Chicken uses the SRFI-12 condition system. Exceptions are condition objects with properties:</p>
+<pre class="language-scheme">
+(handle-exceptions exn
+  ;; Handler: exn is the condition object
+  (print "Error: " (get-condition-property exn 'exn 'message))
+
+  ;; Protected code
+  (dangerous-operation))
+</pre>
+<h3>6.2 Standard Condition Properties</h3>
+<table>
+<tr><th>Property</th><th>Type</th><th>Description</th></tr>
+<tr><td>'exn 'message</td><td>string</td><td>Human-readable error message</td></tr>
+<tr><td>'exn 'location</td><td>symbol</td><td>Procedure where error occurred</td></tr>
+<tr><td>'exn 'arguments</td><td>list</td><td>Arguments that caused error</td></tr>
+<tr><td>'exn 'call-chain</td><td>list</td><td>Stack trace</td></tr>
+</table>
+<pre class="language-scheme">
+(define (safe-operation x)
+  (handle-exceptions exn
+    (let ((msg (get-condition-property exn 'exn 'message "unknown"))
+          (loc (get-condition-property exn 'exn 'location #f))
+          (chain (get-condition-property exn 'exn 'call-chain '())))
+      (printf "Error in ~a: ~a~n" loc msg)
+      (print-call-chain chain)
+      #f)
+    (actual-operation x)))
+</pre>
+<h3>6.3 Rich Exception Display</h3>
+<p>The REPL provides rich exception display with box formatting:</p>
 <pre>
-;; Example warning:
++-------------- Exception ---------------+
+| division by zero                       |
+| Location: quotient                     |
+| Arguments: (42 0)                      |
++-----------------------------------------+
+| Call Chain:                            |
+|   divide-values                        |
+|   process-input                        |
+|   main-loop                            |
++-----------------------------------------+
+</pre>
+<p>Implementation uses the centralized box-drawing API from os.scm.</p>
+<h2>7. Tracing and Profiling</h2>
+<h3>7.1 Procedure Tracing</h3>
+<p>Trace procedure calls and returns:</p>
+<pre class="language-scheme">
+;; Enable tracing
+(trace foo)
+(trace bar baz)
+
+;; Disable tracing
+(untrace foo)
+(untrace)  ; untrace all
+</pre>
+<p>Trace output:</p>
+<pre>
+(foo 1 2 3)
+  |(bar 1)
+  | (baz 2)
+  | baz -&gt; 4
+  |bar -&gt; 5
+foo -&gt; 8
+</pre>
+<h3>7.2 REPL Trace Commands</h3>
+<p>CSI provides trace commands:</p>
+<pre>
+,trace proc     ; trace procedure
+,trace         ; show traced procedures
+,untrace proc  ; stop tracing
+,untrace       ; stop all tracing
+</pre>
+<h3>7.3 Call Chain</h3>
+<p>Get the current call chain at any point:</p>
+<pre class="language-scheme">
+(define (debug-here)
+  (print-call-chain (get-call-chain)))
+
+;; Or after an error in the REPL:
+,n              ; show call chain
+,c              ; continue
+,d              ; describe exception
+</pre>
+<h3>7.4 Time Profiling</h3>
+<p>Measure execution time:</p>
+<pre class="language-scheme">
+(time (expensive-operation))
+;; =&gt; 0.142s CPU, 0.145s real, 12345 bytes allocated
+</pre>
+<p>For more detailed profiling, compile with -profile and use chicken-profile.</p>
+<h2>8. Inspector Design</h2>
+<p>Inspired by Dylan's inspector - the gold standard for interactive debugging.</p>
+<h3>8.1 Design Principles</h3>
+<p>The Dylan inspector philosophy:</p>
+<ul>
+<li>INSPECT EVERYTHING: Any object can be inspected</li>
+<li>HIDE NOTHING: Internal structure is visible</li>
+<li>NAVIGATE FREELY: Drill down into any component</li>
+<li>MODIFY CAREFULLY: Live patching with safety checks</li>
+<li>HISTORY MATTERS: Navigation history, bookmarks</li>
+</ul>
+<h3>8.2 Inspector Commands (Planned)</h3>
+<table>
+<tr><th>Command</th><th>Action</th></tr>
+<tr><td>:i obj</td><td>Inspect object</td></tr>
+<tr><td>:s</td><td>Show current object</td></tr>
+<tr><td>:d N</td><td>Descend into slot N</td></tr>
+<tr><td>:u</td><td>Up to parent object</td></tr>
+<tr><td>:h</td><td>Show inspection history</td></tr>
+<tr><td>:b</td><td>Bookmark current object</td></tr>
+<tr><td>:m slot val</td><td>Modify slot value</td></tr>
+<tr><td>:t</td><td>Show object type info</td></tr>
+<tr><td>:r</td><td>Show references to object</td></tr>
+</table>
+<h3>8.3 Object Display Format</h3>
+<pre>
++---------- Inspecting: pair -------------+
+| Type: pair                             |
+| Address: 0x7fff5fbff8a0                |
++-----------------------------------------+
+| [0] car: symbol 'foo                   |
+| [1] cdr: pair (...)                    |
++-----------------------------------------+
+| :d 0  - inspect car                    |
+| :d 1  - inspect cdr                    |
+| :u    - go back                        |
++-----------------------------------------+
+</pre>
+<h3>8.4 Type-Specific Inspectors</h3>
+<p>Specialized display for common types:</p>
+<ul>
+<li>Procedures: arity, source location, closure variables</li>
+<li>Ports: direction, filename, position</li>
+<li>Blobs: hex dump, ASCII preview</li>
+<li>Hash tables: key count, load factor, entries</li>
+<li>SPKI certs: issuer, subject, validity, delegation</li>
+<li>Audit entries: timestamp, actor, operation</li>
+</ul>
+<h2>9. REPL Debugging Commands</h2>
+<h3>9.1 Built-in Commands</h3>
+<table>
+<tr><th>Command</th><th>Description</th></tr>
+<tr><td>,?</td><td>Show help</td></tr>
+<tr><td>,l file</td><td>Load file</td></tr>
+<tr><td>,r</td><td>Show recent expressions</td></tr>
+<tr><td>,s</td><td>Show current module</td></tr>
+<tr><td>,m module</td><td>Enter module</td></tr>
+<tr><td>,n</td><td>Show call chain after error</td></tr>
+<tr><td>,d</td><td>Describe last exception</td></tr>
+<tr><td>,c</td><td>Continue after break</td></tr>
+<tr><td>,q</td><td>Quit REPL</td></tr>
+<tr><td>,t proc</td><td>Trace procedure</td></tr>
+<tr><td>,u proc</td><td>Untrace procedure</td></tr>
+</table>
+<h3>9.2 Cyberspace Extensions</h3>
+<table>
+<tr><th>Command</th><th>Description</th></tr>
+<tr><td>:rebuild</td><td>Force rebuild all modules</td></tr>
+<tr><td>:status</td><td>Show session statistics</td></tr>
+<tr><td>:soup</td><td>Enter soup browser</td></tr>
+<tr><td>:inspect obj</td><td>Inspect object (planned)</td></tr>
+<tr><td>:audit</td><td>Show recent audit entries</td></tr>
+<tr><td>:keys</td><td>Show loaded keys</td></tr>
+</table>
+<h3>9.3 Error Recovery</h3>
+<p>After an error, the REPL captures context:</p>
+<pre>
+&gt; (/ 1 0)
++-------------- Exception ---------------+
+| division by zero                       |
++-----------------------------------------+
+
+&gt; ,n
+Call chain:
+  (/ 1 0)
+  &lt;toplevel&gt;
+
+&gt; ,d
+Condition: exn
+  message: "division by zero"
+  location: /
+  arguments: (1 0)
+</pre>
+<h2>10. Compiler Warnings Reference</h2>
+<h3>10.1 Type Warnings</h3>
+<pre>
 Warning: Invalid argument
-  In procedure `discover-and-elect',
   Argument #1 to procedure `tcp-accept' has an invalid type:
     false
   The expected type is:
     (struct tcp-listener)
 </pre>
-</section>
-<section>
-<h2>8. Performance Expectations</h2>
+<p>Fix: Add type check or adjust control flow to ensure correct type.</p>
+<h3>10.2 Deprecation Warnings</h3>
+<pre>
+Warning: Deprecated identifier `current-milliseconds'
+  Use of deprecated identifier from module `chicken.time'.
+</pre>
+<p>Fix: Use current-process-milliseconds instead.</p>
+<h3>10.3 Format String Warnings</h3>
+<pre>
+Warning: `printf', in format string "~.2f",
+  illegal format-string character `.'
+</pre>
+<p>Fix: Chicken format doesn't support precision specifiers. Use manual rounding.</p>
+<h3>10.4 Redefinition Warnings</h3>
+<pre>
+Warning: redefinition of imported value binding: blob=?
+</pre>
+<p>Fix: Either don't redefine, or explicitly shadow with (only (chicken blob) (not blob=?))</p>
+<h3>10.5 Warning Policy</h3>
+<p>For production code:</p>
+<ul>
+<li>Zero warnings is the goal</li>
+<li>All warnings should be investigated</li>
+<li>Known acceptable warnings should be documented</li>
+<li>CI should fail on new warnings</li>
+</ul>
+<h2>11. Performance Tuning</h2>
+<h3>11.1 Compilation Performance</h3>
 <table>
-<tr><th>Module Size</th><th>Without Types</th><th>With Types</th><th>With Declarations</th></tr>
-<tr><td>Small (&lt;500 LOC)</td><td>~500ms</td><td>~700ms</td><td>~700ms</td></tr>
-<tr><td>Medium (500-2000 LOC)</td><td>~1s</td><td>~2s</td><td>~2s</td></tr>
-<tr><td>Large (&gt;2000 LOC)</td><td>~2s</td><td>exponential*</td><td>~7s</td></tr>
+<tr><th>Module Size</th><th>Without -strict-types</th><th>With -strict-types</th></tr>
+<tr><td>&lt; 500 LOC</td><td>~500ms</td><td>~700ms</td></tr>
+<tr><td>500-2000 LOC</td><td>~1s</td><td>~2s</td></tr>
+<tr><td>&gt; 2000 LOC (typed)</td><td>~2s</td><td>~7s</td></tr>
+<tr><td>&gt; 2000 LOC (untyped)</td><td>~2s</td><td>exponential</td></tr>
 </table>
-<p>* Without type declarations, large modules with complex control flow can take minutes or fail to complete.</p>
-</section>
-<section>
-<h2>9. References</h2>
+<p>Full bootstrap (21 modules): ~20-25s with strict types</p>
+<h3>11.2 Runtime Performance</h3>
+<p>Type declarations have no runtime cost - they're only used at compile time.</p>
+<p>For runtime optimization:</p>
+<ul>
+<li>Use fixnum operations for integer math (fx+, fx&lt;, etc.)</li>
+<li>Use flonum operations for float math (fp+, fp&lt;, etc.)</li>
+<li>Avoid unnecessary string allocation</li>
+<li>Prefer vectors over lists for random access</li>
+<li>Use hash tables for lookup-heavy operations</li>
+</ul>
+<h3>11.3 Memory Profiling</h3>
+<p>Track allocations:</p>
+<pre class="language-scheme">
+(gc #t)  ; Force GC and print statistics
+(memory-statistics)  ; Show current memory use
+</pre>
+<p>For detailed profiling, compile with -profile flag.</p>
+<h2>12. Module Conventions</h2>
+<h3>12.1 File Structure</h3>
+<pre class="language-scheme">
+;;; module.scm - One line description
+;;;
+;;; Longer description of purpose, heritage, references.
+;;;
+;;; Copyright (c) 2026 Author. See LICENSE.
+
+(module module-name
+  (;; Exports grouped by category
+   export1
+   export2
+
+   ;; Internal (for testing/debugging)
+   internal-helper)
+
+  (import scheme
+          (chicken base)
+          (chicken type)
+          ...)
+
+  ;;; ============================================================
+  ;;; Type Declarations
+  ;;; ============================================================
+
+  (: export1 ...)
+  (: export2 ...)
+
+  ;;; ============================================================
+  ;;; Section Name
+  ;;; ============================================================
+
+  (define (export1 ...) ...)
+
+) ; end module
+</pre>
+<h3>12.2 Naming Conventions</h3>
+<table>
+<tr><th>Type</th><th>Convention</th><th>Example</th></tr>
+<tr><td>Procedure</td><td>verb-noun</td><td>read-file, parse-cert</td></tr>
+<tr><td>Predicate</td><td>noun?</td><td>empty?, valid-cert?</td></tr>
+<tr><td>Conversion</td><td>x-&gt;y</td><td>string-&gt;blob, cert-&gt;sexp</td></tr>
+<tr><td>Mutator</td><td>verb!</td><td>set-value!, init!</td></tr>
+<tr><td>Constant</td><td>*name*</td><td>*default-port*, *max-retries*</td></tr>
+<tr><td>Parameter</td><td>current-name</td><td>current-realm, current-principal</td></tr>
+</table>
+<h3>12.3 Documentation Strings</h3>
+<p>All exported procedures should have docstrings:</p>
+<pre class="language-scheme">
+(define (read-file path)
+  "Read entire file contents as string.
+   Returns #f if file doesn't exist."
+  ...)
+</pre>
+<h2>13. Testing Conventions</h2>
+<h3>13.1 Test File Location</h3>
+<p>Tests live alongside source:</p>
+<pre>
+module.scm       ; Source
+module-test.scm  ; Tests
+</pre>
+<h3>13.2 Test Structure</h3>
+<pre class="language-scheme">
+(import module)
+(import test)  ; SRFI-64 or similar
+
+(test-begin "module")
+
+(test-group "feature-name"
+  (test-equal "description" expected (actual))
+  (test-assert "predicate" (condition?)))
+
+(test-end "module")
+</pre>
+<h3>13.3 Running Tests</h3>
+<pre class="language-shell">
+csi -s module-test.scm
+</pre>
+<h2>14. References</h2>
 <ul>
 <li>Chicken Scheme User's Manual: Types</li>
-<li>RFC-054 Terminal Interface Conventions (forge display)</li>
-<li>Ada Reference Manual: Type Declarations</li>
-<li>Hindley-Milner Type Inference (theoretical background)</li>
+<li>Chicken Scheme User's Manual: Debugging</li>
+<li>SRFI-12: Exception Handling</li>
+<li>Ada Reference Manual: Type System</li>
+<li>Dylan Reference Manual: Inspector</li>
+<li>RFC-054 Terminal Interface Conventions</li>
 </ul>
 </section>
 </body>

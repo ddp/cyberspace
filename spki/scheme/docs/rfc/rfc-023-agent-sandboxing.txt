@@ -1,36 +1,37 @@
 RFC-023: Demonic Agents
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 This RFC specifies demonic agents for the Library of Cyberspace: how
-autonomous agents—daemons in the BSD tradition—are spawned, constrained,
-monitored, and terminated. Agents are helpful spirits that operate with
-capability-based authority in isolated sandboxes, enabling safe delegation of
-tasks while maintaining security boundaries. The vault daemons watch over all.
+autonomous agents—daemons in the BSD tradition—are spawned,
+constrained, monitored, and terminated. Agents are helpful spirits that
+operate with capability-based authority in isolated sandboxes, enabling
+safe delegation of tasks while maintaining security boundaries. The
+vault daemons watch over all.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 The BSD Daemon Tradition
 ------------------------
 
-In Unix mythology, a daemon is a helpful spirit—a background process that
-tends to the system without being asked. The term comes from Maxwell's demon,
-the thought experiment about a creature that sorts molecules. BSD gave this
-concept a face: Beastie, the cheerful daemon with a pitchfork, watching over
-the system.
+In Unix mythology, a daemon is a helpful spirit—a background process
+that tends to the system without being asked. The term comes from
+Maxwell's demon, the thought experiment about a creature that sorts
+molecules. BSD gave this concept a face: Beastie, the cheerful daemon
+with a pitchfork, watching over the system.
 
-The Library embraces this tradition. Our agents are daemons—helpful spirits
-that carry authority, travel between vaults, and do work while their
-principals sleep.
+The Library embraces this tradition. Our agents are daemons—helpful
+spirits that carry authority, travel between vaults, and do work while
+their principals sleep.
 
 
 The General Magic Vision
@@ -39,7 +40,7 @@ The General Magic Vision
 Telescript, from 1994:
 
 
-    ""Programs that travel from machine to machine, carrying your authority, doing things while you sleep.""
+    "Programs that travel from machine to machine, carrying your authority, doing things while you sleep."
 
 That vision failed because:
 
@@ -67,18 +68,20 @@ The Library realizes this vision with proper daemonology:
   * Remote termination
   * Daemons can be banished at any time
 
-Daemons don't rule—they serve. They don't watch over—they watch with.
+Daemons don't rule—they serve. They don't watch over—they watch
+with.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DAEMON MODEL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 What is a Daemon?
 -----------------
 
-A daemon is a helpful spirit—an autonomous agent that serves its principal:
+A daemon is a helpful spirit—an autonomous agent that serves its
+principal:
 
 
     (agent
@@ -101,39 +104,39 @@ Agent Lifecycle
 ---------------
 
 
-        ┌─────────┐
-        │ DEFINED │ Agent specification created
-        └────┬────┘
-             │ spawn
-             ▼
-        ┌─────────┐
-        │ SPAWNED │ Process created, sandbox initialized
-        └────┬────┘
-             │ activate
-             ▼
-        ┌─────────┐
-        │ RUNNING │ Agent executing with capabilities
-        └────┬────┘
-             │ pause/resume/terminate
-             ▼
-        ┌─────────┐
-        │ PAUSED  │ Execution suspended, state preserved
-        └────┬────┘
-             │ terminate/timeout/error
-             ▼
-        ┌─────────┐
-        │ FINISHED│ Execution complete, cleanup pending
-        └────┬────┘
-             │ cleanup
-             ▼
-        ┌─────────┐
-        │ ARCHIVED│ Audit log preserved, resources released
-        └─────────┘
+        +---------+
+        | DEFINED | Agent specification created
+        +----+----+
+             | spawn
+             v
+        +---------+
+        | SPAWNED | Process created, sandbox initialized
+        +----+----+
+             | activate
+             v
+        +---------+
+        | RUNNING | Agent executing with capabilities
+        +----+----+
+             | pause/resume/terminate
+             v
+        +---------+
+        | PAUSED  | Execution suspended, state preserved
+        +----+----+
+             | terminate/timeout/error
+             v
+        +---------+
+        | FINISHED| Execution complete, cleanup pending
+        +----+----+
+             | cleanup
+             v
+        +---------+
+        | ARCHIVED| Audit log preserved, resources released
+        +---------+
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SPAWNING AGENTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Spawn Request
@@ -197,9 +200,9 @@ Agent Code Loading
         code))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SANDBOX TYPES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 POSIX Sandbox
@@ -317,9 +320,9 @@ WebAssembly isolation:
           (cas-put "library:casput"))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CAPABILITY ENFORCEMENT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Capability Proxy
@@ -370,9 +373,9 @@ Attenuation on Delegation
         (spawn-agent (spec-with-capabilities child-spec child-caps))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 AGENT COMMUNICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Message Passing
@@ -428,9 +431,9 @@ Agents can share state through CAS:
         action: `(agent-share ,hash ,recipients)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MONITORING AND CONTROL
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Agent Status
@@ -486,7 +489,8 @@ Agent Control
 Watchdog Daemon
 ---------------
 
-The watchdog daemon tends the flock of agents—a daemon watching daemons:
+The watchdog daemon tends the flock of agents—a daemon watching
+daemons:
 
 
     (define (agent-watchdog)
@@ -508,9 +512,9 @@ The watchdog daemon tends the flock of agents—a daemon watching daemons:
         (all-agents)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SOUP INTEGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Agents in the Soup
@@ -558,9 +562,9 @@ Agent Introspection
           (fuel ,(remaining-fuel)))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 AGENT PATTERNS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Pattern 1: Periodic Task Agent
@@ -639,9 +643,9 @@ Pattern 4: Mobile Agent
         (max-runtime (* 24 3600))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Escape Prevention
@@ -702,9 +706,9 @@ Malicious Agents
         (anomalous-messaging? agent)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Dependencies
@@ -726,25 +730,25 @@ Performance
   * Capability check: ~100ns (cached), ~10μs (chain validation)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 1. [Telescript Technology: Mobile
 Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html)
 2. [Capsicum: Practical Capabilities for
-UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/) 3. [WebAssembly
-System Interface (WASI)](https://wasi.dev/) 4. [RFC-021: Capability
-Delegation](rfc-021-capability-delegation.html) 5. [RFC-003: Cryptographic
-Audit Trail](rfc-003-audit-trail.html) 6. [E Programming
+UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/) 3.
+[WebAssembly System Interface (WASI)](https://wasi.dev/) 4. [RFC-021:
+Capability Delegation](rfc-021-capability-delegation.html) 5. [RFC-003:
+Cryptographic Audit Trail](rfc-003-audit-trail.html) 6. [E Programming
 Language](http://erights.org/) - Object capabilities
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-07
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

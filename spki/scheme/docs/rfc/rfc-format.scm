@@ -246,9 +246,9 @@
     ((and (>= cp #x256D) (<= cp #x2570)) "+")
     ;; Arrows
     ((or (= cp #x2192) (= cp #x25BA) (= cp #x25B6)) ">")  ; → ► ▶
-    ((or (= cp #x2190) (= cp #x25C0)) "<")               ; ← ◀
-    ((or (= cp #x2191) (= cp #x25B2)) "^")               ; ↑ ▲
-    ((or (= cp #x2193) (= cp #x25BC)) "v")               ; ↓ ▼
+    ((or (= cp #x2190) (= cp #x25C0) (= cp #x25C4)) "<")  ; ← ◀ ◄
+    ((or (= cp #x2191) (= cp #x25B2)) "^")                ; ↑ ▲
+    ((or (= cp #x2193) (= cp #x25BC)) "v")                ; ↓ ▼
     ;; Block elements - use # for filled
     ((and (>= cp #x2581) (<= cp #x2588)) "#")
     ;; Math: ∅
@@ -278,10 +278,10 @@
   (with-input-from-file filename read))
 
 ;;; ============================================================
-;;; Text Output (Plain ASCII, 78 columns)
+;;; Text Output (Plain ASCII, 72 columns per RFC tradition)
 ;;; ============================================================
 
-(define txt-width 78)
+(define txt-width 72)
 (define txt-indent 0)
 
 (define (txt-hr)
@@ -312,7 +312,7 @@
   (for-each (lambda (line)
               (display line port)
               (newline port))
-            (txt-wrap text txt-width indent))
+            (txt-wrap (text->ascii text) txt-width indent))
   (newline port))
 
 (define (txt-emit-element elem port indent)
@@ -345,18 +345,18 @@
                           (let ((content (cdr item)))
                             (if (and (pair? (car content)) (eq? (caar content) 'term))
                                 (begin
-                                  (display (cadar content) port)
+                                  (display (text->ascii (cadar content)) port)
                                   (display ": " port)
-                                  (display (cadr content) port))
-                                (display (apply string-append (map ->string content)) port)))
-                          (display item port))
+                                  (display (text->ascii (cadr content)) port))
+                                (display (text->ascii (apply string-append (map ->string content))) port)))
+                          (display (text->ascii (->string item)) port))
                       (newline port))
                     (cdr elem))
           (newline port))
 
         ((blockquote)
           (newline port)
-          (let ((content (cadr elem)))
+          (let ((content (text->ascii (cadr elem))))
             ;; Don't wrap in quotes if content already starts with a quote
             (if (and (string? content)
                      (> (string-length content) 0)
@@ -395,7 +395,7 @@
                 (for-each (lambda (row)
                             (when (pair? row)
                               (display "  " port)
-                              (let ((cells (map ->string (cdr row))))
+                              (let ((cells (map (lambda (c) (text->ascii (->string c))) (cdr row))))
                                 (for-each (lambda (cell width i)
                                             (display (string-pad-right cell (+ width 2)) port))
                                           cells

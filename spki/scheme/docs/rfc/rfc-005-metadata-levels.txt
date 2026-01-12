@@ -1,21 +1,21 @@
 RFC-005: Progressive Metadata Levels
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This RFC specifies progressive metadata levels for vault commits, enabling
-configurable richness from minimal overhead to full preservation context.
-Three levels serve different use cases: minimal (fast iteration), catalog
-(discovery), and preserve (archival).
+This RFC specifies progressive metadata levels for vault commits,
+enabling configurable richness from minimal overhead to full
+preservation context. Three levels serve different use cases: minimal
+(fast iteration), catalog (discovery), and preserve (archival).
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Different commits deserve different metadata:
 
@@ -26,14 +26,14 @@ Different commits deserve different metadata:
 Traditional VCS provides one-size-fits-all commit messages. Cyberspace
 provides progressive levels:
 
-1. Minimal - Hash, timestamp, message (default) 2. Catalog - Add subjects,
-keywords, descriptions (discovery) 3. Preserve - Add environment,
-dependencies, git state (archival)
+1. Minimal - Hash, timestamp, message (default) 2. Catalog - Add
+subjects, keywords, descriptions (discovery) 3. Preserve - Add
+environment, dependencies, git state (archival)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SPECIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Level 1: Minimal (Default)
@@ -79,7 +79,8 @@ Usage:
       keywords: '("login" "oauth" "jwt")
       description: "Added OAuth2 authentication flow with JWT tokens")
 
-Purpose: Enable search and categorization without full environmental capture.
+Purpose: Enable search and categorization without full environmental
+capture.
 
 
 Level 3: Preserve
@@ -111,13 +112,13 @@ Usage:
     (seal-commit "Release v2.0.0"
       preserve: #t)
 
-Purpose: Capture everything needed to understand and reproduce the commit
-environment.
+Purpose: Capture everything needed to understand and reproduce the
+commit environment.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 METADATA FIELDS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Catalog Fields
@@ -144,9 +145,9 @@ Preservation Fields
   git-state.remote              string    Remote URL                      
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 STORAGE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Metadata stored in .vault/metadata/:
 
@@ -170,9 +171,9 @@ When enabled, metadata files are staged for the next commit, creating a
 self-documenting archive.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 IMPLEMENTATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 save-commit-metadata
@@ -224,9 +225,9 @@ Environment Capture
           (remote ,remote))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 USE CASES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Daily Development (Minimal)
@@ -263,9 +264,9 @@ Release Snapshot (Preserve)
 Captures full environment for reproducibility and forensics.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 QUERY SUPPORT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Future enhancement: query interface for metadata.
 
@@ -280,73 +281,73 @@ Future enhancement: query interface for metadata.
     (vault-search has-preservation: #t)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Information Leakage
 -------------------
 
-Preservation metadata captures: - Hostname (could reveal infrastructure) -
-Platform (could reveal vulnerabilities) - Dependencies (could reveal attack
-surface)
+Preservation metadata captures: - Hostname (could reveal infrastructure)
+- Platform (could reveal vulnerabilities) - Dependencies (could reveal
+attack surface)
 
-Recommendation: Use preserve level only for internal archives. Strip when
-publishing externally.
+Recommendation: Use preserve level only for internal archives. Strip
+when publishing externally.
 
 
 Metadata Integrity
 ------------------
 
-Metadata files are not automatically signed. For tamper-evidence: 1. Enable
-track-metadata to include in commits 2. Use seal-release for cryptographic
-sealing 3. Audit trail captures metadata operations
+Metadata files are not automatically signed. For tamper-evidence: 1.
+Enable track-metadata to include in commits 2. Use seal-release for
+cryptographic sealing 3. Audit trail captures metadata operations
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 DESIGN RATIONALE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Why Not Always Full Metadata?
 -----------------------------
 
-1. Performance: Environment capture adds latency 2. Noise: Not every commit
-needs forensic detail 3. Privacy: Some metadata reveals sensitive info 4.
-Storage: Full metadata increases repository size
+1. Performance: Environment capture adds latency 2. Noise: Not every
+commit needs forensic detail 3. Privacy: Some metadata reveals sensitive
+info 4. Storage: Full metadata increases repository size
 
 
 Why S-expressions?
 ------------------
 
-1. Readable: Human-inspectable without tools 2. Parseable: Machine-processable
-3. Extensible: Add fields without schema changes 4. Native: Scheme can
-read/write directly
+1. Readable: Human-inspectable without tools 2. Parseable:
+Machine-processable 3. Extensible: Add fields without schema changes 4.
+Native: Scheme can read/write directly
 
 
 Why Separate Files?
 -------------------
 
 1. Git-friendly: Small files diff well 2. Query-friendly: Can glob/grep
-metadata 3. Optional: Metadata doesn't bloat git objects 4. Flexible: Can
-delete without rewriting history
+metadata 3. Optional: Metadata doesn't bloat git objects 4. Flexible:
+Can delete without rewriting history
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 1. Dublin Core Metadata Initiative (DCMI) 2. Library of Congress Subject
-Headings (LCSH) 3. Software Heritage Archive Metadata 4. Reproducible Builds
-Project
+Headings (LCSH) 3. Software Heritage Archive Metadata 4. Reproducible
+Builds Project
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-06
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

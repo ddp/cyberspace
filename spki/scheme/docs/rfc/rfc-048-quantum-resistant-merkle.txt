@@ -1,71 +1,73 @@
 RFC-048: Quantum-Resistant Merkle Trees
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-SHA-512 won't survive. Grover's algorithm halves the effective security - 256
-bits becomes 128. For the wilderness of mirrors to endure the quantum winter,
-we need quantum-resistant Merkle trees. This RFC specifies the transition from
-flat SHA-512 hashes to tree-structured SHAKE256 hashes.
+SHA-512 won't survive. Grover's algorithm halves the effective security
+- 256 bits becomes 128. For the wilderness of mirrors to endure the
+quantum winter, we need quantum-resistant Merkle trees. This RFC
+specifies the transition from flat SHA-512 hashes to tree-structured
+SHAKE256 hashes.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE PROBLEM
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Current cyberspace object identity:
 
 
-    sha512(content) → 64 bytes → object address
+    sha512(content) > 64 bytes > object address
 
-Against a quantum computer with Grover's algorithm: - Classical security: 256
-bits - Quantum security: 128 bits (square root)
+Against a quantum computer with Grover's algorithm: - Classical
+security: 256 bits - Quantum security: 128 bits (square root)
 
-128 bits may be acceptable for some threat models, but cyberspace is built to
-last. The Library of Alexandria burned once. We won't let quantum computers
-burn it again.
+128 bits may be acceptable for some threat models, but cyberspace is
+built to last. The Library of Alexandria burned once. We won't let
+quantum computers burn it again.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE SOLUTION: MERKLE TREES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Instead of hashing content as a flat blob, structure it as a tree:
 
 
-                        ┌─────────────────┐
-                        │   Merkle Root   │  ← Object identity
-                        │  shake256(...)  │
-                        └────────┬────────┘
-                                 │
-                  ┌──────────────┼──────────────┐
-                  │              │              │
-             ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
-             │ Node 0  │    │ Node 1  │    │ Node 2  │
-             └────┬────┘    └────┬────┘    └────┬────┘
-                  │              │              │
-            ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
-            │           │  │           │  │           │
-        ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ...
-        │Chunk 0│ │Chunk 1│ │Chunk 2│ │Chunk 3│ │Chunk 4│
-        │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │
-        └───────┘ └───────┘ └───────┘ └───────┘ └───────┘
+                        +-----------------+
+                        |   Merkle Root   |  < Object identity
+                        |  shake256(...)  |
+                        +--------+--------+
+                                 |
+                  +--------------+--------------+
+                  |              |              |
+             +----v----+    +----v----+    +----v----+
+             | Node 0  |    | Node 1  |    | Node 2  |
+             +----+----+    +----+----+    +----+----+
+                  |              |              |
+            +-----+-----+  +-----+-----+  +-----+-----+
+            |           |  |           |  |           |
+        +---v---+ +---v---+ +---v---+ +---v---+ +---v---+ ...
+        |Chunk 0| |Chunk 1| |Chunk 2| |Chunk 3| |Chunk 4|
+        | 4 KB  | | 4 KB  | | 4 KB  | | 4 KB  | | 4 KB  |
+        +-------+ +-------+ +-------+ +-------+ +-------+
 
 Benefits:
 
-1. Incremental updates - Change one chunk, rehash one branch 2. Selective
-disclosure - Prove a chunk exists without revealing siblings 3. Streaming
-verification - Verify chunks as they arrive 4. Parallelizable - Hash chunks
-concurrently 5. Quantum-resistant - SHAKE256 at every node
+1. Incremental updates - Change one chunk, rehash one branch 2.
+Selective disclosure - Prove a chunk exists without revealing siblings
+3. Streaming verification - Verify chunks as they arrive 4.
+Parallelizable - Hash chunks concurrently 5. Quantum-resistant -
+SHAKE256 at every node
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 HASH FUNCTION: SHAKE256
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 SHAKE256 is an extendable-output function (XOF) from the SHA-3 (Keccak)
 family.
@@ -91,13 +93,13 @@ Alternative: BLAKE3
   Speed            Very fast, SIMD optimized            
   Standard         Not NIST, but widely trusted         
 
-BLAKE3 is faster and already tree-structured, but SHAKE256 has NIST blessing.
-We support both.
+BLAKE3 is faster and already tree-structured, but SHAKE256 has NIST
+blessing. We support both.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 OBJECT FORMAT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Current (Legacy)
@@ -144,9 +146,9 @@ Old clients use hash. New clients use merkle-root. Both verify the same
 content.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 TREE CONSTRUCTION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Algorithm
@@ -199,9 +201,9 @@ Canonical Parameters
   output-length   32         256 bits                          
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PROOFS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Inclusion Proof
@@ -222,7 +224,7 @@ Prove a chunk is part of an object without revealing other chunks:
 Verifier reconstructs path to root:
 
 
-    chunk_hash → combine with sibling → ... → must equal merkle-root
+    chunk_hash > combine with sibling > ... > must equal merkle-root
 
 
 Exclusion Proof
@@ -239,9 +241,9 @@ Prove a chunk does NOT exist (for sparse objects):
       (path ...))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 STREAMING VERIFICATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Large objects can be verified chunk-by-chunk as they stream:
 
@@ -259,38 +261,39 @@ Large objects can be verified chunk-by-chunk as they stream:
                   #t)
                 #f)))))
 
-You don't need the whole object to start verifying. Each chunk carries its own
-proof.
+You don't need the whole object to start verifying. Each chunk carries
+its own proof.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 THE FOREST
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 The soup becomes a forest of Merkle trees:
 
 
-    ┌─────────────────────────────────────────────────────────────────┐
-    │                    THE FOREST (formerly soup)                    │
-    │                                                                  │
-    │     🌲 obj    🌲 obj       ┌─────────────────┐      🌲 obj       │
-    │          🌲 obj           │░░░░░░░░░░░░░░░░░│           🌲 obj  │
-    │    🌲 obj          🌲 obj │░░░  REALM  ░░░░░│    🌲 obj         │
-    │         🌲 obj            │░░░ (island) ░░░░│         🌲 obj    │
-    │   🌲 obj       🌲 obj     │░░░░░░░░░░░░░░░░░│  🌲 obj           │
-    │        🌲 obj             └─────────────────┘       🌲 obj      │
-    │                                                                  │
-    │   Each object a tree. Each tree quantum-hardened.               │
-    └─────────────────────────────────────────────────────────────────┘
+    +-----------------------------------------------------------------+
+    |                    THE FOREST (formerly soup)                    |
+    |                                                                  |
+    |     🌲 obj    🌲 obj       +-----------------+      🌲 obj       |
+    |          🌲 obj           |░░░░░░░░░░░░░░░░░|           🌲 obj  |
+    |    🌲 obj          🌲 obj |░░░  REALM  ░░░░░|    🌲 obj         |
+    |         🌲 obj            |░░░ (island) ░░░░|         🌲 obj    |
+    |   🌲 obj       🌲 obj     |░░░░░░░░░░░░░░░░░|  🌲 obj           |
+    |        🌲 obj             +-----------------+       🌲 obj      |
+    |                                                                  |
+    |   Each object a tree. Each tree quantum-hardened.               |
+    +-----------------------------------------------------------------+
 
-Objects are trees. The wilderness of mirrors becomes a forest. Agents navigate
-between trees, climbing branches, verifying paths. The capability chain is
-still their thread - but now the mirrors are structured.
+Objects are trees. The wilderness of mirrors becomes a forest. Agents
+navigate between trees, climbing branches, verifying paths. The
+capability chain is still their thread - but now the mirrors are
+structured.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MIGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Phase 1: Dual Hash (Now → Q-Day - 5 years)
@@ -312,7 +315,8 @@ All new objects get both hashes. Old objects rehashed on access.
 Phase 2: Merkle Primary (Q-Day - 5 years → Q-Day)
 ---------------------------------------------------
 
-Merkle root becomes the canonical address. SHA-512 kept for compatibility.
+Merkle root becomes the canonical address. SHA-512 kept for
+compatibility.
 
 
 Phase 3: Legacy Sunset (Q-Day → Q-Day + 2 years)
@@ -328,9 +332,9 @@ SHA-512 hashes removed from new objects. Legacy objects retain both for
 historical verification.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 PERFORMANCE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
   Operation             SHA-512 (flat)   SHAKE256 (Merkle)   Notes             
@@ -343,34 +347,35 @@ PERFORMANCE
 The overhead is small. The benefits are large.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Grover's Algorithm
 ------------------
 
-Grover's algorithm provides quadratic speedup for searching: - SHA-512: 2^256
-→ 2^128 quantum operations - SHAKE256-256: 2^256 → 2^128 quantum
+Grover's algorithm provides quadratic speedup for searching: - SHA-512:
+2^256 > 2^128 quantum operations - SHAKE256-256: 2^256 > 2^128 quantum
 operations
 
-128-bit quantum security is considered sufficient for the foreseeable future.
+128-bit quantum security is considered sufficient for the foreseeable
+future.
 
 
 Second Preimage Resistance
 --------------------------
 
-Finding another input that hashes to the same tree requires: - Classical:
-2^256 operations - Quantum: 2^128 operations (Grover)
+Finding another input that hashes to the same tree requires: -
+Classical: 2^256 operations - Quantum: 2^128 operations (Grover)
 
 
 Tree Structure Attacks
 ----------------------
 
-The Merkle tree structure must prevent: - Length extension: SHAKE256 immune
-(sponge construction) - Subtree collision: Domain separation in node hashing -
-Malleability: Canonical serialization required
+The Merkle tree structure must prevent: - Length extension: SHAKE256
+immune (sponge construction) - Subtree collision: Domain separation in
+node hashing - Malleability: Canonical serialization required
 
 
 Implementation
@@ -387,15 +392,15 @@ The 0x00 prefix for leaves and 0x01 for nodes prevents a leaf from being
 interpreted as a node.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 INVARIANTS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
     M1. Object identity is Merkle root
         id(o) = merkle-root(shake256, chunks(o))
     M2. Any chunk is provable
-        chunk(o,i) → ∃proof: verify(root(o), i, chunk, proof)
+        chunk(o,i) > ∃proof: verify(root(o), i, chunk, proof)
     M3. Tree structure is canonical
         tree(content, params) is deterministic
     M4. Dual hashes are consistent
@@ -404,22 +409,22 @@ INVARIANTS
         old-objects retain verifiable legacy hashes
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 1. NIST FIPS 202 - SHA-3 Standard (SHAKE256) 2. BLAKE3 specification -
-https://github.com/BLAKE3-team/BLAKE3 3. Merkle, R., "A Digital Signature
-Based on a Conventional Encryption Function", 1987 4. Grover, L., "A Fast
-Quantum Mechanical Algorithm for Database Search", 1996 5. RFC-040 -
-Cyberspace Security Architecture
+https://github.com/BLAKE3-team/BLAKE3 3. Merkle, R., "A Digital
+Signature Based on a Conventional Encryption Function", 1987 4. Grover,
+L., "A Fast Quantum Mechanical Algorithm for Database Search", 1996 5.
+RFC-040 - Cyberspace Security Architecture
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-08
   * Initial draft
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------

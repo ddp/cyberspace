@@ -1,25 +1,25 @@
 RFC-038: Local Inference Integration
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-This RFC specifies how Library of Cyberspace agents integrate with local large
-language model (LLM) inference backends. Local inference enables
+This RFC specifies how Library of Cyberspace agents integrate with local
+large language model (LLM) inference backends. Local inference enables
 privacy-preserving agent operations without external API dependencies,
 supporting the self-sovereign architecture of the Library.[^h1]
 
-[^h1]: Historical: The tension between local and remote computation echoes the
-mainframe-to-PC transition. Local inference returns agency to the edge,
-reversing decades of cloud centralization.
+[^h1]: Historical: The tension between local and remote computation
+echoes the mainframe-to-PC transition. Local inference returns agency to
+the edge, reversing decades of cloud centralization.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 MOTIVATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Agents in the Library of Cyberspace require language understanding and
 generation capabilities for:
@@ -31,20 +31,21 @@ generation capabilities for:
 
 External API dependencies (OpenAI, Anthropic, etc.) introduce:
 
-1. Privacy leakage — document content leaves the realm 2. Availability risk
-— network partitions break agent operation 3. Cost unpredictability —
-metered APIs scale poorly 4. Vendor lock-in — proprietary formats and rate
-limits
+1. Privacy leakage — document content leaves the realm 2. Availability
+risk — network partitions break agent operation 3. Cost
+unpredictability — metered APIs scale poorly 4. Vendor lock-in —
+proprietary formats and rate limits
 
-Local inference eliminates these concerns while maintaining capability.[^d1]
+Local inference eliminates these concerns while maintaining
+capability.[^d1]
 
 [^d1]: Design: We deliberately avoid specifying model architectures. The
 interface is model-agnostic—agents negotiate capabilities at runtime.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 ARCHITECTURE
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Inference Topology
@@ -59,18 +60,18 @@ Table 1: Inference Deployment Models
   Federated     Shared across trusted realms    Resource pooling              
 
 
-    ┌─────────────────────────────────────────────────────┐
-    │                      Realm                          │
-    │  ┌─────────┐    ┌──────────────┐    ┌───────────┐  │
-    │  │  Agent  │───▶│   Inference  │───▶│   Model   │  │
-    │  │         │◀───│    Server    │◀───│  Weights  │  │
-    │  └─────────┘    └──────────────┘    └───────────┘  │
-    │       │              :11434              │          │
-    │       ▼                                  ▼          │
-    │  ┌─────────┐                      ┌───────────┐    │
-    │  │  Vault  │                      │   VRAM    │    │
-    │  └─────────┘                      └───────────┘    │
-    └─────────────────────────────────────────────────────┘
+    +-----------------------------------------------------+
+    |                      Realm                          |
+    |  +---------+    +--------------+    +-----------+  |
+    |  |  Agent  |--->|   Inference  |--->|   Model   |  |
+    |  |         |<---|    Server    |<---|  Weights  |  |
+    |  +---------+    +--------------+    +-----------+  |
+    |       |              :11434              |          |
+    |       v                                  v          |
+    |  +---------+                      +-----------+    |
+    |  |  Vault  |                      |   VRAM    |    |
+    |  +---------+                      +-----------+    |
+    +-----------------------------------------------------+
 
 
 Protocol
@@ -79,8 +80,8 @@ Protocol
 Agents communicate with inference servers via HTTP REST API.[^i1]
 
 [^i1]: Implementation: Ollama exposes an OpenAI-compatible API at
-/v1/chat/completions and a native API at /api/generate. We specify both for
-maximum compatibility.
+/v1/chat/completions and a native API at /api/generate. We specify both
+for maximum compatibility.
 
 Discovery:
 
@@ -115,9 +116,9 @@ Table 2: Model Capabilities
   vision       Image understanding       LLaVA, Llama 3.2 Vision   
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 AGENT INTEGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Scribe Agent
@@ -125,9 +126,9 @@ Scribe Agent
 
 The scribe agent uses local inference for document processing:[^r1]
 
-[^r1]: Research: Retrieval-augmented generation (RAG) combines local inference
-with vault content retrieval. See Lewis et al., "Retrieval- Augmented
-Generation for Knowledge-Intensive NLP Tasks" (2020).
+[^r1]: Research: Retrieval-augmented generation (RAG) combines local
+inference with vault content retrieval. See Lewis et al., "Retrieval-
+Augmented Generation for Knowledge-Intensive NLP Tasks" (2020).
 
 
     (define (scribe-summarize document)
@@ -168,7 +169,8 @@ Natural language queries translate to RFC-025 query language:
 Demonic Agent Inference
 -----------------------
 
-Sandboxed agents (RFC-023) access inference through capability tokens:[^d2]
+Sandboxed agents (RFC-023) access inference through capability
+tokens:[^d2]
 
 [^d2]: Design: Inference capability is granted like any other—via SPKI
 certificate. An agent cannot infer without explicit authorization.
@@ -186,9 +188,9 @@ certificate. An agent cannot infer without explicit authorization.
                                   limits)))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 RESOURCE MANAGEMENT
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 VRAM Allocation
@@ -207,11 +209,11 @@ Table 3: Model Size Guidelines
 Rate Limiting
 -------------
 
-Local inference is limited by hardware, not API quotas. Realms implement fair
-scheduling across agents:[^i2]
+Local inference is limited by hardware, not API quotas. Realms implement
+fair scheduling across agents:[^i2]
 
-[^i2]: Implementation: Token bucket algorithm with per-agent quotas. Prevents
-single agent from monopolizing inference resources.
+[^i2]: Implementation: Token bucket algorithm with per-agent quotas.
+Prevents single agent from monopolizing inference resources.
 
 
     (define (inference-rate-limit agent tokens)
@@ -228,9 +230,10 @@ Fallback Behavior
 
 When local inference is unavailable:
 
-1. Queue — buffer requests for later processing 2. Degrade — use simpler
-heuristics (keyword extraction vs. LLM) 3. Federate — request inference from
-trusted peer realm 4. Fail — return error to requesting agent
+1. Queue — buffer requests for later processing 2. Degrade — use
+simpler heuristics (keyword extraction vs. LLM) 3. Federate — request
+inference from trusted peer realm 4. Fail — return error to requesting
+agent
 
 
     (define (inference-with-fallback server model prompt)
@@ -241,9 +244,9 @@ trusted peer realm 4. Fail — return error to requesting agent
           (error 'inference-unavailable)))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 SECURITY CONSIDERATIONS
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Prompt Injection
@@ -251,8 +254,9 @@ Prompt Injection
 
 Agents MUST sanitize document content before inclusion in prompts:[^r2]
 
-[^r2]: Research: Prompt injection attacks embed malicious instructions in user
-content. See Perez & Ribeiro, "Ignore This Title and HackAPrompt" (2023).
+[^r2]: Research: Prompt injection attacks embed malicious instructions
+in user content. See Perez & Ribeiro, "Ignore This Title and
+HackAPrompt" (2023).
 
 
     (define (safe-prompt template document)
@@ -292,14 +296,14 @@ Sensitive documents require isolated inference contexts:
   * No persistent memory across security boundaries
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 OLLAMA INTEGRATION
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Ollama is the reference implementation for local inference.[^h2]
 
-[^h2]: Historical: Ollama follows the Unix philosophy—do one thing well. It
-manages models and serves inference. Nothing more.
+[^h2]: Historical: Ollama follows the Unix philosophy—do one thing
+well. It manages models and serves inference. Nothing more.
 
 
 Installation
@@ -362,9 +366,9 @@ Scheme Bindings
                    (prompt . ,text))))
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 COMPATIBILITY
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 
 Alternative Backends
@@ -394,20 +398,21 @@ fallback with explicit user consent and encryption:
 This is NOT RECOMMENDED for sensitive documents.
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 REFERENCES
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-1. RFC-023: Demonic Agent Sandboxing 2. RFC-025: Query Language 3. RFC-035:
-Mobile Agents and Pub/Sub 4. Ollama Documentation: https://ollama.com/ 5.
-Lewis et al., "Retrieval-Augmented Generation" (2020)
+1. RFC-023: Demonic Agent Sandboxing 2. RFC-025: Query Language 3.
+RFC-035: Mobile Agents and Pub/Sub 4. Ollama Documentation:
+https://ollama.com/ 5. Lewis et al., "Retrieval-Augmented Generation"
+(2020)
 
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 CHANGELOG
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
   * 2026-01-07
   * Initial specification
 
-------------------------------------------------------------------------------
+------------------------------------------------------------------------
