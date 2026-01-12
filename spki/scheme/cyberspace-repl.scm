@@ -194,8 +194,9 @@
 
 (define (write-forge-metadata module metrics so-size import-size elapsed)
   "Write forge metadata for module"
-  (when (not (directory-exists? ".forge"))
-    (create-directory ".forge"))
+  (unless (directory-exists? ".forge")
+    (condition-case (create-directory ".forge")
+      ((exn i/o file) #t)))  ; ignore race: another process created it
   (with-output-to-file (forge-meta-file module)
     (lambda ()
       (write `((module . ,module)
@@ -306,7 +307,7 @@
     (- (string-length str)
        (if (string-contains str "✓") 2 0)
        (if (string-contains str "✗") 2 0)))
-  (define w 50)
+  (define w 90)  ; wide enough for compiler warnings
   (define (box-line content)
     (let* ((clen (display-width content))
            (pad (- w clen 2)))
