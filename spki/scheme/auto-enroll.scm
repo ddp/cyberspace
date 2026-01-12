@@ -257,9 +257,10 @@
                             (cons (cons peer-name peer-hw) discovered))))))
                   (loop)))))))
 
-      ;; Clean up
-      (handle-exceptions exn #f
-        (tcp-close listener))
+      ;; Clean up (guard + cast for strict-types)
+      (when listener
+        (handle-exceptions exn #f
+          (tcp-close (the (struct tcp-listener) listener))))
 
       ;; Return all members including self
       (cons (cons my-name my-hw) discovered)))
