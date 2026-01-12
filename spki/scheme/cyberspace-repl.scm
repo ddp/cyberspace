@@ -3598,8 +3598,21 @@ Cyberspace REPL - Available Commands
           (set! parts (cons (string-append (number->string vault-objects) " objects") parts)))
         (let ((summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
           (print "  vault: " vault-exists summary))))
+    ;; Realm principal (abbreviated)
+    (when vault-exists
+      (let ((realm-pub-file (string-append vault-exists "/keystore/realm.pub")))
+        (when (file-exists? realm-pub-file)
+          (let* ((sexp (with-input-from-file realm-pub-file read))
+                 (pk-entry (and (pair? sexp) (assq 'public-key (cdr sexp))))
+                 (pk (and pk-entry (cadr pk-entry))))
+            (when pk
+              (let ((hex (blob->hex pk)))
+                (print "  realm: " (substring hex 0 8) "..." (substring hex (- (string-length hex) 8)))))))))
+    ;; Entropy source
+    (let ((ent (entropy-status)))
+      (print "  entropy: " (cdr (assq 'source ent)) " (" (cdr (assq 'implementation ent)) ")"))
     ;; FIPS self-test attestation
-    (print "  FIPS self-test: " (if (eq? (fips-status) 'passed) "✓" "FAILED"))
+    (print "  FIPS: " (if (eq? (fips-status) 'passed) "✓" "FAILED"))
     ;; Show identity if enrolled
     (when identity
       (let ((name (cond ((assq 'name identity) => cadr) (else #f)))

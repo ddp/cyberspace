@@ -164,6 +164,7 @@ if [[ -o interactive ]]; then
     alias csi='rlwrap csi'
     alias avatar='cd ~/cyberspace && claude -c'
     alias cyberspace='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
+    alias cs='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
     alias epoch='date +%s'
     alias fen='~/bin/forge-word'
     alias gonorns='ssh we@192.168.0.161'
