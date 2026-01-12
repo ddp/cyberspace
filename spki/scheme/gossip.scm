@@ -51,7 +51,7 @@
           bloom
           catalog
           crypto-ffi
-          portal)     ; for session-stat!
+          os)         ; for session-stat!
 
   ;; ============================================================
   ;; Configuration

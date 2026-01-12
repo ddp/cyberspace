@@ -44,7 +44,7 @@
           srfi-1      ; list utilities
           srfi-18     ; threads
           srfi-4      ; u8vectors
-          portal)     ; for session-stat!
+          os)         ; for session-stat!
 
   ;; ============================================================
   ;; Constants
