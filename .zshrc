@@ -155,6 +155,8 @@ if [[ -o interactive ]]; then
     alias -g L='| less'             # global alias: cmd L
 
     alias aliases='alias | sort'
+    alias avatar='cd ~/cyberspace && claude -c'
+    alias cb='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
     alias cc='claude --continue'
     alias chibi='rlwrap chibi-scheme'
     alias chez='rlwrap chez'
@@ -162,7 +164,6 @@ if [[ -o interactive ]]; then
     alias cr='claude --resume'
     alias clone='stash && clone-fluffy --with-dotfiles'
     alias csi='rlwrap csi'
-    alias avatar='cd ~/cyberspace && claude -c'
     alias cyberspace='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
     alias cs='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
     alias epoch='date +%s'
