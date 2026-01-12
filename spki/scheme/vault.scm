@@ -113,10 +113,27 @@
           srfi-13  ; string utilities
           (chicken sort)  ; sorting
           srfi-69  ; hash tables
+          (chicken type)  ; for type declarations
           cert
           crypto-ffi
           audit
           os)
+
+  ;;; ============================================================================
+  ;;; Type Declarations
+  ;;; ============================================================================
+  ;;
+  ;; Explicit types help the scrutinizer avoid exponential inference.
+  ;; Ada got this right: declare everything, infer nothing.
+
+  (: format-size (number -> string))
+  (: soup-summary-archives (list -> string))
+  (: soup-summary-releases (list -> string))
+  (: soup-summary-audit (list -> string))
+  (: soup-summary-keys (list -> string))
+  (: soup-summary-metadata (list -> string))
+  (: soup-summary-certs (list -> string))
+  (: soup-summary-identity (list -> string))
 
   ;;; ============================================================================
   ;;; Helper Functions
@@ -703,39 +720,35 @@
      (else
       (error "Unknown object type. Expected: archive path, version, signed-cert, or audit-entry"))))
 
+  ;; Box-drawing functions are now centralized in os.scm
+  ;; Use: (make-box width *box-rounded*) and box-top, box-line, etc.
+  ;; Local wrappers for vault's simpler width-based API:
+
   (define (repeat-string str n)
+    "Repeat a string n times"
     (let loop ((i 0) (acc ""))
       (if (= i n) acc
           (loop (+ i 1) (string-append acc str)))))
 
-  (define (box-top width)
-    (string-append "╭" (repeat-string "─" (- width 1)) "╮"))
+  (define (vault-box-top width)
+    "Top border with rounded corners"
+    (string-append "╭" (make-string (- width 1) #\─) "╮"))
 
-  (define (box-bottom width)
-    (string-append "╰" (repeat-string "─" (- width 1)) "╯"))
+  (define (vault-box-bottom width)
+    "Bottom border with rounded corners"
+    (string-append "╰" (make-string (- width 1) #\─) "╯"))
 
-  (define (box-divider width)
-    (string-append "├" (repeat-string "─" (- width 1)) "┤"))
+  (define (vault-box-divider width)
+    "Horizontal divider"
+    (string-append "├" (make-string (- width 1) #\─) "┤"))
 
-  (define (utf8-display-adjustment str)
-    "Calculate adjustment for UTF-8 symbols: string-length counts bytes,
-     but we need display columns. Each 3-byte symbol displays as ~2 cols,
-     so adjustment = -(bytes - display_cols) = -(3 - 2) = -1 per symbol"
-    (let ((check-mark (if (string-contains str "✓") 2 0))   ; 3 bytes, 1 col: -2
-          (x-mark (if (string-contains str "✗") 2 0))       ; 3 bytes, 1 col: -2
-          (warning (if (string-contains str "⚠") 1 0)))     ; 3 bytes, 2 cols: -1
-      (+ check-mark x-mark warning)))
-
-  (define (display-width str)
-    "Calculate display width: byte-length minus UTF-8 overhead"
-    (- (string-length str) (utf8-display-adjustment str)))
-
-  (define (box-line content width)
-    (let* ((content-width (display-width content))
+  (define (vault-box-line content width)
+    "Content line with padding using centralized display-width"
+    (let* ((content-width (string-display-width content))
            (padded (if (> content-width (- width 2))
                        (substring content 0 (- width 2))
                        content))
-           (padding (- width 2 (display-width padded))))
+           (padding (- width 2 (string-display-width padded))))
       (string-append "│ " padded (make-string (max 0 padding) #\space) "│")))
 
   (define (box-line-pair label value width)
@@ -743,18 +756,18 @@
                                label
                                (make-string (max 1 (- 20 (string-length label))) #\space)
                                value)))
-      (box-line formatted width)))
+      (vault-box-line formatted width)))
 
   (define (print-box-header title type width)
-    (print (box-top width))
-    (print (box-line (sprintf "object: ~a" title) width))
-    (print (box-line (sprintf "type:   ~a" type) width))
-    (print (box-divider width)))
+    (print (vault-box-top width))
+    (print (vault-box-line (sprintf "object: ~a" title) width))
+    (print (vault-box-line (sprintf "type:   ~a" type) width))
+    (print (vault-box-divider width)))
 
   (define (print-section-header title width)
-    (print (box-line "" width))
-    (print (box-line title width))
-    (print (box-line "" width)))
+    (print (vault-box-line "" width))
+    (print (vault-box-line title width))
+    (print (vault-box-line "" width)))
 
   (define (inspect-archive-file path #!key verify-key verbose)
     "Inspect a sealed archive file"
@@ -818,7 +831,7 @@
               (else
                (print (box-line-pair "Encryption" "none" width))))
 
-            (print (box-divider width))
+            (print (vault-box-divider width))
             (print-section-header "Migration Properties" width)
             (print (box-line-pair "Format Version" "1" width))
             (print (box-line-pair "Archive Format" (symbol->string fmt) width))
@@ -844,8 +857,8 @@
                                    (else "? (unknown format)"))
                                  width))
 
-            (print (box-line "" width))
-            (print (box-bottom width)))))))
+            (print (vault-box-line "" width))
+            (print (vault-box-bottom width)))))))
 
   (define (inspect-release version #!key verify-key verbose)
     "Inspect a sealed release by version"
@@ -872,7 +885,7 @@
 
           (print (box-line-pair "Signature" "none (unsigned release)" width)))
 
-      (print (box-divider width))
+      (print (vault-box-divider width))
       (print-section-header "Migration Properties" width)
 
       ;; Get git info for the tag
@@ -902,8 +915,8 @@
                    migrations)))
             (print (box-line-pair "Migration Path" "(none)" width))))
 
-      (print (box-line "" width))
-      (print (box-bottom width))))
+      (print (vault-box-line "" width))
+      (print (vault-box-bottom width))))
 
   (define (inspect-signed-cert sc #!key verify-key verbose)
     "Inspect a signed certificate"
@@ -927,13 +940,13 @@
 
         (print (box-line-pair "Propagate" "check cert-propagate" width))
 
-        (print (box-divider width))
+        (print (vault-box-divider width))
         (print-section-header "Delegation Properties" width)
         (print (box-line-pair "Chain Depth" "1 (direct)" width))
         (print (box-line-pair "Validity" "check cert-validity" width))
 
-        (print (box-line "" width))
-        (print (box-bottom width)))))
+        (print (vault-box-line "" width))
+        (print (vault-box-bottom width)))))
 
   (define (inspect-audit-entry entry #!key verify-key verbose)
     "Inspect an audit trail entry"
@@ -960,15 +973,15 @@
                   (print (box-line-pair "Chain Link" "parent-id reference" width))))
               (print (box-line-pair "Seal" "none" width)))
 
-          (print (box-divider width))
+          (print (vault-box-divider width))
           (print-section-header "Audit Properties" width)
           (print (box-line-pair "Entry ID" (substring id 0 24) width))
           (print (box-line-pair "Sequence" (number->string sequence) width))
           (print (box-line-pair "Timestamp" timestamp width))
           (print (box-line-pair "Immutable" "✓ (content-addressed)" width))
 
-          (print (box-line "" width))
-          (print (box-bottom width))))))
+          (print (vault-box-line "" width))
+          (print (vault-box-bottom width))))))
 
   ;;; ============================================================================
   ;;; Address Parsing (RFC-041)

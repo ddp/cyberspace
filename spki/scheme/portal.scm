@@ -32,10 +32,26 @@
           (chicken string)
           (chicken time)
           (chicken time posix)
+          (chicken type)  ; for type declarations
           srfi-1
           srfi-13
           srfi-69
           os)
+
+  ;;; ============================================================
+  ;;; Type Declarations
+  ;;; ============================================================
+  ;;
+  ;; Explicit types help the scrutinizer avoid exponential inference.
+  ;; Ada got this right: declare everything, infer nothing.
+
+  (: format-duration (fixnum -> string))
+  (: format-bytes (number -> string))
+  (: session-summary (-> (list-of string)))
+  (: session-uptime (-> fixnum))
+  (: count-vault-items (string -> fixnum))
+  (: audit-load-entries-raw (-> (list-of string)))
+  (: goodbye (#!optional (or false procedure) -> noreturn))
 
   ;;; ============================================================
   ;;; Session Statistics
@@ -115,14 +131,48 @@
     (cond
      ((< bytes 1024) (sprintf "~aB" bytes))
      ((< bytes 1048576) (sprintf "~aK" (quotient bytes 1024)))
-     ((< bytes 1073741824) (sprintf "~.1fM" (/ bytes 1048576.0)))
-     (else (sprintf "~.2fG" (/ bytes 1073741824.0)))))
+     ((< bytes 1073741824)
+      ;; Manual 1 decimal place: multiply by 10, round, divide by 10
+      (let* ((mb (/ bytes 1048576.0))
+             (rounded (/ (round (* mb 10)) 10.0)))
+        (sprintf "~aM" rounded)))
+     (else
+      ;; Manual 2 decimal places
+      (let* ((gb (/ bytes 1073741824.0))
+             (rounded (/ (round (* gb 100)) 100.0)))
+        (sprintf "~aG" rounded)))))
 
-  (define (string-pad-left str len char)
-    (let ((slen (string-length str)))
-      (if (>= slen len)
-          str
-          (string-append (make-string (- len slen) char) str))))
+  ;;; ============================================================
+  ;;; Session Summary Helpers
+  ;;; ============================================================
+  ;;
+  ;; Small typed helpers avoid exponential type inference.
+  ;; Each returns string or #f, composed via filter.
+
+  (: format-stat (symbol string string -> (or string false)))
+  (define (format-stat key singular plural-suffix)
+    "Format a session stat with pluralization, or #f if zero."
+    (let ((n (session-stat key)))
+      (if (> n 0)
+          (string-append (number->string n) " " singular
+                         (if (= n 1) "" plural-suffix))
+          #f)))
+
+  (: format-stat-irregular (symbol string string -> (or string false)))
+  (define (format-stat-irregular key singular plural)
+    "Format a session stat with irregular plural, or #f if zero."
+    (let ((n (session-stat key)))
+      (if (> n 0)
+          (string-append (number->string n) " " (if (= n 1) singular plural))
+          #f)))
+
+  (: format-stat-fixed (symbol string -> (or string false)))
+  (define (format-stat-fixed key label)
+    "Format a session stat with fixed label (no pluralization), or #f if zero."
+    (let ((n (session-stat key)))
+      (if (> n 0)
+          (string-append (number->string n) " " label)
+          #f)))
 
   ;;; ============================================================
   ;;; Session Summary
@@ -133,98 +183,54 @@
     (let* ((uptime (session-uptime))
            (new-audits (- (length (audit-load-entries-raw)) (session-stat 'boot-audit-count)))
            (boot-weave (session-stat 'boot-weave))
-           (stats '()))
-      ;; Build list of notable stats - always show uptime and weave
-      (set! stats (cons (format-duration uptime) stats))
-      (when (> boot-weave 0)
-        (set! stats (cons (sprintf "~a weave" (inexact->exact (round boot-weave))) stats)))
-      ;; Vault I/O
-      (when (> (session-stat 'unlocks) 0)
-        (set! stats (cons (sprintf "~a unlock~a" (session-stat 'unlocks)
-                                   (if (= 1 (session-stat 'unlocks)) "" "s")) stats)))
-      (when (> (session-stat 'reads) 0)
-        (set! stats (cons (sprintf "~a read~a" (session-stat 'reads)
-                                   (if (= 1 (session-stat 'reads)) "" "s")) stats)))
-      (when (> (session-stat 'writes) 0)
-        (set! stats (cons (sprintf "~a write~a" (session-stat 'writes)
-                                   (if (= 1 (session-stat 'writes)) "" "s")) stats)))
-      (when (> (session-stat 'queries) 0)
-        (set! stats (cons (sprintf "~a quer~a" (session-stat 'queries)
-                                   (if (= 1 (session-stat 'queries)) "y" "ies")) stats)))
-      ;; Crypto ops
-      (when (> (session-stat 'hashes) 0)
-        (set! stats (cons (sprintf "~a hash~a" (session-stat 'hashes)
-                                   (if (= 1 (session-stat 'hashes)) "" "es")) stats)))
-      (when (> (session-stat 'signs) 0)
-        (set! stats (cons (sprintf "~a sign~a" (session-stat 'signs)
-                                   (if (= 1 (session-stat 'signs)) "" "s")) stats)))
-      (when (> (session-stat 'verifies) 0)
-        (set! stats (cons (sprintf "~a verif~a" (session-stat 'verifies)
-                                   (if (= 1 (session-stat 'verifies)) "y" "ies")) stats)))
-      (when (> (session-stat 'encrypts) 0)
-        (set! stats (cons (sprintf "~a encrypt~a" (session-stat 'encrypts)
-                                   (if (= 1 (session-stat 'encrypts)) "" "s")) stats)))
-      (when (> (session-stat 'decrypts) 0)
-        (set! stats (cons (sprintf "~a decrypt~a" (session-stat 'decrypts)
-                                   (if (= 1 (session-stat 'decrypts)) "" "s")) stats)))
-      ;; Seal ops
-      (when (> (session-stat 'commits) 0)
-        (set! stats (cons (sprintf "~a commit~a" (session-stat 'commits)
-                                   (if (= 1 (session-stat 'commits)) "" "s")) stats)))
-      (when (> (session-stat 'syncs) 0)
-        (set! stats (cons (sprintf "~a replication~a" (session-stat 'syncs)
-                                   (if (= 1 (session-stat 'syncs)) "" "s")) stats)))
-      (when (> (session-stat 'peers-discovered) 0)
-        (set! stats (cons (sprintf "~a peer~a" (session-stat 'peers-discovered)
-                                   (if (= 1 (session-stat 'peers-discovered)) "" "s")) stats)))
-      (when (> (session-stat 'votes) 0)
-        (set! stats (cons (sprintf "~a vote~a" (session-stat 'votes)
-                                   (if (= 1 (session-stat 'votes)) "" "s")) stats)))
-      (when (> (session-stat 'gossip-exchanges) 0)
-        (set! stats (cons (sprintf "~a gossip" (session-stat 'gossip-exchanges)) stats)))
-      (when (> (session-stat 'mdns-messages) 0)
-        (set! stats (cons (sprintf "~a mDNS" (session-stat 'mdns-messages)) stats)))
-      (when (> (session-stat 'seals) 0)
-        (set! stats (cons (sprintf "~a seal~a" (session-stat 'seals)
-                                   (if (= 1 (session-stat 'seals)) "" "s")) stats)))
-      (when (> (session-stat 'federation-changes) 0)
-        (set! stats (cons (sprintf "~a fed~a" (session-stat 'federation-changes)
-                                   (if (= 1 (session-stat 'federation-changes)) "" "s")) stats)))
-      (when (> (session-stat 'wormholes) 0)
-        (set! stats (cons (sprintf "~a wormhole~a" (session-stat 'wormholes)
-                                   (if (= 1 (session-stat 'wormholes)) "" "s")) stats)))
-      ;; Network I/O - show as "↓NN ↑NN" if any traffic
-      (let ((bytes-in (session-stat 'bytes-in))
-            (bytes-out (session-stat 'bytes-out)))
-        (when (or (> bytes-in 0) (> bytes-out 0))
-          (set! stats (cons (sprintf "↓~a ↑~a" (format-bytes bytes-in) (format-bytes bytes-out)) stats))))
-      ;; Packet counts by protocol
-      (let ((ipv4 (session-stat 'packets-ipv4))
-            (ipv6 (session-stat 'packets-ipv6)))
-        (when (> ipv4 0)
-          (set! stats (cons (sprintf "~a v4" ipv4) stats)))
-        (when (> ipv6 0)
-          (set! stats (cons (sprintf "~a v6" ipv6) stats))))
-      (when (> new-audits 0)
-        (set! stats (cons (sprintf "+~a audit" new-audits) stats)))
-      ;; Channels & handshakes
-      (when (> (session-stat 'channels) 0)
-        (set! stats (cons (sprintf "~a channel~a" (session-stat 'channels)
-                                   (if (= 1 (session-stat 'channels)) "" "s")) stats)))
-      (when (> (session-stat 'handshakes) 0)
-        (set! stats (cons (sprintf "~a handshake~a" (session-stat 'handshakes)
-                                   (if (= 1 (session-stat 'handshakes)) "" "s")) stats)))
-      ;; Errors (red flags - hopefully zero)
-      (when (> (session-stat 'verify-fails) 0)
-        (set! stats (cons (sprintf "~a verify-fail~a!" (session-stat 'verify-fails)
-                                   (if (= 1 (session-stat 'verify-fails)) "" "s")) stats)))
-      (when (> (session-stat 'auth-fails) 0)
-        (set! stats (cons (sprintf "~a auth-fail~a!" (session-stat 'auth-fails)
-                                   (if (= 1 (session-stat 'auth-fails)) "" "s")) stats)))
-      (when (> (session-stat 'timeouts) 0)
-        (set! stats (cons (sprintf "~a timeout~a" (session-stat 'timeouts)
-                                   (if (= 1 (session-stat 'timeouts)) "" "s")) stats)))
-      (reverse stats)))
+           (bytes-in (session-stat 'bytes-in))
+           (bytes-out (session-stat 'bytes-out))
+           (ipv4 (session-stat 'packets-ipv4))
+           (ipv6 (session-stat 'packets-ipv6)))
+      ;; Collect all stats, filter out #f values
+      (filter identity
+        (list
+          ;; Always show uptime
+          (format-duration uptime)
+          ;; Weave score
+          (and (> boot-weave 0)
+               (string-append (number->string (inexact->exact (round boot-weave))) " weave"))
+          ;; Vault I/O
+          (format-stat 'unlocks "unlock" "s")
+          (format-stat 'reads "read" "s")
+          (format-stat 'writes "write" "s")
+          (format-stat-irregular 'queries "query" "queries")
+          ;; Crypto ops
+          (format-stat 'hashes "hash" "es")
+          (format-stat 'signs "sign" "s")
+          (format-stat-irregular 'verifies "verify" "verifies")
+          (format-stat 'encrypts "encrypt" "s")
+          (format-stat 'decrypts "decrypt" "s")
+          ;; Seal ops
+          (format-stat 'commits "commit" "s")
+          (format-stat 'syncs "replication" "s")
+          (format-stat 'peers-discovered "peer" "s")
+          (format-stat 'votes "vote" "s")
+          (format-stat-fixed 'gossip-exchanges "gossip")
+          (format-stat-fixed 'mdns-messages "mDNS")
+          (format-stat 'seals "seal" "s")
+          (format-stat 'federation-changes "fed" "s")
+          (format-stat 'wormholes "wormhole" "s")
+          ;; Network I/O
+          (and (or (> bytes-in 0) (> bytes-out 0))
+               (string-append "↓" (format-bytes bytes-in) " ↑" (format-bytes bytes-out)))
+          ;; Packet counts
+          (and (> ipv4 0) (string-append (number->string ipv4) " v4"))
+          (and (> ipv6 0) (string-append (number->string ipv6) " v6"))
+          ;; Audits
+          (and (> new-audits 0) (string-append "+" (number->string new-audits) " audit"))
+          ;; Channels & handshakes
+          (format-stat 'channels "channel" "s")
+          (format-stat 'handshakes "handshake" "s")
+          ;; Errors (hopefully zero)
+          (format-stat 'verify-fails "verify-fail" "s!")
+          (format-stat 'auth-fails "auth-fail" "s!")
+          (format-stat 'timeouts "timeout" "s")))))
 
   ;;; ============================================================
   ;;; Vault Helpers

@@ -48,7 +48,22 @@
    ;; Session statistics (primitives for cross-module instrumentation)
    *session-stats*
    session-stat!
-   session-stat)
+   session-stat
+
+   ;; Box drawing (centralized terminal formatting)
+   make-box              ; create a box builder for given width/style
+   box-top               ; (box-top builder #!optional title)
+   box-bottom            ; (box-bottom builder)
+   box-separator         ; (box-separator builder)
+   box-line              ; (box-line builder content)
+   box-print             ; (box-print builder content) - prints immediately
+   box-width             ; (box-width builder) - get inner width
+   *box-square*          ; ┌─┐│└┘├┤
+   *box-rounded*         ; ╭─╮│╰╯├┤
+   *box-double*          ; ╔═╗║╚╝╠╣
+   string-pad-left       ; alias for srfi-13 string-pad
+   string-truncate
+   string-display-width)
 
   (import scheme
           (chicken base)
@@ -246,5 +261,135 @@
   (define (session-stat key)
     "Get a session statistic."
     (hash-table-ref/default *session-stats* key 0))
+
+  ;; ============================================================
+  ;; Box Drawing
+  ;; ============================================================
+  ;;
+  ;; Centralized terminal box drawing for consistent output.
+  ;; Supports three styles: square, rounded, double.
+  ;;
+  ;; Usage:
+  ;;   (let ((b (make-box 60)))
+  ;;     (print (box-top b "Title"))
+  ;;     (box-print b "Content line")
+  ;;     (print (box-separator b))
+  ;;     (box-print b "More content")
+  ;;     (print (box-bottom b)))
+
+  ;; Box character sets: (tl horiz tr vert bl br t-left t-right)
+  (define *box-square*  '(#\┌ #\─ #\┐ #\│ #\└ #\┘ #\├ #\┤))
+  (define *box-rounded* '(#\╭ #\─ #\╮ #\│ #\╰ #\╯ #\├ #\┤))
+  (define *box-double*  '(#\╔ #\═ #\╗ #\║ #\╚ #\╝ #\╠ #\╣))
+
+  ;; String utilities for box formatting
+  ;; Note: srfi-13 provides string-pad (left) and string-pad-right
+  ;; We provide string-pad-left as a clearer alias for string-pad
+
+  (define (string-pad-left str len #!optional (char #\space))
+    "Pad string on left to reach len. Alias for srfi-13 string-pad."
+    (string-pad str len char))
+
+  (define (string-truncate str max-len #!optional (ellipsis "..."))
+    "Truncate string to max-len, adding ellipsis if needed."
+    (if (<= (string-length str) max-len)
+        str
+        (string-append (substring str 0 (- max-len (string-length ellipsis))) ellipsis)))
+
+  (define (string-display-width str)
+    "Calculate display width of string, accounting for multi-byte Unicode.
+     Common symbols like ✓ ✗ are 3 bytes but display as 1 character."
+    (let ((len (string-length str)))
+      ;; Subtract 2 for each known multi-byte single-width char
+      (- len
+         (if (string-contains str "✓") 2 0)
+         (if (string-contains str "✗") 2 0)
+         (if (string-contains str "→") 2 0)
+         (if (string-contains str "←") 2 0)
+         (if (string-contains str "↑") 2 0)
+         (if (string-contains str "↓") 2 0))))
+
+  ;; Box builder - alist with width and style
+  (define (make-box width #!optional (style *box-square*))
+    "Create a box builder for the given inner width and style."
+    `((width . ,width) (style . ,style)))
+
+  (define (box-width builder)
+    "Get the inner width of a box."
+    (cdr (assq 'width builder)))
+
+  (define (box-style builder)
+    "Get the style characters of a box."
+    (cdr (assq 'style builder)))
+
+  ;; Style accessors
+  (define (box-tl s) (list-ref s 0))
+  (define (box-h s)  (list-ref s 1))
+  (define (box-tr s) (list-ref s 2))
+  (define (box-v s)  (list-ref s 3))
+  (define (box-bl s) (list-ref s 4))
+  (define (box-br s) (list-ref s 5))
+  (define (box-tee-l s) (list-ref s 6))
+  (define (box-tee-r s) (list-ref s 7))
+
+  (define (box-top builder #!optional title)
+    "Generate top border, optionally with title."
+    (let* ((w (box-width builder))
+           (s (box-style builder))
+           (h (box-h s)))
+      (if title
+          (let* ((t (string-append " " title " "))
+                 (tlen (string-length t))
+                 (left-pad 1)
+                 (right-pad (- w left-pad tlen)))
+            (string-append
+              (string (box-tl s))
+              (make-string left-pad h)
+              t
+              (make-string (max 0 right-pad) h)
+              (string (box-tr s))))
+          (string-append
+            (string (box-tl s))
+            (make-string w h)
+            (string (box-tr s))))))
+
+  (define (box-bottom builder)
+    "Generate bottom border."
+    (let ((w (box-width builder))
+          (s (box-style builder)))
+      (string-append
+        (string (box-bl s))
+        (make-string w (box-h s))
+        (string (box-br s)))))
+
+  (define (box-separator builder)
+    "Generate horizontal separator."
+    (let ((w (box-width builder))
+          (s (box-style builder)))
+      (string-append
+        (string (box-tee-l s))
+        (make-string w (box-h s))
+        (string (box-tee-r s)))))
+
+  (define (box-line builder content)
+    "Generate content line with proper padding.
+     Uses display-width for Unicode-aware padding."
+    (let* ((w (box-width builder))
+           (s (box-style builder))
+           (inner-w (- w 2))  ; space for leading/trailing space
+           (truncated (string-truncate content inner-w))
+           (display-w (string-display-width truncated))
+           (pad (max 0 (- inner-w display-w))))
+      (string-append
+        (string (box-v s))
+        " "
+        truncated
+        (make-string pad #\space)
+        " "
+        (string (box-v s)))))
+
+  (define (box-print builder content)
+    "Print a content line (convenience wrapper)."
+    (print (box-line builder content)))
 
 ) ; end module os

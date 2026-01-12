@@ -46,6 +46,10 @@
 (define *module-times* '())
 (define *module-start* 0)
 
+;; Beta build mode: enables strict type checking and additional warnings
+;; Set to #f for release builds once beta is complete
+(define *beta-build* #t)
+
 (define (module-start! name)
   "Mark start of module loading."
   (set! *module-start* (current-milliseconds)))
@@ -80,13 +84,6 @@
 (define (string-repeat s n)
   "Repeat string s n times (Unicode-safe)."
   (apply string-append (make-list n s)))
-
-(define (string-pad-left str len char)
-  "Pad string on left with char to reach len."
-  (let ((slen (string-length str)))
-    (if (>= slen len)
-        str
-        (string-append (make-string (- len slen) char) str))))
 
 ;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
@@ -159,7 +156,24 @@
 
 (define (rebuild-module! module arch stamp)
   "Rebuild a module for current platform.
-   Robust: checks exit code, verifies .so was updated, shows details."
+   Robust: checks exit code, verifies .so was updated, shows details.
+   Note: Uses inline box-drawing (runs during bootstrap before os.scm loads)."
+  (define (format-size bytes)
+    (cond ((>= bytes (* 1024 1024))
+           (sprintf "~aMB" (quotient bytes (* 1024 1024))))
+          ((>= bytes 1024)
+           (sprintf "~aK" (quotient bytes 1024)))
+          (else
+           (sprintf "~aB" bytes))))
+  (define (display-width str)
+    (- (string-length str)
+       (if (string-contains str "✓") 2 0)
+       (if (string-contains str "✗") 2 0)))
+  (define w 50)
+  (define (box-line content)
+    (let* ((clen (display-width content))
+           (pad (- w clen 2)))
+      (print "│ " content (make-string (max 0 pad) #\space) " │")))
   (let* ((paths (libsodium-paths arch))
          (inc-path (car paths))
          (lib-path (cadr paths))
@@ -167,83 +181,68 @@
          (so-file (string-append module ".so"))
          (import-file (string-append module ".import.scm"))
          (so-mtime-before (file-mtime so-file))
-         (w 50)
          (title (string-append " forge: " module " "))
          (title-len (string-length title))
          (left-pad (quotient (- w title-len) 2))
          (right-pad (- w title-len left-pad))
          (start-time (current-milliseconds)))
-    (letrec
-        ((display-width
-          (lambda (str)
-            (- (string-length str)
-               (if (string-contains str "✓") 2 0)
-               (if (string-contains str "✗") 2 0))))
-         (box-line
-          (lambda (content)
-            (let* ((clen (display-width content))
-                   (pad (- w clen 2)))
-              (print "│ " content (make-string (max 0 pad) #\space) " │"))))
-         (format-size
-          (lambda (bytes)
-            (cond ((>= bytes (* 1024 1024))
-                   (sprintf "~aMB" (quotient bytes (* 1024 1024))))
-                  ((>= bytes 1024)
-                   (sprintf "~aK" (quotient bytes 1024)))
-                  (else
-                   (sprintf "~aB" bytes))))))
-      (print "")
-      (print "┌" (string-repeat "─" left-pad) title (string-repeat "─" right-pad) "┐")
-      (let* ((actual-cmd (if (string=? module "crypto-ffi")
-                             (string-append "csc -shared -J " src
-                                            " -I" inc-path " -L" lib-path
-                                            " -L -lsodium 2>&1; echo \"__EXIT__$?\"")
-                             (string-append "csc -shared -J " src " 2>&1; echo \"__EXIT__$?\"")))
-             (display-cmd (if (string=? module "crypto-ffi")
-                              (string-append "csc -shared -J " src " -I... -L... -lsodium")
-                              (string-append "csc -shared -J " src))))
-        (box-line display-cmd)
-        (let* ((all-output (with-input-from-pipe actual-cmd
-                             (lambda ()
-                               (let loop ((lines '()))
-                                 (let ((line (read-line)))
-                                   (if (eof-object? line)
-                                       (reverse lines)
-                                       (loop (cons line lines))))))))
-               (exit-line (find (lambda (l) (string-prefix? "__EXIT__" l)) all-output))
-               (exit-code (if exit-line (string->number (substring exit-line 8)) 1))
-               (output (remove (lambda (l) (string-prefix? "__EXIT__" l)) all-output)))
-          (for-each (lambda (line)
-                      (when (> (string-length line) 0)
-                        (box-line line)))
-                    output)
-          (let* ((elapsed (- (current-milliseconds) start-time))
-                 (so-exists (file-exists? so-file))
-                 (so-mtime-after (file-mtime so-file))
-                 (so-updated (> so-mtime-after so-mtime-before))
-                 (success (and (= exit-code 0) so-exists so-updated)))
-            (if success
-                (let* ((so-size (file-size so-file))
-                       (import-size (if (file-exists? import-file)
-                                        (file-size import-file)
-                                        0)))
-                  (write-arch-stamp module stamp)
-                  (box-line (sprintf "✓ ~a + ~a import in ~ams"
-                                     (format-size so-size)
-                                     (format-size import-size)
-                                     elapsed))
-                  (print "└" (string-repeat "─" w) "┘")
-                  #t)
-                (begin
-                  (when (not (= exit-code 0))
-                    (box-line (sprintf "✗ csc exited ~a" exit-code)))
-                  (when (and so-exists (not so-updated))
-                    (box-line "✗ stale .so (not rebuilt)"))
-                  (when (not so-exists)
-                    (box-line "✗ no .so produced"))
-                  (print "└" (string-repeat "─" w) "┘")
-                  (print "")
-                  (exit 1)))))))))
+    (print "")
+    (print "┌" (string-repeat "─" left-pad) title (string-repeat "─" right-pad) "┐")
+    ;; Beta mode adds -strict-types for better type checking
+    ;; All modules now have type declarations for tractable inference
+    (let* ((strict-exempt '())  ; none - all modules typed
+           (beta-flags (if (and *beta-build* (not (member module strict-exempt)))
+                           " -strict-types" ""))
+           (actual-cmd (if (string=? module "crypto-ffi")
+                           (string-append "csc -shared -J" beta-flags " " src
+                                          " -I" inc-path " -L" lib-path
+                                          " -L -lsodium 2>&1; echo \"__EXIT__$?\"")
+                           (string-append "csc -shared -J" beta-flags " " src " 2>&1; echo \"__EXIT__$?\"")))
+           (display-cmd (if (string=? module "crypto-ffi")
+                            (string-append "csc -shared -J" beta-flags " " src " -I... -L... -lsodium")
+                            (string-append "csc -shared -J" beta-flags " " src))))
+      (box-line display-cmd)
+      (let* ((all-output (with-input-from-pipe actual-cmd
+                           (lambda ()
+                             (let loop ((lines '()))
+                               (let ((line (read-line)))
+                                 (if (eof-object? line)
+                                     (reverse lines)
+                                     (loop (cons line lines))))))))
+             (exit-line (find (lambda (l) (string-prefix? "__EXIT__" l)) all-output))
+             (exit-code (if exit-line (string->number (substring exit-line 8)) 1))
+             (output (remove (lambda (l) (string-prefix? "__EXIT__" l)) all-output)))
+        (for-each (lambda (line)
+                    (when (> (string-length line) 0)
+                      (box-line line)))
+                  output)
+        (let* ((elapsed (- (current-milliseconds) start-time))
+               (so-exists (file-exists? so-file))
+               (so-mtime-after (file-mtime so-file))
+               (so-updated (> so-mtime-after so-mtime-before))
+               (success (and (= exit-code 0) so-exists so-updated)))
+          (if success
+              (let* ((so-size (file-size so-file))
+                     (import-size (if (file-exists? import-file)
+                                      (file-size import-file)
+                                      0)))
+                (write-arch-stamp module stamp)
+                (box-line (sprintf "✓ ~a + ~a import in ~ams"
+                                   (format-size so-size)
+                                   (format-size import-size)
+                                   elapsed))
+                (print "└" (string-repeat "─" w) "┘")
+                #t)
+              (begin
+                (when (not (= exit-code 0))
+                  (box-line (sprintf "✗ csc exited ~a" exit-code)))
+                (when (and so-exists (not so-updated))
+                  (box-line "✗ stale .so (not rebuilt)"))
+                (when (not so-exists)
+                  (box-line "✗ no .so produced"))
+                (print "└" (string-repeat "─" w) "┘")
+                (print "")
+                (exit 1))))))))
 
 (define (platform-stamp)
   "Return OS+arch stamp (e.g., 'Darwin-arm64', 'Linux-x86_64')"
@@ -257,14 +256,18 @@
         (arch (current-arch))
         ;; Build order: strict topological sort by dependency level
         ;; Modules within each level can build in parallel
-        (levels '(;; Level 0 (no cyberspace deps)
-                  ("os" "crypto-ffi" "sexp" "mdns")
-                  ;; Level 1 (crypto-ffi only)
-                  ("fips" "audit" "wordlist" "bloom" "catalog" "keyring")
-                  ;; Level 2 (Levels 0+1)
-                  ("cert" "enroll" "gossip" "security" "capability")
-                  ;; Level 3 (all prior levels)
-                  ("vault" "auto-enroll" "ui" "portal"))))
+        (levels '(;; Level 0 (no cyberspace deps - truly parallel)
+                  ("os" "crypto-ffi" "sexp" "capability")
+                  ;; Level 1 (single deps from L0)
+                  ("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
+                  ;; Level 2 (deps on L0+L1)
+                  ("cert" "enroll")
+                  ;; Level 3 (deps on L2)
+                  ("gossip" "security")
+                  ;; Level 4 (deps on L3)
+                  ("vault" "auto-enroll")
+                  ;; Level 5 (ui depends on auto-enroll)
+                  ("ui"))))
 
     (define (rebuild-level-parallel! modules-in-level)
       "Rebuild all modules in level in parallel, return count rebuilt"
@@ -2933,52 +2936,43 @@ Cyberspace REPL - Available Commands
 (define (rich-exception-display exn #!key (frames 5))
   "Display exception with rich formatting and mini-traceback"
   (capture-exception exn)
-  (print "")
-  (print "┌─ Exception ──────────────────────────────────────────────────────┐")
+  (let ((b (make-box 66)))
+    (print "")
+    (print (box-top b "Exception"))
 
-  ;; Extract exception properties
-  (let* ((msg (get-condition-property exn 'exn 'message ""))
-         (loc (get-condition-property exn 'exn 'location #f))
-         (args (get-condition-property exn 'exn 'arguments '()))
-         (kind (cond ((condition? exn)
-                      (cond ((get-condition-property exn 'type 'type #f))
-                            ((get-condition-property exn 'exn 'type #f))
-                            (else #f)))
-                     (else #f))))
+    ;; Extract exception properties
+    (let* ((msg (get-condition-property exn 'exn 'message ""))
+           (loc (get-condition-property exn 'exn 'location #f))
+           (args (get-condition-property exn 'exn 'arguments '()))
+           (kind (cond ((condition? exn)
+                        (cond ((get-condition-property exn 'type 'type #f))
+                              ((get-condition-property exn 'exn 'type #f))
+                              (else #f)))
+                       (else #f))))
 
-    ;; Helper to pad and print box line
-    (define (box-line content)
-      (let ((s (if (> (string-length content) 63)
-                   (string-append (substring content 0 60) "...")
-                   content)))
-        (printf "│ ~a~a│~n" s (make-string (- 65 (string-length s)) #\space))))
+      ;; Exception type if available
+      (when kind
+        (box-print b (sprintf "Type: ~a" kind)))
 
-    ;; Exception type if available
-    (when kind
-      (box-line (sprintf "Type is ~a" kind)))
+      ;; Error message
+      (box-print b msg)
 
-    ;; Error message
-    (box-line msg)
+      ;; Location if available
+      (when loc
+        (box-print b (sprintf "In: ~a" loc)))
 
-    ;; Location if available
-    (when loc
-      (box-line (sprintf "In ~a" loc)))
+      ;; Arguments if available
+      (when (and args (not (null? args)))
+        (box-print b "Arguments:")
+        (for-each
+          (lambda (arg)
+            (let ((s (with-output-to-string (lambda () (write arg)))))
+              (box-print b (sprintf "  ~a" s))))
+          args)))
 
-    ;; Arguments if available - format nicely
-    (when (and args (not (null? args)))
-      (box-line "With arguments:")
-      (for-each
-        (lambda (arg)
-          (let ((s (with-output-to-string (lambda () (write arg)))))
-            (box-line (sprintf "  ~a"
-                              (if (> (string-length s) 60)
-                                  (string-append (substring s 0 57) "...")
-                                  s)))))
-        args))
-
-    (print "├──────────────────────────────────────────────────────────────────┤")
-    (print "│ (bt) backtrace  (frame N) inspect  (exception-info) details     │")
-    (print "└──────────────────────────────────────────────────────────────────┘")))
+    (print (box-separator b))
+    (box-print b "(bt) backtrace  (frame N) inspect  (exception-info) details")
+    (print (box-bottom b))))
 
 ;;; ============================================================
 ;;; Enrollment Status Display
