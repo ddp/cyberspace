@@ -92,13 +92,13 @@
                   (loop (cons line lines)))))))))
 
   ;; ============================================================
-  ;; VUPS Benchmark - Measure actual compute speed
+  ;; Weave Benchmark - Measure actual compute speed
   ;; ============================================================
 
   (define *benchmark-iterations* 10000)  ; SHA-256 hashes to run
 
   (define (probe-scaling)
-    "Measure compute speed in VUPS (hashes/second).
+    "Measure compute speed (weave = hashes/second).
      Runs SHA-256 benchmark and returns hashes per second."
     (let* ((test-data (make-blob 64))  ; 64 bytes of zeros
            (start (current-seconds))
@@ -142,7 +142,7 @@
 
   (define (introspect-hardware)
     "Introspect hardware configuration.
-     Includes (mobile #t/#f) flag and (vups N) benchmark for capability scoring."
+     Includes (mobile #t/#f) flag and (weave N) benchmark for capability scoring."
     (let ((os (shell-command "uname -s"))
           (arch (shell-command "uname -m"))
           (hostname (shell-command "hostname -s")))
@@ -154,14 +154,14 @@
                           (shell-command "hostnamectl --json short 2>/dev/null | grep -o '\"Chassis\":\"[^\"]*\"' | cut -d'\"' -f4")))
                      (else #f)))
              (mobile (detect-mobile model))
-             (vups (probe-scaling)))  ; benchmark during introspection
+             (weave (probe-scaling)))  ; benchmark during introspection
         `(hardware
           (os ,os)
           (arch ,arch)
           (hostname ,hostname)
           (kernel ,(shell-command "uname -r"))
           (mobile ,mobile)
-          (vups ,vups)
+          (weave ,weave)
           ,@(cond
              ;; macOS
              ((and os (string=? os "Darwin"))

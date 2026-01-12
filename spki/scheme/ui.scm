@@ -82,7 +82,7 @@
       (printf "  CPU: ~a~n" (cadr (assq 'cpu (cdr hw))))
       (printf "  Cores: ~a~n" (cadr (assq 'cores (cdr hw))))
       (printf "  Memory: ~a GB~n" (cadr (assq 'memory-gb (cdr hw))))
-      (printf "  VUPS: ~a hashes/sec~n" (cadr (assq 'vups (cdr hw))))
+      (printf "  Weave: ~a hashes/sec~n" (cadr (assq 'weave (cdr hw))))
       (printf "  Mobile: ~a~n" (if (cadr (assq 'mobile (cdr hw))) "yes" "no"))))
 
   (define (show-help)

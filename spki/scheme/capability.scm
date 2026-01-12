@@ -33,11 +33,11 @@
   ;; Capability Weights - Tunable parameters
   ;; ============================================================
 
-  ;; Default weights prioritize vups > memory > storage
-  ;; VUPS (hashes/sec) measures actual compute, not just core count
+  ;; Default weights prioritize weave > memory > storage
+  ;; Weave (hashes/sec) measures actual compute, not just core count
   ;; Mobile penalty is severe - prefer !mobile
   (define *capability-weights*
-    '((vups . 0.001)           ; ~1 point per 1000 hashes/sec
+    '((weave . 0.001)          ; ~1 point per 1000 hashes/sec
       (memory-gb . 2.0)
       (storage-gb . 0.5)
       (mobile-penalty . 0.1)))  ; mobile devices score 10% of desktop/server
@@ -120,31 +120,31 @@
   (define (compute-capability-score hw)
     "Compute capability score from hardware introspection.
 
-     hw: result of (introspect-hardware) - must include (mobile #t/#f) and (vups N)
+     hw: result of (introspect-hardware) - must include (mobile #t/#f) and (weave N)
 
      Returns: numeric score (higher = more capable)
 
      Scoring formula:
-       base = (vups × w_vups) + (memory × w_memory) + (storage × w_storage)
+       base = (weave × w_weave) + (memory × w_memory) + (storage × w_storage)
        score = base × (mobile-penalty if mobile, else 1.0)
 
-     VUPS = hashes/second, measures actual compute speed.
+     Weave = hashes/second, measures actual compute speed.
      An M3 Max will score higher than an old Intel even with same core count.
 
      Example scores (with default weights):
-       MacBook Air M2 (500k vups, 16GB, 256GB, mobile):
+       MacBook Air M2 (500k weave, 16GB, 256GB, mobile):
          base = 500000×0.001 + 16×2 + 256×0.5 = 660
          score = 660 × 0.1 = 66  (heavily penalized!)
 
-       Mac Studio M3 Max (2M vups, 128GB, 1TB, !mobile):
+       Mac Studio M3 Max (2M weave, 128GB, 1TB, !mobile):
          base = 2000000×0.001 + 128×2 + 500×0.5 = 2506
          score = 2506 × 1.0 = 2506  (wins realm)"
 
-    (let* ((vups (extract-hardware-value hw 'vups))
+    (let* ((weave (extract-hardware-value hw 'weave))
            (memory (extract-hardware-value hw 'memory-gb))
            ;; Storage might be in introspect-storage, handle both
            (storage (or (extract-hardware-value hw 'root-avail-gb) 0))
-           (base-score (+ (* vups (get-weight 'vups))
+           (base-score (+ (* weave (get-weight 'weave))
                           (* memory (get-weight 'memory-gb))
                           (* storage (get-weight 'storage-gb))))
            ;; Check mobile flag from hw, or detect from model

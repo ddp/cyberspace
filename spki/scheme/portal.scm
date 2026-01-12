@@ -67,7 +67,7 @@
     (hash-table-set! *session-stats* 'packets-ipv6 0)
     (hash-table-set! *session-stats* 'mdns-messages 0)
     (hash-table-set! *session-stats* 'wormholes 0)
-    (hash-table-set! *session-stats* 'boot-vups 0))
+    (hash-table-set! *session-stats* 'boot-weave 0))
 
   (define (audit-load-entries-raw)
     "Load audit entry count without parsing (for boot stats)."

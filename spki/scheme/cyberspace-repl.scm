@@ -5263,8 +5263,8 @@ Cyberspace REPL - Available Commands
 
 ;; Initialize session statistics
 (session-stat-init!)
-;; Measure boot-time VUPS (must be after vault import)
-(hash-table-set! *session-stats* 'boot-vups (measure-vups))
+;; Measure boot-time weave (must be after vault import)
+(hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
 ;; Report startup time
 (report-module-times)

@@ -59,7 +59,7 @@
    *node-roles*
    *node-operations*
    probe-system-capabilities
-   measure-vups
+   measure-weave
    recommend-role
 
    ;; Keystore (RFC-041)
@@ -2464,7 +2464,7 @@ Object Types:
     (let ((cores (get-cpu-cores))
           (ram (get-ram-gb))
           (load (get-load-average))
-          (vups (measure-vups))
+          (weave (measure-weave))
           (storage (get-available-storage-gb))
           (storage-type (detect-storage-type))
           (network-type (detect-network-type))
@@ -2472,7 +2472,7 @@ Object Types:
       `((compute . ((cores . ,cores)
                     (ram-gb . ,ram)
                     (load-avg . ,load)
-                    (vups . ,vups)))
+                    (weave . ,weave)))
         (storage . ((available-gb . ,storage)
                     (type . ,storage-type)))
         (network . ((type . ,network-type)
@@ -2543,10 +2543,19 @@ Object Types:
         ((cellular) 100)
         (else 50))))
 
-  (define (measure-vups)
-    "Benchmark crypto ops/second, normalize to VUPS.
-     1 VUPS = 1000 SHA-512 hashes/sec (arbitrary baseline).
-     A VAX-11/780 was ~1 VUPS. Modern systems: 100-10000+ VUPS."
+  (define (measure-weave)
+    "Benchmark crypto ops/second - the node's computational essence.
+
+     Cyberspace terminology for this metric:
+       Weave     - how quickly it weaves cryptographic primitives (primary)
+       Flux      - computational flow rate
+       Pulse     - the node's heartbeat speed
+       Forge     - how fast it can forge hashes/seals
+       Lattice   - speed through the cryptographic lattice
+       Resonance - how fast the node vibrates
+
+     1 unit = 1000 SHA-512 hashes/sec (arbitrary baseline).
+     Legacy: VUPS (VAX Units of Performance). Modern systems: 100-10000+."
     (handle-exceptions exn 0.0
       (let* ((test-data (make-blob 64))
              (iterations 5000)
