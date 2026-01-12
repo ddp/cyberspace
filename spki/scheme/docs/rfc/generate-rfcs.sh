@@ -190,7 +190,7 @@ HEADER
 
   for rfc in "${RFCS[@]}"; do
     local title=$(get_title "$rfc")
-    local num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
+    local num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/' | sed 's/^0*\([0-9]\)/\1/')
     local formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
     cat >> index.html << EOF
@@ -214,7 +214,7 @@ MIDDLE
 
   # Generate and sort KWIC entries alphabetically by keyword
   generate_kwic_entries | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc; do
-    local num=$(echo "$rfc" | sed 's/rfc-0*//' | cut -d- -f1)
+    local num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/' | sed 's/^0*\([0-9]\)/\1/')
     cat >> index.html << EOF
       <tr>
         <td class="left">${left}</td>
