@@ -260,6 +260,37 @@
                         (quotient (car totals) (cdr totals))
                         0)))))))
 
+(define *cyberspace-modules*
+  '("os" "crypto-ffi" "sexp" "capability" "mdns" "fips" "audit" "wordlist"
+    "bloom" "catalog" "keyring" "portal" "cert" "enroll" "gossip" "security"
+    "vault" "auto-enroll" "ui"))
+
+(define (sicp)
+  "Analyze SICP metrics for all Cyberspace modules (live, no forge metadata needed)"
+  (printf "~%SICP Metrics - spki/scheme~%~%")
+  (let loop ((modules *cyberspace-modules*)
+             (total-loc 0)
+             (total-lambdas 0))
+    (if (null? modules)
+        (begin
+          (printf "~%  ─────────────────────────────────~%")
+          (printf "  Σ ~a LOC · ~a λ · ~a LOC/λ~%~%"
+                  total-loc total-lambdas
+                  (if (> total-lambdas 0)
+                      (quotient total-loc total-lambdas)
+                      0)))
+        (let* ((mod (car modules))
+               (src (string-append mod ".scm"))
+               (metrics (analyze-source src))
+               (loc (cdr (assq 'loc metrics)))
+               (lambdas (cdr (assq 'lambdas metrics)))
+               (ratio (cdr (assq 'loc/lambda metrics))))
+          (printf "  ~a: ~a LOC · ~a λ · ~a LOC/λ~%"
+                  (string-pad-right mod 12) loc lambdas ratio)
+          (loop (cdr modules)
+                (+ total-loc loc)
+                (+ total-lambdas lambdas))))))
+
 (define (rebuild-module! module arch stamp)
   "Rebuild a module for current platform.
    Robust: checks exit code, verifies .so was updated, shows details.
