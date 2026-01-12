@@ -221,6 +221,8 @@ given as arguments are successfully loaded and NIL otherwise."
 (when (fboundp 'blink-cursor-mode)
       (blink-cursor-mode t))        ; use blinking cursor
 
+(setq-default cursor-type 'box)     ; block cursor
+
 ;; UI cleanup for all contexts
 
 (when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
