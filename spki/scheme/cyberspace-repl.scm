@@ -81,6 +81,13 @@
   "Repeat string s n times (Unicode-safe)."
   (apply string-append (make-list n s)))
 
+(define (string-pad-left str len char)
+  "Pad string on left with char to reach len."
+  (let ((slen (string-length str)))
+    (if (>= slen len)
+        str
+        (string-append (make-string (- len slen) char) str))))
+
 ;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
 ;;; ============================================================
@@ -4576,12 +4583,6 @@ Cyberspace REPL - Available Commands
 ;; (portal.scm: inspired by VMS SYS$SYSTEM:LOGINOUT.EXE)
 (define (repl-goodbye)
   (goodbye repl-history-save))
-
-(define (string-pad-left str len char)
-  (let ((slen (string-length str)))
-    (if (>= slen len)
-        str
-        (string-append (make-string (- len slen) char) str))))
 
 ;; Clear screen (VT100)
 (define (clear)
