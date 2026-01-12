@@ -154,6 +154,112 @@
         (not (string=? stored-arch arch))
         (> (file-mtime src) (file-mtime so)))))
 
+;;; ============================================================
+;;; SICP Metrics - Structure analysis for forged modules
+;;; ============================================================
+
+(define (analyze-source src-file)
+  "Analyze source file for SICP metrics.
+   Returns alist: ((loc . N) (lambdas . N) (imports . N) (loc/lambda . N))"
+  (if (not (file-exists? src-file))
+      '((loc . 0) (lambdas . 0) (imports . 0) (loc/lambda . 0))
+      (with-input-from-file src-file
+        (lambda ()
+          (let loop ((loc 0) (lambdas 0) (imports 0))
+            (let ((line (read-line)))
+              (if (eof-object? line)
+                  (let ((ratio (if (> lambdas 0)
+                                   (quotient loc lambdas)
+                                   0)))
+                    `((loc . ,loc)
+                      (lambdas . ,lambdas)
+                      (imports . ,imports)
+                      (loc/lambda . ,ratio)))
+                  (let* ((trimmed (string-trim-both line))
+                         (is-blank (string-null? trimmed))
+                         (is-comment (and (> (string-length trimmed) 0)
+                                          (char=? (string-ref trimmed 0) #\;)))
+                         (has-define (string-contains line "(define "))
+                         (has-lambda (string-contains line "(lambda "))
+                         (has-import (string-contains line "(import ")))
+                    (loop (if (or is-blank is-comment) loc (+ loc 1))
+                          (+ lambdas
+                             (if has-define 1 0)
+                             (if has-lambda 1 0))
+                          (if has-import (+ imports 1) imports))))))))))
+
+(define (forge-meta-file module)
+  "Path to forge metadata file for module"
+  (string-append ".forge/" module ".meta"))
+
+(define (write-forge-metadata module metrics so-size import-size elapsed)
+  "Write forge metadata for module"
+  (when (not (directory-exists? ".forge"))
+    (create-directory ".forge"))
+  (with-output-to-file (forge-meta-file module)
+    (lambda ()
+      (write `((module . ,module)
+               (timestamp . ,(current-seconds))
+               (so-size . ,so-size)
+               (import-size . ,import-size)
+               (compile-time-ms . ,elapsed)
+               (metrics . ,metrics)))
+      (newline))))
+
+(define (read-forge-metadata module)
+  "Read forge metadata for module, or #f if none"
+  (let ((path (forge-meta-file module)))
+    (if (file-exists? path)
+        (with-input-from-file path read)
+        #f)))
+
+(define (forged module-name)
+  "Display forge metadata for a module. Usage: (forged \"portal\")"
+  (let ((meta (read-forge-metadata module-name)))
+    (if meta
+        (let* ((metrics (cdr (assq 'metrics meta)))
+               (loc (cdr (assq 'loc metrics)))
+               (lambdas (cdr (assq 'lambdas metrics)))
+               (loc/lambda (cdr (assq 'loc/lambda metrics)))
+               (so-size (cdr (assq 'so-size meta)))
+               (import-size (cdr (assq 'import-size meta)))
+               (compile-ms (cdr (assq 'compile-time-ms meta)))
+               (ts (cdr (assq 'timestamp meta))))
+          (printf "~a.scm~%" module-name)
+          (printf "  forged: ~a~%" (seconds->string (seconds->local-time ts)))
+          (printf "  output: ~aK + ~aB import in ~ams~%"
+                  (quotient so-size 1024) import-size compile-ms)
+          (printf "  structure: ~a LOC · ~a λ · ~a LOC/λ~%"
+                  loc lambdas loc/lambda)
+          (void))
+        (printf "No forge metadata for ~a~%" module-name))))
+
+(define (forged-all)
+  "Display forge metrics for all modules"
+  (let ((modules (if (directory-exists? ".forge")
+                     (map (lambda (f) (pathname-strip-extension f))
+                          (filter (lambda (f) (string-suffix? ".meta" f))
+                                  (directory ".forge")))
+                     '())))
+    (if (null? modules)
+        (print "No forge metadata found. Run (bootstrap-modules!) first.")
+        (begin
+          (printf "~%Bitfarm harvest: ~a modules~%~%" (length modules))
+          (let ((totals (fold (lambda (mod acc)
+                                (let* ((meta (read-forge-metadata mod))
+                                       (metrics (cdr (assq 'metrics meta)))
+                                       (loc (cdr (assq 'loc metrics)))
+                                       (lambdas (cdr (assq 'lambdas metrics))))
+                                  (cons (+ (car acc) loc)
+                                        (+ (cdr acc) lambdas))))
+                              '(0 . 0)
+                              modules)))
+            (printf "  Σ ~a LOC · ~a λ · ~a LOC/λ~%~%"
+                    (car totals) (cdr totals)
+                    (if (> (cdr totals) 0)
+                        (quotient (car totals) (cdr totals))
+                        0)))))))
+
 (define (rebuild-module! module arch stamp)
   "Rebuild a module for current platform.
    Robust: checks exit code, verifies .so was updated, shows details.
@@ -225,12 +331,19 @@
               (let* ((so-size (file-size so-file))
                      (import-size (if (file-exists? import-file)
                                       (file-size import-file)
-                                      0)))
+                                      0))
+                     (metrics (analyze-source src))
+                     (loc (cdr (assq 'loc metrics)))
+                     (lambdas (cdr (assq 'lambdas metrics)))
+                     (loc/lambda (cdr (assq 'loc/lambda metrics))))
                 (write-arch-stamp module stamp)
+                (write-forge-metadata module metrics so-size import-size elapsed)
                 (box-line (sprintf "✓ ~a + ~a import in ~ams"
                                    (format-size so-size)
                                    (format-size import-size)
                                    elapsed))
+                (box-line (sprintf "  ~a LOC · ~a λ · ~a LOC/λ"
+                                   loc lambdas loc/lambda))
                 (print "└" (string-repeat "─" w) "┘")
                 #t)
               (begin

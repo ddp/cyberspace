@@ -203,8 +203,17 @@
       (p "Output format:")
       (code "+---------------- forge: portal ----------------+
 | csc -shared -J -strict-types portal.scm       |
-| > 241K + 677B import in 921ms                 |
-+-----------------------------------------------+"))
+| ✓ 241K + 677B import in 921ms                 |
+|   296 LOC · 42 λ · 7 LOC/λ                    |
++-----------------------------------------------+")
+      (p "The SICP metrics line shows:")
+      (list
+        (item "LOC: Lines of code (excluding blanks and comments)")
+        (item "λ: Procedure definitions (define + lambda forms)")
+        (item "LOC/λ: Average lines per procedure (smaller = more compositional)"))
+      (p "Metrics are stored in .forge/<module>.meta and queryable via:")
+      (code scheme "(forged \"portal\")     ; Single module metrics
+(forged-all)          ; Bitfarm harvest: all modules"))
     (subsection
       "4.2 Compiler Invocation"
       (p "The forge invokes csc (Chicken Scheme Compiler) with these flags:")
