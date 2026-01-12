@@ -320,7 +320,12 @@ sanity_check() {
 echo "=== RFC Documentation Pipeline (S-expression) ==="
 echo ""
 
+# Extract kernel assertions (for RFC-046)
+echo "Extracting assertions..."
+./extract-assertions.sh
+
 # Generate all formats via Scheme
+echo ""
 echo "Generating formats..."
 csi -q generate-all.scm 2>/dev/null
 

@@ -571,6 +571,76 @@ Cyberspace frozen at 2026-01-11 20:32 on om.
 <p>The pattern comes from IKE clustering code: conditional asserts for QA builds, compiled out for production. Here we keep the counters but the cost is negligible.</p>
 </section>
 <section>
+<h2>Kernel Assertions</h2>
+<p>The kernel enforces security through typed assertions. Every assertion is cataloged automatically by `extract-assertions.sh` as part of the RFC generation pipeline. The catalog is regenerated on every build - if you add an assertion, it appears in the documentation.</p>
+<h3>Assertion Categories</h3>
+<table>
+<tr><th>Category </th><th>Purpose </th><th>Example </th></tr>
+<tr><td>instrumentation </td><td>Session statistics </td><td>(session-stat! 'unlocks) </td></tr>
+<tr><td>security-error </td><td>Access control failures </td><td>(error 'capability-amplification) </td></tr>
+<tr><td>precondition </td><td>State guards </td><td>(unless (attested?) ...) </td></tr>
+</table>
+<p>The catalog provides traceability: every security-relevant check in the codebase is enumerated with file and line number.</p>
+<h3>Security Errors</h3>
+<p>Typed error symbols for access control failures:</p>
+<table>
+<tr><th>Error </th><th>Meaning </th></tr>
+<tr><td>capability-amplification </td><td>Attempted to delegate more rights than held </td></tr>
+<tr><td>confidentiality-violation </td><td>Read without read capability </td></tr>
+<tr><td>integrity-violation </td><td>Write without write capability </td></tr>
+<tr><td>no-ambient-authority </td><td>Wormhole has no capabilities </td></tr>
+<tr><td>read-denied </td><td>Principal lacks read capability </td></tr>
+<tr><td>write-denied </td><td>Principal lacks write capability </td></tr>
+<tr><td>delete-denied </td><td>Principal lacks delete capability </td></tr>
+<tr><td>delegate-denied </td><td>Principal lacks delegate capability </td></tr>
+<tr><td>secure-clear-failed </td><td>Zeroization verification failed </td></tr>
+</table>
+<p>These errors are not generic - each has specific semantics for audit and forensics.</p>
+<h3>Precondition Guards</h3>
+<p>State assertions that must hold before operations proceed:</p>
+<pre class="language-scheme">
+(unless (attested?)
+  (error "Must attest before signing"))
+
+(unless (keystore-exists?)
+  (error "No keystore found. Use keystore-create first."))
+
+(unless (quiescent? memo)
+  (error "Chaotic memos cannot be published"))
+</pre>
+<p>Guards enforce the state machine: chaotic vs quiescent, attested vs unattested, locked vs unlocked.</p>
+<h3>The Scheme Way</h3>
+<p>Conditional assertions via macros with compile-time flags:</p>
+<pre class="language-scheme">
+;; Config constant
+(define-constant +instrumented+ #t)  ; #f for production
+
+;; Zero-cost when disabled
+(define-syntax stat!
+  (syntax-rules ()
+    ((_ key)
+     (when +instrumented+ (session-stat! key)))))
+</pre>
+<p>With `+instrumented+` false, CHICKEN's optimizer eliminates the dead branch entirely. This is the Scheme equivalent of BLISS `%IF DEBUG %THEN %assert(...) %FI`.</p>
+<h3>Catalog Generation</h3>
+<p>The assertion catalog is generated automatically:</p>
+<pre>
+$ ./docs/rfc/extract-assertions.sh
+  -&gt; docs/rfc/assertion-catalog.scm
+     18 instrumentation, 10 security errors, 12 guards (40 total)
+</pre>
+<p>The catalog is a first-class S-expression that can be loaded and queried:</p>
+<pre class="language-scheme">
+(load "assertion-catalog.scm")
+(assertion-summary)
+;; =&gt; ((instrumentation-points . 18)
+;;     (security-errors . 10)
+;;     (precondition-guards . 12)
+;;     (total . 40))
+</pre>
+<p>Adding assertions to code automatically updates the documentation on next regeneration.</p>
+</section>
+<section>
 <h2>Trusted Path</h2>
 <p>When it matters, talk directly to the core.</p>
 <pre>

@@ -329,6 +329,49 @@
         (item "Extensible - add new stats by instrumenting operations"))
       (p "The pattern comes from IKE clustering code: conditional asserts for QA builds, compiled out for production. Here we keep the counters but the cost is negligible.")))
   (section
+    "Kernel Assertions"
+    (p "The kernel enforces security through typed assertions. Every assertion is cataloged automatically by `extract-assertions.sh` as part of the RFC generation pipeline. The catalog is regenerated on every build - if you add an assertion, it appears in the documentation.")
+    (subsection
+      "Assertion Categories"
+      (table
+        (header "Category " "Purpose " "Example ")
+        (row "instrumentation " "Session statistics " "(session-stat! 'unlocks) ")
+        (row "security-error " "Access control failures " "(error 'capability-amplification) ")
+        (row "precondition " "State guards " "(unless (attested?) ...) "))
+      (p "The catalog provides traceability: every security-relevant check in the codebase is enumerated with file and line number."))
+    (subsection
+      "Security Errors"
+      (p "Typed error symbols for access control failures:")
+      (table
+        (header "Error " "Meaning ")
+        (row "capability-amplification " "Attempted to delegate more rights than held ")
+        (row "confidentiality-violation " "Read without read capability ")
+        (row "integrity-violation " "Write without write capability ")
+        (row "no-ambient-authority " "Wormhole has no capabilities ")
+        (row "read-denied " "Principal lacks read capability ")
+        (row "write-denied " "Principal lacks write capability ")
+        (row "delete-denied " "Principal lacks delete capability ")
+        (row "delegate-denied " "Principal lacks delegate capability ")
+        (row "secure-clear-failed " "Zeroization verification failed "))
+      (p "These errors are not generic - each has specific semantics for audit and forensics."))
+    (subsection
+      "Precondition Guards"
+      (p "State assertions that must hold before operations proceed:")
+      (code scheme "(unless (attested?)\n  (error \"Must attest before signing\"))\n\n(unless (keystore-exists?)\n  (error \"No keystore found. Use keystore-create first.\"))\n\n(unless (quiescent? memo)\n  (error \"Chaotic memos cannot be published\"))")
+      (p "Guards enforce the state machine: chaotic vs quiescent, attested vs unattested, locked vs unlocked."))
+    (subsection
+      "The Scheme Way"
+      (p "Conditional assertions via macros with compile-time flags:")
+      (code scheme ";; Config constant\n(define-constant +instrumented+ #t)  ; #f for production\n\n;; Zero-cost when disabled\n(define-syntax stat!\n  (syntax-rules ()\n    ((_ key)\n     (when +instrumented+ (session-stat! key)))))")
+      (p "With `+instrumented+` false, CHICKEN's optimizer eliminates the dead branch entirely. This is the Scheme equivalent of BLISS `%IF DEBUG %THEN %assert(...) %FI`."))
+    (subsection
+      "Catalog Generation"
+      (p "The assertion catalog is generated automatically:")
+      (code "$ ./docs/rfc/extract-assertions.sh\n  -> docs/rfc/assertion-catalog.scm\n     18 instrumentation, 10 security errors, 12 guards (40 total)")
+      (p "The catalog is a first-class S-expression that can be loaded and queried:")
+      (code scheme "(load \"assertion-catalog.scm\")\n(assertion-summary)\n;; => ((instrumentation-points . 18)\n;;     (security-errors . 10)\n;;     (precondition-guards . 12)\n;;     (total . 40))")
+      (p "Adding assertions to code automatically updates the documentation on next regeneration.")))
+  (section
     "Trusted Path"
     (p "When it matters, talk directly to the core.")
     (code "┌──────────────────────────────────────┐\n│           HUMAN OPERATOR              │\n└─────────────────┬────────────────────┘\n                  │ Local terminal, no network\n┌─────────────────▼────────────────────┐\n│          CYBERSPACE REPL              │\n│    ╔═════════════════════════════╗   │\n│    ║  TRUSTED PATH ACTIVE        ║   │\n│    ╚═════════════════════════════╝   │\n└─────────────────┬────────────────────┘\n                  │\n┌─────────────────▼────────────────────┐\n│           TRUSTED CORE                │\n└──────────────────────────────────────┘")

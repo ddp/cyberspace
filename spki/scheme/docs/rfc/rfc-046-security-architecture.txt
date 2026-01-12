@@ -805,6 +805,110 @@ negligible.
 
 
 ------------------------------------------------------------------------------
+KERNEL ASSERTIONS
+------------------------------------------------------------------------------
+
+The kernel enforces security through typed assertions. Every assertion is
+cataloged automatically by `extract-assertions.sh` as part of the RFC
+generation pipeline. The catalog is regenerated on every build - if you add an
+assertion, it appears in the documentation.
+
+
+Assertion Categories
+--------------------
+
+
+  Category          Purpose                   Example                             
+  instrumentation   Session statistics        (session-stat! 'unlocks)            
+  security-error    Access control failures   (error 'capability-amplification)   
+  precondition      State guards              (unless (attested?) ...)            
+
+The catalog provides traceability: every security-relevant check in the
+codebase is enumerated with file and line number.
+
+
+Security Errors
+---------------
+
+Typed error symbols for access control failures:
+
+
+  Error                       Meaning                                       
+  capability-amplification    Attempted to delegate more rights than held   
+  confidentiality-violation   Read without read capability                  
+  integrity-violation         Write without write capability                
+  no-ambient-authority        Wormhole has no capabilities                  
+  read-denied                 Principal lacks read capability               
+  write-denied                Principal lacks write capability              
+  delete-denied               Principal lacks delete capability             
+  delegate-denied             Principal lacks delegate capability           
+  secure-clear-failed         Zeroization verification failed               
+
+These errors are not generic - each has specific semantics for audit and
+forensics.
+
+
+Precondition Guards
+-------------------
+
+State assertions that must hold before operations proceed:
+
+
+    (unless (attested?)
+      (error "Must attest before signing"))
+    (unless (keystore-exists?)
+      (error "No keystore found. Use keystore-create first."))
+    (unless (quiescent? memo)
+      (error "Chaotic memos cannot be published"))
+
+Guards enforce the state machine: chaotic vs quiescent, attested vs
+unattested, locked vs unlocked.
+
+
+The Scheme Way
+--------------
+
+Conditional assertions via macros with compile-time flags:
+
+
+    ;; Config constant
+    (define-constant +instrumented+ #t)  ; #f for production
+    ;; Zero-cost when disabled
+    (define-syntax stat!
+      (syntax-rules ()
+        ((_ key)
+         (when +instrumented+ (session-stat! key)))))
+
+With `+instrumented+` false, CHICKEN's optimizer eliminates the dead branch
+entirely. This is the Scheme equivalent of BLISS `%IF DEBUG %THEN %assert(...)
+%FI`.
+
+
+Catalog Generation
+------------------
+
+The assertion catalog is generated automatically:
+
+
+    $ ./docs/rfc/extract-assertions.sh
+      -> docs/rfc/assertion-catalog.scm
+         18 instrumentation, 10 security errors, 12 guards (40 total)
+
+The catalog is a first-class S-expression that can be loaded and queried:
+
+
+    (load "assertion-catalog.scm")
+    (assertion-summary)
+    ;; => ((instrumentation-points . 18)
+    ;;     (security-errors . 10)
+    ;;     (precondition-guards . 12)
+    ;;     (total . 40))
+
+Adding assertions to code automatically updates the documentation on next
+regeneration.
+
+
+------------------------------------------------------------------------------
 TRUSTED PATH
 ------------------------------------------------------------------------------
 
