@@ -10,7 +10,7 @@
   (section
     "1. The Operator Interface"
     (p "The Cyberspace REPL is for hackers, admins, and operators—people who think in terms of data structures. This interface is deliberately different from the \"normie\" GUI interface (RFC-053).")
-    (code "                CYBERSPACE\n                    |\n       +------------+------------+\n       |                         |\n  +----v-----+              +----v-----+\n  | Terminal |              | Friendly |\n  |   (cs)   | <- this RFC  |   Door   |\n  +----------+              +----------+"))
+    (code "               CYBERSPACE\n                    |\n       +------------+------------+\n       |                         |\n  +----v-----+              +----v-----+\n  | Terminal |              | Friendly |\n  |   (cs)   | <- this RFC  |   Door   |\n  +----------+              +----------+"))
   (section
     "2. Box Drawing"
     (subsection
