@@ -5256,9 +5256,8 @@ Cyberspace REPL - Available Commands
 
 (module-end! "repl")
 
-;; Show vault status at startup
+;; Refresh hardware info at startup (vault display now in banner)
 (when (directory-exists? ".vault")
-  (describe-vault)
   (node-hardware-refresh!))
 
 ;; Initialize session statistics
