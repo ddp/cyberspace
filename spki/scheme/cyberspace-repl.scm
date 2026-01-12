@@ -235,6 +235,7 @@
         ;;   codesign    - macOS signing (shell only)
         ;;
         ;; Level 1 (crypto-ffi only):
+        ;;   fips        - FIPS self-tests (KATs)
         ;;   audit       - tamper-evident logging
         ;;   wordlist    - FIPS-181 verification codes
         ;;   bloom       - probabilistic set membership
@@ -254,7 +255,7 @@
         ;;   ui          ← enroll + capability + auto-enroll
         ;;
         (modules '("os" "crypto-ffi" "sexp" "mdns"
-                   "audit" "wordlist" "bloom" "catalog" "keyring"
+                   "fips" "audit" "wordlist" "bloom" "catalog" "keyring"
                    "cert" "enroll" "gossip" "security" "capability"
                    "vault" "auto-enroll" "ui" "portal")))
     (let ((rebuilt (fold
@@ -275,6 +276,7 @@
 ;; Load cyberspace modules (now guaranteed to be correct arch)
 (import os)
 (import crypto-ffi)
+(import fips)
 (import vault)
 (import audit)
 (import cert)
@@ -294,6 +296,9 @@
 
 ;; Initialize libsodium
 (sodium-init)
+
+;; FIPS self-tests (KATs) - verify crypto primitives before trusting them
+(fips-self-test)
 
 (module-end! "bootstrap")
 (module-start! "core")
@@ -3593,6 +3598,8 @@ Cyberspace REPL - Available Commands
           (set! parts (cons (string-append (number->string vault-objects) " objects") parts)))
         (let ((summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
           (print "  vault: " vault-exists summary))))
+    ;; FIPS self-test attestation
+    (print "  FIPS self-test: " (if (eq? (fips-status) 'passed) "✓" "FAILED"))
     ;; Show identity if enrolled
     (when identity
       (let ((name (cond ((assq 'name identity) => cadr) (else #f)))

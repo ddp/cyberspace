@@ -123,11 +123,14 @@
     "Generate session statistics summary for goodbye."
     (let* ((uptime (session-uptime))
            (new-audits (- (length (audit-load-entries-raw)) (session-stat 'boot-audit-count)))
+           (boot-weave (session-stat 'boot-weave))
            (stats '()))
-      ;; Build list of notable stats - always show uptime
+      ;; Build list of notable stats - always show uptime and weave
       (set! stats (cons (format-duration uptime) stats))
+      (when (> boot-weave 0)
+        (set! stats (cons (sprintf "~a weave" (inexact->exact (round boot-weave))) stats)))
       (when (> (session-stat 'syncs) 0)
-        (set! stats (cons (sprintf "~a sync~a" (session-stat 'syncs)
+        (set! stats (cons (sprintf "~a replication~a" (session-stat 'syncs)
                                    (if (= 1 (session-stat 'syncs)) "" "s")) stats)))
       (when (> (session-stat 'commits) 0)
         (set! stats (cons (sprintf "~a commit~a" (session-stat 'commits)
