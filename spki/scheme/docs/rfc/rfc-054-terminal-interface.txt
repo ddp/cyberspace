@@ -21,14 +21,14 @@ in terms of data structures. This interface is deliberately different from the
 "normie" GUI interface (RFC-053).
 
 
-                        CYBERSPACE
-                            │
-               ┌────────────┴────────────┐
-               │                         │
-          ┌────▼────┐              ┌─────▼─────┐
-          │ Terminal │              │  Friendly  │
-          │  (cs)    │  ← this RFC │    Door    │
-          └─────────┘              └───────────┘
+                    CYBERSPACE
+                        |
+           +------------+------------+
+           |                         |
+      +----v-----+              +----v-----+
+      | Terminal |              | Friendly |
+      |   (cs)   | <- this RFC  |   Door   |
+      +----------+              +----------+
 
 
 ------------------------------------------------------------------------------
@@ -39,38 +39,19 @@ in terms of data structures. This interface is deliberately different from the
 2.1 Unicode Box Characters
 --------------------------
 
-All boxes MUST use Unicode box-drawing characters. Single-line (standard):
+Boxes use ASCII characters for web compatibility, Unicode in terminals:
 
 
-    ┌  U+250C  Top-left corner
-    ┐  U+2510  Top-right corner
-    └  U+2514  Bottom-left corner
-    ┘  U+2518  Bottom-right corner
-    │  U+2502  Vertical line
-    ─  U+2500  Horizontal line
-    ├  U+251C  Left tee (tree branch)
-    ┤  U+2524  Right tee
-    ┬  U+252C  Top tee
-    ┴  U+2534  Bottom tee
-    ┼  U+253C  Cross
+    +  corner/tee/cross
+    |  vertical line
+    -  horizontal line
 
-Double-line boxes for emphasis:
+Double-line boxes use = and # for emphasis:
 
 
-    ╔  U+2554  Top-left corner
-    ╗  U+2557  Top-right corner
-    ╚  U+255A  Bottom-left corner
-    ╝  U+255D  Bottom-right corner
-    ║  U+2551  Vertical line
-    ═  U+2550  Horizontal line
-
-Rounded corners for certificates and sealed objects:
-
-
-    ╭  U+256D  Top-left corner
-    ╮  U+256E  Top-right corner
-    ╰  U+2570  Bottom-left corner
-    ╯  U+256F  Bottom-right corner
+    #  corner
+    |  vertical
+    =  horizontal
 
 
 2.2 Box Construction Pattern
@@ -85,19 +66,19 @@ Use closures to encapsulate box state:
              (title-len (string-length title-padded))
              (left-pad (quotient (- w title-len) 2))
              (right-pad (- w title-len left-pad))
-             (header (string-append "┌" (make-string left-pad #\─)
+             (header (string-append "+" (make-string left-pad #\-)
                                    title-padded
-                                   (make-string right-pad #\─) "┐\n"))
-             (footer (string-append "└" (make-string w #\─) "┘\n")))
+                                   (make-string right-pad #\-) "+\n"))
+             (footer (string-append "+" (make-string w #\-) "+\n")))
         (lambda (cmd . args)
           (case cmd
             ((header) header)
             ((footer) footer)
             ((line) (let ((content (if (null? args) "" (car args)))
                            (pad (- w (string-length content) 2)))
-                      (string-append "│ " content
+                      (string-append "| " content
                                     (make-string (max 0 pad) #\space)
-                                    " │\n")))))))
+                                    " |\n")))))))
 
 
 2.3 Standard Box Widths
@@ -119,21 +100,19 @@ Use closures to encapsulate box state:
 -------------------
 
 
-    ├─  U+251C + U+2500  Branch with more siblings
-    └─  U+2514 + U+2500  Final branch (no more siblings)
-    │   U+2502           Vertical continuation
-    ▶   U+25B6           Collapsed/expandable indicator
-    ▼   U+25BC           Expanded indicator
+    +-  branch with more siblings
+    +-  final branch (last item)
+    |   vertical continuation
 
 
 3.2 Tree Example
 ----------------
 
 
-    hostname · up 3d 12:45:03
-    ├─ 10 cores, 64GB, Apple M4
-    ├─ 192.168.1.100 / 2001:db8::1...
-    └─ vault: .vault/ (keys) (audit)
+    hostname - up 3d 12:45:03
+    +- 10 cores, 64GB, Apple M4
+    +- 192.168.1.100 / 2001:db8::1...
+    +- vault: .vault/ (keys) (audit)
 
 
 3.3 Multi-level Trees
@@ -141,13 +120,13 @@ Use closures to encapsulate box state:
 
 
     vault (49 objects)
-    ├─ archives (3)
-    │  └─ cyberspace-v0.59.tar.gz
-    ├─ keys (2)
-    │  ├─ starlight · Ed25519
-    │  └─ macmini · Ed25519
-    └─ releases (5)
-       └─ v0.59 (signed)
+    +- archives (3)
+    |  +- cyberspace-v0.59.tar.gz
+    +- keys (2)
+    |  +- starlight - Ed25519
+    |  +- macmini - Ed25519
+    +- releases (5)
+       +- v0.59 (signed)
 
 
 ------------------------------------------------------------------------------
@@ -223,10 +202,10 @@ color (plain terminal, logging, piped output).
 --------------------------
 
 
-    ✓ U+2713  Success
-    ✗ U+2717  Failure
-    • U+2022  Bullet point
-    → U+2192  Arrow, implies
+    [ok]  Success
+    [!!]  Failure
+    *     Bullet point
+    ->    Arrow, implies
 
 
 6.2 Inline Separators
@@ -235,228 +214,28 @@ color (plain terminal, logging, piped output).
 For separating items in compact displays (session stats, status lines):
 
 
-    ·  U+00B7  Middle dot separator (preferred)
-    |  U+007C  Pipe (more intrusive, use sparingly)
-    ↓  U+2193  Down arrow (bytes/data in)
-    ↑  U+2191  Up arrow (bytes/data out)
+    -  dash separator
+    |  pipe (more intrusive)
+    v  down (bytes/data in)
+    ^  up (bytes/data out)
 
 Example session summary:
 
 
-    Session: 4m 24s · 2 syncs · 3 seals · ↓1.2K ↑856B · 1247 VUPS
+    Session: 4m 24s - 2 syncs - 3 seals - v1.2K ^856B
 
 
 6.3 Sparklines
 --------------
 
-For activity visualization over time:
+For activity visualization over time, eight ASCII levels:
 
 
-    ▁▂▃▄▅▆▇█  U+2581 through U+2588
+     ._,-~=+#
 
-Eight levels map to normalized data:
+Map to normalized data:
 
 
-    (define sparkline-chars '#("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█"))
-
-
-------------------------------------------------------------------------------
-7. OUTPUT CONVENTIONS
-------------------------------------------------------------------------------
-
-
-7.1 Blank Lines
----------------
-
-  * One blank line before major output blocks
-  * One blank line after banner/header boxes
-  * No trailing blank lines in functions returning (void)
-
-
-7.2 Indentation
----------------
-
-  * 2 spaces for nested information - 4 spaces for code examples in help text
-  * Tree branches provide visual indentation
-
-
-7.3 Truncation
---------------
-
-Long values should be truncated with ellipsis:
-
-
-    (define (short-id id)
-      "Truncate id for display (max 16 chars)"
-      (if (> (string-length id) 16)
-          (string-append (substring id 0 16) "...")
-          id))
-
-
-------------------------------------------------------------------------------
-8. RESULT DISPLAY
-------------------------------------------------------------------------------
-
-
-8.1 History Variables
----------------------
-
-
-       ; last result
-    1  ; second-to-last
-    _2  ; third-to-last
-    ($n); result by number
-
-
-8.2 Void
---------
-
-Functions that print output typically return (void) to suppress duplicate
-display.
-
-
-------------------------------------------------------------------------------
-9. MESSAGES
-------------------------------------------------------------------------------
-
-
-9.1 Welcome Banner
-------------------
-
-
-    Cyberspace Scheme v0.59 (2026-01-11)
-      Starlight · Darwin-arm64 · 10 cores, 64GB, Apple M4
-      boot: 2026-01-11 22:30:45Z (14:30:45 PST)
-      IPv4: 192.168.1.100
-      IPv6: 2001:db8::1
-
-
-9.2 Goodbye Message
--------------------
-
-
-    Returning to objective reality, Cyberspace frozen at 2026-01-11 22:35:22Z (14:35:22 PST).
-      Session: 4m 37s · 2 syncs · 47 objects · 2 keys
-
-
-9.3 Timestamp Convention
-------------------------
-
-All timestamps in Cyberspace use ISO 8601 UTC format with Z suffix, followed
-by local time reference for operators:
-
-
-    YYYY-MM-DD HH:MM:SSZ (HH:MM:SS TZ)
-
-UTC is canonical for storage, audit trails, and cross-node operations. The
-local time reference aids operators without affecting data integrity.
-
-
-9.4 Error Messages
-------------------
-
-Errors should be clear and actionable:
-
-
-    No signing key configured. Generate with (ed25519-keypair)
-
-Not:
-
-
-    Error: nil key
-
-
-------------------------------------------------------------------------------
-10. SINGLE-CHARACTER SHORTCUTS
-------------------------------------------------------------------------------
-
-
-  Symbol   Function   Description   
-  \        .\                       status   Compact status display   
-  \        ?\                       help     Show help                
-
-These use pipe-delimited symbols to avoid conflict with Scheme.
-
-
-------------------------------------------------------------------------------
-11. TERMINAL WINDOW
-------------------------------------------------------------------------------
-
-
-11.1 Title
-----------
-
-Set terminal title on startup:
-
-
-    (define (set-terminal-title title)
-      (display (string-append "\x1b]0;" title "\x07")))
-
-Format: <Hostname> Workstation
-
-
-11.2 Clear Screen
------------------
-
-
-    (define (clear)
-      (display "\x1b[2J\x1b[H")
-      (void))
-
-
-------------------------------------------------------------------------------
-12. IMPLEMENTATION NOTES
-------------------------------------------------------------------------------
-
-
-12.1 UTF-8 and string-ref
--------------------------
-
-Do NOT use string-ref on strings containing multi-byte UTF-8 characters. Use
-vectors of strings instead:
-
-
-    ;; WRONG - fails on multi-byte chars
-    (string-ref "▁▂▃" idx)
-    ;; RIGHT - vector of strings
-    (vector-ref '#("▁" "▂" "▃") idx)
-
-
-12.2 Width Calculations
------------------------
-
-String length for box padding must account for display width, not byte length.
-ASCII characters are safe. For emoji or CJK, additional handling is needed.
-
-
-------------------------------------------------------------------------------
-13. LINTING CHECKLIST
-------------------------------------------------------------------------------
-
-When auditing terminal output:
-
-1. [ ] Boxes use Unicode box-drawing characters 2. [ ] Trees use ├─ and
-└─ consistently 3. [ ] Prompt is : (colon-space) 4. [ ] Colors are
-optional, not required for meaning 5. [ ] Error messages are actionable 6. [ ]
-Functions returning output use (void) 7. [ ] Long values are truncated with
-... 8. [ ] Blank lines follow the convention 9. [ ] No ASCII art boxes (+---,
-|, etc.) 10. [ ] No tabs in output (spaces only)
-
-
-------------------------------------------------------------------------------
-14. REFERENCES
-------------------------------------------------------------------------------
-
-1. RFC-053 — The Normie Interface (GUI counterpart) 2. RFC-002 —
-Architecture ("English on top, Scheme underneath") 3. Unicode Standard — Box
-Drawing (U+2500–U+257F) 4. ECMA-48 — Control Functions for Coded Character
-Sets (VT100)
-
-
-------------------------------------------------------------------------------
-CHANGELOG
-------------------------------------------------------------------------------
-
-- 2026-01-11 — Initial specification
+    (define sparkline-chars '#(" " "." "_" "," "-" "~" "=" "+" "#"))
 
 ------------------------------------------------------------------------------

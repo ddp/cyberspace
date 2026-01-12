@@ -10,21 +10,19 @@
   (section
     "1. The Operator Interface"
     (p "The Cyberspace REPL is for hackers, admins, and operators—people who think in terms of data structures. This interface is deliberately different from the \"normie\" GUI interface (RFC-053).")
-    (code "                    CYBERSPACE\n                        │\n           ┌────────────┴────────────┐\n           │                         │\n      ┌────▼────┐              ┌─────▼─────┐\n      │ Terminal │              │  Friendly  │\n      │  (cs)    │  ← this RFC │    Door    │\n      └─────────┘              └───────────┘"))
+    (code "                CYBERSPACE\n                    |\n       +------------+------------+\n       |                         |\n  +----v-----+              +----v-----+\n  | Terminal |              | Friendly |\n  |   (cs)   | <- this RFC  |   Door   |\n  +----------+              +----------+"))
   (section
     "2. Box Drawing"
     (subsection
       "2.1 Unicode Box Characters"
-      (p "All boxes MUST use Unicode box-drawing characters. Single-line (standard):")
-      (code "┌  U+250C  Top-left corner\n┐  U+2510  Top-right corner\n└  U+2514  Bottom-left corner\n┘  U+2518  Bottom-right corner\n│  U+2502  Vertical line\n─  U+2500  Horizontal line\n├  U+251C  Left tee (tree branch)\n┤  U+2524  Right tee\n┬  U+252C  Top tee\n┴  U+2534  Bottom tee\n┼  U+253C  Cross")
-      (p "Double-line boxes for emphasis:")
-      (code "╔  U+2554  Top-left corner\n╗  U+2557  Top-right corner\n╚  U+255A  Bottom-left corner\n╝  U+255D  Bottom-right corner\n║  U+2551  Vertical line\n═  U+2550  Horizontal line")
-      (p "Rounded corners for certificates and sealed objects:")
-      (code "╭  U+256D  Top-left corner\n╮  U+256E  Top-right corner\n╰  U+2570  Bottom-left corner\n╯  U+256F  Bottom-right corner"))
+      (p "Boxes use ASCII characters for web compatibility, Unicode in terminals:")
+      (code "+  corner/tee/cross\n|  vertical line\n-  horizontal line")
+      (p "Double-line boxes use = and # for emphasis:")
+      (code "#  corner\n|  vertical\n=  horizontal"))
     (subsection
       "2.2 Box Construction Pattern"
       (p "Use closures to encapsulate box state:")
-      (code scheme "(define (make-box title w)\n  \"Create a box drawing closure with given title and width\"\n  (let ((title-padded (string-append \" \" title \" \"))\n         (title-len (string-length title-padded))\n         (left-pad (quotient (- w title-len) 2))\n         (right-pad (- w title-len left-pad))\n         (header (string-append \"┌\" (make-string left-pad #\\─)\n                               title-padded\n                               (make-string right-pad #\\─) \"┐\\n\"))\n         (footer (string-append \"└\" (make-string w #\\─) \"┘\\n\")))\n    (lambda (cmd . args)\n      (case cmd\n        ((header) header)\n        ((footer) footer)\n        ((line) (let ((content (if (null? args) \"\" (car args)))\n                       (pad (- w (string-length content) 2)))\n                  (string-append \"│ \" content\n                                (make-string (max 0 pad) #\\space)\n                                \" │\\n\")))))))"))
+      (code scheme "(define (make-box title w)\n  \"Create a box drawing closure with given title and width\"\n  (let ((title-padded (string-append \" \" title \" \"))\n         (title-len (string-length title-padded))\n         (left-pad (quotient (- w title-len) 2))\n         (right-pad (- w title-len left-pad))\n         (header (string-append \"+\" (make-string left-pad #\\-)\n                               title-padded\n                               (make-string right-pad #\\-) \"+\\n\"))\n         (footer (string-append \"+\" (make-string w #\\-) \"+\\n\")))\n    (lambda (cmd . args)\n      (case cmd\n        ((header) header)\n        ((footer) footer)\n        ((line) (let ((content (if (null? args) \"\" (car args)))\n                       (pad (- w (string-length content) 2)))\n                  (string-append \"| \" content\n                                (make-string (max 0 pad) #\\space)\n                                \" |\\n\")))))))"))
     (subsection
       "2.3 Standard Box Widths"
       (table
@@ -36,13 +34,13 @@
     "3. Tree Display"
     (subsection
       "3.1 Tree Characters"
-      (code "├─  U+251C + U+2500  Branch with more siblings\n└─  U+2514 + U+2500  Final branch (no more siblings)\n│   U+2502           Vertical continuation\n▶   U+25B6           Collapsed/expandable indicator\n▼   U+25BC           Expanded indicator"))
+      (code "+-  branch with more siblings\n+-  final branch (last item)\n|   vertical continuation"))
     (subsection
       "3.2 Tree Example"
-      (code "hostname · up 3d 12:45:03\n├─ 10 cores, 64GB, Apple M4\n├─ 192.168.1.100 / 2001:db8::1...\n└─ vault: .vault/ (keys) (audit)"))
+      (code "hostname - up 3d 12:45:03\n+- 10 cores, 64GB, Apple M4\n+- 192.168.1.100 / 2001:db8::1...\n+- vault: .vault/ (keys) (audit)"))
     (subsection
       "3.3 Multi-level Trees"
-      (code "vault (49 objects)\n├─ archives (3)\n│  └─ cyberspace-v0.59.tar.gz\n├─ keys (2)\n│  ├─ starlight · Ed25519\n│  └─ macmini · Ed25519\n└─ releases (5)\n   └─ v0.59 (signed)")))
+      (code "vault (49 objects)\n+- archives (3)\n|  +- cyberspace-v0.59.tar.gz\n+- keys (2)\n|  +- starlight - Ed25519\n|  +- macmini - Ed25519\n+- releases (5)\n   +- v0.59 (signed)")))
   (section
     "4. Prompt"
     (subsection
@@ -79,19 +77,19 @@
     "6. Status Symbols"
     (subsection
       "6.1 Checkmarks and Crosses"
-      (code "✓ U+2713  Success\n✗ U+2717  Failure\n• U+2022  Bullet point\n→ U+2192  Arrow, implies"))
+      (code "[ok]  Success\n[!!]  Failure\n*     Bullet point\n->    Arrow, implies"))
     (subsection
       "6.2 Inline Separators"
       (p "For separating items in compact displays (session stats, status lines):")
-      (code "·  U+00B7  Middle dot separator (preferred)\n|  U+007C  Pipe (more intrusive, use sparingly)\n↓  U+2193  Down arrow (bytes/data in)\n↑  U+2191  Up arrow (bytes/data out)")
+      (code "-  dash separator\n|  pipe (more intrusive)\nv  down (bytes/data in)\n^  up (bytes/data out)")
       (p "Example session summary:")
-      (code "Session: 4m 24s · 2 syncs · 3 seals · ↓1.2K ↑856B · 1247 VUPS"))
+      (code "Session: 4m 24s - 2 syncs - 3 seals - v1.2K ^856B"))
     (subsection
       "6.3 Sparklines"
-      (p "For activity visualization over time:")
-      (code "▁▂▃▄▅▆▇█  U+2581 through U+2588")
-      (p "Eight levels map to normalized data:")
-      (code scheme "(define sparkline-chars '#(\"▁\" \"▂\" \"▃\" \"▄\" \"▅\" \"▆\" \"▇\" \"█\"))")))
+      (p "For activity visualization over time, eight ASCII levels:")
+      (code " ._,-~=+#")
+      (p "Map to normalized data:")
+      (code scheme "(define sparkline-chars '#(\" \" \".\" \"_\" \",\" \"-\" \"~\" \"=\" \"+\" \"#\"))"))))
   (section
     "7. Output Conventions"
     (subsection
