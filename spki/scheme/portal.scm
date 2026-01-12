@@ -9,11 +9,8 @@
 ;;; Copyright (c) 2026 Derrell Piper. See LICENSE.
 
 (module portal
-  (;; Session statistics
-   *session-stats*
+  (;; Session statistics (primitives in os module)
    session-stat-init!
-   session-stat!
-   session-stat
    session-uptime
    session-summary
 
@@ -37,14 +34,15 @@
           (chicken time posix)
           srfi-1
           srfi-13
-          srfi-69)
+          srfi-69
+          os)
 
   ;;; ============================================================
   ;;; Session Statistics
   ;;; ============================================================
-
-  (define *session-stats*
-    (make-hash-table))
+  ;;
+  ;; *session-stats*, session-stat!, session-stat are imported from os.
+  ;; This allows cross-module instrumentation at any level.
 
   (define (session-stat-init!)
     "Initialize session statistics at boot."
@@ -95,15 +93,6 @@
       (if (directory-exists? dir)
           (filter (lambda (f) (string-suffix? ".sexp" f)) (directory dir))
           '())))
-
-  (define (session-stat! key #!optional (delta 1))
-    "Increment a session statistic."
-    (hash-table-set! *session-stats* key
-                     (+ delta (hash-table-ref/default *session-stats* key 0))))
-
-  (define (session-stat key)
-    "Get a session statistic."
-    (hash-table-ref/default *session-stats* key 0))
 
   (define (session-uptime)
     "Get session uptime in seconds."
@@ -277,9 +266,10 @@
            (all-parts (append session-parts vault-parts)))
       (print "")
       (if (null? all-parts)
-          (printf "Returning to objective reality, Cyberspace frozen at ~a.~n" date-str)
-          (printf "Returning to objective reality, Cyberspace frozen at ~a.~n  Session: ~a~n"
+          (printf "Cyberspace frozen at ~a on ~a.~n" date-str (hostname))
+          (printf "Cyberspace frozen at ~a on ~a.~n  Session: ~a~n"
                   date-str
+                  (hostname)
                   (string-intersperse all-parts " · ")))
       (print "")
       (flush-output)

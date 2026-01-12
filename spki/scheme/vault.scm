@@ -115,7 +115,8 @@
           srfi-69  ; hash tables
           cert
           crypto-ffi
-          audit)
+          audit
+          os)
 
   ;;; ============================================================================
   ;;; Helper Functions
@@ -287,6 +288,7 @@
                   (set! *keystore-public* public-key)
                   (set! *keystore-unlocked* secret-key)
                   (vault-config 'signing-key secret-key)
+                  (session-stat! 'unlocks)
                   (print "Keystore unlocked: ed25519:" (blob->hex public-key))
                   public-key))
               (begin
@@ -497,6 +499,7 @@
      - keywords: Search keywords (list of strings)
      - description: Extended description
      - preserve: Full preservation metadata"
+    (session-stat! 'commits)
 
     ;; Stage files
     (when files
@@ -1171,6 +1174,7 @@ Object Types:
 
   (define (soup-collect-objects)
     "Collect all objects from the soup"
+    (session-stat! 'reads)
     (let ((objects '()))
 
       ;; Archives (*.archive files in current dir)
@@ -1844,6 +1848,7 @@ Object Types:
 
   (define (soup-hash name)
     "Compute and display SHA-512 hash of an object"
+    (session-stat! 'hashes)
     (let* ((all-objects (soup-collect-objects))
            (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
       (if (not obj)
@@ -2040,6 +2045,7 @@ Object Types:
        (soup-query '(and (type releases) (signed)))
        (soup-query '(or (name \"*.archive\") (name \"*.tar.gz\")))
        (soup-query '(size > 1000000))"
+    (session-stat! 'queries)
 
     (define (eval-query pattern obj)
       "Evaluate query pattern against object"

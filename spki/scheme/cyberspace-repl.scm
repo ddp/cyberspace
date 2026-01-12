@@ -3601,7 +3601,7 @@ Cyberspace REPL - Available Commands
     (let ((ent (entropy-status)))
       (print "  entropy: " (cdr (assq 'source ent)) " (" (cdr (assq 'implementation ent)) ")"))
     ;; FIPS self-test attestation
-    (print "  FIPS: " (if (eq? (fips-status) 'passed) "✓" "FAILED"))
+    (print "  FIPS: " (if (eq? (fips-status) 'passed) "passed" "FAILED"))
     ;; Show identity if enrolled
     (when identity
       (let ((name (cond ((assq 'name identity) => cadr) (else #f)))

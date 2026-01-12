@@ -43,7 +43,12 @@
    ;; Shell utilities
    shell-command
    shell-lines
-   shell-success?)
+   shell-success?
+
+   ;; Session statistics (primitives for cross-module instrumentation)
+   *session-stats*
+   session-stat!
+   session-stat)
 
   (import scheme
           (chicken base)
@@ -54,7 +59,8 @@
           (chicken process)
           (chicken condition)
           srfi-1
-          srfi-13)
+          srfi-13
+          srfi-69)
 
   ;; ============================================================
   ;; Shell Utilities
@@ -220,5 +226,25 @@
   (define (has-homebrew?)
     "Check if Homebrew is installed"
     (not (not (homebrew-prefix))))
+
+  ;; ============================================================
+  ;; Session Statistics
+  ;; ============================================================
+  ;;
+  ;; Lightweight counters for session activity tracking.
+  ;; Lives at level 0 so all modules can instrument themselves.
+  ;; Initialization is done by portal's session-stat-init!.
+
+  (define *session-stats*
+    (make-hash-table))
+
+  (define (session-stat! key #!optional (delta 1))
+    "Increment a session statistic."
+    (hash-table-set! *session-stats* key
+                     (+ delta (hash-table-ref/default *session-stats* key 0))))
+
+  (define (session-stat key)
+    "Get a session statistic."
+    (hash-table-ref/default *session-stats* key 0))
 
 ) ; end module os
