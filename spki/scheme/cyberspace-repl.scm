@@ -163,8 +163,13 @@
            (left-pad (quotient (- w title-len) 2))
            (right-pad (- w title-len left-pad))
            (start-time (current-milliseconds)))
+      ;; UTF-8 display width adjustment (symbols take 3 bytes but ~1-2 display cols)
+      (define (display-width str)
+        (- (string-length str)
+           (if (string-contains str "✓") 2 0)
+           (if (string-contains str "✗") 2 0)))
       (define (box-line content)
-        (let* ((clen (string-length content))
+        (let* ((clen (display-width content))
                (pad (- w clen 2)))
           (print "│ " content (make-string (max 0 pad) #\space) " │")))
       (print "")
@@ -3423,7 +3428,15 @@ Cyberspace REPL - Available Commands
   "Describe vault status (enrollment, audit, keystore)"
   (let* ((audit-entries (count-file-lines ".vault/audit.log"))
          (keystore-exists (directory-exists? ".vault/keystore"))
+         (obj-count (count-vault-items "objects"))
+         (key-count (count-vault-items "keys"))
+         (release-count (length (filter (lambda (f) (string-suffix? ".sexp" f))
+                                        (if (directory-exists? ".vault/releases")
+                                            (directory ".vault/releases")
+                                            '()))))
          (identity (read-node-identity)))
+    ;; Vault contents line
+    (print "  " obj-count " objects, " release-count " releases, " key-count " keys")
     (when (> audit-entries 0)
       (print "  " (plural audit-entries "audit entry")))
     (when keystore-exists
@@ -3539,6 +3552,7 @@ Cyberspace REPL - Available Commands
          (code (assq 'codebase (cdr info)))
          (realm (assq 'realm (cdr info)))
          (loc (and code (cadr (assq 'loc (cdr code)))))
+         (tcb (and code (assq 'tcb (cdr code)) (cadr (assq 'tcb (cdr code)))))
          (modules (and code (cadr (assq 'modules (cdr code)))))
          (rfcs (and code (cadr (assq 'rfcs (cdr code)))))
          (vault-exists (and realm (cadr (assq 'vault-exists (cdr realm))))))
@@ -3551,7 +3565,13 @@ Cyberspace REPL - Available Commands
     (print "  "
            (if loc (string-append (number->string (quotient loc 1000)) "K loc") "")
            (if modules (string-append ", " (number->string modules) " modules") "")
-           (if rfcs (string-append ", " (number->string rfcs) " rfcs") ""))
+           (if rfcs (string-append ", " (number->string rfcs) " rfcs") "")
+           (if (and tcb (> tcb 0))
+               (string-append ", " (number->string (quotient tcb 1000)) "K tcb"
+                              (if loc
+                                  (string-append " (1:" (number->string (round (/ loc tcb))) ")")
+                                  ""))
+               ""))
     (when vault-exists
       (print "  vault: " vault-exists))))
 

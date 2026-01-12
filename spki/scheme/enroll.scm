@@ -286,9 +286,16 @@
                           (string-append "grep -l '^(module' " base-dir "/*.scm 2>/dev/null | wc -l")))
            ;; Count RFCs
            (rfc-count (shell-command
-                       (string-append "ls " base-dir "/docs/rfc/rfc-*.md 2>/dev/null | wc -l"))))
+                       (string-append "ls " base-dir "/docs/rfc/rfc-*.md 2>/dev/null | wc -l")))
+           ;; Count TCB (OCaml) - excluding tests
+           ;; base-dir is spki/scheme, tcb is sibling at spki/tcb
+           (tcb-dir (make-pathname (pathname-directory (string-chomp base-dir "/")) "tcb"))
+           (tcb-output (shell-command
+                        (string-append "wc -l " tcb-dir "/spki_tcb.ml " tcb-dir "/signature.ml "
+                                       tcb-dir "/export.ml 2>/dev/null | tail -1 | awk '{print $1}'"))))
       `(codebase
         (loc ,(if loc-output (string->number (string-trim-both loc-output)) 0))
+        (tcb ,(if tcb-output (string->number (string-trim-both tcb-output)) 0))
         (files ,(if file-count (string->number (string-trim-both file-count)) 0))
         (modules ,(if module-count (string->number (string-trim-both module-count)) 0))
         (rfcs ,(if rfc-count (string->number (string-trim-both rfc-count)) 0)))))
