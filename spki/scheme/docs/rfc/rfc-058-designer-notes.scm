@@ -95,7 +95,14 @@ Cyberspace soup:  Vault objects, content-addressed")
       (p "The brahma muhurta violet isn't just pretty - it's the hour of enlightenment. If they're seeing violet, they're already up at the right time.")))
 
   (section
-    "5. Format Philosophy"
+    "5. Weaving by Lambda"
+    (p "Weaving by lambda - the craft. The act of building, creating, adding to Cyberspace.")
+    (p "Loch lambda - the measure of depth achieved. How far have you gone? How much have you woven?")
+    (p "The deeper you weave, the more loch lambda you've earned. A merit badge for the depths explored.")
+    (p "The weave thickens as lambdas accrete. Each function, each object, each sealed thing adds to the fabric. The loch deepens."))
+
+  (section
+    "6. Format Philosophy"
     (p "The web forgot that good enough is good enough.")
     (p "JPEG worked. PNG worked. FLAC worked. But someone always needs 3% better compression at the cost of yet another decoder in every browser, another format to support forever, another thing that might not render in ten years.")
     (p "Plan 9 had one image format. Unix had pipes and text. Lisp has s-expressions. The power comes from composing a few things well, not accumulating special cases.")
@@ -104,5 +111,5 @@ Cyberspace soup:  Vault objects, content-addressed")
 
   (section
     "Changelog"
-    (p "- 2026-01-13 - Initial specification, migrated from DESIGNER-NOTES.md")
-    (p "- 2026-01-13 - Added raga favicon, format philosophy")))
+    (p "- 2026-01-13 - Weaving by lambda, loch lambda as merit")
+    (p "- 2026-01-13 - Initial specification, migrated from DESIGNER-NOTES.md")))
