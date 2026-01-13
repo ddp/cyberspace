@@ -50,6 +50,35 @@
 ;; Set to #f for release builds once beta is complete
 (define *beta-build* #t)
 
+;;; ============================================================
+;;; Boot Verbosity Levels
+;;; ============================================================
+;;; 0 shadow    - just prompt (default)
+;;; 1 whisper   - version + Ready
+;;; 2 portal    - banner + help + Ready
+;;; 3 chronicle - add module timings
+;;; 4 oracle    - full revelation (forge details)
+
+(define *boot-levels*
+  '((shadow . 0) (whisper . 1) (portal . 2) (chronicle . 3) (oracle . 4)))
+
+(define (parse-boot-level str)
+  "Parse boot level from string (name or number)."
+  (cond
+    ((string->number str) => identity)
+    ((assq (string->symbol (string-downcase str)) *boot-levels*) => cdr)
+    (else 0)))
+
+(define *boot-verbosity*
+  (let ((env (get-environment-variable "CYBERSPACE_BOOT")))
+    (if env (parse-boot-level env) 0)))
+
+(define (boot-level! level)
+  "Set boot verbosity level (0-4 or symbol)."
+  (set! *boot-verbosity*
+    (if (number? level) level
+        (cdr (assq level *boot-levels*)))))
+
 (define (module-start! name)
   "Mark start of module loading."
   (set! *module-start* (current-milliseconds)))
@@ -489,7 +518,7 @@
                                  (+ count (rebuild-level-parallel! level)))
                                0
                                levels)))
-      (when (= total-rebuilt 0)
+      (when (and (= total-rebuilt 0) (>= *boot-verbosity* 1))
         (print "All tomes current for " stamp)))))
 
 ;; Run bootstrap before loading modules
@@ -4538,7 +4567,9 @@ Cyberspace REPL - Available Commands
   "Ping all connected nodes"
   (node-broadcast `(ping ,(current-seconds))))
 
-(banner)
+;; Banner shown at portal level (2) and above
+(when (>= *boot-verbosity* 2)
+  (banner))
 
 ;;; ============================================================
 ;;; Hardware Refresh - always updates node manifest in vault
@@ -4825,7 +4856,15 @@ Cyberspace REPL - Available Commands
      ("(banner)" "Redisplay startup banner")
      ("(entropy-status)" "Entropy source info")
      ("(fips-status)" "FIPS self-test status")
-     ("(goodbye)" "Exit with session summary"))))
+     ("(goodbye)" "Exit with session summary"))
+
+    (boot "Boot Verbosity Levels"
+     ("CYBERSPACE_BOOT=shadow" "0: Silent - just prompt (default)")
+     ("CYBERSPACE_BOOT=whisper" "1: Version + Ready")
+     ("CYBERSPACE_BOOT=portal" "2: Banner + help + Ready")
+     ("CYBERSPACE_BOOT=chronicle" "3: Add module timings")
+     ("CYBERSPACE_BOOT=oracle" "4: Full revelation")
+     ("(boot-level! 'portal)" "Set level at runtime"))))
 
 (define (help #!optional topic)
   "Display help for Cyberspace Scheme.
@@ -5647,16 +5686,29 @@ Cyberspace REPL - Available Commands
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
-;; Report startup time and show essentials
-(report-module-times)
-(help)  ; Show essential commands on startup
-(let* ((elapsed-ms (- (current-milliseconds) *repl-start-time*))
-       (elapsed-sec (/ elapsed-ms 1000.0)))
-  (print (format "Ready in ~a"
-                 (if (< elapsed-sec 1)
-                     (format "~ams" elapsed-ms)
-                     (format "~as" elapsed-sec)))))
-(print "")
+;; Boot output based on verbosity level
+;; 0 shadow    - just prompt
+;; 1 whisper   - version + Ready
+;; 2 portal    - banner + help + Ready
+;; 3 chronicle - banner + timings + help + Ready
+;; 4 oracle    - full (forge shown during build)
+
+(when (>= *boot-verbosity* 3)  ; chronicle+
+  (report-module-times))
+
+(when (>= *boot-verbosity* 2)  ; portal+
+  (help))
+
+(when (>= *boot-verbosity* 1)  ; whisper+
+  (let* ((elapsed-ms (- (current-milliseconds) *repl-start-time*))
+         (elapsed-sec (/ elapsed-ms 1000.0)))
+    (when (= *boot-verbosity* 1)  ; whisper: show version
+      (print "Cyberspace Scheme " (git-version)))
+    (print (format "Ready in ~a"
+                   (if (< elapsed-sec 1)
+                       (format "~ams" elapsed-ms)
+                       (format "~as" elapsed-sec)))))
+  (print ""))
 
 ;; Start custom REPL
 (command-repl)
