@@ -4671,6 +4671,28 @@ Cyberspace REPL - Available Commands
 (module-start! "repl")
 
 ;;; ============================================================
+;;; Inspector Integration
+;;; ============================================================
+;;;
+;;; Dylan/CCL-style debugger infused into the REPL.
+;;; When errors occur, drop into debug> prompt with clean stack.
+
+(import inspector)
+
+;; Enable inspector by default
+(define *inspector-active* #t)
+
+(define (enable-inspector!)
+  "Enable integrated debugger"
+  (set! *inspector-active* #t)
+  (print "Inspector enabled. Errors drop into debug> prompt."))
+
+(define (disable-inspector!)
+  "Disable integrated debugger"
+  (set! *inspector-active* #f)
+  (print "Inspector disabled. Errors show stack trace."))
+
+;;; ============================================================
 ;;; Help System
 ;;; ============================================================
 
@@ -4710,6 +4732,12 @@ Cyberspace REPL - Available Commands
   (print "Audit:")
   (print "  (audit-read)        - Read audit trail")
   (print "  (audit-chain)       - Verify chain integrity")
+  (print "")
+  (print "Inspector:")
+  (print "  (inspect OBJ)       - Inspect any object")
+  (print "  (describe OBJ)      - Describe object type/contents")
+  (print "  (enable-inspector!) - Turn on debug> prompt")
+  (print "  (disable-inspector!) - Turn off debug> prompt")
   (print "")
   (print "Shortcuts:")
   (print "  (|.|)               - Status at a glance")
@@ -5457,7 +5485,11 @@ Cyberspace REPL - Available Commands
         (else
          (repl-history-add line)
          (handle-exceptions exn
-           (rich-exception-display exn)
+           (if *inspector-active*
+               (begin
+                 (inspector-repl exn)
+                 (loop))
+               (rich-exception-display exn))
            (let ((result (eval (with-input-from-string line read))))
              (unless (eq? result (void))
                (push-result! result)
