@@ -45,6 +45,8 @@
 
 The Security Project Team was Derrell Piper, Mark Pilant, and Andy Goldstein.
 
+The security subsystem was written exclusively in BLISS (with MACRO-32 fluency for reading the layers beneath). Now it's Scheme.
+
 ### VMS Security Services (System Services Reference)
 
 Security-related services are grouped under a "Security services" family that includes $CHKPRO and a broader set of calls that manipulate identifiers, rights, and security profiles.
