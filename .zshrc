@@ -276,3 +276,6 @@ if [[ "$PWD" == "$HOME/cyberspace" && -d .git ]]; then
     git pull --quiet 2>/dev/null || true
 fi
 
+
+# Cyberspace SICP metrics
+alias lscs='cd ~/cyberspace/spki/scheme && ./sicp'

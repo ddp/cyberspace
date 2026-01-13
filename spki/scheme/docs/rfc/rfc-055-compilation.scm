@@ -213,7 +213,14 @@
         (item "LOC/λ: Average lines per procedure (smaller = more compositional)"))
       (p "Metrics are stored in .forge/<module>.meta and queryable via:")
       (code scheme "(forged \"portal\")     ; Single module metrics
-(forged-all)          ; Bitfarm harvest: all modules"))
+(forged-all)          ; Bitfarm harvest: all modules
+(sicp)                ; Live analysis (no forge metadata needed)")
+      (p "Standalone script for shell usage:")
+      (code "$ ./sicp              # From spki/scheme directory
+$ lscs                # Shell alias (defined in .zshrc)")
+      (p "Current totals (v0.60):")
+      (code "Σ 8502 LOC · 920 λ · 9 LOC/λ")
+      (p "9 LOC/λ indicates good compositional structure - small procedures combined to build complex behavior."))
     (subsection
       "4.2 Compiler Invocation"
       (p "The forge invokes csc (Chicken Scheme Compiler) with these flags:")
