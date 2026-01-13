@@ -1550,8 +1550,11 @@ Object Types:
                                   (length (hash-table-ref/default grouped (car t) '())))
                                 types)))
            (last-idx (- (length non-empty) 1)))
-      (printf "~%Soup (~a)~%" total)
-      (let loop ((remaining non-empty) (idx 0))
+      (if (zero? total)
+          (printf "~%Empty~%")
+          (begin
+            (printf "~%Soup~%")
+            (let loop ((remaining non-empty) (idx 0))
         (unless (null? remaining)
           (let* ((type-pair (car remaining))
                  (type (car type-pair))
@@ -1568,7 +1571,7 @@ Object Types:
                     (pad-left (number->string count) 3)
                     (if (string=? summary "") "" "   ")
                     summary))
-          (loop (cdr remaining) (+ idx 1))))))
+          (loop (cdr remaining) (+ idx 1))))))))
 
   (define (soup . args)
     "List objects in the soup with optional type filter and pattern
