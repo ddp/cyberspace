@@ -1,0 +1,108 @@
+;; RFC-058: Designer Notes
+;; Loch Lambda - the depths of the weave
+
+(rfc
+  (number 58)
+  (title "Designer Notes")
+  (subtitle "Loch Lambda")
+  (status "Living Document")
+  (date "January 2026")
+
+  (section
+    "Abstract"
+    (p "Personal history, design decisions, and accumulated wisdom from building Cyberspace. This RFC grows as the weave deepens."))
+
+  (section
+    "1. Lineage"
+
+    (subsection
+      "1.1 VMS Security (1984-1994)"
+      (p "The designer was engineering lead for TCSEC C2/B1 certification on VAX/VMS and Alpha VMS, and owned the VMS 6.0 release.")
+      (p "The Security Project Team: Derrell Piper, Mark Pilant, Andy Goldstein.")
+      (p "What we built:")
+      (list
+        (item "$CHKPRO - the privilege checking gate")
+        (item "The entire auditing subsystem (final form)")
+        (item "C2/B1 certified security model"))
+      (p "When Cutler left for Microsoft, his modules were inherited. The privilege auditing rototill required fluency in MACRO-32."))
+
+    (subsection
+      "1.2 Languages"
+      (p "BLISS - Bill Wulf at CMU (1969) created BLISS as an expression language, not 'DEC's C'. Everything returns a value. Lisp in systems clothing.")
+      (p "MACRO-32 - VAX assembly with rich macros. The kernel was MACRO-32.")
+      (p "The VMS Runtime - Had a rich macro wrapper for BLISS. That macro system was a Lisp. We knew.")
+      (p "The designer came to VMS as a Lisper, fell in love with BLISS (an expression language, like home)."))
+
+    (subsection
+      "1.3 Syntax Heritage"
+      (p "Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:")
+      (code scheme "(translate text from: 'en to: 'fr)
+(enroll-request name timeout: 30)")
+      (p "Self syntax was weird. Smalltalk doesn't work for math people. Scheme is honest - prefix, unambiguous, mathematical.")))
+
+  (section
+    "2. Design Principles"
+
+    (subsection
+      "2.1 TCB Minimization"
+      (p "From TCSEC: 'Small, proven, frozen' - only put in the TCB what you can verify.")
+      (code "TCB (OCaml):     ~1000 lines, proven in Coq
+Everything else: Chicken Scheme, can evolve freely"))
+
+    (subsection
+      "2.2 The Vault is the Disk"
+      (p "VAXcluster had multiple subsystems (MSCP, DLM, SCS, quorum disk, LAVC). Cyberspace has one abstraction: the vault. It subsumes all of them."))
+
+    (subsection
+      "2.3 Audit Everything"
+      (p "$CHKPRO checked privileges. The auditing subsystem logged decisions. Both were ours. Cyberspace continues this.")))
+
+  (section
+    "3. The Soup"
+    (p "The vault browser is called 'soup' after Newton's persistent object store (1993).")
+    (code "Newton soup:      Persistent frames, automatic storage
+Cyberspace soup:  Vault objects, content-addressed")
+    (p "Apple Newton -> Dylan -> Scheme. The soup survives."))
+
+  (section
+    "4. The Raga Favicon"
+    (p "The Library's favicon is a lambda whose color morphs through the day.")
+
+    (subsection
+      "4.1 The Prahar (Watches)"
+      (code "04-06  violet    brahma muhurta (pre-dawn meditation)
+06-08  gold      dawn
+08-11  teal      morning
+11-14  phosphor  midday
+14-17  neon      afternoon
+17-19  orange    sunset
+19-22  coral     evening
+22-04  cyan      night"))
+
+    (subsection
+      "4.2 Why Ragas?"
+      (p "Indian classical music assigns ragas to specific times of day. A morning raga played at midnight is wrong - not because of rules, but because it doesn't fit. The music knows when it should be heard."))
+
+    (subsection
+      "4.3 Why a Breathing Lambda?"
+      (p "The lambda isn't just a logo - it's the fundamental unit. What Scheme computes, what the weave is made of. Every function, every object, every sealed thing in the vault is lambdas all the way down.")
+      (p "The color morphing isn't decoration - it's the weave breathing. Lambdas are being gathered, tested, frozen into vaults across time zones. The color you see is the pulse of that activity."))
+
+    (subsection
+      "4.4 The Easter Egg"
+      (p "Someone notices their lambda is orange, asks why, and learns: 'You're seeing sunset. Somewhere, lambdas are being gathered into the weave of Cyberspace.'")
+      (p "Those who need to ask are in need of enlightenment. The Library is here to provide it. They came for the RFCs, they left understanding the lambda.")
+      (p "The brahma muhurta violet isn't just pretty - it's the hour of enlightenment. If they're seeing violet, they're already up at the right time.")))
+
+  (section
+    "5. Format Philosophy"
+    (p "The web forgot that good enough is good enough.")
+    (p "JPEG worked. PNG worked. FLAC worked. But someone always needs 3% better compression at the cost of yet another decoder in every browser, another format to support forever, another thing that might not render in ten years.")
+    (p "Plan 9 had one image format. Unix had pipes and text. Lisp has s-expressions. The power comes from composing a few things well, not accumulating special cases.")
+    (p "SVG is in the right spirit - just XML describing geometry. The browser already has the renderer. No new codec, no binary blob, no patent minefield.")
+    (p "The dumb web optimizes for benchmarks. The good web optimizes for durability."))
+
+  (section
+    "Changelog"
+    (p "- 2026-01-13 - Initial specification, migrated from DESIGNER-NOTES.md")
+    (p "- 2026-01-13 - Added raga favicon, format philosophy")))

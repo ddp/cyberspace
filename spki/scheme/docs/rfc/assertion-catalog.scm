@@ -11,7 +11,7 @@
     (instrumentation commits "./cyberspace-repl.scm" 4933)
     (instrumentation federation-changes "./cyberspace-repl.scm" 4964)
     (instrumentation gossip-exchanges "./cyberspace-repl.scm" 5219)
-    (instrumentation hashes "./vault.scm" 1870)
+    (instrumentation hashes "./vault.scm" 1873)
     (instrumentation mdns-messages "./mdns.scm" 128)
     (instrumentation packets-ipv "./gossip.scm" 170)
     (instrumentation peers-discovered "./cyberspace-repl.scm" 5211)
