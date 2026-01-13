@@ -51,7 +51,7 @@
   (: session-uptime (-> fixnum))
   (: count-vault-items (string -> fixnum))
   (: audit-load-entries-raw (-> (list-of string)))
-  (: goodbye (#!optional (or false procedure) -> noreturn))
+  (: goodbye (#!optional (or false procedure) fixnum -> noreturn))
 
   ;;; ============================================================
   ;;; Session Statistics
@@ -305,19 +305,21 @@
   ;;; Goodbye
   ;;; ============================================================
 
-  (define (goodbye #!optional (history-save-proc #f))
-    "Exit Cyberspace with farewell message and session summary."
+  (define (goodbye #!optional (history-save-proc #f) (verbosity 1))
+    "Exit Cyberspace with farewell message and session summary.
+     Verbosity 0 (shadow) exits silently; higher levels show the banner."
     (when history-save-proc (history-save-proc))
-    (let* ((date-str (format-freeze-timestamp))
-           (all-parts (append (session-summary) (vault-summary))))
-      (print "")
-      (if (null? all-parts)
-          (printf "Cyberspace frozen at ~a on ~a.~n" date-str (hostname))
-          (printf "Cyberspace frozen at ~a on ~a.~n  Session: ~a~n"
-                  date-str (hostname) (string-intersperse all-parts " · ")))
-      (print "")
-      (flush-output)
-      (drain-input)
-      (exit 0)))
+    (when (> verbosity 0)  ; shadow mode: silent exit
+      (let* ((date-str (format-freeze-timestamp))
+             (all-parts (append (session-summary) (vault-summary))))
+        (print "")
+        (if (null? all-parts)
+            (printf "Cyberspace frozen at ~a on ~a.~n" date-str (hostname))
+            (printf "Cyberspace frozen at ~a on ~a.~n  Session: ~a~n"
+                    date-str (hostname) (string-intersperse all-parts " · ")))
+        (print "")))
+    (flush-output)
+    (drain-input)
+    (exit 0))
 
 ) ;; end module portal

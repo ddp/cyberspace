@@ -513,16 +513,37 @@
                   ("ui"))))
 
     (define (rebuild-level-parallel! modules-in-level)
-      "Rebuild all modules in level in parallel, return count rebuilt"
+      "Rebuild all modules in level in parallel, return count rebuilt.
+       Each child writes to a temp file; parent prints sequentially for clean boxes."
       (let* ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level))
-             (pids (map (lambda (module)
+             ;; Create temp file paths for each module (use timestamp for uniqueness)
+             (ts (number->string (current-seconds)))
+             (temp-files (map (lambda (m)
+                                (string-append "/tmp/forge-" m "-" ts ".out"))
+                              to-build))
+             ;; Fork children, each redirecting stdout to its temp file
+             (pids (map (lambda (module temp-file)
                           (process-fork
                            (lambda ()
-                             (rebuild-module! module arch stamp)
+                             (with-output-to-file temp-file
+                               (lambda ()
+                                 (rebuild-module! module arch stamp)))
                              (exit 0))))
-                        to-build)))
-        ;; Wait for all children
+                        to-build temp-files)))
+        ;; Wait for all children to complete
         (for-each (lambda (pid) (process-wait pid)) pids)
+        ;; Print each child's output sequentially (clean, non-interleaved boxes)
+        (for-each (lambda (temp-file)
+                    (when (file-exists? temp-file)
+                      (with-input-from-file temp-file
+                        (lambda ()
+                          (let loop ()
+                            (let ((line (read-line)))
+                              (unless (eof-object? line)
+                                (print line)
+                                (loop))))))
+                      (delete-file temp-file)))
+                  temp-files)
         (length to-build)))
 
     (let ((total-rebuilt (fold (lambda (level count)
@@ -4932,8 +4953,9 @@ Cyberspace REPL - Available Commands
 
 ;; Friendly exit - delegates to portal module
 ;; (portal.scm: inspired by VMS SYS$SYSTEM:LOGINOUT.EXE)
+;; Respects boot verbosity: shadow mode exits silently
 (define (repl-goodbye)
-  (goodbye repl-history-save))
+  (goodbye repl-history-save *boot-verbosity*))
 
 ;; Clear screen (VT100)
 (define (clear)
@@ -5587,7 +5609,7 @@ Cyberspace REPL - Available Commands
         ;; EOF (linenoise returns #f, read-line returns eof-object)
         ((or (not line) (eof-object? line))
          (newline)
-         (goodbye))
+         (goodbye repl-history-save *boot-verbosity*))
 
         ;; Empty line
         ((string=? line "")
@@ -5605,7 +5627,7 @@ Cyberspace REPL - Available Commands
              ((or (string=? cmd "q")
                   (string=? cmd "quit")
                   (string=? cmd "exit"))
-              (goodbye))
+              (goodbye repl-history-save *boot-verbosity*))
 
              ;; Help
              ((or (string=? cmd "h")
