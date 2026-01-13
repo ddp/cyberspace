@@ -74,6 +74,15 @@
    keystore-path
    keystore-exists?
 
+   ;; Lamport Clock (RFC-012)
+   lamport-tick!
+   lamport-time
+   lamport-send
+   lamport-receive!
+   lamport-save!
+   lamport-load!
+   lamport-format
+
    ;; Realm naming
    realm-name
    set-realm-name!
@@ -405,6 +414,69 @@
     name)
 
   ;;; ============================================================================
+  ;;; Lamport Clock (RFC-012)
+  ;;; ============================================================================
+  ;;;
+  ;;; Time in the weave is measured in lambda ticks, not wall-clock time.
+  ;;; The clock increments monotonically on every event.
+  ;;; Federation sync uses happened-before, not synchronized clocks.
+
+  ;; The global Lamport clock for this node
+  (define *lamport-counter* 0)
+
+  (define (lamport-clock-path)
+    ".vault/lamport-clock")
+
+  (define (lamport-tick!)
+    "Increment clock for local event. Returns new time."
+    (set! *lamport-counter* (+ 1 *lamport-counter*))
+    *lamport-counter*)
+
+  (define (lamport-time)
+    "Current Lamport time (λ ticks since genesis)."
+    *lamport-counter*)
+
+  (define (lamport-send message)
+    "Attach timestamp to outgoing message. Increments clock."
+    (lamport-tick!)
+    `((lamport-time . ,*lamport-counter*)
+      (payload . ,message)))
+
+  (define (lamport-receive! timestamped-message)
+    "Update clock on message receipt. Returns payload."
+    (let ((remote-time (cdr (assq 'lamport-time timestamped-message))))
+      (set! *lamport-counter*
+            (+ 1 (max *lamport-counter* remote-time)))
+      (cdr (assq 'payload timestamped-message))))
+
+  (define (lamport-save!)
+    "Persist clock to vault (survives restarts)."
+    (when (directory-exists? ".vault")
+      (with-output-to-file (lamport-clock-path)
+        (lambda ()
+          (write `(lamport-clock (counter ,*lamport-counter*)))
+          (newline)))))
+
+  (define (lamport-load!)
+    "Load clock from vault. Called at startup."
+    (let ((path (lamport-clock-path)))
+      (when (file-exists? path)
+        (let ((data (with-input-from-file path read)))
+          (when (and (pair? data) (eq? (car data) 'lamport-clock))
+            (let ((counter-pair (assq 'counter (cdr data))))
+              (when counter-pair
+                (set! *lamport-counter* (cadr counter-pair)))))))))
+
+  (define (lamport-format)
+    "Human-readable Lamport time with SI prefix for large values."
+    (let ((t *lamport-counter*))
+      (cond
+        ((< t 1000) (sprintf "λ ~a" t))
+        ((< t 1000000) (sprintf "λ ~ak" (quotient t 1000)))
+        ((< t 1000000000) (sprintf "λ ~am" (quotient t 1000000)))
+        (else (sprintf "λ ~ag" (quotient t 1000000000))))))
+
+  ;;; ============================================================================
   ;;; Utility Functions (must be defined before use)
   ;;; ============================================================================
 
@@ -523,6 +595,7 @@
      - description: Extended description
      - preserve: Full preservation metadata"
     (session-stat! 'commits)
+    (lamport-tick!)  ; RFC-012: tick the weave clock
 
     ;; Stage files
     (when files
@@ -551,7 +624,9 @@
           (audit-append
            actor: (get-vault-principal signing-key)
            action: (list 'seal-commit commit-hash)
-           motivation: message)))))
+           motivation: message)))
+      ;; Persist the weave clock
+      (lamport-save!)))
 
   (define (seal-update #!key branch)
     "Update vault from origin

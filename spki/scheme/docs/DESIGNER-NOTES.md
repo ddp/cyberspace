@@ -1,6 +1,6 @@
 # Cyberspace Designer Notes
 
-## 2026-01-11: REPL UX Principles
+## 2026-01-11: Human Interface Principles
 
 ### Output Philosophy
 

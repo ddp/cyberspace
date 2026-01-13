@@ -55,12 +55,12 @@
 ;;; ============================================================
 ;;; 0 shadow    - just prompt (default)
 ;;; 1 whisper   - version + Ready
-;;; 2 portal    - banner + help + Ready
+;;; 2 portal/gate - banner + help + Ready
 ;;; 3 chronicle - add module timings
 ;;; 4 oracle    - full revelation (forge details)
 
 (define *boot-levels*
-  '((shadow . 0) (whisper . 1) (portal . 2) (chronicle . 3) (oracle . 4)))
+  '((shadow . 0) (whisper . 1) (portal . 2) (gate . 2) (chronicle . 3) (oracle . 4)))
 
 (define (parse-boot-level str)
   "Parse boot level from string (name or number)."
@@ -4163,6 +4163,8 @@ Cyberspace REPL - Available Commands
       (print "  entropy: " (cdr (assq 'source ent)) " (" (cdr (assq 'implementation ent)) ")"))
     ;; FIPS self-test attestation
     (print "  FIPS: " (if (eq? (fips-status) 'passed) "passed" "FAILED"))
+    ;; Lamport clock (RFC-012) - time in the weave
+    (print "  " (lamport-format))
     ;; Show identity if enrolled
     (when node-id
       (let ((name (cond ((assq 'name node-id) => cadr) (else #f)))
@@ -4835,6 +4837,9 @@ Cyberspace REPL - Available Commands
   "Ping all connected nodes"
   (node-broadcast `(ping ,(current-seconds))))
 
+;; Load persisted Lamport clock from vault (RFC-012)
+(lamport-load!)
+
 ;; Banner shown at portal level (2) and above
 (when (>= *boot-verbosity* 2)
   (banner))
@@ -5130,7 +5135,7 @@ Cyberspace REPL - Available Commands
     (boot "Boot Verbosity Levels"
      ("CYBERSPACE_BOOT=shadow" "0: Silent - just prompt (default)")
      ("CYBERSPACE_BOOT=whisper" "1: Version + Ready")
-     ("CYBERSPACE_BOOT=portal" "2: Banner + help + Ready")
+     ("CYBERSPACE_BOOT=portal" "2: Banner + help + Ready (alias: gate)")
      ("CYBERSPACE_BOOT=chronicle" "3: Add module timings")
      ("CYBERSPACE_BOOT=oracle" "4: Full revelation")
      ("(boot-level! 'portal)" "Set level at runtime"))))
