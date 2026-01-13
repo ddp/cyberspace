@@ -7,24 +7,26 @@
     ;; === Instrumentation Points (session-stat!) ===
     (instrumentation bytes-in "./gossip.scm" 164)
     (instrumentation bytes-out "./gossip.scm" 154)
-    (instrumentation bytes-written "./vault.scm" 577)
+    (instrumentation bytes-written "./vault.scm" 580)
     (instrumentation commits "./cyberspace-repl.scm" 4939)
+    (instrumentation decrypts "./vault.scm" 308)
+    (instrumentation encrypts "./vault.scm" 252)
     (instrumentation federation-changes "./cyberspace-repl.scm" 4970)
     (instrumentation gossip-exchanges "./cyberspace-repl.scm" 5221)
-    (instrumentation hashes "./vault.scm" 1948)
+    (instrumentation hashes "./vault.scm" 1951)
     (instrumentation mdns-messages "./mdns.scm" 128)
     (instrumentation packets-ipv "./gossip.scm" 170)
     (instrumentation peers-discovered "./cyberspace-repl.scm" 5213)
     (instrumentation queries "./cyberspace-repl.scm" 1250)
-    (instrumentation reads "./vault.scm" 1271)
+    (instrumentation reads "./vault.scm" 1274)
     (instrumentation seals "./cyberspace-repl.scm" 4940)
     (instrumentation signs "./cyberspace-repl.scm" 4950)
     (instrumentation syncs "./cyberspace-repl.scm" 1125)
-    (instrumentation unlocks "./vault.scm" 319)
+    (instrumentation unlocks "./vault.scm" 321)
     (instrumentation verifies "./cyberspace-repl.scm" 4955)
     (instrumentation votes "./cyberspace-repl.scm" 1331)
     (instrumentation wormholes "./cyberspace-repl.scm" 1817)
-    (instrumentation writes "./vault.scm" 576)
+    (instrumentation writes "./vault.scm" 579)
 
     ;; === Security Errors ===
     (security-error capability-amplification "./cyberspace-repl.scm" 1859)
@@ -39,7 +41,7 @@
     (security-error write-denied "./cyberspace-repl.scm" 2103)
 
     ;; === Precondition Guards ===
-    (precondition directory-exists? keystore-path "./enroll.scm" 501)
+    (precondition directory-exists? keystore-path "./enroll.scm" 503)
     (precondition directory-exists? ".forge" "./cyberspace-repl.scm" 237)
     (precondition chaotic? thing "./cyberspace-repl.scm" 775)
     (precondition attested? "./cyberspace-repl.scm" 924)
@@ -50,8 +52,8 @@
     (precondition directory-exists? output-dir "./spki-keygen.scm" 83)
     (precondition directory-exists? path "./keyring.scm" 76)
     (precondition directory-exists? ks-dir "./vault.scm" 238)
-    (precondition keystore-exists? "./vault.scm" 291)
-    (precondition directory-exists? ".vault" "./vault.scm" 409)
+    (precondition keystore-exists? "./vault.scm" 292)
+    (precondition directory-exists? ".vault" "./vault.scm" 412)
 ))
 
 ;; Summary counts

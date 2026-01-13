@@ -27,21 +27,30 @@
       (p "When Cutler left for Microsoft, his modules were inherited. The privilege auditing rototill required fluency in MACRO-32."))
 
     (subsection
-      "1.2 Languages"
+      "1.2 TGV and IPsec (1994-2001)"
+      (p "After DEC, the designer joined TGV Inc. (MultiNet TCP/IP for VMS). Designed all of Secure/IP and the Kerberized VAX/VMS SSO using Kerberos.")
+      (p "Cisco acquired TGV in 1996, thinking they were buying a Windows TCP/IP stack. They weren't. MultiNet was VMS networking; the Windows products were incidental.")
+      (p "The IPsec/IKE work continued through Network Alchemy (acquired by Nokia). The designer authored draft-ietf-ipsec-isakmp-gss-auth-07, 'A GSS-API Authentication Method for IKE', which documented how to authenticate IKE using Kerberos over GSS-API.")
+      (p "Brian Swander was added as co-author to hand the specification to Microsoft for Windows 2000 implementation. The Vendor Payload extension mechanism in IKE was added to encapsulate Microsoft's GSS-API extension cleanly.")
+      (p "That same Vendor Payload mechanism was later used extensively in AlchemyOS for proprietary extensions without breaking interoperability. Good protocol design: create a generic extension point for one use case, it becomes useful for everyone.")
+      (p "The path: DEC → TGV → Cisco → Network Alchemy → Nokia, carrying IPsec/IKE expertise through each transition. The work survives in Windows cross-realm domain authentication to this day."))
+
+    (subsection
+      "1.3 Languages"
       (p "BLISS - Bill Wulf at CMU (1969) created BLISS as an expression language, not 'DEC's C'. Everything returns a value. Lisp in systems clothing.")
       (p "MACRO-32 - VAX assembly with rich macros. The kernel was MACRO-32.")
       (p "The VMS Runtime - Had a rich macro wrapper for BLISS. That macro system was a Lisp. We knew.")
       (p "The designer came to VMS as a Lisper, fell in love with BLISS (an expression language, like home)."))
 
     (subsection
-      "1.3 Syntax Heritage"
+      "1.4 Syntax Heritage"
       (p "Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:")
       (code scheme "(translate text from: 'en to: 'fr)
 (enroll-request name timeout: 30)")
       (p "Self syntax was weird. Smalltalk doesn't work for math people. Scheme is honest - prefix, unambiguous, mathematical."))
 
     (subsection
-      "1.4 System Service Vocabulary"
+      "1.5 System Service Vocabulary"
       (p "The VMS system service vocabulary provides the conceptual heritage for Cyberspace's security primitives.")
       (p "The security subsystem was written exclusively in BLISS (with MACRO-32 fluency for reading the layers beneath). Now it's Scheme.")
       (p "Access check pattern:")
@@ -137,7 +146,7 @@ Cyberspace soup:  Vault objects, content-addressed")
     (p "The dumb web optimizes for benchmarks. The good web optimizes for durability."))
 
   (section
-    "7. REPL UX Principles"
+    "7. Human Interface Principles"
 
     (subsection
       "7.1 Output Philosophy"
@@ -176,8 +185,9 @@ Cyberspace soup:  Vault objects, content-addressed")
 
   (section
     "Changelog"
+    (p "- 2026-01-13 - Section 1.2 TGV and IPsec: Secure/IP, GSS-API/IKE draft, Vendor Payload, AlchemyOS")
     (p "- 2026-01-13 - Rich Bouchard, $IMPERSONATION, Mitnick, Trusting Trust")
-    (p "- 2026-01-13 - Section 1.4 System Service Vocabulary (CHP$_*, $PERSONA_*)")
-    (p "- 2026-01-13 - Section 7 REPL UX Principles")
+    (p "- 2026-01-13 - Section 1.5 System Service Vocabulary (CHP$_*, $PERSONA_*)")
+    (p "- 2026-01-13 - Section 7 Human Interface Principles")
     (p "- 2026-01-13 - Weaving by lambda, loch lambda as merit")
     (p "- 2026-01-13 - Initial specification, migrated from DESIGNER-NOTES.md")))
