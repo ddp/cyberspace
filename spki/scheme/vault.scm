@@ -2617,10 +2617,10 @@ Object Types:
     (handle-exceptions exn 0.0
       (let* ((test-data (make-blob 64))
              (iterations 5000)
-             (start (current-milliseconds)))
+             (start (current-process-milliseconds)))
         (do ((i 0 (+ i 1))) ((= i iterations))
           (sha512-hash test-data))
-        (let* ((elapsed (max 1 (- (current-milliseconds) start)))
+        (let* ((elapsed (max 1 (- (current-process-milliseconds) start)))
                (ops-per-sec (/ (* iterations 1000.0) elapsed)))
           ;; Round to 1 decimal place
           (/ (round (* (/ ops-per-sec 1000.0) 10)) 10.0)))))
