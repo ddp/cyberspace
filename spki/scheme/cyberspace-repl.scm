@@ -3813,7 +3813,7 @@ Cyberspace REPL - Available Commands
       (let ((name (cond ((assq 'name identity) => cadr) (else #f)))
             (role (cond ((assq 'role identity) => cadr) (else #f))))
         (when (and name role)
-          (print "  identity: " name " (" role ")"))))))
+          (print "  identity: " name " (" role ")")))))
 
 ;;; ============================================================
 ;;; Cyberspace Channel Protocol
