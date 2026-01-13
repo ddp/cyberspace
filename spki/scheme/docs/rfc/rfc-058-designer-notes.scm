@@ -34,7 +34,7 @@
       (p "Brian Swander was added as co-author to hand the specification to Microsoft for Windows 2000 implementation. The Vendor Payload extension mechanism in IKE was added to encapsulate Microsoft's GSS-API extension cleanly.")
       (p "That same Vendor Payload mechanism was later used extensively in AlchemyOS for proprietary extensions without breaking interoperability. Good protocol design: create a generic extension point for one use case, it becomes useful for everyone.")
       (p "The path: DEC → TGV → Cisco → Network Alchemy → Nokia, carrying IPsec/IKE expertise through each transition. The work survives in Windows cross-realm domain authentication to this day.")
-      (p "Acknowledgments for the NT IPsec/IKE work: George Lake, Rob Adams, Max Pritikin, John [TODO], Anne Church, Peter Ford, and William Dixon who spearheaded IPv6 integration into NT5 (Windows 2000)."))
+      (p "Acknowledgments for the NT IPsec/IKE work: George Lake, Rob Adams, Max Pritikin, John [TODO], Anne Church, Peter Ford, and William Dixon who cat herded IPv6 into existence during NT5 (Windows 2000) development."))
 
     (subsection
       "1.3 Languages"
