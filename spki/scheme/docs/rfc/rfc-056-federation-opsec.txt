@@ -1,0 +1,390 @@
+RFC-056: Federation Operational Security
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+ABSTRACT
+------------------------------------------------------------------------
+
+Federation (RFC-010) enables peer-to-peer synchronization between
+vaults. This RFC specifies operational security considerations for
+federation: what information flows between peers, how to minimize
+information leakage, and techniques for protecting node identity and
+capabilities from covert channel analysis.
+
+
+------------------------------------------------------------------------
+1. THE PROBLEM SPACE
+------------------------------------------------------------------------
+
+When vaults federate, they exchange more than just releases. Every
+message, timing pattern, and capability advertisement creates an
+information flow. An adversary observing federation traffic—or a
+malicious peer—can build a profile of your node.
+
+
+              +-----------------------------------------+
+              |           FEDERATION TRAFFIC               |
+              +---------------------------------------------+
+              |  Explicit:                                  |
+              |    • Release announcements                  |
+              |    • Sync requests                          |
+              |    • Public keys                            |
+              |                                             |
+              |  Implicit (covert channels):                |
+              |    • Timing patterns                        |
+              |    • Response latencies                     |
+              |    • Capability advertisements (weave)      |
+              |    • Connection frequencies                 |
+              |    • Online/offline patterns                |
+              +---------------------------------------------+
+
+
+------------------------------------------------------------------------
+2. THREAT MODEL
+------------------------------------------------------------------------
+
+
+2.1 Adversary Capabilities
+--------------------------
+
+  * Passive observer: Can see federation traffic
+  * Active participant: Can be a peer in your federation
+  * Traffic analyst: Can correlate timing and volume
+  * Long-term observer: Can build profiles over time
+
+
+2.2 Information at Risk
+-----------------------
+
+  * Node identity: Hardware fingerprinting via benchmarks
+  * Location: Timezone from activity patterns
+  * Capabilities: Computational power from weave
+  * Behavior: Usage patterns from sync timing
+  * Network topology: Who talks to whom
+
+
+------------------------------------------------------------------------
+3. WEAVE AS COVERT CHANNEL
+------------------------------------------------------------------------
+
+
+3.1 The Weave Metric
+--------------------
+
+Weave measures cryptographic throughput: SHA-512 operations per
+millisecond. This correlates directly with:
+
+  * CPU architecture (ARM vs x86, Apple Silicon vs Intel)
+  * Core count and frequency
+  * Thermal state and power constraints
+  * Competing workload
+
+A raw weave value is a fingerprint.
+
+
+3.2 Attack Scenario
+-------------------
+
+
+    Attacker observes: weave = 1667 (your actual value)
+    Known profiles:
+      Apple M4 (10-core):  1600-1700
+      Apple M3 (8-core):   1200-1400
+      Raspberry Pi 4:       150-200
+      Cloud VM (shared):    400-600
+    Conclusion: You're running Apple M4 Silicon on macOS.
+    Cross-reference with other traffic: Likely a specific model.
+
+
+3.3 Quantized Weave Strata
+--------------------------
+
+Never share raw weave values in federation. Use quantized strata:
+
+
+    (define *weave-strata*
+      '((constrained . 500)     ; IoT, embedded, RPi
+        (standard    . 1000)    ; Laptops, desktops
+        (capable     . 2000)    ; Workstations, servers
+        (powerful    . 4000)))  ; HPC, GPU-accelerated
+    (define (weave-stratum weave)
+      "Which stratum of the lattice does this weave occupy?"
+      (cond
+        ((< weave 500)  'constrained)
+        ((< weave 1000) 'standard)
+        ((< weave 2000) 'capable)
+        (else           'powerful)))
+
+Federation messages advertise stratum, not value:
+
+
+    (federation-message
+      (type capability)
+      (from #${my-pubkey})
+      (payload
+        (weave-stratum capable)   ; NOT: (weave 1667)
+        (storage-tier large))
+      (signature #${sig}))
+
+
+------------------------------------------------------------------------
+4. TIMING ANALYSIS
+------------------------------------------------------------------------
+
+
+4.1 Response Timing
+-------------------
+
+Response latency reveals:
+
+  * Storage speed (SSD vs HDD vs network)
+  * Vault size (query time scales with objects)
+  * Current load
+
+Mitigation: Add random jitter to responses.
+
+
+    (define (jittered-response response)
+      "Add 50-500ms random delay to mask timing."
+      (thread-sleep! (+ 0.05 (* 0.45 (random))))
+      response)
+
+
+4.2 Sync Timing
+---------------
+
+Regular sync patterns reveal:
+
+  * Timezone (sync at 'morning' = your morning)
+  * Work patterns (gaps during meetings)
+  * Geographic region
+
+Mitigation: Randomize sync intervals around configured period.
+
+
+    (define (next-sync-time base-interval)
+      "Randomize by +/- 20% to mask patterns."
+      (let ((jitter (* base-interval 0.2 (- (* 2 (random)) 1))))
+        (+ (current-seconds) base-interval jitter)))
+
+
+------------------------------------------------------------------------
+5. METADATA MINIMIZATION
+------------------------------------------------------------------------
+
+
+5.1 Principle
+-------------
+
+Share the minimum information needed for federation to work. Everything
+else is unnecessary exposure.
+
+
+5.2 Required Information
+------------------------
+
+  * Public key: Identity (unavoidable)
+  * Release hashes: Content verification
+  * Timestamps: Ordering (can be coarsened)
+
+
+5.3 Unnecessary Information
+---------------------------
+
+  * Hostname: Use pubkey hash instead
+  * OS/version: Protocol version suffices
+  * Raw benchmarks: Use capability strata
+  * Vault statistics: Object counts, sizes
+  * Uptime: Session duration
+
+
+5.4 Minimal Federation Message
+------------------------------
+
+
+    (federation-message
+      (type announcement)
+      (from #${pubkey-hash})        ; Not hostname
+      (epoch 1767686400)            ; Coarsened to hour
+      (payload
+        (release "2.0.0")
+        (hash "sha512:..."))
+      (signature #${sig}))          ; No extras
+
+
+------------------------------------------------------------------------
+6. NETWORK TOPOLOGY PROTECTION
+------------------------------------------------------------------------
+
+
+6.1 Peer Enumeration
+--------------------
+
+A malicious peer can probe your federation graph:
+
+
+    1. Register as your peer
+    2. Announce fake releases
+    3. Observe which peers request them
+    4. Map your federation network
+
+
+6.2 Mitigation
+--------------
+
+Do not automatically propagate announcements. Verify before forwarding.
+
+
+    (define (should-propagate? announcement)
+      "Only propagate releases we have verified."
+      (and (release-in-vault? (announcement-release announcement))
+           (signature-verified? announcement)))
+
+
+------------------------------------------------------------------------
+7. NODE IDENTITY SEPARATION
+------------------------------------------------------------------------
+
+
+7.1 Multiple Personas
+---------------------
+
+Consider separate identities for different federation contexts:
+
+  * Personal vault: Friends and family
+  * Professional vault: Work colleagues
+  * Public vault: Open source releases
+
+Cross-correlation between personas weakens privacy.
+
+
+7.2 Implementation
+------------------
+
+
+    (federation-identity
+      (persona personal
+        (keypair personal-keys)
+        (peers alice bob carol))
+      (persona professional
+        (keypair work-keys)
+        (peers company-vault))
+      (persona public
+        (keypair oss-keys)
+        (peers community-mirror)))
+
+
+------------------------------------------------------------------------
+8. TRAFFIC ANALYSIS RESISTANCE
+------------------------------------------------------------------------
+
+
+8.1 Constant-Rate Traffic
+-------------------------
+
+Advanced: Maintain constant traffic rate regardless of actual activity.
+
+
+    (define (constant-rate-sync interval)
+      "Send traffic at fixed intervals, real or dummy."
+      (if (have-pending-sync?)
+          (do-real-sync)
+          (send-dummy-heartbeat)))
+
+
+8.2 Transport Considerations
+----------------------------
+
+  * TLS: Minimum for transport encryption
+  * Tor: For strong anonymity (adds latency)
+  * I2P: Alternative anonymity network
+  * VPN: Masks source IP (trust VPN provider)
+
+
+------------------------------------------------------------------------
+9. CONFIGURATION
+------------------------------------------------------------------------
+
+
+    (federation-opsec-config
+      ;; Capability advertisement
+      (advertise-weave-stratum #t)  ; Quantized, not raw
+      (advertise-storage-tier #t)   ; large/medium/small
+      (advertise-raw-metrics #f)    ; NEVER
+      ;; Timing
+      (response-jitter-ms 50 500)   ; Min/max jitter
+      (sync-jitter-percent 20)      ; +/- randomization
+      ;; Metadata
+      (coarsen-timestamps 3600)     ; Round to hour
+      (use-pubkey-hash #t)          ; Not hostname
+      (hide-vault-stats #t)         ; No object counts
+      ;; Network
+      (verify-before-propagate #t)
+      (constant-rate-traffic #f)    ; Advanced, optional
+      (transport tls))
+
+
+------------------------------------------------------------------------
+10. AUDIT INTEGRATION
+------------------------------------------------------------------------
+
+OPSEC events should be recorded locally but not shared:
+
+
+    (federation-opsec-audit
+      (event weave-query)           ; Someone asked our weave
+      (peer #${peer-pubkey})
+      (response stratum:capable)    ; What we sent
+      (actual 1667)                 ; What we have (local only)
+      (timestamp 1767686400))
+
+This creates an audit trail of information disclosure without leaking it
+further.
+
+
+------------------------------------------------------------------------
+11. CHECKLIST
+------------------------------------------------------------------------
+
+Federation OPSEC review:
+
+  * [ ] Weave shared as stratum, not raw value
+  * [ ] Response timing has jitter
+  * [ ] Sync intervals randomized
+  * [ ] Timestamps coarsened appropriately
+  * [ ] Hostname not in protocol messages
+  * [ ] Vault statistics not exposed
+  * [ ] Releases verified before propagation
+  * [ ] Transport encrypted (TLS minimum)
+  * [ ] Personas separated if needed
+
+
+------------------------------------------------------------------------
+12. REFERENCES
+------------------------------------------------------------------------
+
+1. RFC-010 — Federation Protocol
+
+2. RFC-024 — Network Protocol
+
+3. RFC-046 — Security Architecture
+
+4. Dingledine, R., et al. (2004). Tor: The Second-Generation Onion
+Router
+
+5. Danezis, G., Diaz, C. (2008). A Survey of Anonymous Communication
+Channels
+
+
+------------------------------------------------------------------------
+CHANGELOG
+------------------------------------------------------------------------
+
+- 2026-01-13 — Purge OOP: class > stratum, storage-class >
+storage-tier
+
+- 2026-01-13 — Initial specification
+
+------------------------------------------------------------------------

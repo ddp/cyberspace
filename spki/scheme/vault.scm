@@ -60,6 +60,8 @@
    *node-operations*
    probe-system-capabilities
    measure-weave
+   weave-stratum
+   *weave-strata*
    recommend-role
 
    ;; Keystore (RFC-041)
@@ -2619,6 +2621,26 @@ Object Types:
                (ops-per-sec (/ (* iterations 1000.0) elapsed)))
           ;; Round to 1 decimal place
           (/ (round (* (/ ops-per-sec 1000.0) 10)) 10.0)))))
+
+  ;; RFC-056: Weave quantization for federation OPSEC
+  ;; Raw weave values are a covert channel - they fingerprint hardware.
+  ;; Federation shares only strata, not raw values.
+
+  (define *weave-strata*
+    '((constrained . 500)     ; IoT, embedded, RPi
+      (standard    . 1000)    ; Laptops, desktops
+      (capable     . 2000)    ; Workstations, servers
+      (powerful    . 4000)))  ; HPC, GPU-accelerated
+
+  (define (weave-stratum weave)
+    "Which stratum of the lattice does this weave occupy? (RFC-056)
+     For LOCAL display, use raw weave.
+     For FEDERATION, use this to avoid fingerprinting."
+    (cond
+      ((< weave 500)  'constrained)
+      ((< weave 1000) 'standard)
+      ((< weave 2000) 'capable)
+      (else           'powerful)))
 
   (define (recommend-role capabilities)
     "Recommend role based on capabilities"
