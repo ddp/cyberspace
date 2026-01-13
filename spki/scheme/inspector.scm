@@ -371,7 +371,7 @@
               (printf "  ... (~a more frames)~n" (- (length frames) 10))))))
 
     (print "")
-    (print "Inspector commands: :f N (frame), :i OBJ (inspect), :r (restarts), :q (quit)")
+    (print "(?) help  (exit) quit  :f N (frame)  :i OBJ (inspect)  :r (restarts)")
     (print "")
 
     ;; Inspector loop
@@ -381,9 +381,13 @@
       (let ((input (read-line)))
         (cond
           ((or (eof-object? input)
-               (member input '(":q" ":quit" ",q" "bye" "bye.")))
+               (member input '(":q" ":quit" ",q" "bye" "bye." "exit" "(exit)")))
            (print "Returning to REPL.")
            #f)
+
+          ((member input '("?" ":?" ":h" ":help"))
+           (print "Inspector commands: :f N (frame), :i OBJ (inspect), :r (restarts), :q (quit)")
+           (loop))
 
           ((string-prefix? ":f " input)
            (let ((n (string->number (substring input 3))))
