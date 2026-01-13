@@ -67,11 +67,22 @@
   (cond
     ((string->number str) => identity)
     ((assq (string->symbol (string-downcase str)) *boot-levels*) => cdr)
-    (else 0)))
+    (else #f)))
+
+(define (find-boot-arg args)
+  "Find boot level in command line args. Returns level or #f."
+  (cond
+    ((null? args) #f)
+    ((parse-boot-level (car args)) => identity)
+    (else (find-boot-arg (cdr args)))))
 
 (define *boot-verbosity*
-  (let ((env (get-environment-variable "CYBERSPACE_BOOT")))
-    (if env (parse-boot-level env) 0)))
+  (let ((arg (find-boot-arg (command-line-arguments)))
+        (env (get-environment-variable "CYBERSPACE_BOOT")))
+    (cond
+      (arg arg)                          ; CLI argument wins
+      (env (or (parse-boot-level env) 0)) ; then env var
+      (else 0))))                         ; default: shadow
 
 (define (boot-level! level)
   "Set boot verbosity level (0-4 or symbol)."
