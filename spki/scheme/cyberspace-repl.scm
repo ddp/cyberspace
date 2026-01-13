@@ -627,6 +627,7 @@
 (import capability)
 (import auto-enroll)
 (import ui)
+(import inspector)
 (import portal)
 
 ;; Initialize libsodium
@@ -3315,7 +3316,7 @@ Cyberspace REPL - Available Commands
         (string-append (substring str 0 (- max-len 1)) "…")
         str)))
 
-(define (inspect obj #!key (depth 0) (max-depth 6) (prefix "") (last #t))
+(define (tree obj #!key (depth 0) (max-depth 6) (prefix "") (last #t))
   "Display object as ASCII tree"
   (let* ((indent (if (= depth 0) "" (string-append prefix (if last "└── " "├── "))))
          (child-prefix (if (= depth 0) "" (string-append prefix (if last "    " "│   "))))
@@ -3337,13 +3338,13 @@ Cyberspace REPL - Available Commands
            ((null? items) #f)
            ((not (pair? items))
             ;; Improper list - show cdr
-            (inspect items depth: (+ depth 1) prefix: child-prefix last: #t))
+            (tree items depth: (+ depth 1) prefix: child-prefix last: #t))
            ((> idx 10)
             (print child-prefix "└── … (" (- (length obj) idx) " more)"))
            (else
             (let ((is-last (or (null? (cdr items))
                                (and (pair? (cdr items)) (> idx 9)))))
-              (inspect (car items)
+              (tree (car items)
                        depth: (+ depth 1)
                        prefix: child-prefix
                        last: is-last)
@@ -3357,7 +3358,7 @@ Cyberspace REPL - Available Commands
               ((or (= i len) (> i 10)))
             (if (> i 10)
                 (print child-prefix "└── … (" (- len i) " more)")
-                (inspect (vector-ref obj i)
+                (tree (vector-ref obj i)
                          depth: (+ depth 1)
                          prefix: child-prefix
                          last: (= i (- len 1))))))))))
@@ -3366,8 +3367,8 @@ Cyberspace REPL - Available Commands
   (void))
 
 (define (i obj)
-  "Short alias for inspect"
-  (inspect obj))
+  "Short alias for tree (ASCII object display)"
+  (tree obj))
 
 ;;; ============================================================
 ;;; Stack Frame Inspector - Dylan-style Debugging
@@ -4107,7 +4108,7 @@ Cyberspace REPL - Available Commands
          (vault-keys (or (and realm (assq 'keys (cdr realm)) (cadr (assq 'keys (cdr realm)))) 0))
          (vault-releases (or (and realm (assq 'releases (cdr realm)) (cadr (assq 'releases (cdr realm)))) 0))
          (vault-audits (or (and realm (assq 'audits (cdr realm)) (cadr (assq 'audits (cdr realm)))) 0))
-         ;; Identity
+        ;; Identity
          (node-id (read-node-identity))
          ;; Connection origin (SSH client)
          (origin (get-connection-origin)))
@@ -5032,20 +5033,16 @@ Cyberspace REPL - Available Commands
 ;;;
 ;;; Dylan/CCL-style debugger infused into the REPL.
 ;;; When errors occur, drop into debug> prompt with clean stack.
-
-(import inspector)
-
-;; Enable inspector by default
-(define *inspector-active* #t)
+;;; Uses inspector module's *inspector-enabled* parameter.
 
 (define (enable-inspector!)
   "Enable integrated debugger"
-  (set! *inspector-active* #t)
+  (set! *inspector-enabled* #t)
   (print "Inspector enabled. Errors drop into debug> prompt."))
 
 (define (disable-inspector!)
   "Disable integrated debugger"
-  (set! *inspector-active* #f)
+  (set! *inspector-enabled* #f)
   (print "Inspector disabled. Errors show stack trace."))
 
 ;;; ============================================================
@@ -6154,6 +6151,35 @@ Cyberspace REPL - Available Commands
               (clear)
               (loop))
 
+             ;; Inspect object
+             ((string=? cmd "i")
+              (if (null? args)
+                  (print "Usage: ,i <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (inspect (eval (with-input-from-string expr-str read))))))
+              (loop))
+
+             ;; Frame display
+             ((string=? cmd "f")
+              (if (null? args)
+                  (begin
+                    (print "Call stack:")
+                    (let lp ((frames *call-stack*) (i 0))
+                      (when (and (pair? frames) (< i 20))
+                        (printf "  [~a] ~a~n" i (car (car frames)))
+                        (lp (cdr frames) (+ i 1)))))
+                  (pp-frame (string->number (car args))))
+              (loop))
+
+             ;; Toggle inspector
+             ((string=? cmd "inspector")
+              (if *inspector-enabled*
+                  (begin (disable-inspector!))
+                  (begin (enable-inspector!)))
+              (loop))
+
              ;; Complete - show symbol completions
              ((or (string=? cmd "comp") (string=? cmd "complete"))
               (if (null? args)
@@ -6175,7 +6201,7 @@ Cyberspace REPL - Available Commands
         (else
          (repl-history-add line)
          (handle-exceptions exn
-           (if *inspector-active*
+           (if *inspector-enabled*
                (begin
                  (inspector-repl exn)
                  (loop))

@@ -639,7 +639,11 @@ Type (help) for commands.
 </div>
         <div id="input-line">
           <span id="prompt">&gt;</span>
-          <input type="text" id="input" autofocus placeholder="Enter Cyberspace Scheme expression...">
+          <input type="text" id="input" autofocus
+                 autocapitalize="off"
+                 autocorrect="off"
+                 spellcheck="false"
+                 placeholder="Enter Cyberspace Scheme expression...">
         </div>
       </div>
       <div id="vault" class="view">

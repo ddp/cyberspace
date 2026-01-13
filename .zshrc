@@ -184,6 +184,7 @@ if [[ -o interactive ]]; then
     alias lsctl='ls -lac'
     alias lsdot='ls -lad .*'
     alias lsenv='env | sort'
+    alias lscs='lsenv | grep cyberspace'
     alias lsflag='ls -laO'
     alias lsflags='ls -laO'
     alias lsmod='ls -lat'

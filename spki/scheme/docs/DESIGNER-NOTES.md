@@ -35,6 +35,52 @@
 - No calling the runtime from the TCB.
 - The audit and protected subsystems live in their own UI layer.
 
+## 2026-01-13: TCSEC C2/B1 Heritage
+
+### VMS Security Team
+
+The Security Project Team was Derrell Piper, Mark Pilant, and Andy Goldstein.
+
+### VMS Security Services (System Services Reference)
+
+Security-related services are grouped under a "Security services" family that includes $CHKPRO and a broader set of calls that manipulate identifiers, rights, and security profiles.
+
+#### Security Services Family
+
+Functional grouping covering services that operate on identifiers, rights lists, and security profiles, and that perform access decisions.
+
+**Core access-check and audit path:**
+- `$CHKPRO` - Check protection (manual access check)
+- `$CHECK_ACCESS` - Check access (higher-level)
+- `$AUDIT_EVENT` - Audit event
+- `$AUDIT_EVENTW` - Audit event (wait)
+
+**Rights database and identifiers:**
+- `$ADD_IDENT` - Add identifier to rights database
+- `$REMOVE_IDENT` - Remove identifier
+- `$ADD_HOLDER` - Add holder to identifier
+- `$REMOVE_HOLDER` - Remove holder from identifier
+- `$ASCTOID` - Convert ASCII to identifier
+
+#### User/Security Profile Services
+
+Calls to build and use encoded profiles for CHKPRO and CHECK_ACCESS.
+
+- `$CREATE_USER_PROFILE` - Build encoded user security profiles for use with $CHKPRO and $CHECK_ACCESS (via the usrpro argument)
+- `$GETUAI` / `$SETUAI` - Get/set UAF fields and per-user security attributes
+
+#### Privileges and Persona
+
+**Privilege manipulation:**
+- `$SETPRV` - Enable or disable privileges, affecting how CHKPRO and object protection fields are interpreted
+
+**Persona handling:**
+Later releases add `$PERSONA_*` services to let subsystems assume a requester's persona instead of re-implementing access checks - documented as the preferred alternative to manual CHKPRO-style logic.
+
+### Relevance to RFC-032
+
+The VMS security model - particularly the separation of access check ($CHKPRO) from profile creation ($CREATE_USER_PROFILE) and the later move to persona services - informs Cyberspace's approach to capability delegation and principal impersonation.
+
 ## 2026-01-11: Bootstrap Display
 
 Enhanced REPL startup to show:
