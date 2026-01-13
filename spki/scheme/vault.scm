@@ -249,6 +249,7 @@
            ;; Encrypt secret key
            (nonce (random-bytes secretbox-noncebytes))
            (ciphertext (secretbox-encrypt secret-key nonce enc-key)))
+      (session-stat! 'encrypts)
 
       ;; Write encrypted private key
       (with-output-to-file (keystore-key-path)
@@ -304,6 +305,7 @@
                (dec-key (argon2id-hash passphrase salt))
                ;; Decrypt
                (secret-key (secretbox-decrypt ciphertext nonce dec-key)))
+          (session-stat! 'decrypts)
 
           ;; Zero the decryption key
           (memzero! dec-key)
@@ -362,6 +364,7 @@
              (enc-key (argon2id-hash new-passphrase salt))
              (nonce (random-bytes secretbox-noncebytes))
              (ciphertext (secretbox-encrypt secret-key nonce enc-key)))
+        (session-stat! 'encrypts)
 
         ;; Write new encrypted key
         (with-output-to-file (keystore-key-path)
