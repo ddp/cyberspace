@@ -5377,6 +5377,14 @@ Cyberspace REPL - Available Commands
 (define q repl-goodbye)
 (define bye repl-goodbye)
 
+;; Hot reload REPL definitions (for development)
+(define (reload!)
+  "Hot reload REPL definitions without restart.
+   Note: Module state preserved, only top-level defs refreshed."
+  (print "Reloading cyberspace-repl.scm...")
+  (load "cyberspace-repl.scm")
+  (print "Reloaded. New definitions active."))
+
 ;; Settable prompt
 (define *prompt* ": ")
 
