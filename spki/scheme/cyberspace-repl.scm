@@ -3797,10 +3797,12 @@ Cyberspace REPL - Available Commands
                  (pk-entry (and (pair? sexp) (assq 'public-key (cdr sexp))))
                  (pk (and pk-entry (cadr pk-entry))))
             (when pk
-              (let ((hex (blob->hex pk)))
+              (let* ((hex (blob->hex pk))
+                     (len (string-length hex))
+                     (short-hash (string-append (substring hex 0 4) "..." (substring hex (- len 4)))))
                 (if name
-                    (print "  realm: " name " (" (substring hex 0 8) "...)")
-                    (print "  realm: " (substring hex 0 8) "..." (substring hex (- (string-length hex) 8))))))))))
+                    (print "  realm: " name " (" short-hash ")")
+                    (print "  realm: " short-hash)))))))))
     ;; Entropy source
     (let ((ent (entropy-status)))
       (print "  entropy: " (cdr (assq 'source ent)) " (" (cdr (assq 'implementation ent)) ")"))

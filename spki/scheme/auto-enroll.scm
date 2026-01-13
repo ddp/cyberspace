@@ -35,6 +35,7 @@
           (chicken format)
           (chicken tcp)
           (chicken time)
+          (chicken type)
           (chicken condition)
           srfi-1      ; list utilities
           srfi-18     ; threads
@@ -213,11 +214,9 @@
 
     (printf "[discover] Broadcasting capability announcement...~n")
 
+    ;; Start listening for peer announcements (bind immediately for strict-types)
     (let ((discovered '())
-          (listener #f))
-
-      ;; Start listening for peer announcements
-      (set! listener (tcp-listen *discovery-port*))
+          (listener (tcp-listen *discovery-port*)))
 
       ;; Broadcast our capabilities
       (thread-start!
@@ -257,10 +256,9 @@
                             (cons (cons peer-name peer-hw) discovered))))))
                   (loop)))))))
 
-      ;; Clean up (guard + cast for strict-types)
-      (when listener
-        (handle-exceptions exn #f
-          (tcp-close (the (struct tcp-listener) listener))))
+      ;; Clean up
+      (handle-exceptions exn #f
+        (tcp-close listener))
 
       ;; Return all members including self
       (cons (cons my-name my-hw) discovered)))
