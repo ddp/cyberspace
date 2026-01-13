@@ -264,7 +264,7 @@
 (define *cyberspace-modules*
   '("os" "crypto-ffi" "sexp" "capability" "mdns" "fips" "audit" "wordlist"
     "bloom" "catalog" "keyring" "portal" "cert" "enroll" "gossip" "security"
-    "vault" "auto-enroll" "ui"))
+    "vault" "auto-enroll" "ui" "inspector"))
 
 (define (sicp)
   "Analyze SICP metrics for all Cyberspace modules (live, no forge metadata needed)"
@@ -343,10 +343,26 @@
            (sprintf "~aK" (quotient bytes 1024)))
           (else
            (sprintf "~aB" bytes))))
+  (define (count-substr str sub)
+    "Count occurrences of substring in string."
+    (let ((sub-len (string-length sub)))
+      (let loop ((s str) (count 0))
+        (let ((pos (string-contains s sub)))
+          (if pos
+              (loop (substring s (+ pos sub-len)) (+ count 1))
+              count)))))
   (define (display-width str)
-    (- (string-length str)
-       (if (string-contains str "✓") 2 0)
-       (if (string-contains str "✗") 2 0)))
+    "Calculate display width accounting for multi-byte Unicode chars.
+     λ is 2 bytes but 1 display char. ✓✗⚠ are 3 bytes but 1 display char."
+    (let* ((len (string-length str))
+           ;; Count all occurrences of multi-byte chars
+           (lambda-count (count-substr str "λ"))
+           (check-count (count-substr str "✓"))
+           (cross-count (count-substr str "✗"))
+           (warn-count (count-substr str "⚠"))
+           ;; Adjust: λ=1 extra byte, ✓✗⚠=2 extra bytes each
+           (adjustment (+ lambda-count (* 2 (+ check-count cross-count warn-count)))))
+      (- len adjustment)))
   (define w 90)  ; wide enough for compiler warnings
   (define (box-line content)
     (let* ((clen (display-width content))
@@ -444,7 +460,7 @@
         ;; Build order: strict topological sort by dependency level
         ;; Modules within each level can build in parallel
         (levels '(;; Level 0 (no cyberspace deps - truly parallel)
-                  ("os" "crypto-ffi" "sexp" "capability")
+                  ("os" "crypto-ffi" "sexp" "capability" "inspector")
                   ;; Level 1 (single deps from L0)
                   ("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
                   ;; Level 2 (deps on L0+L1)
@@ -3167,7 +3183,7 @@ Cyberspace REPL - Available Commands
 
 (define (enrollment-status)
   "Display current enrollment status"
-  (let* ((identity (read-node-identity))
+  (let* ((node-id (read-node-identity))
          (hostname (get-hostname))
          (w 50))
     (define (line . content)
@@ -3176,11 +3192,11 @@ Cyberspace REPL - Available Commands
         (print "│ " text (make-string (max 0 pad) #\space) " │")))
     (print "")
     (print "┌───────────────────── status ─────────────────────┐")
-    (if identity
-        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
-              (role (cond ((assq 'role identity) => cadr) (else "unknown")))
-              (master (cond ((assq 'master identity) => cadr) (else #f)))
-              (enrolled (cond ((assq 'enrolled identity) => cadr) (else #f))))
+    (if node-id
+        (let ((name (cond ((assq 'name node-id) => cadr) (else "unknown")))
+              (role (cond ((assq 'role node-id) => cadr) (else "unknown")))
+              (master (cond ((assq 'master node-id) => cadr) (else #f)))
+              (enrolled (cond ((assq 'enrolled node-id) => cadr) (else #f))))
           (line "node:     " (->string name))
           (line "role:     " (->string role))
           (when master (line "master:   " (->string master)))
@@ -3637,7 +3653,7 @@ Cyberspace REPL - Available Commands
                                         (if (directory-exists? ".vault/releases")
                                             (directory ".vault/releases")
                                             '()))))
-         (identity (read-node-identity)))
+         (node-id (read-node-identity)))
     ;; Vault contents line
     (print "  " obj-count " objects, " release-count " releases, " key-count " keys")
     (when (> audit-entries 0)
@@ -3645,9 +3661,9 @@ Cyberspace REPL - Available Commands
     (when keystore-exists
       (let ((keycount (count-vault-items "keystore")))
         (print "  " (plural keycount "identity") " in keystore")))
-    (if identity
-        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
-              (role (cond ((assq 'role identity) => cadr) (else "unknown"))))
+    (if node-id
+        (let ((name (cond ((assq 'name node-id) => cadr) (else "unknown")))
+              (role (cond ((assq 'role node-id) => cadr) (else "unknown"))))
           (print "  enrolled as " name " (" role ")"))
         (print "  not enrolled"))))
 
@@ -3796,7 +3812,7 @@ Cyberspace REPL - Available Commands
          (vault-releases (or (and realm (assq 'releases (cdr realm)) (cadr (assq 'releases (cdr realm)))) 0))
          (vault-audits (or (and realm (assq 'audits (cdr realm)) (cadr (assq 'audits (cdr realm)))) 0))
          ;; Identity
-         (identity (read-node-identity))
+         (node-id (read-node-identity))
          ;; Connection origin (SSH client)
          (origin (get-connection-origin)))
     (set-terminal-title window-title)
@@ -3804,8 +3820,8 @@ Cyberspace REPL - Available Commands
     (print "Cyberspace Scheme " version " (" date ")")
     (print "  " host " · " platform (if (not (string=? hw "")) (string-append " · " hw) ""))
     (print "  boot: " boot-time)
-    (when ipv4 (print "  IPv4: " ipv4))
-    (when ipv6 (print "  IPv6: " ipv6))
+    (when (or ipv4 ipv6)
+      (print "  Internet endpoints: " (or ipv4 "—") " · " (or ipv6 "—")))
     (when origin (print "  from: " origin))
     (print "  "
            (if loc (string-append (number->string (quotient loc 1000)) "K loc") "")
@@ -3844,18 +3860,18 @@ Cyberspace REPL - Available Commands
                      (short-hash (string-append (substring hex 0 4) "..." (substring hex (- len 4)))))
                 (if name
                     (print "  realm: " name " (" short-hash ")")
-                    (print "  realm: " short-hash)))))))))
+                    (print "  realm: " short-hash))))))))
     ;; Entropy source
     (let ((ent (entropy-status)))
       (print "  entropy: " (cdr (assq 'source ent)) " (" (cdr (assq 'implementation ent)) ")"))
     ;; FIPS self-test attestation
     (print "  FIPS: " (if (eq? (fips-status) 'passed) "passed" "FAILED"))
     ;; Show identity if enrolled
-    (when identity
-      (let ((name (cond ((assq 'name identity) => cadr) (else #f)))
-            (role (cond ((assq 'role identity) => cadr) (else #f))))
+    (when node-id
+      (let ((name (cond ((assq 'name node-id) => cadr) (else #f)))
+            (role (cond ((assq 'role node-id) => cadr) (else #f))))
         (when (and name role)
-          (print "  identity: " name " (" role ")")))))
+          (print "  identity: " name " (" role ")"))))))
 
 ;;; ============================================================
 ;;; Cyberspace Channel Protocol
@@ -4822,11 +4838,11 @@ Cyberspace REPL - Available Commands
 ;; Show principals (identity + keys)
 (define (principals)
   "Display identity and signing keys"
-  (let ((identity (read-node-identity)))
+  (let ((node-id (read-node-identity)))
     (print "")
-    (if identity
-        (let ((name (cond ((assq 'name identity) => cadr) (else "unknown")))
-              (role (cond ((assq 'role identity) => cadr) (else "unknown"))))
+    (if node-id
+        (let ((name (cond ((assq 'name node-id) => cadr) (else "unknown")))
+              (role (cond ((assq 'role node-id) => cadr) (else "unknown"))))
           (print "Identity: " name " (" role ")"))
         (print "Identity: not enrolled"))
     (print "")
