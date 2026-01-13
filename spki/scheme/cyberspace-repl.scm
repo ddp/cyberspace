@@ -550,6 +550,24 @@
                                  (+ count (rebuild-level-parallel! level)))
                                0
                                levels)))
+      ;; Show forge summary when modules were rebuilt
+      (when (> total-rebuilt 0)
+        (let ((totals (fold (lambda (mod acc)
+                              (let ((meta (read-forge-metadata mod)))
+                                (if meta
+                                    (let* ((metrics (cdr (assq 'metrics meta)))
+                                           (loc (cdr (assq 'loc metrics)))
+                                           (lambdas (cdr (assq 'lambdas metrics))))
+                                      (cons (+ (car acc) loc)
+                                            (+ (cdr acc) lambdas)))
+                                    acc)))
+                            '(0 . 0)
+                            (apply append levels))))
+          (printf "~%Σ ~a LOC · ~a λ · ~a LOC/λ~%"
+                  (car totals) (cdr totals)
+                  (if (> (cdr totals) 0)
+                      (quotient (car totals) (cdr totals))
+                      0))))
       (when (and (= total-rebuilt 0) (>= *boot-verbosity* 1))
         (print "All tomes current for " stamp)))))
 
@@ -5530,9 +5548,9 @@ Cyberspace REPL - Available Commands
             (or rfcs "?"))
     (void)))
 
-;; Single-char shortcuts
-(define |.| status)  ; status at a glance
-(define |?| help)    ; help
+;; Single-char shortcuts (thunks that invoke the command)
+(define (|.|) (status))  ; status at a glance
+(define (|?|) (help))    ; help
 
 ;; Quit shortcuts (don't shadow scheme's exit)
 (define quit repl-goodbye)
@@ -5613,6 +5631,14 @@ Cyberspace REPL - Available Commands
 
         ;; Empty line
         ((string=? line "")
+         (loop))
+
+        ;; Single-char shortcuts (bare ? and . invoke help/status)
+        ((string=? line "?")
+         (help)
+         (loop))
+        ((string=? line ".")
+         (status)
          (loop))
 
         ;; Comma commands
