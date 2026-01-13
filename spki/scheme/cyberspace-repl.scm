@@ -376,6 +376,8 @@
                                    elapsed))
                 (box-line (sprintf "  ~a LOC · ~a λ · ~a LOC/λ"
                                    loc lambdas loc/lambda))
+                (when (>= loc/lambda 10)
+                  (box-line (sprintf "⚠ LOC/λ ≥ 10 (target: < 10)")))
                 (print "└" (string-repeat "─" w) "┘")
                 #t)
               (begin

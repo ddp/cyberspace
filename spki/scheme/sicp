@@ -26,18 +26,21 @@
                              (if (string-contains line "(define ") 1 0)
                              (if (string-contains line "(lambda ") 1 0)))))))))))
 
-(printf "~%SICP Metrics - spki/scheme~%~%")
-(let loop ((mods *modules*) (tloc 0) (tlam 0))
+(printf "~%SICP Metrics - spki/scheme (target: LOC/λ < 10)~%~%")
+(let loop ((mods *modules*) (tloc 0) (tlam 0) (warns 0))
   (if (null? mods)
       (begin
         (printf "  ─────────────────────────────────~%")
-        (printf "  Σ ~a LOC · ~a λ · ~a LOC/λ~%~%"
-                tloc tlam (if (> tlam 0) (quotient tloc tlam) 0)))
+        (printf "  Σ ~a LOC · ~a λ · ~a LOC/λ~a~%~%"
+                tloc tlam (if (> tlam 0) (quotient tloc tlam) 0)
+                (if (> warns 0) (sprintf " (⚠ ~a modules ≥ 10)" warns) " ✓")))
       (let* ((m (car mods))
              (r (analyze (string-append m ".scm")))
              (loc (car r))
-             (lam (cadr r)))
-        (printf "  ~a: ~a LOC · ~a λ · ~a LOC/λ~%"
-                (string-pad-right m 12) loc lam
-                (if (> lam 0) (quotient loc lam) 0))
-        (loop (cdr mods) (+ tloc loc) (+ tlam lam)))))
+             (lam (cadr r))
+             (ratio (if (> lam 0) (quotient loc lam) 0))
+             (warn? (>= ratio 10)))
+        (printf "  ~a: ~a LOC · ~a λ · ~a LOC/λ~a~%"
+                (string-pad-right m 12) loc lam ratio
+                (if warn? " ⚠" ""))
+        (loop (cdr mods) (+ tloc loc) (+ tlam lam) (+ warns (if warn? 1 0))))))

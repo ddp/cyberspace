@@ -218,9 +218,11 @@
       (p "Standalone script for shell usage:")
       (code "$ ./sicp              # From spki/scheme directory
 $ lscs                # Shell alias (defined in .zshrc)")
-      (p "Current totals (v0.60):")
-      (code "Σ 8502 LOC · 920 λ · 9 LOC/λ")
-      (p "9 LOC/λ indicates good compositional structure - small procedures combined to build complex behavior."))
+      (p "Compositional threshold:")
+      (code "LOC/λ < 10  (enforced)")
+      (p "Modules exceeding 10 LOC/λ trigger a warning during forge and are flagged in sicp output. This enforces SICP-style compositional discipline: small procedures composed to build complex behavior.")
+      (p "Current totals (v0.61):")
+      (code "Σ 8502 LOC · 920 λ · 9 LOC/λ ✓"))
     (subsection
       "4.2 Compiler Invocation"
       (p "The forge invokes csc (Chicken Scheme Compiler) with these flags:")
