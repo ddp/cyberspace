@@ -1096,6 +1096,139 @@
   '(replicate-complete))
 
 ;;; ============================================================
+;;; The Weave - Federation Topology View
+;;; ============================================================
+;;; "Reflection invites introspection in the weave."
+;;;
+;;; From any node, see all nodes. The mirrors reflect the entire
+;;; constellation - not just who you're enrolled with, but the
+;;; full topology as known through gossip.
+
+(define (weave-list-enrolled)
+  "List enrolled nodes from .vault/keys/*.cert"
+  (let ((keys-dir ".vault/keys"))
+    (if (directory-exists? keys-dir)
+        (let ((certs (glob "*.cert" keys-dir)))
+          (map (lambda (cert-file)
+                 (let* ((name (pathname-strip-extension (pathname-file cert-file)))
+                        (cert-data (handle-exceptions exn #f
+                                     (with-input-from-file cert-file read))))
+                   (if cert-data
+                       (let* ((cert (if (and (pair? cert-data) (eq? (car cert-data) 'cert))
+                                       cert-data
+                                       (and (pair? cert-data) (assq 'cert cert-data))))
+                              (subject (and cert (assq 'subject (cdr cert))))
+                              (principal (and subject (cadr subject))))
+                         `(,name (principal ,(if principal
+                                                 (short-id (if (blob? principal)
+                                                              (blob->hex principal)
+                                                              (->string principal)))
+                                                 "unknown"))))
+                       `(,name (error "could not parse cert")))))
+               certs))
+        '())))
+
+(define (weave-local-realm)
+  "Get local realm information"
+  (let* ((host (hostname))
+         (vault-exists (directory-exists? ".vault"))
+         (keystore-exists (directory-exists? ".vault/keystore"))
+         (principal (if keystore-exists
+                       (handle-exceptions exn "locked"
+                         (let ((pub-file ".vault/keystore/public.key"))
+                           (if (file-exists? pub-file)
+                               (short-id (with-input-from-file pub-file read-line))
+                               "no-key")))
+                       "no-keystore")))
+    `(,host
+      (principal ,principal)
+      (vault ,vault-exists)
+      (keystore ,keystore-exists))))
+
+(define (weave)
+  "Show the weave - federation topology from this realm's perspective.
+
+   The weave is the constellation of enrolled realms, as seen through
+   the wilderness of mirrors. Each realm mirrors what it knows;
+   gossip propagates the topology.
+
+   Example:
+     (weave)
+     => (weave
+          (local (lambda (principal \"7f3a...\") (vault #t)))
+          (enrolled
+            (starlight (principal \"9b2c...\"))
+            (fluffy (principal \"4d8e...\")))
+          (gossip
+            (peers 2)
+            (running #f)))"
+  (session-stat! 'queries)
+  (let* ((local (weave-local-realm))
+         (enrolled (weave-list-enrolled))
+         (gossip-info (handle-exceptions exn
+                        `(gossip (error "gossip not loaded"))
+                        (gossip-status)))
+         (peers (handle-exceptions exn '()
+                  (list-peers))))
+    (print "")
+    (print "╔══════════════════════════════════════════════════════════════╗")
+    (print "║                        THE WEAVE                             ║")
+    (print "║           Reflection invites introspection                   ║")
+    (print "╚══════════════════════════════════════════════════════════════╝")
+    (print "")
+    (print "Local Realm:")
+    (print "  " (car local))
+    (for-each (lambda (kv) (print "    " (car kv) ": " (cadr kv))) (cdr local))
+    (print "")
+    (print "Enrolled Peers:")
+    (if (null? enrolled)
+        (print "  (none)")
+        (for-each (lambda (node)
+                    (print "  " (car node))
+                    (for-each (lambda (kv) (print "    " (car kv) ": " (cadr kv))) (cdr node)))
+                  enrolled))
+    (print "")
+    (print "Gossip Status:")
+    (if (and (pair? gossip-info) (eq? (car gossip-info) 'gossip-status))
+        (for-each (lambda (kv)
+                    (when (pair? kv)
+                      (print "  " (car kv) ": " (cadr kv))))
+                  (cdr gossip-info))
+        (print "  (gossip daemon not running)"))
+    (print "")
+    (print "Active Peers:")
+    (if (null? peers)
+        (print "  (none - use add-peer to connect)")
+        (for-each (lambda (p) (print "  " p)) peers))
+    (print "")
+    ;; Consensus status
+    (print "Consensus:")
+    (if (null? *consensus-proposals*)
+        (print "  (no active proposals)")
+        (begin
+          (print "  " (length *consensus-proposals*) " proposal(s)")
+          (for-each (lambda (p)
+                      (print "    " (short-id (alist-ref 'id p))
+                             " [" (alist-ref 'quorum p) "] "
+                             (length (alist-ref 'votes p)) " votes"))
+                    *consensus-proposals*)))
+    (print "")
+    ;; Lamport clock
+    (print "Lamport Clock: " *lamport-clock*)
+    (print "")
+    ;; Return structured data for programmatic use
+    `(weave
+      (local ,local)
+      (enrolled ,@enrolled)
+      (gossip ,gossip-info)
+      (peers ,@peers)
+      (consensus ,(length *consensus-proposals*))
+      (lamport ,*lamport-clock*))))
+
+;; Forward declaration note: *quorum-proposals* defined in RFC-036 section
+;; Weave can access it after full load
+
+;;; ============================================================
 ;;; RFC-011: Byzantine Consensus
 ;;; ============================================================
 
