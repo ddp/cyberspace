@@ -292,6 +292,29 @@
                 (+ total-loc loc)
                 (+ total-lambdas lambdas))))))
 
+(define (loch-lambda)
+  "Show modules with LOC/λ ≥ 10 (the Loch Lambda monsters)"
+  (printf "~%Loch Lambda - modules with LOC/λ ≥ 10~%~%")
+  (let loop ((modules *cyberspace-modules*) (monsters '()))
+    (if (null? modules)
+        (if (null? monsters)
+            (printf "  No monsters! All modules < 10 LOC/λ ✓~%~%")
+            (begin
+              (printf "  ─────────────────────────────────~%")
+              (printf "  ~a monsters lurking~%~%" (length monsters))))
+        (let* ((mod (car modules))
+               (src (string-append mod ".scm"))
+               (metrics (analyze-source src))
+               (loc (cdr (assq 'loc metrics)))
+               (lambdas (cdr (assq 'lambdas metrics)))
+               (ratio (cdr (assq 'loc/lambda metrics))))
+          (if (>= ratio 10)
+              (begin
+                (printf "  ~a: ~a LOC · ~a λ · ~a LOC/λ ⚠~%"
+                        (string-pad-right mod 12) loc lambdas ratio)
+                (loop (cdr modules) (cons mod monsters)))
+              (loop (cdr modules) monsters))))))
+
 (define (rebuild-module! module arch stamp)
   "Rebuild a module for current platform.
    Robust: checks exit code, verifies .so was updated, shows details.

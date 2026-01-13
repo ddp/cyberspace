@@ -60,49 +60,52 @@
   ;; *session-stats*, session-stat!, session-stat are imported from os.
   ;; This allows cross-module instrumentation at any level.
 
-  (define (session-stat-init!)
-    "Initialize session statistics at boot."
+  (define (init-stats-boot!)
+    "Initialize boot-time statistics."
     (hash-table-set! *session-stats* 'boot-time (current-seconds))
     (hash-table-set! *session-stats* 'boot-audit-count (length (audit-load-entries-raw)))
     (hash-table-set! *session-stats* 'boot-weave 0)
-    ;; Commands
-    (hash-table-set! *session-stats* 'commands 0)
-    ;; Vault operations
-    (hash-table-set! *session-stats* 'unlocks 0)
-    (hash-table-set! *session-stats* 'reads 0)
-    (hash-table-set! *session-stats* 'writes 0)
-    (hash-table-set! *session-stats* 'bytes-written 0)
-    (hash-table-set! *session-stats* 'deletes 0)
-    (hash-table-set! *session-stats* 'queries 0)
-    ;; Crypto operations
-    (hash-table-set! *session-stats* 'hashes 0)
-    (hash-table-set! *session-stats* 'signs 0)
-    (hash-table-set! *session-stats* 'verifies 0)
-    (hash-table-set! *session-stats* 'encrypts 0)
-    (hash-table-set! *session-stats* 'decrypts 0)
-    ;; Seal operations
-    (hash-table-set! *session-stats* 'commits 0)
-    (hash-table-set! *session-stats* 'seals 0)
-    (hash-table-set! *session-stats* 'syncs 0)
-    ;; Federation
-    (hash-table-set! *session-stats* 'peers-discovered 0)
-    (hash-table-set! *session-stats* 'gossip-exchanges 0)
-    (hash-table-set! *session-stats* 'votes 0)
-    (hash-table-set! *session-stats* 'federation-changes 0)
-    (hash-table-set! *session-stats* 'channels 0)
-    (hash-table-set! *session-stats* 'handshakes 0)
-    ;; Network I/O
-    (hash-table-set! *session-stats* 'bytes-in 0)
-    (hash-table-set! *session-stats* 'bytes-out 0)
-    (hash-table-set! *session-stats* 'packets-ipv4 0)
-    (hash-table-set! *session-stats* 'packets-ipv6 0)
-    (hash-table-set! *session-stats* 'mdns-messages 0)
-    ;; Errors (hopefully zero)
-    (hash-table-set! *session-stats* 'verify-fails 0)
-    (hash-table-set! *session-stats* 'auth-fails 0)
-    (hash-table-set! *session-stats* 'timeouts 0)
-    ;; Navigation
-    (hash-table-set! *session-stats* 'wormholes 0))
+    (hash-table-set! *session-stats* 'commands 0))
+
+  (define (init-stats-vault!)
+    "Initialize vault operation counters."
+    (for-each (lambda (k) (hash-table-set! *session-stats* k 0))
+              '(unlocks reads writes bytes-written deletes queries)))
+
+  (define (init-stats-crypto!)
+    "Initialize cryptographic operation counters."
+    (for-each (lambda (k) (hash-table-set! *session-stats* k 0))
+              '(hashes signs verifies encrypts decrypts)))
+
+  (define (init-stats-seal!)
+    "Initialize seal operation counters."
+    (for-each (lambda (k) (hash-table-set! *session-stats* k 0))
+              '(commits seals syncs)))
+
+  (define (init-stats-federation!)
+    "Initialize federation counters."
+    (for-each (lambda (k) (hash-table-set! *session-stats* k 0))
+              '(peers-discovered gossip-exchanges votes federation-changes channels handshakes)))
+
+  (define (init-stats-network!)
+    "Initialize network I/O counters."
+    (for-each (lambda (k) (hash-table-set! *session-stats* k 0))
+              '(bytes-in bytes-out packets-ipv4 packets-ipv6 mdns-messages)))
+
+  (define (init-stats-errors!)
+    "Initialize error counters."
+    (for-each (lambda (k) (hash-table-set! *session-stats* k 0))
+              '(verify-fails auth-fails timeouts wormholes)))
+
+  (define (session-stat-init!)
+    "Initialize session statistics at boot."
+    (init-stats-boot!)
+    (init-stats-vault!)
+    (init-stats-crypto!)
+    (init-stats-seal!)
+    (init-stats-federation!)
+    (init-stats-network!)
+    (init-stats-errors!))
 
   (define (audit-load-entries-raw)
     "Load audit entry count without parsing (for boot stats)."
@@ -248,51 +251,73 @@
           0)))
 
   ;;; ============================================================
+  ;;; Goodbye Helpers
+  ;;; ============================================================
+
+  (: pad2 (fixnum -> string))
+  (define (pad2 n)
+    "Pad number to 2 digits."
+    (string-pad-left (number->string n) 2 #\0))
+
+  (: format-utc-timestamp (vector -> string))
+  (define (format-utc-timestamp utc)
+    "Format UTC time vector as ISO timestamp."
+    (sprintf "~a-~a-~a ~a:~a:~aZ"
+             (+ 1900 (vector-ref utc 5))
+             (pad2 (+ 1 (vector-ref utc 4)))
+             (pad2 (vector-ref utc 3))
+             (pad2 (vector-ref utc 2))
+             (pad2 (vector-ref utc 1))
+             (pad2 (vector-ref utc 0))))
+
+  (: format-local-timestamp (vector -> string))
+  (define (format-local-timestamp local)
+    "Format local time vector as HH:MM:SS TZ."
+    (sprintf "~a:~a:~a ~a"
+             (pad2 (vector-ref local 2))
+             (pad2 (vector-ref local 1))
+             (pad2 (vector-ref local 0))
+             (time->string local "%Z")))
+
+  (: format-freeze-timestamp (-> string))
+  (define (format-freeze-timestamp)
+    "Format current time as 'UTC (local)' for goodbye."
+    (let* ((secs (current-seconds))
+           (utc (seconds->utc-time secs))
+           (local (seconds->local-time secs)))
+      (sprintf "~a (~a)" (format-utc-timestamp utc) (format-local-timestamp local))))
+
+  (: vault-summary (-> (list-of string)))
+  (define (vault-summary)
+    "Generate vault state summary."
+    (let ((obj-count (count-vault-items "objects"))
+          (key-count (count-vault-items "keys")))
+      (filter identity
+        (list (and (> obj-count 0) (sprintf "~a objects" obj-count))
+              (and (> key-count 0) (sprintf "~a keys" key-count))))))
+
+  (: drain-input (-> undefined))
+  (define (drain-input)
+    "Drain pending input to avoid escape codes leaking to shell."
+    (when (char-ready?) (read-char) (drain-input)))
+
+  ;;; ============================================================
   ;;; Goodbye
   ;;; ============================================================
 
   (define (goodbye #!optional (history-save-proc #f))
     "Exit Cyberspace with farewell message and session summary."
-    ;; Save history if callback provided
     (when history-save-proc (history-save-proc))
-    (let* ((secs (current-seconds))
-           (utc (seconds->utc-time secs))
-           (local (seconds->local-time secs))
-           (utc-str (sprintf "~a-~a-~a ~a:~a:~aZ"
-                            (+ 1900 (vector-ref utc 5))
-                            (string-pad-left (number->string (+ 1 (vector-ref utc 4))) 2 #\0)
-                            (string-pad-left (number->string (vector-ref utc 3)) 2 #\0)
-                            (string-pad-left (number->string (vector-ref utc 2)) 2 #\0)
-                            (string-pad-left (number->string (vector-ref utc 1)) 2 #\0)
-                            (string-pad-left (number->string (vector-ref utc 0)) 2 #\0)))
-           (local-str (sprintf "~a:~a:~a ~a"
-                              (string-pad-left (number->string (vector-ref local 2)) 2 #\0)
-                              (string-pad-left (number->string (vector-ref local 1)) 2 #\0)
-                              (string-pad-left (number->string (vector-ref local 0)) 2 #\0)
-                              (time->string local "%Z")))
-           (date-str (sprintf "~a (~a)" utc-str local-str))
-           ;; Session statistics
-           (session-parts (session-summary))
-           ;; Vault state
-           (obj-count (count-vault-items "objects"))
-           (key-count (count-vault-items "keys"))
-           (vault-parts (filter identity
-                          (list
-                            (and (> obj-count 0) (sprintf "~a objects" obj-count))
-                            (and (> key-count 0) (sprintf "~a keys" key-count)))))
-           ;; Combine session stats and vault state
-           (all-parts (append session-parts vault-parts)))
+    (let* ((date-str (format-freeze-timestamp))
+           (all-parts (append (session-summary) (vault-summary))))
       (print "")
       (if (null? all-parts)
           (printf "Cyberspace frozen at ~a on ~a.~n" date-str (hostname))
           (printf "Cyberspace frozen at ~a on ~a.~n  Session: ~a~n"
-                  date-str
-                  (hostname)
-                  (string-intersperse all-parts " · ")))
+                  date-str (hostname) (string-intersperse all-parts " · ")))
       (print "")
       (flush-output)
-      ;; Drain any pending input to avoid escape codes leaking to shell
-      (let drain () (when (char-ready?) (read-char) (drain)))
+      (drain-input)
       (exit 0)))
 
 ) ;; end module portal
