@@ -192,9 +192,9 @@
         (list
           ;; Always show uptime
           (format-duration uptime)
-          ;; Weave score
+          ;; Weave score (crypto ops/ms at boot)
           (and (> boot-weave 0)
-               (string-append (number->string (inexact->exact (round boot-weave))) " weave"))
+               (string-append (number->string (inexact->exact (round boot-weave))) " ops/ms"))
           ;; Vault I/O
           (format-stat 'unlocks "unlock" "s")
           (format-stat 'reads "read" "s")
