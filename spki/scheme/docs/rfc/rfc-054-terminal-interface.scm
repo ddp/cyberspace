@@ -135,39 +135,53 @@
       (p "Not:")
       (code "Error: nil key")))
   (section
-    "10. Single-Character Shortcuts"
+    "10. Boot Verbosity Levels"
+    (p "Cyberspace supports five named boot verbosity levels, controlled via the CYBERSPACE_BOOT environment variable or (boot-level! 'level) at runtime:")
+    (table
+      (header "Level " "Name " "Output ")
+      (row "0 " "shadow " "Silent — just prompt (default) ")
+      (row "1 " "whisper " "Version + Ready ")
+      (row "2 " "portal " "Banner + help + Ready ")
+      (row "3 " "chronicle " "Add module timings ")
+      (row "4 " "oracle " "Full revelation (forge details) "))
+    (p "Examples:")
+    (code "# Quiet daily use (default)\nCYBERSPACE_BOOT=shadow cs\n\n# Full welcome experience\nCYBERSPACE_BOOT=portal cs\n\n# Debug slow startup\nCYBERSPACE_BOOT=chronicle cs")
+    (p "The (banner) and (help) commands remain available at all levels for on-demand display."))
+  (section
+    "11. Single-Character Shortcuts"
     (table
       (header "Symbol " "Function " "Description ")
       (row "\\" ".\\" " " "status " "Compact status display ")
       (row "\\" "?\\" " " "help " "Show help "))
     (p "These use pipe-delimited symbols to avoid conflict with Scheme."))
   (section
-    "11. Terminal Window"
+    "12. Terminal Window"
     (subsection
-      "11.1 Title"
+      "12.1 Title"
       (p "Set terminal title on startup:")
       (code scheme "(define (set-terminal-title title)\n  (display (string-append \"\\x1b]0;\" title \"\\x07\")))")
       (p "Format: <Hostname> Workstation"))
     (subsection
-      "11.2 Clear Screen"
+      "12.2 Clear Screen"
       (code scheme "(define (clear)\n  (display \"\\x1b[2J\\x1b[H\")\n  (void))")))
   (section
-    "12. Implementation Notes"
+    "13. Implementation Notes"
     (subsection
-      "12.1 UTF-8 and string-ref"
+      "13.1 UTF-8 and string-ref"
       (p "Do NOT use string-ref on strings containing multi-byte UTF-8 characters. Use vectors of strings instead:")
       (code scheme ";; WRONG - fails on multi-byte chars\n(string-ref \"▁▂▃\" idx)\n\n;; RIGHT - vector of strings\n(vector-ref '#(\"▁\" \"▂\" \"▃\") idx)"))
     (subsection
-      "12.2 Width Calculations"
+      "13.2 Width Calculations"
       (p "String length for box padding must account for display width, not byte length. ASCII characters are safe. For emoji or CJK, additional handling is needed.")))
   (section
-    "13. Linting Checklist"
+    "14. Linting Checklist"
     (p "When auditing terminal output:")
     (p "1. [ ] Boxes use Unicode box-drawing characters 2. [ ] Trees use ├─ and └─ consistently 3. [ ] Prompt is :  (colon-space) 4. [ ] Colors are optional, not required for meaning 5. [ ] Error messages are actionable 6. [ ] Functions returning output use (void) 7. [ ] Long values are truncated with ... 8. [ ] Blank lines follow the convention 9. [ ] No ASCII art boxes (+---, |, etc.) 10. [ ] No tabs in output (spaces only)"))
   (section
-    "14. References"
+    "15. References"
     (p "1. RFC-053 — The Normie Interface (GUI counterpart) 2. RFC-002 — Architecture (\"English on top, Scheme underneath\") 3. Unicode Standard — Box Drawing (U+2500–U+257F) 4. ECMA-48 — Control Functions for Coded Character Sets (VT100)"))
   (section
     "Changelog"
+    (p "- 2026-01-13 — Add boot verbosity levels (shadow, whisper, portal, chronicle, oracle)")
     (p "- 2026-01-11 — Initial specification")))
 
