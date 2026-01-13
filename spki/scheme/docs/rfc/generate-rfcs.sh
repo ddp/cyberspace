@@ -1,6 +1,9 @@
 #!/bin/zsh
 # RFC Documentation Pipeline (S-expression Edition)
 setopt null_glob
+
+# Always run from script's directory
+cd "$(dirname "$0")"
 # Generates all RFC formats and index catalog
 # Auto-discovers all rfc-*.scm source files
 #
@@ -337,9 +340,11 @@ echo "=== RFC Documentation Pipeline (S-expression) ==="
 echo "Started: $(date -u '+%Y-%m-%d %H:%M:%SZ') ($(date '+%H:%M:%S %Z'))"
 echo ""
 
-# Extract kernel assertions (for RFC-046)
-echo "Extracting assertions..."
-./extract-assertions.sh
+# Extract kernel assertions (for RFC-046) - optional
+if [[ -x ./extract-assertions.sh ]]; then
+  echo "Extracting assertions..."
+  ./extract-assertions.sh
+fi
 
 # Generate all formats via Scheme
 echo ""
