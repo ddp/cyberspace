@@ -5641,6 +5641,10 @@ Cyberspace REPL - Available Commands
          (status)
          (loop))
 
+        ;; Natural language exit (with optional trailing period)
+        ((or (string=? line "bye") (string=? line "bye."))
+         (goodbye repl-history-save *boot-verbosity*))
+
         ;; Comma commands
         ((char=? (string-ref line 0) #\,)
          (repl-history-add line)
