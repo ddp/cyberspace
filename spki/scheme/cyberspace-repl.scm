@@ -391,6 +391,34 @@
           (if pos
               (loop (substring s (+ pos sub-len)) (+ count 1))
               count)))))
+
+  ;; Spinning lambda for long operations - lambdas in motion!
+  (define *spinner-chars* '#("λ" "λ·" "λ··" "λ···" "··λ·" "·λ··" "λ···" "λ··" "λ·" "λ"))
+  (define *spinner-stars* '#("✧" "✦" "★" "✦" "✧" "☆" "✧" "✦" "★" "✦"))
+  (define *spinner-idx* 0)
+
+  (define (spin! #!optional (style 'lambda))
+    "Advance spinner and display. Call repeatedly during long ops."
+    (let* ((chars (if (eq? style 'stars) *spinner-stars* *spinner-chars*))
+           (char (vector-ref chars (modulo *spinner-idx* (vector-length chars)))))
+      (display (string-append "\r" char " "))
+      (flush-output)
+      (set! *spinner-idx* (+ *spinner-idx* 1))))
+
+  (define (spin-done!)
+    "Clear spinner line"
+    (display "\r   \r")
+    (flush-output)
+    (set! *spinner-idx* 0))
+
+  (define (with-spinner thunk #!optional (style 'lambda))
+    "Run thunk with spinner animation"
+    (let ((result #f))
+      (handle-exceptions exn
+        (begin (spin-done!) (abort exn))
+        (set! result (thunk)))
+      (spin-done!)
+      result))
   (define (display-width str)
     "Calculate display width accounting for multi-byte Unicode chars.
      λ is 2 bytes but 1 display char. ✓✗⚠ are 3 bytes but 1 display char."
@@ -424,17 +452,23 @@
     (print "┌" (string-repeat "─" left-pad) title (string-repeat "─" right-pad) "┐")
     ;; Beta mode adds -strict-types for better type checking
     ;; All modules now have type declarations for tractable inference
+    ;;
+    ;; Modules depending on crypto-ffi need libsodium at link time.
+    ;; We include library paths for all modules since it's harmless
+    ;; for those that don't need it and ensures correct linking for
+    ;; the crypto dependency chain (RFC-056: covert channel awareness).
     (let* ((strict-exempt '())  ; none - all modules typed
            (beta-flags (if (and *beta-build* (not (member module strict-exempt)))
                            " -strict-types" ""))
-           (actual-cmd (if (string=? module "crypto-ffi")
-                           (string-append "csc -shared -J" beta-flags " " src
-                                          " -I" inc-path " -L" lib-path
-                                          " -L -lsodium 2>&1; echo \"__EXIT__$?\"")
-                           (string-append "csc -shared -J" beta-flags " " src " 2>&1; echo \"__EXIT__$?\"")))
-           (display-cmd (if (string=? module "crypto-ffi")
-                            (string-append "csc -shared -J" beta-flags " " src " -I... -L... -lsodium")
-                            (string-append "csc -shared -J" beta-flags " " src))))
+           ;; crypto-ffi needs includes for header files, others just need lib path
+           (needs-includes? (string=? module "crypto-ffi"))
+           (lib-flags (string-append " -L" lib-path " -L -lsodium"))
+           (inc-flags (if needs-includes? (string-append " -I" inc-path) ""))
+           (actual-cmd (string-append "csc -shared -J" beta-flags " " src
+                                      inc-flags lib-flags
+                                      " 2>&1; echo \"__EXIT__$?\""))
+           (display-cmd (string-append "csc -shared -J" beta-flags " " src
+                                       (if needs-includes? " -I... -L... -lsodium" ""))))
       (box-line display-cmd)
       (let* ((all-output (with-input-from-pipe actual-cmd
                            (lambda ()
@@ -769,20 +803,54 @@
     (print "Thing " (short-id id) " marked ephemeral")
     thing))
 
+(define (validate-for-vault thing)
+  "Run thing's self-test lambda before allowing vault migration.
+   MANDATORY: Every thing MUST carry a 'test lambda to be archived.
+   No test = no vault. Clean pass required."
+  (let ((test-entry (and (list? thing)
+                         (pair? (car thing))
+                         (assq 'test thing))))
+    (if test-entry
+        (handle-exceptions exn
+          (begin
+            (print "  ✗ validation exception: "
+                   (get-condition-property exn 'exn 'message "unknown"))
+            #f)
+          (let ((result ((cdr test-entry))))
+            (if result
+                #t
+                (begin
+                  (print "  ✗ self-test failed")
+                  #f))))
+        ;; No test lambda = REJECT
+        (begin
+          (print "  ✗ no test lambda (mandatory for vault)")
+          #f))))
+
 (define (flush-persistence!)
-  "Migrate all queued persistent things to vault"
+  "Migrate all queued persistent things to vault.
+   Each thing must pass its self-contained regression test (if any)."
   (if (null? *persistence-queue*)
       (print "Persistence queue empty")
-      (begin
-        (print "Migrating " (length *persistence-queue*) " things to vault...")
+      (let* ((things *persistence-queue*)
+             (validated (filter validate-for-vault things))
+             (rejected (filter (lambda (t) (not (validate-for-vault t))) things)))
+        (print "Migrating " (length things) " things to vault...")
+        (print "  " (length validated) " passed validation")
+        (when (not (null? rejected))
+          (print "  " (length rejected) " REJECTED (failed self-test)"))
+        ;; Only migrate validated things
         (for-each
          (lambda (thing)
            (let ((id (thing-id thing)))
              (content-put (format "~a" thing))
-             (print "  " (short-id id) " -> vault")))
-         *persistence-queue*)
-        (set! *persistence-queue* '())
-        (print "Done."))))
+             (print "  ✓ " (short-id id) " -> vault")))
+         validated)
+        ;; Clear only migrated things, keep rejected in queue
+        (set! *persistence-queue* rejected)
+        (if (null? rejected)
+            (print "Done.")
+            (print "Done. " (length rejected) " things remain in queue (fix and retry).")))))
 
 (define (thing-status thing)
   "Show thing's state and durability"
@@ -791,9 +859,25 @@
     (print "  State: " (thing-state thing))
     (print "  Durability: " (thing-durability thing))
     (print "  Cacheable: " (if (quiescent? thing) "yes (forever)" "no"))
+    (print "  Self-test: " (if (and (list? thing)
+                                    (pair? (car thing))
+                                    (assq 'test thing))
+                               "present"
+                               "none"))
     `((id . ,id)
       (state . ,(thing-state thing))
       (durability . ,(thing-durability thing)))))
+
+(define (make-tested-thing id data test-lambda)
+  "Create a thing with a self-contained regression test.
+   Example:
+     (make-tested-thing 'my-cert cert-data
+       (lambda () (verify-signature cert-data)))
+   The test lambda must return #t to pass."
+  `((id . ,id)
+    (data . ,data)
+    (test . ,test-lambda)
+    (created . ,(current-seconds))))
 
 ;;; ============================================================
 ;;; Node Identity and Attestation
@@ -5032,10 +5116,15 @@ Cyberspace REPL - Available Commands
      ("(loch-lambda)" "Find LOC/λ ≥ 10 modules")
      ("(forged \"module\")" "View forge metadata")
      ("(forged-all)" "All forge metrics")
+     ("(regression)" "Run all regression tests")
+     ("(regression #t)" "Verbose test output")
      ("(reload!)" "Hot reload REPL definitions"))
 
     (system "System & Introspection"
      ("(introspect)" "Full system introspection")
+     ("(measure-weave)" "Crypto benchmark (ops/ms)")
+     ("(weave-stratum N)" "Lattice stratum (RFC-056)")
+     ("*weave-strata*" "Stratum thresholds alist")
      ("(banner)" "Redisplay startup banner")
      ("(entropy-status)" "Entropy source info")
      ("(fips-status)" "FIPS self-test status")
@@ -5697,6 +5786,232 @@ Cyberspace REPL - Available Commands
   (print "Reloading cyberspace-repl.scm...")
   (load "cyberspace-repl.scm")
   (print "Reloaded. New definitions active."))
+
+;;; ============================================================
+;;; Regression Test Suite
+;;; ============================================================
+;;
+;; Take the lambdas out for a spin. Exercise every stratum of the weave.
+;; Run with (regression) to verify the system is working.
+
+;; Helper: blob to hex string
+(define (blob->hex blob)
+  (let* ((vec (blob->u8vector blob))
+         (len (u8vector-length vec)))
+    (let loop ((i 0) (acc '()))
+      (if (= i len)
+          (apply string-append (reverse acc))
+          (loop (+ i 1)
+                (cons (sprintf "~2,'0x" (u8vector-ref vec i)) acc))))))
+
+;; Helper: blob equality
+(define (blob=? a b)
+  (let ((av (blob->u8vector a))
+        (bv (blob->u8vector b)))
+    (and (= (u8vector-length av) (u8vector-length bv))
+         (let loop ((i 0))
+           (or (= i (u8vector-length av))
+               (and (= (u8vector-ref av i) (u8vector-ref bv i))
+                    (loop (+ i 1))))))))
+
+(define *regression-tests* '())  ; alist of (name . thunk)
+
+(define (deftest name thunk)
+  "Register a regression test"
+  (set! *regression-tests* (append *regression-tests* (list (cons name thunk)))))
+
+(define (run-test name thunk)
+  "Run a single test, return (name pass? elapsed-ms message)"
+  (let ((start (current-milliseconds)))
+    (handle-exceptions exn
+      (list name #f (- (current-milliseconds) start)
+            (sprintf "Exception: ~a" (get-condition-property exn 'exn 'message "unknown")))
+      (let ((result (thunk)))
+        (list name (car result) (- (current-milliseconds) start) (cdr result))))))
+
+;; === Crypto Primitives ===
+
+(deftest 'sha256
+  (lambda ()
+    (let* ((hash (sha256-hash "abc"))
+           (hex (blob->hex hash)))
+      (if (string=? hex "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+          (cons #t "NIST FIPS 180-4 KAT")
+          (cons #f (sprintf "got ~a" (substring hex 0 16)))))))
+
+(deftest 'sha512
+  (lambda ()
+    (let* ((hash (sha512-hash "abc"))
+           (hex (blob->hex hash)))
+      (if (string-prefix? "ddaf35a193617aba" hex)
+          (cons #t "NIST FIPS 180-4 KAT")
+          (cons #f (sprintf "got ~a" (substring hex 0 16)))))))
+
+(deftest 'blake2b
+  (lambda ()
+    (let* ((hash (blake2b-hash "abc"))
+           (hex (blob->hex hash)))
+      (if (string-prefix? "ba80a53f981c4d0d" hex)
+          (cons #t "RFC 7693 KAT")
+          (cons #f (sprintf "got ~a" (substring hex 0 16)))))))
+
+(deftest 'ed25519-sign-verify
+  (lambda ()
+    (let* ((keys (ed25519-keypair))
+           (pk (car keys))
+           (sk (cadr keys))
+           (msg "test message for signing")
+           (sig (ed25519-sign sk msg)))
+      (if (ed25519-verify pk sig msg)
+          (cons #t "sign/verify round-trip")
+          (cons #f "verification failed")))))
+
+(deftest 'ed25519-wrong-key
+  (lambda ()
+    (let* ((keys1 (ed25519-keypair))
+           (keys2 (ed25519-keypair))
+           (pk1 (car keys1))
+           (sk2 (cadr keys2))
+           (msg "test message")
+           (sig (ed25519-sign sk2 msg)))
+      ;; Should NOT verify with wrong key
+      (if (not (ed25519-verify pk1 sig msg))
+          (cons #t "rejects wrong key")
+          (cons #f "accepted wrong key!")))))
+
+(deftest 'x25519-key-exchange
+  (lambda ()
+    (let* ((alice (x25519-keypair))
+           (bob (x25519-keypair))
+           (alice-pk (car alice))
+           (alice-sk (cadr alice))
+           (bob-pk (car bob))
+           (bob-sk (cadr bob))
+           (shared-a (x25519-shared-secret alice-sk bob-pk))
+           (shared-b (x25519-shared-secret bob-sk alice-pk)))
+      (if (blob=? shared-a shared-b)
+          (cons #t "DH key agreement")
+          (cons #f "shared secrets differ")))))
+
+(deftest 'random-bytes
+  (lambda ()
+    (let* ((r1 (random-bytes 32))
+           (r2 (random-bytes 32)))
+      (if (and (= (blob-size r1) 32)
+               (= (blob-size r2) 32)
+               (not (blob=? r1 r2)))
+          (cons #t "32 bytes, non-repeating")
+          (cons #f "entropy failure")))))
+
+;; === Weave Performance ===
+
+(deftest 'weave-performance
+  (lambda ()
+    (let* ((weave (measure-weave))
+           (stratum (weave-stratum weave)))
+      (if (> weave 0)
+          (cons #t (sprintf "~a (~a stratum)" weave stratum))
+          (cons #f "weave is zero")))))
+
+;; === Vault Operations ===
+
+(deftest 'vault-exists
+  (lambda ()
+    (if (directory-exists? ".vault")
+        (cons #t ".vault directory present")
+        (cons #f "no .vault directory"))))
+
+(deftest 'vault-query
+  (lambda ()
+    (if (not (directory-exists? ".vault"))
+        (cons #t "skipped (no vault)")
+        (let ((results (query (lambda (o) #t))))
+          (cons #t (sprintf "~a objects" (length results)))))))
+
+(deftest 'soup-browse
+  (lambda ()
+    (if (not (directory-exists? ".vault"))
+        (cons #t "skipped (no vault)")
+        (let ((count (length (directory ".vault"))))
+          (cons #t (sprintf "~a entries" count))))))
+
+;; === Module Loading ===
+
+(deftest 'modules-loaded
+  (lambda ()
+    (let ((loaded (length *cyberspace-modules*)))
+      (if (>= loaded 20)
+          (cons #t (sprintf "~a modules" loaded))
+          (cons #f (sprintf "only ~a modules" loaded))))))
+
+;; === FIPS Status ===
+
+(deftest 'fips-passed
+  (lambda ()
+    (if (eq? (fips-status) 'passed)
+        (cons #t "all KATs passed")
+        (cons #f "FIPS self-test failed"))))
+
+;; === Entropy ===
+
+(deftest 'entropy-source
+  (lambda ()
+    (let ((ent (entropy-status)))
+      (if ent
+          (cons #t (cdr (assq 'source ent)))
+          (cons #f "no entropy status")))))
+
+;; === The Regression Runner ===
+
+(define (regression #!optional verbose?)
+  "Run all regression tests against the weave.
+   (regression)     - summary only
+   (regression #t)  - verbose output"
+  (print "")
+  (print "┌─────────────────────────────────────────────────────────────┐")
+  (print "│             Cyberspace Regression Suite                     │")
+  (print "├─────────────────────────────────────────────────────────────┤")
+  (let* ((start (current-milliseconds))
+         ;; Run tests with spinning lambda
+         (results (map (lambda (t)
+                         (spin!)
+                         (run-test (car t) (cdr t)))
+                       *regression-tests*))
+         (_ (spin-done!))
+         (passed (filter (lambda (r) (cadr r)) results))
+         (failed (filter (lambda (r) (not (cadr r))) results))
+         (elapsed (- (current-milliseconds) start)))
+    ;; Show each test result
+    (for-each
+      (lambda (r)
+        (let ((name (car r))
+              (pass? (cadr r))
+              (ms (caddr r))
+              (msg (cadddr r)))
+          (if pass?
+              (when verbose?
+                (printf "│  ✓ ~a (~ams) ~a~n"
+                        (string-pad-right (symbol->string name) 20)
+                        ms msg))
+              (printf "│  ✗ ~a (~ams) ~a~n"
+                      (string-pad-right (symbol->string name) 20)
+                      ms msg))))
+      results)
+    ;; Summary
+    (print "├─────────────────────────────────────────────────────────────┤")
+    (let ((total (length results))
+          (pass-count (length passed))
+          (fail-count (length failed)))
+      (if (= fail-count 0)
+          (printf "│  ✓ All ~a tests passed in ~ams~n" total elapsed)
+          (printf "│  ~a/~a passed, ~a FAILED in ~ams~n"
+                  pass-count total fail-count elapsed)))
+    (print "└─────────────────────────────────────────────────────────────┘")
+    (print "")
+    ;; Return summary
+    (if (null? failed)
+        'passed
+        (map car failed))))
 
 ;; Settable prompt
 (define *prompt* ": ")
