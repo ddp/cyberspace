@@ -119,6 +119,7 @@ generate_index() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Library of Cyberspace - RFC Index</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><rect width=%2732%27 height=%2732%27 fill=%27%231a1a2e%27/><text x=%2716%27 y=%2724%27 font-family=%27serif%27 font-size=%2724%27 fill=%27%2300d4aa%27 text-anchor=%27middle%27>λ</text></svg>">
   <style>
     :root {
       /* Dark theme (default) - terminal phosphor */
