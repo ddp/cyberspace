@@ -4754,56 +4754,130 @@ Cyberspace REPL - Available Commands
 ;;; Help System
 ;;; ============================================================
 
-(define (help)
-  "Display help for Cyberspace Scheme"
+(define *help-topics*
+  '((vault "Vault & Objects"
+     ("(soup)" "Browse vault objects")
+     ("(soup 'keys)" "List keys")
+     ("(soup 'audit)" "List audit entries")
+     ("(soup-du)" "Disk usage")
+     ("(seal-commit MSG)" "Commit changes")
+     ("(seal-release VER)" "Create release")
+     ("(query PRED)" "Query vault objects"))
+
+    (library "RFCs & Documentation"
+     ("(library)" "Browse all RFCs")
+     ("(search 'topic)" "Search vault + library")
+     ("(rfc N)" "View RFC in terminal")
+     ("(rfc N 'html)" "Open RFC in browser"))
+
+    (security "Keys & Certificates"
+     ("(principals)" "Show identity and keys")
+     ("(keyring-list)" "List keys in keyring")
+     ("(keyring-generate)" "Generate new keypair")
+     ("(security-summary)" "Security overview")
+     ("(verify-object OBJ)" "Verify signature"))
+
+    (crypto "Cryptographic Primitives"
+     ("(sha512-hash DATA)" "SHA-512 hash")
+     ("(blake2b-hash DATA)" "BLAKE2b hash")
+     ("(ed25519-keypair)" "Generate Ed25519 keypair")
+     ("(sign KEY DATA)" "Sign with private key")
+     ("(verify KEY SIG DATA)" "Verify signature")
+     ("(encrypt KEY DATA)" "Encrypt with X25519")
+     ("(decrypt KEY DATA)" "Decrypt with X25519"))
+
+    (certs "SPKI Certificates"
+     ("(cert-create ...)" "Create certificate")
+     ("(cert-verify CERT)" "Verify certificate")
+     ("(cert-chain ...)" "Build certificate chain")
+     ("(capability? OBJ)" "Check if capability"))
+
+    (federation "Discovery & Gossip"
+     ("(status)" "Node status")
+     ("(enrollment-status)" "Enrollment state")
+     ("(enroll)" "Interactive enrollment")
+     ("(announce-presence 'name)" "Register on mDNS")
+     ("(discover-peers)" "Find _cyberspace._tcp peers")
+     ("(gossip-status)" "Gossip daemon status"))
+
+    (audit "Audit Trail"
+     ("(audit-read)" "Read audit trail")
+     ("(audit-chain)" "Verify chain integrity")
+     ("(audit-append TYPE MSG)" "Append audit entry"))
+
+    (inspector "Debugger & Inspector"
+     ("(inspect OBJ)" "Inspect any object")
+     ("(describe OBJ)" "Describe type/contents")
+     ("(bt)" "Show backtrace")
+     ("(frame N)" "Examine stack frame")
+     ("(enable-inspector!)" "Turn on debug> prompt")
+     ("(disable-inspector!)" "Turn off debug> prompt"))
+
+    (forge "Build & Metrics"
+     ("(sicp)" "SICP metrics for all modules")
+     ("(loch-lambda)" "Find LOC/λ ≥ 10 modules")
+     ("(forged \"module\")" "View forge metadata")
+     ("(forged-all)" "All forge metrics")
+     ("(reload!)" "Hot reload REPL definitions"))
+
+    (system "System & Introspection"
+     ("(introspect)" "Full system introspection")
+     ("(banner)" "Redisplay startup banner")
+     ("(entropy-status)" "Entropy source info")
+     ("(fips-status)" "FIPS self-test status")
+     ("(goodbye)" "Exit with session summary"))))
+
+(define (help #!optional topic)
+  "Display help for Cyberspace Scheme.
+   (help)         - Essential commands
+   (help 'topics) - List all topics
+   (help 'vault)  - Show vault commands
+   (help 'crypto) - Show crypto primitives"
   (print "")
-  (print "Cyberspace Scheme - built on Chicken Scheme")
-  (print "")
-  (print "Vault:")
-  (print "  (soup)              - Browse vault objects")
-  (print "  (soup 'keys)        - List keys")
-  (print "  (soup 'audit)       - List audit entries")
-  (print "  (soup-du)           - Disk usage")
-  (print "  (seal-commit MSG)   - Commit changes")
-  (print "  (seal-release VER)  - Create release")
-  (print "")
-  (print "Library:")
-  (print "  (library)           - Browse all RFCs")
-  (print "  (search 'topic)     - Search vault + library")
-  (print "  (rfc 54)            - View RFC in terminal")
-  (print "  (rfc 54 'html)      - Open in browser")
-  (print "")
-  (print "Security:")
-  (print "  (principals)        - Show identity and keys")
-  (print "  (keyring-list)      - List keys in keyring")
-  (print "  (keyring-generate)  - Generate new keypair")
-  (print "  (security-summary)  - Security overview")
-  (print "  (verify-object OBJ) - Verify signature")
-  (print "")
-  (print "Federation:")
-  (print "  (status)            - Node status")
-  (print "  (enrollment-status) - Enrollment state")
-  (print "  (announce-presence 'name) - Register on mDNS")
-  (print "  (discover-peers)    - Find _cyberspace._tcp peers")
-  (print "  (gossip-status)     - Gossip daemon status")
-  (print "")
-  (print "Audit:")
-  (print "  (audit-read)        - Read audit trail")
-  (print "  (audit-chain)       - Verify chain integrity")
-  (print "")
-  (print "Inspector:")
-  (print "  (inspect OBJ)       - Inspect any object")
-  (print "  (describe OBJ)      - Describe object type/contents")
-  (print "  (enable-inspector!) - Turn on debug> prompt")
-  (print "  (disable-inspector!) - Turn off debug> prompt")
-  (print "")
-  (print "Shortcuts:")
-  (print "  (|.|)               - Status at a glance")
-  (print "  (|?|)               - This help")
-  (print "  (banner)            - Redisplay startup banner")
-  (print "  (bye)               - Exit with session summary")
-  (print "")
-  (print vt100-normal)
+  (cond
+    ;; (help 'topics) - show topic index
+    ((eq? topic 'topics)
+     (print "Help Topics - (help 'topic) for details")
+     (print "")
+     (for-each (lambda (entry)
+                 (let ((sym (car entry))
+                       (title (cadr entry))
+                       (count (length (cddr entry))))
+                   (print "  " (string-pad-right (symbol->string sym) 12)
+                          " - " title " (" count ")")))
+               *help-topics*)
+     (print ""))
+
+    ;; (help 'something) - show specific topic
+    (topic
+     (let ((entry (assq topic *help-topics*)))
+       (if entry
+           (let ((title (cadr entry))
+                 (commands (cddr entry)))
+             (print title ":")
+             (print "")
+             (for-each (lambda (cmd)
+                         (print "  " (string-pad-right (car cmd) 26) " - " (cadr cmd)))
+                       commands)
+             (print ""))
+           (begin
+             (print "Unknown topic: " topic)
+             (print "Try (help 'topics) to see available topics.")
+             (print "")))))
+
+    ;; (help) - essentials only
+    (else
+     (print "Cyberspace Scheme")
+     (print "")
+     (print "  (soup)            - Browse vault")
+     (print "  (library)         - Browse RFCs")
+     (print "  (search 'topic)   - Search everything")
+     (print "  (status)          - Node status")
+     (print "  (inspect OBJ)     - Inspect anything")
+     (print "")
+     (print "  (help 'topics)    - All help topics (52 commands)")
+     (print "  (.) status  (?) help  (bye) exit")
+     (print "")))
   (void))
 
 ;; Friendly exit - delegates to portal module
