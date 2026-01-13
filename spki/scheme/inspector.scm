@@ -371,7 +371,7 @@
               (printf "  ... (~a more frames)~n" (- (length frames) 10))))))
 
     (print "")
-    (print "(?) help  (exit) quit  :f N (frame)  :i OBJ (inspect)  :r (restarts)")
+    (print "(.) proceed  (?) help  (exit) quit  |  frame N  inspect EXPR  restarts")
     (print "")
 
     ;; Inspector loop
@@ -381,27 +381,46 @@
       (let ((input (read-line)))
         (cond
           ((or (eof-object? input)
-               (member input '(":q" ":quit" ",q" "bye" "bye." "exit" "(exit)")))
+               (member input '(":q" ":quit" ",q" "bye" "bye." "exit" "(exit)" "q" "quit")))
            (print "Returning to REPL.")
            #f)
 
-          ((member input '("?" ":?" ":h" ":help"))
-           (print "Inspector commands: :f N (frame), :i OBJ (inspect), :r (restarts), :q (quit)")
+          ;; Dylan-style: period means "do it" / proceed
+          ((member input '("." "go" "proceed" "continue"))
+           (print "Proceeding.")
+           #f)
+
+          ((member input '("?" ":?" ":h" ":help" "help"))
+           (print "(.) proceed  (?) help  (exit) quit")
+           (print "frame N  inspect EXPR  restarts")
            (loop))
 
-          ((string-prefix? ":f " input)
-           (let ((n (string->number (substring input 3))))
-             (if n (pp-frame n) (print "Usage: :f N")))
+          ;; Frame commands: :f N or frame N
+          ((or (string-prefix? ":f " input)
+               (string-prefix? "frame " input)
+               (string-prefix? "f " input))
+           (let* ((prefix-len (cond ((string-prefix? "frame " input) 6)
+                                    ((string-prefix? ":f " input) 3)
+                                    (else 2)))
+                  (n (string->number (string-trim-both (substring input prefix-len)))))
+             (if n (pp-frame n) (print "Usage: frame N")))
            (loop))
 
-          ((string-prefix? ":i " input)
-           (let ((expr (substring input 3)))
+          ;; Inspect commands: :i EXPR or inspect EXPR
+          ((or (string-prefix? ":i " input)
+               (string-prefix? "inspect " input)
+               (string-prefix? "i " input))
+           (let* ((prefix-len (cond ((string-prefix? "inspect " input) 8)
+                                    ((string-prefix? ":i " input) 3)
+                                    (else 2)))
+                  (expr (substring input prefix-len)))
              (handle-exceptions exn
                (printf "Error: ~a~n" ((condition-property-accessor 'exn 'message) exn))
                (describe (eval (read (open-input-string expr))))))
            (loop))
 
-          ((member input '(":r" ":restarts"))
+          ;; Restarts: :r or restarts
+          ((member input '(":r" ":restarts" "r" "restarts"))
            (print "Available restarts:")
            (for-each
              (lambda (r)
@@ -409,8 +428,10 @@
              *restarts*)
            (loop))
 
-          ((string-prefix? ":r " input)
-           (let ((name (string->symbol (substring input 3))))
+          ((or (string-prefix? ":r " input)
+               (string-prefix? "restart " input))
+           (let* ((prefix-len (if (string-prefix? "restart " input) 8 3))
+                  (name (string->symbol (substring input prefix-len))))
              (invoke-restart name)))
 
           ((string-prefix? ":" input)
