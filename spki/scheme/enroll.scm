@@ -59,7 +59,8 @@
           srfi-13     ; string utilities
           srfi-18     ; threads
           crypto-ffi
-          wordlist)
+          wordlist
+          (only vault lamport-time))
 
   ;; Use FIPS-181 by default for federal compliance
   (define (pubkey->verification-code pubkey)
@@ -371,6 +372,7 @@
     "Full system introspection - all the thangs!"
     `(system-info
       (timestamp ,(current-seconds))
+      (lamport-time ,(lamport-time))
       (uptime ,(shell-command "uptime | sed 's/.*up //' | sed 's/,.*//'"))
       ,(introspect-hardware)
       ,(introspect-network)

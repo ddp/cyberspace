@@ -5749,8 +5749,9 @@ Cyberspace REPL - Available Commands
          (audit (safe-ref realm 'has-audit))
          (loc (safe-ref code 'loc))
          (modules (safe-ref code 'modules))
-         (rfcs (safe-ref code 'rfcs)))
-    (printf "~%~a · up ~a~%" (get-hostname) (or uptime "?"))
+         (rfcs (safe-ref code 'rfcs))
+         (lambda-time (safe-ref info 'lamport-time)))
+    (printf "~%~a · up ~a · ~a~%" (get-hostname) (or uptime "?") (lamport-format))
     (printf "├─ ~a cores, ~aGB~a~%"
             (or cores "?")
             (or mem "?")
