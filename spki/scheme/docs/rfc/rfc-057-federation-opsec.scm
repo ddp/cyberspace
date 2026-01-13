@@ -1,7 +1,7 @@
-;; RFC-056: Federation Operational Security
+;; RFC-057: Federation Operational Security
 
 (rfc
-  (number 56)
+  (number 57)
   (title "Federation Operational Security")
   (section
     "Abstract"
