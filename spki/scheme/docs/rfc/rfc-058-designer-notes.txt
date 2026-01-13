@@ -65,6 +65,44 @@ Self syntax was weird. Smalltalk doesn't work for math people. Scheme is
 honest - prefix, unambiguous, mathematical.
 
 
+1.4 System Service Vocabulary
+-----------------------------
+
+The VMS system service vocabulary provides the conceptual heritage for
+Cyberspace's security primitives.
+
+The security subsystem was written exclusively in BLISS (with MACRO-32
+fluency for reading the layers beneath). Now it's Scheme.
+
+Access check pattern:
+
+
+    $CREATE_USER_PROFILE  >  builds encoded user security profile
+            v
+    $CHKPRO / $CHECK_ACCESS  >  evaluates access using profile + object protection
+            v
+    SS$_NORMAL / SS$_NOPRIV  >  grant or deny
+
+Key item codes (CHP$_*):
+
+  * CHP$_ACCESS > access-mask (requested access type bitmask)
+  * CHP$_PROT > protection (SOGW protection mask)
+  * CHP$_OWNER > owner (object owner identifier)
+  * CHP$_UIC > principal (accessor's identity)
+  * CHP$_PRIV > privileges (privilege mask)
+  * CHP$_ACL > acl (access control list)
+  * CHP$_FLAGS > flags (check options: observe/alter)
+
+Flags: CHP$V_AUDIT > audit?, CHP$V_OBSERVE > read?, CHP$V_ALTER > write?
+
+Return status: SS$_NORMAL > #t, SS$_NOPRIV > #f, SS$_ACCVIO > 'accvio,
+SS$_IVACL > 'invalid-acl
+
+Impersonation ($PERSONA_*): Used by DECdfs and distributed file services
+to act on behalf of remote clients without re-implementing access
+checks.
+
+
 ------------------------------------------------------------------------
 2. DESIGN PRINCIPLES
 ------------------------------------------------------------------------
@@ -213,8 +251,69 @@ durability.
 
 
 ------------------------------------------------------------------------
+7. REPL UX PRINCIPLES
+------------------------------------------------------------------------
+
+
+7.1 Output Philosophy
+---------------------
+
+  * Silence is default - Success prints nothing. Failure is an error.
+  * No developer notes - If it's not for the user, it doesn't print.
+  * Verbose is opt-in - --verbose for play-by-play, otherwise quiet.
+  * Consequential operations may announce - Enrollment, federation changes, realm joins.
+
+
+7.2 Async Model
+---------------
+
+  * Prompts return frequently, don't block on long operations.
+  * Background work runs async, notify on completion.
+  * Notifications are optional - check when you want, never modal, never blocking.
+  * Your response is never required.
+
+
+7.3 Introspection by Semantic Type
+----------------------------------
+
+Not a generic notification queue. Organized by type of operation:
+enrollments, syncs, votes, federation requests. Each reflected where it
+makes sense. Introspect by what it *is*, not dig through a queue.
+
+
+7.4 Governance
+--------------
+
+Passive consent: silence is assent to federation consensus. If you don't
+vote, you live with the federation's decision. Fork your own security
+policy in your realm if you disagree.
+
+
+7.5 VMS Lessons
+---------------
+
+  * $FAO-style formatted output for the TCB - clean ASCII.
+  * No calling the runtime from the TCB.
+  * The audit and protected subsystems live in their own UI layer.
+
+
+7.6 Help Command Behavior
+-------------------------
+
+/?/ (and help variants) should always be useful across the REPL. When
+there's nothing contextual to offer, still try to be helpful - offer
+general guidance, suggest related commands, or at minimum apologize for
+not being able to offer specific help.
+
+
+------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
+
+- 2026-01-13 - Section 1.4 System Service Vocabulary (CHP$_*,
+$PERSONA_*)
+
+- 2026-01-13 - Section 7 REPL UX Principles
 
 - 2026-01-13 - Weaving by lambda, loch lambda as merit
 
