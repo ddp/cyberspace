@@ -381,7 +381,7 @@
       (let ((input (read-line)))
         (cond
           ((or (eof-object? input)
-               (member input '(":q" ":quit" ",q")))
+               (member input '(":q" ":quit" ",q" "bye" "bye.")))
            (print "Returning to REPL.")
            #f)
 
