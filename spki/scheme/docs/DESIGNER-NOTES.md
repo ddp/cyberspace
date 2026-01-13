@@ -35,6 +35,10 @@
 - No calling the runtime from the TCB.
 - The audit and protected subsystems live in their own UI layer.
 
+### Help Command Behavior
+
+`/?/` (and help variants) should always be useful across the REPL. When there's nothing contextual to offer, still try to be helpful - offer general guidance, suggest related commands, or at minimum apologize for not being able to offer specific help.
+
 ## 2026-01-13: TCSEC C2/B1 Heritage
 
 ### VMS Security Team
