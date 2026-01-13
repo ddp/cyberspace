@@ -61,7 +61,9 @@ SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
         (item "CHP$_FLAGS → flags (check options: observe/alter)"))
       (p "Flags: CHP$V_AUDIT → audit?, CHP$V_OBSERVE → read?, CHP$V_ALTER → write?")
       (p "Return status: SS$_NORMAL → #t, SS$_NOPRIV → #f, SS$_ACCVIO → 'accvio, SS$_IVACL → 'invalid-acl")
-      (p "Impersonation ($PERSONA_*): Used by DECdfs and distributed file services to act on behalf of remote clients without re-implementing access checks.")))
+      (p "Impersonation ($PERSONA_*): Used by DECdfs and distributed file services to act on behalf of remote clients without re-implementing access checks.")
+      (p "$PERSONA was designed by the DEC Distributed File System group, not VMS Engineering.")
+      (p "The original $IMPERSONATION framework was authored by Rich Bouchard. It was lost during the Mitnick incidents when Andy Goldstein and I decided we needed to rebuild our compiler chain from known good offsite backups - with Ken Thompson's 'Reflections on Trusting Trust' fresh in our minds. In doing so, we lost a year of development during Alpha, including the original kernel threads implementation and the $IMPERSONATION framework.")))
 
   (section
     "2. Design Principles"
@@ -174,6 +176,7 @@ Cyberspace soup:  Vault objects, content-addressed")
 
   (section
     "Changelog"
+    (p "- 2026-01-13 - Rich Bouchard, $IMPERSONATION, Mitnick, Trusting Trust")
     (p "- 2026-01-13 - Section 1.4 System Service Vocabulary (CHP$_*, $PERSONA_*)")
     (p "- 2026-01-13 - Section 7 REPL UX Principles")
     (p "- 2026-01-13 - Weaving by lambda, loch lambda as merit")
