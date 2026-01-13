@@ -99,7 +99,9 @@ Cyberspace soup:  Vault objects, content-addressed")
     (p "Weaving by lambda - the craft. The act of building, creating, adding to Cyberspace.")
     (p "Loch lambda - the measure of depth achieved. How far have you gone? How much have you woven?")
     (p "The deeper you weave, the more loch lambda you've earned. A merit badge for the depths explored.")
-    (p "The weave thickens as lambdas accrete. Each function, each object, each sealed thing adds to the fabric. The loch deepens."))
+    (p "The weave thickens as lambdas accrete. Each function, each object, each sealed thing adds to the fabric. The loch deepens.")
+    (p "The pun layers: LOC (lines of code) -> loc/lambda (lambdas as unit) -> loch lambda (the depths).")
+    (p "Zen is below 10. Enlightened code is under 10 loc/lambda. Small, focused, one thing done well."))
 
   (section
     "6. Format Philosophy"
