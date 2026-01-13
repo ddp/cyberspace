@@ -85,6 +85,52 @@ Later releases add `$PERSONA_*` services to let subsystems assume a requester's 
 
 The VMS security model - particularly the separation of access check ($CHKPRO) from profile creation ($CREATE_USER_PROFILE) and the later move to persona services - informs Cyberspace's approach to capability delegation and principal impersonation.
 
+### 1.4 Lineage: System Service Vocabulary
+
+The VMS system service vocabulary provides the conceptual heritage for Cyberspace's security primitives.
+
+**Access Check Pattern:**
+```
+$CREATE_USER_PROFILE  →  builds encoded user security profile
+        ↓
+$CHKPRO / $CHECK_ACCESS  →  evaluates access using profile + object protection
+        ↓
+SS$_NORMAL / SS$_NOPRIV  →  grant or deny
+```
+
+**Key Item Codes (CHP$_*):**
+| VMS | Cyberspace | Purpose |
+|-----|------------|---------|
+| CHP$_ACCESS | access-mask | Requested access type bitmask |
+| CHP$_PROT | protection | SOGW protection mask |
+| CHP$_OWNER | owner | Object owner identifier |
+| CHP$_UIC | principal | Accessor's identity |
+| CHP$_PRIV | privileges | Privilege mask |
+| CHP$_ACL | acl | Access control list |
+| CHP$_FLAGS | flags | Check options (observe/alter) |
+
+**Flags (CHP$V_*):**
+- `CHP$V_AUDIT` → `audit?` - Request access audit
+- `CHP$V_OBSERVE` → `read?` - Read access
+- `CHP$V_ALTER` → `write?` - Write access
+
+**Return Status:**
+| VMS | Cyberspace | Meaning |
+|-----|------------|---------|
+| SS$_NORMAL | #t | Access granted |
+| SS$_NOPRIV | #f | Access denied |
+| SS$_ACCVIO | 'accvio | Buffer access violation |
+| SS$_IVACL | 'invalid-acl | Invalid ACL |
+
+**Impersonation ($PERSONA_*):**
+- `$PERSONA_CREATE` → `(impersonate principal)` - Assume another identity
+- `$PERSONA_ASSUME` → `(with-persona p thunk)` - Execute as persona
+- `$PERSONA_DELETE` → automatic GC - Release persona
+
+Used by DECdfs and other distributed file services to act on behalf of remote clients without re-implementing access checks.
+
+Sources: [VSI OpenVMS Wiki - $CHKPRO](https://wiki.vmssoftware.com/$CHKPRO), [VSI System Services Reference](https://vmssoftware.com/docs/VSI_SYS_SERVICES_REF_VOL_I.PDF)
+
 ## 2026-01-11: Bootstrap Display
 
 Enhanced REPL startup to show:
