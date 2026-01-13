@@ -292,28 +292,45 @@
                 (+ total-loc loc)
                 (+ total-lambdas lambdas))))))
 
-(define (loch-lambda)
-  "Show modules with LOC/λ ≥ 10 (the Loch Lambda monsters)"
-  (printf "~%Loch Lambda - modules with LOC/λ ≥ 10~%~%")
-  (let loop ((modules *cyberspace-modules*) (monsters '()))
-    (if (null? modules)
-        (if (null? monsters)
-            (printf "  No monsters! All modules < 10 LOC/λ ✓~%~%")
-            (begin
-              (printf "  ─────────────────────────────────~%")
-              (printf "  ~a monsters lurking~%~%" (length monsters))))
-        (let* ((mod (car modules))
-               (src (string-append mod ".scm"))
-               (metrics (analyze-source src))
-               (loc (cdr (assq 'loc metrics)))
-               (lambdas (cdr (assq 'lambdas metrics)))
-               (ratio (cdr (assq 'loc/lambda metrics))))
-          (if (>= ratio 10)
+(define (loch-lambda #!optional (path #f))
+  "Show files with LOC/λ ≥ 10 (the Loch Lambda monsters).
+   Usage: (loch-lambda)           ; Cyberspace modules
+          (loch-lambda \"file.scm\") ; Single file
+          (loch-lambda \"dir/\")     ; All .scm in directory"
+  (let* ((files (cond
+                  ((not path)
+                   ;; Default: Cyberspace modules
+                   (map (lambda (m) (string-append m ".scm")) *cyberspace-modules*))
+                  ((string-suffix? ".scm" path)
+                   ;; Single file
+                   (list path))
+                  ((directory-exists? path)
+                   ;; Directory: all .scm files
+                   (map (lambda (f) (string-append (if (string-suffix? "/" path) path (string-append path "/")) f))
+                        (filter (lambda (f) (string-suffix? ".scm" f)) (directory path))))
+                  (else
+                   (printf "  Not a .scm file or directory: ~a~%" path)
+                   '()))))
+    (printf "~%Loch Lambda - files with LOC/λ ≥ 10~%~%")
+    (let loop ((files files) (monsters '()))
+      (if (null? files)
+          (if (null? monsters)
+              (printf "  No monsters! All files < 10 LOC/λ ✓~%~%")
               (begin
-                (printf "  ~a: ~a LOC · ~a λ · ~a LOC/λ ⚠~%"
-                        (string-pad-right mod 12) loc lambdas ratio)
-                (loop (cdr modules) (cons mod monsters)))
-              (loop (cdr modules) monsters))))))
+                (printf "  ─────────────────────────────────~%")
+                (printf "  ~a monsters lurking~%~%" (length monsters))))
+          (let* ((src (car files))
+                 (name (pathname-strip-directory (pathname-strip-extension src)))
+                 (metrics (analyze-source src))
+                 (loc (cdr (assq 'loc metrics)))
+                 (lambdas (cdr (assq 'lambdas metrics)))
+                 (ratio (cdr (assq 'loc/lambda metrics))))
+            (if (and (> lambdas 0) (>= ratio 10))
+                (begin
+                  (printf "  ~a: ~a LOC · ~a λ · ~a LOC/λ ⚠~%"
+                          (string-pad-right name 16) loc lambdas ratio)
+                  (loop (cdr files) (cons name monsters)))
+                (loop (cdr files) monsters)))))))
 
 (define (rebuild-module! module arch stamp)
   "Rebuild a module for current platform.
