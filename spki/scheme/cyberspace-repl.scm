@@ -5647,8 +5647,9 @@ Cyberspace REPL - Available Commands
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
-;; Report startup time
+;; Report startup time and show essentials
 (report-module-times)
+(help)  ; Show essential commands on startup
 (let* ((elapsed-ms (- (current-milliseconds) *repl-start-time*))
        (elapsed-sec (/ elapsed-ms 1000.0)))
   (print (format "Ready in ~a"
