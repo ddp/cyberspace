@@ -88,9 +88,9 @@
               '(peers-discovered gossip-exchanges votes federation-changes channels handshakes)))
 
   (define (init-stats-network!)
-    "Initialize network I/O counters."
+    "Initialize network counters."
     (for-each (lambda (k) (hash-table-set! *session-stats* k 0))
-              '(bytes-in bytes-out packets-ipv4 packets-ipv6 mdns-messages)))
+              '(mdns-messages)))
 
   (define (init-stats-errors!)
     "Initialize error counters."
@@ -186,11 +186,7 @@
     "Generate session statistics summary for goodbye."
     (let* ((uptime (session-uptime))
            (new-audits (- (length (audit-load-entries-raw)) (session-stat 'boot-audit-count)))
-           (boot-weave (session-stat 'boot-weave))
-           (bytes-in (session-stat 'bytes-in))
-           (bytes-out (session-stat 'bytes-out))
-           (ipv4 (session-stat 'packets-ipv4))
-           (ipv6 (session-stat 'packets-ipv6)))
+           (boot-weave (session-stat 'boot-weave)))
       ;; Collect all stats, filter out #f values
       (filter identity
         (list
@@ -222,12 +218,6 @@
           (format-stat 'seals "seal" "s")
           (format-stat 'federation-changes "fed" "s")
           (format-stat 'wormholes "wormhole" "s")
-          ;; Network I/O
-          (and (or (> bytes-in 0) (> bytes-out 0))
-               (string-append "↓" (format-bytes bytes-in) " ↑" (format-bytes bytes-out)))
-          ;; Packet counts
-          (and (> ipv4 0) (string-append (number->string ipv4) " v4"))
-          (and (> ipv6 0) (string-append (number->string ipv6) " v6"))
           ;; Audits
           (and (> new-audits 0) (string-append "+" (number->string new-audits) " audit"))
           ;; Channels & handshakes
