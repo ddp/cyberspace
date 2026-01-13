@@ -38,7 +38,30 @@
       (p "Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:")
       (code scheme "(translate text from: 'en to: 'fr)
 (enroll-request name timeout: 30)")
-      (p "Self syntax was weird. Smalltalk doesn't work for math people. Scheme is honest - prefix, unambiguous, mathematical.")))
+      (p "Self syntax was weird. Smalltalk doesn't work for math people. Scheme is honest - prefix, unambiguous, mathematical."))
+
+    (subsection
+      "1.4 System Service Vocabulary"
+      (p "The VMS system service vocabulary provides the conceptual heritage for Cyberspace's security primitives.")
+      (p "The security subsystem was written exclusively in BLISS (with MACRO-32 fluency for reading the layers beneath). Now it's Scheme.")
+      (p "Access check pattern:")
+      (code "$CREATE_USER_PROFILE  →  builds encoded user security profile
+        ↓
+$CHKPRO / $CHECK_ACCESS  →  evaluates access using profile + object protection
+        ↓
+SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
+      (p "Key item codes (CHP$_*):")
+      (list
+        (item "CHP$_ACCESS → access-mask (requested access type bitmask)")
+        (item "CHP$_PROT → protection (SOGW protection mask)")
+        (item "CHP$_OWNER → owner (object owner identifier)")
+        (item "CHP$_UIC → principal (accessor's identity)")
+        (item "CHP$_PRIV → privileges (privilege mask)")
+        (item "CHP$_ACL → acl (access control list)")
+        (item "CHP$_FLAGS → flags (check options: observe/alter)"))
+      (p "Flags: CHP$V_AUDIT → audit?, CHP$V_OBSERVE → read?, CHP$V_ALTER → write?")
+      (p "Return status: SS$_NORMAL → #t, SS$_NOPRIV → #f, SS$_ACCVIO → 'accvio, SS$_IVACL → 'invalid-acl")
+      (p "Impersonation ($PERSONA_*): Used by DECdfs and distributed file services to act on behalf of remote clients without re-implementing access checks.")))
 
   (section
     "2. Design Principles"
@@ -112,6 +135,46 @@ Cyberspace soup:  Vault objects, content-addressed")
     (p "The dumb web optimizes for benchmarks. The good web optimizes for durability."))
 
   (section
+    "7. REPL UX Principles"
+
+    (subsection
+      "7.1 Output Philosophy"
+      (list
+        (item "Silence is default - Success prints nothing. Failure is an error.")
+        (item "No developer notes - If it's not for the user, it doesn't print.")
+        (item "Verbose is opt-in - --verbose for play-by-play, otherwise quiet.")
+        (item "Consequential operations may announce - Enrollment, federation changes, realm joins.")))
+
+    (subsection
+      "7.2 Async Model"
+      (list
+        (item "Prompts return frequently, don't block on long operations.")
+        (item "Background work runs async, notify on completion.")
+        (item "Notifications are optional - check when you want, never modal, never blocking.")
+        (item "Your response is never required.")))
+
+    (subsection
+      "7.3 Introspection by Semantic Type"
+      (p "Not a generic notification queue. Organized by type of operation: enrollments, syncs, votes, federation requests. Each reflected where it makes sense. Introspect by what it *is*, not dig through a queue."))
+
+    (subsection
+      "7.4 Governance"
+      (p "Passive consent: silence is assent to federation consensus. If you don't vote, you live with the federation's decision. Fork your own security policy in your realm if you disagree."))
+
+    (subsection
+      "7.5 VMS Lessons"
+      (list
+        (item "$FAO-style formatted output for the TCB - clean ASCII.")
+        (item "No calling the runtime from the TCB.")
+        (item "The audit and protected subsystems live in their own UI layer.")))
+
+    (subsection
+      "7.6 Help Command Behavior"
+      (p "/?/ (and help variants) should always be useful across the REPL. When there's nothing contextual to offer, still try to be helpful - offer general guidance, suggest related commands, or at minimum apologize for not being able to offer specific help.")))
+
+  (section
     "Changelog"
+    (p "- 2026-01-13 - Section 1.4 System Service Vocabulary (CHP$_*, $PERSONA_*)")
+    (p "- 2026-01-13 - Section 7 REPL UX Principles")
     (p "- 2026-01-13 - Weaving by lambda, loch lambda as merit")
     (p "- 2026-01-13 - Initial specification, migrated from DESIGNER-NOTES.md")))
