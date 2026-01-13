@@ -361,7 +361,7 @@ YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/rfc/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_RFC_PATH"
-  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css *.woff2 "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
+  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
   echo "  -> $YOYODYNE_RFC_PATH"
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
   echo "  Published RFCs to ${YOYODYNE_URL}spki/scheme/docs/rfc/"

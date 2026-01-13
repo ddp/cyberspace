@@ -654,6 +654,7 @@
         (if is-rfc
             (display (format "  <title>RFC-~a: ~a</title>\n" (zero-pad num 3) (html-escape title)) port)
             (display (format "  <title>~a</title>\n" (html-escape title)) port))
+        (display "  <link rel=\"icon\" type=\"image/svg+xml\" href=\"favicon.svg\">\n" port)
         (display "  <link rel=\"stylesheet\" href=\"rfc.css\">\n" port)
         (display "</head>\n<body>\n" port)
         ;; Theme toggle
