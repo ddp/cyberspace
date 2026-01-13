@@ -132,6 +132,36 @@ Apple Newton → Dylan → Scheme. The soup survives.
 
 ---
 
+## The Raga Favicon
+
+The Library's favicon is a lambda (λ) whose color morphs through the day.
+
+**The Prahar (Watches):**
+```
+04-06  violet    brahma muhurta (pre-dawn meditation)
+06-08  gold      dawn
+08-11  teal      morning
+11-14  phosphor  midday
+14-17  neon      afternoon
+17-19  orange    sunset
+19-22  coral     evening
+22-04  cyan      night
+```
+
+**Why ragas?** Indian classical music assigns ragas to specific times of day. A morning raga played at midnight is wrong—not because of rules, but because it doesn't fit. The music knows when it should be heard.
+
+**Why a breathing lambda?** The lambda isn't just a logo—it's the fundamental unit. What Scheme computes, what the weave is made of. Every function, every object, every sealed thing in the vault is lambdas all the way down.
+
+The color morphing isn't decoration—it's the weave breathing. Lambdas are being gathered, tested, frozen into vaults across time zones. The color you see is the pulse of that activity. Dawn gold as the eastern hemisphere wakes and contributes. Phosphor green at peak hours. Cyan in the quiet night when the squirrels rest.
+
+**The easter egg:** Someone notices their lambda is orange, asks why, and learns: "You're seeing sunset. Somewhere, lambdas are being gathered into the weave of Cyberspace."
+
+Those who need to ask are in need of enlightenment. The Library is here to provide it. They came for the RFCs, they left understanding the λ.
+
+The brahma muhurta violet isn't just pretty—it's the hour of enlightenment. If they're seeing violet, they're already up at the right time.
+
+---
+
 *In Scheme and Dylan with Newton soup.*
 
 *Forty years from asking permission to enter the kernel, to owning the whole stack.*
