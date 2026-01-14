@@ -198,6 +198,7 @@
     (subsection
       "4.1 The Forge"
       (p "The forge is the build system for Cyberspace modules. It compiles Scheme to shared libraries (.so) with import specifications (.import.scm).")
+      (p "The name is deliberate. Not CompilationManager or BuildSystem - forge. Words a squirrel would use. The same MIT hackers who gave us LISP, Scheme, and the λ-calculus named things to mean something: lambda, cons, car, cdr. We continue that tradition: forge, vault, portal, gossip, bloom, keyring.")
       (p "Invocation:")
       (code scheme "(bootstrap-modules!)  ; Called automatically at REPL start")
       (p "Output format:")
@@ -211,7 +212,17 @@
         (item "LOC: Lines of code (excluding blanks and comments)")
         (item "λ: Procedure definitions (define + lambda forms)")
         (item "LOC/λ: Average lines per procedure (smaller = more compositional)"))
-      (p "Metrics are stored in .forge/<module>.meta and queryable via:")
+      (p "The fundamental unit is not the line - it's the λ. This is the heritage of computer science invented at MIT by smart squirrel/hackers: McCarthy's LISP, Sussman and Steele's Scheme, the AI Lab, Building 20. They saw computation as pure thought, λ as the primitive, parentheses as liberation not burden.")
+      (p "Measuring λ-density is measuring compositional discipline. A module with 6 LOC/λ has crystallized more thought per line than one with 10. The ratio tells you how SICP-minded the code is.")
+      (p "Metrics are stored in .forge/<module>.meta as s-expressions:")
+      (code scheme "((module . \"vault\")
+ (timestamp . 1768359548)
+ (so-size . 951016)
+ (import-size . 3258)
+ (compile-time-ms . 12686)
+ (metrics (loc . 2793) (lambdas . 260) (imports . 1) (loc/lambda . 10)))")
+      (p "The forge knows how λ-dense your code is. Each compilation records: timestamp (Unix epoch), artifact sizes, build time, and the metrics that matter - lines of code, lambda count, λ-density ratio.")
+      (p "Queryable via:")
       (code scheme "(forged \"portal\")     ; Single module metrics
 (forged-all)          ; Bitfarm harvest: all modules
 (sicp)                ; Live analysis (no forge metadata needed)")
@@ -281,7 +292,19 @@ csc -shared -J -strict-types crypto-ffi.scm \\
     (length modules)))")
       (p "The build blocks until all processes in a level complete before starting the next level. This ensures dependencies are satisfied."))
     (subsection
-      "4.5 Rebuild Detection"
+      "4.5 Architecture Neutrality"
+      (p "The weave must be universal. Only content-addressed, architecture-neutral artifacts flow through the weave: s-expressions, signatures, proofs. Binary artifacts (.so, .o, the REPL executable) are local materializations - ephemeral as the hardware they run on.")
+      (p "Machine code is gibberish outside the local realm. Could be ARM64, could be x86_64, could be a JPEG of a cat. The weave cannot inspect it, cannot verify it, cannot reason about it. Only the s-expression source has universal meaning - it parses the same on lambda as on fluffy as on whatever Linux box joins the realm next.")
+      (p "Consequently, compiled artifacts are excluded from version control and replication:")
+      (code "# .gitignore
+spki/scheme/cyberspace-repl
+spki/scheme/*.so
+spki/scheme/*.o
+spki/scheme/*.import.scm
+spki/scheme/.*.arch")
+      (p "Each node compiles its own. Lambda is portable. Machine code is not."))
+    (subsection
+      "4.6 Rebuild Detection"
       (p "A module needs rebuilding when any of these conditions hold:")
       (list
         "The .so file does not exist"
