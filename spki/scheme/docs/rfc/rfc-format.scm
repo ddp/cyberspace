@@ -917,12 +917,74 @@
             (display ".SH\nColophon\n" port)
             (for-each (lambda (e) (ms-emit-element e port)) (cdr footer))))))))
 
+(define (ps-escape str)
+  "Escape special PostScript characters in string."
+  (let ((out (open-output-string)))
+    (string-for-each
+     (lambda (c)
+       (case c
+         ((#\\) (display "\\\\" out))
+         ((#\() (display "\\(" out))
+         ((#\)) (display "\\)" out))
+         (else (display c out))))
+     str)
+    (get-output-string out)))
+
 (define (rfc->ps doc filename)
-  "Convert RFC S-expression to PostScript via groff."
-  (let ((ms-file (string-append filename ".ms")))
-    (rfc->ms doc ms-file)
-    (system (format "groff -t -ms -Tps ~a > ~a" ms-file filename))
-    (delete-file ms-file)))
+  "Convert RFC S-expression to PostScript directly (no external tools)."
+  (let ((txt-file (string-append (pathname-strip-extension filename) ".txt")))
+    (when (file-exists? txt-file)
+      (call-with-output-file filename
+        (lambda (out)
+          ;; PostScript header
+          (display "%!PS-Adobe-3.0\n" out)
+          (display "%%Title: " out)
+          (display (pathname-strip-directory (pathname-strip-extension filename)) out)
+          (display "\n%%Creator: Library of Cyberspace RFC Pipeline\n" out)
+          (display "%%Pages: (atend)\n" out)
+          (display "%%EndComments\n\n" out)
+
+          ;; Setup: Courier 10pt, 72pt margins, 12pt leading
+          (display "/Courier findfont 10 scalefont setfont\n" out)
+          (display "/margin 72 def\n" out)
+          (display "/pagewidth 612 def\n" out)
+          (display "/pageheight 792 def\n" out)
+          (display "/leading 12 def\n" out)
+          (display "/topmargin pageheight margin sub def\n" out)
+          (display "/bottommargin margin def\n" out)
+          (display "/linewidth pagewidth margin 2 mul sub def\n" out)
+          (display "/ypos topmargin def\n" out)
+          (display "/pagenum 1 def\n\n" out)
+
+          ;; Newline procedure
+          (display "/newline {\n" out)
+          (display "  /ypos ypos leading sub def\n" out)
+          (display "  ypos bottommargin lt {\n" out)
+          (display "    showpage\n" out)
+          (display "    /pagenum pagenum 1 add def\n" out)
+          (display "    /ypos topmargin def\n" out)
+          (display "  } if\n" out)
+          (display "  margin ypos moveto\n" out)
+          (display "} def\n\n" out)
+
+          ;; Start first page
+          (display "margin topmargin moveto\n" out)
+
+          ;; Read text file and emit lines
+          (call-with-input-file txt-file
+            (lambda (in)
+              (let loop ((line (read-line in)))
+                (unless (eof-object? line)
+                  (display "(" out)
+                  (display (ps-escape line) out)
+                  (display ") show newline\n" out)
+                  (loop (read-line in))))))
+
+          ;; Footer
+          (display "\nshowpage\n" out)
+          (display "%%Trailer\n" out)
+          (display "%%Pages: pagenum\n" out)
+          (display "%%EOF\n" out))))))
 
 ;;; ============================================================
 ;;; Batch Processing

@@ -1,0 +1,431 @@
+%!PS-Adobe-3.0
+%%Title: rfc-058-designer-notes
+%%Creator: Library of Cyberspace RFC Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(RFC-058: Designer Notes) show newline
+(Loch Lambda) show newline
+() show newline
+(Status: Living Document) show newline
+(Date: January 2026) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Personal history and design decisions behind Cyberspace. This RFC grows) show newline
+(as the weave deepens.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(1. LINEAGE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(1.1 VMS Security \(1984-1994\)) show newline
+(----------------------------) show newline
+() show newline
+(DEC was a family. This was merely one specialty.) show newline
+() show newline
+(The Security Project Team was Derrell Piper, Mark Pilant, Andy) show newline
+(Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.) show newline
+() show newline
+(What we built:) show newline
+() show newline
+(  * $CHKPRO - the privilege checking gate, the single point where all privilege decisions were made) show newline
+(  * The entire auditing subsystem \(final form\), comprehensive privilege and access logging) show newline
+(  * C2/B1 certified security model \(Orange Book compliance, proven secure\)) show newline
+() show newline
+(Access: The security project team \(or anyone we designated\) were the) show newline
+(only ones allowed in the kernel group's modules. Dave Cutler's team) show newline
+(begrudgingly accepted this as a mandate from heaven \(Ken Olsen /) show newline
+(Maynard\). We got in on a mandate. We stayed because the work was good.) show newline
+() show newline
+(Inheritance: When Cutler left for Microsoft, his modules were inherited.) show newline
+(The privilege auditing 'rototill' required fluency in MACRO-32.) show newline
+() show newline
+(Text in the Library of Cyberspace is in the color of phosphor green, the) show newline
+(color of VT100s and reflective of IBM green bar printouts. Not retro.) show newline
+(Not nostalgia. Memory.) show newline
+() show newline
+() show newline
+(1.2 The Road Not Taken) show newline
+(----------------------) show newline
+() show newline
+(We all built VAX/VMS V6.0 and then we threw it away--literally tossing) show newline
+(our green bar printouts of our respective subsystems into an empty cube) show newline
+(on ZK03/4. The code of what could have been. The end of DEC.) show newline
+() show newline
+(They must have done something similar after Prism/Mica was cancelled,) show newline
+(ahead of that fateful offer to Gates & Co. that gifted Microsoft) show newline
+(dominance in COTS computing.) show newline
+() show newline
+(Prism/Mica was being designed for TCSEC B1. That's the legacy--the) show newline
+(mindset, the trust model, and the codebase--that Gates was gifted in an) show newline
+(offer they couldn't refuse.) show newline
+() show newline
+(Of all the people at DEC, Cutler--designer of the MicroVAX--could see) show newline
+(the writing on the wall. The age of PCs had been born. Digital missed) show newline
+(the train.) show newline
+() show newline
+(The weave predates the software. The people who understood trust) show newline
+(architectures kept finding each other:) show newline
+() show newline
+(  * DEC -> Microsoft -> Cisco -> here) show newline
+(  * Peter Lofgren was there. There's a photograph of that meeting floating around in PDP-10 space. He ended up at Cisco--our nexus.) show newline
+() show newline
+(The thread is unbroken. From the people who built it, through the people) show newline
+(who maintained it, to the people who understood what was lost. And now) show newline
+(into the code.) show newline
+() show newline
+(That's provenance you can't fake.) show newline
+() show newline
+() show newline
+(1.3 Languages) show newline
+(-------------) show newline
+() show newline
+(BLISS - Bill Wulf at CMU \(1969\) created BLISS as an expression language,) show newline
+(not 'DEC's C'. Everything returns a value. Lisp in systems clothing.) show newline
+() show newline
+(MACRO-32 - VAX assembly with rich macros. The kernel was MACRO-32.) show newline
+(Learned it from the privilege auditing rototill.) show newline
+() show newline
+(The VMS Runtime - Had a rich macro wrapper for BLISS. That macro system) show newline
+(was a Lisp. We knew. That's why we used it.) show newline
+() show newline
+(A Lisper who fell in love with BLISS \(an expression language, like) show newline
+(home\).) show newline
+() show newline
+() show newline
+(1.4 Syntax Heritage) show newline
+(-------------------) show newline
+() show newline
+(Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:) show newline
+() show newline
+() show newline
+(    \(translate text from: 'en to: 'fr\)) show newline
+(    \(enroll-request name timeout: 30\)) show newline
+() show newline
+(Ada/Dylan/BLISS style - named parameters, self-documenting:) show newline
+() show newline
+(  * Ada: Open\(File => "data.txt", Mode => Read_Only\)) show newline
+(  * Dylan: open\(file: "data.txt", mode: #"read"\)) show newline
+(  * BLISS: OPEN\(FILE = 'data.txt', MODE = READONLY\)) show newline
+() show newline
+(Self syntax was weird. Smalltalk doesn't work for math people \(2 + 3 * 4) show newline
+(= 20, not 14\). Scheme is honest - prefix, unambiguous, mathematical.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(2. DESIGN PRINCIPLES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(2.1 TCB Minimization) show newline
+(--------------------) show newline
+() show newline
+(From TCSEC: 'Small, proven, frozen' - only put in the TCB what you can) show newline
+(verify. VMS C2/B1 taught this. Cyberspace applies it:) show newline
+() show newline
+() show newline
+(    TCB \(OCaml\):     ~1000 lines, proven in Coq) show newline
+(    Everything else: Chicken Scheme, can evolve freely) show newline
+() show newline
+() show newline
+(2.2 The Vault is the Disk) show newline
+(-------------------------) show newline
+() show newline
+(VAXcluster had multiple subsystems \(MSCP, DLM, SCS, quorum disk, LAVC\).) show newline
+(Cyberspace has one abstraction: the vault. It subsumes all of them.) show newline
+() show newline
+() show newline
+(2.3 Audit Everything) show newline
+(--------------------) show newline
+() show newline
+($CHKPRO checked privileges. The auditing subsystem logged decisions.) show newline
+(Both were ours. Cyberspace continues this:) show newline
+() show newline
+() show newline
+(    \(define \(check-capability actor action resource\)) show newline
+(      \(let \(\(granted \(spki-verify actor action resource\)\)\)) show newline
+(        \(audit-append actor: actor action: action granted: granted\)) show newline
+(        granted\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(3. INTERFACE PHILOSOPHY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(3.1 English on Top, Scheme Underneath) show newline
+(-------------------------------------) show newline
+() show newline
+() show newline
+(    Terminal:    English verbs for mortals) show newline
+(    REPL:        Scheme for hackers) show newline
+(    Commands:    Forever cast in English/Scheme) show newline
+(    Messages:    Multilingual \(the command line speaks your tongue\)) show newline
+() show newline
+() show newline
+(3.2 For the Uninitiated) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(about\)      ; What is this place?) show newline
+(    \(huh?\)       ; Same question, different inflection) show newline
+(    \(what?\)      ; Still the same) show newline
+(    \(describe\)   ; For the formal) show newline
+() show newline
+(The answer morphs with the weave. Standing alone, it suggests) show newline
+(enrollment. With peers, it lists them. The description reflects the) show newline
+(current state--not a static brochure but a living mirror of the) show newline
+(constellation.) show newline
+() show newline
+(Cyberspace is a system for storing and sharing digital documents, code,) show newline
+(and data without relying on any company, government, or central) show newline
+(authority. Instead of trusting a corporation to keep your files safe,) show newline
+(you and people you trust keep copies that are cryptographically) show newline
+(signed--meaning anyone can verify who created something and that it) show newline
+(hasn't been tampered with. If one computer goes offline, the others) show newline
+(still have everything. Your data belongs to you, verified by math,) show newline
+(preserved by the people you choose.) show newline
+() show newline
+() show newline
+(3.3 Workstations and Terminals) show newline
+(------------------------------) show newline
+() show newline
+(Workstations and terminals weren't wrong. PCs aren't the answer to) show newline
+(everything. The right interface for the job at hand. Sometimes your) show newline
+(native language is superior.) show newline
+() show newline
+(Cyberspace runs on terminals because that's what operators use.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(4. THE SOUP) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The vault browser is called 'soup' after Newton's persistent object) show newline
+(store \(1993\).) show newline
+() show newline
+() show newline
+(    Newton soup:      Persistent frames, automatic storage) show newline
+(    Cyberspace soup:  Vault objects, content-addressed) show newline
+() show newline
+(Apple Newton -> Dylan -> Scheme. The soup survives.) show newline
+() show newline
+() show newline
+(    \(soup\)              ; browse the vault) show newline
+(    \(soup 'keys\)        ; list keys) show newline
+(    \(soup-stat 'alice\)  ; inspect object) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(5. THE RAGA FAVICON) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The Library's favicon is a lambda whose color morphs through the day.) show newline
+() show newline
+() show newline
+(5.1 The Prahar \(Watches\)) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    04-06  violet    brahma muhurta \(pre-dawn meditation\)) show newline
+(    06-08  gold      dawn) show newline
+(    08-11  teal      morning) show newline
+(    11-14  phosphor  midday) show newline
+(    14-17  neon      afternoon) show newline
+(    17-19  orange    sunset) show newline
+(    19-22  coral     evening) show newline
+(    22-04  cyan      night) show newline
+() show newline
+() show newline
+(5.2 Why Ragas?) show newline
+(--------------) show newline
+() show newline
+(Indian classical music assigns ragas to specific times of day. A morning) show newline
+(raga played at midnight is wrong--not because of rules, but because it) show newline
+(doesn't fit. The music knows when it should be heard.) show newline
+() show newline
+() show newline
+(5.3 Why a Breathing Lambda?) show newline
+(---------------------------) show newline
+() show newline
+(The lambda isn't just a logo--it's the fundamental unit. What Scheme) show newline
+(computes, what the weave is made of. Every function, every object, every) show newline
+(sealed thing in the vault is lambdas all the way down.) show newline
+() show newline
+(The color morphing isn't decoration--it's the weave breathing. Lambdas) show newline
+(are being gathered, tested, frozen into vaults across time zones. The) show newline
+(color you see is the pulse of that activity. Dawn gold as the eastern) show newline
+(hemisphere wakes and contributes. Phosphor green at peak hours. Cyan in) show newline
+(the quiet night when the squirrels rest.) show newline
+() show newline
+() show newline
+(5.4 The Easter Egg) show newline
+(------------------) show newline
+() show newline
+(Someone notices their lambda is orange, asks why, and learns: 'You're) show newline
+(seeing sunset. Somewhere, lambdas are being gathered into the weave of) show newline
+(Cyberspace.') show newline
+() show newline
+(Those who need to ask are in need of enlightenment. The Library is here) show newline
+(to provide it. They came for the RFCs, they left understanding the) show newline
+(lambda.) show newline
+() show newline
+(The brahma muhurta violet isn't just pretty--it's the hour of) show newline
+(enlightenment. If they're seeing violet, they're already up at the right) show newline
+(time.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(6. LITTLE FLUFFY CLOUDS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+('What were the skies like when you were young?' -- The Orb, 1990) show newline
+() show newline
+(The realms in the weave are clouds--little fluffy clouds drifting in) show newline
+(ambient space. The Orb understood distributed systems before we had the) show newline
+(words: layers of sound, samples from elsewhere, everything floating,) show newline
+(nothing anchored to a single point.) show newline
+() show newline
+(Fluffy leads the weave. The name was never arbitrary.) show newline
+() show newline
+(The skies when we were young were phosphor green, VT100s in machine) show newline
+(rooms, the hum of VAXen. Now the clouds are realms, and the realms are) show newline
+(lambdas, and the lambdas float in the wilderness of mirrors.) show newline
+() show newline
+(Ambient for the ages. Distributed for the future.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(7. DERIVATION VS. DISCOVERY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(7.1 Lamport Time) show newline
+(----------------) show newline
+() show newline
+(In the absence of global clock synchronization, distributed systems) show newline
+(establish causal ordering through logical clocks \(Lamport, 1978\). Each) show newline
+(node maintains a local counter incremented on message send/receive,) show newline
+(establishing a happens-before relation that provides partial ordering) show newline
+(without requiring synchronized wall-clock time.) show newline
+() show newline
+(The happens-before relation was always there--Lamport gave it a name and) show newline
+(a notation. That's discovery. Seeing what was already true.) show newline
+() show newline
+() show newline
+(7.2 call/cc) show newline
+(-----------) show newline
+() show newline
+(Most language features are about what you can say. call/cc is about what) show newline
+(exists.) show newline
+() show newline
+(call/cc says: the future of the computation is a value you can hold,) show newline
+(store, invoke later. Continuations. Time as a first-class object. That's) show newline
+(not syntax preference--that's ontology.) show newline
+() show newline
+(The continuation exists whether you capture it or not--call/cc just lets) show newline
+(you name it. The future was always there, implicit in every expression.) show newline
+(Scheme made it explicit.) show newline
+() show newline
+(SICP wasn't about parentheses. It was a course in thinking, disguised as) show newline
+(a programming textbook. Streams, lazy evaluation, the environment model,) show newline
+(the metacircular evaluator--and then call/cc, which breaks your brain) show newline
+(the right way.) show newline
+() show newline
+() show newline
+(7.3 The Y Combinator) show newline
+(--------------------) show newline
+() show newline
+(The Y combinator \(Y = λf.\(λx.f\(x x\)\)\(λx.f\(x x\)\)\) is a fixed-point) show newline
+(combinator enabling recursion without explicit self-reference. It's) show newline
+(elegant. It's also just math that falls out of lambda) show newline
+(calculus--derivation, not discovery.) show newline
+() show newline
+(A certain Silicon Valley venture capital firm took the name as borrowed) show newline
+(plumage. Value signaling to people who recognize the symbol but don't) show newline
+(work in the calculus. The firm's founder wrote 'On Lisp', evangelized) show newline
+(the aesthetic--but Arc didn't have call/cc. Common Lisp doesn't have it.) show newline
+(He came from the CL side, where continuations aren't primitive.) show newline
+() show newline
+(Naming the firm 'Y Combinator' signals: I read the cool parts. Not) show newline
+(naming it 'call/cc' signals: I stopped before it got weird.) show newline
+() show newline
+(The Y combinator is page 300 of SICP. call/cc is the last chapter. Most) show newline
+(people don't finish.) show newline
+() show newline
+() show newline
+(7.4 The Distinction) show newline
+(-------------------) show newline
+() show newline
+(Derivation: The Y combinator. Recursion falling out of self-application.) show newline
+(True but not illuminating.) show newline
+() show newline
+(Discovery: Lamport clocks. call/cc. Seeing structure that was always) show newline
+(there, giving it a name, making it usable.) show newline
+() show newline
+(Cyberspace is built on discoveries: happens-before for distributed time,) show newline
+(continuations for control flow, SPKI for authorization. The derivations) show newline
+(are implementation details.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(8. TIMELINE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    1969  Bill Wulf creates BLISS at CMU) show newline
+(    1984  VAXcluster, VMS security work begins) show newline
+(    1985  VMS C2 certification) show newline
+(    1992  Dylan released \(Apple Cambridge\)) show newline
+(    1993  VMS 6.0 release) show newline
+(    1994  SDSI proposed at IETF 29 Seattle) show newline
+(    1999  SPKI RFC 2693) show newline
+(    2026  Cyberspace - synthesis of all the above) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CLOSING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(In Scheme and Dylan with Newton soup.) show newline
+() show newline
+(Forty years from asking permission to enter the kernel, to owning the) show newline
+(whole stack.) show newline
+() show newline
+(The Lisper finally gets to write Lisp.) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF
