@@ -834,6 +834,7 @@
           cols: term.cols,
           rows: term.rows
         }));
+        term.focus();
       };
       ws.onclose = () => {
         status.textContent = 'Disconnected';
@@ -980,6 +981,7 @@
     // Initialize
     loadPreferences();
     initTerminal();
+    term.focus();
     connect();
     fetch('/api/info').then(r => r.json()).then(info => {
       document.getElementById('info').textContent = info.name + ' v' + info.version;

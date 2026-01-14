@@ -115,6 +115,9 @@ didFailNavigation:(WKNavigation *)navigation
 - (void)webView:(WKWebView *)webView
 didFinishNavigation:(WKNavigation *)navigation {
     NSLog(@"[Cyberspace] Page loaded");
+    // Focus the webview and terminal
+    [webView becomeFirstResponder];
+    [webView evaluateJavaScript:@"if(term) term.focus();" completionHandler:nil];
 }
 
 @end
