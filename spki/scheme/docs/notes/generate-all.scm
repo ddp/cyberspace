@@ -44,7 +44,7 @@
       (> (file-modification-time source)
          (file-modification-time target))))
 
-(define (generate-rfc memo-file)
+(define (generate-memo memo-file)
   "Generate all formats for one Memo."
   (let* ((base (pathname-strip-extension memo-file))
          (txt-file (string-append base ".txt"))
@@ -101,13 +101,13 @@
   (print "")
 
   (let* ((start-time (current-milliseconds))
-         (rfcs (discover-memos))
+         (memos (discover-memos))
          (docs (discover-docs))
-         (all-files (append rfcs docs)))
-    (print "Found " (length rfcs) " Memos, " (length docs) " docs")
+         (all-files (append memos docs)))
+    (print "Found " (length memos) " Memos, " (length docs) " docs")
     (print "")
 
-    (for-each generate-rfc all-files)
+    (for-each generate-memo all-files)
 
     ;; Validation pass
     (print "")

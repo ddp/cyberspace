@@ -301,9 +301,9 @@
            ;; Count modules (files with (module ...))
            (module-count (shell-command
                           (string-append "grep -l '^(module' " base-dir "/*.scm 2>/dev/null | wc -l")))
-           ;; Count RFCs
-           (rfc-count (shell-command
-                       (string-append "ls " base-dir "/docs/notes/rfc-*.md 2>/dev/null | wc -l")))
+           ;; Count memos
+           (memo-count (shell-command
+                       (string-append "ls " base-dir "/docs/notes/memo-*.scm 2>/dev/null | wc -l")))
            ;; Count TCB (OCaml) - excluding tests
            ;; base-dir is spki/scheme, tcb is sibling at spki/tcb
            (tcb-dir (make-pathname (pathname-directory (string-chomp base-dir "/")) "tcb"))
@@ -315,21 +315,21 @@
         (tcb ,(if tcb-output (string->number (string-trim-both tcb-output)) 0))
         (files ,(if file-count (string->number (string-trim-both file-count)) 0))
         (modules ,(if module-count (string->number (string-trim-both module-count)) 0))
-        (rfcs ,(if rfc-count (string->number (string-trim-both rfc-count)) 0)))))
+        (memos ,(if memo-count (string->number (string-trim-both memo-count)) 0)))))
 
-  (define (parse-rfc-txt path)
-    "Parse RFC .txt file for metadata (cleaner than markdown)"
+  (define (parse-memo-txt path)
+    "Parse Memo .txt file for metadata (cleaner than markdown)"
     (handle-exceptions exn #f
       (with-input-from-file path
         (lambda ()
-          (let ((line1 (read-line))   ; RFC-NNN: Title
+          (let ((line1 (read-line))   ; Memo-NNN: Title
                 (line2 (read-line))   ; blank
                 (line3 (read-line))   ; Status: X
                 (line4 (read-line)))  ; Category: Y
             (and (not (eof-object? line1))
                  (let ((colon-pos (string-index line1 #\:)))
                    (and colon-pos
-                        (let* ((num-part (substring line1 4 colon-pos))
+                        (let* ((num-part (substring line1 5 colon-pos))  ; "Memo-" is 5 chars
                                (title (string-trim-both (substring line1 (+ colon-pos 1))))
                                (status (and (not (eof-object? line3))
                                             (string-prefix? "Status:" line3)
@@ -343,30 +343,30 @@
                             (category ,(or category "unknown"))))))))))))
 
   (define (introspect-library)
-    "Introspect the Library of Cyberspace - RFC catalog from .txt files"
+    "Introspect the Library of Cyberspace - Memo catalog from .txt files"
     (let* ((base-dir (or (get-environment-variable "CYBERSPACE_HOME")
                          (make-pathname (current-directory) "")))
-           (rfc-dir (make-pathname base-dir "docs/notes"))
-           (rfc-files (shell-command
-                       (string-append "ls " rfc-dir "/rfc-*.txt 2>/dev/null | sort"))))
-      (if (not rfc-files)
-          '(library (count 0) (rfcs ()))
-          (let* ((files (with-input-from-string rfc-files
+           (memo-dir (make-pathname base-dir "docs/notes"))
+           (memo-files (shell-command
+                       (string-append "ls " memo-dir "/memo-*.txt 2>/dev/null | sort"))))
+      (if (not memo-files)
+          '(library (count 0) (memos ()))
+          (let* ((files (with-input-from-string memo-files
                           (lambda ()
                             (let loop ((files '()))
                               (let ((line (read-line)))
                                 (if (eof-object? line)
                                     (reverse files)
                                     (loop (cons line files))))))))
-                 (rfcs (filter-map
+                 (memos (filter-map
                         (lambda (path)
-                          (let ((meta (parse-rfc-txt path)))
+                          (let ((meta (parse-memo-txt path)))
                             (and meta
-                                 `(rfc ,@meta (path ,path)))))
+                                 `(memo ,@meta (path ,path)))))
                         files)))
             `(library
-              (count ,(length rfcs))
-              (rfcs ,rfcs))))))
+              (count ,(length memos))
+              (memos ,memos))))))
 
   (define (introspect-system)
     "Full system introspection - all the thangs!"

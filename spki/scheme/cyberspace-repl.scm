@@ -724,7 +724,7 @@
   (banner))
 
 (module-end! "core")
-(module-start! "rfcs")
+(module-start! "memos")
 
 ;;; ============================================================
 ;;; Memo-040: Object State (chaotic/quiescent) and Persistence
@@ -4182,7 +4182,7 @@ Cyberspace REPL - Available Commands
          (loc (and code (cadr (assq 'loc (cdr code)))))
          (tcb (and code (assq 'tcb (cdr code)) (cadr (assq 'tcb (cdr code)))))
          (modules (and code (cadr (assq 'modules (cdr code)))))
-         (rfcs (and code (cadr (assq 'rfcs (cdr code)))))
+         (memos (and code (cadr (assq 'memos (cdr code)))))
          (vault-exists (and realm (cadr (assq 'vault-exists (cdr realm)))))
          ;; Vault contents - default to 0 if not present
          (vault-objects (or (and realm (assq 'objects (cdr realm)) (cadr (assq 'objects (cdr realm)))) 0))
@@ -4204,7 +4204,7 @@ Cyberspace REPL - Available Commands
     (print "  "
            (if loc (string-append (number->string (quotient loc 1000)) "K loc") "")
            (if modules (string-append ", " (number->string modules) " modules") "")
-           (if rfcs (string-append ", " (number->string rfcs) " rfcs") "")
+           (if memos (string-append ", " (number->string memos) " memos") "")
            (if (and tcb (> tcb 0))
                (string-append ", " (number->string (quotient tcb 1000)) "K tcb"
                               (if loc
@@ -5110,7 +5110,7 @@ Cyberspace REPL - Available Commands
                           (reverse (cdr (reverse tokens)))))
                 (loop (cons tok tokens))))))))
 
-(module-end! "rfcs")
+(module-end! "memos")
 (module-start! "repl")
 
 ;;; ============================================================
@@ -5149,7 +5149,7 @@ Cyberspace REPL - Available Commands
      ("(library)" "Browse all Memos")
      ("(search 'topic)" "Search vault + library")
      ("(memo N)" "View Memo in terminal")
-     ("(rfc N 'html)" "Open Memo in browser"))
+     ("(memo N 'html)" "Open Memo in browser"))
 
     (security "Keys & Certificates"
      ("(principals)" "Show identity and keys")
@@ -5687,7 +5687,7 @@ Cyberspace REPL - Available Commands
   "Browse the Library of Cyberspace"
   (let* ((lib (introspect-library))
          (count (cadr (assq 'count (cdr lib))))
-         (rfcs (cadr (assq 'rfcs (cdr lib)))))
+         (memos (cadr (assq 'memos (cdr lib)))))
     (print "")
     (printf "Library of Cyberspace (~a memos)~%" count)
     (print "")
@@ -5705,7 +5705,7 @@ Cyberspace REPL - Available Commands
            (printf "  Memo-~a  ~a~%"
                    (string-pad-left num 3 #\0)
                    title-short))))
-     rfcs)
+     memos)
     (print "")
     (void)))
 
@@ -5733,14 +5733,14 @@ Cyberspace REPL - Available Commands
 
     ;; Search library
     (let* ((lib (introspect-library))
-           (rfcs (cadr (assq 'rfcs (cdr lib))))
+           (memos (cadr (assq 'memos (cdr lib))))
            (matches (filter
                      (lambda (rfc)
                        (let ((title (cadr (assq 'title (cdr rfc))))
                              (num (cadr (assq 'number (cdr rfc)))))
                          (or (string-contains-ci title term-str)
                              (string-contains-ci num term-str))))
-                     rfcs)))
+                     memos)))
       (when (not (null? matches))
         (print "Library:")
         (for-each
@@ -5765,7 +5765,7 @@ Cyberspace REPL - Available Commands
                       (string-pad-left (symbol->string num) 3 #\0)))
          (base-dir (or (get-environment-variable "CYBERSPACE_HOME")
                        (make-pathname (current-directory) "")))
-         (rfc-dir (make-pathname base-dir "docs/notes"))
+         (memo-dir (make-pathname base-dir "docs/notes"))
          (fmt (or format 'txt))
          (ext (case fmt
                 ((html) ".html")
@@ -5773,10 +5773,10 @@ Cyberspace REPL - Available Commands
                 ((txt text) ".txt")
                 ((md markdown) ".md")
                 (else ".txt")))
-         (path (string-append rfc-dir "/memo-" num-str "-*.txt"))
+         (path (string-append memo-dir "/memo-" num-str "-*.txt"))
          ;; Find the actual filename
          (actual (with-input-from-pipe
-                  (string-append "ls " rfc-dir "/memo-" num-str "-*" ext " 2>/dev/null | head -1")
+                  (string-append "ls " memo-dir "/memo-" num-str "-*" ext " 2>/dev/null | head -1")
                   read-line)))
     (if (or (eof-object? actual) (string=? actual ""))
         (print "Memo-" num-str " not found")
@@ -5876,7 +5876,7 @@ Cyberspace REPL - Available Commands
          (audit (safe-ref realm 'has-audit))
          (loc (safe-ref code 'loc))
          (modules (safe-ref code 'modules))
-         (rfcs (safe-ref code 'rfcs))
+         (memos (safe-ref code 'memos))
          (lambda-time (safe-ref info 'lamport-time)))
     (printf "~%~a · up ~a · ~a~%" (get-hostname) (or uptime "?") (lamport-format))
     (printf "├─ ~a cores, ~aGB~a~%"
@@ -5894,10 +5894,10 @@ Cyberspace REPL - Available Commands
                                (if keystore " (keys)" "")
                                (if audit " (audit)" ""))
                 "no vault"))
-    (printf "└─ ~aK loc, ~a modules, ~a rfcs~%"
+    (printf "└─ ~aK loc, ~a modules, ~a memos~%"
             (if loc (quotient loc 1000) "?")
             (or modules "?")
-            (or rfcs "?"))
+            (or memos "?"))
     (void)))
 
 ;; Single-char shortcuts (thunks that invoke the command)
