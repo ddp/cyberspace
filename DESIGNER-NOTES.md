@@ -198,6 +198,45 @@ Ambient for the ages. Distributed for the future.
 
 ---
 
+## Derivation vs. Discovery
+
+### Lamport Time
+
+In the absence of global clock synchronization, distributed systems establish causal ordering through logical clocks (Lamport, 1978). Each node maintains a local counter incremented on message send/receive, establishing a happens-before relation (→) that provides partial ordering without requiring synchronized wall-clock time.
+
+The happens-before relation was always there—Lamport gave it a name and a notation. That's discovery. Seeing what was already true.
+
+### call/cc
+
+Most language features are about *what you can say*. call/cc is about *what exists*.
+
+`call/cc` says: the future of the computation is a value you can hold, store, invoke later. Continuations. Time as a first-class object. That's not syntax preference—that's ontology.
+
+The continuation exists whether you capture it or not—call/cc just lets you name it. The future was always there, implicit in every expression. Scheme made it explicit.
+
+SICP wasn't about parentheses. It was a course in *thinking*, disguised as a programming textbook. Streams, lazy evaluation, the environment model, the metacircular evaluator—and then call/cc, which breaks your brain the right way.
+
+### The Y Combinator
+
+The Y combinator (Y = λf.(λx.f(x x))(λx.f(x x))) is a fixed-point combinator enabling recursion without explicit self-reference. It's elegant. It's also just math that falls out of lambda calculus—derivation, not discovery.
+
+A certain Silicon Valley venture capital firm took the name as borrowed plumage. Value signaling to people who recognize the symbol but don't work in the calculus. The firm's founder wrote *On Lisp*, evangelized the aesthetic—but Arc didn't have call/cc. Common Lisp doesn't have it. He came from the CL side, where continuations aren't primitive.
+
+Naming the firm "Y Combinator" signals: *I read the cool parts.*
+Not naming it "call/cc" signals: *I stopped before it got weird.*
+
+The Y combinator is page 300 of SICP. call/cc is the last chapter. Most people don't finish.
+
+### The Distinction
+
+**Derivation:** The Y combinator. Recursion falling out of self-application. True but not illuminating.
+
+**Discovery:** Lamport clocks. call/cc. Seeing structure that was always there, giving it a name, making it usable.
+
+Cyberspace is built on discoveries: happens-before for distributed time, continuations for control flow, SPKI for authorization. The derivations are implementation details.
+
+---
+
 *In Scheme and Dylan with Newton soup.*
 
 *Forty years from asking permission to enter the kernel, to owning the whole stack.*
