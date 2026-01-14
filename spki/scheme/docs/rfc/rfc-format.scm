@@ -987,6 +987,170 @@
           (display "%%EOF\n" out))))))
 
 ;;; ============================================================
+;;; Markdown Output (local scratch only)
+;;; ============================================================
+;;; For local previewing with native markdown viewers.
+;;; Not part of the publication pipeline - outputs to /tmp.
+
+(define (md-emit-element elem port)
+  (cond
+    ((string? elem) (display elem port) (newline port) (newline port))
+    ((not (pair? elem)) #f)
+    (else
+      (case (car elem)
+        ((p)
+          (for-each (lambda (e)
+                      (if (string? e) (display e port) (md-emit-element e port)))
+                    (cdr elem))
+          (newline port) (newline port))
+
+        ((section)
+          (display "## " port)
+          (display (cadr elem) port)
+          (newline port) (newline port)
+          (for-each (lambda (e) (md-emit-element e port)) (cddr elem)))
+
+        ((subsection)
+          (display "### " port)
+          (display (cadr elem) port)
+          (newline port) (newline port)
+          (for-each (lambda (e) (md-emit-element e port)) (cddr elem)))
+
+        ((list)
+          (for-each (lambda (item)
+                      (display "- " port)
+                      (if (and (pair? item) (eq? (car item) 'item))
+                          (display (apply string-append (map ->string (cdr item))) port)
+                          (display (->string item) port))
+                      (newline port))
+                    (cdr elem))
+          (newline port))
+
+        ((blockquote)
+          (display "> " port)
+          (display (cadr elem) port)
+          (newline port)
+          (when (and (pair? (cddr elem)) (eq? (caaddr elem) 'cite))
+            (display "> — " port)
+            (display (cadr (caddr elem)) port)
+            (newline port))
+          (newline port))
+
+        ((code)
+          (let* ((has-lang (and (pair? (cdr elem)) (symbol? (cadr elem))))
+                 (lang (if has-lang (symbol->string (cadr elem)) ""))
+                 (content (if has-lang (caddr elem) (cadr elem))))
+            (display "```" port)
+            (display lang port)
+            (newline port)
+            (display content port)
+            (newline port)
+            (display "```" port)
+            (newline port) (newline port)))
+
+        ((link)
+          (display "[" port)
+          (display (caddr elem) port)
+          (display "](" port)
+          (display (cadr elem) port)
+          (display ")" port)
+          (newline port))
+
+        ((table)
+          (let ((rows (filter pair? (cdr elem))))
+            (when (pair? rows)
+              ;; Header row
+              (let ((first-row (cdr (car rows))))
+                (display "| " port)
+                (for-each (lambda (cell)
+                            (display (->string cell) port)
+                            (display " | " port))
+                          first-row)
+                (newline port)
+                ;; Separator
+                (display "|" port)
+                (for-each (lambda (_) (display " --- |" port)) first-row)
+                (newline port))
+              ;; Data rows
+              (for-each (lambda (row)
+                          (display "| " port)
+                          (for-each (lambda (cell)
+                                      (display (->string cell) port)
+                                      (display " | " port))
+                                    (cdr row))
+                          (newline port))
+                        (cdr rows))
+              (newline port))))
+
+        ((references)
+          (for-each (lambda (ref)
+                      (when (and (pair? ref) (eq? (car ref) 'ref))
+                        (display (format "- **[~a, ~a]** ~a~%"
+                                         (cadr ref) (caddr ref) (cadddr ref)) port)))
+                    (cdr elem))
+          (newline port))
+
+        (else #f)))))
+
+(define (rfc->md doc #!optional filename)
+  "Convert RFC to Markdown in /tmp for local viewing."
+  (let* ((num (get-field doc 'number 0))
+         (title (get-field doc 'title "Untitled"))
+         (is-rfc (eq? (doc-type doc) 'rfc))
+         (default-name (if is-rfc
+                           (format "/tmp/rfc-~a.md" (zero-pad num 3))
+                           "/tmp/doc.md"))
+         (outfile (or filename default-name)))
+    (call-with-output-file outfile
+      (lambda (port)
+        (let ((subtitle (get-field doc 'subtitle #f))
+              (status (get-field doc 'status #f))
+              (date (get-field doc 'date ""))
+              (author (assq 'author (cdr doc))))
+
+          ;; Title
+          (display "# " port)
+          (if is-rfc
+              (display (format "RFC-~a: ~a" (zero-pad num 3) title) port)
+              (display title port))
+          (newline port)
+          (when subtitle
+            (display "*" port)
+            (display subtitle port)
+            (display "*" port)
+            (newline port))
+          (newline port)
+
+          ;; Metadata
+          (when status
+            (display (format "**Status:** ~a  " status) port)
+            (newline port))
+          (when (and date (not (string-null? date)))
+            (display (format "**Date:** ~a  " date) port)
+            (newline port))
+          (when author
+            (display (format "**Author:** ~a <~a>" (cadr author) (caddr author)) port)
+            (newline port))
+          (newline port)
+          (display "---" port)
+          (newline port) (newline port)
+
+          ;; Abstract
+          (let ((abstract (assq 'abstract (cdr doc))))
+            (when abstract
+              (display "## Abstract" port)
+              (newline port) (newline port)
+              (for-each (lambda (e) (md-emit-element e port)) (cdr abstract))))
+
+          ;; Body
+          (for-each (lambda (elem)
+                      (when (and (pair? elem) (eq? (car elem) 'section))
+                        (md-emit-element elem port)))
+                    (cdr doc)))))
+    (print "  -> " outfile)
+    outfile))
+
+;;; ============================================================
 ;;; Batch Processing
 ;;; ============================================================
 
