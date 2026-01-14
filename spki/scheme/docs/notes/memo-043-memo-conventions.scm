@@ -15,8 +15,8 @@
     "Motivation"
     (p "The IETF's \"Request for Comments\" name reflects a historical process we don't share.[^h1] We don't request comments—we record decisions. But the RFC format is well-understood and serves our needs.")
     (p "The compromise: RFC format externally, \"memo\" internally.")
-    (code "\"I penned a memo on wormholes\"     ← what we say\n\"See RFC-041\"                       ← how we cite")
-    (p "[^h1]: Historical: The first RFC (RFC-1, April 1969) was literally a request for comments on host software. The name stuck. Fifty-seven years later, nobody requests comments—they publish specifications."))
+    (code "\"I penned a memo on wormholes\"     ← what we say\n\"See Memo-041\"                       ← how we cite")
+    (p "[^h1]: Historical: The first RFC (Memo-1, April 1969) was literally a request for comments on host software. The name stuck. Fifty-seven years later, nobody requests comments—they publish specifications."))
   (section
     "Terminology"
     (table
@@ -34,7 +34,7 @@
       (table
         (header "Field " "Required " "Description ")
         (row "Status " "Yes " "Document lifecycle stage ")
-        (row "Category " "Yes " "Document type (per RFC-019) ")
+        (row "Category " "Yes " "Document type (per Memo-019) ")
         (row "Scope " "Yes " "Visibility and authority ")
         (row "Created " "Yes " "Initial authorship date ")
         (row "Author " "Yes " "Who penned the memo ")))
@@ -59,7 +59,7 @@
     (subsection
       "Core Scope"
       (p "Core memos use IETF-style sequential numbering:")
-      (code "RFC-001, RFC-002, ... RFC-043")
+      (code "Memo-001, Memo-002, ... Memo-043")
       (p "These are canonical specifications for the Library of Cyberspace. Core maintainer approval required for Standards Track, BCP, and Historic. Anyone may pen Informational or Experimental memos with maintainer review."))
     (subsection
       "Federation Scope"
@@ -83,7 +83,7 @@
     (subsection
       "Federation to Core"
       (p "A federation submits a memo for core adoption:")
-      (code scheme "(memo-promote \"yoyodyne:memo-023\" 'core)\n;; → RFC-044 (after consensus)")
+      (code scheme "(memo-promote \"yoyodyne:memo-023\" 'core)\n;; → Memo-044 (after consensus)")
       (p "Cross-federation review and rough consensus required. Standards Track requires core maintainer approval.")))
   (section
     "Collision Avoidance"
@@ -103,7 +103,7 @@
     "Citation Format"
     (subsection
       "Within Scope"
-      (code markdown "See RFC-041 for wormhole specification.\nSee memo-007 for local notes."))
+      (code markdown "See Memo-041 for wormhole specification.\nSee memo-007 for local notes."))
     (subsection
       "Cross-Federation"
       (code markdown "See yoyodyne:memo-023 for their implementation."))
@@ -131,7 +131,7 @@
       (p "Memo metadata is stored with content in the vault. Tampering with metadata (scope, author, date) is detectable via content addressing.")))
   (section
     "References"
-    (p "1. RFC-019 — Documentation Pipeline 2. RFC-042 — IETF Normative Reference 3. RFC-004 — SPKI Authorization"))
+    (p "1. Memo-019 — Documentation Pipeline 2. Memo-042 — IETF Normative Reference 3. Memo-004 — SPKI Authorization"))
   (section
     "Changelog"
     (p "- 2026-01-07 — Initial specification")))

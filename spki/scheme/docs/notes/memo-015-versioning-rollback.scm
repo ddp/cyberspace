@@ -6,7 +6,7 @@
   (title "Versioning and Rollback")
   (section
     "Abstract"
-    (p "This RFC specifies user-visible versioning and rollback semantics for Cyberspace vaults, providing clear mental models for version management, safe rollback operations, and recovery from mistakes."))
+    (p "This Memo specifies user-visible versioning and rollback semantics for Cyberspace vaults, providing clear mental models for version management, safe rollback operations, and recovery from mistakes."))
   (section
     "Motivation"
     (p "Users need simple answers to simple questions:")
@@ -117,14 +117,14 @@
     (subsection
       "Rollback Attacks"
       (p "Attacker forces rollback to vulnerable version.")
-      (p "Mitigation: - Threshold signatures for rollback (RFC-007) - Protected version list - Audit trail detection"))
+      (p "Mitigation: - Threshold signatures for rollback (Memo-007) - Protected version list - Audit trail detection"))
     (subsection
       "History Manipulation"
       (p "Hard rollback can hide evidence.")
       (p "Mitigation: - Prefer forward rollback - Audit before hard rollback - Federation replication preserves history")))
   (section
     "References"
-    (p "1. Semantic Versioning 2.0.0 (semver.org) 2. Git Reset, Checkout, and Revert (git-scm.com) 3. RFC-003: Cryptographic Audit Trail 4. RFC-006: Vault System Architecture"))
+    (p "1. Semantic Versioning 2.0.0 (semver.org) 2. Git Reset, Checkout, and Revert (git-scm.com) 3. Memo-003: Cryptographic Audit Trail 4. Memo-006: Vault System Architecture"))
   (section
     "Changelog"
     (list

@@ -6,7 +6,7 @@
   (title "Cryptographic Audit Trail")
   (section
     "Abstract"
-    (p "This RFC specifies the cryptographic audit trail system for the Library of Cyberspace, providing tamper-evident, hash-chained logging with SPKI principal attribution and Ed25519 signatures."))
+    (p "This Memo specifies the cryptographic audit trail system for the Library of Cyberspace, providing tamper-evident, hash-chained logging with SPKI principal attribution and Ed25519 signatures."))
   (section
     "Motivation"
     (p "Distributed systems require accountability. Who did what, when, and under whose authority?")

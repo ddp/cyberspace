@@ -6,7 +6,7 @@
   (title "Network Protocol")
   (section
     "Abstract"
-    (p "This RFC specifies the network protocol for the Library of Cyberspace: how vaults discover each other, authenticate, exchange objects, and synchronize state. The protocol is transport-agnostic, capability-authenticated, and optimized for content-addressed data."))
+    (p "This Memo specifies the network protocol for the Library of Cyberspace: how vaults discover each other, authenticate, exchange objects, and synchronize state. The protocol is transport-agnostic, capability-authenticated, and optimized for content-addressed data."))
   (section
     "Motivation"
     (p "Vaults must communicate to:")
@@ -151,7 +151,7 @@
       (code scheme "(define connection-pool (make-hash-table))\n\n(define (get-connection address)\n  \"Get pooled connection or create new\"\n  (or (hash-table-ref connection-pool address #f)\n      (let ((conn (connect-vault address)))\n        (hash-table-set! connection-pool address conn)\n        conn)))")))
   (section
     "References"
-    (p "1. [QUIC Protocol - RFC 9000](https://tools.ietf.org/html/rfc9000) 2. [Noise Protocol Framework](http://noiseprotocol.org/) 3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.html) 4. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 5. [IPFS Bitswap Protocol](https://docs.ipfs.tech/concepts/bitswap/) 6. [libp2p Specifications](https://github.com/libp2p/specs)"))
+    (p "1. [QUIC Protocol - RFC 9000](https://tools.ietf.org/html/rfc9000) 2. [Noise Protocol Framework](http://noiseprotocol.org/) 3. [Memo-020: Content-Addressed Storage](memo-020-content-addressed-storage.html) 4. [Memo-021: Capability Delegation](memo-021-capability-delegation.html) 5. [IPFS Bitswap Protocol](https://docs.ipfs.tech/concepts/bitswap/) 6. [libp2p Specifications](https://github.com/libp2p/specs)"))
   (section
     "Changelog"
     (list

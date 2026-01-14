@@ -6,10 +6,10 @@
   (title "Coq Extraction for TCB")
   (section
     "Abstract"
-    (p "This RFC specifies the use of Coq proof assistant for verified implementation of the Trusted Computing Base, with extraction to OCaml for production use. Prove once, trust forever."))
+    (p "This Memo specifies the use of Coq proof assistant for verified implementation of the Trusted Computing Base, with extraction to OCaml for production use. Prove once, trust forever."))
   (section
     "Motivation"
-    (p "The Prime Directive (RFC-002):")
+    (p "The Prime Directive (Memo-002):")
     (blockquote "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.")
     (p "But even OCaml can have bugs. The TCB handles: - Ed25519 signatures - SHA-512 hashing - Signature chain verification")
     (p "A single bug breaks everything.")
@@ -115,7 +115,7 @@
       (code "Total TCB:     ~1000 lines OCaml\nVerified:      ~800 lines (extracted from ~2000 lines Coq)\nTrusted:       ~200 lines (FFI, bindings)")))
   (section
     "References"
-    (p "1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2. Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic. 3. Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*. 4. Chlipala, A. (2013). Certified Programming with Dependent Types. 5. RFC-002: Cyberspace Architecture"))
+    (p "1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2. Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic. 3. Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*. 4. Chlipala, A. (2013). Certified Programming with Dependent Types. 5. Memo-002: Cyberspace Architecture"))
   (section
     "Changelog"
     (list

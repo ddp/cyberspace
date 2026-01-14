@@ -3,7 +3,7 @@
   (title "Compilation and Debugging Manual")
   (section
     "Abstract"
-    (p "This RFC is the compilation and debugging manual for Cyberspace Scheme. It specifies type inference conventions, build system architecture, debugging infrastructure, exception handling, and inspector design. The guiding principles are Ada's \"declare everything, infer nothing\" and Dylan's \"inspect everything, hide nothing.\""))
+    (p "This Memo is the compilation and debugging manual for Cyberspace Scheme. It specifies type inference conventions, build system architecture, debugging infrastructure, exception handling, and inspector design. The guiding principles are Ada's \"declare everything, infer nothing\" and Dylan's \"inspect everything, hide nothing.\""))
 
   (section
     "Part I: Compilation"
@@ -687,4 +687,4 @@ module-test.scm  ; Tests"))
       "SRFI-12: Exception Handling"
       "Ada Reference Manual: Type System"
       "Dylan Reference Manual: Inspector"
-      "RFC-054 Terminal Interface Conventions"))))
+      "Memo-054 Terminal Interface Conventions"))))

@@ -3,13 +3,13 @@
 ;;; Implements epidemic protocol for federation convergence.
 ;;; Nodes gossip periodically to discover and sync missing objects.
 ;;;
-;;; Three-Layer Convergence (RFC-010 compliant):
+;;; Three-Layer Convergence (Memo-010 compliant):
 ;;;   Layer 1: Bloom filter exchange (fast, approximate)
 ;;;   Layer 2: Merkle tree diff (precise, logarithmic)
 ;;;   Layer 3: Object transfer (actual data)
 ;;;
 ;;; Post-Quantum: All hashes use SHA-256 (128-bit quantum security).
-;;; Ready for SHAKE256 migration per RFC-042/043.
+;;; Ready for SHAKE256 migration per Memo-042/043.
 
 (module gossip
   (;; Gossip daemon

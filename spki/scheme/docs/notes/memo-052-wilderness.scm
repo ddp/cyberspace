@@ -6,7 +6,7 @@
   (title "The Wilderness")
   (section
     "Abstract"
-    (p "This RFC defines the Wilderness - the interstitial space between realms in Cyberspace. It establishes the cosmology of realms, wormholes, and affiliation."))
+    (p "This Memo defines the Wilderness - the interstitial space between realms in Cyberspace. It establishes the cosmology of realms, wormholes, and affiliation."))
   (section
     "1. The Wilderness"
     (p "The Wilderness is the space between all realms. It is not empty - it is the medium through which all connections pass.")
@@ -82,7 +82,7 @@
     (p "1. Honest onboarding - Users know they are not yet part of anything 2. Unified metaphor - Same space for unaffiliated and wormhole transit 3. Security clarity - No implicit trust, no assumed identity 4. Poetic resonance - Evokes the uncertainty of the unaffiliated state"))
   (section
     "7. References"
-    (p "1. Angleton, J.J. - \"Wilderness of Mirrors\" (intelligence terminology) 2. Eliot, T.S. - \"Gerontion\" (original source of the phrase) 3. RFC-010 - Federation Protocol 4. RFC-044 - Node Enrollment"))
+    (p "1. Angleton, J.J. - \"Wilderness of Mirrors\" (intelligence terminology) 2. Eliot, T.S. - \"Gerontion\" (original source of the phrase) 3. Memo-010 - Federation Protocol 4. Memo-044 - Node Enrollment"))
   (section
     "Changelog"
     (list

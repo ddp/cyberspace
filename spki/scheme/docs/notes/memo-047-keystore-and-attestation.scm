@@ -6,12 +6,12 @@
   (title "Realm Keystore and Attestation")
   (section
     "Abstract"
-    (p "A realm without identity is not sovereign. This RFC defines two protected stores within the vault:")
+    (p "A realm without identity is not sovereign. This Memo defines two protected stores within the vault:")
     (p "1. Keystore - where cryptographic identity lives (Ed25519 signing keys) 2. Attestation Store - where proofs about the realm live (hardware, software, identity claims)")
     (p "Together they form the inner vault - the protected core of a realm. Keys prove who you are. Attestations prove what you are."))
   (section
     "Motivation"
-    (p "RFC-040 established that capabilities flow from Ed25519 signatures. Every certificate, every sealed release, every audit entry requires a signature. But where does the signing key live?")
+    (p "Memo-040 established that capabilities flow from Ed25519 signatures. Every certificate, every sealed release, every audit entry requires a signature. But where does the signing key live?")
     (p "Currently: ephemeral, generated per session. This is fine for testing but broken for production. A realm needs:")
     (list
       (item "Persistent identity - the same principal across sessions")
@@ -105,7 +105,7 @@
     "Recovery"
     (subsection
       "Threshold Shares"
-      (p "For high-value realms, split the key into k-of-n shares (RFC-007):")
+      (p "For high-value realms, split the key into k-of-n shares (Memo-007):")
       (code scheme "(keystore-backup\n  threshold: 2                   ; k - shares needed\n  shares: 3)                     ; n - shares created\n\n;; Output:\n;; Share 1 of 3 (requires 2 to recover):\n;; CYBER-SHARE-1-7f3a2b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2\n;;\n;; Share 2 of 3 (requires 2 to recover):\n;; CYBER-SHARE-2-8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8\n;;\n;; Share 3 of 3 (requires 2 to recover):\n;; CYBER-SHARE-3-9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9\n;;\n;; STORE THESE SEPARATELY. Any 2 can recover your realm.")
       (p "Recovery:")
       (code scheme "(keystore-recover\n  \"CYBER-SHARE-1-7f3a2b4c...\"\n  \"CYBER-SHARE-3-9b0c1d2e...\")\n\n;; Realm recovered. Set new passphrase:\n;; New passphrase: \n;; Confirm: \n;; Keystore restored."))
@@ -146,8 +146,8 @@
       (p "Remote verifier can walk the chain: \"Show me your hardware attestation, software measurement, and the capability you claim.\""))
     (subsection
       "Use Cases"
-      (p "Coordinator Election (RFC-037): Candidate presents attestations proving hardware capability and identity. Voters verify before granting coordinator role.")
-      (p "Federation Trust (RFC-039): Realms exchange attestations when federating. \"Before I sync objects with you, prove your software is legitimate.\"")
+      (p "Coordinator Election (Memo-037): Candidate presents attestations proving hardware capability and identity. Voters verify before granting coordinator role.")
+      (p "Federation Trust (Memo-039): Realms exchange attestations when federating. \"Before I sync objects with you, prove your software is legitimate.\"")
       (p "High-Security Operations: Some capabilities might require fresh attestation: \"This capability requires Anchor attestation less than 1 hour old.\"")))
   (section
     "Hardware Token Support"
@@ -193,13 +193,13 @@
   (section
     "Integration"
     (subsection
-      "With seal-release (RFC-033)"
+      "With seal-release (Memo-033)"
       (code scheme "(seal-release \"1.0.4\" name: \"phoenix\")\n;; Uses keystore signing key automatically\n;; Prompts for unlock if keystore locked"))
     (subsection
-      "With capabilities (RFC-004)"
+      "With capabilities (Memo-004)"
       (code scheme "(spki-cert-create\n  subject: \"ed25519:bob...\"\n  tag: '(read \"sha512:doc...\"))\n;; Signed with keystore key\n;; Issuer automatically set to realm principal"))
     (subsection
-      "With audit (RFC-040)"
+      "With audit (Memo-040)"
       (code scheme ";; Audit entries signed with keystore key\n;; Principal identity consistent across sessions")))
   (section
     "Invariants"
@@ -228,7 +228,7 @@
     (p "Ed25519 replacement: SPHINCS+ or CRYSTALS-Dilithium for signatures. That's a separate RFC."))
   (section
     "References"
-    (p "1. libsodium documentation - Password Hashing, Secret-key Encryption 2. Argon2 specification - https://github.com/P-H-C/phc-winner-argon2 3. Shamir's Secret Sharing - Shamir, A., \"How to Share a Secret\", 1979 4. RFC-007 - Threshold Governance 5. RFC-040 - Cyberspace Security Architecture"))
+    (p "1. libsodium documentation - Password Hashing, Secret-key Encryption 2. Argon2 specification - https://github.com/P-H-C/phc-winner-argon2 3. Shamir's Secret Sharing - Shamir, A., \"How to Share a Secret\", 1979 4. Memo-007 - Threshold Governance 5. Memo-040 - Cyberspace Security Architecture"))
   (section
     "Changelog"
     (list

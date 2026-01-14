@@ -6,7 +6,7 @@
   (title "Node Roles and Capabilities")
   (section
     "Abstract"
-    (p "This RFC defines functional roles for nodes in a Library of Cyberspace confederation based on compute, storage, network, and security capabilities. Roles determine what operations a node can perform and how it participates in the distributed system."))
+    (p "This Memo defines functional roles for nodes in a Library of Cyberspace confederation based on compute, storage, network, and security capabilities. Roles determine what operations a node can perform and how it participates in the distributed system."))
   (section
     "Terminology"
     (p "Realm: A node's place in cyberspace. A realm encompasses: - The node's vault (local content-addressed object store) - The node's principal (Ed25519 identity) - The node's capabilities (hardware, network, security) - The node's objects (what it stores and serves)")
@@ -14,7 +14,7 @@
     (p "The hardware manifest stored at .vault/node-hardware declares what kind of place this realm occupies in cyberspace."))
   (section
     "Motivation"
-    (p "RFC-010 (Federation Protocol) defines trust relationships between peers (publisher, subscriber, peer). However, it does not address functional capabilities - what operations each node can actually perform based on its hardware and network constraints.")
+    (p "Memo-010 (Federation Protocol) defines trust relationships between peers (publisher, subscriber, peer). However, it does not address functional capabilities - what operations each node can actually perform based on its hardware and network constraints.")
     (p "A Raspberry Pi on a solar-powered satellite uplink has different capabilities than a rack-mounted server in a datacenter. The system should:")
     (p "1. Self-assess - Nodes should know their own capabilities 2. Declare - Nodes should advertise their role to peers 3. Adapt - Operations should degrade gracefully based on available roles 4. Persist - Role assignments should survive restarts"))
   (section
@@ -74,7 +74,7 @@
       (code scheme "(define (node-can-perform? operation)\n  \"Check if current role permits operation\"\n  (let ((role (node-current-role))\n        (required (operation-required-role operation)))\n    (role-permits? role required)))\n\n(define (role-permits? actual required)\n  \"Check role hierarchy\"\n  (let ((hierarchy '(coordinator full witness archiver edge)))\n    (<= (list-index hierarchy actual)\n        (list-index hierarchy required))))")))
   (section
     "Starlink Considerations"
-    (p "Per RFC-016, the system is optimized for satellite links:")
+    (p "Per Memo-016, the system is optimized for satellite links:")
     (code scheme "(node-config\n  (role witness)\n  (network\n    (type satellite)\n    (provider starlink)\n    (characteristics\n      (latency-ms 20-40)           ; Low-earth orbit\n      (bandwidth-mbps 100-200)     ; Bursty\n      (jitter high)                ; Variable\n      (uptime 0.95)                ; Weather dependent\n      (data-cap none))))           ; Unlimited for now\n\n;; Satellite-optimized behavior\n(define satellite-mode\n  '((batch-sync #t)                ; Aggregate operations\n    (lazy-pull #t)                 ; Don't fetch eagerly\n    (compress-always #t)           ; Minimize transfer\n    (retry-aggressive #t)          ; Handle drops\n    (heartbeat-interval 300)))     ; 5 min, not seconds")
     (subsection
       "Role Implications for Satellite Nodes"
@@ -105,7 +105,7 @@
       (p "1. Signed role declarations: Can't forge 2. Local override: Node controls own role 3. Audit trail: Role changes are logged")))
   (section
     "References"
-    (p "1. RFC-010: Federation Protocol 2. RFC-011: Byzantine Consensus 3. RFC-016: Lazy Clustering 4. RFC-017: Security Considerations"))
+    (p "1. Memo-010: Federation Protocol 2. Memo-011: Byzantine Consensus 3. Memo-016: Lazy Clustering 4. Memo-017: Security Considerations"))
   (section
     "Changelog"
     (list

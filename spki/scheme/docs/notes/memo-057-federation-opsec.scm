@@ -1,11 +1,11 @@
-;; RFC-057: Federation Operational Security
+;; Memo-057: Federation Operational Security
 
 (memo
   (number 57)
   (title "Federation Operational Security")
   (section
     "Abstract"
-    (p "Federation (RFC-010) enables peer-to-peer synchronization between vaults. This RFC specifies operational security considerations for federation: what information flows between peers, how to minimize information leakage, and techniques for protecting node identity and capabilities from covert channel analysis."))
+    (p "Federation (Memo-010) enables peer-to-peer synchronization between vaults. This Memo specifies operational security considerations for federation: what information flows between peers, how to minimize information leakage, and techniques for protecting node identity and capabilities from covert channel analysis."))
   (section
     "1. The Problem Space"
     (p "When vaults federate, they exchange more than just releases. Every message, timing pattern, and capability advertisement creates an information flow. An adversary observing federation traffic—or a malicious peer—can build a profile of your node.")
@@ -244,9 +244,9 @@ Cross-reference with other traffic: Likely a specific model."))
       (item "[ ] Personas separated if needed")))
   (section
     "12. References"
-    (p "1. RFC-010 — Federation Protocol")
-    (p "2. RFC-024 — Network Protocol")
-    (p "3. RFC-046 — Security Architecture")
+    (p "1. Memo-010 — Federation Protocol")
+    (p "2. Memo-024 — Network Protocol")
+    (p "3. Memo-046 — Security Architecture")
     (p "4. Dingledine, R., et al. (2004). Tor: The Second-Generation Onion Router")
     (p "5. Danezis, G., Diaz, C. (2008). A Survey of Anonymous Communication Channels"))
   (section

@@ -6,7 +6,7 @@
   (title "Vault System Architecture")
   (section
     "Abstract"
-    (p "This RFC specifies the Vault system for the Library of Cyberspace: cryptographically sealed version control with SPKI authorization, progressive metadata, archival support, and integrated audit trails."))
+    (p "This Memo specifies the Vault system for the Library of Cyberspace: cryptographically sealed version control with SPKI authorization, progressive metadata, archival support, and integrated audit trails."))
   (section
     "Motivation"
     (p "Git is powerful but lacks:")
@@ -97,7 +97,7 @@
         (item "Age encryption (X25519/Ed25519 compatible)")
         (item "SHA-512 hash + Ed25519 signature")
         (item "Encrypted at rest")
-        (item "See RFC-018: Sealed Archive Format for full specification"))
+        (item "See Memo-018: Sealed Archive Format for full specification"))
       (p "Cryptographic Archive Structure:")
       (code "vault-1.0.0.archive        # Manifest\nvault-1.0.0.archive.tar.gz # Tarball (cryptographic)")
       (p "Zstd+Age Archive Structure:")
@@ -114,7 +114,7 @@
       (p "Process: 1. Read manifest 2. Verify hash (archive integrity) 3. Verify signature (if key provided) 4. Decrypt (zstd-age only, requires identity) 5. Extract to target directory")))
   (section
     "Replication Layer"
-    (p "See RFC-001 for complete specification.")
+    (p "See Memo-001 for complete specification.")
     (subsection
       "seal-publish"
       (p "Publish release to remote.")
@@ -191,15 +191,15 @@
   (section
     "Integration Points"
     (subsection
-      "With Audit Trail (RFC-003)"
+      "With Audit Trail (Memo-003)"
       (p "All vault operations create audit entries:")
       (code scheme "(audit-append\n  actor: (get-vault-principal signing-key)\n  action: '(seal-commit \"hash123\")\n  motivation: message)"))
     (subsection
-      "With SPKI (RFC-004)"
+      "With SPKI (Memo-004)"
       (p "Signing keys are SPKI principals:")
       (code scheme "(make-key-principal (get-vault-principal signing-key))"))
     (subsection
-      "With Metadata (RFC-005)"
+      "With Metadata (Memo-005)"
       (p "Progressive metadata via seal-commit parameters:")
       (code scheme "(seal-commit \"msg\" preserve: #t)  ; Full preservation")))
   (section
@@ -221,7 +221,7 @@
     (p "All formats are first-class citizens in the Vault. RFCs and declarations SHOULD be published in all three formats for maximum preservation and accessibility. No proprietary formats."))
   (section
     "References"
-    (p "1. Git Internals - Plumbing and Porcelain 2. RFC-001: Replication Layer 3. RFC-003: Cryptographic Audit Trail 4. RFC-004: SPKI Authorization 5. RFC-005: Progressive Metadata Levels 6. RFC-018: Sealed Archive Format 7. Semantic Versioning 2.0.0"))
+    (p "1. Git Internals - Plumbing and Porcelain 2. Memo-001: Replication Layer 3. Memo-003: Cryptographic Audit Trail 4. Memo-004: SPKI Authorization 5. Memo-005: Progressive Metadata Levels 6. Memo-018: Sealed Archive Format 7. Semantic Versioning 2.0.0"))
   (section
     "Changelog"
     (list

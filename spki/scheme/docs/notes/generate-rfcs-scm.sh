@@ -1,5 +1,5 @@
 #!/bin/zsh
-# RFC Documentation Pipeline - S-expression Edition
+# Memo Documentation Pipeline - S-expression Edition
 #
 # Generates all RFC formats from S-expression sources
 # Source: .scm (S-expression documents)
@@ -13,7 +13,7 @@ setopt null_glob
 
 cd "$(dirname "$0")"
 
-echo "=== RFC Documentation Pipeline (S-expression) ==="
+echo "=== Memo Documentation Pipeline (S-expression) ==="
 echo ""
 
 # Discover RFCs from filesystem
@@ -76,7 +76,7 @@ generate_index() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Library of Cyberspace - RFC Index</title>
+  <title>Library of Cyberspace - Memo Index</title>
   <link rel="stylesheet" href="rfc.css">
   <style>
     body { max-width: 900px; margin: 0 auto; padding: 1rem; }
@@ -89,14 +89,14 @@ generate_index() {
   </style>
 </head>
 <body>
-  <h1>Library of Cyberspace - RFC Index</h1>
+  <h1>Library of Cyberspace - Memo Index</h1>
   <p>Request for Comments documents for the Library of Cyberspace preservation architecture.</p>
   <p><em>Generated from S-expression sources via Scheme processors.</em></p>
 
   <table>
     <thead>
       <tr>
-        <th>RFC</th>
+        <th>Memo</th>
         <th>Title</th>
         <th>Formats</th>
       </tr>

@@ -6,7 +6,7 @@
   (title "Wormholes (FUSE Filesystem Layer)")
   (section
     "Abstract"
-    (p "This RFC specifies wormholes—FUSE-based bidirectional portals between the macOS filesystem and the Library of Cyberspace vault. Wormholes preserve full metadata including extended attributes, Finder tags, and ACLs. All operations are auditable (RFC-003) and rate-limited (RFC-032).[^h1]")
+    (p "This Memo specifies wormholes—FUSE-based bidirectional portals between the macOS filesystem and the Library of Cyberspace vault. Wormholes preserve full metadata including extended attributes, Finder tags, and ACLs. All operations are auditable (Memo-003) and rate-limited (Memo-032).[^h1]")
     (p "[^h1]: Historical: FUSE originated in Linux 2.6 (2005), inspired by earlier userspace filesystem work in Plan 9 and Hurd. macFUSE (originally MacFUSE) brought it to macOS in 2007. The abstraction outlived Apple's hostility."))
   (section
     "Motivation"
@@ -19,11 +19,11 @@
     "Wormhole as Security Object"
     (p "A wormhole is a first-class security object in cyberspace, subject to:[^d2]")
     (list
-      (item "SPKI Authorization (RFC-004) — Opening requires valid certificate")
-      (item "Capability Delegation (RFC-021) — Wormhole access can be delegated")
-      (item "Audit Trail (RFC-003) — All operations logged")
-      (item "Rate Limiting (RFC-032) — Configurable ops/minute")
-      (item "Sandboxing (RFC-023) — Agents access wormholes through capabilities"))
+      (item "SPKI Authorization (Memo-004) — Opening requires valid certificate")
+      (item "Capability Delegation (Memo-021) — Wormhole access can be delegated")
+      (item "Audit Trail (Memo-003) — All operations logged")
+      (item "Rate Limiting (Memo-032) — Configurable ops/minute")
+      (item "Sandboxing (Memo-023) — Agents access wormholes through capabilities"))
     (p "[^d2]: Design: Wormholes are attack surface. Unrestricted filesystem access defeats vault security. Every wormhole must be explicitly authorized, continuously audited, and rate-limited against abuse.")
     (subsection
       "Wormhole Certificate"
@@ -125,7 +125,7 @@
       (code scheme "(define (fuse-getattr path)\n  \"Return file attributes from vault metadata\"\n  (let ((entry (manifest-lookup path)))\n    (if entry\n        (let ((meta (vault-file-metadata entry)))\n          (make-stat\n           (alist-ref 'mode (alist-ref 'posix meta))\n           (alist-ref 'size (alist-ref 'posix meta))\n           (alist-ref 'mtime (alist-ref 'posix meta))\n           ...))\n        -ENOENT)))\n\n(define (fuse-read path size offset)\n  \"Read file content from vault\"\n  (let ((entry (manifest-lookup path))\n         (hash (vault-file-hash entry))\n         (content (vault-fetch hash)))\n    (subbytes content offset (+ offset size))))\n\n(define (fuse-write path data offset)\n  \"Write to file, content-address the result\"\n  (let ((entry (manifest-lookup path))\n         (current (vault-fetch (vault-file-hash entry)))\n         (updated (bytes-splice current offset data))\n         (new-hash (content-address updated)))\n    (manifest-update! path new-hash)\n    (string-length data)))\n\n(define (fuse-setxattr path name value)\n  \"Store extended attribute in vault metadata\"\n  (let ((entry (manifest-lookup path)))\n    (metadata-set-xattr! entry name value)\n    0))")))
   (section
     "Content Addressing"
-    (p "Files are stored by content hash (RFC-020):")
+    (p "Files are stored by content hash (Memo-020):")
     (code scheme "(define (content-address data)\n  \"Store data, return hash\"\n  (let* ((hash (sha256 data))\n         (path (vault-object-path hash)))\n    (unless (file-exists? path)\n      (write-blob path data))\n    hash))\n\n(define (vault-fetch hash)\n  \"Retrieve data by hash\"\n  (read-blob (vault-object-path hash)))")
     (p "Benefits: - Identical files stored once (deduplication) - Integrity verification on every read - Immutable objects enable safe caching"))
   (section
@@ -133,11 +133,11 @@
     (subsection
       "Change Detection"
       (p "The FUSE layer captures all writes in real-time. No separate sync needed for local changes.")
-      (p "For multi-device sync, the manifest includes version vectors (RFC-012):")
+      (p "For multi-device sync, the manifest includes version vectors (Memo-012):")
       (code scheme "(define (manifest-entry path hash metadata)\n  `(entry\n    (path ,path)\n    (hash ,hash)\n    (metadata ,metadata)\n    (version-vector ,local-node ,lamport-clock)))"))
     (subsection
       "Conflict Resolution"
-      (p "When merging manifests from different devices (RFC-016 lazy clustering):")
+      (p "When merging manifests from different devices (Memo-016 lazy clustering):")
       (p "1. Same hash → No conflict (identical content) 2. Different hash, one newer → Take newer 3. Different hash, concurrent → Conflict, apply lazy-resolve")
       (code scheme "(define (merge-manifests local remote)\n  (for-each\n   (lambda (path)\n     (let ((l (manifest-lookup local path))\n           (r (manifest-lookup remote path)))\n       (cond\n        ((not l) (manifest-add! local r))\n        ((not r) 'keep-local)\n        ((equal? (vault-file-hash l) (vault-file-hash r)) 'identical)\n        ((version-newer? r l) (manifest-update! local r))\n        ((version-newer? l r) 'keep-local)\n        (else (queue-conflict! path l r)))))\n   (union (manifest-paths local) (manifest-paths remote))))")))
   (section
@@ -192,7 +192,7 @@
       (row "Scheme FFI " "Bindings to libfuse ")))
   (section
     "References"
-    (p "1. RFC-012: Lamport Clocks 2. RFC-016: Lazy Clustering 3. RFC-020: Content-Addressed Storage 4. FUSE documentation: https://libfuse.github.io/ 5. FUSE-T: https://github.com/macos-fuse-t/fuse-t"))
+    (p "1. Memo-012: Lamport Clocks 2. Memo-016: Lazy Clustering 3. Memo-020: Content-Addressed Storage 4. FUSE documentation: https://libfuse.github.io/ 5. FUSE-T: https://github.com/macos-fuse-t/fuse-t"))
   (section
     "Changelog"
     (list

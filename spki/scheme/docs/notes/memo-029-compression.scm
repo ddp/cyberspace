@@ -6,7 +6,7 @@
   (title "Compression and Deduplication")
   (section
     "Abstract"
-    (p "This RFC specifies compression and deduplication for the Library of Cyberspace: how vaults reduce storage requirements while maintaining content-addressability, integrity verification, and efficient retrieval. Compression is transparent to the content-addressing layer."))
+    (p "This Memo specifies compression and deduplication for the Library of Cyberspace: how vaults reduce storage requirements while maintaining content-addressability, integrity verification, and efficient retrieval. Compression is transparent to the content-addressing layer."))
   (section
     "Motivation"
     (p "Storage efficiency matters for preservation:")
@@ -85,7 +85,7 @@
     "Archive Compression"
     (subsection
       "Sealed Archive Format"
-      (code scheme ";; RFC-018 integration\n(define (create-compressed-archive objects)\n  \"Create compressed sealed archive\"\n  (let* ((serialized (serialize-objects objects))\n         (compressed (zstd-compress serialized 19))  ; Max compression\n         (encrypted (age-encrypt compressed recipients)))\n    (cas-put encrypted)))"))
+      (code scheme ";; Memo-018 integration\n(define (create-compressed-archive objects)\n  \"Create compressed sealed archive\"\n  (let* ((serialized (serialize-objects objects))\n         (compressed (zstd-compress serialized 19))  ; Max compression\n         (encrypted (age-encrypt compressed recipients)))\n    (cas-put encrypted)))"))
     (subsection
       "Streaming Compression"
       (code scheme "(define (stream-compress input-port output-port algorithm)\n  \"Stream compression for large files\"\n  (let ((ctx (compression-context-create algorithm)))\n    (let loop ()\n      (let ((chunk (read-bytevector chunk-size input-port)))\n        (unless (eof-object? chunk)\n          (write-bytevector (compress-chunk ctx chunk) output-port)\n          (loop))))\n    (write-bytevector (compress-finish ctx) output-port)))")))
@@ -110,7 +110,7 @@
       (code scheme "(define (recover-compressed hash)\n  \"Attempt to recover corrupted compressed object\"\n  ;; Try partial decompression\n  (let ((partial (decompress-partial hash)))\n    (when partial\n      (audit-append action: 'partial-recovery hash: hash)\n      partial))\n\n  ;; Fetch from replica\n  (let ((replica-data (fetch-from-replica hash)))\n    (when replica-data\n      (storage-put hash replica-data)\n      replica-data)))")))
   (section
     "References"
-    (p "1. [Zstandard](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Content-Defined Chunking](https://restic.net/blog/2015-09-12/restic-foundation1-cdc/) - Restic blog 3. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.html) 4. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.html)"))
+    (p "1. [Zstandard](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Content-Defined Chunking](https://restic.net/blog/2015-09-12/restic-foundation1-cdc/) - Restic blog 3. [Memo-018: Sealed Archive Format](memo-018-sealed-archive.html) 4. [Memo-020: Content-Addressed Storage](memo-020-content-addressed-storage.html)"))
   (section
     "Changelog"
     (list

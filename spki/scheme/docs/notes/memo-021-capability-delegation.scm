@@ -6,7 +6,7 @@
   (title "Capability Delegation Patterns")
   (section
     "Abstract"
-    (p "This RFC specifies capability delegation patterns for the Library of Cyberspace: how principals grant, attenuate, and revoke capabilities using SPKI certificates, content-addressed objects, and the soup metadata layer. Capabilities flow through delegation chains with monotonically decreasing authority."))
+    (p "This Memo specifies capability delegation patterns for the Library of Cyberspace: how principals grant, attenuate, and revoke capabilities using SPKI certificates, content-addressed objects, and the soup metadata layer. Capabilities flow through delegation chains with monotonically decreasing authority."))
   (section
     "Motivation"
     (p "Authorization in distributed systems is hard:")
@@ -79,7 +79,7 @@
     "Content-Addressed Capabilities"
     (subsection
       "Hash as Capability"
-      (p "Knowledge of a content hash is itself a capability (RFC-020):")
+      (p "Knowledge of a content hash is itself a capability (Memo-020):")
       (code scheme ";; Possessing this hash grants read access\n(define secret-doc-hash \"sha256:7f83b1657ff1fc...\")\n\n;; The hash is unguessable (256 bits of entropy)\n;; Sharing the hash = sharing the capability\n(define (share-capability recipient hash)\n  (encrypted-send recipient hash))"))
     (subsection
       "Capability Certificates for Hashes"
@@ -103,7 +103,7 @@
       (code scheme "(define (check-revocation cert)\n  \"Check if certificate is revoked\"\n  (let* ((cert-hash (sha256 (serialize cert)))\n         (issuer (cert-issuer cert))\n         (crl (fetch-crl issuer)))\n    (not (member cert-hash (crl-revoked-hashes crl)))))"))
     (subsection
       "Tombstone Revocation"
-      (p "Using CAS tombstones (RFC-020):")
+      (p "Using CAS tombstones (Memo-020):")
       (code scheme "(define (revoke-capability-tombstone cert-hash reason)\n  \"Revoke by tombstoning the certificate\"\n  (cas-tombstone cert-hash\n    reason: reason\n    actor: (current-principal)))"))
     (subsection
       "Short-Lived Certificates"
@@ -168,7 +168,7 @@
         (item "Revocation checks add latency - use short-lived certs when possible"))))
   (section
     "References"
-    (p "1. SPKI/SDSI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication - Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller, Yee, Shapiro (preserved) 4. RFC-004: SPKI Authorization 5. RFC-020: Content-Addressed Storage 6. RFC-007: Threshold Signature Governance"))
+    (p "1. SPKI/SDSI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication - Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller, Yee, Shapiro (preserved) 4. Memo-004: SPKI Authorization 5. Memo-020: Content-Addressed Storage 6. Memo-007: Threshold Signature Governance"))
   (section
     "Changelog"
     (list

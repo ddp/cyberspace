@@ -6,7 +6,7 @@
   (title "Error Handling and Recovery")
   (section
     "Abstract"
-    (p "This RFC specifies error handling and recovery for the Library of Cyberspace: how vaults detect, report, and recover from failures while maintaining integrity guarantees. Errors are first-class objects in the soup, enabling systematic analysis and automated recovery."))
+    (p "This Memo specifies error handling and recovery for the Library of Cyberspace: how vaults detect, report, and recover from failures while maintaining integrity guarantees. Errors are first-class objects in the soup, enabling systematic analysis and automated recovery."))
   (section
     "Motivation"
     (p "Distributed systems fail in creative ways:")
@@ -118,7 +118,7 @@
       (code scheme ";; Rate limit error generation to prevent DoS\n(define error-rate-limiter\n  (make-rate-limiter 1000 60))  ; 1000 errors per minute max\n\n(define (rate-limited-record-error! err)\n  (if (rate-limiter-allow? error-rate-limiter)\n      (record-error! err)\n      (audit-append action: 'error-rate-limited)))")))
   (section
     "References"
-    (p "1. [Release It!](https://pragprog.com/titles/mnee2/release-it-second-edition/) - Nygard 2. [Hystrix](https://github.com/Netflix/Hystrix) - Netflix Circuit Breaker 3. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.html) 4. [RFC-026: Garbage Collection](rfc-026-garbage-collection.html)"))
+    (p "1. [Release It!](https://pragprog.com/titles/mnee2/release-it-second-edition/) - Nygard 2. [Hystrix](https://github.com/Netflix/Hystrix) - Netflix Circuit Breaker 3. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 4. [Memo-026: Garbage Collection](memo-026-garbage-collection.html)"))
   (section
     "Changelog"
     (list

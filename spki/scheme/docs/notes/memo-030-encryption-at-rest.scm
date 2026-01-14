@@ -6,7 +6,7 @@
   (title "Encryption at Rest")
   (section
     "Abstract"
-    (p "This RFC specifies encryption at rest for the Library of Cyberspace: how vaults protect stored data using modern cryptography while maintaining content-addressability, key management, and operational flexibility. All sensitive data is encrypted before touching persistent storage."))
+    (p "This Memo specifies encryption at rest for the Library of Cyberspace: how vaults protect stored data using modern cryptography while maintaining content-addressability, key management, and operational flexibility. All sensitive data is encrypted before touching persistent storage."))
   (section
     "Motivation"
     (p "Data at rest faces threats:")
@@ -44,7 +44,7 @@
       (code scheme "(define key-hierarchy\n  '(master-key                    ; Root of trust\n    └── vault-key                 ; Per-vault encryption\n        ├── content-key           ; Object encryption\n        ├── metadata-key          ; Soup encryption\n        ├── index-key             ; Index encryption\n        └── audit-key))           ; Audit log encryption\n\n(define (derive-key parent purpose)\n  \"Derive child key from parent\"\n  (hkdf-sha256 parent\n               salt: (purpose->salt purpose)\n               info: (string->utf8 (symbol->string purpose))\n               length: 32))"))
     (subsection
       "Master Key"
-      (code scheme ";; Master key from key ceremony (RFC-022)\n(define (initialize-master-key shares threshold)\n  \"Reconstruct master key from shares\"\n  (let ((master (shamir-combine shares threshold)))\n    ;; Derive vault key\n    (let ((vault-key (derive-key master 'vault)))\n      ;; Store encrypted vault key\n      (store-encrypted-vault-key vault-key master)\n      ;; Clear master from memory\n      (secure-clear! master)\n      vault-key)))"))
+      (code scheme ";; Master key from key ceremony (Memo-022)\n(define (initialize-master-key shares threshold)\n  \"Reconstruct master key from shares\"\n  (let ((master (shamir-combine shares threshold)))\n    ;; Derive vault key\n    (let ((vault-key (derive-key master 'vault)))\n      ;; Store encrypted vault key\n      (store-encrypted-vault-key vault-key master)\n      ;; Clear master from memory\n      (secure-clear! master)\n      vault-key)))"))
     (subsection
       "Key Derivation"
       (code scheme "(define (derive-content-key vault-key object-hash)\n  \"Derive unique key for each object\"\n  (hkdf-sha256 vault-key\n               salt: (string->utf8 object-hash)\n               info: #u8(99 111 110 116 101 110 116)  ; \"content\"\n               length: 32))\n\n(define (derive-chunk-key content-key chunk-index)\n  \"Derive key for each chunk within object\"\n  (hkdf-sha256 content-key\n               salt: (integer->bytevector chunk-index)\n               info: #u8(99 104 117 110 107)  ; \"chunk\"\n               length: 32))")))
@@ -52,7 +52,7 @@
     "Object Encryption"
     (subsection
       "Age Format"
-      (code scheme ";; Use age for object encryption (RFC-018)\n(define (encrypt-object data recipient-keys)\n  \"Encrypt object using age format\"\n  (age-encrypt data recipient-keys))\n\n(define (decrypt-object encrypted identity)\n  \"Decrypt object using age format\"\n  (age-decrypt encrypted identity))"))
+      (code scheme ";; Use age for object encryption (Memo-018)\n(define (encrypt-object data recipient-keys)\n  \"Encrypt object using age format\"\n  (age-encrypt data recipient-keys))\n\n(define (decrypt-object encrypted identity)\n  \"Decrypt object using age format\"\n  (age-decrypt encrypted identity))"))
     (subsection
       "Symmetric Encryption"
       (code scheme ";; For internal encryption with derived keys\n(define (encrypt-symmetric data key)\n  \"Encrypt with ChaCha20-Poly1305\"\n  (let ((nonce (generate-nonce 12)))\n    (let ((ciphertext (chacha20-poly1305-encrypt data key nonce)))\n      (bytevector-append nonce ciphertext))))\n\n(define (decrypt-symmetric encrypted key)\n  \"Decrypt ChaCha20-Poly1305\"\n  (let ((nonce (subbytevector encrypted 0 12))\n        (ciphertext (subbytevector encrypted 12)))\n    (chacha20-poly1305-decrypt ciphertext key nonce)))"))
@@ -131,7 +131,7 @@
       (code scheme ";; Constant-time operations\n(define (constant-time-compare a b)\n  \"Compare without timing leaks\"\n  (let ((result 0))\n    (do ((i 0 (+ i 1)))\n        ((= i (bytevector-length a)) (= result 0))\n      (set! result (bitwise-ior result\n                    (bitwise-xor (bytevector-u8-ref a i)\n                                 (bytevector-u8-ref b i)))))))")))
   (section
     "References"
-    (p "1. [age](https://age-encryption.org/) - Modern file encryption 2. [LUKS](https://gitlab.com/cryptsetup/cryptsetup) - Linux Unified Key Setup 3. [RFC-022: Key Ceremony Protocol](rfc-022-key-ceremony.html) 4. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.html)"))
+    (p "1. [age](https://age-encryption.org/) - Modern file encryption 2. [LUKS](https://gitlab.com/cryptsetup/cryptsetup) - Linux Unified Key Setup 3. [Memo-022: Key Ceremony Protocol](memo-022-key-ceremony.html) 4. [Memo-018: Sealed Archive Format](memo-018-sealed-archive.html)"))
   (section
     "Changelog"
     (list

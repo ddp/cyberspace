@@ -6,7 +6,7 @@
   (title "Sealed Archive Format")
   (section
     "Abstract"
-    (p "This RFC specifies the Zstd+Age archive format for the Library of Cyberspace: a modern archive format combining Zstd compression with Age encryption, replacing gzip for cryptographic archives."))
+    (p "This Memo specifies the Zstd+Age archive format for the Library of Cyberspace: a modern archive format combining Zstd compression with Age encryption, replacing gzip for cryptographic archives."))
   (section
     "Motivation"
     (p "The legacy cryptographic archive format uses gzip compression without encryption:")
@@ -128,7 +128,7 @@
       (p "Both formats can coexist. The manifest format field determines restoration method: - (format cryptographic) → seal-restore-cryptographic - (format zstd-age) → seal-restore-zstd-age")))
   (section
     "References"
-    (p "1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Age](https://age-encryption.org/) - Modern encryption tool 3. [RFC-006](rfc-006-vault-architecture.html) - Vault System Architecture 4. [RFC-004](rfc-004-spki-authorization.html) - SPKI Authorization"))
+    (p "1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Age](https://age-encryption.org/) - Modern encryption tool 3. [Memo-006](memo-006-vault-architecture.html) - Vault System Architecture 4. [Memo-004](memo-004-spki-authorization.html) - SPKI Authorization"))
   (section
     "Changelog"
     (list

@@ -31,7 +31,7 @@
    random-u32
    random-uniform
    entropy-status
-   ;; Vault cryptography (RFC-041)
+   ;; Vault cryptography (Memo-041)
    argon2id-hash
    secretbox-encrypt
    secretbox-decrypt
@@ -45,7 +45,7 @@
    ward unward                   ; Protective barrier
    veil unveil                   ; Hidden from view
    entrust recover               ; Key relationship
-   ;; X25519 key exchange (RFC-039 network encryption)
+   ;; X25519 key exchange (Memo-039 network encryption)
    x25519-keypair
    x25519-scalarmult
    x25519-publickeybytes
@@ -219,7 +219,7 @@
       hash))
 
   ;;; ============================================================================
-  ;;; Vault Cryptography (RFC-041)
+  ;;; Vault Cryptography (Memo-041)
   ;;; ============================================================================
 
   ;; Constants for secretbox (XSalsa20-Poly1305)
@@ -402,7 +402,7 @@
   (define recover secretbox-decrypt)
 
   ;;; ============================================================================
-  ;;; X25519 Key Exchange (RFC-039 Network Encryption)
+  ;;; X25519 Key Exchange (Memo-039 Network Encryption)
   ;;; ============================================================================
 
   ;; Generate X25519 keypair

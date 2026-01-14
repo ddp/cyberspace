@@ -6,7 +6,7 @@
   (title "Schema Evolution")
   (section
     "Abstract"
-    (p "This RFC specifies schema evolution for the Library of Cyberspace: how soup metadata schemas change over time while maintaining backward compatibility, migration paths, and query consistency. Schemas are themselves content-addressed objects."))
+    (p "This Memo specifies schema evolution for the Library of Cyberspace: how soup metadata schemas change over time while maintaining backward compatibility, migration paths, and query consistency. Schemas are themselves content-addressed objects."))
   (section
     "Motivation"
     (p "Data outlives code:")
@@ -93,7 +93,7 @@
       (code scheme ";; What schemas exist?\n(soup-query type: 'schema)\n\n;; What versions of a schema?\n(soup-query type: 'schema name: 'document)\n\n;; What fields in a schema?\n(schema-fields (get-schema 'document 2))\n\n;; Schema dependency graph\n(define (schema-dependencies schema)\n  (filter-map (lambda (field)\n                (when (schema-reference? (field-type field))\n                  (field-type-target field)))\n              (schema-fields schema)))"))
     (subsection
       "Schema Documentation"
-      (code scheme "(define-schema 'document\n  (version 2)\n  (description \"A document stored in the vault\")\n  (fields\n    (hash\n      (type string)\n      (required #t)\n      (indexed #t)\n      (description \"Content-addressed hash of document\"))\n    (name\n      (type string)\n      (required #t)\n      (description \"Human-readable document name\")\n      (example \"RFC-033-schema-evolution.md\"))))")))
+      (code scheme "(define-schema 'document\n  (version 2)\n  (description \"A document stored in the vault\")\n  (fields\n    (hash\n      (type string)\n      (required #t)\n      (indexed #t)\n      (description \"Content-addressed hash of document\"))\n    (name\n      (type string)\n      (required #t)\n      (description \"Human-readable document name\")\n      (example \"Memo-033-schema-evolution.md\"))))")))
   (section
     "Default Values"
     (subsection
@@ -115,7 +115,7 @@
       (code scheme ";; Migrations require capability\n(spki-cert\n  (issuer vault-admin)\n  (subject schema-admin)\n  (capability\n    (action migrate-schema)\n    (object (schema 'document)))\n  (validity (not-after \"2027-01-01\")))")))
   (section
     "References"
-    (p "1. [Protocol Buffers - Updating A Message Type](https://developers.google.com/protocol-buffers/docs/proto#updating) 2. [Avro Schema Evolution](https://avro.apache.org/docs/current/spec.html#Schema+Resolution) 3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.html) 4. [RFC-025: Query Language](rfc-025-query-language.html)"))
+    (p "1. [Protocol Buffers - Updating A Message Type](https://developers.google.com/protocol-buffers/docs/proto#updating) 2. [Avro Schema Evolution](https://avro.apache.org/docs/current/spec.html#Schema+Resolution) 3. [Memo-020: Content-Addressed Storage](memo-020-content-addressed-storage.html) 4. [Memo-025: Query Language](memo-025-query-language.html)"))
   (section
     "Changelog"
     (list

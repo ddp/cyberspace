@@ -6,7 +6,7 @@
   (title "The Normie Interface")
   (section
     "Abstract"
-    (p "Cyberspace must be approachable by normal people. The terminal is for operators. This RFC specifies a friendly interface layer for everyone else."))
+    (p "Cyberspace must be approachable by normal people. The terminal is for operators. This Memo specifies a friendly interface layer for everyone else."))
   (section
     "1. The Problem"
     (p "A normie asked: \"Why would I want to use this? I have Tahoe 26.2. They have recipes and cat pictures.\"")
@@ -63,7 +63,7 @@
     (p "Then we've succeeded."))
   (section
     "10. References"
-    (p "1. RFC-002 - Architecture (\"English on top, Scheme underneath\") 2. RFC-050 - The Wilderness (onboarding state)"))
+    (p "1. Memo-002 - Architecture (\"English on top, Scheme underneath\") 2. Memo-050 - The Wilderness (onboarding state)"))
   (section
     "Changelog"
     (list

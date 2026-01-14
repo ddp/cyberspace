@@ -6,7 +6,7 @@
   (title "Monitoring and Observability")
   (section
     "Abstract"
-    (p "This RFC specifies monitoring and observability for the Library of Cyberspace: how vaults expose metrics, traces, and logs for operational visibility while maintaining privacy and security. Observability data is itself content-addressed and auditable."))
+    (p "This Memo specifies monitoring and observability for the Library of Cyberspace: how vaults expose metrics, traces, and logs for operational visibility while maintaining privacy and security. Observability data is itself content-addressed and auditable."))
   (section
     "Motivation"
     (p "Operating distributed systems requires visibility:")
@@ -106,7 +106,7 @@
       (code scheme ";; Sample traces to control storage\n(define trace-sample-rate 0.1)  ; 10%\n\n(define (should-sample-trace?)\n  (< (random 1.0) trace-sample-rate))\n\n(define (record-trace! trace)\n  (when (or (trace-has-error? trace)\n            (should-sample-trace?))\n    (soup-put trace type: 'trace)))")))
   (section
     "References"
-    (p "1. [OpenTelemetry](https://opentelemetry.io/) - Observability framework 2. [Prometheus](https://prometheus.io/) - Monitoring system 3. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.html) 4. [RFC-028: Error Handling](rfc-028-error-handling.html)"))
+    (p "1. [OpenTelemetry](https://opentelemetry.io/) - Observability framework 2. [Prometheus](https://prometheus.io/) - Monitoring system 3. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 4. [Memo-028: Error Handling](memo-028-error-handling.html)"))
   (section
     "Changelog"
     (list

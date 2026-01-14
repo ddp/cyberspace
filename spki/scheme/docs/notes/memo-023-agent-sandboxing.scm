@@ -6,7 +6,7 @@
   (title "Demonic Agents")
   (section
     "Abstract"
-    (p "This RFC specifies demonic agents for the Library of Cyberspace: how autonomous agents—daemons in the BSD tradition—are spawned, constrained, monitored, and terminated. Agents are helpful spirits that operate with capability-based authority in isolated sandboxes, enabling safe delegation of tasks while maintaining security boundaries. The vault daemons watch over all."))
+    (p "This Memo specifies demonic agents for the Library of Cyberspace: how autonomous agents—daemons in the BSD tradition—are spawned, constrained, monitored, and terminated. Agents are helpful spirits that operate with capability-based authority in isolated sandboxes, enabling safe delegation of tasks while maintaining security boundaries. The vault daemons watch over all."))
   (section
     "Motivation"
     (subsection
@@ -166,7 +166,7 @@
         (item "Capability check: ~100ns (cached), ~10μs (chain validation)"))))
   (section
     "References"
-    (p "1. [Telescript Technology: Mobile Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html) 2. [Capsicum: Practical Capabilities for UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/) 3. [WebAssembly System Interface (WASI)](https://wasi.dev/) 4. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 5. [RFC-003: Cryptographic Audit Trail](rfc-003-audit-trail.html) 6. [E Programming Language](http://erights.org/) - Object capabilities"))
+    (p "1. [Telescript Technology: Mobile Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html) 2. [Capsicum: Practical Capabilities for UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/) 3. [WebAssembly System Interface (WASI)](https://wasi.dev/) 4. [Memo-021: Capability Delegation](memo-021-capability-delegation.html) 5. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 6. [E Programming Language](http://erights.org/) - Object capabilities"))
   (section
     "Changelog"
     (list

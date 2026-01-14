@@ -6,7 +6,7 @@
   (title "Documentation Pipeline")
   (section
     "Abstract"
-    (p "This RFC specifies the documentation pipeline for the Library of Cyberspace: automated generation of canonical document formats and index catalogs. Output formats are HTML, PostScript, and plain text—open formats that will outlast corporations."))
+    (p "This Memo specifies the documentation pipeline for the Library of Cyberspace: automated generation of canonical document formats and index catalogs. Output formats are HTML, PostScript, and plain text—open formats that will outlast corporations."))
   (section
     "Motivation"
     (p "Documentation must be:")
@@ -113,7 +113,7 @@
     (subsection
       "Permuted Index (KWIC)"
       (p "A Key Word In Context index rotates titles around each significant word:[^h3]")
-      (code "              Architecture  RFC-002: Vault System Architecture\n                    Audit  RFC-003: Cryptographic Audit Trail\nVault System  Architecture  RFC-002: Vault System Architecture\nCryptographic       Audit  RFC-003: Cryptographic Audit Trail")
+      (code "              Architecture  Memo-002: Vault System Architecture\n                    Audit  Memo-003: Cryptographic Audit Trail\nVault System  Architecture  Memo-002: Vault System Architecture\nCryptographic       Audit  Memo-003: Cryptographic Audit Trail")
       (p "Stop words excluded: a, an, and, for, in, of, on, or, the, to, with")
       (p "The permuted index enables discovery by concept rather than by RFC number.[^r2]")
       (p "[^h3]: Historical: KWIC indices originated at IBM (1958) for chemical abstracts. Unix ptx command generates permuted indices. The technique predates full-text search and remains valuable for browsable discovery.")
@@ -129,7 +129,7 @@
         (row "commit " "git commit " "Local repository ")
         (row "sync " "git pull && git push " "GitHub (cyberspace) ")
         (row "publish " "rsync " "Yoyodyne (www) "))
-      (p "Note: sync is intentionally ambiguous—it also means lazy clustering sync (RFC-016). Context disambiguates. The ambiguity with git is preserved.[^d3]")
+      (p "Note: sync is intentionally ambiguous—it also means lazy clustering sync (Memo-016). Context disambiguates. The ambiguity with git is preserved.[^d3]")
       (p "[^d3]: Design: Overloaded vocabulary reflects reality. \"Sync\" universally means bidirectional reconciliation. Fighting this creates cognitive load. Embrace it."))
     (subsection
       "Commit (Local)"
@@ -189,7 +189,7 @@
       (p "Remote publication uses: - SSH key authentication - No sensitive data in documents - World-readable permissions only")))
   (section
     "References"
-    (p "1. Pandoc User's Guide (preserved) 2. PostScript Language Reference Manual - Adobe (preserved) 3. RFC-006: Vault System Architecture"))
+    (p "1. Pandoc User's Guide (preserved) 2. PostScript Language Reference Manual - Adobe (preserved) 3. Memo-006: Vault System Architecture"))
   (section
     "Changelog"
     (list

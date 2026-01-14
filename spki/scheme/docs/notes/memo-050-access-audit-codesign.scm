@@ -6,7 +6,7 @@
   (title "Access Control and Audit Co-Design")
   (section
     "Abstract"
-    (p "This RFC establishes the principle that access control and auditing must be designed together, not separately. Every access control decision point produces three outputs: a decision, an effect, and a record. Audit policy is per-realm, with lean defaults."))
+    (p "This Memo establishes the principle that access control and auditing must be designed together, not separately. Every access control decision point produces three outputs: a decision, an effect, and a record. Audit policy is per-realm, with lean defaults."))
   (section
     "Motivation"
     (p "Security systems often treat auditing as an afterthought—bolted on after access control is designed. This leads to:")
@@ -85,9 +85,9 @@
   (section
     "References"
     (list
-      (item "RFC-003: Cryptographic Audit Trail")
-      (item "RFC-004: SPKI Authorization")
-      (item "RFC-046: Security Architecture")))
+      (item "Memo-003: Cryptographic Audit Trail")
+      (item "Memo-004: SPKI Authorization")
+      (item "Memo-046: Security Architecture")))
   (section
     "Changelog"
     (p "- 2026-01-10: Initial draft")))

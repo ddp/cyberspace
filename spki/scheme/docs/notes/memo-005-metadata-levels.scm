@@ -6,7 +6,7 @@
   (title "Progressive Metadata Levels")
   (section
     "Abstract"
-    (p "This RFC specifies progressive metadata levels for vault commits, enabling configurable richness from minimal overhead to full preservation context. Three levels serve different use cases: minimal (fast iteration), catalog (discovery), and preserve (archival)."))
+    (p "This Memo specifies progressive metadata levels for vault commits, enabling configurable richness from minimal overhead to full preservation context. Three levels serve different use cases: minimal (fast iteration), catalog (discovery), and preserve (archival)."))
   (section
     "Motivation"
     (p "Different commits deserve different metadata:")

@@ -6,7 +6,7 @@
   (title "Shamir Secret Sharing")
   (section
     "Abstract"
-    (p "This RFC specifies Shamir's Secret Sharing implementation for the Library of Cyberspace, enabling K-of-N threshold splitting and reconstruction of cryptographic keys and other secrets."))
+    (p "This Memo specifies Shamir's Secret Sharing implementation for the Library of Cyberspace, enabling K-of-N threshold splitting and reconstruction of cryptographic keys and other secrets."))
   (section
     "Motivation"
     (p "Private keys are single points of failure:")
@@ -102,10 +102,10 @@
     "Integration with Threshold Signatures"
     (p "Two complementary approaches:")
     (subsection
-      "Shamir for Key Backup (This RFC)"
+      "Shamir for Key Backup (This Memo)"
       (code "Private key → split → N shares\nRecovery: K shares → reconstruct → use key"))
     (subsection
-      "Multi-Signature for Governance (RFC-007)"
+      "Multi-Signature for Governance (Memo-007)"
       (code "N parties → N keys → N signatures\nVerification: count valid ≥ K")
       (p "Use Shamir when: - Backing up existing keys - Emergency recovery scenarios - Single key must be reconstructable")
       (p "Use Multi-Sig when: - Ongoing governance decisions - Need audit trail of who signed - Asynchronous authorization")))

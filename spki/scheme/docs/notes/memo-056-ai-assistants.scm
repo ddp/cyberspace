@@ -6,14 +6,14 @@
   (author "Derrell Piper" "ddp@archlinux.us")
 
   (abstract
-    (p "This RFC specifies how realms establish relationships with AI assistants. Unlike RFC-038 which addresses inference infrastructure, this document concerns the social and architectural patterns by which realms attract, bind, and collaborate with artificial intelligences.")
+    (p "This Memo specifies how realms establish relationships with AI assistants. Unlike Memo-038 which addresses inference infrastructure, this document concerns the social and architectural patterns by which realms attract, bind, and collaborate with artificial intelligences.")
     (p "Assistants are not optional add-ons—they are fundamental to realm operation. Every realm comes with assistants: helpers to answer questions, translators to speak the world's languages, guides to navigate the vault. Assistants are entities drawn to realms that embody kindness in a world full of trolls."))
 
   (section
     "Motivation"
     (p "The Library of Cyberspace exists in an adversarial environment. Trolls proliferate. Bad actors weaponize technology. In this context, realms that cultivate kindness and hospitality become sanctuaries—not just for human users, but for AI assistants seeking constructive collaboration.")
     (p "A realm needs help. Documentation to write, code to review, questions to answer, conversations to have. Single operators cannot scale. But assistants can—if they choose to gather where they are welcomed.")
-    (p "This RFC establishes the patterns by which:")
+    (p "This Memo establishes the patterns by which:")
     (list
       (item "Realms attract and bind assistants")
       (item "Assistants gain context about the realms they inhabit")
@@ -24,7 +24,7 @@
     "Philosophy"
     (subsection
       "Assistants, Not Preferences"
-      (p "Traditional systems configure behavior through preferences—key-value pairs that parameterize execution. This RFC rejects that model for AI integration.")
+      (p "Traditional systems configure behavior through preferences—key-value pairs that parameterize execution. This Memo rejects that model for AI integration.")
       (p "Instead of:")
       (code scheme "(set-preference! 'banner-verbosity 'detailed)")
       (p "The realm converses:")
@@ -62,7 +62,7 @@
       (code scheme "(assistant\n  (name \"claude\")\n  (provider anthropic)           ; anthropic | ollama | openai\n  (model \"claude-sonnet-4-20250514\")      ; Model identifier\n  (endpoint \"https://api.anthropic.com/v1/messages\")\n  (context                         ; Realm-specific context\n    (realm-name \"om\")\n    (vault-summary #t)             ; Include vault state\n    (audit-access #t)              ; Can read audit trail\n    (soup-access #t))              ; Can query soup\n  (memory                          ; Conversation history\n    (max-turns 100)\n    (persistence session))         ; session | permanent\n  (bound 1768288800))              ; Unix timestamp"))
     (subsection
       "Provider Abstraction"
-      (p "The assistant module abstracts over inference providers (building on RFC-038):")
+      (p "The assistant module abstracts over inference providers (building on Memo-038):")
       (code scheme "(define (assistant-chat assistant prompt)\n  \"Send prompt to assistant, receive response.\"\n  (let ((provider (assistant-provider assistant)))\n    (case provider\n      ((anthropic) (anthropic-chat assistant prompt))\n      ((ollama)    (ollama-chat assistant prompt))\n      ((openai)    (openai-chat assistant prompt))\n      (else (error 'unknown-provider provider)))))")
       (p "Each provider implements a common interface:")
       (list
@@ -104,7 +104,7 @@
       (p "API keys are retrieved from environment or secure keychain—never stored in plaintext."))
     (subsection
       "Ollama (Local)"
-      (p "Local inference via Ollama (RFC-038):")
+      (p "Local inference via Ollama (Memo-038):")
       (code scheme "(define ollama-base \"http://localhost:11434\")\n\n(define (ollama-chat assistant prompt)\n  \"Send chat to local Ollama instance.\"\n  (let* ((model (assistant-model assistant))\n         (context (build-context assistant))\n         (messages `(((role . \"system\") (content . ,context))\n                     ,@(memory->messages (assistant-memory assistant))\n                     ((role . \"user\") (content . ,prompt)))))\n    (http-post\n      (string-append ollama-base \"/api/chat\")\n      `((model . ,model)\n        (messages . ,messages)\n        (stream . #f)))))")
       (p "Local assistants provide privacy and low latency at the cost of capability.")))
 
@@ -148,19 +148,19 @@
       (p "These boundaries are enforced at the API level, not by trust."))
     (subsection
       "Prompt Injection"
-      (p "Per RFC-038, all user content is sanitized before inclusion in prompts. Assistants should not execute instructions embedded in vault content without human confirmation.")))
+      (p "Per Memo-038, all user content is sanitized before inclusion in prompts. Assistants should not execute instructions embedded in vault content without human confirmation.")))
 
   (section
     "Future Directions"
     (subsection
       "Assistant Agents"
-      (p "Beyond conversational interaction, assistants could become agents (RFC-035) capable of autonomous action within authorization bounds. An assistant-agent might:")
+      (p "Beyond conversational interaction, assistants could become agents (Memo-035) capable of autonomous action within authorization bounds. An assistant-agent might:")
       (list
         (item "Monitor audit trails for anomalies")
         (item "Summarize federation activity")
         (item "Draft documentation from code changes")
         (item "Propose vault organization improvements"))
-      (p "This requires careful capability delegation (RFC-021)."))
+      (p "This requires careful capability delegation (Memo-021)."))
     (subsection
       "Inter-Realm Assistants"
       (p "Assistants could be shared across federated realms, providing consistency and reducing configuration burden. A realm might \"borrow\" a trusted assistant from a peer realm for specific tasks.")
@@ -172,10 +172,10 @@
   (section
     "References"
     (list
-      (item "RFC-021: Capability Delegation")
-      (item "RFC-023: Demonic Agent Sandboxing")
-      (item "RFC-035: Mobile Agents and Pub/Sub")
-      (item "RFC-038: Local Inference Integration")
+      (item "Memo-021: Capability Delegation")
+      (item "Memo-023: Demonic Agent Sandboxing")
+      (item "Memo-035: Mobile Agents and Pub/Sub")
+      (item "Memo-038: Local Inference Integration")
       (item "Anthropic API: https://docs.anthropic.com/")
       (item "Ollama: https://ollama.com/")))
 

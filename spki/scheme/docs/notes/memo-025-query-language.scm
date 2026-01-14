@@ -6,7 +6,7 @@
   (title "Soup Query Language")
   (section
     "Abstract"
-    (p "This RFC specifies the query language for the Library of Cyberspace soup: how principals search, filter, and retrieve objects from the content-addressed store using the rich metadata layer. Queries are themselves content-addressed and auditable."))
+    (p "This Memo specifies the query language for the Library of Cyberspace soup: how principals search, filter, and retrieve objects from the content-addressed store using the rich metadata layer. Queries are themselves content-addressed and auditable."))
   (section
     "Motivation"
     (p "The soup contains infinite metadata. Finding needles requires a query language that is:")
@@ -35,7 +35,7 @@
     "Advanced Queries"
     (subsection
       "Range Queries"
-      (code scheme ";; Numeric ranges\n(soup-query size: (between 1000 10000))\n\n;; Date ranges\n(soup-query created: (between \"2026-01-01\" \"2026-12-31\"))\n\n;; Lexicographic ranges\n(soup-query name: (between \"rfc-010\" \"rfc-020\"))"))
+      (code scheme ";; Numeric ranges\n(soup-query size: (between 1000 10000))\n\n;; Date ranges\n(soup-query created: (between \"2026-01-01\" \"2026-12-31\"))\n\n;; Lexicographic ranges\n(soup-query name: (between \"memo-010\" \"memo-020\"))"))
     (subsection
       "Full-Text Search"
       (code scheme ";; Search indexed content\n(soup-query (text-search \"capability delegation\"))\n\n;; With highlighting\n(soup-query (text-search \"SPKI certificate\")\n            highlight: #t)\n\n;; Phrase search\n(soup-query (text-search \"\\\"monotonic attenuation\\\"\"))\n\n;; Fuzzy search\n(soup-query (text-search \"delgation~\"))  ; typo-tolerant"))
@@ -156,7 +156,7 @@
         (item "S-expression syntax for Scheme integration"))))
   (section
     "References"
-    (p "1. Newton Programmer's Guide - Soup and cursor APIs 2. SQLite Query Planner - Query optimization 3. Selinger et al., \"Access Path Selection in a Relational Database Management System\" (1979) - Cost-based optimization 4. RFC-020: Content-Addressed Storage 5. RFC-021: Capability Delegation 6. RFC-026: Garbage Collection (generation-aware caching)"))
+    (p "1. Newton Programmer's Guide - Soup and cursor APIs 2. SQLite Query Planner - Query optimization 3. Selinger et al., \"Access Path Selection in a Relational Database Management System\" (1979) - Cost-based optimization 4. Memo-020: Content-Addressed Storage 5. Memo-021: Capability Delegation 6. Memo-026: Garbage Collection (generation-aware caching)"))
   (section
     "Changelog"
     (list

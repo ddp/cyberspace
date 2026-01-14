@@ -8,7 +8,7 @@
 ;;; - Ready for SHAKE256 upgrade when libsodium adds support
 ;;; - Tree structure allows O(log n) diff detection
 ;;;
-;;; RFC-042 specifies SHAKE256 for quantum resistance.
+;;; Memo-042 specifies SHAKE256 for quantum resistance.
 ;;; This implementation uses SHA-256 as transitional hash
 ;;; (same 128-bit quantum security level).
 
@@ -51,7 +51,7 @@
   ;; Future:  SHAKE256 (256-bit classical, 128-bit quantum)
   ;;
   ;; Both provide same quantum security. SHAKE256 preferred for
-  ;; alignment with SPHINCS+ signatures (RFC-043).
+  ;; alignment with SPHINCS+ signatures (Memo-043).
 
   (define *catalog-hash* 'sha256)  ; 'sha256 | 'shake256 (future)
 
@@ -70,7 +70,7 @@
            (h2-vec (blob->u8vector h2))
            (combined (make-u8vector (+ 1 (u8vector-length h1-vec)
                                        (u8vector-length h2-vec)))))
-      ;; Interior node marker (RFC-042 domain separation)
+      ;; Interior node marker (Memo-042 domain separation)
       (u8vector-set! combined 0 1)
       ;; Copy h1
       (do ((i 0 (+ i 1)))
@@ -89,7 +89,7 @@
     (let* ((data-bytes (if (blob? data) (blob->u8vector data)
                            (blob->u8vector (string->blob data))))
            (prefixed (make-u8vector (+ 1 (u8vector-length data-bytes)))))
-      ;; Leaf node marker (RFC-042 domain separation)
+      ;; Leaf node marker (Memo-042 domain separation)
       (u8vector-set! prefixed 0 0)
       (do ((i 0 (+ i 1)))
           ((= i (u8vector-length data-bytes)))

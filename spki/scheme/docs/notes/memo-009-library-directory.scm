@@ -6,7 +6,7 @@
   (title "Library Directory System")
   (section
     "Abstract"
-    (p "This RFC specifies the Library Directory System for the Library of Cyberspace: a searchable catalog of research papers with natural language queries, fuzzy matching, and beautiful output. Finding knowledge should be delightful."))
+    (p "This Memo specifies the Library Directory System for the Library of Cyberspace: a searchable catalog of research papers with natural language queries, fuzzy matching, and beautiful output. Finding knowledge should be delightful."))
   (section
     "E Pluribus Unum"
     (code "╔═══════════════════════════════════════════════════════════════╗\n║  📚 Cyberspace Library Directory                               ║\n║  Finding knowledge should be joyful                            ║\n╚═══════════════════════════════════════════════════════════════╝"))

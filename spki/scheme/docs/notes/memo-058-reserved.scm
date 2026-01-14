@@ -1,4 +1,4 @@
-;; RFC-058: Reserved
+;; Memo-058: Reserved
 ;; Number reserved for Designer Notes (not an RFC)
 
 (memo

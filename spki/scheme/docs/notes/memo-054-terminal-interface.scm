@@ -6,10 +6,10 @@
   (title "Terminal Interface Conventions")
   (section
     "Abstract"
-    (p "The terminal is for operators. This RFC specifies visual conventions for the Cyberspace REPL: box drawing, tree displays, prompts, color usage, and output formatting. Consistency aids muscle memory."))
+    (p "The terminal is for operators. This Memo specifies visual conventions for the Cyberspace REPL: box drawing, tree displays, prompts, color usage, and output formatting. Consistency aids muscle memory."))
   (section
     "1. The Operator Interface"
-    (p "The Cyberspace REPL is for hackers, admins, and operators—people who think in terms of data structures. This interface is deliberately different from the \"normie\" GUI interface (RFC-053).")
+    (p "The Cyberspace REPL is for hackers, admins, and operators—people who think in terms of data structures. This interface is deliberately different from the \"normie\" GUI interface (Memo-053).")
     (code "               CYBERSPACE\n                    |\n       +------------+------------+\n       |                         |\n  +----v-----+              +----v-----+\n  | Terminal |              | Friendly |\n  |   (cs)   | <- this RFC  |   Door   |\n  +----------+              +----------+"))
   (section
     "2. Box Drawing"
@@ -179,7 +179,7 @@
     (p "1. [ ] Boxes use Unicode box-drawing characters 2. [ ] Trees use ├─ and └─ consistently 3. [ ] Prompt is :  (colon-space) 4. [ ] Colors are optional, not required for meaning 5. [ ] Error messages are actionable 6. [ ] Functions returning output use (void) 7. [ ] Long values are truncated with ... 8. [ ] Blank lines follow the convention 9. [ ] No ASCII art boxes (+---, |, etc.) 10. [ ] No tabs in output (spaces only)"))
   (section
     "15. References"
-    (p "1. RFC-053 — The Normie Interface (GUI counterpart) 2. RFC-002 — Architecture (\"English on top, Scheme underneath\") 3. Unicode Standard — Box Drawing (U+2500–U+257F) 4. ECMA-48 — Control Functions for Coded Character Sets (VT100)"))
+    (p "1. Memo-053 — The Normie Interface (GUI counterpart) 2. Memo-002 — Architecture (\"English on top, Scheme underneath\") 3. Unicode Standard — Box Drawing (U+2500–U+257F) 4. ECMA-48 — Control Functions for Coded Character Sets (VT100)"))
   (section
     "Changelog"
     (p "- 2026-01-13 — Add boot verbosity levels (shadow, whisper, portal, chronicle, oracle)")

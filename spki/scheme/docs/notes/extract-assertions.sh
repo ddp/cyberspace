@@ -1,7 +1,7 @@
 #!/bin/bash
 # extract-assertions.sh - Extract security assertions from cyberspace kernel
 #
-# Generates assertion-catalog.scm for inclusion in RFC-046
+# Generates assertion-catalog.scm for inclusion in Memo-046
 #
 # Categories:
 #   - Instrumentation: session-stat! calls

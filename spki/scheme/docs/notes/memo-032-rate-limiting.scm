@@ -6,7 +6,7 @@
   (title "Rate Limiting and Quotas")
   (section
     "Abstract"
-    (p "This RFC specifies rate limiting and quotas for the Library of Cyberspace: how vaults protect themselves from abuse while ensuring fair access for legitimate users. Limits are capability-aware and auditable."))
+    (p "This Memo specifies rate limiting and quotas for the Library of Cyberspace: how vaults protect themselves from abuse while ensuring fair access for legitimate users. Limits are capability-aware and auditable."))
   (section
     "Motivation"
     (p "Shared resources require protection:")
@@ -110,7 +110,7 @@
       (code scheme "(define (audit-limit-event event-type principal details)\n  (audit-append\n    action: event-type\n    principal: principal\n    details: details\n    timestamp: (current-time)))")))
   (section
     "References"
-    (p "1. [Token Bucket Algorithm](https://en.wikipedia.org/wiki/Tokenbucket) 2. [Leaky Bucket Algorithm](https://en.wikipedia.org/wiki/Leakybucket) 3. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 4. [RFC-031: Monitoring](rfc-031-monitoring.html)"))
+    (p "1. [Token Bucket Algorithm](https://en.wikipedia.org/wiki/Tokenbucket) 2. [Leaky Bucket Algorithm](https://en.wikipedia.org/wiki/Leakybucket) 3. [Memo-021: Capability Delegation](memo-021-capability-delegation.html) 4. [Memo-031: Monitoring](memo-031-monitoring.html)"))
   (section
     "Changelog"
     (list

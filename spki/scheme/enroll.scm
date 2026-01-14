@@ -1,4 +1,4 @@
-;;; SPKI Scheme - Node Enrollment and Presence (RFC-044)
+;;; SPKI Scheme - Node Enrollment and Presence (Memo-044)
 ;;;
 ;;; Handles node enrollment in the confederation and continuous
 ;;; presence announcement for peer discovery.

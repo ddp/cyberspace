@@ -6,7 +6,7 @@
   (title "Lazy Clustering")
   (section
     "Abstract"
-    (p "This RFC specifies Lazy Clustering for Cyberspace federation: a relaxed synchronization model where nodes sync when convenient, not continuously. Optimized for the \"loose confederacy of friends\" model."))
+    (p "This Memo specifies Lazy Clustering for Cyberspace federation: a relaxed synchronization model where nodes sync when convenient, not continuously. Optimized for the \"loose confederacy of friends\" model."))
   (section
     "Motivation"
     (p "Not every deployment needs Byzantine consensus:")
@@ -35,8 +35,8 @@
       "Heartbeat and Timekeeping"
       (p "No mandatory heartbeat. That's the design.")
       (code "Traditional cluster:  ping → pong → ping → pong → ...\nLazy cluster:         ... silence ... (sync) ... silence ...")
-      (p "Timekeeping: Lamport clocks (RFC-012), not wall clocks. - Causality without synchronization - No NTP dependency - No GPS required - Works across time zones, planets")
-      (p "When you need consensus: Byzantine consensus (RFC-011) + Lamport clocks. - Lazy clustering for everyday sync - Byzantine consensus for critical decisions - Same Lamport clock across both modes")
+      (p "Timekeeping: Lamport clocks (Memo-012), not wall clocks. - Causality without synchronization - No NTP dependency - No GPS required - Works across time zones, planets")
+      (p "When you need consensus: Byzantine consensus (Memo-011) + Lamport clocks. - Lazy clustering for everyday sync - Byzantine consensus for critical decisions - Same Lamport clock across both modes")
       (p "Optional presence beacon:")
       (code scheme "(cluster-beacon\n  (peer \"alice\")\n  (lamport-time 4271)\n  (last-release \"2.1.0\")\n  (status available)\n  (next-expected \"when ready\"))")
       (p "Beacons are: - Pull-based (query, don't push) - Cached (no flood) - Stale-tolerant (hours/days old is fine) - Unsigned (advisory only)"))
@@ -138,7 +138,7 @@
   (section
     "Comparison with Other Modes"
     (table
-      (header "Aspect " "Lazy Cluster " "Federation (RFC-010) " "Byzantine (RFC-011) ")
+      (header "Aspect " "Lazy Cluster " "Federation (Memo-010) " "Byzantine (Memo-011) ")
       (row "Trust " "Friends " "Verified peers " "Adversarial ")
       (row "Sync " "Manual/periodic " "Announcement-based " "Consensus ")
       (row "Conflicts " "Manual resolve " "Detect + flag " "Prevented ")
@@ -181,7 +181,7 @@
       (code ".vault/\n  lazy/\n    peers.sexp        # Registered peers\n    vectors.sexp      # Version vectors\n    conflicts/        # Unresolved conflicts\n    queue/            # Pending pushes")))
   (section
     "References"
-    (p "1. Saito, Y., & Shapiro, M. (2005). Optimistic Replication. 2. Terry, D., et al. (1995). Managing Update Conflicts in Bayou. 3. DeCandia, G., et al. (2007). Dynamo: Amazon's Key-Value Store. 4. RFC-010: Federation Protocol 5. RFC-012: Lamport Logical Clocks"))
+    (p "1. Saito, Y., & Shapiro, M. (2005). Optimistic Replication. 2. Terry, D., et al. (1995). Managing Update Conflicts in Bayou. 3. DeCandia, G., et al. (2007). Dynamo: Amazon's Key-Value Store. 4. Memo-010: Federation Protocol 5. Memo-012: Lamport Logical Clocks"))
   (section
     "Changelog"
     (list

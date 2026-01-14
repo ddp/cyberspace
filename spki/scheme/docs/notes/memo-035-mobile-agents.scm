@@ -6,7 +6,7 @@
   (title "Mobile Agents and Pub/Sub")
   (section
     "Abstract"
-    (p "This RFC specifies the mobile agent architecture for the Library of Cyberspace: Telescript-inspired agents that migrate between realms, carry SPKI credentials, communicate via pub/sub channels, and operate under realm coordinator supervision. Agents are first-class citizens with cryptographic identity."))
+    (p "This Memo specifies the mobile agent architecture for the Library of Cyberspace: Telescript-inspired agents that migrate between realms, carry SPKI credentials, communicate via pub/sub channels, and operate under realm coordinator supervision. Agents are first-class citizens with cryptographic identity."))
   (section
     "Motivation"
     (p "Distributed computation requires mobile code:")
@@ -193,7 +193,7 @@
       (p "The agent computes on encrypted data, returns encrypted result. Only the principal with the decryption key can read the result.")))
   (section
     "References"
-    (p "1. Telescript Language Reference - General Magic (preserved) 2. Mobile Agents - Lange & Oshima (preserved) 3. Distributed Lock Manager - VAX/VMS SCS (preserved) 4. Concurrency Oriented Programming in Termite Scheme - Germain (preserved) 5. RFC-003: Cryptographic Audit Trail 6. RFC-004: SPKI Authorization 7. RFC-010: Federation Protocol 8. RFC-021: Capability Delegation 9. RFC-023: Agent Sandboxing"))
+    (p "1. Telescript Language Reference - General Magic (preserved) 2. Mobile Agents - Lange & Oshima (preserved) 3. Distributed Lock Manager - VAX/VMS SCS (preserved) 4. Concurrency Oriented Programming in Termite Scheme - Germain (preserved) 5. Memo-003: Cryptographic Audit Trail 6. Memo-004: SPKI Authorization 7. Memo-010: Federation Protocol 8. Memo-021: Capability Delegation 9. Memo-023: Agent Sandboxing"))
   (section
     "Changelog"
     (list

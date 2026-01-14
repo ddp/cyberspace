@@ -6,7 +6,7 @@
   (title "Lamport Logical Clocks")
   (section
     "Abstract"
-    (p "This RFC specifies Lamport logical clocks for Cyberspace distributed ordering, providing a happened-before relation across federated vaults without synchronized physical clocks."))
+    (p "This Memo specifies Lamport logical clocks for Cyberspace distributed ordering, providing a happened-before relation across federated vaults without synchronized physical clocks."))
   (section
     "Motivation"
     (p "Physical clocks lie:")
@@ -74,13 +74,13 @@
   (section
     "Integration Points"
     (subsection
-      "With Audit Trail (RFC-003)"
+      "With Audit Trail (Memo-003)"
       (code scheme "(audit-entry\n  (sequence 42)           ; Local sequence\n  (lamport-clock 1042)    ; Logical timestamp\n  (physical-time \"...\")   ; Advisory only\n  ...)"))
     (subsection
-      "With Consensus (RFC-011)"
+      "With Consensus (Memo-011)"
       (code scheme "(consensus-message\n  (sequence 573)          ; Consensus sequence\n  (lamport-clock 2891)    ; Causal context\n  ...)"))
     (subsection
-      "With Replication (RFC-001)"
+      "With Replication (Memo-001)"
       (code scheme "(seal-publish \"2.0.0\"\n  (logical-time 892)\n  ...)")))
   (section
     "Security Considerations"
@@ -104,7 +104,7 @@
       (code scheme "(define (save-clock clock path)\n  (with-output-to-file path\n    (lambda ()\n      (write `(lamport-clock\n                (counter ,(clock-counter clock))\n                (node-id ,(clock-node-id clock)))))))")))
   (section
     "References"
-    (p "1. Lamport, L. (1978). Time, Clocks, and the Ordering of Events in a Distributed System. 2. Fidge, C. J. (1988). Timestamps in Message-Passing Systems. 3. Mattern, F. (1989). Virtual Time and Global States of Distributed Systems. 4. RFC-003: Cryptographic Audit Trail 5. RFC-010: Federation Protocol"))
+    (p "1. Lamport, L. (1978). Time, Clocks, and the Ordering of Events in a Distributed System. 2. Fidge, C. J. (1988). Timestamps in Message-Passing Systems. 3. Mattern, F. (1989). Virtual Time and Global States of Distributed Systems. 4. Memo-003: Cryptographic Audit Trail 5. Memo-010: Federation Protocol"))
   (section
     "Changelog"
     (list

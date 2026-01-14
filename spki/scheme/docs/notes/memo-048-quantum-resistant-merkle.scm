@@ -6,7 +6,7 @@
   (title "Quantum-Resistant Merkle Trees")
   (section
     "Abstract"
-    (p "SHA-512 won't survive. Grover's algorithm halves the effective security - 256 bits becomes 128. For the wilderness of mirrors to endure the quantum winter, we need quantum-resistant Merkle trees. This RFC specifies the transition from flat SHA-512 hashes to tree-structured SHAKE256 hashes."))
+    (p "SHA-512 won't survive. Grover's algorithm halves the effective security - 256 bits becomes 128. For the wilderness of mirrors to endure the quantum winter, we need quantum-resistant Merkle trees. This Memo specifies the transition from flat SHA-512 hashes to tree-structured SHAKE256 hashes."))
   (section
     "The Problem"
     (p "Current cyberspace object identity:")
@@ -139,7 +139,7 @@
     (code "M1. Object identity is Merkle root\n    id(o) = merkle-root(shake256, chunks(o))\n\nM2. Any chunk is provable\n    chunk(o,i) → ∃proof: verify(root(o), i, chunk, proof)\n\nM3. Tree structure is canonical\n    tree(content, params) is deterministic\n\nM4. Dual hashes are consistent\n    sha512(content) ↔ merkle-root(content) verify same content\n\nM5. Migration preserves identity\n    old-objects retain verifiable legacy hashes"))
   (section
     "References"
-    (p "1. NIST FIPS 202 - SHA-3 Standard (SHAKE256) 2. BLAKE3 specification - https://github.com/BLAKE3-team/BLAKE3 3. Merkle, R., \"A Digital Signature Based on a Conventional Encryption Function\", 1987 4. Grover, L., \"A Fast Quantum Mechanical Algorithm for Database Search\", 1996 5. RFC-040 - Cyberspace Security Architecture"))
+    (p "1. NIST FIPS 202 - SHA-3 Standard (SHAKE256) 2. BLAKE3 specification - https://github.com/BLAKE3-team/BLAKE3 3. Merkle, R., \"A Digital Signature Based on a Conventional Encryption Function\", 1987 4. Grover, L., \"A Fast Quantum Mechanical Algorithm for Database Search\", 1996 5. Memo-040 - Cyberspace Security Architecture"))
   (section
     "Changelog"
     (list

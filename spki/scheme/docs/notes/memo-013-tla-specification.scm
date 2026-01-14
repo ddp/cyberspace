@@ -6,7 +6,7 @@
   (title "TLA+ Formal Specification")
   (section
     "Abstract"
-    (p "This RFC specifies the use of TLA+ (Temporal Logic of Actions) for formal specification and model checking of Cyberspace protocols, ensuring correctness before implementation."))
+    (p "This Memo specifies the use of TLA+ (Temporal Logic of Actions) for formal specification and model checking of Cyberspace protocols, ensuring correctness before implementation."))
   (section
     "Motivation"
     (p "Running code is necessary but not sufficient:")
@@ -35,13 +35,13 @@
   (section
     "Cyberspace Protocol Specifications"
     (subsection
-      "Threshold Signatures (RFC-007)"
+      "Threshold Signatures (Memo-007)"
       (code tla "--------------------------- MODULE ThresholdSig ---------------------------\nEXTENDS Integers, FiniteSets\n\nCONSTANTS Signers, Threshold, Script\n\nVARIABLES signatures, verified\n\nInit ==\n  /\\ signatures = {}\n  /\\ verified = FALSE\n\nSign(s) ==\n  /\\ s \\in Signers\n  /\\ s \\notin {sig.signer : sig \\in signatures}\n  /\\ signatures' = signatures \\union\n       {[signer |-> s, script |-> Script, valid |-> TRUE]}\n  /\\ verified' = verified\n\nVerify ==\n  /\\ Cardinality({sig \\in signatures : sig.valid}) >= Threshold\n  /\\ verified' = TRUE\n  /\\ UNCHANGED signatures\n\nNext ==\n  \\/ \\E s \\in Signers: Sign(s)\n  \\/ Verify\n\n\\ Safety: Never verify with insufficient signatures\nSafety ==\n  verified => Cardinality({sig \\in signatures : sig.valid}) >= Threshold\n\n\\ Liveness: If enough sign, eventually verify\nLiveness ==\n  (Cardinality(Signers) >= Threshold) => <>(verified)\n\n============================================================================="))
     (subsection
-      "Audit Trail (RFC-003)"
+      "Audit Trail (Memo-003)"
       (code tla "--------------------------- MODULE AuditTrail ---------------------------\nEXTENDS Integers, Sequences\n\nCONSTANTS Actors, Actions\n\nVARIABLES log, sequence\n\nInit ==\n  /\\ log = <<>>\n  /\\ sequence = 0\n\nAppend(actor, action) ==\n  /\\ actor \\in Actors\n  /\\ action \\in Actions\n  /\\ sequence' = sequence + 1\n  /\\ log' = Append(log, [\n       seq |-> sequence',\n       actor |-> actor,\n       action |-> action,\n       parent |-> IF sequence = 0 THEN \"genesis\" ELSE log[sequence].hash\n     ])\n\n\\ Invariant: Chain integrity\nChainIntegrity ==\n  \\A i \\in 1..Len(log)-1:\n    log[i+1].parent = log[i].hash\n\n\\ Invariant: Monotonic sequence\nMonotonicSequence ==\n  \\A i \\in 1..Len(log)-1:\n    log[i+1].seq = log[i].seq + 1\n\n============================================================================="))
     (subsection
-      "Byzantine Consensus (RFC-011)"
+      "Byzantine Consensus (Memo-011)"
       (code tla "--------------------------- MODULE PBFT ---------------------------\nEXTENDS Integers, FiniteSets\n\nCONSTANTS Nodes, f, Values\n\nASSUME Cardinality(Nodes) >= 3f + 1\n\nVARIABLES\n  view,\n  prepares,\n  commits,\n  decisions\n\nInit ==\n  /\\ view = 0\n  /\\ prepares = [n \\in Nodes |-> {}]\n  /\\ commits = [n \\in Nodes |-> {}]\n  /\\ decisions = [n \\in Nodes |-> {}]\n\nPrePrepare(primary, v) ==\n  /\\ primary = Leader(view)\n  /\\ v \\in Values\n  /\\ \\A n \\in Nodes:\n       prepares' = [prepares EXCEPT ![n] = @ \\union {[view |-> view, value |-> v]}]\n  /\\ UNCHANGED <<view, commits, decisions>>\n\nPrepare(n, v) ==\n  /\\ [view |-> view, value |-> v] \\in prepares[n]\n  /\\ Cardinality({m \\in Nodes : [view |-> view, value |-> v] \\in prepares[m]}) >= 2f + 1\n  /\\ commits' = [commits EXCEPT ![n] = @ \\union {[view |-> view, value |-> v]}]\n  /\\ UNCHANGED <<view, prepares, decisions>>\n\nCommit(n, v) ==\n  /\\ [view |-> view, value |-> v] \\in commits[n]\n  /\\ Cardinality({m \\in Nodes : [view |-> view, value |-> v] \\in commits[m]}) >= 2f + 1\n  /\\ decisions' = [decisions EXCEPT ![n] = {v}]\n  /\\ UNCHANGED <<view, prepares, commits>>\n\n\\ Safety: Agreement\nAgreement ==\n  \\A n1, n2 \\in Nodes:\n    (decisions[n1] # {} /\\ decisions[n2] # {}) =>\n      decisions[n1] = decisions[n2]\n\n=============================================================================")))
   (section
     "Model Checking Process"

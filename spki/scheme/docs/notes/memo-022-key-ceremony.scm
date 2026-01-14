@@ -6,7 +6,7 @@
   (title "Key Ceremony Protocol")
   (section
     "Abstract"
-    (p "This RFC specifies key ceremony protocols for the Library of Cyberspace: the ritualized generation, distribution, and activation of cryptographic keys with witnessed verification. Key ceremonies establish roots of trust through transparent, auditable, multi-party processes."))
+    (p "This Memo specifies key ceremony protocols for the Library of Cyberspace: the ritualized generation, distribution, and activation of cryptographic keys with witnessed verification. Key ceremonies establish roots of trust through transparent, auditable, multi-party processes."))
   (section
     "Motivation"
     (p "Keys are the foundation of all cryptographic trust:")
@@ -43,7 +43,7 @@
       (code "┌─────────────────────────────────────────┐\n│          SINGLE KEY CEREMONY            │\n├─────────────────────────────────────────┤\n│ Participants: 1 generator, 2+ witnesses │\n│ Duration: ~30 minutes                   │\n│ Output: 1 keypair                       │\n└─────────────────────────────────────────┘"))
     (subsection
       "Type 2: Threshold Key Generation"
-      (p "For M-of-N shared keys (RFC-007, RFC-008):")
+      (p "For M-of-N shared keys (Memo-007, Memo-008):")
       (code "┌─────────────────────────────────────────┐\n│        THRESHOLD KEY CEREMONY           │\n├─────────────────────────────────────────┤\n│ Participants: N shareholders, 2+ witnesses │\n│ Duration: ~2 hours                      │\n│ Output: N shares, 1 public key          │\n└─────────────────────────────────────────┘"))
     (subsection
       "Type 3: Root Certificate Ceremony"
@@ -143,7 +143,7 @@
       (code bash "# Ceremony tool - runs air-gapped\n$ seal-ceremony --type threshold --shares 5 --threshold 3\n\nLibrary of Cyberspace - Key Ceremony Tool\n=========================================\n\nCeremony ID: KC-2026-001\nType: Threshold (5-of-3)\n\nPre-ceremony checklist:\n[x] Network disabled\n[x] Wireless disabled\n[x] Software verified\n[x] Witnesses present (3)\n\nGenerating entropy...\n  Hardware RNG: 32 bytes collected\n  Dice rolls: Witness 1, roll 1: _")))
   (section
     "References"
-    (p "1. [DNSSEC Root Key Ceremony](https://www.iana.org/dnssec/ceremonies) 2. [RFC 2693 - SPKI Certificate Theory](https://tools.ietf.org/html/rfc2693) 3. [RFC-007: Threshold Signature Governance](rfc-007-threshold-governance.html) 4. [RFC-008: Shamir Secret Sharing](rfc-008-shamir-sharing.html) 5. [RFC-021: Capability Delegation](rfc-021-capability-delegation.html) 6. [Key Ceremony Best Practices - NIST SP 800-57](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final)"))
+    (p "1. [DNSSEC Root Key Ceremony](https://www.iana.org/dnssec/ceremonies) 2. [RFC 2693 - SPKI Certificate Theory](https://tools.ietf.org/html/rfc2693) 3. [Memo-007: Threshold Signature Governance](memo-007-threshold-governance.html) 4. [Memo-008: Shamir Secret Sharing](memo-008-shamir-sharing.html) 5. [Memo-021: Capability Delegation](memo-021-capability-delegation.html) 6. [Key Ceremony Best Practices - NIST SP 800-57](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final)"))
   (section
     "Changelog"
     (list

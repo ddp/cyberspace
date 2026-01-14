@@ -10,14 +10,14 @@ discover_rfcs() {
   done | sort -u | sort -t- -k2,2n
 }
 
-# Check for duplicate RFC numbers
+# Check for duplicate Memo numbers
 check_duplicates() {
   local prev_num=""
   local prev_rfc=""
   for rfc in "$@"; do
     local num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/')
     if [[ -n "$prev_num" && "$num" == "$prev_num" ]]; then
-      echo "WARNING: Duplicate RFC number $num:" >&2
+      echo "WARNING: Duplicate Memo number $num:" >&2
       echo "  - $prev_rfc" >&2
       echo "  - $rfc" >&2
     fi
@@ -63,7 +63,7 @@ cat > index.html << 'HEADER'
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Library of Cyberspace - RFC Index</title>
+  <title>Library of Cyberspace - Memo Index</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -87,13 +87,13 @@ cat > index.html << 'HEADER'
   </style>
 </head>
 <body>
-  <h1>Library of Cyberspace - RFC Index</h1>
+  <h1>Library of Cyberspace - Memo Index</h1>
   <p>Request for Comments documents for the Library of Cyberspace preservation architecture.</p>
 
   <table>
     <thead>
       <tr>
-        <th>RFC</th>
+        <th>Memo</th>
         <th>Title</th>
         <th>Formats</th>
       </tr>
@@ -101,7 +101,7 @@ cat > index.html << 'HEADER'
     <tbody>
 HEADER
 
-# Generate RFC table
+# Generate Memo table
 for rfc in "${RFCS[@]}"; do
   title=$(get_title "$rfc")
   num=$(echo "$rfc" | sed -E 's/rfc-0*([0-9]+)-.*/\1/')

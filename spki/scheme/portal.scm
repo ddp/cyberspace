@@ -4,7 +4,7 @@
 ;;; the portal between objective reality and Cyberspace.
 ;;;
 ;;; Heritage: VMS SYS$SYSTEM:LOGINOUT.EXE (with LGI$ callouts by COVERT::COVERT)
-;;; RFC-054 Terminal Interface Conventions
+;;; Memo-054 Terminal Interface Conventions
 ;;;
 ;;; Copyright (c) 2026 Derrell Piper. See LICENSE.
 

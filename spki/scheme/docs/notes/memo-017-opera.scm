@@ -99,5 +99,5 @@
     (blockquote "\"I will not say: do not weep,\" said Gandalf, \"for not all tears are an evil. But I will say: do not lose the redundant copies.\""))
   (section
     "References"
-    (p "- [RFC-760] DOD Standard Internet Protocol - [RFC-791] Internet Protocol - [RFC-1122] Requirements for Internet Hosts - [NEUROMANCER] Gibson, W., \"The sky above the port\", 1984 - [SNOW-CRASH] Stephenson, N., \"Hiro Protagonist, last of the freelance hackers\", 1992 - [CRYPTONOMICON] Stephenson, N., \"Let me tell you about checksums\", 1999 - [LOTR] Tolkien, J.R.R., \"The Fellowship of the Ring\", 1954 - [SILMARILLION] Tolkien, J.R.R., \"Of the Music of the Ainur\", 1977")))
+    (p "- [Memo-760] DOD Standard Internet Protocol - [Memo-791] Internet Protocol - [Memo-1122] Requirements for Internet Hosts - [NEUROMANCER] Gibson, W., \"The sky above the port\", 1984 - [SNOW-CRASH] Stephenson, N., \"Hiro Protagonist, last of the freelance hackers\", 1992 - [CRYPTONOMICON] Stephenson, N., \"Let me tell you about checksums\", 1999 - [LOTR] Tolkien, J.R.R., \"The Fellowship of the Ring\", 1954 - [SILMARILLION] Tolkien, J.R.R., \"Of the Music of the Ainur\", 1977")))
 

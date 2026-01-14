@@ -51,7 +51,7 @@
    complete
    ask
 
-   ;; Node Roles (RFC-037)
+   ;; Node Roles (Memo-037)
    node-probe
    node-role
    node-can?
@@ -64,7 +64,7 @@
    *weave-strata*
    recommend-role
 
-   ;; Keystore (RFC-041)
+   ;; Keystore (Memo-041)
    keystore-create
    keystore-unlock
    keystore-lock
@@ -74,7 +74,7 @@
    keystore-path
    keystore-exists?
 
-   ;; Lamport Clock (RFC-012)
+   ;; Lamport Clock (Memo-012)
    lamport-tick!
    lamport-time
    lamport-send
@@ -87,7 +87,7 @@
    realm-name
    set-realm-name!
 
-   ;; Address parsing (RFC-041)
+   ;; Address parsing (Memo-041)
    parse-address
    address?
    address-principal
@@ -204,7 +204,7 @@
                      motivation: "Vault initialized with cryptographic audit trail")))))
 
   ;;; ============================================================================
-  ;;; Keystore (RFC-041)
+  ;;; Keystore (Memo-041)
   ;;; ============================================================================
   ;;;
   ;;; The keystore is the inner vault - where cryptographic identity lives.
@@ -417,7 +417,7 @@
     name)
 
   ;;; ============================================================================
-  ;;; Lamport Clock (RFC-012)
+  ;;; Lamport Clock (Memo-012)
   ;;; ============================================================================
   ;;;
   ;;; Time in the weave is measured in lambda ticks, not wall-clock time.
@@ -598,7 +598,7 @@
      - description: Extended description
      - preserve: Full preservation metadata"
     (session-stat! 'commits)
-    (lamport-tick!)  ; RFC-012: tick the weave clock
+    (lamport-tick!)  ; Memo-012: tick the weave clock
 
     ;; Stage files
     (when files
@@ -1068,7 +1068,7 @@
           (print (vault-box-bottom width))))))
 
   ;;; ============================================================================
-  ;;; Address Parsing (RFC-041)
+  ;;; Address Parsing (Memo-041)
   ;;; ============================================================================
   ;;;
   ;;; Cyberspace object addresses:
@@ -2493,7 +2493,7 @@ Object Types:
                  (printf "Unknown command: ~a (try 'help)~%" cmd))))))))
 
   ;;; ============================================================================
-  ;;; Node Roles - RFC-037 Implementation
+  ;;; Node Roles - Memo-037 Implementation
   ;;; ============================================================================
 
   ;; Role definitions with capability requirements
@@ -2703,7 +2703,7 @@ Object Types:
           ;; Round to 1 decimal place
           (/ (round (* (/ ops-per-sec 1000.0) 10)) 10.0)))))
 
-  ;; RFC-056: Weave quantization for federation OPSEC
+  ;; Memo-056: Weave quantization for federation OPSEC
   ;; Raw weave values are a covert channel - they fingerprint hardware.
   ;; Federation shares only strata, not raw values.
 
@@ -2714,7 +2714,7 @@ Object Types:
       (powerful    . 4000)))  ; HPC, GPU-accelerated
 
   (define (weave-stratum weave)
-    "Which stratum of the lattice does this weave occupy? (RFC-056)
+    "Which stratum of the lattice does this weave occupy? (Memo-056)
      For LOCAL display, use raw weave.
      For FEDERATION, use this to avoid fingerprinting."
     (cond
@@ -3489,7 +3489,7 @@ Object Types:
         '()))
 
   ;;; ============================================================================
-  ;;; Natural Language Soup Query (RFC-038)
+  ;;; Natural Language Soup Query (Memo-038)
   ;;; ============================================================================
 
   (define *ollama-base* "http://localhost:11434")

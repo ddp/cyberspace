@@ -6,7 +6,7 @@
   (title "Threshold Signature Governance")
   (section
     "Abstract"
-    (p "This RFC specifies the threshold signature system for Cyberspace governance, enabling K-of-N multi-party authorization for critical operations. Democracy in code: no single point of failure, no rogue administrator."))
+    (p "This Memo specifies the threshold signature system for Cyberspace governance, enabling K-of-N multi-party authorization for critical operations. Democracy in code: no single point of failure, no rogue administrator."))
   (section
     "Motivation"
     (p "Critical operations require collective authorization:")
@@ -63,11 +63,11 @@
     "Multi-Signature vs Shamir"
     (p "Two threshold approaches exist:")
     (subsection
-      "Multi-Signature (This RFC)"
+      "Multi-Signature (This Memo)"
       (code "Each party: own keypair\nSigning:    each signs independently\nVerify:     count valid signatures ≥ K\nUse case:   governance, approvals")
       (p "Advantages: - Each party maintains own key - Clear audit trail (who signed) - Simple revocation (by key) - No key reconstruction"))
     (subsection
-      "Shamir Splitting (RFC-008)"
+      "Shamir Splitting (Memo-008)"
       (code "Single key: split into N shares\nSigning:    K parties reconstruct, sign once\nVerify:     single signature\nUse case:   key backup, recovery")
       (p "Advantages: - Single signature output - Key never fully assembled (in advanced schemes) - Smaller signature files")
       (p "For governance, multi-signature is preferred: - Accountability (which individuals approved) - No reconstruction ceremony - Works asynchronously")))
@@ -111,7 +111,7 @@
         (item "No network round-trips (offline verification)"))))
   (section
     "References"
-    (p "1. Boneh, D., et al. (2001). Short Signatures from the Weil Pairing. 2. Gennaro, R., et al. (2016). Threshold-optimal DSA/ECDSA signatures. 3. NIST SP 800-57. Recommendation for Key Management. 4. RFC-004: SPKI Authorization Integration"))
+    (p "1. Boneh, D., et al. (2001). Short Signatures from the Weil Pairing. 2. Gennaro, R., et al. (2016). Threshold-optimal DSA/ECDSA signatures. 3. NIST SP 800-57. Recommendation for Key Management. 4. Memo-004: SPKI Authorization Integration"))
   (section
     "Changelog"
     (list

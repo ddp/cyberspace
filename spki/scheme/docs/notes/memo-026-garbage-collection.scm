@@ -6,7 +6,7 @@
   (title "Garbage Collection")
   (section
     "Abstract"
-    (p "This RFC specifies garbage collection for the Library of Cyberspace: how vaults identify and reclaim storage from unreferenced objects while preserving pinned content, respecting tombstones, and maintaining audit trails. Content-addressed storage requires careful GC to avoid data loss.")
+    (p "This Memo specifies garbage collection for the Library of Cyberspace: how vaults identify and reclaim storage from unreferenced objects while preserving pinned content, respecting tombstones, and maintaining audit trails. Content-addressed storage requires careful GC to avoid data loss.")
     (p "The Library of Cyberspace is an archival system. The default is preservation, not collection. Objects evaporate only with explicit consent."))
   (section
     "Philosophy: The Soup Preserves"
@@ -146,8 +146,8 @@
     (subsection
       "Archival Object Evaporation"
       (p "Archival objects (>30 days) receive maximum protection. They can only evaporate via:")
-      (p "1. Legal requirement - With proof of legal order 2. Data corruption - With cryptographic proof of corruption 3. Governance vote - Per RFC-036 quorum protocol")
-      (code scheme "(define (archival-evaporation-authorized? cert)\n  \"Check if archival evaporation is properly authorized\"\n  (case (evap-reason cert)\n    ((legal-requirement)\n     ;; Must include legal order reference\n     (and (evap-legal-order cert)\n          (verify-legal-order (evap-legal-order cert))))\n\n    ((data-corruption)\n     ;; Must include corruption proof\n     (and (evap-corruption-proof cert)\n          (verify-corruption (evap-hash cert) (evap-corruption-proof cert))))\n\n    ((federation-consensus)\n     ;; Must have governance quorum (RFC-036)\n     (governance-quorum-met? cert))\n\n    (else #f)))  ; No other reasons valid for archival")))
+      (p "1. Legal requirement - With proof of legal order 2. Data corruption - With cryptographic proof of corruption 3. Governance vote - Per Memo-036 quorum protocol")
+      (code scheme "(define (archival-evaporation-authorized? cert)\n  \"Check if archival evaporation is properly authorized\"\n  (case (evap-reason cert)\n    ((legal-requirement)\n     ;; Must include legal order reference\n     (and (evap-legal-order cert)\n          (verify-legal-order (evap-legal-order cert))))\n\n    ((data-corruption)\n     ;; Must include corruption proof\n     (and (evap-corruption-proof cert)\n          (verify-corruption (evap-hash cert) (evap-corruption-proof cert))))\n\n    ((federation-consensus)\n     ;; Must have governance quorum (Memo-036)\n     (governance-quorum-met? cert))\n\n    (else #f)))  ; No other reasons valid for archival")))
   (section
     "Distributed GC"
     (subsection
@@ -203,7 +203,7 @@
     (code "G1. Preservation default\n    default-mode = archival → no-automatic-collection\n\nG2. Age increases protection\n    age(obj) > age(obj') → protection(obj) ≥ protection(obj')\n\nG3. Evaporation requires consent\n    evaporate(hash) requires signed-certificate(hash)\n\nG4. Quorum scales with age\n    generation = archival → quorum = governance-level\n\nG5. Archival objects are sacred\n    age > 30-days → no-automatic-evaporation\n\nG6. Audit trail preserved\n    evaporate(hash) → audit-append(hash, certificate, reason, signers)\n\nG7. Mark-and-sweep authoritative\n    truly-unreachable(hash) ↔ ¬member(hash, mark-reachable())\n\nG8. Cycles preserved\n    cycle(A, B, C) ∧ archival-mode → preserve(A, B, C)"))
   (section
     "References"
-    (p "1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. RFC-020: Content-Addressed Storage 4. RFC-003: Cryptographic Audit Trail 5. RFC-036: Quorum Protocol with Homomorphic Voting 6. RFC-007: Threshold Signature Governance"))
+    (p "1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. Memo-020: Content-Addressed Storage 4. Memo-003: Cryptographic Audit Trail 5. Memo-036: Quorum Protocol with Homomorphic Voting 6. Memo-007: Threshold Signature Governance"))
   (section
     "Changelog"
     (list

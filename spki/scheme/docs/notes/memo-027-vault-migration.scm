@@ -6,7 +6,7 @@
   (title "Vault Migration")
   (section
     "Abstract"
-    (p "This RFC specifies vault migration for the Library of Cyberspace: how to move vaults between hosts, storage backends, and administrative domains while preserving content integrity, capability chains, and audit continuity. Migration is essential for long-term preservation."))
+    (p "This Memo specifies vault migration for the Library of Cyberspace: how to move vaults between hosts, storage backends, and administrative domains while preserving content integrity, capability chains, and audit continuity. Migration is essential for long-term preservation."))
   (section
     "Motivation"
     (p "Vaults must outlive their infrastructure:")
@@ -49,7 +49,7 @@
     "Object Transfer"
     (subsection
       "Export Format"
-      (code scheme ";; Sealed archive format (RFC-018)\n(define (export-object hash)\n  `(vault-object\n    (hash ,hash)\n    (content ,(cas-get hash))\n    (soup-entry ,(soup-get hash))\n    (references ,(object-references hash))\n    (signatures ,(object-signatures hash))))\n\n(define (export-batch hashes)\n  (let ((objects (map export-object hashes)))\n    (seal-archive objects\n      compression: 'zstd\n      encryption: target-vault-key)))"))
+      (code scheme ";; Sealed archive format (Memo-018)\n(define (export-object hash)\n  `(vault-object\n    (hash ,hash)\n    (content ,(cas-get hash))\n    (soup-entry ,(soup-get hash))\n    (references ,(object-references hash))\n    (signatures ,(object-signatures hash))))\n\n(define (export-batch hashes)\n  (let ((objects (map export-object hashes)))\n    (seal-archive objects\n      compression: 'zstd\n      encryption: target-vault-key)))"))
     (subsection
       "Transfer Protocol"
       (code scheme "(define (transfer-object obj source target)\n  \"Transfer single object with verification\"\n  (let* ((hash (object-hash obj))\n         (data (export-object hash)))\n    ;; Send to target\n    (vault-send target data)\n    ;; Get acknowledgment with hash\n    (let ((ack (vault-receive target)))\n      (unless (equal? (ack-hash ack) hash)\n        (error \"Transfer verification failed\" hash))\n      (audit-append action: `(object-transferred ,hash)\n                    source: source\n                    target: target))))"))
@@ -134,7 +134,7 @@
       (code scheme ";; All migrations are fully audited\n(define (audited-migration source target)\n  (let ((migration-id (generate-migration-id)))\n    (audit-append action: 'migration-authorized\n                  migration-id: migration-id\n                  operator: (current-principal)\n                  source: source\n                  target: target)\n    ;; ... perform migration ...\n    (audit-append action: 'migration-complete\n                  migration-id: migration-id\n                  objects: (count-migrated)\n                  verification: (verification-result))))")))
   (section
     "References"
-    (p "1. [Live Migration of Virtual Machines](https://dl.acm.org/doi/10.1145/1095810.1095816) - Clark et al. 2. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.html) 3. [RFC-022: Key Ceremony Protocol](rfc-022-key-ceremony.html) 4. [RFC-024: Network Protocol](rfc-024-network-protocol.html)"))
+    (p "1. [Live Migration of Virtual Machines](https://dl.acm.org/doi/10.1145/1095810.1095816) - Clark et al. 2. [Memo-018: Sealed Archive Format](memo-018-sealed-archive.html) 3. [Memo-022: Key Ceremony Protocol](memo-022-key-ceremony.html) 4. [Memo-024: Network Protocol](memo-024-network-protocol.html)"))
   (section
     "Changelog"
     (list

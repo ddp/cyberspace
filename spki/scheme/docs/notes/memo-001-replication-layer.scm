@@ -6,7 +6,7 @@
   (title "Replication Layer for Library of Cyberspace")
   (section
     "Abstract"
-    (p "This RFC specifies a replication layer for the Library of Cyberspace preservation architecture, enabling cryptographically sealed releases to be published, subscribed to, and synchronized across distributed locations while maintaining tamper-evident audit trails."))
+    (p "This Memo specifies a replication layer for the Library of Cyberspace preservation architecture, enabling cryptographically sealed releases to be published, subscribed to, and synchronized across distributed locations while maintaining tamper-evident audit trails."))
   (section
     "Motivation"
     (subsection
@@ -128,7 +128,7 @@
     (code scheme ";; Test seal-publish to filesystem\n(seal-publish \"1.0.0\"\n              remote: \"/tmp/cyberspace-publish-test\"\n              message: \"Published to filesystem\")\n\n;; Verify archive exists\n(file-exists? \"/tmp/cyberspace-publish-test/vault-1.0.0.archive\")\n\n;; Verify audit entry created\n(audit-read sequence: 1)"))
   (section
     "References"
-    (p "1. SPKI/SDSI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 - Bernstein et al. 5. Audit Trails - RFC-002 (Cryptographic Audit Trail)"))
+    (p "1. SPKI/SDSI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 - Bernstein et al. 5. Audit Trails - Memo-002 (Cryptographic Audit Trail)"))
   (section
     "Changelog"
     (list

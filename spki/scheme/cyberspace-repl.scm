@@ -477,7 +477,7 @@
     ;; Modules depending on crypto-ffi need libsodium at link time.
     ;; We include library paths for all modules since it's harmless
     ;; for those that don't need it and ensures correct linking for
-    ;; the crypto dependency chain (RFC-056: covert channel awareness).
+    ;; the crypto dependency chain (Memo-056: covert channel awareness).
     (let* ((strict-exempt '())  ; none - all modules typed
            (beta-flags (if (and *beta-build* (not (member module strict-exempt)))
                            " -strict-types" ""))
@@ -719,7 +719,7 @@
 (module-start! "rfcs")
 
 ;;; ============================================================
-;;; RFC-040: Object State (chaotic/quiescent) and Persistence
+;;; Memo-040: Object State (chaotic/quiescent) and Persistence
 ;;; ============================================================
 
 ;; All things have state and durability
@@ -993,7 +993,7 @@
         (capabilities . ,caps)))))
 
 ;;; ============================================================
-;;; RFC-043: Memo Conventions
+;;; Memo-043: Memo Conventions
 ;;; ============================================================
 
 (define *memos* '())
@@ -1099,7 +1099,7 @@
         (error "Memo not found" memo-id))))
 
 ;;; ============================================================
-;;; RFC-016: Lazy Clustering
+;;; Memo-016: Lazy Clustering
 ;;; ============================================================
 
 (define *lazy-peers* '())
@@ -1177,7 +1177,7 @@
     (status available)))
 
 ;;; ============================================================
-;;; RFC-010: Federation
+;;; Memo-010: Federation
 ;;; ============================================================
 
 (define *federation-peers* '())
@@ -1331,7 +1331,7 @@
       (consensus ,(length *consensus-proposals*))
       (lamport ,*lamport-clock*))))
 
-;; Forward declaration note: *quorum-proposals* defined in RFC-036 section
+;; Forward declaration note: *quorum-proposals* defined in Memo-036 section
 ;; Weave can access it after full load
 
 (define (about)
@@ -1387,7 +1387,7 @@
 (define (describe) (about))
 
 ;;; ============================================================
-;;; RFC-011: Byzantine Consensus
+;;; Memo-011: Byzantine Consensus
 ;;; ============================================================
 
 (define *consensus-proposals* '())
@@ -1414,7 +1414,7 @@
                 *consensus-proposals*)))
 
 ;;; ============================================================
-;;; RFC-012: Lamport Clocks
+;;; Memo-012: Lamport Clocks
 ;;; ============================================================
 
 (define *lamport-clock* 0)
@@ -1444,7 +1444,7 @@
   *lamport-clock*)
 
 ;;; ============================================================
-;;; RFC-020: Content-Addressed Storage
+;;; Memo-020: Content-Addressed Storage
 ;;; ============================================================
 
 (define *content-store* '())
@@ -1474,7 +1474,7 @@
   (if (assoc addr *content-store*) #t #f))
 
 ;;; ============================================================
-;;; RFC-021: Capability Delegation
+;;; Memo-021: Capability Delegation
 ;;; ============================================================
 
 (define (delegate capability to-principal #!key (restrict '()) (expires #f))
@@ -1505,7 +1505,7 @@
          (equal? cap action))))
 
 ;;; ============================================================
-;;; RFC-023: Agent Sandboxing (Demonic Agents)
+;;; Memo-023: Agent Sandboxing (Demonic Agents)
 ;;; ============================================================
 
 (define *sandboxes* '())
@@ -1539,7 +1539,7 @@
   (print "Sandbox '" sb-name "' destroyed"))
 
 ;;; ============================================================
-;;; RFC-035: Mobile Agents (Quantum Vocabulary)
+;;; Memo-035: Mobile Agents (Quantum Vocabulary)
 ;;; ============================================================
 
 (define *agent-location* 'local)
@@ -1717,7 +1717,7 @@
       superposition))
 
 ;;; ============================================================
-;;; RFC-036: Quorum Voting (Homomorphic)
+;;; Memo-036: Quorum Voting (Homomorphic)
 ;;; ============================================================
 
 (define *quorum-proposals* '())
@@ -1758,7 +1758,7 @@
                 *quorum-proposals*)))
 
 ;;; ============================================================
-;;; RFC-038: Local Inference (Ollama)
+;;; Memo-038: Local Inference (Ollama)
 ;;; ============================================================
 
 (define *inference-server* "http://localhost:11434")
@@ -1792,7 +1792,7 @@
   '(embedding-simulated))
 
 ;;; ============================================================
-;;; RFC-041: FUSE Filesystem
+;;; Memo-041: FUSE Filesystem
 ;;; ============================================================
 
 (define *wormholes* '())
@@ -2086,13 +2086,13 @@
      ;; What traverses the wormhole is strictly controlled
      (data-flow . capability-bounded)      ; only what capabilities allow
      (type-checking . enforced)            ; validate data at boundaries
-     (code-execution . sandboxed)          ; agents confined by RFC-023
+     (code-execution . sandboxed)          ; agents confined by Memo-023
      (ambient-channels . blocked)          ; no covert channels
      (reference-passing . by-capability))  ; objects passed as capabilities
 
     (audit
      ;; All operations are logged
-     (logging . comprehensive)             ; all ops logged (RFC-003)
+     (logging . comprehensive)             ; all ops logged (Memo-003)
      (trail . tamper-evident)              ; append-only, signed
      (critical-ops . always)               ; open, close, delegate logged
      (data-ops . configurable)             ; read/write logging optional
@@ -2100,7 +2100,7 @@
 
     (availability
      ;; Protection against abuse and resource exhaustion
-     (rate-limiting . enforced)            ; ops/minute limits (RFC-032)
+     (rate-limiting . enforced)            ; ops/minute limits (Memo-032)
      (connection-quota . per-principal)    ; max concurrent wormholes
      (timeout . configurable)              ; idle connection timeout
      (graceful-degradation . required)     ; fail safely under load
@@ -2302,7 +2302,7 @@
           #f))))
 
 ;;; ============================================================
-;;; Secure Erasure (RFC-040)
+;;; Secure Erasure (Memo-040)
 ;;; ============================================================
 
 ;;; When sensitive data must be destroyed, it must be destroyed completely.
@@ -3012,7 +3012,7 @@ Cyberspace REPL - Available Commands
     (map f list)                   Full Scheme available
     (+ 1 2)                        Expressions
 
-  Object State (RFC-040):
+  Object State (Memo-040):
     (chaotic thing)              Mark thing as chaotic (in flux)
     (commit-thing thing)         Commit: chaotic → quiescent
     (chaotic? thing)             Is thing chaotic?
@@ -3020,7 +3020,7 @@ Cyberspace REPL - Available Commands
     (thing-state thing)          Get state (chaotic|quiescent)
     (thing-status thing)         Full status display
 
-  Persistence (RFC-040):
+  Persistence (Memo-040):
     (persist thing)              Mark thing persistent (vault-bound)
     (ephemeral thing)            Mark thing ephemeral (no promise)
     (persistent? thing)          Is thing persistent?
@@ -3028,7 +3028,7 @@ Cyberspace REPL - Available Commands
     (thing-durability thing)     Get durability
     (flush-persistence!)         Migrate queued things to vault
 
-  Memos (RFC-043):
+  Memos (Memo-043):
     (memo-create title)          Create local memo
     (memo-create t scope: 'federation)  Federation scope
     (memo-create t category: 'experimental)
@@ -3088,14 +3088,14 @@ Cyberspace REPL - Available Commands
     (sign-cert cert key)             Sign certificate
     (verify-signed-cert cert key)    Verify certificate
 
-  Node Roles (RFC-037):
+  Node Roles (Memo-037):
     (node-probe)                     Probe system capabilities
     (node-role)                      Show current role
     (node-role 'witness)             Set role (coordinator/full/witness/archiver/edge)
     (node-can? 'seal-commit)         Check if operation permitted
     (node-announce)                  Announce role to peers
 
-  Lazy Clustering (RFC-016):
+  Lazy Clustering (Memo-016):
     (lazy-join peer uri: u key: k) Join cluster
     (lazy-leave peer)              Leave cluster
     (lazy-push peer)               Push to peer
@@ -3105,38 +3105,38 @@ Cyberspace REPL - Available Commands
     (lazy-queue)                   Show pending sync
     (lazy-resolve ver prefer: p)   Resolve conflict
 
-  Federation (RFC-010):
+  Federation (Memo-010):
     (federate \"peer-url\")            Establish federation
     (federate-status)                Show federation peers
     (federate-replicate \"url\")       Replicate with peer
 
-  Byzantine Consensus (RFC-011):
+  Byzantine Consensus (Memo-011):
     (consensus-propose value)        Propose for consensus
     (consensus-vote id 'accept)      Vote on proposal
     (consensus-status)               Show proposals
 
-  Lamport Clocks (RFC-012):
+  Lamport Clocks (Memo-012):
     (lamport-tick)                   Increment clock
     (lamport-send)                   Get send timestamp
     (lamport-receive ts)             Update on receive
     (lamport-clock)                  Get current value
 
-  Content-Addressed Storage (RFC-020):
+  Content-Addressed Storage (Memo-020):
     (content-address data)           Compute hash address
     (content-put data)               Store by hash
     (content-get addr)               Retrieve by hash
 
-  Capability Delegation (RFC-021):
+  Capability Delegation (Memo-021):
     (delegate cap principal)         Delegate capability
     (delegate-chain delegations)     Verify chain
     (delegate-verify d p action)     Check authorization
 
-  Agent Sandboxing (RFC-023):
+  Agent Sandboxing (Memo-023):
     (sandbox \"name\" capabilities: c) Create sandbox
     (sandbox-run \"name\" code)        Execute in sandbox
     (sandbox-destroy \"name\")         Remove sandbox
 
-  Mobile Agents (RFC-035):
+  Mobile Agents (Memo-035):
     (tunnel destination)             Move agent to realm
     (observe resource)               Observe (collapse state)
     (entangle a1 a2)                 Correlate agents
@@ -3145,19 +3145,19 @@ Cyberspace REPL - Available Commands
     (superpose states)               Create superposition
     (collapse superposition)         Resolve to one state
 
-  Quorum Voting (RFC-036):
+  Quorum Voting (Memo-036):
     (quorum-propose q options)       Start vote
     (quorum-vote id choice)          Cast vote (HE encrypted)
     (quorum-tally id)                Tally results
     (quorum-status)                  Show proposals
 
-  Local Inference (RFC-038):
+  Local Inference (Memo-038):
     (inference-server)               Get/set Ollama URL
     (inference-models)               List available models
     (inference prompt model: m)      Run LLM inference
     (inference-embed text)           Generate embeddings
 
-  Wormholes (RFC-041):
+  Wormholes (Memo-041):
     (wormhole-open \"~/Space\")        Open wormhole fs <-> vault
     (wormhole-open p capabilities: capability:read-only)
     (wormhole-open p locked: #t)     Open locked (requires unlock)
@@ -3176,7 +3176,7 @@ Cyberspace REPL - Available Commands
     (fs-sync vault-path fs-path)     Bidirectional sync
     (manifest-list)                  Show manifest entries
 
-  Secure Erasure (RFC-040):
+  Secure Erasure (Memo-040):
     (secure-clear! buffer)           Zeroize buffer (blobs only)
     (key-destroy! key-id)            Destroy key material
     (object-erase! hash)             Overwrite + delete object
@@ -3184,7 +3184,7 @@ Cyberspace REPL - Available Commands
     (session-key-destroy! id)        Destroy session key
     (erase-audit)                    Show erasure audit trail
 
-  Node Enrollment (RFC-044):
+  Node Enrollment (Memo-044):
     (enroll-request 'name)           Request enrollment (FIPS-181)
     (enroll-listen)                  Listen for enrollment requests
     (enroll-approve req key)         Approve enrollment
@@ -3193,14 +3193,14 @@ Cyberspace REPL - Available Commands
     (introspect-network)             Network interfaces
     (introspect-storage)             Storage info
 
-  mDNS Discovery (RFC-044):
+  mDNS Discovery (Memo-044):
     (mdns-announce name pubkey)      Broadcast enrollment request
     (mdns-listen handler)            Listen for mDNS announcements
     (mdns-query service)             Query for service
     (announce-presence n k)          Start mDNS presence
     (discover-peers)                 Find peers on network
 
-  Bloom Filters (RFC-020):
+  Bloom Filters (Memo-020):
     (make-blocked-bloom n fpp)       Create blocked Bloom filter
     (blocked-bloom-add! bf item)     Add item to filter
     (blocked-bloom-contains? bf i)   Test membership
@@ -3208,14 +3208,14 @@ Cyberspace REPL - Available Commands
     (blocked-bloom-serialize bf)     Serialize for network
     (blocked-bloom-deserialize b)    Deserialize from network
 
-  Merkle Catalog (RFC-020):
+  Merkle Catalog (Memo-020):
     (catalog-build hashes)           Build Merkle tree of hashes
     (catalog-root cat)               Get root hash
     (catalog-diff local remote)      Find differing subtrees
     (catalog-proof cat hash)         Generate inclusion proof
     (catalog-verify-proof proof)     Verify inclusion proof
 
-  Anti-Entropy Gossip (RFC-010):
+  Anti-Entropy Gossip (Memo-010):
     (gossip-round peers)             One round of gossip
     (gossip-start interval peers)    Start gossip daemon
     (gossip-stop)                    Stop gossip daemon
@@ -4236,7 +4236,7 @@ Cyberspace REPL - Available Commands
       (print "  entropy: " (cdr (assq 'source ent)) " (" (cdr (assq 'implementation ent)) ")"))
     ;; FIPS self-test attestation
     (print "  FIPS: " (if (eq? (fips-status) 'passed) "passed" "FAILED"))
-    ;; Lamport clock (RFC-012) - time in the weave
+    ;; Lamport clock (Memo-012) - time in the weave
     (print "  " (lamport-format))
     ;; Show identity if enrolled
     (when node-id
@@ -4910,7 +4910,7 @@ Cyberspace REPL - Available Commands
   "Ping all connected nodes"
   (node-broadcast `(ping ,(current-seconds))))
 
-;; Load persisted Lamport clock from vault (RFC-012)
+;; Load persisted Lamport clock from vault (Memo-012)
 (lamport-load!)
 
 ;; Banner shown at portal level (2) and above
@@ -5198,7 +5198,7 @@ Cyberspace REPL - Available Commands
     (system "System & Introspection"
      ("(introspect)" "Full system introspection")
      ("(measure-weave)" "Crypto benchmark (ops/ms)")
-     ("(weave-stratum N)" "Lattice stratum (RFC-056)")
+     ("(weave-stratum N)" "Lattice stratum (Memo-056)")
      ("*weave-strata*" "Stratum thresholds alist")
      ("(banner)" "Redisplay startup banner")
      ("(entropy-status)" "Entropy source info")

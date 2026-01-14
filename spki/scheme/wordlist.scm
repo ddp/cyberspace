@@ -1,7 +1,7 @@
 ;;; SPKI Scheme - Pronounceable Verification Codes
 ;;;
 ;;; Provides human-readable fingerprints for public keys.
-;;; Used during node enrollment (RFC-044) for verbal verification.
+;;; Used during node enrollment (Memo-044) for verbal verification.
 ;;;
 ;;; Supports two modes:
 ;;;   FIPS-181: Automated Password Generator (federal compliance)

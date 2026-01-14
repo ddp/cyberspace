@@ -6,7 +6,7 @@
   (title "Content-Addressed Storage")
   (section
     "Abstract"
-    (p "This RFC specifies content-addressed storage (CAS) for the Library of Cyberspace: a storage model where data is addressed by its cryptographic hash rather than by location. Content addressing provides immutability guarantees, automatic deduplication, and tamper-evident storage."))
+    (p "This Memo specifies content-addressed storage (CAS) for the Library of Cyberspace: a storage model where data is addressed by its cryptographic hash rather than by location. Content addressing provides immutability guarantees, automatic deduplication, and tamper-evident storage."))
   (section
     "Motivation"
     (p "Traditional storage systems use location-based addressing:")
@@ -82,7 +82,7 @@
       (code scheme ";; Immutable named reference\n(define (tag-create name hash #!key message signature)\n  (let ((tag-content\n         `(tag\n           (name ,name)\n           (object ,hash)\n           (message ,message)\n           (signature ,signature))))\n    (cas-put (serialize tag-content))))"))
     (subsection
       "Directory Entries"
-      (code scheme ";; Human name -> content hash\n(define library-index\n  '((\"RFC-000\" . \"sha256:e3b0c44...\")\n    (\"RFC-001\" . \"sha256:a7ffc6f...\")\n    (\"RFC-002\" . \"sha256:b94d27b...\")))")))
+      (code scheme ";; Human name -> content hash\n(define library-index\n  '((\"Memo-000\" . \"sha256:e3b0c44...\")\n    (\"Memo-001\" . \"sha256:a7ffc6f...\")\n    (\"Memo-002\" . \"sha256:b94d27b...\")))")))
   (section
     "The Soup: Object Directory"
     (p "Content-addressed storage provides retrieval by hash, but discovery requires an object directory. The Soup (inspired by NewtonOS) provides a unified view of all objects with rich metadata.")
@@ -116,20 +116,20 @@
     "Integration with Library of Cyberspace"
     (subsection
       "Vault Integration"
-      (p "The Vault (RFC-006) uses content addressing internally via Git:")
+      (p "The Vault (Memo-006) uses content addressing internally via Git:")
       (code scheme ";; Git objects ARE content-addressed\n(define (git-hash-object content)\n  (sha1 (string-append \"blob \" (number->string (blob-length content)) \"\\x00\" content)))")
       (p "CAS extends this with SHA-256 and Library-specific semantics."))
     (subsection
       "Archive Storage"
-      (p "Sealed archives (RFC-018) can be stored by content address:")
+      (p "Sealed archives (Memo-018) can be stored by content address:")
       (code scheme "(define (archive-to-cas archive-path)\n  (let* ((content (read-blob archive-path))\n         (hash (cas-put content)))\n    (ref-set (string-append \"archives/\" (archive-version archive-path)) hash)\n    hash))"))
     (subsection
       "Replication"
-      (p "Content addressing enables efficient replication (RFC-001):")
+      (p "Content addressing enables efficient replication (Memo-001):")
       (code scheme ";; Only transfer objects receiver doesn't have\n(define (replicate-to remote root-hash)\n  (for-each\n    (lambda (hash)\n      (unless (remote-has? remote hash)\n        (remote-put remote hash (cas-get hash))))\n    (trace-reachable root-hash)))"))
     (subsection
       "SPKI Integration"
-      (p "Content hashes can be authorization subjects (RFC-004):")
+      (p "Content hashes can be authorization subjects (Memo-004):")
       (code scheme ";; Grant permission to specific content\n(spki-cert\n  (issuer publisher-key)\n  (subject (hash sha256 \"abc123...\"))\n  (permission read)\n  (validity (not-after \"2027-01-01\")))")))
   (section
     "Chunking for Large Objects"
@@ -162,7 +162,7 @@
     (subsection
       "Provenance"
       (p "Every object knows its origin:")
-      (code scheme "(soup-object\n  (name \"rfc-020.ps\")\n  (type blob)\n  (size \"89KB\")\n  (crypto (sha256 \"abc123...\"))\n  (provenance\n    (created-by \"ddp@eludom.net\")\n    (created-at 1767700000)\n    (derived-from \"sha256:fff888...\")\n    (tool \"dvips\")))")
+      (code scheme "(soup-object\n  (name \"memo-020.ps\")\n  (type blob)\n  (size \"89KB\")\n  (crypto (sha256 \"abc123...\"))\n  (provenance\n    (created-by \"ddp@eludom.net\")\n    (created-at 1767700000)\n    (derived-from \"sha256:fff888...\")\n    (tool \"dvips\")))")
       (p "Provenance chains are themselves content-addressed:")
       (code scheme ";; Trace full history\n(define (provenance-chain hash)\n  (let ((obj (soup-get hash)))\n    (if (soup-object-derived-from obj)\n        (cons obj (provenance-chain (soup-object-derived-from obj)))\n        (list obj))))"))
     (subsection
@@ -175,7 +175,7 @@
       (code scheme ";; Bootstrap manifest - everything needed to reconstruct\n(bootstrap-manifest\n  (hash \"sha256:bootstrap...\")\n  (contents\n    ((\"src/\" tree \"sha256:src...\")\n     (\"rfcs/\" tree \"sha256:rfcs...\")\n     (\"keys/\" tree \"sha256:keys...\")\n     (\"schema/\" tree \"sha256:schema...\")))\n  (build-instructions\n    \"Load src/boot.scm, call (bootstrap)\"))\n\n;; Verify bootstrap integrity\n(define (verify-bootstrap)\n  (let ((manifest (cas-get (ref-get \"bootstrap\"))))\n    (for-each verify-tree (manifest-contents manifest))))"))
     (subsection
       "The Library Contains Itself"
-      (code "╭─────────────────────────────────────────╮\n│            LIBRARY OF CYBERSPACE        │\n│  ╭───────────────────────────────────╮  │\n│  │     Content-Addressed Storage     │  │\n│  │  ╭─────────────────────────────╮  │  │\n│  │  │    RFC-020 (this document)  │  │  │\n│  │  │    describing CAS           │  │  │\n│  │  │    stored in CAS            │  │  │\n│  │  ╰─────────────────────────────╯  │  │\n│  ╰───────────────────────────────────╯  │\n╰─────────────────────────────────────────╯")
+      (code "╭─────────────────────────────────────────╮\n│            LIBRARY OF CYBERSPACE        │\n│  ╭───────────────────────────────────╮  │\n│  │     Content-Addressed Storage     │  │\n│  │  ╭─────────────────────────────╮  │  │\n│  │  │    Memo-020 (this document)  │  │  │\n│  │  │    describing CAS           │  │  │\n│  │  │    stored in CAS            │  │  │\n│  │  ╰─────────────────────────────╯  │  │\n│  ╰───────────────────────────────────╯  │\n╰─────────────────────────────────────────╯")
       (p "Homoiconic storage: the description is the thing.")))
   (section
     "Tombstones"
@@ -327,7 +327,7 @@
       (code scheme "(define-condition-type &cas-error &error\n  cas-error?\n  (hash cas-error-hash))\n\n(define-condition-type &cas-not-found &cas-error\n  cas-not-found?)\n\n(define-condition-type &cas-corrupt &cas-error\n  cas-corrupt?)")))
   (section
     "References"
-    (p "1. Merkle, R. (1987), \"A Digital Signature Based on a Conventional Encryption Function\" 2. Git Internals - Git Objects 3. IPFS Content Addressing 4. Putze, Sanders, Singler (2007), \"Cache-, Hash-, and Space-Efficient Bloom Filters\" 5. Bender et al. (2012), \"Don't Thrash: How to Cache Your Hash on Flash\" 6. RFC-006: Vault System Architecture 7. RFC-018: Sealed Archive Format"))
+    (p "1. Merkle, R. (1987), \"A Digital Signature Based on a Conventional Encryption Function\" 2. Git Internals - Git Objects 3. IPFS Content Addressing 4. Putze, Sanders, Singler (2007), \"Cache-, Hash-, and Space-Efficient Bloom Filters\" 5. Bender et al. (2012), \"Don't Thrash: How to Cache Your Hash on Flash\" 6. Memo-006: Vault System Architecture 7. Memo-018: Sealed Archive Format"))
   (section
     "Changelog"
     (list

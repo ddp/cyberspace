@@ -6,7 +6,7 @@
   (title "Federation Protocol")
   (section
     "Abstract"
-    (p "This RFC specifies the Federation Protocol for the Library of Cyberspace: a peer-to-peer synchronization system enabling loose confederacies of friends to share and preserve cryptographically sealed artifacts without central authority."))
+    (p "This Memo specifies the Federation Protocol for the Library of Cyberspace: a peer-to-peer synchronization system enabling loose confederacies of friends to share and preserve cryptographically sealed artifacts without central authority."))
   (section
     "E Pluribus Unum"
     (p "Out of many, one.")
@@ -56,7 +56,7 @@
     (subsection
       "Synchronization"
       (code scheme "(federation-sync peer\n  #!key direction verify-key)")
-      (p "Bidirectional sync (from RFC-001): 1. Exchange release lists 2. Identify missing releases 3. Push/pull as configured 4. Verify all signatures 5. Update audit trails")))
+      (p "Bidirectional sync (from Memo-001): 1. Exchange release lists 2. Identify missing releases 3. Push/pull as configured 4. Verify all signatures 5. Update audit trails")))
   (section
     "Message Format"
     (subsection
@@ -142,12 +142,12 @@
   (section
     "Implementation Status"
     (subsection
-      "Implemented (RFC-001)"
+      "Implemented (Memo-001)"
       (list
         (item "seal-publish: Push to single remote - seal-subscribe: Pull from single remote - seal-synchronize: Bidirectional with single peer")
         (item "Transport: git, HTTP, filesystem")))
     (subsection
-      "Proposed (This RFC)"
+      "Proposed (This Memo)"
       (list
         (item "Multi-peer management")
         (item "Trust levels and policies")
@@ -156,7 +156,7 @@
         (item "Conflict resolution UI"))))
   (section
     "References"
-    (p "1. Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols. 2. Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance. 3. Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types. 4. RFC-001: Replication Layer 5. RFC-004: SPKI Authorization"))
+    (p "1. Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols. 2. Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance. 3. Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types. 4. Memo-001: Replication Layer 5. Memo-004: SPKI Authorization"))
   (section
     "Changelog"
     (list

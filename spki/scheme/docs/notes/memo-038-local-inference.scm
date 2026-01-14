@@ -6,14 +6,14 @@
   (title "Local Inference Integration")
   (section
     "Abstract"
-    (p "This RFC specifies how Library of Cyberspace agents integrate with local large language model (LLM) inference backends. Local inference enables privacy-preserving agent operations without external API dependencies, supporting the self-sovereign architecture of the Library.[^h1]")
+    (p "This Memo specifies how Library of Cyberspace agents integrate with local large language model (LLM) inference backends. Local inference enables privacy-preserving agent operations without external API dependencies, supporting the self-sovereign architecture of the Library.[^h1]")
     (p "[^h1]: Historical: The tension between local and remote computation echoes the mainframe-to-PC transition. Local inference returns agency to the edge, reversing decades of cloud centralization."))
   (section
     "Motivation"
     (p "Agents in the Library of Cyberspace require language understanding and generation capabilities for:")
     (list
       (item "Document summarization and indexing")
-      (item "Natural language query translation (RFC-025)")
+      (item "Natural language query translation (Memo-025)")
       (item "Content annotation and metadata extraction")
       (item "Inter-agent communication in natural language"))
     (p "External API dependencies (OpenAI, Anthropic, etc.) introduce:")
@@ -56,11 +56,11 @@
       (code scheme "(define (scribe-summarize document)\n  (let ((server (discover-inference-server))\n         (model (select-model server 'completion))\n         (prompt (format \"Summarize the following document:\\n\\n~a\"\n                         (document-content document))))\n    (inference-complete server model prompt\n                        '((max-tokens . 500)\n                          (temperature . 0.3)))))\n\n(define (scribe-index document)\n  ;; Extract keywords using local inference\n  (let ((server (discover-inference-server))\n         (model (select-model server 'completion))\n         (prompt (format \"Extract 5-10 keywords from:\\n\\n~a\"\n                         (document-content document))))\n    (parse-keywords (inference-complete server model prompt))))"))
     (subsection
       "Query Translation"
-      (p "Natural language queries translate to RFC-025 query language:")
+      (p "Natural language queries translate to Memo-025 query language:")
       (code scheme "(define (nl-to-query natural-language)\n  (let* ((server (discover-inference-server))\n         (model (select-model server 'chat))\n         (system \"You translate natural language to Cyberspace query\n                  language. Output only the query, no explanation.\")\n         (examples '((\"find all RFCs about security\"\n                      \"(query (type rfc) (topic security))\")\n                     (\"documents modified last week\"\n                      \"(query (modified (after (days-ago 7))))\"))))\n    (inference-chat server model system examples natural-language)))"))
     (subsection
       "Demonic Agent Inference"
-      (p "Sandboxed agents (RFC-023) access inference through capability tokens:[^d2]")
+      (p "Sandboxed agents (Memo-023) access inference through capability tokens:[^d2]")
       (p "[^d2]: Design: Inference capability is granted like any other—via SPKI certificate. An agent cannot infer without explicit authorization.")
       (code scheme "(define (demonic-inference agent prompt)\n  (let ((cap (agent-capability agent 'inference)))\n    (if (not cap)\n        (error 'unauthorized \"Agent lacks inference capability\")\n        (let ((limits (capability-limits cap)))\n          (enforce-limits limits)\n          (inference-complete (capability-server cap)\n                              (capability-model cap)\n                              prompt\n                              limits)))))")))
   (section
@@ -142,7 +142,7 @@
       (p "This is NOT RECOMMENDED for sensitive documents.")))
   (section
     "References"
-    (p "1. RFC-023: Demonic Agent Sandboxing 2. RFC-025: Query Language 3. RFC-035: Mobile Agents and Pub/Sub 4. Ollama Documentation: https://ollama.com/ 5. Lewis et al., \"Retrieval-Augmented Generation\" (2020)"))
+    (p "1. Memo-023: Demonic Agent Sandboxing 2. Memo-025: Query Language 3. Memo-035: Mobile Agents and Pub/Sub 4. Ollama Documentation: https://ollama.com/ 5. Lewis et al., \"Retrieval-Augmented Generation\" (2020)"))
   (section
     "Changelog"
     (list

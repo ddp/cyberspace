@@ -1,6 +1,6 @@
 ;;; SPKI Scheme - Local Network Discovery (mDNS-lite)
 ;;;
-;;; Provides local network discovery for node enrollment (RFC-044).
+;;; Provides local network discovery for node enrollment (Memo-044).
 ;;; Uses UDP broadcast for announcements and TCP for enrollment protocol.
 ;;;
 ;;; This is a minimal mDNS-compatible implementation focused on

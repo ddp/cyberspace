@@ -6,7 +6,7 @@
   (title "Scaling Architecture for IPv6")
   (section
     "Abstract"
-    (p "This RFC defines the architectural changes required to scale Cyberspace from a git-backed prototype to a native distributed system capable of operating at IPv6 scale (billions of realms, exabytes of content). Git becomes an export format; the vault becomes the source of truth."))
+    (p "This Memo defines the architectural changes required to scale Cyberspace from a git-backed prototype to a native distributed system capable of operating at IPv6 scale (billions of realms, exabytes of content). Git becomes an export format; the vault becomes the source of truth."))
   (section
     "Terminology"
     (p "Realm: A node's place in cyberspace - its vault, principal, capabilities, and objects. Each realm is sovereign: local-first, controlled by its operator. Realms federate by choice, sharing objects according to trust relationships.")
@@ -107,7 +107,7 @@
       "Crdt-Style Convergence"
       (p "Objects are immutable and content-addressed. No conflicts possible at object level.")
       (p "Manifests (collections of objects) use: - Lamport timestamps for ordering - Last-writer-wins with principal tiebreaker - Or: union (add-only sets)")
-      (code scheme "(manifest\n  (name \"library\")\n  (version (lamport 42) (principal \"ed25519:...\"))\n  (entries\n    (\"rfc-001\" \"sha512:...\")\n    (\"rfc-002\" \"sha512:...\")\n    ...))"))
+      (code scheme "(manifest\n  (name \"library\")\n  (version (lamport 42) (principal \"ed25519:...\"))\n  (entries\n    (\"memo-001\" \"sha512:...\")\n    (\"memo-002\" \"sha512:...\")\n    ...))"))
     (subsection
       "Merkle Sync"
       (p "Efficient diff for large manifests:")
@@ -180,7 +180,7 @@
     (code scheme "(node-metrics)\n;; Returns:\n((objects-stored 150000)\n (objects-size-gb 50)\n (peers-known 500)\n (peers-connected 20)\n (sync-lag-seconds 30)\n (bandwidth-in-mbps 10)\n (bandwidth-out-mbps 5)\n (requests-per-second 100)\n (errors-per-second 0.1))"))
   (section
     "References"
-    (p "1. RFC-010: Federation Protocol 2. RFC-016: Lazy Clustering 3. RFC-037: Node Roles and Capabilities 4. Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information System 5. Rabin, M. (1981). Fingerprinting by Random Polynomials 6. IPFS Whitepaper (2014) 7. Shapiro, M. (2011). Conflict-Free Replicated Data Types"))
+    (p "1. Memo-010: Federation Protocol 2. Memo-016: Lazy Clustering 3. Memo-037: Node Roles and Capabilities 4. Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information System 5. Rabin, M. (1981). Fingerprinting by Random Polynomials 6. IPFS Whitepaper (2014) 7. Shapiro, M. (2011). Conflict-Free Replicated Data Types"))
   (section
     "Changelog"
     (list

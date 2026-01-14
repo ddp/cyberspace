@@ -1,4 +1,4 @@
-;; RFC-059: Lazy Discovery
+;; Memo-059: Lazy Discovery
 ;; Reactive change propagation in the weave
 
 (memo
@@ -51,7 +51,7 @@
 
     (subsection
       "4.1 Notification Propagation"
-      (p "Change notifications piggyback on gossip protocol (RFC-010). They are small, signed, and expire:")
+      (p "Change notifications piggyback on gossip protocol (Memo-010). They are small, signed, and expire:")
       (list
         (item "Notifications included in gossip heartbeat")
         (item "TTL limits propagation (default: 24 hours)")
@@ -129,7 +129,7 @@ Gossip:    Transport. Carries both forged objects and notifications.")
   (section
     "8. Security Considerations"
     (list
-      (item "Notification spam: Rate limiting per realm (RFC-032)")
+      (item "Notification spam: Rate limiting per realm (Memo-032)")
       (item "Subscription flooding: Quota on active subscriptions")
       (item "Privacy leakage: Subscriptions reveal interest graphs")
       (item "Replay attacks: Lamport ordering prevents stale notifications")))
@@ -137,7 +137,7 @@ Gossip:    Transport. Carries both forged objects and notifications.")
   (section
     "References"
     (references
-      (ref "RFC-010" "2026" "Federation Protocol")
-      (ref "RFC-012" "2026" "Lamport Clocks")
-      (ref "RFC-032" "2026" "Rate Limiting")
-      (ref "RFC-004" "2026" "SPKI Authorization"))))
+      (ref "Memo-010" "2026" "Federation Protocol")
+      (ref "Memo-012" "2026" "Lamport Clocks")
+      (ref "Memo-032" "2026" "Rate Limiting")
+      (ref "Memo-004" "2026" "SPKI Authorization"))))

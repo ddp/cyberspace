@@ -3,10 +3,10 @@
 ;;
 ;; Usage:
 ;;   (load "rfc-format.scm")
-;;   (define doc (read-memo "rfc-000-declaration.scm"))
-;;   (memo->txt doc "rfc-000-declaration.txt")
-;;   (memo->ps doc "rfc-000-declaration.ps")
-;;   (memo->html doc "rfc-000-declaration.html")
+;;   (define doc (read-memo "memo-000-declaration.scm"))
+;;   (memo->txt doc "memo-000-declaration.txt")
+;;   (memo->ps doc "memo-000-declaration.ps")
+;;   (memo->html doc "memo-000-declaration.html")
 
 (import scheme
         (chicken base)
@@ -1164,4 +1164,4 @@
     (print "Generated: " base ".{txt,html,ps}")))
 
 ;; Example usage:
-;; (memo-generate "rfc-000-declaration.scm")
+;; (memo-generate "memo-000-declaration.scm")

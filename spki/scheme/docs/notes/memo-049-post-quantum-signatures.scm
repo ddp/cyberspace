@@ -6,7 +6,7 @@
   (title "Post-Quantum Signatures")
   (section
     "Abstract"
-    (p "Ed25519 won't survive. Shor's algorithm breaks elliptic curve cryptography in polynomial time. When quantum computers arrive, every capability ever signed, every realm identity ever created, becomes forgeable. This RFC specifies the transition from Ed25519 to post-quantum signature schemes: SPHINCS+ and CRYSTALS-Dilithium."))
+    (p "Ed25519 won't survive. Shor's algorithm breaks elliptic curve cryptography in polynomial time. When quantum computers arrive, every capability ever signed, every realm identity ever created, becomes forgeable. This Memo specifies the transition from Ed25519 to post-quantum signature schemes: SPHINCS+ and CRYSTALS-Dilithium."))
   (section
     "The Threat"
     (p "Ed25519 security relies on the hardness of the elliptic curve discrete logarithm problem. Shor's algorithm solves this in polynomial time on a quantum computer.")
@@ -179,11 +179,11 @@
     "The Quantum Winter"
     (p "Q-Day is coming. We don't know when - estimates range from 2030 to 2040. But the harvest-now-decrypt-later threat is real today. Every Ed25519 signature captured now can be forged after Q-Day.")
     (p "Cyberspace is built to last. The Library of Alexandria must not burn twice.")
-    (p "When the quantum winter comes: - Merkle trees (RFC-042) protect object identity - SPHINCS+/Dilithium protect signatures - The sealed closure remains sealed - The wilderness of mirrors endures")
+    (p "When the quantum winter comes: - Merkle trees (Memo-042) protect object identity - SPHINCS+/Dilithium protect signatures - The sealed closure remains sealed - The wilderness of mirrors endures")
     (p "Prepare now. Migrate early. Survive."))
   (section
     "References"
-    (p "1. NIST Post-Quantum Cryptography Standardization 2. SPHINCS+ specification - https://sphincs.org/ 3. CRYSTALS-Dilithium specification - https://pq-crystals.org/dilithium/ 4. Open Quantum Safe project - https://openquantumsafe.org/ 5. Shor, P., \"Algorithms for Quantum Computation\", 1994 6. RFC-041 - Keystore and Attestation 7. RFC-042 - Quantum-Resistant Merkle Trees"))
+    (p "1. NIST Post-Quantum Cryptography Standardization 2. SPHINCS+ specification - https://sphincs.org/ 3. CRYSTALS-Dilithium specification - https://pq-crystals.org/dilithium/ 4. Open Quantum Safe project - https://openquantumsafe.org/ 5. Shor, P., \"Algorithms for Quantum Computation\", 1994 6. Memo-041 - Keystore and Attestation 7. Memo-042 - Quantum-Resistant Merkle Trees"))
   (section
     "Changelog"
     (list

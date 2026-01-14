@@ -6,7 +6,7 @@
   (title "Quorum Protocol with Homomorphic Voting")
   (section
     "Abstract"
-    (p "This RFC specifies the quorum protocol for the Library of Cyberspace: how principals reach collective decisions through homomorphic encryption-based voting, enabling private ballot tallying without revealing individual votes. Quorum integrates with threshold governance (RFC-007) and Byzantine consensus (RFC-011)."))
+    (p "This Memo specifies the quorum protocol for the Library of Cyberspace: how principals reach collective decisions through homomorphic encryption-based voting, enabling private ballot tallying without revealing individual votes. Quorum integrates with threshold governance (Memo-007) and Byzantine consensus (Memo-011)."))
   (section
     "Motivation"
     (p "Collective decisions require:")
@@ -53,7 +53,7 @@
     "Ballot Structure"
     (subsection
       "Ballot Definition"
-      (code scheme "(define-record-type <ballot>\n  (make-ballot id question options threshold deadline)\n  ballot?\n  (id ballot-id)                 ; Content hash\n  (question ballot-question)     ; Human-readable question\n  (options ballot-options)       ; List of choices\n  (threshold ballot-threshold)   ; Votes needed to pass\n  (deadline ballot-deadline))    ; Voting closes\n\n;; Example ballot\n(make-ballot\n  id: \"sha256:ballot...\"\n  question: \"Accept RFC-042 into standard?\"\n  options: '(accept reject abstain)\n  threshold: '(majority members)  ; >50% of members\n  deadline: 1767786000)"))
+      (code scheme "(define-record-type <ballot>\n  (make-ballot id question options threshold deadline)\n  ballot?\n  (id ballot-id)                 ; Content hash\n  (question ballot-question)     ; Human-readable question\n  (options ballot-options)       ; List of choices\n  (threshold ballot-threshold)   ; Votes needed to pass\n  (deadline ballot-deadline))    ; Voting closes\n\n;; Example ballot\n(make-ballot\n  id: \"sha256:ballot...\"\n  question: \"Accept Memo-042 into standard?\"\n  options: '(accept reject abstain)\n  threshold: '(majority members)  ; >50% of members\n  deadline: 1767786000)"))
     (subsection
       "Encrypted Vote"
       (code scheme "(define-record-type <encrypted-vote>\n  (make-encrypted-vote ballot-id voter ciphertext proof timestamp signature)\n  encrypted-vote?\n  (ballot-id vote-ballot-id)     ; Which ballot\n  (voter vote-voter)             ; Voter's public key (or anonymous token)\n  (ciphertext vote-ciphertext)   ; HE-encrypted choice\n  (proof vote-proof)             ; Zero-knowledge proof of validity\n  (timestamp vote-timestamp)\n  (signature vote-signature))"))
@@ -113,10 +113,10 @@
   (section
     "Integration with Governance"
     (subsection
-      "RFC-007 Threshold Governance"
+      "Memo-007 Threshold Governance"
       (code scheme ";; Quorum voting for threshold operations\n(define (threshold-operation-vote operation trustees)\n  \"Vote on threshold operation\"\n  (let ((ballot (create-ballot\n                  question: (format \"Approve ~a?\" operation)\n                  options: '(approve reject)\n                  threshold: '(supermajority 2/3)\n                  deadline: (+ (current-time) 86400)\n                  trustees: trustees)))\n    ;; Wait for voting\n    (await-ballot-result ballot)))"))
     (subsection
-      "RFC-011 Byzantine Consensus"
+      "Memo-011 Byzantine Consensus"
       (code scheme ";; Use quorum voting within Byzantine protocol\n(define (byzantine-propose-vote proposal validators)\n  \"Propose via encrypted voting\"\n  (let ((ballot (create-ballot\n                  question: proposal\n                  options: '(commit abort)\n                  threshold: '(byzantine-quorum (length validators))\n                  trustees: validators)))\n    ballot))\n\n(define (byzantine-quorum n)\n  \"2f+1 for n=3f+1 validators\"\n  (+ (* 2 (floor (/ (- n 1) 3))) 1))"))
     (subsection
       "Key Ceremony Voting"
@@ -171,7 +171,7 @@
       (p "Recommended implementations: - OpenFHE (C++) - Full HE library - python-paillier - Reference implementation - threshold-paillier - Distributed key generation")))
   (section
     "References"
-    (p "1. Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes 2. Benaloh, J. (1994). Dense Probabilistic Encryption 3. Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and Optimally Efficient Multi-Authority Election Scheme 4. RFC-007: Threshold Signature Governance 5. RFC-011: Byzantine Consensus 6. RFC-022: Key Ceremony Protocol"))
+    (p "1. Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes 2. Benaloh, J. (1994). Dense Probabilistic Encryption 3. Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and Optimally Efficient Multi-Authority Election Scheme 4. Memo-007: Threshold Signature Governance 5. Memo-011: Byzantine Consensus 6. Memo-022: Key Ceremony Protocol"))
   (section
     "Changelog"
     (list
