@@ -8,9 +8,7 @@ Personal history and design decisions behind Cyberspace.
 
 ### VMS Security (1984-1994)
 
-The designer was engineering lead for TCSEC C2/B1 certification on VAX/VMS and Alpha VMS, and owned the VMS 6.0 release.
-
-**The Security Project Team** included Derrell Piper, Mark Pilant, and Andy Goldstein.
+**The Security Project Team:** Derrell Piper (lead), Mark Pilant, and Andy Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.
 
 **What we built:**
 - `$CHKPRO` - the privilege checking gate
@@ -30,8 +28,7 @@ Of all the people at DEC, Cutler—designer of the MicroVAX—could see the writ
 **The weave predates the software.** The people who understood trust architectures kept finding each other:
 
 - DEC → Microsoft → Cisco → here
-- Peter Lofgren was there. There's a photograph of that meeting floating around in PDP-10 space.
-- The designer is friends with Peter. He ended up at Cisco—our nexus.
+- Peter Lofgren was there. There's a photograph of that meeting floating around in PDP-10 space. He ended up at Cisco—our nexus.
 
 The thread is unbroken. From the people who built it, through the people who maintained it, to the people who understood what was lost. And now into the code.
 
@@ -45,7 +42,7 @@ That's provenance you can't fake.
 
 **The VMS Runtime** - Had a rich macro wrapper for BLISS. That macro system was a Lisp. We knew. That's why we used it.
 
-**The designer** - Came to VMS as a Lisper, fell in love with BLISS (an expression language, like home).
+A Lisper who fell in love with BLISS (an expression language, like home).
 
 ### Syntax Heritage
 
