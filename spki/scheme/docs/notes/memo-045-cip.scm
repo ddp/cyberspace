@@ -6,7 +6,7 @@
   (title "Cryptographic Imprint Protocol (CIP)")
   (section
     "Abstract"
-    (p "CIP establishes secure channels between Cyberspace nodes using stateless cookies for DoS resistance, ephemeral key exchange for forward secrecy, and capability attestation for authorization. No X.509. No CA hierarchy. No algorithm negotiation."))
+    (p "CIP establishes secure channels between Cyberspace nodes using stateless cookies for DoS resistance, ephemeral key exchange for forward secrecy, and capability attestation for authorization. Each imprint is an authoritative affirmation of trust - signed and sealed by the issuing principal in their realm. No X.509. No CA hierarchy. No algorithm negotiation."))
   (section
     "Motivation"
     (p "TLS is complex: - Certificate chains require PKI - Algorithm negotiation invites downgrade attacks - State allocated before client proven real - Identity exposed before encryption")
@@ -63,6 +63,7 @@
     (code "ATTEST payload (encrypted):\n  principal-hash \"|\" signature")
     (p "- principal-hash: SPKI principal (hex-encoded public key hash) - signature: Ed25519 signature over transcript")
     (p "Identity is cryptographic, not nominal. A principal is identified solely by its public key hash, never by a human-readable name. This is a prime directive.")
+    (p "The attestation constitutes an authoritative affirmation of trust: the signing principal vouches for the channel with the full weight of their cryptographic identity. This is not a bearer token - it is a sealed declaration bound to the principal's realm.")
     (p "Transcript for signing:")
     (code "cookie-i || cookie-r || ephemeral-public")
     (subsection
