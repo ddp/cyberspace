@@ -54,6 +54,10 @@
 ;;; the lambda rests in stillness.
 (define *stillness* 'quiescent)
 
+;;; Travellers leave trails.
+(define *trail* '())        ; navigation history
+(define *lens* 'library)    ; current view: 'library or 'soup
+
 ;;; ============================================================
 ;;; Boot Verbosity Levels
 ;;; ============================================================
@@ -5141,8 +5145,8 @@ Cyberspace REPL - Available Commands
      ("(seal-release VER)" "Create release")
      ("(query PRED)" "Query vault objects"))
 
-    (library "RFCs & Documentation"
-     ("(library)" "Browse all RFCs")
+    (library "Memos"
+     ("(library)" "Browse all Memos")
      ("(search 'topic)" "Search vault + library")
      ("(memo N)" "View Memo in terminal")
      ("(rfc N 'html)" "Open Memo in browser"))
@@ -5680,7 +5684,7 @@ Cyberspace REPL - Available Commands
 
 ;; Library of Cyberspace - Memo browser
 (define (library #!optional filter)
-  "Browse the Library of Cyberspace RFCs"
+  "Browse the Library of Cyberspace"
   (let* ((lib (introspect-library))
          (count (cadr (assq 'count (cdr lib))))
          (rfcs (cadr (assq 'rfcs (cdr lib)))))
@@ -5698,7 +5702,7 @@ Cyberspace REPL - Available Commands
          (when (or (not filter)
                    (string-contains-ci title (symbol->string filter))
                    (string-contains-ci num (symbol->string filter)))
-           (printf "  RFC-~a  ~a~%"
+           (printf "  Memo-~a  ~a~%"
                    (string-pad-left num 3 #\0)
                    title-short))))
      rfcs)
@@ -5743,7 +5747,7 @@ Cyberspace REPL - Available Commands
          (lambda (rfc)
            (let ((num (cadr (assq 'number (cdr rfc))))
                  (title (cadr (assq 'title (cdr rfc)))))
-             (printf "  RFC-~a  ~a~%"
+             (printf "  Memo-~a  ~a~%"
                      (string-pad-left num 3 #\0)
                      (if (> (string-length title) 45)
                          (string-append (substring title 0 42) "...")
@@ -5754,8 +5758,8 @@ Cyberspace REPL - Available Commands
     (void)))
 
 ;; Open Memo in viewer
-(define (rfc num #!optional format)
-  "Open Memo in viewer. (rfc 54) or (rfc 54 'html) or (rfc 54 'ps)"
+(define (memo num #!optional format)
+  "Open Memo in viewer. (memo 54) or (memo 54 'html) or (memo 54 'ps)"
   (let* ((num-str (if (number? num)
                       (string-pad-left (number->string num) 3 #\0)
                       (string-pad-left (symbol->string num) 3 #\0)))
@@ -5769,10 +5773,10 @@ Cyberspace REPL - Available Commands
                 ((txt text) ".txt")
                 ((md markdown) ".md")
                 (else ".txt")))
-         (path (string-append rfc-dir "/rfc-" num-str "-*.txt"))
+         (path (string-append rfc-dir "/memo-" num-str "-*.txt"))
          ;; Find the actual filename
          (actual (with-input-from-pipe
-                  (string-append "ls " rfc-dir "/rfc-" num-str "-*" ext " 2>/dev/null | head -1")
+                  (string-append "ls " rfc-dir "/memo-" num-str "-*" ext " 2>/dev/null | head -1")
                   read-line)))
     (if (or (eof-object? actual) (string=? actual ""))
         (print "Memo-" num-str " not found")
@@ -5795,8 +5799,55 @@ Cyberspace REPL - Available Commands
                        (print line)
                        (loop (+ n 1)))))))
              (print "")
-             (print "... (rfc " num " 'html) to open in browser")))
+             (print "... (memo " num " 'html) to open in browser")))
+          ;; Leave a trail
+          (set! *trail* (cons num *trail*))
           (void)))))
+
+;; Alias for backward compatibility
+(define rfc memo)
+
+;;; Navigation - travellers leave trails
+(define (back)
+  "Go back to previous memo in trail"
+  (if (null? *trail*)
+      (print "No trail yet")
+      (let ((prev (car *trail*)))
+        (set! *trail* (cdr *trail*))
+        (memo prev))))
+
+(define (next #!optional n)
+  "Go to next memo. (next) or (next 5)"
+  (let* ((current (if (null? *trail*) 0 (car *trail*)))
+         (target (+ current (or n 1))))
+    (memo target)))
+
+(define (prev #!optional n)
+  "Go to previous memo. (prev) or (prev 5)"
+  (let* ((current (if (null? *trail*) 1 (car *trail*)))
+         (target (max 0 (- current (or n 1)))))
+    (memo target)))
+
+(define (trail)
+  "Show navigation trail"
+  (if (null? *trail*)
+      (print "No trail yet - start reading with (memo N)")
+      (begin
+        (print "Trail:")
+        (for-each (lambda (n) (printf "  Memo-~a~%" n))
+                  (reverse (take *trail* (min 10 (length *trail*))))))))
+
+;;; Lens - library (light) or soup (dark)
+(define (lens #!optional mode)
+  "Show or set viewing lens. (lens) or (lens 'soup) or (lens 'library)"
+  (if mode
+      (begin
+        (set! *lens* mode)
+        (printf "~a~%" (if (eq? mode 'soup) "⚗ soup" "📚 library")))
+      (printf "~a~%" (if (eq? *lens* 'soup) "⚗ soup" "📚 library"))))
+
+(define (light) (lens 'library))
+(define (dark) (lens 'soup))
 
 ;; Status - compact tree view
 (define (status)
