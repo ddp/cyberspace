@@ -8,6 +8,8 @@ Personal history and design decisions behind Cyberspace.
 
 ### VMS Security (1984-1994)
 
+DEC was a family. This was merely one specialty.
+
 **The Security Project Team:** Derrell Piper (lead), Mark Pilant, and Andy Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.
 
 **What we built:**
