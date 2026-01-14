@@ -10,7 +10,7 @@ Personal history and design decisions behind Cyberspace.
 
 DEC was a family. This was merely one specialty.
 
-**The Security Project Team:** Derrell Piper (lead), Mark Pilant, and Andy Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.
+**The Security Project Team:** Derrell Piper, Mark Pilant, Andy Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.
 
 **What we built:**
 - `$CHKPRO` - the privilege checking gate, the single point where all privilege decisions were made
