@@ -1381,6 +1381,11 @@
       (peers ,peer-count)
       (vault ,has-vault))))
 
+;; Synonyms for the uninitiated
+(define (huh?) (about))
+(define (what?) (about))
+(define (describe) (about))
+
 ;;; ============================================================
 ;;; RFC-011: Byzantine Consensus
 ;;; ============================================================
