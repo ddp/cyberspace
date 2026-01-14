@@ -1,5 +1,8 @@
 ;;; portal.scm - Session lifecycle: crossing into and out of Cyberspace
 ;;;
+;;; They enter through gates, some call them portals, into lambda land,
+;;; where we teleport through wormholes in the fabric of the weave.
+;;;
 ;;; Tracks session statistics, provides the goodbye message, and manages
 ;;; the portal between objective reality and Cyberspace.
 ;;;
