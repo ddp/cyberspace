@@ -6353,6 +6353,8 @@ Cyberspace REPL - Available Commands
 
 ;; Initialize session statistics
 (session-stat-init!)
+;; Catch termination signals for clean exit
+(install-signal-handlers!)
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 

@@ -24,6 +24,9 @@
    ;; Exit
    goodbye
 
+   ;; Signal handlers
+   install-signal-handlers!
+
    ;; Internal (for REPL)
    count-vault-items
    audit-load-entries-raw)
@@ -36,6 +39,8 @@
           (chicken time)
           (chicken time posix)
           (chicken type)  ; for type declarations
+          (chicken process signal)
+          (chicken process-context posix)
           srfi-1
           srfi-13
           srfi-69
@@ -293,6 +298,44 @@
   (define (drain-input)
     "Drain pending input to avoid escape codes leaking to shell."
     (when (char-ready?) (read-char) (drain-input)))
+
+  ;;; ============================================================
+  ;;; Signal Handlers
+  ;;; ============================================================
+  ;;
+  ;; Catch termination signals to clean up gracefully.
+  ;; Prevents stranded REPLs from draining power.
+
+  (define *signal-log* #f)  ; set to path for debug logging
+
+  (define (log-signal signum)
+    "Log signal receipt for debugging stranded processes."
+    (let ((logfile *signal-log*))
+      (when (string? logfile)
+        (with-output-to-file logfile
+          (lambda ()
+            (printf "~a: signal ~a received by pid ~a~%"
+                    (format-freeze-timestamp)
+                    signum
+                    (current-process-id)))
+          #:append))))
+
+  (define (handle-termination signum)
+    "Handle termination signals gracefully."
+    (log-signal signum)
+    (flush-output)
+    (drain-input)
+    (exit (+ 128 signum)))  ; Unix convention: 128 + signal
+
+  (define (install-signal-handlers!)
+    "Install handlers for SIGTERM, SIGHUP, SIGINT."
+    ;; SIGTERM (15) - polite termination
+    (set-signal-handler! signal/term handle-termination)
+    ;; SIGHUP (1) - hangup (terminal closed)
+    (set-signal-handler! signal/hup handle-termination)
+    ;; SIGINT (2) - interrupt (Ctrl-C) - may want different behavior
+    ;; Leave SIGINT to default for now (allows Ctrl-C to work normally)
+    )
 
   ;;; ============================================================
   ;;; Goodbye
