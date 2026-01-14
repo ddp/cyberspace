@@ -63,7 +63,7 @@
     (code "ATTEST payload (encrypted):\n  principal-hash \"|\" signature")
     (p "- principal-hash: SPKI principal (hex-encoded public key hash) - signature: Ed25519 signature over transcript")
     (p "Identity is cryptographic, not nominal. A principal is identified solely by its public key hash, never by a human-readable name. This is a prime directive.")
-    (p "The attestation constitutes an authoritative affirmation of trust: the signing principal vouches for the channel with the full weight of their cryptographic identity. This is not a bearer token - it is a sealed declaration bound to the principal's realm.")
+    (p "The attestation is the principal's authoritative affirmation of their own trust: I vouch for this channel. This is not a bearer token - it is my sealed declaration, bound to my realm.")
     (p "Transcript for signing:")
     (code "cookie-i || cookie-r || ephemeral-public")
     (subsection
