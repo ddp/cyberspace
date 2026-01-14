@@ -1,0 +1,1058 @@
+%!PS-Adobe-3.0
+%%Title: rfc-046-security-architecture
+%%Creator: Library of Cyberspace RFC Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(RFC-046: Cyberspace Security Architecture) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This document defines how cyberspace protects itself. The model is) show newline
+(simple: capabilities all the way down. Objects are content.) show newline
+(Authorization flows through signed certificates. No labels, no ACLs, no) show newline
+(ambient authority. You hold a capability or you don't.) show newline
+() show newline
+(We use the rigor of TCSEC B2 as a lens - particularly for covert channel) show newline
+(analysis - but cyberspace is its own thing. This is our security) show newline
+(architecture, in our language.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE MANIFESTO) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    "Authorized capability set with auditing. No central authority.") show newline
+() show newline
+(You can have a central authority if you want one. That's up to you. But) show newline
+(you don't need one. The architecture doesn't require it. Trust flows) show newline
+(from keys you choose to trust, not from a hierarchy imposed upon you.) show newline
+() show newline
+(These principles were proven in VAXcluster security \(1984-1994\),) show newline
+(proposed in SDSI at IETF 29 Seattle \(1994\), and implemented partially in) show newline
+(products that didn't survive their parent companies. Cyberspace) show newline
+(completes what was started.) show newline
+() show newline
+() show newline
+(Design Lineage) show newline
+(--------------) show newline
+() show newline
+() show newline
+(  Era    System       Contribution                                                 ) show newline
+(  1984   VAXcluster   "Behave as one" - N nodes, one security domain               ) show newline
+(  1985   VMS C2       Audit trails, access control, TCSEC security primitives      ) show newline
+(  1993   VMS 6.0      Cluster-wide intrusion detection, TLV object store           ) show newline
+(  1994   SDSI         Self-certifying keys, local names \(Rivest, IETF 29\)          ) show newline
+(  1999   SPKI         Authorization certificates, capability delegation            ) show newline
+(  2026   Cyberspace   Synthesis: SPKI + audit + IPv6 mesh + no central authority   ) show newline
+() show newline
+(DECnet Phase IV had 24-bit addressing—fatal for internet scale.) show newline
+(Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same) show newline
+(security principles.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY OBJECT TYPES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Every first-class object in cyberspace. Names as defined.) show newline
+() show newline
+(Table 0: Security Object Registry) show newline
+() show newline
+() show newline
+(  Object          Defining RFC   Description                                    ) show newline
+(  Identity        ) show newline
+(  principal       RFC-004        Cryptographic identity \(ed25519 key or hash\)   ) show newline
+(  key             RFC-022        Keypair with ceremony provenance               ) show newline
+(  attestation     RFC-041        Signed claim about identity or state           ) show newline
+(  Authorization   ) show newline
+(  certificate     RFC-004        SPKI capability grant                          ) show newline
+(  tag             RFC-004        Authorization scope \(read, write, etc.\)        ) show newline
+(  signature       RFC-004        Ed25519 attestation                            ) show newline
+(  share           RFC-008        Shamir secret fragment                         ) show newline
+(  quorum          RFC-036        Voting threshold specification                 ) show newline
+(  Storage         ) show newline
+(  vault           RFC-006        Sovereign storage realm                        ) show newline
+(  object          RFC-020        Content-addressed immutable data               ) show newline
+(  archive         RFC-018        Sealed, encrypted content package              ) show newline
+(  schema          RFC-033        Structure definition                           ) show newline
+(  Boundaries      ) show newline
+(  realm           RFC-040        Trust and sovereignty boundary                 ) show newline
+(  wormhole        RFC-041        FUSE mount portal to filesystem                ) show newline
+(  federation      RFC-010        Peer network of realms                         ) show newline
+(  node            RFC-037        Network participant with role                  ) show newline
+(  Execution       ) show newline
+(  agent           RFC-023        Sandboxed daemon                               ) show newline
+(  topic           RFC-035        Pub/sub channel                                ) show newline
+(  tunnel          RFC-035        Agent communication path                       ) show newline
+(  lock            RFC-035        Distributed mutex                              ) show newline
+(  Observability   ) show newline
+(  audit-entry     RFC-003        Immutable log record                           ) show newline
+(  lamport-clock   RFC-012        Causal ordering timestamp                      ) show newline
+(  query           RFC-025        Search expression                              ) show newline
+(  Documentation   ) show newline
+(  memo            RFC-043        Scoped documentation unit                      ) show newline
+(  soup            RFC-040        The auditable collection of all things         ) show newline
+() show newline
+() show newline
+(Object Properties) show newline
+(-----------------) show newline
+() show newline
+(All security objects share:) show newline
+() show newline
+() show newline
+(    1. Content-addressed identity \(SHA-512 hash\)) show newline
+(    2. Cryptographic signature \(Ed25519\)) show newline
+(    3. Audit trail integration \(RFC-003\)) show newline
+(    4. Capability-gated access \(RFC-004\)) show newline
+(    5. State: chaotic | quiescent) show newline
+() show newline
+() show newline
+(Object State) show newline
+(------------) show newline
+() show newline
+(All things in cyberspace exist in two states:) show newline
+() show newline
+() show newline
+(  State       Meaning                   Properties                      ) show newline
+(  chaotic     In flux, being modified   Mutable, uncommitted, local     ) show newline
+(  quiescent   At rest, stable           Immutable, signed, replicable   ) show newline
+() show newline
+(Transitions:) show newline
+() show newline
+() show newline
+(    chaotic --commit--> quiescent) show newline
+(        ^                   |) show newline
+(        |                   |) show newline
+(        +----- fork --------+) show newline
+() show newline
+(Only quiescent objects: - Have stable content hashes - Can be signed -) show newline
+(Can be replicated - Can be delegated) show newline
+() show newline
+(Chaotic things: - Exist only in the realm's store - Have provisional) show newline
+(identity - Cannot be shared - Must settle before federation - Cannot be) show newline
+(cached) show newline
+() show newline
+() show newline
+(Caching Implications) show newline
+(--------------------) show newline
+() show newline
+(State controls caching:) show newline
+() show newline
+() show newline
+(  State       Cacheable   Reason                               ) show newline
+(  quiescent   Forever     Hash is identity; immutable          ) show newline
+(  chaotic     Never       Content may change; no stable hash   ) show newline
+() show newline
+(Quiescent things cache by content hash. Cache hit = identical content,) show newline
+(guaranteed. Chaotic things bypass cache entirely. Every access reads) show newline
+(current state.) show newline
+() show newline
+() show newline
+(Persistence) show newline
+(-----------) show newline
+() show newline
+(Persistence is the guarantee of migration to the vault.) show newline
+() show newline
+() show newline
+(  Durability   Meaning                             ) show newline
+(  persistent   Guaranteed to migrate to vault      ) show newline
+(  ephemeral    May vanish; no durability promise   ) show newline
+() show newline
+(State and durability are orthogonal:) show newline
+() show newline
+() show newline
+(  Ephemeral   Persistent      ) show newline
+(  Chaotic     Scratch work    Draft being saved   ) show newline
+(  Quiescent   Cached result   Archived thing      ) show newline
+() show newline
+(Persistent things survive restart. Ephemeral things don't.) show newline
+() show newline
+(Vault takes cataloging and effort. Not all things need persistence.) show newline
+(Ephemeral is not failure—it's deliberate economy. Cache results,) show newline
+(scratch work, intermediate computations: let them vanish.) show newline
+() show newline
+(Marking a thing persistent schedules vault migration.) show newline
+() show newline
+() show newline
+(    \(persist thing\)    ; guarantee vault migration) show newline
+(    \(ephemeral thing\)  ; no durability promise) show newline
+() show newline
+() show newline
+(Object Relationships) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    principal --creates--> certificate --grants--> tag) show newline
+(        |                      |) show newline
+(        |                      v) show newline
+(        |                   object <--stores-- vault) show newline
+(        |                      |) show newline
+(        v                      v) show newline
+(      agent --operates--> wormhole --bridges--> realm) show newline
+(        |                                         |) show newline
+(        |                                         v) show newline
+(        +----------------------------------> federation) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE AXIOMS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    A1. No Ambient Authority) show newline
+(        You have nothing until someone gives you something.) show newline
+(        Every access requires presenting a capability.) show newline
+(    A2. Capabilities Are Unforgeable) show newline
+(        Ed25519 signatures. No exceptions.) show newline
+(        Create by origin or delegation. No other path.) show newline
+(    A3. Capabilities Only Attenuate) show newline
+(        Delegation can reduce rights, never amplify.) show newline
+(        What you give cannot exceed what you hold.) show newline
+(    A4. Objects Are Immutable Content) show newline
+(        SHA-512 hash IS identity.) show newline
+(        No metadata. No labels. No ACLs.) show newline
+(        Objects don't know who can access them.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE REALM) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(A realm is your place in cyberspace. It is sovereign.) show newline
+() show newline
+() show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                        YOUR REALM                            |) show newline
+(    |                                                              |) show newline
+(    |   Principal: ed25519:a1b2c3...  \(this is you\)               |) show newline
+(    |                                                              |) show newline
+(    |   +------------------------------------------------------+  |) show newline
+(    |   |                      VAULT                            |  |) show newline
+(    |   |  Objects:     content-addressed, signed               |  |) show newline
+(    |   |  Capabilities: certificates you hold                  |  |) show newline
+(    |   |  Audit:       what happened here                      |  |) show newline
+(    |   +------------------------------------------------------+  |) show newline
+(    |                                                              |) show newline
+(    |   Trust boundary: your signing key                          |) show newline
+(    |   You decide: what to store, who to trust, what to share    |) show newline
+(    +-------------------------------------------------------------+) show newline
+() show newline
+(Your realm is local-first. Federation is optional. When you federate,) show newline
+(realms overlap - objects flow according to capability chains. But your) show newline
+(realm remains yours.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CAPABILITIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(The Certificate) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer "ed25519:alice..."\)        ; Who grants) show newline
+(      \(subject "ed25519:bob..."\)         ; Who receives) show newline
+(      \(tag \(read "sha512:doc..."\)\)       ; What: read this object) show newline
+(      \(valid \(not-after 1736400000\)\)     ; When: expires in 24h) show newline
+(      \(propagate #f\)                     ; Bob cannot delegate) show newline
+(      \(signature "ed25519:..."\)\)         ; Alice's signature) show newline
+() show newline
+() show newline
+(Access Check) show newline
+(------------) show newline
+() show newline
+() show newline
+(    Can Bob read sha512:doc?) show newline
+(    1. Does Bob hold a cert granting \(read "sha512:doc"\)?) show newline
+(    2. Is the signature valid?) show newline
+(    3. Is it expired?) show newline
+(    4. Is it revoked?) show newline
+(    5. Does the chain trace to someone who could grant it?) show newline
+(    All yes? Access granted.) show newline
+(    Any no?  Access denied.) show newline
+() show newline
+() show newline
+(Delegation) show newline
+(----------) show newline
+() show newline
+(Alice can give Bob read access:) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer "ed25519:alice..."\)) show newline
+(      \(subject "ed25519:bob..."\)) show newline
+(      \(tag \(read "sha512:doc..."\)\)) show newline
+(      \(propagate #t\)\)                    ; Bob CAN delegate) show newline
+() show newline
+(Bob can give Carol read access \(because Alice allowed propagation\):) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer "ed25519:bob..."\)) show newline
+(      \(subject "ed25519:carol..."\)) show newline
+(      \(tag \(read "sha512:doc..."\)\)) show newline
+(      \(propagate #f\)\)                    ; Carol cannot delegate further) show newline
+() show newline
+(Carol cannot give anyone else access. The chain stops.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CLASSIFICATION WITHOUT LABELS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP) show newline
+(SECRET.) show newline
+() show newline
+(In cyberspace, classification is a capability you hold:) show newline
+() show newline
+() show newline
+(    ;; Security officer grants SECRET clearance) show newline
+(    \(spki-cert) show newline
+(      \(issuer "ed25519:security-officer..."\)) show newline
+(      \(subject "ed25519:analyst..."\)) show newline
+(      \(tag \(clearance secret\)\)) show newline
+(      \(valid \(not-after 1767225600\)\)\)    ; Annual renewal) show newline
+(    ;; Program manager grants compartment access) show newline
+(    \(spki-cert) show newline
+(      \(issuer "ed25519:program-manager..."\)) show newline
+(      \(subject "ed25519:engineer..."\)) show newline
+(      \(tag \(compartment "project-atlas"\)\)\)) show newline
+() show newline
+(Access to a classified object requires: 1. Capability to read the object) show newline
+(itself 2. Appropriate clearance capability 3. All required compartment) show newline
+(capabilities) show newline
+() show newline
+(The object has no labels. The policy lives in the certificates.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INFORMATION FLOW) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The mathematics of multilevel security, expressed in capabilities.) show newline
+() show newline
+() show newline
+(The Properties) show newline
+(--------------) show newline
+() show newline
+(Traditional formulations speak of "read up" and "write down" with) show newline
+(respect to classification labels. We preserve the mathematics but speak) show newline
+(differently:) show newline
+() show newline
+() show newline
+(  Traditional       Cyberspace                  Formal Statement                                      ) show newline
+(  "No read up"      Read requires capability    ∀ read\(P,O\): P ∈ holders\(cap_read\(O\)\)             ) show newline
+(  "No write down"   Write requires capability   ∀ write\(P,O\): P ∈ holders\(cap_write\(O\)\)           ) show newline
+(  "No read down"    Integrity via provenance    ∀ accept\(P,O\): verify\(signature\(O\)\)                 ) show newline
+(  "No write up"     Attenuation only            ∀ delegate\(P₁,P₂,C\): C ⊆ capabilities\(P₁\)   ) show newline
+() show newline
+(The capability graph IS the lattice. Delegation flows down. Authority) show newline
+(cannot flow up.) show newline
+() show newline
+() show newline
+(Confidentiality) show newline
+(---------------) show newline
+() show newline
+(Information flows only through capabilities:) show newline
+() show newline
+() show newline
+(    ∀ read\(P,O\): P ∈ holders\(capread\(O\)\)) show newline
+(    ∀ write\(P,O\): P ∈ holders\(capwrite\(O\)\)) show newline
+(    ∀ delegate\(P₁,P₂,C\): C ⊆ capabilities\(P₁\)) show newline
+() show newline
+(A principal without read capability cannot observe content. A principal) show newline
+(without write capability cannot exfiltrate via storage. Delegation) show newline
+(cannot grant what you don't hold.) show newline
+() show newline
+() show newline
+(Integrity) show newline
+(---------) show newline
+() show newline
+(Modification flows only through capabilities:) show newline
+() show newline
+() show newline
+(    ∀ modify\(P,O\): P ∈ holders\(capwrite\(O\)\)) show newline
+(    ∀ delegate\(P₁,P₂,C'\): integrity\(C'\) ≤ integrity\(C\)) show newline
+(    ∀ capability C: provenance\(C\) ⊆ audittrail) show newline
+() show newline
+(Objects cannot be corrupted without write capability. Delegated) show newline
+(capabilities cannot exceed held capabilities. All grants are traceable.) show newline
+() show newline
+() show newline
+(Confinement) show newline
+(-----------) show newline
+() show newline
+(The capability discipline eliminates ambient authority:) show newline
+() show newline
+() show newline
+(    ∀ access\(P,O\): ∃ C ∈ capabilities\(P\): authorizes\(C,O\)) show newline
+(    ∀ C: unforgeable\(C\)) show newline
+(    ∀ acquire\(P,C\): ∃ P': delegate\(P',P,C\) ∨ create\(P,O\)) show newline
+() show newline
+(No access without explicit capability. Capabilities cannot be) show newline
+(manufactured. The only paths: receive via delegation, or create the) show newline
+(object.) show newline
+() show newline
+() show newline
+(Wormhole Enforcement) show newline
+(--------------------) show newline
+() show newline
+(Wormholes \(RFC-041\) are channel boundaries. Information flow is enforced) show newline
+(at every crossing:) show newline
+() show newline
+() show newline
+(    \(wormhole-flow-guard wormhole operation object\)) show newline
+(      ;; Checks:) show newline
+(      ;; 1. wormhole has capabilities \(no ambient authority\)) show newline
+(      ;; 2. operation permitted by held capabilities) show newline
+(      ;; 3. audit entry created) show newline
+() show newline
+() show newline
+(  Operation              Required Capability   Violation Type    ) show newline
+(  read, stat, readdir    read                  confidentiality   ) show newline
+(  write, create, chmod   write                 integrity         ) show newline
+(  delete, unlink         delete                integrity         ) show newline
+(  delegate               delegate              amplification     ) show newline
+() show newline
+(Denied operations raise typed errors: - no-ambient-authority —) show newline
+(wormhole has no capabilities - read-denied — missing read capability -) show newline
+(write-denied — missing write capability - capability-amplification —) show newline
+(delegation exceeds held) show newline
+() show newline
+() show newline
+(The Lattice) show newline
+(-----------) show newline
+() show newline
+(Capabilities form a partial order. The lattice:) show newline
+() show newline
+() show newline
+(            full) show newline
+(              |) show newline
+(        +-----+-----+) show newline
+(        |     |     |) show newline
+(      admin synch read-write) show newline
+(        |     |     |) show newline
+(        +-----+-----+) show newline
+(              |) show newline
+(          read-only) show newline
+(              |) show newline
+(            none) show newline
+() show newline
+(Delegation can only move DOWN the lattice. This is attenuation. You) show newline
+(cannot delegate admin if you hold read-only. You cannot grant write if) show newline
+(you hold read.) show newline
+() show newline
+(The math is sound. We just speak it in capabilities.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURE ERASURE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(When sensitive data must be destroyed, it must be destroyed completely.) show newline
+() show newline
+() show newline
+(Erasure Requirements) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(  What               How                                   Verification           ) show newline
+(  Object content     Overwrite with random, then zeros     Read-back verify       ) show newline
+(  Memory buffers     Secure memset, compiler barrier       Not optimized away     ) show newline
+(  Key material       Zeroize immediately after use         Audit trail entry      ) show newline
+(  Audit entries      Preserve hash chain, redact content   Chain integrity        ) show newline
+(  Capability certs   Revoke, then destroy                  Revocation published   ) show newline
+() show newline
+() show newline
+(Erasure Guarantees) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    E1. Zeroization is atomic) show newline
+(        erase\(o\) > ¬recoverable\(o\)) show newline
+(    E2. Memory clearing defeats inspection) show newline
+(        clear\(buffer\) > ∀ address ∈ buffer: read\(address\) = 0) show newline
+(    E3. Key destruction is immediate) show newline
+(        destroy\(key\) > ¬usable\(key\) ∧ audit\(destroyed, key\)) show newline
+(    E4. Revocation propagates) show newline
+(        revoke\(cert\) > ∀ delegate\(cert, c'\): revoke\(c'\)) show newline
+() show newline
+() show newline
+(Implementation) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; Secure memory clearing \(defeats compiler optimization\)) show newline
+(    \(define \(secure-clear! buffer\)) show newline
+(      "Overwrite buffer with zeros, verify") show newline
+(      \(let \(\(len \(blob-size buffer\)\)\)) show newline
+(        ;; Write zeros) show newline
+(        \(do \(\(i 0 \(+ i 1\)\)\)) show newline
+(            \(\(>= i len\)\)) show newline
+(          \(blob-set! buffer i 0\)\)) show newline
+(        ;; Memory barrier \(implementation-specific\)) show newline
+(        ;; Verify) show newline
+(        \(do \(\(i 0 \(+ i 1\)\)\)) show newline
+(            \(\(>= i len\) #t\)) show newline
+(          \(unless \(zero? \(blob-ref buffer i\)\)) show newline
+(            \(error 'secure-clear-failed\)\)\)\)\)) show newline
+(    ;; Key zeroization) show newline
+(    \(define \(key-destroy! key\)) show newline
+(      "Zeroize key material, audit") show newline
+(      \(let \(\(material \(key-material key\)\)\)) show newline
+(        \(secure-clear! material\)) show newline
+(        \(audit-append actor: \(current-principal\)) show newline
+(                      action: 'key-destroyed) show newline
+(                      target: \(key-id key\)\)) show newline
+(        'destroyed\)\)) show newline
+(    ;; Object secure deletion) show newline
+(    \(define \(object-erase! hash\)) show newline
+(      "Securely erase object content") show newline
+(      \(let \(\(path \(vault-object-path hash\)\)\)) show newline
+(        ;; Overwrite with random) show newline
+(        \(call-with-output-file path) show newline
+(          \(lambda \(port\)) show newline
+(            \(write-blob port \(random-bytes \(file-size path\)\)\)\)\)) show newline
+(        ;; Overwrite with zeros) show newline
+(        \(call-with-output-file path) show newline
+(          \(lambda \(port\)) show newline
+(            \(write-blob port \(make-blob \(file-size path\) 0\)\)\)\)) show newline
+(        ;; Delete) show newline
+(        \(delete-file path\)) show newline
+(        ;; Audit) show newline
+(        \(audit-append actor: \(current-principal\)) show newline
+(                      action: 'object-erased) show newline
+(                      target: hash\)) show newline
+(        'erased\)\)) show newline
+() show newline
+() show newline
+(What Cannot Be Erased) show newline
+(---------------------) show newline
+() show newline
+(Some things must persist:) show newline
+() show newline
+() show newline
+(  Thing                   Why                             ) show newline
+(  Audit chain structure   Hash links must verify          ) show newline
+(  Revocation records      Must prove capability invalid   ) show newline
+(  Content hashes          May exist in other chains       ) show newline
+() show newline
+(Redaction, not deletion: the fact that something existed remains, but) show newline
+(the content is gone.) show newline
+() show newline
+() show newline
+(SSD/Flash Considerations) show newline
+(------------------------) show newline
+() show newline
+(Modern storage complicates secure erasure:) show newline
+() show newline
+(  * Wear leveling moves data without notification) show newline
+(  * Trim/discard doesn't guarantee overwrite) show newline
+(  * Encryption is the only reliable approach) show newline
+() show newline
+(Our answer: Encrypt at rest \(RFC-030\). Erasing the key erases the data.) show newline
+() show newline
+() show newline
+(    ;; With encryption at rest, key destruction = data destruction) show newline
+(    \(define \(secure-erase-encrypted hash\)) show newline
+(      "For encrypted objects: destroy decryption key") show newline
+(      \(let \(\(dek \(object-data-encryption-key hash\)\)\)) show newline
+(        \(key-destroy! dek\)) show newline
+(        ;; The ciphertext remains but is now meaningless) show newline
+(        'erased-via-key-destruction\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE TRUSTED CORE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(What must work correctly for security to hold:) show newline
+() show newline
+() show newline
+(  Component             What It Does         What We Trust            ) show newline
+(  Ed25519               Signatures           libsodium, math          ) show newline
+(  SHA-512               Object identity      libsodium, math          ) show newline
+(  Capability verifier   Chain validation     Our code                 ) show newline
+(  Vault storage         Object integrity     Local filesystem         ) show newline
+(  Audit chain           What happened        Hash chain, signatures   ) show newline
+(  Soup                  Object enumeration   Vault, audit             ) show newline
+() show newline
+(The core is small. Objects are dumb content. Policy lives in) show newline
+(certificates. Verification is stateless computation.) show newline
+() show newline
+() show newline
+(Authoritative Counts) show newline
+(--------------------) show newline
+() show newline
+(Object counts MUST come from the TCB. The soup is the authoritative) show newline
+(source for object enumeration - it walks the vault and audit trail.) show newline
+(Counts displayed outside the TCB \(prompts, status displays, dashboards\)) show newline
+(are advisory only and could be stale or spoofed.) show newline
+() show newline
+(If you need to know how many objects exist, ask the soup. Don't cache) show newline
+(counts outside the TCB.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COVERT CHANNELS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This is where we get serious.) show newline
+() show newline
+(A covert channel is information flow that violates policy - a way to) show newline
+(leak data that bypasses the capability model. They exist in every) show newline
+(system. We analyze ours.) show newline
+() show newline
+() show newline
+(Storage Channels) show newline
+(----------------) show newline
+() show newline
+() show newline
+(  Channel            How It Works                        Bandwidth      Mitigation           ) show newline
+(  Object existence   Create/don't create object as 1/0   ~1 bit/op      Bloom filter noise   ) show newline
+(  Object size        Encode in padding                   ~10 bits/obj   Size quantization    ) show newline
+(  Object count       Number of objects in namespace      ~4 bits/ns     Rate limiting        ) show newline
+() show newline
+() show newline
+(Timing Channels) show newline
+(---------------) show newline
+() show newline
+() show newline
+(  Channel             How It Works                Bandwidth      Mitigation          ) show newline
+(  Verification time   Slow/fast response as 1/0   ~1 bit/100ms   Constant-time ops   ) show newline
+(  Network latency     Delay patterns              ~10 bits/sec   Batching, Tor       ) show newline
+(  Audit write time    When entries appear         ~1 bit/sec     Async, batched      ) show newline
+() show newline
+() show newline
+(Federation Channels) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(  Channel           How It Works              Bandwidth       Mitigation          ) show newline
+(  Sync timing       When objects replicate    ~1 bit/sync     Random delays       ) show newline
+(  Peer selection    Which realms to contact   ~4 bits/conn    Randomized peers    ) show newline
+(  Gossip patterns   Propagation paths         ~2 bits/round   Epidemic flooding   ) show newline
+() show newline
+() show newline
+(Analysis) show newline
+(--------) show newline
+() show newline
+(Scenario: Alice has SECRET access. Bob has UNCLASSIFIED. Alice wants to) show newline
+(leak to Bob.) show newline
+() show newline
+(Via storage: Alice creates/deletes objects Bob can see. Each operation) show newline
+(signals one bit. Rate: maybe 1 bit/second with careful timing.) show newline
+() show newline
+(Via timing: Alice influences verification time of requests Bob makes.) show newline
+(Bob measures. Rate: maybe 0.1 bit/second, noisy.) show newline
+() show newline
+(Via federation: Alice causes sync events Bob can observe. Rate: depends) show newline
+(on federation config, maybe 0.01 bit/second.) show newline
+() show newline
+(Assessment: Total covert bandwidth: ~1-2 bits/second under ideal) show newline
+(conditions. Not enough for bulk data. Enough for short signals.) show newline
+(Acceptable residual risk for our threat model.) show newline
+() show newline
+() show newline
+(Mitigation Principles) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    1. Add noise where practical \(bloom filters, random delays\)) show newline
+(    2. Quantize where observable \(object sizes, batch windows\)) show newline
+(    3. Rate limit where controllable \(operations per time\)) show newline
+(    4. Accept what remains \(document it, move on\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(AUDIT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Everything important gets logged.) show newline
+() show newline
+() show newline
+(    \(audit-entry) show newline
+(      \(sequence 12345\)) show newline
+(      \(timestamp 1736300000\)) show newline
+(      \(lamport 67890\)) show newline
+(      \(type capability-exercise\)) show newline
+(      \(actor "ed25519:subject..."\)) show newline
+(      \(action \(read "sha512:object..."\)\)) show newline
+(      \(capability "sha512:cert..."\)) show newline
+(      \(previous "sha512:prev-entry..."\)) show newline
+(      \(signature "ed25519:auditor..."\)\)) show newline
+() show newline
+(Properties: - Hash-chained: tamper-evident - Signed: non-repudiable -) show newline
+(Monotonic: gaps detected - Distributed: witnesses replicate) show newline
+() show newline
+(What gets logged: - Capability creation - Capability exercise \(access\) -) show newline
+(Capability revocation - Access denials - Object creation - Realm events) show newline
+(\(role changes, federation\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SESSION OBSERVABILITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The portal module manages session lifecycle: crossing into and out of) show newline
+(cyberspace. Every session provides observability through the banner,) show newline
+(session statistics, and the goodbye summary.) show newline
+() show newline
+() show newline
+(The Banner) show newline
+(----------) show newline
+() show newline
+(At session start, the banner attests system state. Every line is) show newline
+(meaningful:) show newline
+() show newline
+() show newline
+(    Cyberspace Scheme v0.9.17 \(2026-01-11\)) show newline
+(      Om · Darwin-arm64 · 16 cores, 128GB, Apple M4) show newline
+(      IPv4: 192.168.0.105) show newline
+(      IPv6: fd0f:a8ba:61a3:42ce:1856:f4d9:e25:998e) show newline
+(      37K loc, 21 modules, 0 rfcs, 1K tcb \(1:32\)) show newline
+(      vault: .vault \(1 releases, 23 audits\)) show newline
+(      realm: om \(ecefca39...\)) show newline
+(      entropy: /dev/urandom \(sysrandom\)) show newline
+(      FIPS: passed) show newline
+() show newline
+() show newline
+(  Line                Security Purpose                                        ) show newline
+(  Version, date       Identifies build, detects stale installations           ) show newline
+(  Hostname, arch      Confirms you're on the expected machine                 ) show newline
+(  IPv4/IPv6           Network identity for federation, peer verification      ) show newline
+(  loc, modules, tcb   Codebase size, attack surface visibility                ) show newline
+(  vault               Confirms vault exists, shows releases and audit count   ) show newline
+(  realm               Your cryptographic identity \(abbreviated principal\)     ) show newline
+(  entropy             Entropy source attestation for key generation           ) show newline
+(  FIPS                Cryptographic self-test status \(must pass\)              ) show newline
+() show newline
+(The FIPS line is critical. Before trusting any cryptographic operation,) show newline
+(the system runs Known-Answer Tests \(KATs\) against SHA-256, SHA-512,) show newline
+(Ed25519, and the RNG. If any test fails, the system displays FAILED and) show newline
+(should not be trusted for security operations.) show newline
+() show newline
+() show newline
+(Realm Naming) show newline
+(------------) show newline
+() show newline
+(Realms can have human-readable names, analogous to hostnames for IP) show newline
+(addresses:) show newline
+() show newline
+() show newline
+(    \(set-realm-name! "om"\)     ; Name this realm) show newline
+(    \(realm-name\)               ; => "om") show newline
+() show newline
+(The name appears in the banner: `realm: om \(ecefca39...\)` The) show newline
+(abbreviated principal \(first 8 hex chars\) provides cryptographic) show newline
+(identity while the name provides human recognition. Names are stored in) show newline
+(`.vault/realm-name`.) show newline
+() show newline
+() show newline
+(Session Statistics) show newline
+(------------------) show newline
+() show newline
+(Every operation is counted. Statistics track session activity for) show newline
+(monitoring and forensics:) show newline
+() show newline
+() show newline
+(  Category      Stats                                         Purpose                      ) show newline
+(  Vault I/O     unlocks, reads, writes, deletes, queries      Storage activity profile     ) show newline
+(  Crypto ops    hashes, signs, verifies, encrypts, decrypts   Cryptographic workload       ) show newline
+(  Seal ops      commits, seals, syncs                         Version control activity     ) show newline
+(  Federation    peers-discovered, gossip-exchanges, votes     Network participation        ) show newline
+(  Network I/O   bytes-in, bytes-out, packets-ipv4/ipv6        Traffic volume               ) show newline
+(  Errors        verify-fails, auth-fails, timeouts            Security-relevant failures   ) show newline
+() show newline
+(Statistics are initialized at session start and accumulated during) show newline
+(operation. The primitives live in the `os` module \(level 0\) so all) show newline
+(modules can instrument themselves without circular dependencies.) show newline
+() show newline
+() show newline
+(    \(session-stat! 'unlocks\)           ; Increment unlock counter) show newline
+(    \(session-stat! 'bytes-in 1024\)     ; Add 1024 to bytes-in) show newline
+(    \(session-stat 'reads\)              ; Get current read count) show newline
+() show newline
+() show newline
+(The Portal) show newline
+(----------) show newline
+() show newline
+(Entry and exit are symmetric. The goodbye message mirrors the banner's) show newline
+(attestation style:) show newline
+() show newline
+() show newline
+(    Cyberspace frozen at 2026-01-11 20:32 on om.) show newline
+(      Session: 0s · 5000 weave · 1 unlock · 3 reads · 2 queries) show newline
+() show newline
+(The session summary shows:) show newline
+() show newline
+(  * Duration \(human-readable: 0s, 5m, 2h 30m, 1d 4h\)) show newline
+(  * Weave - crypto benchmark from boot) show newline
+(  * Notable operations \(non-zero counts\)) show newline
+(  * Errors if any occurred \(verify-fails, auth-fails, timeouts\)) show newline
+() show newline
+(The hostname in the goodbye message confirms which realm you're leaving) show newline
+(- important when operating multiple realms via SSH.) show newline
+() show newline
+() show newline
+(Monitoring Philosophy) show newline
+(---------------------) show newline
+() show newline
+("You can always assert\(\) it away." Statistics are conditional) show newline
+(instrumentation:) show newline
+() show newline
+(  * Always present in source - documents what's measurable) show newline
+(  * Minimal overhead - hash table increment) show newline
+(  * No persistence - session-scoped, vanishes on exit) show newline
+(  * Extensible - add new stats by instrumenting operations) show newline
+() show newline
+(The pattern comes from IKE clustering code: conditional asserts for QA) show newline
+(builds, compiled out for production. Here we keep the counters but the) show newline
+(cost is negligible.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(KERNEL ASSERTIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The kernel enforces security through typed assertions. Every assertion) show newline
+(is cataloged automatically by `extract-assertions.sh` as part of the RFC) show newline
+(generation pipeline. The catalog is regenerated on every build - if you) show newline
+(add an assertion, it appears in the documentation.) show newline
+() show newline
+() show newline
+(Assertion Categories) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(  Category          Purpose                   Example                             ) show newline
+(  instrumentation   Session statistics        \(session-stat! 'unlocks\)            ) show newline
+(  security-error    Access control failures   \(error 'capability-amplification\)   ) show newline
+(  precondition      State guards              \(unless \(attested?\) ...\)            ) show newline
+() show newline
+(The catalog provides traceability: every security-relevant check in the) show newline
+(codebase is enumerated with file and line number.) show newline
+() show newline
+() show newline
+(Security Errors) show newline
+(---------------) show newline
+() show newline
+(Typed error symbols for access control failures:) show newline
+() show newline
+() show newline
+(  Error                       Meaning                                       ) show newline
+(  capability-amplification    Attempted to delegate more rights than held   ) show newline
+(  confidentiality-violation   Read without read capability                  ) show newline
+(  integrity-violation         Write without write capability                ) show newline
+(  no-ambient-authority        Wormhole has no capabilities                  ) show newline
+(  read-denied                 Principal lacks read capability               ) show newline
+(  write-denied                Principal lacks write capability              ) show newline
+(  delete-denied               Principal lacks delete capability             ) show newline
+(  delegate-denied             Principal lacks delegate capability           ) show newline
+(  secure-clear-failed         Zeroization verification failed               ) show newline
+() show newline
+(These errors are not generic - each has specific semantics for audit and) show newline
+(forensics.) show newline
+() show newline
+() show newline
+(Precondition Guards) show newline
+(-------------------) show newline
+() show newline
+(State assertions that must hold before operations proceed:) show newline
+() show newline
+() show newline
+(    \(unless \(attested?\)) show newline
+(      \(error "Must attest before signing"\)\)) show newline
+(    \(unless \(keystore-exists?\)) show newline
+(      \(error "No keystore found. Use keystore-create first."\)\)) show newline
+(    \(unless \(quiescent? memo\)) show newline
+(      \(error "Chaotic memos cannot be published"\)\)) show newline
+() show newline
+(Guards enforce the state machine: chaotic vs quiescent, attested vs) show newline
+(unattested, locked vs unlocked.) show newline
+() show newline
+() show newline
+(The Scheme Way) show newline
+(--------------) show newline
+() show newline
+(Conditional assertions via macros with compile-time flags:) show newline
+() show newline
+() show newline
+(    ;; Config constant) show newline
+(    \(define-constant +instrumented+ #t\)  ; #f for production) show newline
+(    ;; Zero-cost when disabled) show newline
+(    \(define-syntax stat!) show newline
+(      \(syntax-rules \(\)) show newline
+(        \(\(_ key\)) show newline
+(         \(when +instrumented+ \(session-stat! key\)\)\)\)\)) show newline
+() show newline
+(With `+instrumented+` false, CHICKEN's optimizer eliminates the dead) show newline
+(branch entirely. This is the Scheme equivalent of BLISS `%IF DEBUG %THEN) show newline
+(%assert\(...\) %FI`.) show newline
+() show newline
+() show newline
+(Catalog Generation) show newline
+(------------------) show newline
+() show newline
+(The assertion catalog is generated automatically:) show newline
+() show newline
+() show newline
+(    $ ./docs/rfc/extract-assertions.sh) show newline
+(      -> docs/rfc/assertion-catalog.scm) show newline
+(         18 instrumentation, 10 security errors, 12 guards \(40 total\)) show newline
+() show newline
+(The catalog is a first-class S-expression that can be loaded and) show newline
+(queried:) show newline
+() show newline
+() show newline
+(    \(load "assertion-catalog.scm"\)) show newline
+(    \(assertion-summary\)) show newline
+(    ;; => \(\(instrumentation-points . 18\)) show newline
+(    ;;     \(security-errors . 10\)) show newline
+(    ;;     \(precondition-guards . 12\)) show newline
+(    ;;     \(total . 40\)\)) show newline
+() show newline
+(Adding assertions to code automatically updates the documentation on) show newline
+(next regeneration.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TRUSTED PATH) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(When it matters, talk directly to the core.) show newline
+() show newline
+() show newline
+(    +--------------------------------------+) show newline
+(    |           HUMAN OPERATOR              |) show newline
+(    +-----------------+--------------------+) show newline
+(                      | Local terminal, no network) show newline
+(    +-----------------v--------------------+) show newline
+(    |          CYBERSPACE REPL              |) show newline
+(    |    +-----------------------------+   |) show newline
+(    |    |  TRUSTED PATH ACTIVE        |   |) show newline
+(    |    +-----------------------------+   |) show newline
+(    +-----------------+--------------------+) show newline
+(                      |) show newline
+(    +-----------------v--------------------+) show newline
+(    |           TRUSTED CORE                |) show newline
+(    +--------------------------------------+) show newline
+() show newline
+(Operations requiring trusted path: - \(ed25519-keypair\) - key generation) show newline
+(- \(node-role 'coordinator\) - role assignment - \(seal-release "1.0.0"\) -) show newline
+(signing releases - Key ceremony \(RFC-022\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THREATS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(What We Handle) show newline
+(--------------) show newline
+() show newline
+() show newline
+(  Threat                Defense                              ) show newline
+(  Unauthorized access   No capability = no access            ) show newline
+(  Capability forgery    Ed25519 signatures                   ) show newline
+(  Replay attacks        Timestamps, nonces, Lamport clocks   ) show newline
+(  Stale capabilities    Expiration, revocation               ) show newline
+(  Delegation abuse      Attenuation, propagation flags       ) show newline
+(  Content tampering     SHA-512 content addressing           ) show newline
+(  Origin spoofing       Object signatures                    ) show newline
+(  Audit tampering       Hash chain, distribution             ) show newline
+() show newline
+() show newline
+(What We Don't Handle) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(  Threat                        Why                                                 ) show newline
+(  Compromised signing key       Fundamental limit. Mitigate: threshold, rotation.   ) show newline
+(  Endpoint compromise           Your realm, your problem.                           ) show newline
+(  Physical access               Out of scope for software.                          ) show newline
+(  Covert channels > 1 bit/sec   Residual risk, documented above.                    ) show newline
+(  Availability attacks          Focus on integrity/confidentiality.                 ) show newline
+(  Quantum computing             Ed25519 vulnerable. Migration path planned.         ) show newline
+(  Coercion                      Math doesn't help if you're forced to sign.         ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE INVARIANTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(These must always hold:) show newline
+() show newline
+() show newline
+(    I1. No access without valid capability) show newline
+(        access\(s,o,r\) > ∃c: valid_chain\(s,o,r,c\)) show newline
+(    I2. Delegation cannot amplify) show newline
+(        delegated\(c₂,c₁\) > rights\(c₂\) ⊆ rights\(c₁\)) show newline
+(    I3. Object identity is content hash) show newline
+(        id\(o\) = sha512\(content\(o\)\)) show newline
+(    I4. Audit is ordered) show newline
+(        sequence\(e₁\) < sequence\(e₂\) > time\(e₁\) ≤ time\(e₂\)) show newline
+(    I5. Revocation is permanent) show newline
+(        revoked\(c,t\) > ∀t' > t: ¬valid\(c,t'\)) show newline
+(    I6. No ambient authority) show newline
+(        ¬∃c: grants\(c,,\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2.) show newline
+(Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed) show newline
+(Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson,) show newline
+(B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD \(Orange) show newline
+(Book\), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula,) show newline
+(L.J., Secure Computer Systems: Mathematical Foundations, 1973 -) show newline
+(confidentiality model 7. Biba, K.J., Integrity Considerations for Secure) show newline
+(Computer Systems, 1977 - integrity model) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-08) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

@@ -1,0 +1,249 @@
+%!PS-Adobe-3.0
+%%Title: rfc-050-access-audit-codesign
+%%Creator: Library of Cyberspace RFC Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(RFC-050: Access Control and Audit Co-Design) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC establishes the principle that access control and auditing must) show newline
+(be designed together, not separately. Every access control decision) show newline
+(point produces three outputs: a decision, an effect, and a record. Audit) show newline
+(policy is per-realm, with lean defaults.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Security systems often treat auditing as an afterthought—bolted on) show newline
+(after access control is designed. This leads to:) show newline
+() show newline
+(  * Incomplete coverage: Some decisions are never logged) show newline
+(  * Inconsistent records: Different formats at different points) show newline
+(  * Performance surprises: Auditing added late without cost analysis) show newline
+(  * Policy gaps: No framework for what to log when) show newline
+() show newline
+(The solution: co-design access control and auditing from the start.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DESIGN PRINCIPLE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Access control and auditing are co-designed, not bolted on.) show newline
+() show newline
+(Every access control point has three outputs:) show newline
+() show newline
+() show newline
+(    +-------------------------------------+) show newline
+(    |         Access Control Point        |) show newline
+(    +-------------------------------------+) show newline
+(    | Input:  principal, action, context  |) show newline
+(    +-------------------------------------+) show newline
+(    | Output: decision \(grant | refuse\)   |) show newline
+(    |         effect   \(what happens\)     |) show newline
+(    |         record   \(audit entry\)      |) show newline
+(    |                  v                  |) show newline
+(    |         policy > lean: print        |) show newline
+(    |                  paranoid: append   |) show newline
+(    +-------------------------------------+) show newline
+() show newline
+() show newline
+(The Three Outputs) show newline
+(-----------------) show newline
+() show newline
+(1. Decision: Grant or refuse the requested action 2. Effect: The) show newline
+(consequence of the decision \(action performed, or refusal message\) 3.) show newline
+(Record: An audit entry capturing what happened) show newline
+() show newline
+() show newline
+(Auditable vs. Audited) show newline
+(---------------------) show newline
+() show newline
+(  * Auditable: The mechanism exists to log the event) show newline
+(  * Audited: The event is actively being logged) show newline
+() show newline
+(All access control decisions are auditable. Whether they are audited) show newline
+(depends on realm policy.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PER-REALM AUDIT POLICY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Each realm configures its own audit policy. The default is lean.) show newline
+() show newline
+() show newline
+(Policy Levels) show newline
+(-------------) show newline
+() show newline
+() show newline
+(  Level      Description                                ) show newline
+(  lean       Minimal auditing, low overhead \(default\)   ) show newline
+(  standard   Security-relevant events audited           ) show newline
+(  paranoid   All access decisions audited               ) show newline
+() show newline
+() show newline
+(Event Categories) show newline
+(----------------) show newline
+() show newline
+() show newline
+(  Event                 Lean    Standard   Paranoid   ) show newline
+(  Successful joins      audit   audit      audit      ) show newline
+(  Join refusals         print   audit      audit      ) show newline
+(  Delegations           audit   audit      audit      ) show newline
+(  Revocations           audit   audit      audit      ) show newline
+(  Capability grants     audit   audit      audit      ) show newline
+(  Capability refusals   print   audit      audit      ) show newline
+(  Object reads          —     —        audit      ) show newline
+(  Object writes         print   audit      audit      ) show newline
+() show newline
+() show newline
+(Configuration) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(realm-audit-policy 'lean\)      ; default) show newline
+(    \(realm-audit-policy 'standard\)) show newline
+(    \(realm-audit-policy 'paranoid\)) show newline
+(    ;; Or fine-grained:) show newline
+(    \(realm-audit-policy) show newline
+(      '\(\(joins . audit\)) show newline
+(        \(refusals . print\)) show newline
+(        \(delegations . audit\)) show newline
+(        \(reads . none\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION PATTERN) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(When implementing an access control point:) show newline
+() show newline
+() show newline
+(    \(define \(access-control-point principal action context\)) show newline
+(      "Template for access control with co-designed auditing") show newline
+(      ;; 1. Make the decision) show newline
+(      \(let \(\(decision \(evaluate-policy principal action context\)\)\)) show newline
+(        ;; 2. Record based on policy) show newline
+(        \(case \(realm-audit-policy\)) show newline
+(          \(\(paranoid\)) show newline
+(           \(audit-append) show newline
+(             actor: principal) show newline
+(             action: `\(,action ,@context\)) show newline
+(             motivation: \(if \(eq? decision 'grant\)) show newline
+(                             "Access granted") show newline
+(                             "Access refused"\)\)\)) show newline
+(          \(\(standard\)) show newline
+(           \(when \(or \(eq? decision 'grant\)) show newline
+(                     \(security-relevant? action\)\)) show newline
+(             \(audit-append ...\)\)\)) show newline
+(          \(\(lean\)) show newline
+(           \(when \(eq? decision 'refuse\)) show newline
+(             \(print \(format "~a Refused: ~a" action \(refuse-reason\)\)\)\)\)\)) show newline
+(        ;; 3. Effect) show newline
+(        \(if \(eq? decision 'grant\)) show newline
+(            \(perform-action action context\)) show newline
+(            \(refuse-with-reason action context\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VOCABULARY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Consistent terminology for access control outcomes:) show newline
+() show newline
+() show newline
+(  Outcome             Verb         Usage                                                   ) show newline
+(  Execution fails     Evaporated   "Execution Evaporated: Signature verification failed"   ) show newline
+(  Join denied         Refused      "Join Refused: No valid attestation"                    ) show newline
+(  Capability denied   Refused      "Capability Refused: Insufficient authority"            ) show newline
+(  Operation blocked   Refused      "Operation Refused: Policy violation"                   ) show newline
+() show newline
+(Avoid: terminated, aborted, ended, failed \(where possible\).) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Refusal Patterns) show newline
+(----------------) show newline
+() show newline
+(A pattern of refusals may indicate: - Misconfiguration \(legitimate users) show newline
+(being blocked\) - Attack probing \(malicious principals testing) show newline
+(boundaries\) - Policy too restrictive \(needs adjustment\)) show newline
+() show newline
+(Standard and paranoid policies audit refusals to enable pattern) show newline
+(detection.) show newline
+() show newline
+() show newline
+(Audit Cost) show newline
+(----------) show newline
+() show newline
+(Each audit entry is: - Cryptographically signed \(Ed25519\) - Hash-chained) show newline
+(to previous entry - Persisted to storage) show newline
+() show newline
+(Lean policy minimizes this overhead for high-throughput realms.) show newline
+() show newline
+() show newline
+(Audit Integrity) show newline
+(---------------) show newline
+() show newline
+(Audit entries themselves are tamper-evident. An attacker cannot: -) show newline
+(Delete entries \(breaks hash chain\) - Modify entries \(invalidates) show newline
+(signature\) - Reorder entries \(violates sequence numbers\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * RFC-003: Cryptographic Audit Trail) show newline
+(  * RFC-004: SPKI Authorization) show newline
+(  * RFC-046: Security Architecture) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(- 2026-01-10: Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

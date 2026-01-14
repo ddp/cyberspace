@@ -1,0 +1,441 @@
+%!PS-Adobe-3.0
+%%Title: rfc-018-sealed-archive
+%%Creator: Library of Cyberspace RFC Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(RFC-018: Sealed Archive Format) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies the Zstd+Age archive format for the Library of) show newline
+(Cyberspace: a modern archive format combining Zstd compression with Age) show newline
+(encryption, replacing gzip for cryptographic archives.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The legacy cryptographic archive format uses gzip compression without) show newline
+(encryption:) show newline
+() show newline
+() show newline
+(  Aspect              gzip \(legacy\)   zstd + age                      ) show newline
+(  Compression speed   Slow            Fast \(parallel\)                 ) show newline
+(  Compression ratio   Good            Better                          ) show newline
+(  Encryption          None            Built-in \(age\)                  ) show newline
+(  Key compatibility   N/A             X25519/Ed25519 \(SPKI aligned\)   ) show newline
+(  Streaming           Yes             Yes                             ) show newline
+() show newline
+(Why change?) show newline
+() show newline
+(1. Encryption at rest - Archives contain potentially sensitive data 2.) show newline
+(Faster compression - Zstd is 3-5x faster than gzip 3. Better ratios -) show newline
+(Zstd typically achieves 10-20% better compression 4. Key alignment - Age) show newline
+(uses X25519/Ed25519, same curve family as SPKI 5. Parallel support -) show newline
+(zstd -T0 uses all cores) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Archive Creation Pipeline) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    git archive | tar --zstd | age -r <recipients> > archive.tar.zst.age) show newline
+() show newline
+(Or equivalently:) show newline
+() show newline
+() show newline
+(    tar --zstd -cf - <files> | age -r <recipient1> -r <recipient2> > archive.tar.zst.age) show newline
+() show newline
+() show newline
+(Archive Restoration Pipeline) show newline
+(----------------------------) show newline
+() show newline
+() show newline
+(    age -d -i <identity> < archive.tar.zst.age | zstd -d | tar -xf -) show newline
+() show newline
+() show newline
+(Manifest Format) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(sealed-archive) show newline
+(      \(version "1.0.0"\)) show newline
+(      \(format zstd-age\)) show newline
+(      \(archive "vault-1.0.0.archive.tar.zst.age"\)) show newline
+(      \(compression zstd\)) show newline
+(      \(encryption age\)) show newline
+(      \(recipients \("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"\)\)) show newline
+(      \(hash "sha512:..."\)) show newline
+(      \(signature "ed25519:..."\)\)) show newline
+() show newline
+() show newline
+(File Extensions) show newline
+(---------------) show newline
+() show newline
+() show newline
+(  Extension      Contents                        ) show newline
+(  .archive       S-expression manifest           ) show newline
+(  .tar.zst.age   Encrypted, compressed tarball   ) show newline
+() show newline
+() show newline
+(Configuration) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Set age recipients for encryption) show newline
+(    \(vault-config 'age-recipients) show newline
+(      '\("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p") show newline
+(        "age1..."\)\)) show newline
+(    ;; Set age identity for decryption) show newline
+(    \(vault-config 'age-identity "~/.config/age/identity.txt"\)) show newline
+(    ;; Set default archive format) show newline
+(    \(vault-config 'archive-format 'zstd-age\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PERFORMANCE CHARACTERISTICS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Compression) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    Zstd default \(-3\):) show newline
+(      Compression:   ~400 MB/s) show newline
+(      Decompression: ~800 MB/s) show newline
+(      Ratio:         ~3:1 \(typical source code\)) show newline
+(    Zstd parallel \(-T0\):) show newline
+(      Compression:   ~400 MB/s × cores) show newline
+(      Decompression: ~800 MB/s × cores) show newline
+(    Gzip comparison:) show newline
+(      Compression:   ~30 MB/s) show newline
+(      Decompression: ~200 MB/s) show newline
+(      Ratio:         ~2.5:1) show newline
+() show newline
+() show newline
+(Encryption) show newline
+(----------) show newline
+() show newline
+() show newline
+(    Age X25519:) show newline
+(      Encrypt:  ~1 GB/s \(ChaCha20-Poly1305\)) show newline
+(      Decrypt:  ~1 GB/s) show newline
+(      Key size: 32 bytes \(public\), 32 bytes \(private\)) show newline
+(    Age overhead:) show newline
+(      Header:   ~200 bytes per recipient) show newline
+(      MAC:      16 bytes) show newline
+() show newline
+() show newline
+(Signature) show newline
+(---------) show newline
+() show newline
+() show newline
+(    Ed25519:) show newline
+(      Sign:     ~10 μs) show newline
+(      Verify:   ~10 μs) show newline
+(      Signature: 64 bytes) show newline
+() show newline
+() show newline
+(Total Pipeline) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    10 MB archive:) show newline
+(      Compress \(zstd -T0\): ~25 ms) show newline
+(      Encrypt \(age\):       ~10 ms) show newline
+(      Hash \(SHA-512\):      ~1 ms) show newline
+(      Sign \(Ed25519\):      ~10 μs) show newline
+(      Total:               ~36 ms) show newline
+(    vs gzip legacy:) show newline
+(      Compress \(gzip\):     ~300 ms) show newline
+(      Hash \(SHA-512\):      ~1 ms) show newline
+(      Sign \(Ed25519\):      ~10 μs) show newline
+(      Total:               ~301 ms) show newline
+(    Speedup: ~8x) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Encryption Layer \(Age\)) show newline
+(----------------------) show newline
+() show newline
+(  * Algorithm: X25519 + ChaCha20-Poly1305) show newline
+(  * Recipients: Multiple allowed \(each can decrypt\)) show newline
+(  * Forward secrecy: Ephemeral key per archive) show newline
+(  * Authenticity: Poly1305 MAC) show newline
+() show newline
+() show newline
+(Signature Layer \(SPKI\)) show newline
+(----------------------) show newline
+() show newline
+(  * Algorithm: Ed25519) show newline
+(  * Scope: Signs encrypted archive hash) show newline
+(  * Non-repudiation: Signer cannot deny creating archive) show newline
+() show newline
+() show newline
+(Verification Order) show newline
+(------------------) show newline
+() show newline
+(1. Verify signature - Before decryption \(fail fast on tampering\) 2.) show newline
+(Verify hash - Encrypted archive integrity 3. Decrypt - Only after) show newline
+(signature verified 4. Extract - Only after successful decryption) show newline
+() show newline
+() show newline
+(Threat Mitigations) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Threat              Mitigation                           ) show newline
+(  Eavesdropping       Age encryption \(X25519 + ChaCha20\)   ) show newline
+(  Tampering           SHA-512 hash + Ed25519 signature     ) show newline
+(  Replay attacks      Version + timestamp in manifest      ) show newline
+(  Key compromise      Multiple recipients, key rotation    ) show newline
+(  Chosen ciphertext   Poly1305 authentication              ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COMPATIBILITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Age Identity Types) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    # Native age key) show newline
+(    age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p) show newline
+(    # SSH key \(age supports ssh-ed25519 and ssh-rsa\)) show newline
+(    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...) show newline
+(    # GitHub key \(via age-plugin-github or ssh\)) show newline
+(    github:username) show newline
+() show newline
+() show newline
+(Platform Support) show newline
+(----------------) show newline
+() show newline
+() show newline
+(  Platform   zstd       age                 ) show newline
+(  macOS      Homebrew   Homebrew            ) show newline
+(  Linux      apt/yum    apt/yum or binary   ) show newline
+(  FreeBSD    pkg        pkg                 ) show newline
+(  Windows    winget     winget or binary    ) show newline
+() show newline
+() show newline
+(Fallback) show newline
+(--------) show newline
+() show newline
+(If zstd or age unavailable, fall back to cryptographic format:) show newline
+() show newline
+() show newline
+(    \(if \(and \(command-exists? "zstd"\) \(command-exists? "age"\)\)) show newline
+(        \(seal-archive version format: 'zstd-age\)) show newline
+(        \(seal-archive version format: 'cryptographic\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(seal-archive-zstd-age) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define \(seal-archive-zstd-age version output\)) show newline
+(      "Create zstd-compressed, age-encrypted archive with SPKI signature") show newline
+(      \(let \(\(recipients \(vault-config 'age-recipients\)\)) show newline
+(            \(signing-key \(vault-config 'signing-key\)\)) show newline
+(            \(encrypted-file \(sprintf "~a.tar.zst.age" output\)\)\)) show newline
+(        ;; Require recipients) show newline
+(        \(unless \(pair? recipients\)) show newline
+(          \(error "No age recipients configured"\)\)) show newline
+(        ;; Build recipient args: -r key1 -r key2 ...) show newline
+(        \(let \(\(recipient-args) show newline
+(               \(string-join \(map \(lambda \(r\) \(sprintf "-r ~a" r\)\) recipients\) " "\)\)\)) show newline
+(          ;; Create archive: git archive | zstd | age) show newline
+(          \(let \(\(temp-tar \(sprintf "/tmp/vault-~a.tar" version\)\)\)) show newline
+(            \(run-command "git" "archive" "--prefix=vault/") show newline
+(                         \(sprintf "--output=~a" temp-tar\) version\)) show newline
+(            \(system \(sprintf "zstd -T0 -c ~a | age ~a > ~a") show newline
+(                            temp-tar recipient-args encrypted-file\)\)) show newline
+(            \(delete-file temp-tar\)\)) show newline
+(          ;; Sign the encrypted archive) show newline
+(          \(when signing-key) show newline
+(            \(let* \(\(archive-bytes \(read-file-bytes encrypted-file\)\)) show newline
+(                   \(archive-hash \(sha512-hash archive-bytes\)\)) show newline
+(                   \(signature \(ed25519-sign signing-key archive-hash\)\)\)) show newline
+(              ;; Write manifest) show newline
+(              \(with-output-to-file output) show newline
+(                \(lambda \(\)) show newline
+(                  \(write `\(sealed-archive) show newline
+(                           \(version ,version\)) show newline
+(                           \(format zstd-age\)) show newline
+(                           \(archive ,encrypted-file\)) show newline
+(                           \(compression zstd\)) show newline
+(                           \(encryption age\)) show newline
+(                           \(recipients ,recipients\)) show newline
+(                           \(hash ,\(blob->hex archive-hash\)\)) show newline
+(                           \(signature ,\(blob->hex signature\)\)\)\)\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(seal-restore-zstd-age) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define \(seal-restore-zstd-age manifest verify-key target-dir identity\)) show newline
+(      "Restore zstd+age encrypted archive") show newline
+(      \(let \(\(version \(cadr \(assq 'version \(cdr manifest\)\)\)\)) show newline
+(            \(archive-file \(cadr \(assq 'archive \(cdr manifest\)\)\)\)) show newline
+(            \(hash-hex \(cadr \(assq 'hash \(cdr manifest\)\)\)\)) show newline
+(            \(sig-hex \(cadr \(assq 'signature \(cdr manifest\)\)\)\)) show newline
+(            \(id-file \(or identity \(vault-config 'age-identity\)\)\)\)) show newline
+(        ;; Require identity) show newline
+(        \(unless id-file) show newline
+(          \(error "No age identity configured"\)\)) show newline
+(        ;; Verify signature first \(before decryption\)) show newline
+(        \(when verify-key) show newline
+(          \(let* \(\(archive-bytes \(read-file-bytes archive-file\)\)) show newline
+(                 \(archive-hash \(sha512-hash archive-bytes\)\)) show newline
+(                 \(expected-hash \(hex->blob hash-hex\)\)) show newline
+(                 \(signature \(hex->blob sig-hex\)\)) show newline
+(                 \(pubkey \(read-key-from-file verify-key\)\)\)) show newline
+(            \(unless \(equal? archive-hash expected-hash\)) show newline
+(              \(error "Archive hash mismatch"\)\)) show newline
+(            \(unless \(ed25519-verify pubkey archive-hash signature\)) show newline
+(              \(error "Signature verification failed"\)\)\)\)) show newline
+(        ;; Decrypt and extract: age -d | zstd -d | tar -x) show newline
+(        \(system \(sprintf "age -d -i ~a < ~a | zstd -d | tar -xf - -C ~a") show newline
+(                        id-file archive-file target-dir\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(USAGE EXAMPLES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Create Encrypted Archive) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    ;; Configure recipients) show newline
+(    \(vault-config 'age-recipients) show newline
+(      '\("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"\)\)) show newline
+(    ;; Create archive) show newline
+(    \(seal-archive "1.0.0" format: 'zstd-age\)) show newline
+(    ;; => vault-1.0.0.archive) show newline
+(    ;; => vault-1.0.0.archive.tar.zst.age) show newline
+() show newline
+() show newline
+(Restore Encrypted Archive) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    ;; Configure identity) show newline
+(    \(vault-config 'age-identity "~/.config/age/identity.txt"\)) show newline
+(    ;; Restore with verification) show newline
+(    \(seal-restore "vault-1.0.0.archive") show newline
+(                  verify-key: "publisher.public") show newline
+(                  target: "./restored"\)) show newline
+() show newline
+() show newline
+(Command Line Equivalents) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    # Create) show newline
+(    git archive --prefix=vault/ 1.0.0 | \\) show newline
+(      zstd -T0 | \\) show newline
+(      age -r age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p \\) show newline
+(      > vault-1.0.0.tar.zst.age) show newline
+(    # Restore) show newline
+(    age -d -i ~/.config/age/identity.txt < vault-1.0.0.tar.zst.age | \\) show newline
+(      zstd -d | \\) show newline
+(      tar -xf -) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(From Cryptographic to Zstd-Age) show newline
+(------------------------------) show newline
+() show newline
+() show newline
+(    ;; Re-archive existing releases with new format) show newline
+(    \(for-each) show newline
+(      \(lambda \(version\)) show newline
+(        \(seal-archive version format: 'zstd-age\)\)) show newline
+(      \(get-local-releases\)\)) show newline
+() show newline
+() show newline
+(Backward Compatibility) show newline
+(----------------------) show newline
+() show newline
+(Both formats can coexist. The manifest format field determines) show newline
+(restoration method: - \(format cryptographic\) >) show newline
+(seal-restore-cryptographic - \(format zstd-age\) > seal-restore-zstd-age) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [Zstd]\(https://github.com/facebook/zstd\) - Facebook's compression) show newline
+(algorithm 2. [Age]\(https://age-encryption.org/\) - Modern encryption tool) show newline
+(3. [RFC-006]\(rfc-006-vault-architecture.html\) - Vault System) show newline
+(Architecture 4. [RFC-004]\(rfc-004-spki-authorization.html\) - SPKI) show newline
+(Authorization) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

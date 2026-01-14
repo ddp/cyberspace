@@ -1,0 +1,620 @@
+%!PS-Adobe-3.0
+%%Title: rfc-028-error-handling
+%%Creator: Library of Cyberspace RFC Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(RFC-028: Error Handling and Recovery) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies error handling and recovery for the Library of) show newline
+(Cyberspace: how vaults detect, report, and recover from failures while) show newline
+(maintaining integrity guarantees. Errors are first-class objects in the) show newline
+(soup, enabling systematic analysis and automated recovery.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Distributed systems fail in creative ways:) show newline
+() show newline
+(  * Network partitions) show newline
+(  * Vaults lose contact) show newline
+(  * Storage corruption) show newline
+(  * Bits flip, disks fail) show newline
+(  * Byzantine faults) show newline
+(  * Nodes lie or misbehave) show newline
+(  * Resource exhaustion) show newline
+(  * Out of memory, disk, connections) show newline
+(  * Protocol violations) show newline
+(  * Malformed messages, invalid state) show newline
+() show newline
+(Recovery must be:) show newline
+() show newline
+(  * Deterministic) show newline
+(  * Same error, same recovery) show newline
+(  * Auditable) show newline
+(  * Every error logged with context) show newline
+(  * Automatic) show newline
+(  * Self-healing where possible) show newline
+(  * Graceful) show newline
+(  * Degrade rather than crash) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ERROR MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Error Types) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define-error-type 'storage-error) show newline
+(      \(subtypes corruption missing full readonly\)\)) show newline
+(    \(define-error-type 'network-error) show newline
+(      \(subtypes timeout unreachable protocol-violation\)\)) show newline
+(    \(define-error-type 'crypto-error) show newline
+(      \(subtypes signature-invalid key-expired capability-denied\)\)) show newline
+(    \(define-error-type 'consistency-error) show newline
+(      \(subtypes hash-mismatch merkle-divergence conflict\)\)) show newline
+(    \(define-error-type 'resource-error) show newline
+(      \(subtypes memory-exhausted connections-exhausted rate-limited\)\)) show newline
+(    \(define-error-type 'protocol-error) show newline
+(      \(subtypes invalid-message invalid-state version-mismatch\)\)) show newline
+() show newline
+() show newline
+(Error Structure) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(make-error type message context\)) show newline
+(      `\(error) show newline
+(        \(id ,\(generate-error-id\)\)) show newline
+(        \(type ,type\)) show newline
+(        \(message ,message\)) show newline
+(        \(context ,context\)) show newline
+(        \(timestamp ,\(current-time\)\)) show newline
+(        \(vault ,\(current-vault-id\)\)) show newline
+(        \(principal ,\(current-principal\)\)) show newline
+(        \(stack ,\(capture-stack-trace\)\)\)\)) show newline
+(    ;; Errors are soup objects) show newline
+(    \(define \(record-error! err\)) show newline
+(      \(let \(\(hash \(soup-put err type: 'error\)\)\)) show newline
+(        \(audit-append action: 'error-recorded error-hash: hash\)) show newline
+(        hash\)\)) show newline
+() show newline
+() show newline
+(Error Context) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Capture rich context for debugging) show newline
+(    \(define \(error-context operation\)) show newline
+(      `\(\(operation . ,operation\)) show newline
+(        \(request-id . ,\(current-request-id\)\)) show newline
+(        \(correlation-id . ,\(current-correlation-id\)\)) show newline
+(        \(peer . ,\(current-peer\)\)) show newline
+(        \(attempt . ,\(current-retry-count\)\)) show newline
+(        \(duration . ,\(operation-duration\)\)) show newline
+(        \(inputs . ,\(sanitize-inputs \(operation-inputs\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ERROR HANDLING PATTERNS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Result Type) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    ;; Operations return \(ok value\) or \(err error\)) show newline
+(    \(define \(result-ok value\) \(ok ,value\)\)) show newline
+(    \(define \(result-err error\) \(err ,error\)\)) show newline
+(    \(define \(result-ok? r\) \(eq? \(car r\) 'ok\)\)) show newline
+(    \(define \(result-err? r\) \(eq? \(car r\) 'err\)\)) show newline
+(    \(define \(result-value r\) \(cadr r\)\)) show newline
+(    \(define \(result-error r\) \(cadr r\)\)) show newline
+(    ;; Chain operations) show newline
+(    \(define \(result-bind r f\)) show newline
+(      \(if \(result-ok? r\)) show newline
+(          \(f \(result-value r\)\)) show newline
+(          r\)\)) show newline
+(    ;; Example) show newline
+(    \(define \(safe-read hash\)) show newline
+(      \(result-bind \(cas-get-safe hash\)) show newline
+(        \(lambda \(data\)) show newline
+(          \(result-bind \(verify-signature data\)) show newline
+(            \(lambda \(verified\)) show newline
+(              \(result-ok verified\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Error Recovery) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(with-recovery operation recovery\)) show newline
+(      "Execute operation with recovery on failure") show newline
+(      \(let \(\(result \(guard \(ex \(else \(result-err ex\)\)\)) show newline
+(                      \(result-ok \(operation\)\)\)\)\)) show newline
+(        \(if \(result-ok? result\)) show newline
+(            \(result-value result\)) show newline
+(            \(recovery \(result-error result\)\)\)\)\)) show newline
+(    ;; Example: read with fallback to replica) show newline
+(    \(define \(read-with-fallback hash\)) show newline
+(      \(with-recovery) show newline
+(        \(lambda \(\) \(cas-get hash\)\)) show newline
+(        \(lambda \(err\)) show newline
+(          \(audit-append action: 'read-fallback error: err\)) show newline
+(          \(cas-get-from-replica hash\)\)\)\)) show newline
+() show newline
+() show newline
+(Retry Logic) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define \(with-retry operation max-retries backoff\)) show newline
+(      "Retry operation with exponential backoff") show newline
+(      \(let loop \(\(attempt 1\)\)) show newline
+(        \(let \(\(result \(guard \(ex \(else \(result-err ex\)\)\)) show newline
+(                        \(result-ok \(operation\)\)\)\)\)) show newline
+(          \(cond) show newline
+(            \(\(result-ok? result\)) show newline
+(             \(result-value result\)\)) show newline
+(            \(\(>= attempt max-retries\)) show newline
+(             \(error "Max retries exceeded" \(result-error result\)\)\)) show newline
+(            \(else) show newline
+(             \(let \(\(delay \( backoff \(expt 2 \(- attempt 1\)\)\)\)\)) show newline
+(               \(audit-append action: 'retry attempt: attempt delay: delay\)) show newline
+(               \(thread-sleep! delay\)) show newline
+(               \(loop \(+ attempt 1\)\)\)\)\)\)\)\)) show newline
+(    ;; Retry configuration) show newline
+(    \(define default-retry-config*) show newline
+(      `\(\(max-retries . 3\)) show newline
+(        \(initial-backoff . 100\)    ; ms) show newline
+(        \(max-backoff . 30000\)      ; ms) show newline
+(        \(jitter . 0.1\)\)\)           ; 10% randomization) show newline
+() show newline
+() show newline
+(Circuit Breaker) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(make-circuit-breaker threshold timeout\)) show newline
+(      \(let \(\(failures 0\)) show newline
+(            \(state 'closed\)) show newline
+(            \(last-failure #f\)\)) show newline
+(        \(lambda \(operation\)) show newline
+(          \(case state) show newline
+(            \(\(open\)) show newline
+(             \(if \(> \(- \(current-time\) last-failure\) timeout\)) show newline
+(                 \(begin) show newline
+(                   \(set! state 'half-open\)) show newline
+(                   \(try-operation operation\)\)) show newline
+(                 \(error "Circuit open"\)\)\)) show newline
+(            \(\(half-open\)) show newline
+(             \(let \(\(result \(try-operation operation\)\)\)) show newline
+(               \(if \(result-ok? result\)) show newline
+(                   \(begin) show newline
+(                     \(set! state 'closed\)) show newline
+(                     \(set! failures 0\)) show newline
+(                     \(result-value result\)\)) show newline
+(                   \(begin) show newline
+(                     \(set! state 'open\)) show newline
+(                     \(error "Circuit reopened"\)\)\)\)\)) show newline
+(            \(\(closed\)) show newline
+(             \(try-operation operation\)\)\)\)\)\)) show newline
+(    \(define \(try-operation cb operation\)) show newline
+(      \(guard \(ex) show newline
+(              \(else) show newline
+(               \(cb-record-failure! cb\)) show newline
+(               \(result-err ex\)\)\)) show newline
+(        \(result-ok \(operation\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(STORAGE ERRORS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Corruption Detection) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(detect-corruption hash\)) show newline
+(      "Verify object integrity") show newline
+(      \(let* \(\(data \(storage-read-raw hash\)\)) show newline
+(             \(computed-hash \(content-hash data\)\)\)) show newline
+(        \(unless \(equal? hash computed-hash\)) show newline
+(          \(record-error!) show newline
+(            \(make-error 'corruption) show newline
+(              "Hash mismatch detected") show newline
+(              `\(\(expected . ,hash\)) show newline
+(                \(computed . ,computed-hash\)) show newline
+(                \(size . ,\(bytevector-length data\)\)\)\)\)\)\)\)) show newline
+(    \(define \(scan-for-corruption\)) show newline
+(      "Full vault integrity scan") show newline
+(      \(let \(\(corrupted '\(\)\)\)) show newline
+(        \(for-each \(lambda \(hash\)) show newline
+(                    \(unless \(verify-integrity hash\)) show newline
+(                      \(set! corrupted \(cons hash corrupted\)\)\)\)) show newline
+(                  \(all-object-hashes\)\)) show newline
+(        \(when \(not \(null? corrupted\)\)) show newline
+(          \(audit-append action: 'corruption-scan) show newline
+(                        corrupted: \(length corrupted\)\)\)) show newline
+(        corrupted\)\)) show newline
+() show newline
+() show newline
+(Corruption Recovery) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(recover-corrupted hash\)) show newline
+(      "Attempt to recover corrupted object") show newline
+(      ;; Strategy 1: Fetch from replica) show newline
+(      \(let \(\(replicas \(find-replicas hash\)\)\)) show newline
+(        \(for-each \(lambda \(replica\)) show newline
+(                    \(let \(\(data \(fetch-from-replica replica hash\)\)\)) show newline
+(                      \(when \(and data \(verify-hash data hash\)\)) show newline
+(                        \(storage-write hash data\)) show newline
+(                        \(audit-append action: 'corruption-recovered) show newline
+(                                      source: replica\)) show newline
+(                        \(return data\)\)\)\)) show newline
+(                  replicas\)\)) show newline
+(      ;; Strategy 2: Reconstruct from erasure coding) show newline
+(      \(when \(erasure-coded? hash\)) show newline
+(        \(let \(\(data \(reconstruct-from-shards hash\)\)\)) show newline
+(          \(when data) show newline
+(            \(storage-write hash data\)) show newline
+(            \(audit-append action: 'erasure-recovery\)) show newline
+(            \(return data\)\)\)\)) show newline
+(      ;; Strategy 3: Mark as lost) show newline
+(      \(mark-object-lost hash\)) show newline
+(      \(audit-append action: 'object-lost hash: hash\)) show newline
+(      #f\)) show newline
+() show newline
+() show newline
+(Disk Full Handling) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(handle-disk-full\)) show newline
+(      "Emergency disk space recovery") show newline
+(      ;; Phase 1: Emergency GC) show newline
+(      \(gc-emergency\)) show newline
+(      ;; Phase 2: Clear caches) show newline
+(      \(clear-all-caches\)) show newline
+(      ;; Phase 3: Compress compressible objects) show newline
+(      \(compress-uncompressed-objects\)) show newline
+(      ;; Phase 4: Alert and degrade) show newline
+(      \(when \(< \(available-space\) critical-threshold\)) show newline
+(        \(alert-disk-critical\)) show newline
+(        \(vault-readonly!\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(NETWORK ERRORS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Timeout Handling) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(with-timeout duration operation\)) show newline
+(      "Execute operation with timeout") show newline
+(      \(let \(\(result \(make-channel\)\)\)) show newline
+(        \(thread-start!) show newline
+(          \(make-thread) show newline
+(            \(lambda \(\)) show newline
+(              \(channel-put! result) show newline
+(                \(guard \(ex \(else \(result-err ex\)\)\)) show newline
+(                  \(result-ok \(operation\)\)\)\)\)\)\)) show newline
+(        \(let \(\(r \(channel-get! result duration\)\)\)) show newline
+(          \(if r) show newline
+(              \(if \(result-ok? r\)) show newline
+(                  \(result-value r\)) show newline
+(                  \(error \(result-error r\)\)\)) show newline
+(              \(error \(make-error 'timeout) show newline
+(                       "Operation timed out") show newline
+(                       `\(\(duration . ,duration\)\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Partition Detection) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(detect-partition peers\)) show newline
+(      "Detect network partition") show newline
+(      \(let* \(\(reachable \(filter peer-reachable? peers\)\)) show newline
+(             \(unreachable \(filter \(lambda \(p\) \(not \(peer-reachable? p\)\)\) peers\)\)\)) show newline
+(        \(when \(> \(length unreachable\) 0\)) show newline
+(          \(audit-append action: 'partition-detected) show newline
+(                        reachable: \(length reachable\)) show newline
+(                        unreachable: \(length unreachable\)\)) show newline
+(          \(if \(> \(length reachable\) \(/ \(length peers\) 2\)\)) show newline
+(              \(continue-with-majority reachable\)) show newline
+(              \(enter-read-only-mode\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Connection Pool Recovery) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(define \(recover-connection-pool pool\)) show newline
+(      "Recover from connection pool exhaustion") show newline
+(      ;; Close idle connections) show newline
+(      \(pool-close-idle! pool\)) show newline
+(      ;; Close long-running connections) show newline
+(      \(pool-close-stale! pool max-connection-age\)) show newline
+(      ;; If still exhausted, reject new requests) show newline
+(      \(when \(pool-exhausted? pool\)) show newline
+(        \(audit-append action: 'pool-exhausted\)) show newline
+(        \(enable-request-shedding\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONSISTENCY ERRORS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Conflict Detection) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(detect-conflict hash versions\)) show newline
+(      "Detect conflicting versions of object") show newline
+(      \(let \(\(unique-contents \(delete-duplicates) show newline
+(                              \(map version-content versions\)\)\)\)) show newline
+(        \(when \(> \(length unique-contents\) 1\)) show newline
+(          \(record-error!) show newline
+(            \(make-error 'conflict) show newline
+(              "Conflicting versions detected") show newline
+(              `\(\(hash . ,hash\)) show newline
+(                \(versions . ,\(length unique-contents\)\)) show newline
+(                \(sources . ,\(map version-source versions\)\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Conflict Resolution) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(resolve-conflict hash versions strategy\)) show newline
+(      "Resolve conflicting versions") show newline
+(      \(let \(\(resolved) show newline
+(             \(case strategy) show newline
+(               \(\(latest\)) show newline
+(                \(max-by version-timestamp versions\)\)) show newline
+(               \(\(merge\)) show newline
+(                \(merge-versions versions\)\)) show newline
+(               \(\(manual\)) show newline
+(                \(queue-for-manual-resolution hash versions\)\)) show newline
+(               \(\(tombstone\)) show newline
+(                \(create-conflict-tombstone hash versions\)\)\)\)\)) show newline
+(        \(audit-append action: 'conflict-resolved) show newline
+(                      hash: hash) show newline
+(                      strategy: strategy\)) show newline
+(        resolved\)\)) show newline
+() show newline
+() show newline
+(Merkle Divergence) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(handle-merkle-divergence local-root remote-root peer\)) show newline
+(      "Handle diverged Merkle trees") show newline
+(      \(let \(\(divergence \(find-divergence-point local-root remote-root\)\)\)) show newline
+(        \(audit-append action: 'merkle-divergence) show newline
+(                      local: local-root) show newline
+(                      remote: remote-root) show newline
+(                      divergence: divergence\)) show newline
+(        ;; Sync diverged subtrees) show newline
+(        \(for-each \(lambda \(subtree\)) show newline
+(                    \(sync-subtree subtree peer\)\)) show newline
+(                  \(divergent-subtrees divergence\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(RECOVERY PROCEDURES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Automatic Recovery) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define recovery-handlers) show newline
+(      `\(\(corruption . ,recover-corrupted\)) show newline
+(        \(missing . ,fetch-from-replica\)) show newline
+(        \(timeout . ,retry-with-backoff\)) show newline
+(        \(partition . ,wait-for-reconnection\)) show newline
+(        \(conflict . ,resolve-with-default-strategy\)\)\)) show newline
+(    \(define \(auto-recover error\)) show newline
+(      "Attempt automatic recovery") show newline
+(      \(let \(\(handler \(assoc-ref recovery-handlers \(error-type error\)\)\)\)) show newline
+(        \(if handler) show newline
+(            \(begin) show newline
+(              \(audit-append action: 'auto-recovery-attempt) show newline
+(                            error: \(error-id error\)\)) show newline
+(              \(handler error\)\)) show newline
+(            \(escalate-error error\)\)\)\)) show newline
+() show newline
+() show newline
+(Manual Recovery) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(queue-manual-recovery error\)) show newline
+(      "Queue error for manual intervention") show newline
+(      \(soup-put) show newline
+(        `\(recovery-ticket) show newline
+(          \(error ,\(error-id error\)\)) show newline
+(          \(status pending\)) show newline
+(          \(created ,\(current-time\)\)) show newline
+(          \(assigned #f\)\)) show newline
+(        type: 'recovery-ticket\)\)) show newline
+(    \(define \(process-recovery-ticket ticket-hash\)) show newline
+(      "Process manual recovery ticket") show newline
+(      \(let \(\(ticket \(soup-get ticket-hash\)\)\)) show newline
+(        ;; Mark in progress) show newline
+(        \(soup-update ticket-hash status: 'in-progress\)) show newline
+(        ;; ... manual recovery steps ...) show newline
+(        ;; Mark resolved) show newline
+(        \(soup-update ticket-hash) show newline
+(                     status: 'resolved) show newline
+(                     resolved-at: \(current-time\)) show newline
+(                     resolved-by: \(current-principal\)\)\)\)) show newline
+() show newline
+() show newline
+(Disaster Recovery) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(disaster-recovery backup-location\)) show newline
+(      "Full vault recovery from backup") show newline
+(      \(audit-append action: 'disaster-recovery-start) show newline
+(                    backup: backup-location\)) show newline
+(      ;; Phase 1: Verify backup integrity) show newline
+(      \(unless \(verify-backup-integrity backup-location\)) show newline
+(        \(error "Backup integrity check failed"\)\)) show newline
+(      ;; Phase 2: Restore CAS) show newline
+(      \(restore-cas-from-backup backup-location\)) show newline
+(      ;; Phase 3: Restore soup) show newline
+(      \(restore-soup-from-backup backup-location\)) show newline
+(      ;; Phase 4: Restore indexes) show newline
+(      \(rebuild-indexes\)) show newline
+(      ;; Phase 5: Verify restoration) show newline
+(      \(verify-restoration\)) show newline
+(      \(audit-append action: 'disaster-recovery-complete\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ERROR REPORTING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Error Aggregation) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(aggregate-errors window\)) show newline
+(      "Aggregate errors over time window") show newline
+(      \(let \(\(errors \(soup-query type: 'error) show newline
+(                                timestamp: \(> \(- \(current-time\) window\)\)\)\)\)) show newline
+(        \(group-by error-type errors\)\)\)) show newline
+(    \(define \(error-rate error-type window\)) show newline
+(      "Calculate error rate") show newline
+(      \(let \(\(count \(length \(soup-query type: 'error) show newline
+(                                       error-type: error-type) show newline
+(                                       timestamp: \(> \(- \(current-time\) window\)\)\)\)\)\)) show newline
+(        \(/ count window\)\)\)) show newline
+() show newline
+() show newline
+(Alerting) show newline
+(--------) show newline
+() show newline
+() show newline
+(    \(define alert-thresholds) show newline
+(      `\(\(corruption . 1\)        ; Any corruption is critical) show newline
+(        \(timeout . 100\)         ; 100 timeouts per minute) show newline
+(        \(conflict . 10\)         ; 10 conflicts per minute) show newline
+(        \(resource . 5\)\)\)        ; 5 resource errors per minute) show newline
+(    \(define \(check-alert-thresholds\)) show newline
+(      "Check if error rates exceed thresholds") show newline
+(      \(for-each \(lambda \(threshold\)) show newline
+(                  \(let \(\(type \(car threshold\)\)) show newline
+(                        \(limit \(cdr threshold\)\)\)) show newline
+(                    \(when \(> \(error-rate type 60\) limit\)) show newline
+(                      \(send-alert type \(error-rate type 60\) limit\)\)\)\)) show newline
+(                alert-thresholds\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Error Information Leakage) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    ;; Don't expose internal details in user-facing errors) show newline
+(    \(define \(sanitize-error-for-user error\)) show newline
+(      `\(error) show newline
+(        \(type ,\(error-type error\)\)) show newline
+(        \(message ,\(user-safe-message \(error-type error\)\)\)) show newline
+(        \(request-id ,\(error-request-id error\)\)\)\)) show newline
+(    ;; Full details only in audit log) show newline
+(    \(define \(log-full-error error\)) show newline
+(      \(audit-append action: 'error) show newline
+(                    error: error\)\)  ; Full context preserved) show newline
+() show newline
+() show newline
+(Error-Based Attacks) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Rate limit error generation to prevent DoS) show newline
+(    \(define error-rate-limiter) show newline
+(      \(make-rate-limiter 1000 60\)\)  ; 1000 errors per minute max) show newline
+(    \(define \(rate-limited-record-error! err\)) show newline
+(      \(if \(rate-limiter-allow? error-rate-limiter\)) show newline
+(          \(record-error! err\)) show newline
+(          \(audit-append action: 'error-rate-limited\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [Release) show newline
+(It!]\(https://pragprog.com/titles/mnee2/release-it-second-edition/\) -) show newline
+(Nygard 2. [Hystrix]\(https://github.com/Netflix/Hystrix\) - Netflix) show newline
+(Circuit Breaker 3. [RFC-003: Cryptographic Audit) show newline
+(Trail]\(rfc-003-audit-trail.html\) 4. [RFC-026: Garbage) show newline
+(Collection]\(rfc-026-garbage-collection.html\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

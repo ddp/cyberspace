@@ -1,0 +1,531 @@
+%!PS-Adobe-3.0
+%%Title: rfc-033-schema-evolution
+%%Creator: Library of Cyberspace RFC Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(RFC-033: Schema Evolution) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies schema evolution for the Library of Cyberspace: how) show newline
+(soup metadata schemas change over time while maintaining backward) show newline
+(compatibility, migration paths, and query consistency. Schemas are) show newline
+(themselves content-addressed objects.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Data outlives code:) show newline
+() show newline
+(  * Long-term preservation) show newline
+(  * Data must remain readable for centuries) show newline
+(  * Software updates) show newline
+(  * New versions need new fields) show newline
+(  * Federation) show newline
+(  * Different vaults may have different schema versions) show newline
+(  * Rollback) show newline
+(  * Must handle downgrades gracefully) show newline
+() show newline
+(Schema evolution must be:) show newline
+() show newline
+(  * Non-breaking) show newline
+(  * Old data remains accessible) show newline
+(  * Bidirectional) show newline
+(  * Upgrade and downgrade paths) show newline
+(  * Explicit) show newline
+(  * Changes documented and versioned) show newline
+(  * Verifiable) show newline
+(  * Schema validation at boundaries) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SCHEMA MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Schema Definition) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define-schema 'document) show newline
+(      \(version 1\)) show newline
+(      \(fields) show newline
+(        \(hash \(type string\) \(required #t\) \(indexed #t\)\)) show newline
+(        \(name \(type string\) \(required #t\)\)) show newline
+(        \(content-type \(type string\) \(required #t\)\)) show newline
+(        \(size \(type integer\) \(required #t\)\)) show newline
+(        \(created \(type timestamp\) \(required #t\)\)) show newline
+(        \(modified \(type timestamp\) \(required #f\)\)) show newline
+(        \(author \(type principal\) \(required #f\)\)) show newline
+(        \(tags \(type \(list string\)\) \(required #f\) \(default '\(\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Schema as Content-Addressed Object) show newline
+(----------------------------------) show newline
+() show newline
+() show newline
+(    ;; Schemas are soup objects) show newline
+(    \(soup-object) show newline
+(      \(hash "sha256:schema-hash..."\)) show newline
+(      \(type schema\)) show newline
+(      \(name document\)) show newline
+(      \(version 1\)) show newline
+(      \(fields ...\)) show newline
+(      \(created "2026-01-01"\)\)) show newline
+(    ;; Reference schema by hash for reproducibility) show newline
+(    \(define \(validate-against-schema obj schema-hash\)) show newline
+(      \(let \(\(schema \(soup-get schema-hash\)\)\)) show newline
+(        \(validate-object obj schema\)\)\)) show newline
+() show newline
+() show newline
+(Schema Registry) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define schema-registry \(make-hash-table\)\)) show newline
+(    \(define \(register-schema! schema\)) show newline
+(      \(let* \(\(name \(schema-name schema\)\)) show newline
+(             \(version \(schema-version schema\)\)) show newline
+(             \(hash \(soup-put schema type: 'schema\)\)\)) show newline
+(        \(hash-table-set! schema-registry \(cons name version\) hash\)) show newline
+(        \(audit-append action: 'schema-registered) show newline
+(                      name: name) show newline
+(                      version: version) show newline
+(                      hash: hash\)) show newline
+(        hash\)\)) show newline
+(    \(define \(get-schema name #!optional version\)) show newline
+(      "Get schema by name and optional version") show newline
+(      \(if version) show newline
+(          \(soup-get \(hash-table-ref schema-registry \(cons name version\)\)\)) show newline
+(          \(get-latest-schema name\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EVOLUTION RULES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Compatible Changes) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; These changes are backward compatible) show newline
+(    \(define compatible-changes) show newline
+(      '\(add-optional-field      ; New field with default) show newline
+(        add-index               ; New index on existing field) show newline
+(        widen-type              ; integer -> number) show newline
+(        relax-constraint        ; required -> optional) show newline
+(        add-enum-value\)\)        ; Extend enumeration) show newline
+(    \(define \(change-compatible? old-schema new-schema\)) show newline
+(      "Check if schema change is backward compatible") show newline
+(      \(let \(\(changes \(diff-schemas old-schema new-schema\)\)\)) show newline
+(        \(every compatible-change? changes\)\)\)) show newline
+() show newline
+() show newline
+(Breaking Changes) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    ;; These changes require migration) show newline
+(    \(define breaking-changes) show newline
+(      '\(remove-field            ; Field no longer exists) show newline
+(        add-required-field      ; New required field without default) show newline
+(        narrow-type             ; number -> integer) show newline
+(        tighten-constraint      ; optional -> required) show newline
+(        remove-enum-value       ; Shrink enumeration) show newline
+(        rename-field\)\)          ; Field name changed) show newline
+(    \(define \(requires-migration? old-schema new-schema\)) show newline
+(      "Check if migration needed") show newline
+(      \(let \(\(changes \(diff-schemas old-schema new-schema\)\)\)) show newline
+(        \(any breaking-change? changes\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VERSION MANAGEMENT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Semantic Versioning) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Schema versions follow semver) show newline
+(    \(define \(schema-version-compare v1 v2\)) show newline
+(      \(let \(\(major1 \(version-major v1\)\) \(major2 \(version-major v2\)\)) show newline
+(            \(minor1 \(version-minor v1\)\) \(minor2 \(version-minor v2\)\)) show newline
+(            \(patch1 \(version-patch v1\)\) \(patch2 \(version-patch v2\)\)\)) show newline
+(        \(cond) show newline
+(          \(\(not \(= major1 major2\)\) \(- major1 major2\)\)) show newline
+(          \(\(not \(= minor1 minor2\)\) \(- minor1 minor2\)\)) show newline
+(          \(else \(- patch1 patch2\)\)\)\)\)) show newline
+(    ;; Major: breaking changes) show newline
+(    ;; Minor: compatible additions) show newline
+(    ;; Patch: documentation/fixes) show newline
+() show newline
+() show newline
+(Version History) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(schema-history name\)) show newline
+(      "Get all versions of a schema") show newline
+(      \(soup-query type: 'schema) show newline
+(                  name: name) show newline
+(                  order-by: '\(\(version desc\)\)\)\)) show newline
+(    \(define \(schema-lineage name version\)) show newline
+(      "Get evolution path to current version") show newline
+(      \(let \(\(schema \(get-schema name version\)\)\)) show newline
+(        \(if \(schema-parent schema\)) show newline
+(            \(cons schema \(schema-lineage name \(schema-parent-version schema\)\)\)) show newline
+(            \(list schema\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Migration Definition) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define-migration 'document-v1-to-v2) show newline
+(      \(from-schema 'document \(version 1\)\)) show newline
+(      \(to-schema 'document \(version 2\)\)) show newline
+(      \(up \(lambda \(obj\)) show newline
+(            ;; Add new field with default) show newline
+(            \(assoc-set obj 'visibility 'private\)\)\)) show newline
+(      \(down \(lambda \(obj\)) show newline
+(              ;; Remove new field) show newline
+(              \(assoc-remove obj 'visibility\)\)\)\)) show newline
+() show newline
+() show newline
+(Migration Execution) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(migrate-object obj from-version to-version\)) show newline
+(      "Migrate object between schema versions") show newline
+(      \(let \(\(migrations \(find-migration-path from-version to-version\)\)\)) show newline
+(        \(fold \(lambda \(migration obj\)) show newline
+(                \(\(migration-up migration\) obj\)\)) show newline
+(              obj) show newline
+(              migrations\)\)\)) show newline
+(    \(define \(find-migration-path from to\)) show newline
+(      "Find sequence of migrations between versions") show newline
+(      \(let \(\(direction \(if \(> to from\) 'up 'down\)\)\)) show newline
+(        \(filter \(lambda \(m\)) show newline
+(                  \(and \(eq? \(migration-direction m\) direction\)) show newline
+(                       \(version-in-range? \(migration-from m\) from to\)\)\)) show newline
+(                \(all-migrations\)\)\)\)) show newline
+() show newline
+() show newline
+(Lazy Migration) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; Migrate on read, not on upgrade) show newline
+(    \(define \(soup-get-migrated hash\)) show newline
+(      "Get object, migrating if necessary") show newline
+(      \(let \(\(obj \(soup-get-raw hash\)\)) show newline
+(             \(obj-version \(object-schema-version obj\)\)) show newline
+(             \(current-version \(current-schema-version \(object-type obj\)\)\)\)) show newline
+(        \(if \(= obj-version current-version\)) show newline
+(            obj) show newline
+(            \(let \(\(migrated \(migrate-object obj obj-version current-version\)\)\)) show newline
+(              ;; Optionally persist migrated version) show newline
+(              \(when persist-migrations*) show newline
+(                \(soup-put-raw migrated\)\)) show newline
+(              migrated\)\)\)\)) show newline
+() show newline
+() show newline
+(Batch Migration) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(batch-migrate schema-name from-version to-version\)) show newline
+(      "Migrate all objects of a schema") show newline
+(      \(let \(\(objects \(soup-query type: schema-name) show newline
+(                                 schema-version: from-version\)\)\)) show newline
+(        \(for-each \(lambda \(obj\)) show newline
+(                    \(let \(\(migrated \(migrate-object obj from-version to-version\)\)\)) show newline
+(                      \(soup-update \(object-hash obj\) migrated\)) show newline
+(                      \(audit-append action: 'object-migrated) show newline
+(                                    hash: \(object-hash obj\)) show newline
+(                                    from: from-version) show newline
+(                                    to: to-version\)\)\)) show newline
+(                  objects\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VALIDATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Schema Validation) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(validate-object obj schema\)) show newline
+(      "Validate object against schema") show newline
+(      \(let \(\(errors '\(\)\)\)) show newline
+(        ;; Check required fields) show newline
+(        \(for-each \(lambda \(field\)) show newline
+(                    \(when \(and \(field-required? field\)) show newline
+(                               \(not \(assoc-ref obj \(field-name field\)\)\)\)) show newline
+(                      \(set! errors \(cons \(missing-required ,\(field-name field\)\)) show newline
+(                                        errors\)\)\)\)) show newline
+(                  \(schema-fields schema\)\)) show newline
+(        ;; Check field types) show newline
+(        \(for-each \(lambda \(pair\)) show newline
+(                    \(let* \(\(name \(car pair\)\)) show newline
+(                           \(value \(cdr pair\)\)) show newline
+(                           \(field \(schema-field schema name\)\)\)) show newline
+(                      \(when \(and field \(not \(type-matches? value \(field-type field\)\)\)\)) show newline
+(                        \(set! errors \(cons \(type-mismatch ,name\) errors\)\)\)\)\)) show newline
+(                  obj\)) show newline
+(        \(if \(null? errors\)) show newline
+(            \(result-ok obj\)) show newline
+(            \(result-err errors\)\)\)\)) show newline
+() show newline
+() show newline
+(Validation Modes) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define validation-mode \(make-parameter 'strict\)\)) show newline
+(    \(define \(validate-with-mode obj schema\)) show newline
+(      \(case \(validation-mode\)) show newline
+(        \(\(strict\)) show newline
+(         ;; All fields must match schema) show newline
+(         \(validate-object obj schema\)\)) show newline
+(        \(\(permissive\)) show newline
+(         ;; Extra fields allowed) show newline
+(         \(validate-required-fields obj schema\)\)) show newline
+(        \(\(warn\)) show newline
+(         ;; Log warnings but don't fail) show newline
+(         \(let \(\(result \(validate-object obj schema\)\)\)) show newline
+(           \(when \(result-err? result\)) show newline
+(             \(log-warn "Validation errors" errors: \(result-error result\)\)\)) show newline
+(           \(result-ok obj\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(FEDERATION COMPATIBILITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Schema Negotiation) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(negotiate-schema peer schema-name\)) show newline
+(      "Negotiate compatible schema version with peer") show newline
+(      \(let* \(\(local-versions \(local-schema-versions schema-name\)\)) show newline
+(             \(peer-versions \(request-schema-versions peer schema-name\)\)) show newline
+(             \(compatible \(intersection local-versions peer-versions\)\)\)) show newline
+(        \(if \(null? compatible\)) show newline
+(            \(error 'no-compatible-schema\)) show newline
+(            \(max compatible\)\)\)\)) show newline
+(    \(define \(sync-with-schema-version peer schema-name version\)) show newline
+(      "Sync objects using negotiated schema version") show newline
+(      \(for-each \(lambda \(obj\)) show newline
+(                  \(let \(\(converted \(convert-to-version obj version\)\)\)) show newline
+(                    \(send-object peer converted\)\)\)) show newline
+(                \(objects-to-sync schema-name\)\)\)) show newline
+() show newline
+() show newline
+(Cross-Version Queries) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define \(query-with-version-tolerance query\)) show newline
+(      "Query that handles mixed schema versions") show newline
+(      \(let* \(\(results \(soup-query-raw query\)\)) show newline
+(             \(current-version \(current-schema-version \(query-type query\)\)\)\)) show newline
+(        \(map \(lambda \(obj\)) show newline
+(               \(if \(= \(object-schema-version obj\) current-version\)) show newline
+(                   obj) show newline
+(                   \(migrate-object obj \(object-schema-version obj\) current-version\)\)\)) show newline
+(             results\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SCHEMA INTROSPECTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Schema Queries) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; What schemas exist?) show newline
+(    \(soup-query type: 'schema\)) show newline
+(    ;; What versions of a schema?) show newline
+(    \(soup-query type: 'schema name: 'document\)) show newline
+(    ;; What fields in a schema?) show newline
+(    \(schema-fields \(get-schema 'document 2\)\)) show newline
+(    ;; Schema dependency graph) show newline
+(    \(define \(schema-dependencies schema\)) show newline
+(      \(filter-map \(lambda \(field\)) show newline
+(                    \(when \(schema-reference? \(field-type field\)\)) show newline
+(                      \(field-type-target field\)\)\)) show newline
+(                  \(schema-fields schema\)\)\)) show newline
+() show newline
+() show newline
+(Schema Documentation) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define-schema 'document) show newline
+(      \(version 2\)) show newline
+(      \(description "A document stored in the vault"\)) show newline
+(      \(fields) show newline
+(        \(hash) show newline
+(          \(type string\)) show newline
+(          \(required #t\)) show newline
+(          \(indexed #t\)) show newline
+(          \(description "Content-addressed hash of document"\)\)) show newline
+(        \(name) show newline
+(          \(type string\)) show newline
+(          \(required #t\)) show newline
+(          \(description "Human-readable document name"\)) show newline
+(          \(example "RFC-033-schema-evolution.md"\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DEFAULT VALUES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Static Defaults) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define-schema 'document) show newline
+(      \(version 2\)) show newline
+(      \(fields) show newline
+(        \(visibility) show newline
+(          \(type enum\)) show newline
+(          \(values \(public private restricted\)\)) show newline
+(          \(default 'private\)\)) show newline
+(        \(tags) show newline
+(          \(type \(list string\)\)) show newline
+(          \(default '\(\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Computed Defaults) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define-schema 'document) show newline
+(      \(version 2\)) show newline
+(      \(fields) show newline
+(        \(created) show newline
+(          \(type timestamp\)) show newline
+(          \(default \(current-time\)\)\)) show newline
+(        \(id) show newline
+(          \(type string\)) show newline
+(          \(default \(generate-uuid\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Migration Defaults) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; Default for objects migrated from v1 to v2) show newline
+(    \(define-migration 'document-v1-to-v2) show newline
+(      \(defaults) show newline
+(        \(visibility \(lambda \(obj\)) show newline
+(                      ;; Infer from existing data) show newline
+(                      \(if \(assoc-ref obj 'public\)) show newline
+(                          'public) show newline
+(                          'private\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Schema Tampering) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    ;; Schemas are content-addressed - tampering detectable) show newline
+(    \(define \(verify-schema-integrity schema-hash\)) show newline
+(      \(let* \(\(schema \(soup-get schema-hash\)\)) show newline
+(             \(computed-hash \(content-hash \(serialize schema\)\)\)\)) show newline
+(        \(equal? schema-hash computed-hash\)\)\)) show newline
+() show newline
+() show newline
+(Migration Authorization) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Migrations require capability) show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-admin\)) show newline
+(      \(subject schema-admin\)) show newline
+(      \(capability) show newline
+(        \(action migrate-schema\)) show newline
+(        \(object \(schema 'document\)\)\)) show newline
+(      \(validity \(not-after "2027-01-01"\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [Protocol Buffers - Updating A Message) show newline
+(Type]\(https://developers.google.com/protocol-buffers/docs/proto#updating\)) show newline
+(2. [Avro Schema) show newline
+(Evolution]\(https://avro.apache.org/docs/current/spec.html#Schema+Resolution\)) show newline
+(3. [RFC-020: Content-Addressed) show newline
+(Storage]\(rfc-020-content-addressed-storage.html\) 4. [RFC-025: Query) show newline
+(Language]\(rfc-025-query-language.html\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF
