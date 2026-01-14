@@ -108,7 +108,8 @@
    capability?
    capabilities
    capability-intersect
-   capability-difference)
+   capability-difference
+   capability-audit-enable!)
 
   (import scheme
           (chicken base)
@@ -495,15 +496,28 @@
   ;;; Capabilities are symbols registered at module load or runtime.
 
   (define *capabilities* (make-hash-table eq?))
+  (define *capability-audit* #f)  ; Set to signing-key to enable auditing
 
   (define (capability-add! cap)
     "Register a capability this node supports."
     (hash-table-set! *capabilities* cap #t)
+    (when *capability-audit*
+      (audit-append
+        actor: (get-vault-principal *capability-audit*)
+        action: `(capability-add ,cap)
+        motivation: "Capability registered"
+        signing-key: *capability-audit*))
     cap)
 
   (define (capability-remove! cap)
     "Remove a capability."
-    (hash-table-delete! *capabilities* cap))
+    (hash-table-delete! *capabilities* cap)
+    (when *capability-audit*
+      (audit-append
+        actor: (get-vault-principal *capability-audit*)
+        action: `(capability-remove ,cap)
+        motivation: "Capability removed"
+        signing-key: *capability-audit*)))
 
   (define (capability? cap)
     "Check if this node has a capability."
@@ -521,6 +535,12 @@
   (define (capability-difference caps1 caps2)
     "Set difference: capabilities in caps1 but not caps2."
     (filter (lambda (c) (not (memq c caps2))) caps1))
+
+  (define (capability-audit-enable! signing-key)
+    "Enable signed attestations for capability changes.
+     Your key is the notary."
+    (set! *capability-audit* signing-key)
+    'audit-enabled)
 
   ;; Register core capabilities at load time
   (capability-add! 'ed25519-sign)
