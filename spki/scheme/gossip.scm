@@ -16,6 +16,9 @@
    start-gossip-daemon
    stop-gossip-daemon
    gossip-status
+   ;; Gossip listener (server-side)
+   start-gossip-listener
+   stop-gossip-listener
    ;; Single round operations
    gossip-round
    gossip-with-peer
@@ -28,6 +31,9 @@
    sync-bloom-exchange
    sync-merkle-diff
    sync-object-transfer
+   ;; Lamport-timestamped I/O
+   gossip-write-timestamped
+   gossip-read-timestamped
    ;; Scaling configuration (from auto-enroll)
    configure-from-scaling!
    ;; Statistics
@@ -51,7 +57,8 @@
           bloom
           catalog
           crypto-ffi
-          os)         ; for session-stat!
+          os          ; for session-stat!
+          (only vault lamport-send lamport-receive! lamport-save!))
 
   ;; ============================================================
   ;; Configuration
@@ -90,9 +97,12 @@
 
   (define *gossip-thread* #f)
   (define *gossip-running* #f)
+  (define *gossip-listener* #f)
   (define *peers* (make-hash-table string=?))
   (define *local-catalog* #f)
   (define *local-bloom* #f)
+  (define *object-getter* #f)
+  (define *object-storer* #f)
 
   ;; Statistics
   (define *stats*
@@ -104,6 +114,8 @@
       (bloom-exchanges . 0)
       (merkle-diffs . 0)
       (false-positives . 0)
+      (hash-mismatches . 0)
+      (sync-completed . 0)
       (last-round . #f)))
 
   (define (stat-inc! key #!optional (amount 1))
@@ -137,6 +149,8 @@
         (bloom-exchanges . 0)
         (merkle-diffs . 0)
         (false-positives . 0)
+        (hash-mismatches . 0)
+        (sync-completed . 0)
         (last-round . #f))))
 
   ;; ============================================================
@@ -169,6 +183,26 @@
     (if (string-contains host ":")
         (session-stat! 'packets-ipv6)
         (session-stat! 'packets-ipv4)))
+
+  ;; ============================================================
+  ;; Lamport-Timestamped Messaging (RFC-012)
+  ;; ============================================================
+
+  (define (gossip-write-timestamped data out)
+    "Write data with Lamport timestamp attached."
+    (let ((timestamped (lamport-send data)))
+      (gossip-write timestamped out)))
+
+  (define (gossip-read-timestamped in)
+    "Read data and update local Lamport clock."
+    (let ((msg (gossip-read in)))
+      (if (and (pair? msg)
+               (assq 'lamport-time msg)
+               (assq 'payload msg))
+          ;; Timestamped message - update clock and extract payload
+          (lamport-receive! msg)
+          ;; Not timestamped - return as-is for backward compat
+          msg)))
 
   ;; ============================================================
   ;; Peer Management
@@ -219,16 +253,27 @@
   ;; Gossip Daemon
   ;; ============================================================
 
-  (define (start-gossip-daemon local-objects #!key (interval *gossip-interval*)
-                                                   (port *gossip-port*))
+  (define (start-gossip-daemon local-objects #!key
+                                             (interval *gossip-interval*)
+                                             (port *gossip-port*)
+                                             (object-getter #f)
+                                             (object-storer #f)
+                                             (listen #t))
     "Start background gossip daemon.
 
      local-objects: procedure returning list of local object hashes
      interval: seconds between gossip rounds
-     port: listening port for incoming gossip"
+     port: listening port for incoming gossip
+     object-getter: (lambda (hash) content) to retrieve objects
+     object-storer: (lambda (hash content) void) to store objects
+     listen: if #t, also start listener for incoming connections"
 
     (when *gossip-running*
       (stop-gossip-daemon))
+
+    ;; Store callbacks
+    (set! *object-getter* object-getter)
+    (set! *object-storer* object-storer)
 
     ;; Initialize local state
     (set! *local-catalog* (make-catalog))
@@ -245,19 +290,27 @@
           (lambda ()
             (gossip-main-loop local-objects interval port)))))
 
+    ;; Optionally start listener for incoming connections
+    (when listen
+      (start-gossip-listener port local-objects object-getter))
+
     `(gossip-daemon-started
       (interval ,interval)
       (port ,port)
+      (listening ,listen)
       (peers ,(hash-table-size *peers*))
       (local-objects ,(catalog-size *local-catalog*))))
 
   (define (stop-gossip-daemon)
-    "Stop gossip daemon"
+    "Stop gossip daemon and listener"
     (set! *gossip-running* #f)
+    (stop-gossip-listener)
     (when *gossip-thread*
       (handle-exceptions exn #f
         (thread-terminate! *gossip-thread*))
       (set! *gossip-thread* #f))
+    ;; Persist Lamport clock on shutdown
+    (lamport-save!)
     'stopped)
 
   (define (gossip-status)
@@ -364,32 +417,38 @@
   ;; ============================================================
 
   (define (sync-bloom-exchange in out)
-    "Exchange Bloom filters, return candidate hashes to sync.
+    "Exchange Bloom filters and hash lists, return candidate hashes to sync.
 
      Protocol:
-     1. Send local Bloom filter
-     2. Receive remote Bloom filter
-     3. Check remote Bloom against local objects
-     4. Return objects remote has that we might not"
+     1. Send local Bloom filter + hash list
+     2. Receive remote Bloom filter + hash list
+     3. Find what remote has that we don't
+     4. Return candidates (may include false positives from Bloom)"
 
-    ;; Send our Bloom filter
-    (gossip-write (blocked-bloom-serialize *local-bloom*) out)
+    (let ((local-hashes (catalog->list *local-catalog*)))
+      ;; Send our Bloom filter and hash list
+      (gossip-write-timestamped
+        `(bloom-exchange
+          (bloom ,(blocked-bloom-serialize *local-bloom*))
+          (hashes ,local-hashes)
+          (count ,(length local-hashes)))
+        out)
 
-    ;; Receive remote Bloom filter
-    (let* ((remote-data (gossip-read in))
-           (remote-bloom (blocked-bloom-deserialize remote-data))
-           (local-hashes (catalog->list *local-catalog*)))
-
-      ;; Find what remote has that we might not
-      ;; (These are candidates - may include false positives)
-      (filter (lambda (hash)
-                (and (blocked-bloom-contains? remote-bloom (string->blob hash))
-                     ;; Check our bloom to reduce false positives
-                     (not (blocked-bloom-contains? *local-bloom* (string->blob hash)))))
-              ;; We need to check remote's objects, not ours
-              ;; This requires remote to send their hash list too
-              ;; Simplified: assume remote sends candidates in response
-              '())))
+      ;; Receive remote Bloom filter and hash list
+      (let ((response (gossip-read-timestamped in)))
+        (if (and (pair? response)
+                 (eq? (car response) 'bloom-exchange))
+            (let* ((remote-bloom-data (cadr (assq 'bloom (cdr response))))
+                   (remote-hashes (cadr (assq 'hashes (cdr response))))
+                   (remote-bloom (blocked-bloom-deserialize remote-bloom-data)))
+              ;; Find hashes remote has that we don't have locally
+              ;; Use Bloom filter to quickly filter, then check catalog
+              (filter
+                (lambda (hash)
+                  (not (catalog-contains? *local-catalog* hash)))
+                remote-hashes))
+            ;; Protocol mismatch - return empty (no sync)
+            '()))))
 
   ;; ============================================================
   ;; Layer 2: Merkle Tree Diff
@@ -400,26 +459,58 @@
 
      Protocol:
      1. Exchange Merkle roots
-     2. If roots match, synchronized
-     3. If roots differ, binary search for differences
-     4. Return exact list of missing object hashes"
+     2. If roots match, synchronized (return empty)
+     3. If roots differ, verify candidates with remote
+     4. Return exact list of hashes we are missing"
 
     ;; Send our Merkle root
-    (gossip-write `(merkle-root ,(catalog-root *local-catalog*)) out)
+    (gossip-write-timestamped
+      `(merkle-root ,(catalog-root *local-catalog*))
+      out)
 
     ;; Receive remote Merkle root
-    (let ((remote-response (gossip-read in)))
-      (if (and (pair? remote-response)
-               (eq? (car remote-response) 'merkle-root))
-          (let ((remote-root (cadr remote-response)))
-            (if (and (catalog-root *local-catalog*)
-                     remote-root
-                     (blob=? (catalog-root *local-catalog*) remote-root))
-                ;; Roots match - synchronized
-                '()
-                ;; Roots differ - need detailed diff
-                ;; (Full implementation would do binary tree walk)
-                candidates))
+    (let ((response (gossip-read-timestamped in)))
+      (if (and (pair? response)
+               (eq? (car response) 'merkle-root))
+          (let ((remote-root (cadr response))
+                (local-root (catalog-root *local-catalog*)))
+            (cond
+              ;; Both empty - synchronized
+              ((and (not local-root) (not remote-root))
+               '())
+
+              ;; Roots match - synchronized
+              ((and local-root remote-root
+                    (blob-equal? local-root remote-root))
+               '())
+
+              ;; Roots differ - verify candidates
+              ((null? candidates)
+               ;; No candidates from Bloom - nothing to sync
+               '())
+
+              (else
+               ;; Request verification of candidates
+               (sync-verify-candidates in out candidates))))
+
+          ;; Protocol error - return candidates as-is
+          candidates)))
+
+  (define (sync-verify-candidates in out candidates)
+    "Ask remote to verify which candidates they actually have.
+     Eliminates Bloom filter false positives."
+
+    ;; Send candidates for verification
+    (gossip-write-timestamped
+      `(verify-candidates ,candidates)
+      out)
+
+    ;; Receive verified list
+    (let ((response (gossip-read-timestamped in)))
+      (if (and (pair? response)
+               (eq? (car response) 'verified-missing))
+          (cadr response)
+          ;; Fallback to candidates if protocol error
           candidates)))
 
   ;; ============================================================
@@ -430,32 +521,64 @@
     "Request and receive missing objects.
 
      Protocol:
-     1. Send list of wanted hashes
-     2. Receive objects
-     3. Verify received objects
-     4. Return list of successfully received hashes"
+     1. Send list of wanted hashes (batched)
+     2. Receive objects with content
+     3. Verify hash matches content
+     4. Store verified objects
+     5. Recurse for remaining batches
+     6. Return list of successfully received hashes"
 
-    ;; Request missing objects
-    (gossip-write `(request-objects ,(take missing-hashes
-                                           (min (length missing-hashes)
-                                                *max-transfer-batch*))) out)
+    (if (null? missing-hashes)
+        '()
+        (let ((batch (take missing-hashes
+                           (min (length missing-hashes)
+                                *max-transfer-batch*))))
+          ;; Request this batch
+          (gossip-write-timestamped
+            `(request-objects ,batch)
+            out)
 
-    ;; Receive objects
-    (let ((response (gossip-read in)))
-      (if (and (pair? response)
-               (eq? (car response) 'objects))
-          (let ((objects (cdr response)))
-            ;; Verify each object hash matches content
-            (filter-map
-             (lambda (obj)
-               (let* ((hash (car obj))
-                      (content (cadr obj))
-                      (computed (blob->hex (sha256-hash content))))
-                 (if (string=? hash computed)
-                     hash  ; verified
-                     #f))) ; hash mismatch
-             objects))
-          '())))
+          ;; Receive objects
+          (let ((response (gossip-read-timestamped in)))
+            (if (and (pair? response)
+                     (eq? (car response) 'objects))
+                (let* ((objects (cdr response))
+                       (verified (filter-map verify-and-store-object objects)))
+                  ;; Update local catalog with verified hashes
+                  (for-each
+                    (lambda (hash)
+                      (catalog-add! *local-catalog* hash))
+                    verified)
+                  ;; Recurse for remaining hashes
+                  (if (> (length missing-hashes) *max-transfer-batch*)
+                      (append verified
+                              (sync-object-transfer
+                                in out
+                                (drop missing-hashes *max-transfer-batch*)))
+                      verified))
+                '())))))
+
+  (define (verify-and-store-object obj)
+    "Verify object hash matches content, store if valid.
+     Returns hash on success, #f on failure."
+    (let* ((hash (car obj))
+           (content (cadr obj))
+           (content-blob (if (blob? content)
+                             content
+                             (string->blob content)))
+           (computed (blob->hex (sha256-hash content-blob)))
+           (expected-hash (if (string-prefix? "sha256:" hash)
+                              (substring hash 7)
+                              hash)))
+      (if (string=? expected-hash computed)
+          (begin
+            ;; Store object if callback is set
+            (when *object-storer*
+              (*object-storer* hash content-blob))
+            hash)
+          (begin
+            (stat-inc! 'hash-mismatches)
+            #f))))
 
   ;; ============================================================
   ;; Helpers
@@ -472,7 +595,7 @@
                   (cons (number->string (u8vector-ref vec i) 16)
                         acc))))))
 
-  (define (blob=? a b)
+  (define (blob-equal? a b)
     "Compare two blobs"
     (let ((av (blob->u8vector a))
           (bv (blob->u8vector b)))
@@ -481,6 +604,107 @@
              (or (= i (u8vector-length av))
                  (and (= (u8vector-ref av i) (u8vector-ref bv i))
                       (loop (+ i 1))))))))
+
+  ;; ============================================================
+  ;; Server-Side Handler (Incoming Connections)
+  ;; ============================================================
+
+  (define (start-gossip-listener port local-objects-proc object-getter)
+    "Start listening for incoming gossip connections.
+
+     port: TCP port to listen on
+     local-objects-proc: procedure returning list of local hashes
+     object-getter: (lambda (hash) content) to retrieve object content"
+
+    (set! *object-getter* object-getter)
+    (set! *gossip-listener* (tcp-listen port))
+    (thread-start!
+      (make-thread
+        (lambda ()
+          (gossip-listener-loop local-objects-proc))))
+    `(gossip-listener-started (port ,port)))
+
+  (define (stop-gossip-listener)
+    "Stop listening for incoming connections."
+    (when *gossip-listener*
+      (tcp-close *gossip-listener*)
+      (set! *gossip-listener* #f))
+    'stopped)
+
+  (define (gossip-listener-loop local-objects-proc)
+    "Accept and handle incoming gossip connections."
+    (let loop ()
+      (when (and *gossip-running* *gossip-listener*)
+        (handle-exceptions exn
+          #f  ; Continue on errors
+          (let-values (((in out) (tcp-accept *gossip-listener*)))
+            (thread-start!
+              (make-thread
+                (lambda ()
+                  (handle-exceptions exn
+                    #f
+                    (handle-gossip-session in out local-objects-proc))
+                  (close-input-port in)
+                  (close-output-port out))))))
+        (loop))))
+
+  (define (handle-gossip-session in out local-objects-proc)
+    "Handle one incoming gossip session.
+     Implements server side of three-layer protocol."
+
+    (let* ((local-hashes (local-objects-proc))
+           (local-bloom (make-inventory-bloom local-hashes
+                                              error-rate: *bloom-error-rate*))
+           (local-cat (make-catalog)))
+      ;; Build local catalog
+      (for-each (lambda (h) (catalog-add! local-cat h)) local-hashes)
+
+      ;; Layer 1: Respond to Bloom exchange
+      (let ((request (gossip-read-timestamped in)))
+        (when (and (pair? request) (eq? (car request) 'bloom-exchange))
+          ;; Send our bloom and hashes
+          (gossip-write-timestamped
+            `(bloom-exchange
+              (bloom ,(blocked-bloom-serialize local-bloom))
+              (hashes ,local-hashes)
+              (count ,(length local-hashes)))
+            out)
+
+          ;; Layer 2: Respond to Merkle root request
+          (let ((request2 (gossip-read-timestamped in)))
+            (when (and (pair? request2) (eq? (car request2) 'merkle-root))
+              (gossip-write-timestamped
+                `(merkle-root ,(catalog-root local-cat))
+                out)
+
+              ;; Handle verify-candidates request
+              (let ((request3 (gossip-read-timestamped in)))
+                (when (and (pair? request3) (eq? (car request3) 'verify-candidates))
+                  (let* ((candidates (cadr request3))
+                         ;; Filter to hashes we actually have
+                         (verified (filter
+                                     (lambda (h) (member h local-hashes string=?))
+                                     candidates)))
+                    (gossip-write-timestamped
+                      `(verified-missing ,verified)
+                      out)
+
+                    ;; Layer 3: Respond to object requests
+                    (let ((request4 (gossip-read-timestamped in)))
+                      (when (and (pair? request4)
+                                 (eq? (car request4) 'request-objects))
+                        (let* ((requested (cadr request4))
+                               (objects (filter-map
+                                          (lambda (hash)
+                                            (and *object-getter*
+                                                 (let ((content (*object-getter* hash)))
+                                                   (and content (list hash content)))))
+                                          requested)))
+                          (gossip-write-timestamped
+                            `(objects ,@objects)
+                            out)
+                          (stat-inc! 'objects-sent (length objects))
+                          (stat-inc! 'sync-completed)))))))))))))
 
 ) ;; end module
 
