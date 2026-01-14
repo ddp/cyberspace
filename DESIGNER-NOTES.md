@@ -21,6 +21,22 @@ The designer was engineering lead for TCSEC C2/B1 certification on VAX/VMS and A
 
 **Inheritance:** When Cutler left for Microsoft, his modules were inherited. The privilege auditing "rototill" required fluency in MACRO-32.
 
+### The Road Not Taken
+
+**Prism/Mica** was being designed for TCSEC B1. That's the legacy—the mindset, the trust model, and the codebase—that Gates was gifted in an offer they couldn't refuse.
+
+Of all the people at DEC, Cutler—designer of the MicroVAX—could see the writing on the wall. The age of PCs had been born. Digital missed the train.
+
+**The weave predates the software.** The people who understood trust architectures kept finding each other:
+
+- DEC → Microsoft → Cisco → here
+- Peter Lofgren was there. There's a photograph of that meeting floating around in PDP-10 space.
+- The designer is good friends with Peter. He ended up at Cisco—our nexus.
+
+The thread is unbroken. From the people who built it, through the people who maintained it, to the people who understood what was lost. And now into the code.
+
+That's provenance you can't fake.
+
 ### Languages
 
 **BLISS** - Bill Wulf at CMU (1969) created BLISS as an expression language, not "DEC's C". Everything returns a value. Lisp in systems clothing.
