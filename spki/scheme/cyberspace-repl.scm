@@ -658,6 +658,7 @@
 (import ui)
 (import inspector)
 (import portal)
+(import board)
 
 ;; Initialize libsodium
 (sodium-init)
