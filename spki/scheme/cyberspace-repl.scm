@@ -5259,8 +5259,7 @@ Cyberspace REPL - Available Commands
     (else
      (print "Cyberspace Scheme")
      (print "")
-     (print "  (soup)            - Browse vault")
-     (print "  (library)         - Browse Memos")
+     (print "  (soup)            - Browse vault and library")
      (print "  (search 'topic)   - Search everything")
      (print "  (status)          - Node status")
      (print "  (inspect OBJ)     - Inspect anything")
