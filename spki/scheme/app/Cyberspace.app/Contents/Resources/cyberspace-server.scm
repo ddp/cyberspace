@@ -352,8 +352,9 @@
          ;; Unescape JSON string
          (send-to-repl (json-unescape data))))
 
-      ;; Terminal resize - ignored for pipe mode, needed for PTY
+      ;; Terminal resize - start REPL if not running, update size
       ((equal? type "resize")
+       (ensure-repl-running out)
        (let ((cols (extract-json-number "cols" msg))
              (rows (extract-json-number "rows" msg)))
          (printf "[ws] Resize: ~ax~a~n" cols rows)))
@@ -666,12 +667,15 @@
       display: flex;
       flex-direction: column;
       padding: 10px;
+      min-height: 0;  /* Allow flex child to shrink below content size */
     }
     #terminal {
       flex: 1;
+      min-height: 200px;  /* Ensure minimum height for xterm */
       background: rgba(0,0,0,0.3);
       border-radius: 4px;
       padding: 5px;
+      position: relative;
     }
     .view { display: none; flex-direction: column; height: 100%; }
     .view.active { display: flex; }
@@ -711,7 +715,14 @@
       justify-content: space-between;
     }
     /* xterm customization */
-    .xterm { height: 100%; }
+    .xterm {
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
     .xterm-viewport { overflow-y: auto !important; }
   </style>
 </head>
@@ -793,7 +804,11 @@
       term.loadAddon(new WebLinksAddon.WebLinksAddon());
 
       term.open(document.getElementById('terminal'));
-      fitAddon.fit();
+      // Delay fit until container has layout dimensions
+      setTimeout(() => {
+        fitAddon.fit();
+        term.focus();
+      }, 100);
 
       // Handle window resize
       window.addEventListener('resize', () => {

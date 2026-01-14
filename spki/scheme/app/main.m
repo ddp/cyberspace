@@ -408,7 +408,7 @@ didFinishNavigation:(WKNavigation *)navigation {
     self.window.title = @"Cyberspace";
     self.window.delegate = self;
     self.window.minSize = NSMakeSize(800, 600);
-    self.window.frameAutosaveName = @"CyberspaceMainWindow";
+    // Frame persistence handled by PreferencesManager in windowDidResize/Move
 
     // Create WebView adapter (swappable)
     self.webView = [[WKWebViewAdapter alloc] init];
