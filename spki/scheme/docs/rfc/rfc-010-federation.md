@@ -57,12 +57,12 @@ Cyberspace picks up that thread:
 ```
 The Weave
 ─────────
-     λ ─────── fluffy
-    /│\
-   λ λ λ        More lambdas in the weave.
-  /│   │\       The constellation grows.
- λ λ   λ λ      Each one a realm, enrolled,
-                mirrors reflecting mirrors.
+     λ ─────── fluffy           "What were the skies like
+    /│\                          when you were young?"
+   λ λ λ        Little fluffy clouds             — The Orb
+  /│   │\       drifting in ambient space.
+ λ λ   λ λ      Realms floating, mirrors
+                reflecting mirrors.
 ```
 
 ### Trust Philosophy
