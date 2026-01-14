@@ -42,7 +42,7 @@
 ;;; Startup Timing
 ;;; ============================================================
 
-(define *repl-start-time* (current-milliseconds))
+(define *repl-start-time* (current-process-milliseconds))
 (define *module-times* '())
 (define *module-start* 0)
 
@@ -100,11 +100,11 @@
 
 (define (module-start! name)
   "Mark start of module loading."
-  (set! *module-start* (current-milliseconds)))
+  (set! *module-start* (current-process-milliseconds)))
 
 (define (module-end! name)
   "Mark end of module loading, record timing."
-  (let ((elapsed (- (current-milliseconds) *module-start*)))
+  (let ((elapsed (- (current-process-milliseconds) *module-start*)))
     (set! *module-times* (cons (cons name elapsed) *module-times*))))
 
 (define (report-module-times)
@@ -476,7 +476,7 @@
          (title-len (string-length title))
          (left-pad (quotient (- w title-len) 2))
          (right-pad (- w title-len left-pad))
-         (start-time (current-milliseconds)))
+         (start-time (current-process-milliseconds)))
     (print "")
     (print "┌" (string-repeat "─" left-pad) title (string-repeat "─" right-pad) "┐")
     ;; Beta mode adds -strict-types for better type checking
@@ -513,7 +513,7 @@
                     (when (> (string-length line) 0)
                       (box-line line)))
                   output)
-        (let* ((elapsed (- (current-milliseconds) start-time))
+        (let* ((elapsed (- (current-process-milliseconds) start-time))
                (so-exists (file-exists? so-file))
                (so-mtime-after (file-mtime so-file))
                (so-updated (> so-mtime-after so-mtime-before))
@@ -5953,12 +5953,12 @@ Cyberspace REPL - Available Commands
 
 (define (run-test name thunk)
   "Run a single test, return (name pass? elapsed-ms message)"
-  (let ((start (current-milliseconds)))
+  (let ((start (current-process-milliseconds)))
     (handle-exceptions exn
-      (list name #f (- (current-milliseconds) start)
+      (list name #f (- (current-process-milliseconds) start)
             (sprintf "Exception: ~a" (get-condition-property exn 'exn 'message "unknown")))
       (let ((result (thunk)))
-        (list name (car result) (- (current-milliseconds) start) (cdr result))))))
+        (list name (car result) (- (current-process-milliseconds) start) (cdr result))))))
 
 ;; === Crypto Primitives ===
 
@@ -6102,7 +6102,7 @@ Cyberspace REPL - Available Commands
   (print "┌─────────────────────────────────────────────────────────────┐")
   (print "│             Cyberspace Regression Suite                     │")
   (print "├─────────────────────────────────────────────────────────────┤")
-  (let* ((start (current-milliseconds))
+  (let* ((start (current-process-milliseconds))
          ;; Run tests with spinning lambda
          (results (map (lambda (t)
                          (spin!)
@@ -6111,7 +6111,7 @@ Cyberspace REPL - Available Commands
          (_ (spin-done!))
          (passed (filter (lambda (r) (cadr r)) results))
          (failed (filter (lambda (r) (not (cadr r))) results))
-         (elapsed (- (current-milliseconds) start)))
+         (elapsed (- (current-process-milliseconds) start)))
     ;; Show each test result
     (for-each
       (lambda (r)
@@ -6373,7 +6373,7 @@ Cyberspace REPL - Available Commands
   (help))
 
 (when (>= *boot-verbosity* 1)  ; whisper+
-  (let* ((elapsed-ms (- (current-milliseconds) *repl-start-time*))
+  (let* ((elapsed-ms (- (current-process-milliseconds) *repl-start-time*))
          (elapsed-sec (/ elapsed-ms 1000.0)))
     (when (= *boot-verbosity* 1)  ; whisper: show version
       (print "Cyberspace Scheme " (git-version)))
