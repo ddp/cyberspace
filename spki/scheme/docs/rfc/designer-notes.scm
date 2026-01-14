@@ -1,16 +1,16 @@
-;; RFC-058: Designer Notes
+;; Designer Notes
 ;; Loch Lambda - the depths of the weave
 
-(rfc
-  (number 58)
+(document
   (title "Designer Notes")
   (subtitle "Loch Lambda")
   (status "Living Document")
   (date "January 2026")
+  (author "Derrell Piper" "ddp@archlinux.us")
 
   (section
     "Abstract"
-    (p "Personal history and design decisions behind Cyberspace. This RFC grows as the weave deepens."))
+    (p "Personal history and design decisions behind Cyberspace. This document grows as the weave deepens."))
 
   (section
     "1. Lineage"
@@ -49,7 +49,32 @@
       (p "A Lisper who fell in love with BLISS (an expression language, like home)."))
 
     (subsection
-      "1.4 Syntax Heritage"
+      "1.4 System Service Vocabulary"
+      (p "The VMS system service vocabulary provides the conceptual heritage for Cyberspace's security primitives.")
+      (p "The security subsystem was written exclusively in BLISS (with MACRO-32 fluency for reading the layers beneath). Now it's Scheme.")
+      (p "Access check pattern:")
+      (code "$CREATE_USER_PROFILE  →  builds encoded user security profile
+        ↓
+$CHKPRO / $CHECK_ACCESS  →  evaluates access using profile + object protection
+        ↓
+SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
+      (p "Key item codes (CHP$_*):")
+      (list
+        (item "CHP$_ACCESS → access-mask (requested access type bitmask)")
+        (item "CHP$_PROT → protection (SOGW protection mask)")
+        (item "CHP$_OWNER → owner (object owner identifier)")
+        (item "CHP$_UIC → principal (accessor's identity)")
+        (item "CHP$_PRIV → privileges (privilege mask)")
+        (item "CHP$_ACL → acl (access control list)")
+        (item "CHP$_FLAGS → flags (check options: observe/alter)"))
+      (p "Flags: CHP$V_AUDIT → audit?, CHP$V_OBSERVE → read?, CHP$V_ALTER → write?")
+      (p "Return status: SS$_NORMAL → #t, SS$_NOPRIV → #f, SS$_ACCVIO → 'accvio, SS$_IVACL → 'invalid-acl")
+      (p "Impersonation ($PERSONA_*): Used by DECdfs and distributed file services to act on behalf of remote clients without re-implementing access checks.")
+      (p "$PERSONA was designed by the DEC Distributed File System group, not VMS Engineering.")
+      (p "The original $IMPERSONATION framework was authored by myself with Rich Bouchard. It was lost during the Mitnick incidents when Andy Goldstein and I decided we needed to rebuild our compiler chain from known good offsite backups - with Ken Thompson's 'Reflections on Trusting Trust' fresh in our minds. In doing so, we lost a year of development during Alpha, including the original kernel threads implementation and the $IMPERSONATION framework."))
+
+    (subsection
+      "1.5 Syntax Heritage"
       (p "Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:")
       (code scheme "(translate text from: 'en to: 'fr)
 (enroll-request name timeout: 30)")

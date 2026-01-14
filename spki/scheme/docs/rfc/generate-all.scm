@@ -68,7 +68,7 @@
 
 (define (discover-docs)
   "Find non-RFC document files."
-  (filter file-exists? '("README.scm")))
+  (filter file-exists? '("README.scm" "designer-notes.scm")))
 
 ;;; Validation checks
 (define (validate-txt-file txt-file)
