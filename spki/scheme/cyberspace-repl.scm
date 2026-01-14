@@ -116,6 +116,27 @@
 ;;;  session-summary, format-duration, format-bytes, goodbye)
 
 ;;; ============================================================
+;;; Realm Signature - Provenance in the Weave
+;;; ============================================================
+;;; Messages should know where they came from.
+;;; The wilderness needs provenance metadata.
+
+(define *realm-signature* #f)  ; #f = use hostname, or set to symbol/string
+
+(define (realm-signature)
+  "Get current realm signature for message provenance"
+  (or *realm-signature* (hostname)))
+
+(define (realm-signature! sig)
+  "Set realm signature (symbol, string, or #f for hostname)"
+  (set! *realm-signature* sig)
+  (print "[realm-signature: " (realm-signature) "]"))
+
+(define (realm-prompt)
+  "Generate realm-aware prompt"
+  (string-append (->string (realm-signature)) "> "))
+
+;;; ============================================================
 ;;; Unicode Helpers
 ;;; ============================================================
 ;;; make-string doesn't work with multi-byte Unicode chars.
@@ -6247,10 +6268,11 @@ Cyberspace REPL - Available Commands
          (elapsed-sec (/ elapsed-ms 1000.0)))
     (when (= *boot-verbosity* 1)  ; whisper: show version
       (print "Cyberspace Scheme " (git-version)))
-    (print (format "Ready in ~a"
+    (print (format "Ready in ~a [~a]"
                    (if (< elapsed-sec 1)
                        (format "~ams" elapsed-ms)
-                       (format "~as" elapsed-sec)))))
+                       (format "~as" elapsed-sec))
+                   (realm-signature))))
   (print ""))
 
 ;; Start custom REPL
