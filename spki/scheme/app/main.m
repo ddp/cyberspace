@@ -422,9 +422,16 @@ didFinishNavigation:(WKNavigation *)navigation {
     webViewNS.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [self.window.contentView addSubview:webViewNS];
 
-    // Load the Library of Cyberspace
-    NSURL *url = [NSURL URLWithString:@"https://www.yoyodyne.com/ddp/cyberspace/spki/scheme/docs/notes/"];
-    [self.webView loadURL:url];
+    // Start the Scheme backend server
+    [self startSchemeBackend];
+
+    // Give server a moment to start, then load UI
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        NSURL *url = [NSURL URLWithString:
+                      [NSString stringWithFormat:@"http://127.0.0.1:%d/", self.backendPort]];
+        [self.webView loadURL:url];
+    });
 
     // Show window
     [self.window makeKeyAndOrderFront:nil];
