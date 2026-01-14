@@ -4267,14 +4267,14 @@ Cyberspace REPL - Available Commands
 ;;;   == CHANNEL OPEN ==
 
 ;;; Protocol message types
-(define CCP-KNOCK    #x01)
-(define CCP-COOKIE   #x02)
-(define CCP-EXCHANGE #x03)
-(define CCP-ATTEST   #x04)
-(define CCP-OFFER    #x05)
-(define CCP-CONFIRM  #x06)
-(define CCP-DATA     #x10)
-(define CCP-CLOSE    #xff)
+(define CIP-KNOCK    #x01)
+(define CIP-COOKIE   #x02)
+(define CIP-EXCHANGE #x03)
+(define CIP-ATTEST   #x04)
+(define CIP-OFFER    #x05)
+(define CIP-CONFIRM  #x06)
+(define CIP-DATA     #x10)
+(define CIP-CLOSE    #xff)
 
 ;;; ============================================================
 ;;; Algorithm Agility via Version-Locked Suites
@@ -4290,8 +4290,8 @@ Cyberspace REPL - Available Commands
 ;;; Lessons from IKEv1: SA negotiation was complexity hell.
 ;;; Lessons from Chaum: blind signatures for identity privacy.
 
-(define CCP-VERSION-MAJOR 1)
-(define CCP-VERSION-MINOR 0)
+(define CIP-VERSION-MAJOR 1)
+(define CIP-VERSION-MINOR 0)
 
 ;;; Algorithm suites by version
 ;;; Version 1.x: Modern, conservative
@@ -4313,19 +4313,19 @@ Cyberspace REPL - Available Commands
 ;;;   (sign . ed25519+dilithium)
 
 (define (ccp-version-string)
-  (string-append (number->string CCP-VERSION-MAJOR) "."
-                 (number->string CCP-VERSION-MINOR)))
+  (string-append (number->string CIP-VERSION-MAJOR) "."
+                 (number->string CIP-VERSION-MINOR)))
 
 (define (ccp-suite)
   "Get algorithm suite for current version"
-  (alist-ref CCP-VERSION-MAJOR *algorithm-suites*))
+  (alist-ref CIP-VERSION-MAJOR *algorithm-suites*))
 
 (define (ccp-check-version remote-major remote-minor)
   "Check version compatibility"
   (cond
-   ((> remote-major CCP-VERSION-MAJOR)
+   ((> remote-major CIP-VERSION-MAJOR)
     (values #f "Remote version too new - upgrade required"))
-   ((< remote-major CCP-VERSION-MAJOR)
+   ((< remote-major CIP-VERSION-MAJOR)
     (values #f "Remote version too old - they must upgrade"))
    (else
     (values #t "Compatible"))))
@@ -4376,14 +4376,14 @@ Cyberspace REPL - Available Commands
 
 (define (make-knock-payload)
   "Create KNOCK payload with version"
-  (string->blob (string-append "CCP/"
-                               (number->string CCP-VERSION-MAJOR) "."
-                               (number->string CCP-VERSION-MINOR))))
+  (string->blob (string-append "CIP/"
+                               (number->string CIP-VERSION-MAJOR) "."
+                               (number->string CIP-VERSION-MINOR))))
 
 (define (parse-knock-payload payload)
   "Parse KNOCK payload, extract version"
   (let ((str (blob->string payload)))
-    (if (string-prefix? "CCP/" str)
+    (if (string-prefix? "CIP/" str)
         (let* ((ver-str (substring str 4 (string-length str)))
                (parts (string-split ver-str "."))
                (major (string->number (car parts)))
@@ -4575,11 +4575,11 @@ Cyberspace REPL - Available Commands
 
       ;; Phase 1: KNOCK
       (print "  [Knock] Sending knock...")
-      (channel-write-msg ch CCP-KNOCK (string->blob "KNOCK"))
+      (channel-write-msg ch CIP-KNOCK (string->blob "KNOCK"))
 
       ;; Phase 2: Receive COOKIE
       (let-values (((type payload) (channel-read-msg ch)))
-        (unless (= type CCP-COOKIE)
+        (unless (= type CIP-COOKIE)
           (error "Expected COOKIE, got" type))
         (let ((cookie-r (blob->string payload)))
           (print "  [Cookie] Received: " (substring cookie-r 0 8) "...")
@@ -4597,11 +4597,11 @@ Cyberspace REPL - Available Commands
                                       (string-append cookie-r "|"
                                                      cookie-i "|"
                                                      (blob->hex (alist-ref 'public eph))))))
-              (channel-write-msg ch CCP-EXCHANGE exchange-payload))
+              (channel-write-msg ch CIP-EXCHANGE exchange-payload))
 
             ;; Receive their EXCHANGE
             (let-values (((type payload) (channel-read-msg ch)))
-              (unless (= type CCP-EXCHANGE)
+              (unless (= type CIP-EXCHANGE)
                 (error "Expected EXCHANGE, got" type))
               (let* ((parts (string-split (blob->string payload) "|"))
                      (their-public (string->blob (caddr parts))))
@@ -4629,12 +4629,12 @@ Cyberspace REPL - Available Commands
                                                  (blob->hex (alist-ref 'public eph))))
                          ;; In real impl: ed25519-sign with our key
                          (signature (blob->hex (blake2b-hash (string->blob to-sign)))))
-                    (channel-write-msg ch CCP-ATTEST
+                    (channel-write-msg ch CIP-ATTEST
                                        (string->blob (string-append principal-hex "|" signature))))
 
                   ;; Receive their ATTEST
                   (let-values (((type payload) (channel-read-msg ch)))
-                    (unless (= type CCP-ATTEST)
+                    (unless (= type CIP-ATTEST)
                       (error "Expected ATTEST, got" type))
                     (let* ((parts (string-split (blob->string payload) "|"))
                            (their-principal (car parts)))
@@ -4646,11 +4646,11 @@ Cyberspace REPL - Available Commands
                       ;; Format: (tag (set read write replicate))
                       (print "  [Offer] Sending capabilities...")
                       (let ((our-caps "(tag (* set read write replicate))"))
-                        (channel-write-msg ch CCP-OFFER (string->blob our-caps)))
+                        (channel-write-msg ch CIP-OFFER (string->blob our-caps)))
 
                       ;; Receive their OFFER
                       (let-values (((type payload) (channel-read-msg ch)))
-                        (unless (= type CCP-OFFER)
+                        (unless (= type CIP-OFFER)
                           (error "Expected OFFER, got" type))
                         ;; TODO: Parse SPKI tag s-expression properly
                         (let ((their-caps (blob->string payload)))
@@ -4663,11 +4663,11 @@ Cyberspace REPL - Available Commands
                                                    (string->blob
                                                      (string-append cookie-i cookie-r
                                                                     their-principal)))))
-                            (channel-write-msg ch CCP-CONFIRM transcript-hash)
+                            (channel-write-msg ch CIP-CONFIRM transcript-hash)
 
                             ;; Receive their CONFIRM
                             (let-values (((type payload) (channel-read-msg ch)))
-                              (unless (= type CCP-CONFIRM)
+                              (unless (= type CIP-CONFIRM)
                                 (error "Expected CONFIRM, got" type))
                               (print "  [Confirm] Verified")
 
@@ -4701,19 +4701,19 @@ Cyberspace REPL - Available Commands
 
       ;; Phase 1: Receive KNOCK
       (let-values (((type payload) (channel-read-msg ch)))
-        (unless (= type CCP-KNOCK)
+        (unless (= type CIP-KNOCK)
           (error "Expected KNOCK, got" type))
         (print "  [Knock] Received")
 
         ;; Phase 2: Send COOKIE (stateless)
         (let ((cookie-r (make-cookie "remote" 0)))  ; In real impl: actual remote addr
           (print "  [Cookie] Sending: " (substring cookie-r 0 8) "...")
-          (channel-write-msg ch CCP-COOKIE (string->blob cookie-r))
+          (channel-write-msg ch CIP-COOKIE (string->blob cookie-r))
           (set! ch (alist-update 'cookie-ours cookie-r ch))
 
           ;; Phase 3: Receive EXCHANGE
           (let-values (((type payload) (channel-read-msg ch)))
-            (unless (= type CCP-EXCHANGE)
+            (unless (= type CIP-EXCHANGE)
               (error "Expected EXCHANGE, got" type))
             (let* ((parts (string-split (blob->string payload) "|"))
                    (echoed-cookie (car parts))
@@ -4737,7 +4737,7 @@ Cyberspace REPL - Available Commands
                                           (string-append cookie-i "|"
                                                          cookie-r "|"
                                                          (blob->hex (alist-ref 'public eph))))))
-                  (channel-write-msg ch CCP-EXCHANGE exchange-payload)
+                  (channel-write-msg ch CIP-EXCHANGE exchange-payload)
                   (print "  [Exchange] Sent our public key")
 
                   ;; Derive session keys
@@ -4754,7 +4754,7 @@ Cyberspace REPL - Available Commands
 
                     ;; Phase 4: Receive ATTEST
                     (let-values (((type payload) (channel-read-msg ch)))
-                      (unless (= type CCP-ATTEST)
+                      (unless (= type CIP-ATTEST)
                         (error "Expected ATTEST, got" type))
                       (let* ((parts (string-split (blob->string payload) "|"))
                              (their-principal (car parts))
@@ -4772,12 +4772,12 @@ Cyberspace REPL - Available Commands
                                (to-sign (string-append cookie-i cookie-r
                                                        (blob->hex (alist-ref 'public eph))))
                                (signature (blob->hex (blake2b-hash (string->blob to-sign)))))
-                          (channel-write-msg ch CCP-ATTEST
+                          (channel-write-msg ch CIP-ATTEST
                                              (string->blob (string-append principal-hex "|" signature))))
 
                         ;; Phase 5: Receive OFFER
                         (let-values (((type payload) (channel-read-msg ch)))
-                          (unless (= type CCP-OFFER)
+                          (unless (= type CIP-OFFER)
                             (error "Expected OFFER, got" type))
                           ;; TODO: Parse SPKI tag s-expression properly
                           (let ((their-caps (blob->string payload)))
@@ -4788,11 +4788,11 @@ Cyberspace REPL - Available Commands
                             ;; TODO: Should be SPKI auth-certs
                             (print "  [Offer] Sending capabilities...")
                             (let ((our-caps "(tag (* set read write replicate))"))
-                              (channel-write-msg ch CCP-OFFER (string->blob our-caps)))
+                              (channel-write-msg ch CIP-OFFER (string->blob our-caps)))
 
                             ;; Phase 6: Receive CONFIRM
                             (let-values (((type payload) (channel-read-msg ch)))
-                              (unless (= type CCP-CONFIRM)
+                              (unless (= type CIP-CONFIRM)
                                 (error "Expected CONFIRM, got" type))
                               (print "  [Confirm] Verified")
 
@@ -4801,7 +4801,7 @@ Cyberspace REPL - Available Commands
                                                        (string->blob
                                                          (string-append cookie-i cookie-r
                                                                         their-principal)))))
-                                (channel-write-msg ch CCP-CONFIRM transcript-hash))
+                                (channel-write-msg ch CIP-CONFIRM transcript-hash))
 
                               ;; === CHANNEL OPEN ===
                               (channel-set-state! (alist-ref 'id ch) 'open)
@@ -4830,7 +4830,7 @@ Cyberspace REPL - Available Commands
            (key (alist-ref 'key-send ch))
            (plaintext (string->blob (format "~a" message)))
            (ciphertext (channel-encrypt key seq plaintext)))
-      (channel-write-msg ch CCP-DATA ciphertext)
+      (channel-write-msg ch CIP-DATA ciphertext)
       (print "  [Send] seq=" seq " encrypted"))))
 
 (define (channel-recv ch)
@@ -4840,13 +4840,13 @@ Cyberspace REPL - Available Commands
       (error "Channel not open"))
     (let-values (((type payload) (channel-read-msg ch)))
       (cond
-       ((= type CCP-DATA)
+       ((= type CIP-DATA)
         (let* ((seq (channel-seq-recv! id))
                (key (alist-ref 'key-recv ch))
                (plaintext (channel-decrypt key seq payload)))
           (print "  [Recv] seq=" seq " decrypted")
           (blob->string plaintext)))
-       ((= type CCP-CLOSE)
+       ((= type CIP-CLOSE)
         (channel-set-state! id 'closed)
         'closed)
        (else
@@ -4855,7 +4855,7 @@ Cyberspace REPL - Available Commands
 (define (channel-close ch)
   "Close secure channel"
   (let ((id (alist-ref 'id ch)))
-    (channel-write-msg ch CCP-CLOSE (string->blob "CLOSE"))
+    (channel-write-msg ch CIP-CLOSE (string->blob "CLOSE"))
     (channel-set-state! id 'closed)
     ;; Destroy session keys (zeroize)
     (print "  [Closed] Channel closed, keys destroyed")))
@@ -4876,7 +4876,7 @@ Cyberspace REPL - Available Commands
         (init-cookie-secret!)
         (set! *node-listener* (tcp-listen port))
         (print "Node '" *node-name* "' listening on port " port)
-        (print "  Protocol: Cyberspace Channel Protocol (CCP)")
+        (print "  Protocol: Cyberspace Channel Protocol (CIP)")
         (print "  Cookie secret initialized")
         (set! *cluster-state* 'forming)
         *node-name*)))

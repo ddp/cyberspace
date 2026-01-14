@@ -67,7 +67,7 @@
       (p "The vault is the disk.")
       (p "In VAXcluster, multiple subsystems coordinated distributed storage: MSCP served disks across nodes, the DLM managed locks, SCS handled communication, and the quorum disk arbitrated partitions. Five subsystems, complex interactions, decades of refinement.")
       (p "Cyberspace has one abstraction: the vault.")
-      (code "VAXcluster          Cyberspace\n──────────          ──────────\nShared disk    →    Vault\nMSCP           →    Gossip replication\nDLM            →    Quorum consensus\nSCS            →    CCP (secure channels)\nQuorum disk    →    Vault\nLAVC           →    Enrollment")
+      (code "VAXcluster          Cyberspace\n──────────          ──────────\nShared disk    →    Vault\nMSCP           →    Gossip replication\nDLM            →    Quorum consensus\nSCS            →    CIP (secure channels)\nQuorum disk    →    Vault\nLAVC           →    Enrollment")
       (p "The vault is content-addressed storage, replicated across nodes via gossip, with quorum state for partition handling:")
       (code scheme "(cluster-quorum\n  (epoch 42)\n  (expected-votes 5)\n  (quorum 3)\n  (members\n    (alice (votes 1) (role master))\n    (bob   (votes 1) (role full))\n    (carol (votes 1) (role full))\n    (dave  (votes 1) (role witness))\n    (eve   (votes 1) (role archive))))")
       (p "Boot sequence mirrors VAXcluster: 1. Node reads local vault → knows expected membership 2. Contacts other expected members 3. Counts responding votes 4. If ≥ quorum → cluster forms, proceed 5. If < quorum → hang, wait, retry")

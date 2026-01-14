@@ -3,15 +3,15 @@
 
 (memo
   (number 45)
-  (title "Cookie-Capability Protocol (CCP)")
+  (title "Cryptographic Imprint Protocol (CIP)")
   (section
     "Abstract"
-    (p "CCP establishes secure channels between Cyberspace nodes using stateless cookies for DoS resistance, ephemeral key exchange for forward secrecy, and capability attestation for authorization. No X.509. No CA hierarchy. No algorithm negotiation."))
+    (p "CIP establishes secure channels between Cyberspace nodes using stateless cookies for DoS resistance, ephemeral key exchange for forward secrecy, and capability attestation for authorization. No X.509. No CA hierarchy. No algorithm negotiation."))
   (section
     "Motivation"
     (p "TLS is complex: - Certificate chains require PKI - Algorithm negotiation invites downgrade attacks - State allocated before client proven real - Identity exposed before encryption")
     (p "PHOTURIS (1995) had better ideas: - Cookies before crypto - Identity under encryption - Simple state machine")
-    (p "CCP resurrects these ideas with modern primitives."))
+    (p "CIP resurrects these ideas with modern primitives."))
   (section
     "Protocol Overview"
     (code "Initiator                          Responder\n    |                                   |\n    |-------- KNOCK (version) -------->|  Stateless\n    |<-------- COOKIE -----------------|  Stateless\n    |                                   |\n    |-------- EXCHANGE (eph key) ----->|  State committed\n    |<------- EXCHANGE (eph key) ------|\n    |                                   |\n    |========= encrypted below ========|\n    |                                   |\n    |-------- ATTEST (identity) ------>|\n    |<------- ATTEST (identity) -------|\n    |                                   |\n    |-------- OFFER (capabilities) --->|\n    |<------- OFFER (capabilities) ----|\n    |                                   |\n    |-------- CONFIRM (transcript) --->|\n    |<------- CONFIRM (transcript) ----|\n    |                                   |\n    |========= CHANNEL OPEN ===========|\n    |                                   |\n    |<----------- DATA -------------->|")
@@ -35,7 +35,7 @@
   (section
     "Phase 1: KNOCK"
     (p "Initiator announces intent and protocol version.")
-    (code "KNOCK payload:\n  \"CCP/\" VERSIONMAJOR \".\" VERSIONMINOR\n\nExample: \"CCP/1.0\"")
+    (code "KNOCK payload:\n  \"CIP/\" VERSIONMAJOR \".\" VERSIONMINOR\n\nExample: \"CIP/1.0\"")
     (p "Responder checks version compatibility: - Major mismatch: reject (incompatible suites) - Minor mismatch: accept (backward compatible)")
     (p "Responder allocates no state."))
   (section
@@ -91,7 +91,7 @@
     "Algorithm Suites"
     (p "No runtime negotiation. Version determines suite.")
     (subsection
-      "CCP/1.x (Current)"
+      "CIP/1.x (Current)"
       (table
         (header "Function " "Algorithm ")
         (row "Key Exchange " "X25519 ")
@@ -100,7 +100,7 @@
         (row "Hash " "BLAKE2b ")
         (row "KDF " "HKDF-BLAKE2b ")))
     (subsection
-      "CCP/2.x (Reserved: Post-Quantum)"
+      "CIP/2.x (Reserved: Post-Quantum)"
       (table
         (header "Function " "Algorithm ")
         (row "Key Exchange " "Kyber-1024 ")
@@ -108,7 +108,7 @@
         (row "AEAD " "ChaCha20-Poly1305 ")
         (row "Hash " "BLAKE2b ")))
     (subsection
-      "CCP/3.x (Reserved: Hybrid)"
+      "CIP/3.x (Reserved: Hybrid)"
       (table
         (header "Function " "Algorithm ")
         (row "Key Exchange " "X25519 + Kyber ")
@@ -137,14 +137,14 @@
   (section
     "Comparison"
     (table
-      (header "Property " "TLS 1.3 " "IKEv2 " "CCP ")
+      (header "Property " "TLS 1.3 " "IKEv2 " "CIP ")
       (row "Messages to establish " "2-3 " "4+ " "10 ")
       (row "DoS resistance " "Limited " "Cookies " "Cookies ")
       (row "Algorithm negotiation " "Yes " "Yes " "No ")
       (row "Certificate required " "Yes " "Yes " "No ")
       (row "Identity protection " "Partial " "Yes " "Yes ")
       (row "Capability binding " "No " "No " "Yes "))
-    (p "CCP trades fewer round-trips for simplicity and capability integration."))
+    (p "CIP trades fewer round-trips for simplicity and capability integration."))
   (section
     "Implementation"
     (code scheme ";; Initiator\n(define ch (node-connect \"remote.host\" 4433))\n(channel-send ch '(request object-hash))\n(channel-recv ch)\n\n;; Responder\n(node-listen 4433 \"my-node\")\n(define ch (node-accept))\n(let ((msg (channel-recv ch)))\n  (channel-send ch (process msg)))"))
