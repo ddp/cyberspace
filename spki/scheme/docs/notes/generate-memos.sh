@@ -35,7 +35,7 @@ check_duplicates() {
   local prev_num=""
   local prev_rfc=""
   for rfc in "$@"; do
-    local num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/')
+    local num=$(echo "$rfc" | sed 's/memo-\([0-9]*\)-.*/\1/')
     if [[ -n "$prev_num" && "$num" == "$prev_num" ]]; then
       echo "WARNING: Duplicate Memo number $num:" >&2
       echo "  - $prev_rfc" >&2
@@ -208,7 +208,7 @@ HEADER
 
   for rfc in "${MEMOS[@]}"; do
     local title=$(get_title "$rfc")
-    local num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/' | sed 's/^0*\([0-9]\)/\1/')
+    local num=$(echo "$rfc" | sed 's/memo-\([0-9]*\)-.*/\1/' | sed 's/^0*\([0-9]\)/\1/')
     local formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
     cat >> index.html << EOF
@@ -232,7 +232,7 @@ MIDDLE
 
   # Generate and sort KWIC entries alphabetically by keyword
   generate_kwic_entries | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc; do
-    local num=$(echo "$rfc" | sed 's/rfc-\([0-9]*\)-.*/\1/' | sed 's/^0*\([0-9]\)/\1/')
+    local num=$(echo "$rfc" | sed 's/memo-\([0-9]*\)-.*/\1/' | sed 's/^0*\([0-9]\)/\1/')
     cat >> index.html << EOF
       <tr>
         <td class="left">${left}</td>
@@ -377,14 +377,14 @@ echo "=== Publishing to yoyodyne ==="
 YOYODYNE_HOST="ddp@www.yoyodyne.com"
 YOYODYNE_BASE="/www/yoyodyne/ddp/cyberspace"
 YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
-YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/notes/"
+YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/rfc/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_RFC_PATH"
   rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
   echo "  -> $YOYODYNE_RFC_PATH"
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
-  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/notes/"
+  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/rfc/"
 else
   echo "  [skip] Cannot reach yoyodyne"
 fi
