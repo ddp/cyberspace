@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Memo 033: Schema Evolution</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 033: Schema Evolution</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies schema evolution for the Library of Cyberspace: how soup metadata schemas change over time while maintaining backward compatibility, migration paths, and query consistency. Schemas are themselves content-addressed objects.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>Data outlives code:</p>
+<ul>
+<li>Long-term preservation</li>
+<li>Data must remain readable for centuries</li>
+<li>Software updates</li>
+<li>New versions need new fields</li>
+<li>Federation</li>
+<li>Different vaults may have different schema versions</li>
+<li>Rollback</li>
+<li>Must handle downgrades gracefully</li>
+</ul>
+<p>Schema evolution must be:</p>
+<ul>
+<li>Non-breaking</li>
+<li>Old data remains accessible</li>
+<li>Bidirectional</li>
+<li>Upgrade and downgrade paths</li>
+<li>Explicit</li>
+<li>Changes documented and versioned</li>
+<li>Verifiable</li>
+<li>Schema validation at boundaries</li>
+</ul>
+</section>
+<section>
+<h2>Schema Model</h2>
+<h3>Schema Definition</h3>
+<pre class="language-scheme">
+(define-schema 'document
+  (version 1)
+  (fields
+    (hash (type string) (required #t) (indexed #t))
+    (name (type string) (required #t))
+    (content-type (type string) (required #t))
+    (size (type integer) (required #t))
+    (created (type timestamp) (required #t))
+    (modified (type timestamp) (required #f))
+    (author (type principal) (required #f))
+    (tags (type (list string)) (required #f) (default '()))))
+</pre>
+<h3>Schema as Content-Addressed Object</h3>
+<pre class="language-scheme">
+;; Schemas are soup objects
+(soup-object
+  (hash "sha256:schema-hash...")
+  (type schema)
+  (name document)
+  (version 1)
+  (fields ...)
+  (created "2026-01-01"))
+
+;; Reference schema by hash for reproducibility
+(define (validate-against-schema obj schema-hash)
+  (let ((schema (soup-get schema-hash)))
+    (validate-object obj schema)))
+</pre>
+<h3>Schema Registry</h3>
+<pre class="language-scheme">
+(define schema-registry (make-hash-table))
+
+(define (register-schema! schema)
+  (let* ((name (schema-name schema))
+         (version (schema-version schema))
+         (hash (soup-put schema type: 'schema)))
+    (hash-table-set! schema-registry (cons name version) hash)
+    (audit-append action: 'schema-registered
+                  name: name
+                  version: version
+                  hash: hash)
+    hash))
+
+(define (get-schema name #!optional version)
+  "Get schema by name and optional version"
+  (if version
+      (soup-get (hash-table-ref schema-registry (cons name version)))
+      (get-latest-schema name)))
+</pre>
+</section>
+<section>
+<h2>Evolution Rules</h2>
+<h3>Compatible Changes</h3>
+<pre class="language-scheme">
+;; These changes are backward compatible
+(define compatible-changes
+  '(add-optional-field      ; New field with default
+    add-index               ; New index on existing field
+    widen-type              ; integer -&gt; number
+    relax-constraint        ; required -&gt; optional
+    add-enum-value))        ; Extend enumeration
+
+(define (change-compatible? old-schema new-schema)
+  "Check if schema change is backward compatible"
+  (let ((changes (diff-schemas old-schema new-schema)))
+    (every compatible-change? changes)))
+</pre>
+<h3>Breaking Changes</h3>
+<pre class="language-scheme">
+;; These changes require migration
+(define breaking-changes
+  '(remove-field            ; Field no longer exists
+    add-required-field      ; New required field without default
+    narrow-type             ; number -&gt; integer
+    tighten-constraint      ; optional -&gt; required
+    remove-enum-value       ; Shrink enumeration
+    rename-field))          ; Field name changed
+
+(define (requires-migration? old-schema new-schema)
+  "Check if migration needed"
+  (let ((changes (diff-schemas old-schema new-schema)))
+    (any breaking-change? changes)))
+</pre>
+</section>
+<section>
+<h2>Version Management</h2>
+<h3>Semantic Versioning</h3>
+<pre class="language-scheme">
+;; Schema versions follow semver
+(define (schema-version-compare v1 v2)
+  (let ((major1 (version-major v1)) (major2 (version-major v2))
+        (minor1 (version-minor v1)) (minor2 (version-minor v2))
+        (patch1 (version-patch v1)) (patch2 (version-patch v2)))
+    (cond
+      ((not (= major1 major2)) (- major1 major2))
+      ((not (= minor1 minor2)) (- minor1 minor2))
+      (else (- patch1 patch2)))))
+
+;; Major: breaking changes
+;; Minor: compatible additions
+;; Patch: documentation/fixes
+</pre>
+<h3>Version History</h3>
+<pre class="language-scheme">
+(define (schema-history name)
+  "Get all versions of a schema"
+  (soup-query type: 'schema
+              name: name
+              order-by: '((version desc))))
+
+(define (schema-lineage name version)
+  "Get evolution path to current version"
+  (let ((schema (get-schema name version)))
+    (if (schema-parent schema)
+        (cons schema (schema-lineage name (schema-parent-version schema)))
+        (list schema))))
+</pre>
+</section>
+<section>
+<h2>Migration</h2>
+<h3>Migration Definition</h3>
+<pre class="language-scheme">
+(define-migration 'document-v1-to-v2
+  (from-schema 'document (version 1))
+  (to-schema 'document (version 2))
+  (up (lambda (obj)
+        ;; Add new field with default
+        (assoc-set obj 'visibility 'private)))
+  (down (lambda (obj)
+          ;; Remove new field
+          (assoc-remove obj 'visibility))))
+</pre>
+<h3>Migration Execution</h3>
+<pre class="language-scheme">
+(define (migrate-object obj from-version to-version)
+  "Migrate object between schema versions"
+  (let ((migrations (find-migration-path from-version to-version)))
+    (fold (lambda (migration obj)
+            ((migration-up migration) obj))
+          obj
+          migrations)))
+
+(define (find-migration-path from to)
+  "Find sequence of migrations between versions"
+  (let ((direction (if (&gt; to from) 'up 'down)))
+    (filter (lambda (m)
+              (and (eq? (migration-direction m) direction)
+                   (version-in-range? (migration-from m) from to)))
+            (all-migrations))))
+</pre>
+<h3>Lazy Migration</h3>
+<pre class="language-scheme">
+;; Migrate on read, not on upgrade
+(define (soup-get-migrated hash)
+  "Get object, migrating if necessary"
+  (let ((obj (soup-get-raw hash))
+         (obj-version (object-schema-version obj))
+         (current-version (current-schema-version (object-type obj))))
+    (if (= obj-version current-version)
+        obj
+        (let ((migrated (migrate-object obj obj-version current-version)))
+          ;; Optionally persist migrated version
+          (when persist-migrations*
+            (soup-put-raw migrated))
+          migrated))))
+</pre>
+<h3>Batch Migration</h3>
+<pre class="language-scheme">
+(define (batch-migrate schema-name from-version to-version)
+  "Migrate all objects of a schema"
+  (let ((objects (soup-query type: schema-name
+                             schema-version: from-version)))
+    (for-each (lambda (obj)
+                (let ((migrated (migrate-object obj from-version to-version)))
+                  (soup-update (object-hash obj) migrated)
+                  (audit-append action: 'object-migrated
+                                hash: (object-hash obj)
+                                from: from-version
+                                to: to-version)))
+              objects)))
+</pre>
+</section>
+<section>
+<h2>Validation</h2>
+<h3>Schema Validation</h3>
+<pre class="language-scheme">
+(define (validate-object obj schema)
+  "Validate object against schema"
+  (let ((errors '()))
+    ;; Check required fields
+    (for-each (lambda (field)
+                (when (and (field-required? field)
+                           (not (assoc-ref obj (field-name field))))
+                  (set! errors (cons (missing-required ,(field-name field))
+                                    errors))))
+              (schema-fields schema))
+
+    ;; Check field types
+    (for-each (lambda (pair)
+                (let* ((name (car pair))
+                       (value (cdr pair))
+                       (field (schema-field schema name)))
+                  (when (and field (not (type-matches? value (field-type field))))
+                    (set! errors (cons (type-mismatch ,name) errors)))))
+              obj)
+
+    (if (null? errors)
+        (result-ok obj)
+        (result-err errors))))
+</pre>
+<h3>Validation Modes</h3>
+<pre class="language-scheme">
+(define validation-mode (make-parameter 'strict))
+
+(define (validate-with-mode obj schema)
+  (case (validation-mode)
+    ((strict)
+     ;; All fields must match schema
+     (validate-object obj schema))
+    ((permissive)
+     ;; Extra fields allowed
+     (validate-required-fields obj schema))
+    ((warn)
+     ;; Log warnings but don't fail
+     (let ((result (validate-object obj schema)))
+       (when (result-err? result)
+         (log-warn "Validation errors" errors: (result-error result)))
+       (result-ok obj)))))
+</pre>
+</section>
+<section>
+<h2>Federation Compatibility</h2>
+<h3>Schema Negotiation</h3>
+<pre class="language-scheme">
+(define (negotiate-schema peer schema-name)
+  "Negotiate compatible schema version with peer"
+  (let* ((local-versions (local-schema-versions schema-name))
+         (peer-versions (request-schema-versions peer schema-name))
+         (compatible (intersection local-versions peer-versions)))
+    (if (null? compatible)
+        (error 'no-compatible-schema)
+        (max compatible))))
+
+(define (sync-with-schema-version peer schema-name version)
+  "Sync objects using negotiated schema version"
+  (for-each (lambda (obj)
+              (let ((converted (convert-to-version obj version)))
+                (send-object peer converted)))
+            (objects-to-sync schema-name)))
+</pre>
+<h3>Cross-Version Queries</h3>
+<pre class="language-scheme">
+(define (query-with-version-tolerance query)
+  "Query that handles mixed schema versions"
+  (let* ((results (soup-query-raw query))
+         (current-version (current-schema-version (query-type query))))
+    (map (lambda (obj)
+           (if (= (object-schema-version obj) current-version)
+               obj
+               (migrate-object obj (object-schema-version obj) current-version)))
+         results)))
+</pre>
+</section>
+<section>
+<h2>Schema Introspection</h2>
+<h3>Schema Queries</h3>
+<pre class="language-scheme">
+;; What schemas exist?
+(soup-query type: 'schema)
+
+;; What versions of a schema?
+(soup-query type: 'schema name: 'document)
+
+;; What fields in a schema?
+(schema-fields (get-schema 'document 2))
+
+;; Schema dependency graph
+(define (schema-dependencies schema)
+  (filter-map (lambda (field)
+                (when (schema-reference? (field-type field))
+                  (field-type-target field)))
+              (schema-fields schema)))
+</pre>
+<h3>Schema Documentation</h3>
+<pre class="language-scheme">
+(define-schema 'document
+  (version 2)
+  (description "A document stored in the vault")
+  (fields
+    (hash
+      (type string)
+      (required #t)
+      (indexed #t)
+      (description "Content-addressed hash of document"))
+    (name
+      (type string)
+      (required #t)
+      (description "Human-readable document name")
+      (example "RFC-033-schema-evolution.md"))))
+</pre>
+</section>
+<section>
+<h2>Default Values</h2>
+<h3>Static Defaults</h3>
+<pre class="language-scheme">
+(define-schema 'document
+  (version 2)
+  (fields
+    (visibility
+      (type enum)
+      (values (public private restricted))
+      (default 'private))
+    (tags
+      (type (list string))
+      (default '()))))
+</pre>
+<h3>Computed Defaults</h3>
+<pre class="language-scheme">
+(define-schema 'document
+  (version 2)
+  (fields
+    (created
+      (type timestamp)
+      (default (current-time)))
+    (id
+      (type string)
+      (default (generate-uuid)))))
+</pre>
+<h3>Migration Defaults</h3>
+<pre class="language-scheme">
+;; Default for objects migrated from v1 to v2
+(define-migration 'document-v1-to-v2
+  (defaults
+    (visibility (lambda (obj)
+                  ;; Infer from existing data
+                  (if (assoc-ref obj 'public)
+                      'public
+                      'private)))))
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Schema Tampering</h3>
+<pre class="language-scheme">
+;; Schemas are content-addressed - tampering detectable
+(define (verify-schema-integrity schema-hash)
+  (let* ((schema (soup-get schema-hash))
+         (computed-hash (content-hash (serialize schema))))
+    (equal? schema-hash computed-hash)))
+</pre>
+<h3>Migration Authorization</h3>
+<pre class="language-scheme">
+;; Migrations require capability
+(spki-cert
+  (issuer vault-admin)
+  (subject schema-admin)
+  (capability
+    (action migrate-schema)
+    (object (schema 'document)))
+  (validity (not-after "2027-01-01")))
+</pre>
+</section>
+<section>
+<h2>References</h2>
+<p>1. [Protocol Buffers - Updating A Message Type](https://developers.google.com/protocol-buffers/docs/proto#updating) 2. [Avro Schema Evolution](https://avro.apache.org/docs/current/spec.html#Schema+Resolution) 3. [RFC-020: Content-Addressed Storage](rfc-020-content-addressed-storage.html) 4. [RFC-025: Query Language](rfc-025-query-language.html)</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-07</li>
+<li>Initial draft</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

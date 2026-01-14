@@ -1,0 +1,448 @@
+%!PS-Adobe-3.0
+%%Title: memo-009-library-directory
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 009: Library Directory System) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies the Library Directory System for the Library of) show newline
+(Cyberspace: a searchable catalog of research papers with natural) show newline
+(language queries, fuzzy matching, and beautiful output. Finding) show newline
+(knowledge should be delightful.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(E PLURIBUS UNUM) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    +---------------------------------------------------------------+) show newline
+(    |  📚 Cyberspace Library Directory                               |) show newline
+(    |  Finding knowledge should be joyful                            |) show newline
+(    +---------------------------------------------------------------+) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The Library of Cyberspace contains 421+ research papers spanning 50) show newline
+(years of computing history. Without a catalog:) show newline
+() show newline
+(  * Discoverability: How to find Lamport's clock paper?) show newline
+(  * Connections: What relates to SPKI?) show newline
+(  * Context: When was this written? By whom?) show newline
+() show newline
+(The Directory System provides:) show newline
+() show newline
+(1. Natural language search - "papers by Lampson about protection" 2.) show newline
+(Multi-index access - By author, topic, year, collection 3. Fuzzy) show newline
+(matching - "Lamp" finds Lampson and Lamport 4. Beautiful output -) show newline
+(Unicode, emoji, formatted results 5. S-expression export -) show newline
+(Machine-readable catalogs) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DATA MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Document Record) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <document>) show newline
+(      \(make-document title authors year topics file-path) show newline
+(                     collection source-url description\)) show newline
+(      document?) show newline
+(      \(title document-title\)) show newline
+(      \(authors document-authors\)      ; List of strings) show newline
+(      \(year document-year\)            ; Integer or #f) show newline
+(      \(topics document-topics\)        ; List of strings) show newline
+(      \(file-path document-file-path\)) show newline
+(      \(collection document-collection\)) show newline
+(      \(source-url document-source-url\)) show newline
+(      \(description document-description\)\)) show newline
+() show newline
+() show newline
+(Collection Record) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <collection>) show newline
+(      \(make-collection name path documents description\)) show newline
+(      collection?) show newline
+(      \(name collection-name\)) show newline
+(      \(path collection-path\)) show newline
+(      \(documents collection-documents\)  ; List of documents) show newline
+(      \(description collection-description\)\)) show newline
+() show newline
+() show newline
+(Library Record) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <library>) show newline
+(      \(make-library collections documents) show newline
+(                    author-index topic-index year-index collection-index\)) show newline
+(      library?) show newline
+(      \(collections library-collections\)) show newline
+(      \(documents library-documents\)) show newline
+(      \(author-index library-author-index\)     ; Hash table) show newline
+(      \(topic-index library-topic-index\)       ; Hash table) show newline
+(      \(year-index library-year-index\)         ; Hash table) show newline
+(      \(collection-index library-collection-index\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INDEX SYSTEM) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Four hash table indexes for O\(1\) lookup:) show newline
+() show newline
+() show newline
+(    author-index:     "Lamport" > [doc1, doc2, doc5, ...]) show newline
+(    topic-index:      "cryptography" > [doc3, doc7, doc12, ...]) show newline
+(    year-index:       1978 > [doc1, doc4, ...]) show newline
+(    collection-index: "lampson" > <collection>) show newline
+() show newline
+() show newline
+(Building Indexes) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(build-author-index documents\)) show newline
+(      \(let \(\(index \(make-hash-table equal?\)\)\)) show newline
+(        \(for-each) show newline
+(          \(lambda \(doc\)) show newline
+(            \(for-each) show newline
+(              \(lambda \(author\)) show newline
+(                \(hash-table-update!/default) show newline
+(                  index) show newline
+(                  \(normalize-author author\)) show newline
+(                  \(lambda \(docs\) \(cons doc docs\)\)) show newline
+(                  '\(\)\)\)) show newline
+(              \(document-authors doc\)\)\)) show newline
+(          documents\)) show newline
+(        index\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUERY INTERFACE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Natural Language Parsing) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(parse-query "papers by Lampson about protection"\)) show newline
+(    ;; => \(query \(author "Lampson"\) \(topic "protection"\)\)) show newline
+(    \(parse-query "from 1978"\)) show newline
+(    ;; => \(query \(year 1978\)\)) show newline
+(    \(parse-query "SPKI certificates"\)) show newline
+(    ;; => \(query \(topic "SPKI"\) \(topic "certificates"\)\)) show newline
+() show newline
+(Recognized Patterns: - by <name> > author search - about <topic> > topic) show newline
+(search - from <year> > year search - in <collection> > collection filter) show newline
+(- Bare words > topic search) show newline
+() show newline
+() show newline
+(Fuzzy Matching) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(fuzzy-match "Lamp" author-list\)) show newline
+(    ;; => \("Lampson" "Lamport"\)) show newline
+(    \(fuzzy-match "crypto" topic-list\)) show newline
+(    ;; => \("cryptography" "cryptographic" "encryption"\)) show newline
+() show newline
+(Matching strategies: 1. Exact match \(highest priority\) 2.) show newline
+(Case-insensitive match 3. Prefix match 4. Substring match) show newline
+() show newline
+() show newline
+(Query Functions) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(find-by-author library "Lampson"\)) show newline
+(    \(find-by-topic library "SPKI"\)) show newline
+(    \(find-by-year library 1978\)) show newline
+(    \(find-by-collection library "lampson"\)) show newline
+(    \(find-related library document\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REPL INTERFACE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Interactive Session) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    $ csi -s directory-repl.scm) show newline
+(    +---------------------------------------------------------------+) show newline
+(    |  📚 Cyberspace Library Directory                               |) show newline
+(    |  "E Pluribus Unum" - Finding knowledge should be joyful        |) show newline
+(    +---------------------------------------------------------------+) show newline
+(    Loaded 312 documents from 18 collections) show newline
+(    Type 'help' for search tips, 'quit' to exit) show newline
+(    📖 > papers by Rivest) show newline
+(    📚 Found 3 documents:) show newline
+(     [1] SDSI: A Simple Distributed Security Infrastructure) show newline
+(         👤 R. Rivest, B. Lampson) show newline
+(         📅 1996  📁 lampson) show newline
+(     [2] SPKI Certificate Theory) show newline
+(         👤 C. Ellison, B. Frantz, B. Lampson, R. Rivest, ...) show newline
+(         📅 1999  📁 lampson) show newline
+(    📖 > about SPKI) show newline
+(    📚 Found 8 documents:) show newline
+(    ...) show newline
+(    📖 > stats) show newline
+(    Library Statistics:) show newline
+(      📚 Documents: 312) show newline
+(      📁 Collections: 18) show newline
+(      👤 Authors: 245) show newline
+(      🏷️ Topics: 89) show newline
+(      📅 Years: 1971-2024) show newline
+(    📖 > quit) show newline
+(    Happy exploring! 📚✨) show newline
+() show newline
+() show newline
+(Commands) show newline
+(--------) show newline
+() show newline
+() show newline
+(  Command       Description              ) show newline
+(  help          Show search tips         ) show newline
+(  stats         Library statistics       ) show newline
+(  collections   List all collections     ) show newline
+(  authors       Show author index        ) show newline
+(  topics        Show topic index         ) show newline
+(  years         Show year distribution   ) show newline
+(  quit          Exit REPL                ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INDEX.MD PARSER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Each collection contains an INDEX.md with paper listings:) show newline
+() show newline
+() show newline
+(    # Lampson Collection) show newline
+(    Butler Lampson's papers on protection, capability systems, and distributed computing.) show newline
+(    ## Papers) show newline
+(    1. Protection \(1971\)) show newline
+(       - Author: Butler Lampson) show newline
+(       - Topics: capability, protection, access control) show newline
+(       - Source: ACM Operating Systems Review) show newline
+(    2. Hints for Computer System Design \(1983\)) show newline
+(       - Author: Butler Lampson) show newline
+(       - Topics: systems design, engineering) show newline
+(       - Source: ACM Operating Systems Review) show newline
+() show newline
+() show newline
+(Parser Output) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(parse-index-file "lampson/INDEX.md"\)) show newline
+(    ;; =>) show newline
+(    \(collection) show newline
+(      \(name "lampson"\)) show newline
+(      \(description "Butler Lampson's papers..."\)) show newline
+(      \(documents) show newline
+(        \(\(title "Protection"\)) show newline
+(         \(authors "Butler Lampson"\)) show newline
+(         \(year 1971\)) show newline
+(         \(topics "capability" "protection" "access control"\)\)) show newline
+(        ...\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EXPORT FORMATS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(S-expression Export) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(export-to-sexp library "catalog.sexp"\)) show newline
+() show newline
+(Output:) show newline
+() show newline
+() show newline
+(    \(library) show newline
+(      \(metadata) show newline
+(        \(document-count 312\)) show newline
+(        \(collection-count 18\)) show newline
+(        \(generated "2026-01-06"\)\)) show newline
+(      \(collections) show newline
+(        \(collection) show newline
+(          \(name "lampson"\)) show newline
+(          \(documents) show newline
+(            \(document) show newline
+(              \(title "Protection"\)) show newline
+(              \(authors \("Butler Lampson"\)\)) show newline
+(              \(year 1971\)) show newline
+(              \(topics \("capability" "protection"\)\)\)) show newline
+(            ...\)\)) show newline
+(        ...\)\)) show newline
+() show newline
+() show newline
+(HTML Export) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(export-to-html library "catalog.html"\)) show newline
+() show newline
+(Generates browsable web catalog with: - Alphabetical author index -) show newline
+(Topic tag cloud - Year timeline - Search functionality) show newline
+() show newline
+() show newline
+(Markdown Export) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(export-to-markdown library "catalog.md"\)) show newline
+() show newline
+(Documentation-friendly format for README files.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DESIGN PHILOSOPHY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Super Nice and Helpful) show newline
+(----------------------) show newline
+() show newline
+(  * Natural language understanding) show newline
+(  * Fuzzy matching catches typos) show newline
+(  * Suggestions for empty results) show newline
+(  * Encouraging prompts) show newline
+() show newline
+() show newline
+(Beautiful Output) show newline
+(----------------) show newline
+() show newline
+(  * Unicode box drawing \(+---+\)) show newline
+(  * Emoji visual markers \(📖 📚 👤 📅\)) show newline
+(  * Consistent formatting) show newline
+(  * Progressive disclosure) show newline
+() show newline
+() show newline
+(Hone In On What You Need) show newline
+(------------------------) show newline
+() show newline
+(  * Multi-strategy search) show newline
+(  * Progressive filtering) show newline
+(  * Cross-references) show newline
+(  * Related paper discovery) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(No Execution) show newline
+(------------) show newline
+() show newline
+(The directory system is read-only: - Parses INDEX.md files \(trusted\) -) show newline
+(No code execution - No network access - No file modification) show newline
+() show newline
+() show newline
+(Path Traversal) show newline
+(--------------) show newline
+() show newline
+(File paths validated: - Must be within library root - No .. components -) show newline
+(Normalized before use) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Dependencies) show newline
+(------------) show newline
+() show newline
+(  * srfi-1) show newline
+(  * List utilities - srfi-13) show newline
+(  * String utilities - srfi-69) show newline
+(  * Hash tables - chicken file) show newline
+(  * Directory scanning) show newline
+() show newline
+() show newline
+(Performance) show newline
+(-----------) show newline
+() show newline
+(  * Index building: O\(N\) documents) show newline
+(  * Query: O\(1\) hash lookup + O\(M\) result filtering) show newline
+(  * Fuzzy match: O\(K\) candidates) show newline
+() show newline
+() show newline
+(Extensibility) show newline
+(-------------) show newline
+() show newline
+(Future enhancements: - Full-text search \(PostScript/Text extraction\) -) show newline
+(Citation graph visualization - BibTeX export - Web API server - Semantic) show newline
+(search with embeddings) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Dublin Core Metadata Initiative 2. Library of Congress Subject) show newline
+(Headings 3. BibTeX format specification 4. Unicode Standard for box) show newline
+(drawing) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

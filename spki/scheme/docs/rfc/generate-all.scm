@@ -1,9 +1,9 @@
 #!/usr/bin/env csi -q
-;;; generate-all.scm - Generate all RFC formats from S-expression sources
+;;; generate-all.scm - Generate all Memo formats from S-expression sources
 ;;;
 ;;; Usage: csi -q generate-all.scm
 ;;;
-;;; Processes all rfc-*.scm files and generates .txt, .html, .ps
+;;; Processes all memo-*.scm files and generates .txt, .html, .ps
 
 (import scheme
         (chicken base)
@@ -19,21 +19,21 @@
         srfi-1
         srfi-13)
 
-(load "rfc-format.scm")
+(load "memo-format.scm")
 
-(define (discover-rfcs)
-  "Find all RFC S-expression source files."
-  (let ((files (glob "rfc-*.scm")))
+(define (discover-memos)
+  "Find all Memo S-expression source files."
+  (let ((files (glob "memo-*.scm")))
     (sort (filter (lambda (f)
-                    (and (not (string=? f "rfc-format.scm"))
+                    (and (not (string=? f "memo-format.scm"))
                          (not (string=? f "md2scm.scm"))
                          (not (string=? f "generate-all.scm"))))
                   files)
           string<?)))
 
-(define (rfc-number filename)
-  "Extract RFC number from filename for sorting."
-  (let ((m (irregex-match "rfc-([0-9]+)" filename)))
+(define (memo-number filename)
+  "Extract Memo number from filename for sorting."
+  (let ((m (irregex-match "memo-([0-9]+)" filename)))
     (if m
         (string->number (irregex-match-substring m 1))
         999)))
@@ -44,30 +44,30 @@
       (> (file-modification-time source)
          (file-modification-time target))))
 
-(define (generate-rfc rfc-file)
-  "Generate all formats for one RFC."
-  (let* ((base (pathname-strip-extension rfc-file))
+(define (generate-rfc memo-file)
+  "Generate all formats for one Memo."
+  (let* ((base (pathname-strip-extension memo-file))
          (txt-file (string-append base ".txt"))
          (html-file (string-append base ".html"))
          (ps-file (string-append base ".ps")))
 
     ;; Check if regeneration needed (also check formatter itself)
-    (when (or (file-newer? rfc-file txt-file)
-              (file-newer? rfc-file html-file)
-              (file-newer? rfc-file ps-file)
-              (file-newer? "rfc-format.scm" txt-file))
+    (when (or (file-newer? memo-file txt-file)
+              (file-newer? memo-file html-file)
+              (file-newer? memo-file ps-file)
+              (file-newer? "memo-format.scm" txt-file))
 
       (condition-case
-        (let ((doc (read-rfc rfc-file)))
-          (rfc->txt doc txt-file)
-          (rfc->html doc html-file)
-          (rfc->ps doc ps-file)
+        (let ((doc (read-memo memo-file)))
+          (memo->txt doc txt-file)
+          (memo->html doc html-file)
+          (memo->ps doc ps-file)
           (print "  " base ": txt html ps"))
         (e ()
           (print "  " base ": FAILED - " (get-condition-property e 'exn 'message "")))))))
 
 (define (discover-docs)
-  "Find non-RFC document files."
+  "Find non-Memo document files."
   (filter file-exists? '("README.scm")))
 
 ;;; Validation checks
@@ -87,7 +87,7 @@
     errors))
 
 (define (validate-outputs base)
-  "Validate all output files for an RFC."
+  "Validate all output files for an Memo."
   (let* ((txt-file (string-append base ".txt"))
          (errors (if (file-exists? txt-file)
                      (validate-txt-file txt-file)
@@ -97,14 +97,14 @@
     (null? errors)))
 
 (define (main)
-  (print "=== RFC Generation (S-expression Pipeline) ===")
+  (print "=== Memo Generation (S-expression Pipeline) ===")
   (print "")
 
   (let* ((start-time (current-milliseconds))
-         (rfcs (discover-rfcs))
+         (rfcs (discover-memos))
          (docs (discover-docs))
          (all-files (append rfcs docs)))
-    (print "Found " (length rfcs) " RFCs, " (length docs) " docs")
+    (print "Found " (length rfcs) " Memos, " (length docs) " docs")
     (print "")
 
     (for-each generate-rfc all-files)
@@ -127,8 +127,8 @@
       (print "Done in " (if (< elapsed-sec 1)
                             (string-append (number->string elapsed-ms) "ms")
                             (string-append (number->string elapsed-sec) "s")))
-      (print "  TXT:  " (length (glob "rfc-*.txt")))
-      (print "  HTML: " (length (glob "rfc-*.html")))
-      (print "  PS:   " (length (glob "rfc-*.ps"))))))
+      (print "  TXT:  " (length (glob "memo-*.txt")))
+      (print "  HTML: " (length (glob "memo-*.html")))
+      (print "  PS:   " (length (glob "memo-*.ps"))))))
 
 (main)

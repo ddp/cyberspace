@@ -1,0 +1,493 @@
+%!PS-Adobe-3.0
+%%Title: memo-010-federation
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 010: Federation Protocol) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies the Federation Protocol for the Library of) show newline
+(Cyberspace: a peer-to-peer synchronization system enabling loose) show newline
+(confederacies of friends to share and preserve cryptographically sealed) show newline
+(artifacts without central authority.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(E PLURIBUS UNUM) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Out of many, one.) show newline
+() show newline
+() show newline
+(        +---------+         +---------+         +---------+) show newline
+(        |  Alice  |<------->|   Bob   |<------->|  Carol  |) show newline
+(        |  Vault  |         |  Vault  |         |  Vault  |) show newline
+(        +----+----+         +----+----+         +----+----+) show newline
+(             |                   |                   |) show newline
+(             |    +--------------+--------------+    |) show newline
+(             |    |                             |    |) show newline
+(             +---->    No Central Authority    <----+) show newline
+(                  |                             |) show newline
+(                  |   Just keys, seals, trust   |) show newline
+(                  |                             |) show newline
+(                  +-----------------------------+) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Centralized systems fail:) show newline
+() show newline
+(  * Single point of failure: Server goes down, everyone stops) show newline
+(  * Censorship: Authority can deny access) show newline
+(  * Trust concentration: Must trust operator) show newline
+(  * Survival: Company folds, data lost) show newline
+() show newline
+(Federation provides:) show newline
+() show newline
+(1. Decentralized - No master server 2. Resilient - Survives node) show newline
+(failures 3. Autonomous - Each peer controls own data 4. Cryptographic -) show newline
+(Trust through math, not authority 5. Eventual consistency - Convergence) show newline
+(without coordination) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(FEDERATION MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Peer Relationships) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    Peer: A vault instance with identity \(SPKI principal\)) show newline
+(    Relationships:) show newline
+(      - Publisher:  I push releases to you) show newline
+(      - Subscriber: I pull releases from you) show newline
+(      - Peer:       Bidirectional sync) show newline
+() show newline
+() show newline
+(Trust Model) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(federation-trust) show newline
+(      \(peer alice-pubkey) show newline
+(        \(role publisher\)) show newline
+(        \(trust-level verified\)     ; Signature verified) show newline
+(        \(sync-policy automatic\)\)) show newline
+(      \(peer bob-pubkey) show newline
+(        \(role subscriber\)) show newline
+(        \(trust-level known\)        ; Key known, not verified) show newline
+(        \(sync-policy manual\)\)\)) show newline
+() show newline
+(Trust levels: - unknown: Never seen, reject - known: Key registered,) show newline
+(manual approval - verified: Signature chain verified via SPKI - trusted:) show newline
+(Full automatic sync) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PROTOCOL OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Peer Discovery) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(federation-discover\)) show newline
+(    ;; Returns: List of known peers and their status) show newline
+() show newline
+(Discovery mechanisms: 1. Explicit configuration: Known peer list 2. Git) show newline
+(remotes: Extract from repository 3. Directory service: Optional, not) show newline
+(required 4. mDNS/Bonjour: Local network discovery via cyberspace.tcp) show newline
+() show newline
+() show newline
+(mDNS Service Discovery) show newline
+(----------------------) show newline
+() show newline
+(Cyberspace nodes announce themselves via mDNS using the cyberspace.tcp) show newline
+(service type:) show newline
+() show newline
+() show newline
+(    ;; Announce this node) show newline
+(    \(announce-presence 'starlight\)) show newline
+(    ;; Registers: starlight.cyberspace.tcp.local. port 7654) show newline
+(    ;; Discover peers) show newline
+(    \(discover-peers\)) show newline
+(    ;; Scans for cyberspace.tcp services on local network) show newline
+() show newline
+(Platform support: - macOS: dns-sd -R for registration, dns-sd -B for) show newline
+(browsing - Linux: avahi-publish for registration, avahi-browse for) show newline
+(browsing) show newline
+() show newline
+() show newline
+(Peer Registration) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(federation-register peer-uri) show newline
+(      #!key public-key trust-level\)) show newline
+() show newline
+(Registers a new peer with: - URI \(git remote, HTTP endpoint, filesystem) show newline
+(path\) - Public key for verification - Initial trust level) show newline
+() show newline
+() show newline
+(Release Announcement) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(federation-announce version) show newline
+(      #!key peers message\)) show newline
+() show newline
+(Pushes release notification to peers: 1. Create signed announcement 2.) show newline
+(Send to specified peers \(or all\) 3. Peers verify signature 4. Peers) show newline
+(decide whether to pull) show newline
+() show newline
+() show newline
+(Release Request) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(federation-request version peer) show newline
+(      #!key verify-key\)) show newline
+() show newline
+(Pulls specific release from peer: 1. Request release metadata 2. Verify) show newline
+(signature 3. Download archive 4. Verify integrity 5. Record in audit) show newline
+(trail) show newline
+() show newline
+() show newline
+(Synchronization) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(federation-sync peer) show newline
+(      #!key direction verify-key\)) show newline
+() show newline
+(Bidirectional sync \(from RFC-001\): 1. Exchange release lists 2. Identify) show newline
+(missing releases 3. Push/pull as configured 4. Verify all signatures 5.) show newline
+(Update audit trails) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MESSAGE FORMAT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Announcement Message) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(federation-message) show newline
+(      \(type announcement\)) show newline
+(      \(from #${alice-pubkey}\)) show newline
+(      \(timestamp 1767685100\)) show newline
+(      \(payload) show newline
+(        \(release "2.0.0"\)) show newline
+(        \(hash "sha512:..."\)) show newline
+(        \(archive-size 1048576\)) show newline
+(        \(notes "Major release"\)\)) show newline
+(      \(signature #${ed25519-sig}\)\)) show newline
+() show newline
+() show newline
+(Request Message) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(federation-message) show newline
+(      \(type request\)) show newline
+(      \(from #${bob-pubkey}\)) show newline
+(      \(timestamp 1767685200\)) show newline
+(      \(payload) show newline
+(        \(release "2.0.0"\)) show newline
+(        \(format cryptographic\)\)) show newline
+(      \(signature #${ed25519-sig}\)\)) show newline
+() show newline
+() show newline
+(Response Message) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(federation-message) show newline
+(      \(type response\)) show newline
+(      \(from #${alice-pubkey}\)) show newline
+(      \(in-reply-to "sha512:request-hash"\)) show newline
+(      \(timestamp 1767685300\)) show newline
+(      \(payload) show newline
+(        \(release "2.0.0"\)) show newline
+(        \(archive-uri "/releases/vault-2.0.0.archive"\)) show newline
+(        \(hash "sha512:..."\)) show newline
+(        \(signature "ed25519:..."\)\)) show newline
+(      \(signature #${ed25519-sig}\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TRANSPORT BINDINGS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Git Transport) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    Origin: git@github.com:alice/vault.git) show newline
+(    Mechanism: Tags + release assets) show newline
+(    Announce: git push origin v2.0.0) show newline
+(    Request:  git fetch origin --tags) show newline
+(    Sync:     git fetch origin && git push origin) show newline
+() show newline
+() show newline
+(HTTP Transport) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    Endpoint: https://alice.example.com/federation) show newline
+(    Announce: POST /federation/announce) show newline
+(    Request:  GET /federation/releases/2.0.0) show newline
+(    Sync:     POST /federation/sync) show newline
+() show newline
+() show newline
+(Filesystem Transport) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    Path: /shared/federation/alice) show newline
+(    Announce: Copy to /shared/federation/alice/announce/) show newline
+(    Request:  Read from /shared/federation/alice/releases/) show newline
+(    Sync:     rsync --update) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONFLICT RESOLUTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Version Conflicts) show newline
+(-----------------) show newline
+() show newline
+(Same version, different content:) show newline
+() show newline
+() show newline
+(    \(federation-conflict) show newline
+(      \(version "2.0.0"\)) show newline
+(      \(local-hash "sha512:abc..."\)) show newline
+(      \(remote-hash "sha512:def..."\)) show newline
+(      \(resolution reject\)\)  ; Or: prefer-local, prefer-remote, rename) show newline
+() show newline
+(Default: Reject conflicts, require human decision.) show newline
+() show newline
+() show newline
+(Resolution Strategies) show newline
+(---------------------) show newline
+() show newline
+(1. Reject: Stop sync, alert human 2. Prefer-local: Keep local version 3.) show newline
+(Prefer-remote: Take remote version 4. Rename: Keep both as 2.0.0-local,) show newline
+(2.0.0-remote 5. Merge: If content mergeable \(future\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONSISTENCY MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Eventual Consistency) show newline
+(--------------------) show newline
+() show newline
+(  * No global ordering required) show newline
+(  * Each peer has local view) show newline
+(  * Convergence through sync) show newline
+(  * Conflicts resolved locally) show newline
+() show newline
+() show newline
+(Causal Ordering) show newline
+(---------------) show newline
+() show newline
+(Within a peer's releases: - Version numbers are monotonic - Audit trail) show newline
+(provides causality - Hash chains prevent reordering) show newline
+() show newline
+() show newline
+(No Coordination) show newline
+(---------------) show newline
+() show newline
+(  * No consensus protocol required) show newline
+(  * No distributed lock) show newline
+(  * No leader election) show newline
+(  * Each peer autonomous) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Threat Model) show newline
+(------------) show newline
+() show newline
+(Protected: - Unauthenticated release injection \(signature verification\)) show newline
+(- Content tampering \(hash verification\) - Impersonation \(SPKI principal) show newline
+(binding\) - Replay attacks \(timestamps, sequence numbers\)) show newline
+() show newline
+(Not protected: - Denial of service \(rate limiting helps\) - Privacy of) show newline
+(release metadata \(encrypted transport helps\) - Sybil attacks \(trust) show newline
+(management helps\)) show newline
+() show newline
+() show newline
+(Trust Verification) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-peer-message msg peer-key\)) show newline
+(      \(and \(verify-signature msg peer-key\)) show newline
+(           \(verify-timestamp msg \(current-seconds\)\)) show newline
+(           \(verify-not-replayed msg\)\)\)) show newline
+() show newline
+() show newline
+(Rate Limiting) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(federation-config) show newline
+(      \(rate-limit) show newline
+(        \(announcements-per-hour 10\)) show newline
+(        \(requests-per-minute 60\)) show newline
+(        \(sync-interval-minimum 300\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(GOSSIP PROTOCOL \(FUTURE\)) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(For larger networks:) show newline
+() show newline
+() show newline
+(    Alice announces to Bob and Carol) show newline
+(    Bob announces to Dave and Eve) show newline
+(    Eve announces to Frank) show newline
+(    Result: Epidemic spread without central broadcast) show newline
+() show newline
+(Properties: - Logarithmic propagation time - Resilient to node failures) show newline
+(- No single bottleneck) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(BOOTSTRAP PROCEDURE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(New Peer Joining) show newline
+(----------------) show newline
+() show newline
+(1. Generate keypair 2. Register with known peer 3. Exchange public keys) show newline
+(\(out-of-band verification\) 4. Initial sync to get current releases 5.) show newline
+(Begin participating in federation) show newline
+() show newline
+() show newline
+(Network Partitions) show newline
+(------------------) show newline
+() show newline
+(  * Partitions heal automatically on reconnection) show newline
+(  * Conflicting releases detected and flagged) show newline
+(  * Audit trails show partition history) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONFIGURATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    \(federation-config) show newline
+(      ;; Identity) show newline
+(      \(identity my-private-key\)) show newline
+(      ;; Peers) show newline
+(      \(peers) show newline
+(        \(peer "alice" uri: "git@github.com:alice/vault.git") show newline
+(                      key: alice-pubkey) show newline
+(                      trust: verified\)) show newline
+(        \(peer "bob"   uri: "/shared/bob-vault") show newline
+(                      key: bob-pubkey) show newline
+(                      trust: known\)\)) show newline
+(      ;; Policies) show newline
+(      \(auto-sync #t\)) show newline
+(      \(sync-interval 3600\)  ; seconds) show newline
+(      \(verify-before-accept #t\)) show newline
+(      ;; Security) show newline
+(      \(require-signature #t\)) show newline
+(      \(trust-on-first-use #f\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION STATUS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Implemented \(RFC-001\)) show newline
+(---------------------) show newline
+() show newline
+(  * seal-publish: Push to single remote - seal-subscribe: Pull from single remote - seal-synchronize: Bidirectional with single peer) show newline
+(  * Transport: git, HTTP, filesystem) show newline
+() show newline
+() show newline
+(Proposed \(This RFC\)) show newline
+(-------------------) show newline
+() show newline
+(  * Multi-peer management) show newline
+(  * Trust levels and policies) show newline
+(  * Announcement protocol) show newline
+(  * Gossip propagation) show newline
+(  * Conflict resolution UI) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Birman, K. \(2007\). The Promise, and Limitations, of Gossip Protocols.) show newline
+(2. Demers, A., et al. \(1987\). Epidemic Algorithms for Replicated) show newline
+(Database Maintenance. 3. Shapiro, M., et al. \(2011\). Conflict-Free) show newline
+(Replicated Data Types. 4. RFC-001: Replication Layer 5. RFC-004: SPKI) show newline
+(Authorization) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

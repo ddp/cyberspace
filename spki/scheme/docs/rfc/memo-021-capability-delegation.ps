@@ -1,0 +1,738 @@
+%!PS-Adobe-3.0
+%%Title: memo-021-capability-delegation
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 021: Capability Delegation Patterns) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies capability delegation patterns for the Library of) show newline
+(Cyberspace: how principals grant, attenuate, and revoke capabilities) show newline
+(using SPKI certificates, content-addressed objects, and the soup) show newline
+(metadata layer. Capabilities flow through delegation chains with) show newline
+(monotonically decreasing authority.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Authorization in distributed systems is hard:) show newline
+() show newline
+(- ACLs don't scale - Central lists become bottlenecks - Identity is) show newline
+(fragile - Names change, keys rotate - Ambient authority is dangerous -) show newline
+("Run as root" is not a security model - Revocation is an afterthought -) show newline
+(Usually bolted on badly) show newline
+() show newline
+(SPKI \(Simple Public Key Infrastructure\) solved this decades ago:) show newline
+() show newline
+(  * Capabilities, not identities) show newline
+(  * What you can do, not who you are) show newline
+(  * Local names) show newline
+(  * No global namespace required) show newline
+(  * Delegation chains) show newline
+(  * Authority flows from source to delegate) show newline
+(  * Threshold signatures) show newline
+(  * M-of-N for critical operations) show newline
+() show newline
+(The Library integrates SPKI with content-addressed storage, creating) show newline
+(capabilities that are themselves content-addressed and introspectable.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CAPABILITY MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Principals) show newline
+(----------) show newline
+() show newline
+(A principal is anything that can hold authority:) show newline
+() show newline
+() show newline
+(    ;; Key principal - most common) show newline
+(    \(make-principal) show newline
+(      \(type key\)) show newline
+(      \(algorithm ed25519\)) show newline
+(      \(public-key #${...32 bytes...}\)\)) show newline
+(    ;; Hash principal - content-addressed object) show newline
+(    \(make-principal) show newline
+(      \(type hash\)) show newline
+(      \(algorithm sha256\)) show newline
+(      \(digest #${...32 bytes...}\)\)) show newline
+(    ;; Threshold principal - M-of-N group) show newline
+(    \(make-principal) show newline
+(      \(type threshold\)) show newline
+(      \(threshold 3\)) show newline
+(      \(members \(key1 key2 key3 key4 key5\)\)\)) show newline
+(    ;; Name principal - local binding) show newline
+(    \(make-principal) show newline
+(      \(type name\)) show newline
+(      \(issuer parent-key\)) show newline
+(      \(name "alice"\)\)) show newline
+() show newline
+() show newline
+(Capabilities) show newline
+(------------) show newline
+() show newline
+(A capability is a transferable right to perform an action:) show newline
+() show newline
+() show newline
+(    \(capability) show newline
+(      \(action read\)) show newline
+(      \(object \(hash sha256 "content-hash..."\)\)\)) show newline
+(    \(capability) show newline
+(      \(action write\)) show newline
+(      \(object \(tree sha256 "subtree-root..."\)\)\)) show newline
+(    \(capability) show newline
+(      \(action sign\)) show newline
+(      \(object \(tag "releases/*"\)\)\)) show newline
+(    \(capability) show newline
+(      \(action delegate\)) show newline
+(      \(object \(capability ...\)\)\)  ; Meta-capability) show newline
+() show newline
+() show newline
+(Certificates) show newline
+(------------) show newline
+() show newline
+(SPKI certificates bind capabilities to principals:) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-master-key\)) show newline
+(      \(subject alice-key\)) show newline
+(      \(capability) show newline
+(        \(action read\)) show newline
+(        \(object \(tree sha256 "docs-root..."\)\)\)) show newline
+(      \(validity) show newline
+(        \(not-before "2026-01-01"\)) show newline
+(        \(not-after "2027-01-01"\)\)) show newline
+(      \(delegation #t\)\)  ; Alice can re-delegate) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DELEGATION CHAINS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Chain Structure) show newline
+(---------------) show newline
+() show newline
+(Authority flows through certificate chains:) show newline
+() show newline
+() show newline
+(    Master Key) show newline
+(        |) show newline
+(        v \(cert: full access to vault\)) show newline
+(    Admin Key) show newline
+(        |) show newline
+(        v \(cert: read/write to docs/, can delegate\)) show newline
+(    Developer Key) show newline
+(        |) show newline
+(        v \(cert: read-only to docs/public/, cannot delegate\)) show newline
+(    Contractor Key) show newline
+() show newline
+() show newline
+(Chain Validation) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(validate-chain chain target-capability\)) show newline
+(      "Validate delegation chain grants capability") show newline
+(      \(let loop \(\(certs chain\)) show newline
+(                 \(current-authority 'unlimited\)\)) show newline
+(        \(if \(null? certs\)) show newline
+(            \(capability-subset? target-capability current-authority\)) show newline
+(            \(let \(\(cert \(car certs\)\)\)) show newline
+(              \(and \(verify-signature cert\)) show newline
+(                   \(valid-time? cert\)) show newline
+(                   \(not-revoked? cert\)) show newline
+(                   \(capability-subset? \(cert-capability cert\) current-authority\)) show newline
+(                   \(if \(cert-delegation? cert\)) show newline
+(                       \(loop \(cdr certs\) \(cert-capability cert\)\)) show newline
+(                       \(and \(null? \(cdr certs\)\)) show newline
+(                            \(capability-subset? target-capability) show newline
+(                                               \(cert-capability cert\)\)\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Monotonic Attenuation) show newline
+(---------------------) show newline
+() show newline
+(Delegated capabilities can only decrease:) show newline
+() show newline
+() show newline
+(    ;; Alice has read/write to entire vault) show newline
+(    \(spki-cert) show newline
+(      \(issuer master\)) show newline
+(      \(subject alice\)) show newline
+(      \(capability \(action \(read write\)\) \(object vault-root\)\)) show newline
+(      \(delegation #t\)\)) show newline
+(    ;; Alice delegates read-only to Bob \(valid - attenuation\)) show newline
+(    \(spki-cert) show newline
+(      \(issuer alice\)) show newline
+(      \(subject bob\)) show newline
+(      \(capability \(action read\) \(object vault-root\)\)) show newline
+(      \(delegation #t\)\)) show newline
+(    ;; Bob tries to delegate write to Carol \(INVALID - amplification\)) show newline
+(    \(spki-cert) show newline
+(      \(issuer bob\)) show newline
+(      \(subject carol\)) show newline
+(      \(capability \(action write\) \(object vault-root\)\)  ; REJECTED) show newline
+(      \(delegation #f\)\)) show newline
+(    ;; Bob delegates read to subtree only \(valid - further attenuation\)) show newline
+(    \(spki-cert) show newline
+(      \(issuer bob\)) show newline
+(      \(subject carol\)) show newline
+(      \(capability \(action read\) \(object docs-subtree\)\)) show newline
+(      \(delegation #f\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DELEGATION PATTERNS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Pattern 1: Direct Delegation) show newline
+(----------------------------) show newline
+() show newline
+(Simplest form - one hop:) show newline
+() show newline
+() show newline
+(    \(define \(delegate-direct issuer-key subject-key capability) show newline
+(                             #!key validity can-delegate\)) show newline
+(      \(sign-cert issuer-key) show newline
+(        `\(spki-cert) show newline
+(          \(issuer ,\(key->principal issuer-key\)\)) show newline
+(          \(subject ,\(key->principal subject-key\)\)) show newline
+(          \(capability ,capability\)) show newline
+(          \(validity ,validity\)) show newline
+(          \(delegation ,can-delegate\)\)\)\)) show newline
+() show newline
+() show newline
+(Pattern 2: Role-Based Delegation) show newline
+(--------------------------------) show newline
+() show newline
+(Delegate to roles, bind keys to roles:) show newline
+() show newline
+() show newline
+(    ;; Define role) show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-admin\)) show newline
+(      \(subject \(name vault-admin "reviewer"\)\)) show newline
+(      \(capability \(action read\) \(object \(tag "pending/*"\)\)\)) show newline
+(      \(delegation #f\)\)) show newline
+(    ;; Bind key to role) show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-admin\)) show newline
+(      \(subject alice-key\)) show newline
+(      \(capability \(name vault-admin "reviewer"\)\)) show newline
+(      \(validity \(not-after "2026-06-01"\)\)\)) show newline
+(    ;; Alice now has reviewer capability via role binding) show newline
+() show newline
+() show newline
+(Pattern 3: Threshold Delegation) show newline
+(-------------------------------) show newline
+() show newline
+(Require multiple parties:) show newline
+() show newline
+() show newline
+(    ;; Critical operation requires 3-of-5) show newline
+(    \(spki-cert) show newline
+(      \(issuer root-key\)) show newline
+(      \(subject \(threshold 3 \(key1 key2 key3 key4 key5\)\)\)) show newline
+(      \(capability \(action delete\) \(object vault-root\)\)) show newline
+(      \(delegation #f\)\)) show newline
+(    ;; Exercise requires gathering signatures) show newline
+(    \(define \(threshold-exercise capability signers\)) show newline
+(      \(let \(\(signatures \(map \(lambda \(key\) \(sign key capability\)\) signers\)\)\)) show newline
+(        \(if \(>= \(length signatures\) 3\)) show newline
+(            \(execute-capability capability signatures\)) show newline
+(            \(error "Insufficient signatures"\)\)\)\)) show newline
+() show newline
+() show newline
+(Pattern 4: Time-Bounded Delegation) show newline
+(----------------------------------) show newline
+() show newline
+(Temporary access:) show newline
+() show newline
+() show newline
+(    ;; Conference access - 3 days only) show newline
+(    \(spki-cert) show newline
+(      \(issuer organizer-key\)) show newline
+(      \(subject attendee-key\)) show newline
+(      \(capability \(action read\) \(object conference-materials\)\)) show newline
+(      \(validity) show newline
+(        \(not-before "2026-03-15T09:00:00Z"\)) show newline
+(        \(not-after "2026-03-17T18:00:00Z"\)\)) show newline
+(      \(delegation #f\)\)) show newline
+() show newline
+() show newline
+(Pattern 5: Conditional Delegation) show newline
+(---------------------------------) show newline
+() show newline
+(Capability with restrictions:) show newline
+() show newline
+() show newline
+(    ;; Can read, but only from specific IP range) show newline
+(    \(spki-cert) show newline
+(      \(issuer admin-key\)) show newline
+(      \(subject service-key\)) show newline
+(      \(capability \(action read\) \(object api-data\)\)) show newline
+(      \(condition) show newline
+(        \(source-ip "10.0.0.0/8"\)\)) show newline
+(      \(delegation #f\)\)) show newline
+(    ;; Can write, but only objects under 1MB) show newline
+(    \(spki-cert) show newline
+(      \(issuer admin-key\)) show newline
+(      \(subject uploader-key\)) show newline
+(      \(capability \(action write\) \(object uploads\)\)) show newline
+(      \(condition) show newline
+(        \(max-size 1048576\)\)) show newline
+(      \(delegation #f\)\)) show newline
+() show newline
+() show newline
+(Pattern 6: Proxy Delegation) show newline
+(---------------------------) show newline
+() show newline
+(Delegate through intermediary:) show newline
+() show newline
+() show newline
+(    ;; Alice delegates to proxy service) show newline
+(    \(spki-cert) show newline
+(      \(issuer alice-key\)) show newline
+(      \(subject proxy-key\)) show newline
+(      \(capability \(action read\) \(object alice-files\)\)) show newline
+(      \(delegation #t\)) show newline
+(      \(condition \(proxy-for alice-key\)\)\)) show newline
+(    ;; Proxy can act on Alice's behalf) show newline
+(    ;; but chain shows Alice as original authority) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONTENT-ADDRESSED CAPABILITIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Hash as Capability) show newline
+(------------------) show newline
+() show newline
+(Knowledge of a content hash is itself a capability \(RFC-020\):) show newline
+() show newline
+() show newline
+(    ;; Possessing this hash grants read access) show newline
+(    \(define secret-doc-hash "sha256:7f83b1657ff1fc..."\)) show newline
+(    ;; The hash is unguessable \(256 bits of entropy\)) show newline
+(    ;; Sharing the hash = sharing the capability) show newline
+(    \(define \(share-capability recipient hash\)) show newline
+(      \(encrypted-send recipient hash\)\)) show newline
+() show newline
+() show newline
+(Capability Certificates for Hashes) show newline
+(----------------------------------) show newline
+() show newline
+(Formalize hash-based access:) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-key\)) show newline
+(      \(subject reader-key\)) show newline
+(      \(capability) show newline
+(        \(action read\)) show newline
+(        \(object \(hash sha256 "specific-doc..."\)\)\)) show newline
+(      \(validity \(not-after "2027-01-01"\)\)\)) show newline
+() show newline
+() show newline
+(Tree Capabilities) show newline
+(-----------------) show newline
+() show newline
+(Grant access to Merkle subtree:) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-key\)) show newline
+(      \(subject team-key\)) show newline
+(      \(capability) show newline
+(        \(action read\)) show newline
+(        \(object \(tree sha256 "project-root..."\)\)) show newline
+(        \(propagate #t\)\)  ; Includes all referenced objects) show newline
+(      \(delegation #t\)\)) show newline
+() show newline
+() show newline
+(Sealed Capabilities) show newline
+(-------------------) show newline
+() show newline
+(Encrypt capability for specific recipient:) show newline
+() show newline
+() show newline
+(    \(define \(seal-capability cap recipient-pubkey\)) show newline
+(      "Encrypt capability so only recipient can use it") show newline
+(      \(let \(\(serialized \(serialize cap\)\)) show newline
+(             \(encrypted \(age-encrypt serialized recipient-pubkey\)\)\)) show newline
+(        \(cas-put encrypted\)\)\)) show newline
+(    \(define \(unseal-capability sealed-hash identity\)) show newline
+(      "Decrypt and exercise capability") show newline
+(      \(let \(\(encrypted \(cas-get sealed-hash\)\)) show newline
+(             \(decrypted \(age-decrypt encrypted identity\)\)) show newline
+(             \(cap \(deserialize decrypted\)\)\)) show newline
+(        cap\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REVOCATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Revocation Lists) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(spki-crl) show newline
+(      \(issuer vault-admin\)) show newline
+(      \(revoked) show newline
+(        \(\(cert-hash "sha256:revoked1..."\)) show newline
+(         \(reason key-compromise\)) show newline
+(         \(revoked-at 1767700000\)\)) show newline
+(        \(\(cert-hash "sha256:revoked2..."\)) show newline
+(         \(reason superseded\)) show newline
+(         \(revoked-at 1767700100\)\)\)\)) show newline
+() show newline
+() show newline
+(Online Revocation Check) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(define \(check-revocation cert\)) show newline
+(      "Check if certificate is revoked") show newline
+(      \(let* \(\(cert-hash \(sha256 \(serialize cert\)\)\)) show newline
+(             \(issuer \(cert-issuer cert\)\)) show newline
+(             \(crl \(fetch-crl issuer\)\)\)) show newline
+(        \(not \(member cert-hash \(crl-revoked-hashes crl\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Tombstone Revocation) show newline
+(--------------------) show newline
+() show newline
+(Using CAS tombstones \(RFC-020\):) show newline
+() show newline
+() show newline
+(    \(define \(revoke-capability-tombstone cert-hash reason\)) show newline
+(      "Revoke by tombstoning the certificate") show newline
+(      \(cas-tombstone cert-hash) show newline
+(        reason: reason) show newline
+(        actor: \(current-principal\)\)\)) show newline
+() show newline
+() show newline
+(Short-Lived Certificates) show newline
+(------------------------) show newline
+() show newline
+(Avoid revocation by using short validity:) show newline
+() show newline
+() show newline
+(    ;; 1-hour certificate, no revocation needed) show newline
+(    \(spki-cert) show newline
+(      \(issuer service-key\)) show newline
+(      \(subject session-key\)) show newline
+(      \(capability \(action api-access\)\)) show newline
+(      \(validity) show newline
+(        \(not-before ,\(current-time\)\)) show newline
+(        \(not-after ,\(+ \(current-time\) 3600\)\)\)) show newline
+(      \(delegation #f\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SOUP INTEGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Certificates in the Soup) show newline
+(------------------------) show newline
+() show newline
+(All certificates are soup objects:) show newline
+() show newline
+() show newline
+(    \(soup-object) show newline
+(      \(name "cert/alice-read-docs"\)) show newline
+(      \(type certificate\)) show newline
+(      \(size "412B"\)) show newline
+(      \(crypto \(ed25519 sha256 "cert-hash..."\)\)) show newline
+(      \(issuer "vault-admin"\)) show newline
+(      \(subject "alice"\)) show newline
+(      \(capability "read docs/*"\)) show newline
+(      \(expires "2027-01-01"\)\)) show newline
+() show newline
+() show newline
+(Querying Capabilities) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    ;; Find all certificates for a subject) show newline
+(    \(soup-query type: 'certificate subject: alice-key\)) show newline
+(    ;; Find all certificates granting write access) show newline
+(    \(soup-query type: 'certificate capability: 'write\)) show newline
+(    ;; Find expiring certificates) show newline
+(    \(soup-query type: 'certificate) show newline
+(                expires-before: \(+ \(current-time\) \(* 7 24 3600\)\)\)) show newline
+(    ;; Find certificates from specific issuer) show newline
+(    \(soup-query type: 'certificate issuer: vault-admin\)) show newline
+() show newline
+() show newline
+(Capability Introspection) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    ;; What can Alice do?) show newline
+(    \(define \(principal-capabilities principal\)) show newline
+(      \(let \(\(certs \(soup-query type: 'certificate subject: principal\)\)\)) show newline
+(        \(map cert-capability certs\)\)\)) show newline
+(    ;; Who can read this object?) show newline
+(    \(define \(object-readers hash\)) show newline
+(      \(let \(\(certs \(soup-query type: 'certificate) show newline
+(                               capability: `\(read ,hash\)\)\)\)) show newline
+(        \(map cert-subject certs\)\)\)) show newline
+(    ;; Visualize delegation graph) show newline
+(    \(define \(delegation-graph root-principal\)) show newline
+(      \(let \(\(certs \(soup-query type: 'certificate issuer: root-principal\)\)\)) show newline
+(        \(map \(lambda \(cert\)) show newline
+(               \(cons \(cert-subject cert\)) show newline
+(                     \(delegation-graph \(cert-subject cert\)\)\)\)) show newline
+(             certs\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(AUTHORIZATION DECISIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Simple Check) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define \(authorized? principal action object\)) show newline
+(      "Check if principal can perform action on object") show newline
+(      \(let \(\(chains \(find-authorization-chains principal action object\)\)\)) show newline
+(        \(any valid-chain? chains\)\)\)) show newline
+() show newline
+() show newline
+(Chain Discovery) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(find-authorization-chains principal action object\)) show newline
+(      "Find all certificate chains granting capability") show newline
+(      \(let \(\(target-cap \(capability action object\)\)\)) show newline
+(        \(let search \(\(current principal\) \(chain '\(\)\)\)) show newline
+(          \(let \(\(certs \(soup-query type: 'certificate subject: current\)\)\)) show newline
+(            \(append-map) show newline
+(              \(lambda \(cert\)) show newline
+(                \(if \(capability-grants? \(cert-capability cert\) target-cap\)) show newline
+(                    \(list \(reverse \(cons cert chain\)\)\)) show newline
+(                    \(if \(cert-delegation? cert\)) show newline
+(                        \(search \(cert-issuer cert\) \(cons cert chain\)\)) show newline
+(                        '\(\)\)\)\)) show newline
+(              certs\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Cached Authorization) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define auth-cache \(make-lru-cache 10000\)\)) show newline
+(    \(define \(authorized?/cached principal action object\)) show newline
+(      \(let \(\(key \(list principal action object\)\)\)) show newline
+(        \(or \(lru-get auth-cache key\)) show newline
+(            \(let \(\(result \(authorized? principal action object\)\)\)) show newline
+(              \(lru-put! auth-cache key result\)) show newline
+(              result\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DELEGATION CEREMONIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Key Ceremony) show newline
+(------------) show newline
+() show newline
+(For critical delegations:) show newline
+() show newline
+() show newline
+(    \(define \(key-ceremony capability threshold witnesses\)) show newline
+(      "Conduct witnessed delegation ceremony") show newline
+(      \(let* \(\(ceremony-id \(generate-ceremony-id\)\)) show newline
+(             \(ceremony-record) show newline
+(              \(ceremony) show newline
+(                \(id ,ceremony-id\)) show newline
+(                \(capability ,capability\)) show newline
+(                \(threshold ,threshold\)) show newline
+(                \(witnesses ,witnesses\)) show newline
+(                \(started-at ,\(current-time\)\)\)\)\)) show newline
+(        ;; Record ceremony start) show newline
+(        \(audit-append action: \(ceremony-start ,ceremony-id\)\)) show newline
+(        ;; Gather witness signatures) show newline
+(        \(let \(\(signatures \(gather-witness-signatures ceremony-record witnesses\)\)\)) show newline
+(          \(if \(>= \(length signatures\) threshold\)) show newline
+(              \(let \(\(cert \(finalize-ceremony ceremony-record signatures\)\)\)) show newline
+(                \(audit-append action: \(ceremony-complete ,ceremony-id\)\)) show newline
+(                cert\)) show newline
+(              \(begin) show newline
+(                \(audit-append action: \(ceremony-failed ,ceremony-id\)\)) show newline
+(                \(error "Insufficient witnesses"\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Emergency Revocation) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(emergency-revoke cert-hash reason\)) show newline
+(      "Emergency revocation with audit trail") show newline
+(      \(let \(\(revocation) show newline
+(             \(emergency-revocation) show newline
+(               \(cert ,cert-hash\)) show newline
+(               \(reason ,reason\)) show newline
+(               \(revoked-by ,\(current-principal\)\)) show newline
+(               \(revoked-at ,\(current-time\)\)\)\)\)) show newline
+(        ;; Immediate tombstone) show newline
+(        \(cas-tombstone cert-hash reason: reason\)) show newline
+(        ;; Add to CRL) show newline
+(        \(crl-append cert-hash reason\)) show newline
+(        ;; Audit with high priority) show newline
+(        \(audit-append) show newline
+(          action: \(emergency-revoke ,cert-hash\)) show newline
+(          motivation: reason) show newline
+(          priority: 'critical\)) show newline
+(        ;; Notify affected parties) show newline
+(        \(notify-revocation cert-hash\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Capability Leakage) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; Capabilities can leak through:) show newline
+(    ;; 1. Logging - don't log capability tokens) show newline
+(    ;; 2. URLs - don't put capabilities in query strings) show newline
+(    ;; 3. Errors - don't include capabilities in error messages) show newline
+(    \(define \(safe-log message capability\)) show newline
+(      \(log \(string-append message " [capability:REDACTED]"\)\)\)) show newline
+() show newline
+() show newline
+(Confused Deputy) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; Always verify capability matches intended action) show newline
+(    \(define \(execute-action action object capability\)) show newline
+(      \(unless \(capability-grants? capability action object\)) show newline
+(        \(error "Capability does not grant this action"\)\)) show newline
+(      \(perform-action action object\)\)) show newline
+() show newline
+() show newline
+(Time-of-Check vs Time-of-Use) show newline
+(----------------------------) show newline
+() show newline
+() show newline
+(    ;; Validate immediately before use, not before) show newline
+(    \(define \(safe-execute capability action\)) show newline
+(      \(let \(\(validated \(validate-capability capability\)\)\)) show newline
+(        ;; No window between check and use) show newline
+(        \(atomically) show newline
+(          \(unless validated) show newline
+(            \(error "Invalid capability"\)\)) show newline
+(          \(perform-action action\)\)\)\)) show newline
+() show newline
+() show newline
+(Delegation Depth Limits) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Prevent infinite delegation chains) show newline
+(    \(define max-delegation-depth 10\)) show newline
+(    \(define \(validate-chain-depth chain\)) show newline
+(      \(when \(> \(length chain\) max-delegation-depth\)) show newline
+(        \(error "Delegation chain too deep"\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Certificate Storage) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Certificates stored in CAS) show newline
+(    \(define \(store-cert cert\)) show newline
+(      \(let \(\(signed \(sign-cert cert\)\)\)) show newline
+(        \(cas-put \(serialize signed\)\)\)\)) show newline
+(    ;; Indexed by issuer and subject for fast lookup) show newline
+(    \(define cert-by-issuer \(make-hash-table\)\)) show newline
+(    \(define cert-by-subject \(make-hash-table\)\)) show newline
+() show newline
+() show newline
+(Performance) show newline
+(-----------) show newline
+() show newline
+(  * Certificate validation is expensive - cache results) show newline
+(  * Chain discovery can be slow - index by issuer/subject) show newline
+(  * Revocation checks add latency - use short-lived certs when possible) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. SPKI/SDSI 2.0 - RFC 2693 \(preserved\) 2. A Logic of Authentication -) show newline
+(Burrows, Abadi, Needham \(preserved\) 3. Capability Myths Demolished -) show newline
+(Miller, Yee, Shapiro \(preserved\) 4. RFC-004: SPKI Authorization 5.) show newline
+(RFC-020: Content-Addressed Storage 6. RFC-007: Threshold Signature) show newline
+(Governance) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

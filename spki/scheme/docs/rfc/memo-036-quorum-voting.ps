@@ -1,0 +1,680 @@
+%!PS-Adobe-3.0
+%%Title: memo-036-quorum-voting
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 036: Quorum Protocol with Homomorphic Voting) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies the quorum protocol for the Library of Cyberspace:) show newline
+(how principals reach collective decisions through homomorphic) show newline
+(encryption-based voting, enabling private ballot tallying without) show newline
+(revealing individual votes. Quorum integrates with threshold governance) show newline
+(\(RFC-007\) and Byzantine consensus \(RFC-011\).) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Collective decisions require:) show newline
+() show newline
+(  * Privacy) show newline
+(  * Voters shouldn't know how others voted) show newline
+(  * Verifiability) show newline
+(  * Results must be provably correct) show newline
+(  * Coercion resistance) show newline
+(  * Can't prove how you voted to others) show newline
+(  * Availability) show newline
+(  * Voting continues despite failures) show newline
+() show newline
+(Traditional approaches fail:) show newline
+() show newline
+(  * Open ballot) show newline
+(  * No privacy, enables coercion) show newline
+(  * Trusted tallier) show newline
+(  * Single point of compromise) show newline
+(  * Secure multi-party computation) show newline
+(  * Complex, high communication overhead) show newline
+() show newline
+(Homomorphic encryption provides:) show newline
+() show newline
+(  * Vote on encrypted ballots) show newline
+(  * Sum without decryption) show newline
+(  * Decrypt only the final tally) show newline
+(  * Mathematical proof of correctness) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CRYPTOGRAPHIC FOUNDATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Homomorphic Encryption Schemes) show newline
+(------------------------------) show newline
+() show newline
+() show newline
+(  Scheme     Operations       Performance   Use Case              ) show newline
+(  Paillier   Addition         Fast          Vote tallying         ) show newline
+(  BFV/BGV    Add + Multiply   Medium        Complex predicates    ) show newline
+(  TFHE       Arbitrary        Slow          General computation   ) show newline
+() show newline
+(For quorum voting, Paillier suffices - we only need addition.) show newline
+() show newline
+() show newline
+(Paillier Properties) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Additive homomorphism) show newline
+(    \(= \(decrypt \(he-add \(encrypt a\) \(encrypt b\)\)\)) show newline
+(       \(+ a b\)\)) show newline
+(    ;; Scalar multiplication via repeated addition) show newline
+(    \(= \(decrypt \(he-scalar-mult \(encrypt a\) k\)\)) show newline
+(       \(* a k\)\)) show newline
+(    ;; Semantic security - ciphertexts indistinguishable) show newline
+(    \(not \(distinguishable? \(encrypt 0\) \(encrypt 1\)\)\)) show newline
+() show newline
+() show newline
+(Key Generation) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <quorum-keys>) show newline
+(      \(make-quorum-keys public private threshold shares\)) show newline
+(      quorum-keys?) show newline
+(      \(public qk-public\)           ; Public encryption key) show newline
+(      \(private qk-private\)         ; Private decryption key \(or #f if distributed\)) show newline
+(      \(threshold qk-threshold\)     ; M-of-N threshold) show newline
+(      \(shares qk-shares\)\)          ; Distributed key shares) show newline
+(    \(define \(generate-quorum-keys bit-length threshold trustees\)) show newline
+(      "Generate threshold Paillier keys") show newline
+(      \(let* \(\(keys \(paillier-keygen bit-length\)\)) show newline
+(             \(shares \(shamir-split \(paillier-private keys\)) show newline
+(                                   threshold) show newline
+(                                   \(length trustees\)\)\)\)) show newline
+(        \(make-quorum-keys) show newline
+(          \(paillier-public keys\)) show newline
+(          #f  ; No single party holds private key) show newline
+(          threshold) show newline
+(          \(map cons trustees shares\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(BALLOT STRUCTURE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Ballot Definition) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <ballot>) show newline
+(      \(make-ballot id question options threshold deadline\)) show newline
+(      ballot?) show newline
+(      \(id ballot-id\)                 ; Content hash) show newline
+(      \(question ballot-question\)     ; Human-readable question) show newline
+(      \(options ballot-options\)       ; List of choices) show newline
+(      \(threshold ballot-threshold\)   ; Votes needed to pass) show newline
+(      \(deadline ballot-deadline\)\)    ; Voting closes) show newline
+(    ;; Example ballot) show newline
+(    \(make-ballot) show newline
+(      id: "sha256:ballot...") show newline
+(      question: "Accept RFC-042 into standard?") show newline
+(      options: '\(accept reject abstain\)) show newline
+(      threshold: '\(majority members\)  ; >50% of members) show newline
+(      deadline: 1767786000\)) show newline
+() show newline
+() show newline
+(Encrypted Vote) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <encrypted-vote>) show newline
+(      \(make-encrypted-vote ballot-id voter ciphertext proof timestamp signature\)) show newline
+(      encrypted-vote?) show newline
+(      \(ballot-id vote-ballot-id\)     ; Which ballot) show newline
+(      \(voter vote-voter\)             ; Voter's public key \(or anonymous token\)) show newline
+(      \(ciphertext vote-ciphertext\)   ; HE-encrypted choice) show newline
+(      \(proof vote-proof\)             ; Zero-knowledge proof of validity) show newline
+(      \(timestamp vote-timestamp\)) show newline
+(      \(signature vote-signature\)\)) show newline
+() show newline
+() show newline
+(Vote Encoding) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; One-hot encoding for multiple choices) show newline
+(    ;; accept=1, reject=0, abstain=0 > \(1, 0, 0\)) show newline
+(    \(define \(encode-vote choice options\)) show newline
+(      "Encode choice as one-hot vector") show newline
+(      \(map \(lambda \(opt\)) show newline
+(             \(if \(eq? opt choice\) 1 0\)\)) show newline
+(           options\)\)) show newline
+(    \(define \(encrypt-vote choice options public-key\)) show newline
+(      "Encrypt one-hot encoded vote") show newline
+(      \(map \(lambda \(v\)) show newline
+(             \(paillier-encrypt public-key v\)\)) show newline
+(           \(encode-vote choice options\)\)\)) show newline
+(    ;; Vote for "accept") show newline
+(    \(encrypt-vote 'accept '\(accept reject abstain\) pub-key\)) show newline
+(    ;; => \(Enc\(1\), Enc\(0\), Enc\(0\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VOTING PROTOCOL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Phase 1: Ballot Creation) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(define \(create-ballot question options threshold deadline trustees\)) show newline
+(      "Create new ballot with threshold decryption") show newline
+(      \(let* \(\(keys \(generate-quorum-keys 2048) show newline
+(                                         \(ceiling \(/ \(length trustees\) 2\)\)) show newline
+(                                         trustees\)\)) show newline
+(             \(ballot \(make-ballot) show newline
+(                       question: question) show newline
+(                       options: options) show newline
+(                       threshold: threshold) show newline
+(                       deadline: deadline\)\)\)) show newline
+(        ;; Distribute key shares to trustees) show newline
+(        \(for-each \(lambda \(trustee share\)) show newline
+(                    \(secure-send trustee) show newline
+(                      `\(key-share) show newline
+(                        \(ballot-id ,\(ballot-id ballot\)\)) show newline
+(                        \(share ,share\)\)\)\)) show newline
+(                  trustees) show newline
+(                  \(qk-shares keys\)\)) show newline
+(        ;; Publish ballot) show newline
+(        \(soup-put ballot type: 'ballot\)) show newline
+(        \(audit-append action: 'ballot-created) show newline
+(                      ballot: \(ballot-id ballot\)\)) show newline
+(        ballot\)\)) show newline
+() show newline
+() show newline
+(Phase 2: Vote Casting) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define \(cast-vote ballot choice voter-key\)) show newline
+(      "Cast encrypted vote with validity proof") show newline
+(      \(let* \(\(pub-key \(ballot-public-key ballot\)\)) show newline
+(             \(encrypted \(encrypt-vote choice \(ballot-options ballot\) pub-key\)\)) show newline
+(             \(proof \(generate-validity-proof encrypted choice pub-key\)\)) show newline
+(             \(vote \(make-encrypted-vote) show newline
+(                     ballot-id: \(ballot-id ballot\)) show newline
+(                     voter: \(key->principal voter-key\)) show newline
+(                     ciphertext: encrypted) show newline
+(                     proof: proof) show newline
+(                     timestamp: \(current-time\)\)\)\)) show newline
+(        ;; Sign the vote) show newline
+(        \(set-encrypted-vote-signature! vote) show newline
+(          \(sign-vote voter-key vote\)\)) show newline
+(        ;; Submit) show newline
+(        \(submit-vote vote\)) show newline
+(        vote\)\)) show newline
+(    \(define \(submit-vote vote\)) show newline
+(      "Submit vote to ballot coordinator") show newline
+(      ;; Verify eligibility) show newline
+(      \(unless \(eligible-voter? \(vote-voter vote\) \(vote-ballot-id vote\)\)) show newline
+(        \(error 'not-eligible\)\)) show newline
+(      ;; Verify validity proof) show newline
+(      \(unless \(verify-validity-proof vote\)) show newline
+(        \(error 'invalid-vote-proof\)\)) show newline
+(      ;; Verify not already voted) show newline
+(      \(when \(already-voted? \(vote-voter vote\) \(vote-ballot-id vote\)\)) show newline
+(        \(error 'already-voted\)\)) show newline
+(      ;; Record vote) show newline
+(      \(soup-put vote type: 'encrypted-vote\)) show newline
+(      \(audit-append action: 'vote-cast) show newline
+(                    ballot: \(vote-ballot-id vote\)) show newline
+(                    voter: \(vote-voter vote\)\)\)) show newline
+() show newline
+() show newline
+(Phase 3: Homomorphic Tallying) show newline
+(-----------------------------) show newline
+() show newline
+() show newline
+(    \(define \(tally-votes ballot\)) show newline
+(      "Homomorphically sum all votes") show newline
+(      \(let* \(\(votes \(soup-query type: 'encrypted-vote) show newline
+(                                ballot-id: \(ballot-id ballot\)\)\)) show newline
+(             \(num-options \(length \(ballot-options ballot\)\)\)) show newline
+(             \(zero-tally \(make-list num-options \(paillier-encrypt-zero\)\)\)\)) show newline
+(        ;; Sum encrypted votes) show newline
+(        \(fold \(lambda \(vote tally\)) show newline
+(                \(map paillier-add) show newline
+(                     \(vote-ciphertext vote\)) show newline
+(                     tally\)\)) show newline
+(              zero-tally) show newline
+(              votes\)\)\)) show newline
+(    ;; After tallying 100 votes:) show newline
+(    ;; \(Enc\(47\), Enc\(41\), Enc\(12\)\)) show newline
+(    ;; Still encrypted - no one knows the result yet) show newline
+() show newline
+() show newline
+(Phase 4: Threshold Decryption) show newline
+(-----------------------------) show newline
+() show newline
+() show newline
+(    \(define \(decrypt-tally ballot encrypted-tally\)) show newline
+(      "Threshold decrypt the tally") show newline
+(      \(let* \(\(trustees \(ballot-trustees ballot\)\)) show newline
+(             \(threshold \(ballot-key-threshold ballot\)\)) show newline
+(             \(shares '\(\)\)\)) show newline
+(        ;; Collect decryption shares) show newline
+(        \(for-each \(lambda \(trustee\)) show newline
+(                    \(let \(\(share \(request-decryption-share trustee) show newline
+(                                   \(ballot-id ballot\)) show newline
+(                                   encrypted-tally\)\)\)) show newline
+(                      \(when share) show newline
+(                        \(set! shares \(cons share shares\)\)\)\)\)) show newline
+(                  trustees\)) show newline
+(        ;; Need threshold shares) show newline
+(        \(unless \(>= \(length shares\) threshold\)) show newline
+(          \(error 'insufficient-decryption-shares\)\)) show newline
+(        ;; Combine shares to decrypt) show newline
+(        \(let \(\(plaintext-tally) show newline
+(               \(map \(lambda \(ct\)) show newline
+(                      \(threshold-decrypt ct shares\)\)) show newline
+(                    encrypted-tally\)\)\)) show newline
+(          ;; Publish result) show newline
+(          \(publish-result ballot plaintext-tally\)) show newline
+(          plaintext-tally\)\)\)) show newline
+(    \(define \(request-decryption-share trustee ballot-id encrypted-tally\)) show newline
+(      "Request trustee's decryption share") show newline
+(      \(let \(\(response \(tunnel trustee) show newline
+(                        `\(decryption-share-request) show newline
+(                          \(ballot-id ,ballot-id\)) show newline
+(                          \(tally ,encrypted-tally\)\)\)\)\)) show newline
+(        \(and \(valid-share? response\)) show newline
+(             response\)\)\)) show newline
+() show newline
+() show newline
+(Phase 5: Result Publication) show newline
+(---------------------------) show newline
+() show newline
+() show newline
+(    \(define \(publish-result ballot tally\)) show newline
+(      "Publish verified result") show newline
+(      \(let* \(\(options \(ballot-options ballot\)\)) show newline
+(             \(result \(map cons options tally\)\)) show newline
+(             \(winner \(determine-winner result \(ballot-threshold ballot\)\)\)\)) show newline
+(        \(soup-put) show newline
+(          `\(ballot-result) show newline
+(            \(ballot-id ,\(ballot-id ballot\)\)) show newline
+(            \(tally ,result\)) show newline
+(            \(winner ,winner\)) show newline
+(            \(timestamp ,\(current-time\)\)) show newline
+(            \(total-votes ,\(apply + tally\)\)\)) show newline
+(          type: 'ballot-result\)) show newline
+(        \(audit-append action: 'ballot-result) show newline
+(                      ballot: \(ballot-id ballot\)) show newline
+(                      result: result) show newline
+(                      winner: winner\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ZERO-KNOWLEDGE PROOFS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Vote Validity Proof) show newline
+(-------------------) show newline
+() show newline
+(Prove vote is valid \(exactly one 1, rest 0s\) without revealing which:) show newline
+() show newline
+() show newline
+(    \(define \(generate-validity-proof encrypted-vote choice public-key\)) show newline
+(      "ZK proof that vote encodes valid choice") show newline
+(      ;; Disjunctive proof: prove one of N possibilities) show newline
+(      ;; Without revealing which) show newline
+(      \(let \(\(n \(length encrypted-vote\)\)\)) show newline
+(        \(make-or-proof) show newline
+(          \(map \(lambda \(i\)) show newline
+(                 \(if \(= i \(choice-index choice\)\)) show newline
+(                     ;; Real proof for actual choice) show newline
+(                     \(make-encryption-proof \(list-ref encrypted-vote i\) 1 public-key\)) show newline
+(                     ;; Simulated proof for other choices) show newline
+(                     \(simulate-encryption-proof \(list-ref encrypted-vote i\) 1 public-key\)\)\)) show newline
+(               \(iota n\)\)\)\)\)) show newline
+(    \(define \(verify-validity-proof vote\)) show newline
+(      "Verify vote validity without learning choice") show newline
+(      \(let \(\(proof \(vote-proof vote\)\)) show newline
+(            \(ciphertext \(vote-ciphertext vote\)\)) show newline
+(            \(pub-key \(ballot-public-key \(vote-ballot-id vote\)\)\)\)) show newline
+(        ;; Verify OR proof) show newline
+(        \(and \(verify-or-proof proof ciphertext pub-key\)) show newline
+(             ;; Verify sum of encrypted values equals Enc\(1\)) show newline
+(             \(verify-sum-equals-one ciphertext pub-key\)\)\)\)) show newline
+() show newline
+() show newline
+(Decryption Share Proof) show newline
+(----------------------) show newline
+() show newline
+(Prove decryption share is correct:) show newline
+() show newline
+() show newline
+(    \(define \(generate-share-proof share ciphertext trustee-key\)) show newline
+(      "ZK proof that decryption share is correct") show newline
+(      \(make-dlog-proof) show newline
+(        \(share-value share\)) show newline
+(        trustee-key) show newline
+(        ciphertext\)\)) show newline
+(    \(define \(verify-share-proof share ciphertext trustee-pubkey\)) show newline
+(      "Verify decryption share correctness") show newline
+(      \(verify-dlog-proof) show newline
+(        \(share-proof share\)) show newline
+(        \(share-value share\)) show newline
+(        trustee-pubkey) show newline
+(        ciphertext\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VOTER PRIVACY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Anonymous Voting Tokens) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(define \(issue-voting-token voter-key ballot-id issuer-key\)) show newline
+(      "Issue blind voting token") show newline
+(      ;; Voter blinds their key) show newline
+(      \(let* \(\(blinding-factor \(random-scalar\)\)) show newline
+(             \(blinded-key \(blind-key voter-key blinding-factor\)\)\)) show newline
+(        ;; Issuer signs blinded key) show newline
+(        \(let \(\(blind-signature \(sign issuer-key blinded-key\)\)\)) show newline
+(          ;; Voter unblinds signature) show newline
+(          \(let \(\(token \(unblind-signature blind-signature blinding-factor\)\)\)) show newline
+(            ;; Token proves eligibility without linking to voter) show newline
+(            \(make-voting-token) show newline
+(              ballot-id: ballot-id) show newline
+(              token: token) show newline
+(              ;; Cannot be linked to voter-key) show newline
+(              \)\)\)\)\)) show newline
+(    \(define \(vote-anonymously ballot choice token\)) show newline
+(      "Cast vote using anonymous token") show newline
+(      \(let \(\(vote \(cast-vote ballot choice token\)\)\)) show newline
+(        ;; Vote linked to token, not voter identity) show newline
+(        vote\)\)) show newline
+() show newline
+() show newline
+(Receipt-Freeness) show newline
+(----------------) show newline
+() show newline
+(Voters cannot prove how they voted \(prevents vote buying/coercion\):) show newline
+() show newline
+() show newline
+(    ;; Re-encryption mixnet for receipt-freeness) show newline
+(    \(define \(submit-through-mixnet vote mixnet-nodes\)) show newline
+(      "Submit vote through re-encryption mixnet") show newline
+(      \(fold \(lambda \(node encrypted-vote\)) show newline
+(              ;; Each node re-encrypts) show newline
+(              \(let \(\(re-encrypted \(paillier-rerandomize encrypted-vote\)\)\)) show newline
+(                ;; Shuffle with other votes) show newline
+(                \(mixnet-shuffle node re-encrypted\)\)\)) show newline
+(            vote) show newline
+(            mixnet-nodes\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUORUM TYPES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Simple Majority) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(simple-majority tally total-eligible\)) show newline
+(      "More than half of voters") show newline
+(      \(let \(\(total-votes \(apply + tally\)\)) show newline
+(            \(winning-votes \(apply max tally\)\)\)) show newline
+(        \(> winning-votes \(/ total-votes 2\)\)\)\)) show newline
+() show newline
+() show newline
+(Supermajority) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(supermajority tally fraction\)) show newline
+(      "Require fraction \(e.g., 2/3\) agreement") show newline
+(      \(let \(\(total-votes \(apply + tally\)\)) show newline
+(            \(winning-votes \(apply max tally\)\)\)) show newline
+(        \(>= winning-votes \(* fraction total-votes\)\)\)\)) show newline
+() show newline
+() show newline
+(Threshold of Eligible) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define \(threshold-of-eligible tally total-eligible threshold\)) show newline
+(      "Require threshold of all eligible voters") show newline
+(      \(let \(\(winning-votes \(apply max tally\)\)\)) show newline
+(        \(>= winning-votes \(* threshold total-eligible\)\)\)\)) show newline
+() show newline
+() show newline
+(Weighted Voting) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(weighted-vote voter-key weight choice ballot\)) show newline
+(      "Cast vote with weight") show newline
+(      ;; Encode weight in vote) show newline
+(      \(let \(\(encoded \(map \(lambda \(v\) \(* v weight\)\)) show newline
+(                          \(encode-vote choice \(ballot-options ballot\)\)\)\)\)) show newline
+(        \(encrypt-vote-vector encoded \(ballot-public-key ballot\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRATION WITH GOVERNANCE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(RFC-007 Threshold Governance) show newline
+(----------------------------) show newline
+() show newline
+() show newline
+(    ;; Quorum voting for threshold operations) show newline
+(    \(define \(threshold-operation-vote operation trustees\)) show newline
+(      "Vote on threshold operation") show newline
+(      \(let \(\(ballot \(create-ballot) show newline
+(                      question: \(format "Approve ~a?" operation\)) show newline
+(                      options: '\(approve reject\)) show newline
+(                      threshold: '\(supermajority 2/3\)) show newline
+(                      deadline: \(+ \(current-time\) 86400\)) show newline
+(                      trustees: trustees\)\)\)) show newline
+(        ;; Wait for voting) show newline
+(        \(await-ballot-result ballot\)\)\)) show newline
+() show newline
+() show newline
+(RFC-011 Byzantine Consensus) show newline
+(---------------------------) show newline
+() show newline
+() show newline
+(    ;; Use quorum voting within Byzantine protocol) show newline
+(    \(define \(byzantine-propose-vote proposal validators\)) show newline
+(      "Propose via encrypted voting") show newline
+(      \(let \(\(ballot \(create-ballot) show newline
+(                      question: proposal) show newline
+(                      options: '\(commit abort\)) show newline
+(                      threshold: '\(byzantine-quorum \(length validators\)\)) show newline
+(                      trustees: validators\)\)\)) show newline
+(        ballot\)\)) show newline
+(    \(define \(byzantine-quorum n\)) show newline
+(      "2f+1 for n=3f+1 validators") show newline
+(      \(+ \(* 2 \(floor \(/ \(- n 1\) 3\)\)\) 1\)\)) show newline
+() show newline
+() show newline
+(Key Ceremony Voting) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Vote to approve key ceremony) show newline
+(    \(define \(key-ceremony-approval ceremony guardians\)) show newline
+(      "Guardians vote to approve ceremony") show newline
+(      \(let \(\(ballot \(create-ballot) show newline
+(                      question: \(format "Approve key ceremony ~a?" \(ceremony-id ceremony\)\)) show newline
+(                      options: '\(approve reject\)) show newline
+(                      threshold: '\(unanimous\)) show newline
+(                      deadline: \(+ \(current-time\) 3600\)) show newline
+(                      trustees: guardians\)\)\)) show newline
+(        \(let \(\(result \(await-ballot-result ballot\)\)\)) show newline
+(          \(if \(eq? \(result-winner result\) 'approve\)) show newline
+(              \(proceed-ceremony ceremony\)) show newline
+(              \(abort-ceremony ceremony\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Cryptographic Assumptions) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(  Assumption                         Primitive        Consequence if Broken   ) show newline
+(  Decisional Composite Residuosity   Paillier         Vote privacy lost       ) show newline
+(  Discrete Log                       ZK proofs        Validity unverifiable   ) show newline
+(  Random Oracle                      Hash functions   Proof forgery           ) show newline
+() show newline
+() show newline
+(Attack Mitigations) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Attack               Mitigation                           ) show newline
+(  Vote buying          Receipt-freeness via re-encryption   ) show newline
+(  Coercion             Deniable voting tokens               ) show newline
+(  Ballot stuffing      Eligibility proofs, audit trail      ) show newline
+(  Tally manipulation   Threshold decryption, ZK proofs      ) show newline
+(  Denial of service    Rate limiting, deadlines             ) show newline
+() show newline
+() show newline
+(Audit Trail) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    ;; All voting actions audited) show newline
+(    \(audit-append action: 'ballot-created ...\)) show newline
+(    \(audit-append action: 'vote-cast ...\)      ; Voter ID, not choice) show newline
+(    \(audit-append action: 'tally-computed ...\)) show newline
+(    \(audit-append action: 'share-provided ...\)) show newline
+(    \(audit-append action: 'result-published ...\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PERFORMANCE CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Paillier Costs) show newline
+(--------------) show newline
+() show newline
+() show newline
+(  Operation           Time \(2048-bit\)   ) show newline
+(  Key generation      ~100ms            ) show newline
+(  Encrypt             ~5ms              ) show newline
+(  Homomorphic add     ~0.1ms            ) show newline
+(  Decrypt             ~5ms              ) show newline
+(  Threshold decrypt   ~10ms per share   ) show newline
+() show newline
+() show newline
+(Scalability) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    ;; For N voters, M options:) show newline
+(    ;; - Encryption: O\(N  M\) operations) show newline
+(    ;; - Tallying: O\(N  M\) additions \(fast\)) show newline
+(    ;; - Decryption: O\(M * threshold\) operations) show newline
+(    ;; 10,000 voters, 3 options, 5 trustees:) show newline
+(    ;; ~50,000 encryptions \(parallel\)) show newline
+(    ;; ~30,000 additions \(<1 second\)) show newline
+(    ;; ~15 decryptions \(~150ms\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Dependencies) show newline
+(------------) show newline
+() show newline
+(  * paillier) show newline
+(  * Paillier cryptosystem - shamir) show newline
+(  * Secret sharing for threshold keys - zkp) show newline
+(  * Zero-knowledge proof primitives - srfi-27) show newline
+(  * Random number generation) show newline
+() show newline
+() show newline
+(Libraries) show newline
+(---------) show newline
+() show newline
+(Recommended implementations: - OpenFHE \(C++\) - Full HE library -) show newline
+(python-paillier - Reference implementation - threshold-paillier -) show newline
+(Distributed key generation) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Paillier, P. \(1999\). Public-Key Cryptosystems Based on Composite) show newline
+(Degree Residuosity Classes 2. Benaloh, J. \(1994\). Dense Probabilistic) show newline
+(Encryption 3. Cramer, R., Gennaro, R., Schoenmakers, B. \(1997\). A Secure) show newline
+(and Optimally Efficient Multi-Authority Election Scheme 4. RFC-007:) show newline
+(Threshold Signature Governance 5. RFC-011: Byzantine Consensus 6.) show newline
+(RFC-022: Key Ceremony Protocol) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

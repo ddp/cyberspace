@@ -1,0 +1,572 @@
+%!PS-Adobe-3.0
+%%Title: memo-016-lazy-clustering
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 016: Lazy Clustering) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies Lazy Clustering for Cyberspace federation: a relaxed) show newline
+(synchronization model where nodes sync when convenient, not) show newline
+(continuously. Optimized for the "loose confederacy of friends" model.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Not every deployment needs Byzantine consensus:) show newline
+() show newline
+(  * Friends trust friends: No active adversary) show newline
+(  * Bandwidth costs: Continuous sync is expensive) show newline
+(  * Offline operation: Internet isn't always available) show newline
+(  * Simplicity: Complex protocols have complex bugs) show newline
+() show newline
+(Lazy Clustering provides:) show newline
+() show newline
+(1. Sync when ready: Push/pull at human pace 2. Offline-first: Work) show newline
+(without network 3. Conflict detection: Know when divergence happens 4.) show newline
+(Manual resolution: Humans resolve, not algorithms 5. Audit everything:) show newline
+(Full history preserved) show newline
+() show newline
+() show newline
+(    "The best protocol is the one you don't run.") show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Cluster Model) show newline
+(-------------) show newline
+() show newline
+() show newline
+(         +---------+) show newline
+(         |  Alice  |) show newline
+(         | \(lazy\)  |) show newline
+(         +----+----+) show newline
+(              |) show newline
+(              | sync when ready @ 10Gb/s) show newline
+(              |) show newline
+(         +----v----+         +---------+) show newline
+(         |   Bob   |<------->|  Carol  |) show newline
+(         | \(lazy\)  | 10Gb/s  | \(lazy\)  |) show newline
+(         +---------+         +---------+) show newline
+(    No heartbeats. No leader election. No quorum.) show newline
+(    Just friends sharing when they're ready.) show newline
+(    At line speed when they do.) show newline
+() show newline
+() show newline
+(Performance Model) show newline
+(-----------------) show newline
+() show newline
+(Lazy semantics, line speed execution.) show newline
+() show newline
+() show newline
+(    Line speed \(10 Gb/s\):) show newline
+(      Typical release: 10 MB archive) show newline
+(      Transfer time:   8 ms) show newline
+(      Effective rate:  ~1000 releases/second) show newline
+(    Starlink \(100-200 Mb/s, 20-40ms latency\):) show newline
+(      Typical release: 10 MB archive) show newline
+(      Transfer time:   400-800 ms) show newline
+(      Effective rate:  ~1-2 releases/second) show newline
+(      Optimized for:   Bursty, high-latency satellite links) show newline
+(    Minimum bandwidth:) show newline
+(      Floor:           128 Kb/s \(dual-ISDN\)) show newline
+(      Target:          1 Mb/s \(T1\)) show newline
+(      Typical release: 10 MB archive) show newline
+(      Transfer time:   ~80 sec \(T1\), ~10 min \(dual-ISDN\)) show newline
+(      Strategy:        Delta sync, compressed archives) show newline
+() show newline
+(Crypto overhead \(constant\):) show newline
+() show newline
+() show newline
+(    Signature verify: ~10 μs \(Ed25519\)) show newline
+(    Hash verify:      ~1 ms \(SHA-512, 10MB\)) show newline
+(    Total overhead:   ~1 ms \(negligible vs transfer\)) show newline
+() show newline
+("Lazy" means when, not how fast. When you sync, it saturates the pipe.) show newline
+() show newline
+(Design priorities: 1. Optimized for Starlink and satellite links 2.) show newline
+(Tolerant of high latency \(no chatty protocols\) 3. Graceful degradation) show newline
+(to minimum bandwidth 4. Bursty transfer patterns \(sync then idle\)) show newline
+() show newline
+() show newline
+(Heartbeat and Timekeeping) show newline
+(-------------------------) show newline
+() show newline
+(No mandatory heartbeat. That's the design.) show newline
+() show newline
+() show newline
+(    Traditional cluster:  ping > pong > ping > pong > ...) show newline
+(    Lazy cluster:         ... silence ... \(sync\) ... silence ...) show newline
+() show newline
+(Timekeeping: Lamport clocks \(RFC-012\), not wall clocks. - Causality) show newline
+(without synchronization - No NTP dependency - No GPS required - Works) show newline
+(across time zones, planets) show newline
+() show newline
+(When you need consensus: Byzantine consensus \(RFC-011\) + Lamport clocks.) show newline
+(- Lazy clustering for everyday sync - Byzantine consensus for critical) show newline
+(decisions - Same Lamport clock across both modes) show newline
+() show newline
+(Optional presence beacon:) show newline
+() show newline
+() show newline
+(    \(cluster-beacon) show newline
+(      \(peer "alice"\)) show newline
+(      \(lamport-time 4271\)) show newline
+(      \(last-release "2.1.0"\)) show newline
+(      \(status available\)) show newline
+(      \(next-expected "when ready"\)\)) show newline
+() show newline
+(Beacons are: - Pull-based \(query, don't push\) - Cached \(no flood\) -) show newline
+(Stale-tolerant \(hours/days old is fine\) - Unsigned \(advisory only\)) show newline
+() show newline
+() show newline
+(Sync Modes) show newline
+(----------) show newline
+() show newline
+(#### Push \(I have something\)) show newline
+() show newline
+() show newline
+(    \(lazy-push peer\)) show newline
+(    ;; Sends my new releases to peer) show newline
+(    ;; Non-blocking, fire-and-forget) show newline
+() show newline
+(#### Pull \(What do you have?\)) show newline
+() show newline
+() show newline
+(    \(lazy-pull peer\)) show newline
+(    ;; Fetches peer's new releases) show newline
+(    ;; Verifies signatures, stores locally) show newline
+() show newline
+(#### Sync \(Bidirectional\)) show newline
+() show newline
+() show newline
+(    \(lazy-sync peer\)) show newline
+(    ;; Push then pull) show newline
+(    ;; Returns conflict report if any) show newline
+() show newline
+() show newline
+(Lazy Semantics) show newline
+(--------------) show newline
+() show newline
+(No continuous connection. Nodes are offline by default.) show newline
+() show newline
+(No consistency guarantees. Nodes may diverge.) show newline
+() show newline
+(No automatic resolution. Conflicts flagged for humans.) show newline
+() show newline
+(No urgency. Sync happens when convenient.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(STATE TRACKING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Version Vector) show newline
+(--------------) show newline
+() show newline
+(Each node tracks what it knows about others:) show newline
+() show newline
+() show newline
+(    \(define-record-type <version-vector>) show newline
+(      \(make-version-vector entries\)) show newline
+(      version-vector?) show newline
+(      \(entries vv-entries\)\)  ; Hash: node-id > latest-sequence) show newline
+(    ;; Alice's view:) show newline
+(    ;; { alice: 42, bob: 37, carol: 29 }) show newline
+() show newline
+() show newline
+(Sync Calculation) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(compute-sync-set local-vv remote-vv\)) show newline
+(      "What to send/receive") show newline
+(      \(let \(\(to-send '\(\)\)) show newline
+(            \(to-receive '\(\)\)\)) show newline
+(        \(for-each) show newline
+(          \(lambda \(node\)) show newline
+(            \(let \(\(local-seq \(vv-get local-vv node\)\)) show newline
+(                  \(remote-seq \(vv-get remote-vv node\)\)\)) show newline
+(              \(cond) show newline
+(                \(\(> local-seq remote-seq\)) show newline
+(                 \(push! to-send \(releases-between node remote-seq local-seq\)\)\)) show newline
+(                \(\(< local-seq remote-seq\)) show newline
+(                 \(push! to-receive \(list node remote-seq local-seq\)\)\)\)\)\)) show newline
+(          \(all-nodes local-vv remote-vv\)\)) show newline
+(        \(values to-send to-receive\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONFLICT DETECTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Divergence) show newline
+(----------) show newline
+() show newline
+(Same version, different content:) show newline
+() show newline
+() show newline
+(    \(lazy-sync "bob"\)) show newline
+(    ;; =>) show newline
+(    ;; ⚠ Conflict detected:) show newline
+(    ;;   Version 2.1.0) show newline
+(    ;;   Local:  sha512:abc123...) show newline
+(    ;;   Remote: sha512:def456...) show newline
+(    ;;) show newline
+(    ;;   Both modified since common ancestor 2.0.0) show newline
+() show newline
+() show newline
+(Conflict Record) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(conflict) show newline
+(      \(version "2.1.0"\)) show newline
+(      \(local-hash "sha512:abc123..."\)) show newline
+(      \(remote-hash "sha512:def456..."\)) show newline
+(      \(common-ancestor "2.0.0"\)) show newline
+(      \(detected "2026-01-06T15:30:00Z"\)) show newline
+(      \(status pending\)\)  ; pending, resolved-local, resolved-remote, merged) show newline
+() show newline
+() show newline
+(Resolution) show newline
+(----------) show newline
+() show newline
+(Manual resolution required:) show newline
+() show newline
+() show newline
+(    \(lazy-resolve "2.1.0" prefer: 'local\)) show newline
+(    ;; or) show newline
+(    \(lazy-resolve "2.1.0" prefer: 'remote\)) show newline
+(    ;; or) show newline
+(    \(lazy-resolve "2.1.0" merged: "2.1.0-merged"\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(OFFLINE OPERATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Work Offline) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(seal-commit "Add feature"\)) show newline
+(    \(seal-release "2.2.0"\)) show newline
+(    ;; All local, no network required) show newline
+() show newline
+() show newline
+(Queue for Sync) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(lazy-queue\)) show newline
+(    ;; =>) show newline
+(    ;; Pending sync:) show newline
+(    ;;   2.1.1  \(local, not pushed\)) show newline
+(    ;;   2.2.0  \(local, not pushed\)) show newline
+(    ;;) show newline
+(    ;; To sync: \(lazy-push "bob"\)) show newline
+() show newline
+() show newline
+(Reconnect and Sync) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(lazy-sync "bob"\)) show newline
+(    ;; Sends 2.1.1, 2.2.0) show newline
+(    ;; Receives bob's changes) show newline
+(    ;; Reports any conflicts) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CLUSTER OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Join Cluster) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(lazy-join "bob") show newline
+(      uri: "git@github.com:bob/vault.git") show newline
+(      key: bob-public-key\)) show newline
+(    ;; Registers peer, doesn't sync yet) show newline
+() show newline
+() show newline
+(Initial Sync) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(lazy-pull "bob"\)) show newline
+(    ;; Gets bob's full history) show newline
+(    ;; Verifies all signatures) show newline
+() show newline
+() show newline
+(Leave Cluster) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(lazy-leave "bob"\)) show newline
+(    ;; Removes peer from sync list) show newline
+(    ;; Keeps local copies of bob's releases) show newline
+() show newline
+() show newline
+(Cluster Status) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(lazy-status\)) show newline
+(    ;; =>) show newline
+(    ;; Cluster peers:) show newline
+(    ;;   bob    last-sync: 2026-01-05  versions: 1.0.0-2.1.0  ✓) show newline
+(    ;;   carol  last-sync: 2026-01-03  versions: 1.0.0-2.0.0  \(2 behind\)) show newline
+(    ;;   dave   last-sync: never       versions: none         \(not synced\)) show newline
+(    ;;) show newline
+(    ;; Local: 2.2.0 \(2 ahead of cluster\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SYNC STRATEGIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Manual \(Default\)) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(vault-config 'sync-strategy 'manual\)) show newline
+(    ;; User explicitly calls lazy-sync) show newline
+() show newline
+() show newline
+(Periodic) show newline
+(--------) show newline
+() show newline
+() show newline
+(    \(vault-config 'sync-strategy 'periodic\)) show newline
+(    \(vault-config 'sync-interval 3600\)  ; hourly) show newline
+(    ;; Background sync when network available) show newline
+() show newline
+() show newline
+(On-Commit) show newline
+(---------) show newline
+() show newline
+() show newline
+(    \(vault-config 'sync-strategy 'on-commit\)) show newline
+(    ;; Push after each seal-commit) show newline
+(    ;; Still lazy \(non-blocking, best-effort\)) show newline
+() show newline
+() show newline
+(On-Release) show newline
+(----------) show newline
+() show newline
+() show newline
+(    \(vault-config 'sync-strategy 'on-release\)) show newline
+(    ;; Push only after seal-release) show newline
+(    ;; Most conservative) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONSISTENCY GUARANTEES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(What We Guarantee) show newline
+(-----------------) show newline
+() show newline
+(  * Signature integrity: All releases verified) show newline
+(  * Causal ordering: Within single node) show newline
+(  * Conflict detection: Divergence detected) show newline
+(  * Audit preservation: Full history kept) show newline
+() show newline
+() show newline
+(What We Don't Guarantee) show newline
+(-----------------------) show newline
+() show newline
+(  * Global ordering: Nodes may see different orders) show newline
+(  * Consistency: Nodes may have different content) show newline
+(  * Availability: Offline nodes are offline) show newline
+(  * Automatic resolution: Humans must resolve) show newline
+() show newline
+() show newline
+(CAP Theorem Position) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(          Consistency) show newline
+(              /\\) show newline
+(             /  \\) show newline
+(            /    \\) show newline
+(           / Lazy \\) show newline
+(          / Cluster\\) show newline
+(         /    ✓     \\) show newline
+(        /\\) show newline
+(    Availability    Partition) show newline
+(        ✓           Tolerance ✓) show newline
+() show newline
+(We choose AP: Available and Partition-tolerant, eventually consistent.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COMPARISON WITH OTHER MODES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(  Aspect       Lazy Cluster      Federation \(RFC-010\)   Byzantine \(RFC-011\)   ) show newline
+(  Trust        Friends           Verified peers         Adversarial           ) show newline
+(  Sync         Manual/periodic   Announcement-based     Consensus             ) show newline
+(  Conflicts    Manual resolve    Detect + flag          Prevented             ) show newline
+(  Offline      Full support      Partial                Requires quorum       ) show newline
+(  Complexity   Minimal           Medium                 High                  ) show newline
+(  Use case     Small groups      Organizations          Critical systems      ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EXAMPLE SESSION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    ;; Morning: Alice works offline) show newline
+(    \(seal-commit "Add authentication"\)) show newline
+(    \(seal-commit "Add authorization"\)) show newline
+(    \(seal-release "2.3.0"\)) show newline
+(    ;; Lunch: Alice syncs with Bob) show newline
+(    \(lazy-sync "bob"\)) show newline
+(    ;; => Pushed 2.3.0 to bob) show newline
+(    ;; => Pulled 2.2.1 from bob) show newline
+(    ;; => No conflicts) show newline
+(    ;; Evening: Alice syncs with Carol) show newline
+(    \(lazy-sync "carol"\)) show newline
+(    ;; => Pushed 2.2.1, 2.3.0 to carol) show newline
+(    ;; => Pulled nothing \(carol hasn't released\)) show newline
+(    ;; => ⚠ Carol has unsynced commits \(not our concern\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Trust Model) show newline
+(-----------) show newline
+() show newline
+(Lazy clustering assumes good-faith peers:) show newline
+() show newline
+(  * Peers won't inject malicious releases) show newline
+(  * Peers won't withhold releases maliciously) show newline
+(  * Peers will eventually sync) show newline
+() show newline
+(Not suitable for: Adversarial environments, high-value targets.) show newline
+() show newline
+(Suitable for: Research groups, open source projects, friend networks.) show newline
+() show newline
+() show newline
+(Signature Verification) show newline
+(----------------------) show newline
+() show newline
+(All releases still verified:) show newline
+() show newline
+() show newline
+(    \(lazy-pull "bob"\)) show newline
+(    ;; Each release:) show newline
+(    ;;   1. Verify Ed25519 signature) show newline
+(    ;;   2. Verify hash matches content) show newline
+(    ;;   3. Check against known bob public key) show newline
+(    ;;   4. Store only if valid) show newline
+() show newline
+() show newline
+(Conflict Attacks) show newline
+(----------------) show newline
+() show newline
+(Malicious peer creates conflicting release.) show newline
+() show newline
+(Mitigation: - Conflicts flagged, not auto-resolved - Full audit trail of) show newline
+(conflict - Peer reputation tracking) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Dependencies) show newline
+(------------) show newline
+() show newline
+(  * crypto-ffi) show newline
+(  * Signature verification - audit) show newline
+(  * Sync logging) show newline
+(  * Transport \(git/HTTP/filesystem\)) show newline
+() show newline
+() show newline
+(Storage) show newline
+(-------) show newline
+() show newline
+() show newline
+(    .vault/) show newline
+(      lazy/) show newline
+(        peers.sexp        # Registered peers) show newline
+(        vectors.sexp      # Version vectors) show newline
+(        conflicts/        # Unresolved conflicts) show newline
+(        queue/            # Pending pushes) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Saito, Y., & Shapiro, M. \(2005\). Optimistic Replication. 2. Terry,) show newline
+(D., et al. \(1995\). Managing Update Conflicts in Bayou. 3. DeCandia, G.,) show newline
+(et al. \(2007\). Dynamo: Amazon's Key-Value Store. 4. RFC-010: Federation) show newline
+(Protocol 5. RFC-012: Lamport Logical Clocks) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Set minimum bandwidth: 128 Kb/s floor \(dual-ISDN\), 1 Mb/s target \(T1\) - 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Memo 027: Vault Migration</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 027: Vault Migration</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies vault migration for the Library of Cyberspace: how to move vaults between hosts, storage backends, and administrative domains while preserving content integrity, capability chains, and audit continuity. Migration is essential for long-term preservation.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>Vaults must outlive their infrastructure:</p>
+<ul>
+<li>Hardware failure</li>
+<li>Disks die, servers decommission</li>
+<li>Provider changes</li>
+<li>Cloud vendors come and go</li>
+<li>Jurisdiction</li>
+<li>Legal requirements may force relocation</li>
+<li>Performance</li>
+<li>Move closer to users</li>
+<li>Cost</li>
+<li>Cheaper storage becomes available</li>
+</ul>
+<p>Migration must be:</p>
+<ul>
+<li>Complete</li>
+<li>All objects, metadata, capabilities</li>
+<li>Verifiable</li>
+<li>Cryptographic proof of integrity</li>
+<li>Resumable</li>
+<li>Handle interruptions gracefully</li>
+<li>Auditable</li>
+<li>Full trail of what moved where</li>
+</ul>
+</section>
+<section>
+<h2>Migration Types</h2>
+<h3>Full Migration</h3>
+<p>Move entire vault to new location:</p>
+<pre class="language-scheme">
+(define (full-migration source-vault target-host)
+  "Migrate entire vault to new host"
+  (let ((migration-id (generate-migration-id)))
+    (audit-append action: `(migration-start ,migration-id)
+                  type: 'full
+                  source: source-vault
+                  target: target-host)
+
+    ;; Phase 1: Snapshot
+    (let ((snapshot (vault-snapshot source-vault)))
+      ;; Phase 2: Transfer
+      (transfer-snapshot snapshot target-host)
+      ;; Phase 3: Verify
+      (verify-transfer snapshot target-host)
+      ;; Phase 4: Cutover
+      (cutover source-vault target-host migration-id))))
+</pre>
+<h3>Partial Migration</h3>
+<p>Move subset of objects:</p>
+<pre class="language-scheme">
+(define (partial-migration source-vault target-host predicate)
+  "Migrate objects matching predicate"
+  (let ((objects (soup-query source-vault predicate)))
+    (for-each (lambda (obj)
+                (migrate-object obj target-host))
+              objects)))
+</pre>
+<h3>Live Migration</h3>
+<p>Migrate while vault remains active:</p>
+<pre class="language-scheme">
+(define (live-migration source-vault target-host)
+  "Migrate without downtime"
+  ;; Phase 1: Initial sync
+  (let ((checkpoint (initial-sync source-vault target-host)))
+    ;; Phase 2: Catch up changes
+    (let loop ((last-checkpoint checkpoint))
+      (let ((changes (changes-since source-vault last-checkpoint)))
+        (if (&lt; (length changes) catchup-threshold)
+            ;; Phase 3: Final cutover (brief pause)
+            (atomic-cutover source-vault target-host changes)
+            (loop (sync-changes changes target-host)))))))
+</pre>
+</section>
+<section>
+<h2>Object Transfer</h2>
+<h3>Export Format</h3>
+<pre class="language-scheme">
+;; Sealed archive format (RFC-018)
+(define (export-object hash)
+  `(vault-object
+    (hash ,hash)
+    (content ,(cas-get hash))
+    (soup-entry ,(soup-get hash))
+    (references ,(object-references hash))
+    (signatures ,(object-signatures hash))))
+
+(define (export-batch hashes)
+  (let ((objects (map export-object hashes)))
+    (seal-archive objects
+      compression: 'zstd
+      encryption: target-vault-key)))
+</pre>
+<h3>Transfer Protocol</h3>
+<pre class="language-scheme">
+(define (transfer-object obj source target)
+  "Transfer single object with verification"
+  (let* ((hash (object-hash obj))
+         (data (export-object hash)))
+    ;; Send to target
+    (vault-send target data)
+    ;; Get acknowledgment with hash
+    (let ((ack (vault-receive target)))
+      (unless (equal? (ack-hash ack) hash)
+        (error "Transfer verification failed" hash))
+      (audit-append action: `(object-transferred ,hash)
+                    source: source
+                    target: target))))
+</pre>
+<h3>Streaming Transfer</h3>
+<pre class="language-scheme">
+(define (stream-transfer source target)
+  "Stream objects for efficient bulk transfer"
+  (let ((stream (open-transfer-stream source target)))
+    (for-each (lambda (hash)
+                (let ((obj (export-object hash)))
+                  (stream-write stream obj)
+                  (when (stream-buffer-full? stream)
+                    (stream-flush stream))))
+              (vault-all-hashes source))
+    (stream-close stream)))
+</pre>
+</section>
+<section>
+<h2>Metadata Migration</h2>
+<h3>Soup Entries</h3>
+<pre class="language-scheme">
+(define (migrate-soup-entry hash source target)
+  "Migrate soup metadata for object"
+  (let ((entry (soup-get source hash)))
+    (when entry
+      (soup-put target hash entry)
+      ;; Verify
+      (unless (equal? (soup-get target hash) entry)
+        (error "Soup entry migration failed" hash)))))
+</pre>
+<h3>Index Migration</h3>
+<pre class="language-scheme">
+(define (migrate-indexes source target)
+  "Rebuild indexes on target"
+  ;; Option 1: Export and import index data
+  (let ((index-data (export-indexes source)))
+    (import-indexes target index-data))
+
+  ;; Option 2: Rebuild from soup (slower but guaranteed correct)
+  (rebuild-indexes target))
+</pre>
+<h3>Audit Trail</h3>
+<pre class="language-scheme">
+(define (migrate-audit source target)
+  "Migrate audit trail (critical for provenance)"
+  (let ((audit-entries (audit-export source)))
+    ;; Audit entries are append-only, transfer in order
+    (for-each (lambda (entry)
+                (audit-import target entry))
+              audit-entries)
+    ;; Add migration event to both
+    (let ((migration-entry
+           `(migration-audit
+             (source ,source)
+             (target ,target)
+             (entries ,(length audit-entries))
+             (timestamp ,(current-time)))))
+      (audit-append source migration-entry)
+      (audit-append target migration-entry))))
+</pre>
+</section>
+<section>
+<h2>Capability Migration</h2>
+<h3>Certificate Transfer</h3>
+<pre class="language-scheme">
+(define (migrate-capabilities source target)
+  "Migrate SPKI certificates"
+  (let ((certs (soup-query source type: 'certificate)))
+    (for-each (lambda (cert)
+                ;; Certificates are content-addressed, transfer directly
+                (let ((hash (cert-hash cert)))
+                  (migrate-object hash source target)))
+              certs)))
+</pre>
+<h3>Key Migration</h3>
+<pre class="language-scheme">
+;; Private keys require special handling
+(define (migrate-vault-keys source target ceremony-witnesses)
+  "Migrate vault keys via key ceremony"
+  ;; Never transfer private keys directly!
+  ;; Use threshold re-sharing or key ceremony
+  (let* ((old-shares (gather-key-shares source))
+         (new-key (generate-new-key target))
+         (transition-cert (create-key-transition-cert
+                           old-key: (vault-public-key source)
+                           new-key: new-key
+                           witnesses: ceremony-witnesses)))
+    ;; Sign transition with old key
+    (sign-transition old-shares transition-cert)
+    ;; Record in both vaults
+    (audit-append source action: (key-transition ,transition-cert))
+    (audit-append target action: (key-transition ,transition-cert))))
+</pre>
+<h3>Delegation Chain Continuity</h3>
+<pre class="language-scheme">
+(define (verify-delegation-chains target)
+  "Verify all delegation chains remain valid after migration"
+  (let ((certs (soup-query target type: 'certificate)))
+    (for-each (lambda (cert)
+                (let ((chain (build-chain cert)))
+                  (unless (valid-chain? chain)
+                    (warn "Broken delegation chain" cert))))
+              certs)))
+</pre>
+</section>
+<section>
+<h2>Verification</h2>
+<h3>Content Verification</h3>
+<pre class="language-scheme">
+(define (verify-migration source target)
+  "Verify all content transferred correctly"
+  (let ((source-hashes (vault-all-hashes source))
+        (target-hashes (vault-all-hashes target)))
+
+    ;; Check completeness
+    (let ((missing (set-difference source-hashes target-hashes)))
+      (unless (null? missing)
+        (error "Missing objects after migration" missing)))
+
+    ;; Check integrity (sample verification for large vaults)
+    (let ((sample (random-sample source-hashes 1000)))
+      (for-each (lambda (hash)
+                  (unless (equal? (cas-get source hash)
+                                  (cas-get target hash))
+                    (error "Content mismatch" hash)))
+                sample))
+
+    ;; Check soup metadata
+    (for-each (lambda (hash)
+                (unless (equal? (soup-get source hash)
+                                (soup-get target hash))
+                  (error "Soup mismatch" hash)))
+              (random-sample source-hashes 1000))))
+</pre>
+<h3>Merkle Verification</h3>
+<pre class="language-scheme">
+(define (merkle-verify-migration source target)
+  "Verify migration via Merkle root comparison"
+  (let ((source-root (vault-merkle-root source))
+        (target-root (vault-merkle-root target)))
+    (unless (equal? source-root target-root)
+      ;; Find divergence
+      (let ((divergence (find-merkle-divergence source target)))
+        (error "Merkle verification failed" divergence)))))
+</pre>
+<h3>Audit Verification</h3>
+<pre class="language-scheme">
+(define (verify-audit-continuity source target)
+  "Verify audit trail continuity"
+  (let ((source-audit (audit-export source))
+        (target-audit (audit-export target)))
+    ;; Target should have all source entries plus migration events
+    (unless (subsequence? source-audit target-audit)
+      (error "Audit trail discontinuity"))))
+</pre>
+</section>
+<section>
+<h2>Cutover</h2>
+<h3>Atomic Cutover</h3>
+<pre class="language-scheme">
+(define (atomic-cutover source target migration-id)
+  "Atomically switch from source to target"
+  ;; Phase 1: Quiesce source
+  (vault-readonly! source)
+
+  ;; Phase 2: Final sync
+  (let ((final-changes (changes-since source (last-sync-point))))
+    (sync-changes final-changes target))
+
+  ;; Phase 3: Verify
+  (verify-migration source target)
+
+  ;; Phase 4: Update DNS/routing
+  (update-vault-routing source target)
+
+  ;; Phase 5: Activate target
+  (vault-activate! target)
+
+  ;; Phase 6: Record completion
+  (audit-append target action: `(migration-complete ,migration-id)))
+</pre>
+<h3>Rollback</h3>
+<pre class="language-scheme">
+(define (migration-rollback migration-id)
+  "Rollback failed migration"
+  (let ((migration (get-migration migration-id)))
+    (case (migration-phase migration)
+      ((transfer)
+       ;; Just abandon target
+       (vault-delete! (migration-target migration)))
+      ((cutover)
+       ;; Restore routing to source
+       (update-vault-routing (migration-target migration)
+                             (migration-source migration))
+       (vault-readonly! (migration-target migration))
+       (vault-activate! (migration-source migration)))
+      ((complete)
+       (error "Cannot rollback completed migration")))))
+</pre>
+</section>
+<section>
+<h2>Incremental Migration</h2>
+<h3>Checkpoint System</h3>
+<pre class="language-scheme">
+(define (migration-checkpoint migration-id progress)
+  "Save migration progress for resumption"
+  (let ((checkpoint
+         `(checkpoint
+           (migration-id ,migration-id)
+           (timestamp ,(current-time))
+           (transferred ,(progress-transferred progress))
+           (remaining ,(progress-remaining progress))
+           (last-hash ,(progress-last-hash progress)))))
+    (cas-put (serialize checkpoint))))
+
+(define (resume-migration migration-id)
+  "Resume interrupted migration"
+  (let ((checkpoint (latest-checkpoint migration-id)))
+    (if checkpoint
+        (continue-from-checkpoint checkpoint)
+        (error "No checkpoint found" migration-id))))
+</pre>
+<h3>Change Tracking</h3>
+<pre class="language-scheme">
+;; Track changes during migration
+(define (changes-since vault timestamp)
+  "Get all changes since timestamp"
+  (soup-query vault
+              modified: (&gt; timestamp)
+              order-by: '((modified asc))))
+
+(define (sync-changes changes target)
+  "Apply changes to target"
+  (for-each (lambda (change)
+              (case (change-type change)
+                ((create modify)
+                 (migrate-object (change-hash change) target))
+                ((delete)
+                 (cas-delete target (change-hash change)))))
+            changes))
+</pre>
+</section>
+<section>
+<h2>Storage Backend Migration</h2>
+<h3>Backend Abstraction</h3>
+<pre class="language-scheme">
+;; Migrate between storage backends
+(define (backend-migration vault old-backend new-backend)
+  "Migrate vault to different storage backend"
+  (for-each (lambda (hash)
+              (let ((data (backend-get old-backend hash)))
+                (backend-put new-backend hash data)
+                (verify-backend-transfer hash old-backend new-backend)))
+            (backend-all-hashes old-backend)))
+
+;; Example: S3 to local filesystem
+(define (s3-to-local vault bucket path)
+  (backend-migration vault
+                     (make-s3-backend bucket)
+                     (make-fs-backend path)))
+</pre>
+<h3>Format Conversion</h3>
+<pre class="language-scheme">
+;; Migrate between storage formats
+(define (format-migration vault old-format new-format)
+  "Convert storage format during migration"
+  (for-each (lambda (hash)
+              (let* ((old-data (read-format old-format hash))
+                     (new-data (convert-format old-data new-format)))
+                (write-format new-format hash new-data)))
+            (vault-all-hashes vault)))
+</pre>
+</section>
+<section>
+<h2>Federation Migration</h2>
+<h3>Vault Federation Changes</h3>
+<pre class="language-scheme">
+(define (federation-migrate vault old-federation new-federation)
+  "Migrate vault between federations"
+  ;; Leave old federation
+  (federation-leave old-federation vault)
+
+  ;; Update vault metadata
+  (vault-set-federation! vault new-federation)
+
+  ;; Join new federation
+  (federation-join new-federation vault)
+
+  ;; Announce to peers
+  (federation-announce new-federation vault))
+</pre>
+<h3>Cross-Federation Transfer</h3>
+<pre class="language-scheme">
+(define (cross-federation-transfer hash source-fed target-fed)
+  "Transfer object between federations"
+  (let* ((source-vault (federation-locate source-fed hash))
+         (target-vault (federation-select target-fed))
+         (obj (vault-get source-vault hash)))
+    (vault-put target-vault obj)
+    (federation-announce target-fed hash target-vault)))
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Migration Authorization</h3>
+<pre class="language-scheme">
+;; Migration requires appropriate capability
+(spki-cert
+  (issuer vault-admin)
+  (subject migration-operator)
+  (capability
+    (action migrate)
+    (object vault-id))
+  (validity (not-after "2026-02-01")))
+
+(define (authorized-migration? operator source target)
+  (and (has-capability? operator 'migrate source)
+       (has-capability? operator 'write target)))
+</pre>
+<h3>Encryption in Transit</h3>
+<pre class="language-scheme">
+(define (secure-transfer source target)
+  "Transfer with encryption"
+  (let ((session-key (establish-session-key source target)))
+    (for-each (lambda (hash)
+                (let* ((data (cas-get source hash))
+                       (encrypted (encrypt session-key data)))
+                  (send-encrypted target encrypted)))
+              (vault-all-hashes source))))
+</pre>
+<h3>Migration Audit</h3>
+<pre class="language-scheme">
+;; All migrations are fully audited
+(define (audited-migration source target)
+  (let ((migration-id (generate-migration-id)))
+    (audit-append action: 'migration-authorized
+                  migration-id: migration-id
+                  operator: (current-principal)
+                  source: source
+                  target: target)
+    ;; ... perform migration ...
+    (audit-append action: 'migration-complete
+                  migration-id: migration-id
+                  objects: (count-migrated)
+                  verification: (verification-result))))
+</pre>
+</section>
+<section>
+<h2>References</h2>
+<p>1. [Live Migration of Virtual Machines](https://dl.acm.org/doi/10.1145/1095810.1095816) - Clark et al. 2. [RFC-018: Sealed Archive Format](rfc-018-sealed-archive.html) 3. [RFC-022: Key Ceremony Protocol](rfc-022-key-ceremony.html) 4. [RFC-024: Network Protocol](rfc-024-network-protocol.html)</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-07</li>
+<li>Initial draft</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>
