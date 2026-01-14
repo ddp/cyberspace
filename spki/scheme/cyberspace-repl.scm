@@ -50,6 +50,9 @@
 ;; Set to #f for release builds once beta is complete
 (define *beta-build* #t)
 
+;;; The memos are tidy, the tala beats on, and the flute still plays om.
+(define *stillness* "Quiet night in cyberspace.")
+
 ;;; ============================================================
 ;;; Boot Verbosity Levels
 ;;; ============================================================
