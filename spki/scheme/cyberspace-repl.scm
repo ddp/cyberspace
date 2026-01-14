@@ -659,6 +659,7 @@
 (import inspector)
 (import portal)
 (import board)
+(import display)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -5082,6 +5083,8 @@ Cyberspace REPL - Available Commands
     (gossip    . gossip-status)
     (audit     . audit-read)
     (clear     . clear)
+    (open      . open)
+    (theme     . theme!)
     (help      . help)
     (quit      . exit)
     (exit      . exit)))
@@ -5303,6 +5306,32 @@ Cyberspace REPL - Available Commands
     result))
 (define security security-summary)
 (define announce announce-presence)
+
+;; Display modes and browser opening
+(define (open #!optional content)
+  "Open content in browser with current theme.
+   (open)         - open status/about page
+   (open \"text\") - open text in browser
+   (open obj)     - open pretty-printed object"
+  (let ((html-content
+         (cond
+          ((not content)
+           ;; No argument - generate status page
+           (render-html "Cyberspace"
+             (string-append
+              "<h1>Cyberspace</h1>\n"
+              "<pre>" (with-output-to-string status) "</pre>\n")))
+          ((string? content)
+           ;; String - wrap in pre
+           (render-html "Cyberspace"
+             (string-append "<pre>" content "</pre>\n")))
+          (else
+           ;; Object - pretty print
+           (render-html "Cyberspace"
+             (string-append "<pre>"
+                            (with-output-to-string (lambda () (pp content)))
+                            "</pre>\n"))))))
+    (open-in-browser html-content)))
 
 ;; Show principals (identity + keys)
 (define (principals)
