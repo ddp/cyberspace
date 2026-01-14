@@ -40,6 +40,14 @@ This RFC specifies the Federation Protocol for the Library of Cyberspace: a peer
 
 DEC had the pieces in the 1980s—VAXclusters, distributed lock managers, capability-based security thinking. The federation model where enrollment IS trust. No baroque ACL hierarchies within the cluster. You're in or you're out.
 
+The security architecture was real:
+
+- **$CHKPRO** - the privilege checking gate, the single point where all privilege decisions were made
+- **The auditing subsystem** - in its final form, comprehensive privilege and access logging
+- **C2/B1 certified security model** - Orange Book compliance, proven secure
+
+When Cutler left for Microsoft, his modules were inherited. The privilege auditing rototill required fluency in MACRO-32. The people who understood the security architecture intimately were the ones who maintained it—and they understood that trust was binary. You had the privilege or you didn't. You were in the cluster or you weren't.
+
 Then the market went another way. Firewalls and perimeters instead of capabilities. Identity instead of authorization. "Zero trust" that paradoxically trusts everything except the things that should be trusted.
 
 Cyberspace picks up that thread:
