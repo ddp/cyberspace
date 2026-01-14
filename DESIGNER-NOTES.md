@@ -21,7 +21,7 @@ DEC was a family. This was merely one specialty.
 
 **Inheritance:** When Cutler left for Microsoft, his modules were inherited. The privilege auditing "rototill" required fluency in MACRO-32.
 
-**Text in the Library of Cyberspace** is in the color of phosphor green, the color of those green bar printouts. Not retro. Not nostalgia. Memory.
+**Text in the Library of Cyberspace** is in the color of phosphor green, the color of VT100s and reflective of LPS-40 green bar printouts. Not retro. Not nostalgia. Memory.
 
 ### The Road Not Taken
 
