@@ -58,7 +58,8 @@
           catalog
           crypto-ffi
           os          ; for session-stat!
-          (only vault lamport-send lamport-receive! lamport-save!))
+          (only vault lamport-send lamport-receive! lamport-save!
+                      capability-add!))
 
   ;; ============================================================
   ;; Configuration
@@ -274,6 +275,12 @@
     ;; Store callbacks
     (set! *object-getter* object-getter)
     (set! *object-storer* object-storer)
+
+    ;; Register gossip capabilities (lazy, at daemon start)
+    (capability-add! 'gossip-protocol)
+    (capability-add! 'bloom-filter)
+    (capability-add! 'merkle-diff)
+    (capability-add! 'object-transfer)
 
     ;; Initialize local state
     (set! *local-catalog* (make-catalog))

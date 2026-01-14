@@ -100,7 +100,15 @@
    ;; Configuration
    vault-init
    vault-config
-   get-vault-principal)
+   get-vault-principal
+
+   ;; Capability Set (weave self-awareness)
+   capability-add!
+   capability-remove!
+   capability?
+   capabilities
+   capability-intersect
+   capability-difference)
 
   (import scheme
           (chicken base)
@@ -478,6 +486,51 @@
         ((< t 1000000) (sprintf "λ ~ak" (quotient t 1000)))
         ((< t 1000000000) (sprintf "λ ~am" (quotient t 1000000)))
         (else (sprintf "λ ~ag" (quotient t 1000000000))))))
+
+  ;;; ============================================================================
+  ;;; Capability Set (Weave Self-Awareness)
+  ;;; ============================================================================
+  ;;;
+  ;;; Tracks what this node can do. Used for gossip negotiation and introspection.
+  ;;; Capabilities are symbols registered at module load or runtime.
+
+  (define *capabilities* (make-hash-table eq?))
+
+  (define (capability-add! cap)
+    "Register a capability this node supports."
+    (hash-table-set! *capabilities* cap #t)
+    cap)
+
+  (define (capability-remove! cap)
+    "Remove a capability."
+    (hash-table-delete! *capabilities* cap))
+
+  (define (capability? cap)
+    "Check if this node has a capability."
+    (hash-table-exists? *capabilities* cap))
+
+  (define (capabilities)
+    "List all capabilities as a sorted list."
+    (sort (hash-table-keys *capabilities*)
+          (lambda (a b) (string<? (symbol->string a) (symbol->string b)))))
+
+  (define (capability-intersect caps1 caps2)
+    "Set intersection: capabilities both have."
+    (filter (lambda (c) (memq c caps2)) caps1))
+
+  (define (capability-difference caps1 caps2)
+    "Set difference: capabilities in caps1 but not caps2."
+    (filter (lambda (c) (not (memq c caps2))) caps1))
+
+  ;; Register core capabilities at load time
+  (capability-add! 'ed25519-sign)
+  (capability-add! 'ed25519-verify)
+  (capability-add! 'sha256-hash)
+  (capability-add! 'argon2id-kdf)
+  (capability-add! 'chacha20-poly1305)
+  (capability-add! 'lamport-clock)
+  (capability-add! 'spki-certs)
+  (capability-add! 'audit-trail)
 
   ;;; ============================================================================
   ;;; Utility Functions (must be defined before use)
