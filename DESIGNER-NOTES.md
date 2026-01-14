@@ -13,13 +13,15 @@ DEC was a family. This was merely one specialty.
 **The Security Project Team:** Derrell Piper (lead), Mark Pilant, and Andy Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.
 
 **What we built:**
-- `$CHKPRO` - the privilege checking gate
-- The entire auditing subsystem (final form)
-- C2/B1 certified security model
+- `$CHKPRO` - the privilege checking gate, the single point where all privilege decisions were made
+- The entire auditing subsystem (final form), comprehensive privilege and access logging
+- C2/B1 certified security model (Orange Book compliance, proven secure)
 
 **Access:** The security project team (or anyone we designated) were the only ones allowed in the kernel group's modules. Dave Cutler's team begrudgingly accepted this as a mandate from heaven (Ken Olsen / Maynard). We got in on a mandate. We stayed because the work was good.
 
 **Inheritance:** When Cutler left for Microsoft, his modules were inherited. The privilege auditing "rototill" required fluency in MACRO-32.
+
+**The phosphor green** in the Library of Cyberspace is the color of those green bar printouts. Not retro. Not nostalgia. Memory.
 
 ### The Road Not Taken
 
