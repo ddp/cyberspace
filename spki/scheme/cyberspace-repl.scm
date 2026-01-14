@@ -1016,7 +1016,7 @@
          (id (case scope
                ((local) (string-append "local:memo-" num))
                ((federation) (string-append (current-directory) ":memo-" num))
-               ((core) (string-append "RFC-" num))
+               ((core) (string-append "Memo-" num))
                (else (error "Invalid scope" scope))))
          (memo `((id . ,id)
                  (title . ,title)
@@ -1061,7 +1061,7 @@
         ((core)
          (unless (member current-scope '(local federation))
            (error "Already at core scope"))
-         (print "Promoting " memo-id " to core (RFC)")
+         (print "Promoting " memo-id " to core (Memo)")
          (print "  Requires rough consensus"))
         (else (error "Invalid scope" new-scope)))
       `(promoted ,memo-id ,new-scope))))
@@ -5144,8 +5144,8 @@ Cyberspace REPL - Available Commands
     (library "RFCs & Documentation"
      ("(library)" "Browse all RFCs")
      ("(search 'topic)" "Search vault + library")
-     ("(rfc N)" "View RFC in terminal")
-     ("(rfc N 'html)" "Open RFC in browser"))
+     ("(memo N)" "View Memo in terminal")
+     ("(rfc N 'html)" "Open Memo in browser"))
 
     (security "Keys & Certificates"
      ("(principals)" "Show identity and keys")
@@ -5260,7 +5260,7 @@ Cyberspace REPL - Available Commands
      (print "Cyberspace Scheme")
      (print "")
      (print "  (soup)            - Browse vault")
-     (print "  (library)         - Browse RFCs")
+     (print "  (library)         - Browse Memos")
      (print "  (search 'topic)   - Search everything")
      (print "  (status)          - Node status")
      (print "  (inspect OBJ)     - Inspect anything")
@@ -5679,7 +5679,7 @@ Cyberspace REPL - Available Commands
      (else
       (print "Unknown audit command. Try (audit) for help.")))))
 
-;; Library of Cyberspace - RFC browser
+;; Library of Cyberspace - Memo browser
 (define (library #!optional filter)
   "Browse the Library of Cyberspace RFCs"
   (let* ((lib (introspect-library))
@@ -5754,9 +5754,9 @@ Cyberspace REPL - Available Commands
 
     (void)))
 
-;; Open RFC in viewer
+;; Open Memo in viewer
 (define (rfc num #!optional format)
-  "Open RFC in viewer. (rfc 54) or (rfc 54 'html) or (rfc 54 'ps)"
+  "Open Memo in viewer. (rfc 54) or (rfc 54 'html) or (rfc 54 'ps)"
   (let* ((num-str (if (number? num)
                       (string-pad-left (number->string num) 3 #\0)
                       (string-pad-left (symbol->string num) 3 #\0)))
@@ -5776,7 +5776,7 @@ Cyberspace REPL - Available Commands
                   (string-append "ls " rfc-dir "/rfc-" num-str "-*" ext " 2>/dev/null | head -1")
                   read-line)))
     (if (or (eof-object? actual) (string=? actual ""))
-        (print "RFC-" num-str " not found")
+        (print "Memo-" num-str " not found")
         (begin
           (case fmt
             ((html)
