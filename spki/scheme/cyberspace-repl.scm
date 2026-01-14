@@ -1334,6 +1334,53 @@
 ;; Forward declaration note: *quorum-proposals* defined in RFC-036 section
 ;; Weave can access it after full load
 
+(define (about)
+  "Describe Cyberspace for the uninitiated. The description morphs with the weave."
+  (let* ((realm-name (realm-signature))
+         (enrolled (handle-exceptions exn '() (weave-list-enrolled)))
+         (peer-count (length enrolled))
+         (vault-path (get-vault-path))
+         (has-vault (and vault-path (directory-exists? vault-path))))
+    (print "")
+    (print "════════════════════════════════════════════════════════════════")
+    (print "")
+    (print "  Cyberspace is a system for storing and sharing digital")
+    (print "  documents, code, and data without relying on any company,")
+    (print "  government, or central authority.")
+    (print "")
+    (print "  Instead of trusting a corporation to keep your files safe,")
+    (print "  you and people you trust keep copies that are cryptographically")
+    (print "  signed--meaning anyone can verify who created something and")
+    (print "  that it hasn't been tampered with.")
+    (print "")
+    (print "  If one computer goes offline, the others still have everything.")
+    (print "")
+    (print "  Your data belongs to you, verified by math, preserved by the")
+    (print "  people you choose.")
+    (print "")
+    (print "════════════════════════════════════════════════════════════════")
+    (print "")
+    (print "  This realm: " realm-name)
+    (cond
+      ((= peer-count 0)
+       (print "  Standing alone. No peers enrolled yet.")
+       (print "  Use (enroll-request \"name\") to join the weave."))
+      ((= peer-count 1)
+       (print "  One peer in the weave. A mirror reflects.")
+       (print "  " (caar enrolled)))
+      (else
+       (print "  " peer-count " peers in the weave. Mirrors reflecting mirrors.")
+       (for-each (lambda (node) (print "  " (car node))) enrolled)))
+    (print "")
+    (if has-vault
+        (print "  Vault: active")
+        (print "  Vault: not initialized (use vault-init)"))
+    (print "")
+    `(about
+      (realm ,realm-name)
+      (peers ,peer-count)
+      (vault ,has-vault))))
+
 ;;; ============================================================
 ;;; RFC-011: Byzantine Consensus
 ;;; ============================================================
