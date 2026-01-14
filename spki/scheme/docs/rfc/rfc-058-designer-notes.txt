@@ -10,8 +10,8 @@ Date: January 2026
 ABSTRACT
 ------------------------------------------------------------------------
 
-Personal history, design decisions, and accumulated wisdom from building
-Cyberspace. This RFC grows as the weave deepens.
+Personal history and design decisions behind Cyberspace. This RFC grows
+as the weave deepens.
 
 
 ------------------------------------------------------------------------
@@ -22,53 +22,60 @@ Cyberspace. This RFC grows as the weave deepens.
 1.1 VMS Security (1984-1994)
 ----------------------------
 
-The designer was engineering lead for TCSEC C2/B1 certification on
-VAX/VMS and Alpha VMS, and owned the VMS 6.0 release.
+DEC was a family. This was merely one specialty.
 
-The Security Project Team: Derrell Piper, Mark Pilant, Andy Goldstein.
+The Security Project Team was Derrell Piper, Mark Pilant, Andy
+Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.
 
 What we built:
 
-  * $CHKPRO - the privilege checking gate
-  * The entire auditing subsystem (final form)
-  * C2/B1 certified security model
+  * $CHKPRO - the privilege checking gate, the single point where all privilege decisions were made
+  * The entire auditing subsystem (final form), comprehensive privilege and access logging
+  * C2/B1 certified security model (Orange Book compliance, proven secure)
 
-When Cutler left for Microsoft, his modules were inherited. The
-privilege auditing rototill required fluency in MACRO-32.
+Access: The security project team (or anyone we designated) were the
+only ones allowed in the kernel group's modules. Dave Cutler's team
+begrudgingly accepted this as a mandate from heaven (Ken Olsen /
+Maynard). We got in on a mandate. We stayed because the work was good.
+
+Inheritance: When Cutler left for Microsoft, his modules were inherited.
+The privilege auditing 'rototill' required fluency in MACRO-32.
+
+Text in the Library of Cyberspace is in the color of phosphor green, the
+color of VT100s and reflective of IBM green bar printouts. Not retro.
+Not nostalgia. Memory.
 
 
-1.2 TGV and IPsec (1994-2001)
------------------------------
+1.2 The Road Not Taken
+----------------------
 
-After DEC, the designer joined TGV Inc. (MultiNet TCP/IP for VMS).
-Designed all of Secure/IP and the Kerberized VAX/VMS SSO using Kerberos.
+We all built VAX/VMS V6.0 and then we threw it away--literally tossing
+our green bar printouts of our respective subsystems into an empty cube
+on ZK03/4. The code of what could have been. The end of DEC.
 
-Cisco acquired TGV in 1996, thinking they were buying a Windows TCP/IP
-stack. They weren't. MultiNet was VMS networking; the Windows products
-were incidental.
+They must have done something similar after Prism/Mica was cancelled,
+ahead of that fateful offer to Gates & Co. that gifted Microsoft
+dominance in COTS computing.
 
-The IPsec/IKE work continued through Network Alchemy (acquired by
-Nokia). The designer authored , 'A GSS-API Authentication Method for
-IKE', which documented how to authenticate IKE using Kerberos over
-GSS-API.
+Prism/Mica was being designed for TCSEC B1. That's the legacy--the
+mindset, the trust model, and the codebase--that Gates was gifted in an
+offer they couldn't refuse.
 
-Brian Swander was added as co-author to hand the specification to
-Microsoft for Windows 2000 implementation. The Vendor Payload extension
-mechanism in IKE was added to encapsulate Microsoft's GSS-API extension
-cleanly.
+Of all the people at DEC, Cutler--designer of the MicroVAX--could see
+the writing on the wall. The age of PCs had been born. Digital missed
+the train.
 
-That same Vendor Payload mechanism was later used extensively in
-AlchemyOS for proprietary extensions without breaking interoperability.
-Good protocol design: create a generic extension point for one use case,
-it becomes useful for everyone.
+The weave predates the software. The people who understood trust
+architectures kept finding each other:
 
-The path: DEC > TGV > Cisco > Network Alchemy > Nokia, carrying
-IPsec/IKE expertise through each transition. The work survives in
-Windows cross-realm domain authentication to this day.
+  * DEC -> Microsoft -> Cisco -> here
+  * Peter Lofgren was there. There's a photograph of that meeting floating around in PDP-10 space. He ended up at Cisco--our nexus.
 
-Acknowledgments for the NT IPsec/IKE work: George Lake, Rob Adams, Max
-Pritikin, John [TODO], Anne Church, Peter Ford, and William Dixon who
-cat herded IPv6 into existence during NT5 (Windows 2000) development.
+The thread is unbroken. From the people who built it, through the people
+who maintained it, to the people who understood what was lost. And now
+into the code.
+
+That's provenance you can't fake.
 
 
 1.3 Languages
@@ -78,12 +85,13 @@ BLISS - Bill Wulf at CMU (1969) created BLISS as an expression language,
 not 'DEC's C'. Everything returns a value. Lisp in systems clothing.
 
 MACRO-32 - VAX assembly with rich macros. The kernel was MACRO-32.
+Learned it from the privilege auditing rototill.
 
 The VMS Runtime - Had a rich macro wrapper for BLISS. That macro system
-was a Lisp. We knew.
+was a Lisp. We knew. That's why we used it.
 
-The designer came to VMS as a Lisper, fell in love with BLISS (an
-expression language, like home).
+A Lisper who fell in love with BLISS (an expression language, like
+home).
 
 
 1.4 Syntax Heritage
@@ -95,57 +103,14 @@ Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:
     (translate text from: 'en to: 'fr)
     (enroll-request name timeout: 30)
 
-Self syntax was weird. Smalltalk doesn't work for math people. Scheme is
-honest - prefix, unambiguous, mathematical.
+Ada/Dylan/BLISS style - named parameters, self-documenting:
 
+  * Ada: Open(File => "data.txt", Mode => Read_Only)
+  * Dylan: open(file: "data.txt", mode: #"read")
+  * BLISS: OPEN(FILE = 'data.txt', MODE = READONLY)
 
-1.5 System Service Vocabulary
------------------------------
-
-The VMS system service vocabulary provides the conceptual heritage for
-Cyberspace's security primitives.
-
-The security subsystem was written exclusively in BLISS (with MACRO-32
-fluency for reading the layers beneath). Now it's Scheme.
-
-Access check pattern:
-
-
-    $CREATE_USER_PROFILE  >  builds encoded user security profile
-            v
-    $CHKPRO / $CHECK_ACCESS  >  evaluates access using profile + object protection
-            v
-    SS$_NORMAL / SS$_NOPRIV  >  grant or deny
-
-Key item codes (CHP$_*):
-
-  * CHP$_ACCESS > access-mask (requested access type bitmask)
-  * CHP$_PROT > protection (SOGW protection mask)
-  * CHP$_OWNER > owner (object owner identifier)
-  * CHP$_UIC > principal (accessor's identity)
-  * CHP$_PRIV > privileges (privilege mask)
-  * CHP$_ACL > acl (access control list)
-  * CHP$_FLAGS > flags (check options: observe/alter)
-
-Flags: CHP$V_AUDIT > audit?, CHP$V_OBSERVE > read?, CHP$V_ALTER > write?
-
-Return status: SS$_NORMAL > #t, SS$_NOPRIV > #f, SS$_ACCVIO > 'accvio,
-SS$_IVACL > 'invalid-acl
-
-Impersonation ($PERSONA_*): Used by DECdfs and distributed file services
-to act on behalf of remote clients without re-implementing access
-checks.
-
-$PERSONA was designed by the DEC Distributed File System group, not VMS
-Engineering.
-
-The original $IMPERSONATION framework was authored by Rich Bouchard. It
-was lost during the Mitnick incidents when Andy Goldstein and I decided
-we needed to rebuild our compiler chain from known good offsite backups
-- with Ken Thompson's 'Reflections on Trusting Trust' fresh in our
-minds. In doing so, we lost a year of development during Alpha,
-including the original kernel threads implementation and the
-$IMPERSONATION framework.
+Self syntax was weird. Smalltalk doesn't work for math people (2 + 3 * 4
+= 20, not 14). Scheme is honest - prefix, unambiguous, mathematical.
 
 
 ------------------------------------------------------------------------
@@ -157,7 +122,7 @@ $IMPERSONATION framework.
 --------------------
 
 From TCSEC: 'Small, proven, frozen' - only put in the TCB what you can
-verify.
+verify. VMS C2/B1 taught this. Cyberspace applies it:
 
 
     TCB (OCaml):     ~1000 lines, proven in Coq
@@ -175,11 +140,66 @@ Cyberspace has one abstraction: the vault. It subsumes all of them.
 --------------------
 
 $CHKPRO checked privileges. The auditing subsystem logged decisions.
-Both were ours. Cyberspace continues this.
+Both were ours. Cyberspace continues this:
+
+
+    (define (check-capability actor action resource)
+      (let ((granted (spki-verify actor action resource)))
+        (audit-append actor: actor action: action granted: granted)
+        granted))
 
 
 ------------------------------------------------------------------------
-3. THE SOUP
+3. INTERFACE PHILOSOPHY
+------------------------------------------------------------------------
+
+
+3.1 English on Top, Scheme Underneath
+-------------------------------------
+
+
+    Terminal:    English verbs for mortals
+    REPL:        Scheme for hackers
+    Commands:    Forever cast in English/Scheme
+    Messages:    Multilingual (the command line speaks your tongue)
+
+
+3.2 For the Uninitiated
+-----------------------
+
+
+    (about)      ; What is this place?
+    (huh?)       ; Same question, different inflection
+    (what?)      ; Still the same
+    (describe)   ; For the formal
+
+The answer morphs with the weave. Standing alone, it suggests
+enrollment. With peers, it lists them. The description reflects the
+current state--not a static brochure but a living mirror of the
+constellation.
+
+Cyberspace is a system for storing and sharing digital documents, code,
+and data without relying on any company, government, or central
+authority. Instead of trusting a corporation to keep your files safe,
+you and people you trust keep copies that are cryptographically
+signed--meaning anyone can verify who created something and that it
+hasn't been tampered with. If one computer goes offline, the others
+still have everything. Your data belongs to you, verified by math,
+preserved by the people you choose.
+
+
+3.3 Workstations and Terminals
+------------------------------
+
+Workstations and terminals weren't wrong. PCs aren't the answer to
+everything. The right interface for the job at hand. Sometimes your
+native language is superior.
+
+Cyberspace runs on terminals because that's what operators use.
+
+
+------------------------------------------------------------------------
+4. THE SOUP
 ------------------------------------------------------------------------
 
 The vault browser is called 'soup' after Newton's persistent object
@@ -192,14 +212,19 @@ store (1993).
 Apple Newton -> Dylan -> Scheme. The soup survives.
 
 
+    (soup)              ; browse the vault
+    (soup 'keys)        ; list keys
+    (soup-stat 'alice)  ; inspect object
+
+
 ------------------------------------------------------------------------
-4. THE RAGA FAVICON
+5. THE RAGA FAVICON
 ------------------------------------------------------------------------
 
 The Library's favicon is a lambda whose color morphs through the day.
 
 
-4.1 The Prahar (Watches)
+5.1 The Prahar (Watches)
 ------------------------
 
 
@@ -213,27 +238,29 @@ The Library's favicon is a lambda whose color morphs through the day.
     22-04  cyan      night
 
 
-4.2 Why Ragas?
+5.2 Why Ragas?
 --------------
 
 Indian classical music assigns ragas to specific times of day. A morning
-raga played at midnight is wrong - not because of rules, but because it
+raga played at midnight is wrong--not because of rules, but because it
 doesn't fit. The music knows when it should be heard.
 
 
-4.3 Why a Breathing Lambda?
+5.3 Why a Breathing Lambda?
 ---------------------------
 
-The lambda isn't just a logo - it's the fundamental unit. What Scheme
+The lambda isn't just a logo--it's the fundamental unit. What Scheme
 computes, what the weave is made of. Every function, every object, every
 sealed thing in the vault is lambdas all the way down.
 
-The color morphing isn't decoration - it's the weave breathing. Lambdas
+The color morphing isn't decoration--it's the weave breathing. Lambdas
 are being gathered, tested, frozen into vaults across time zones. The
-color you see is the pulse of that activity.
+color you see is the pulse of that activity. Dawn gold as the eastern
+hemisphere wakes and contributes. Phosphor green at peak hours. Cyan in
+the quiet night when the squirrels rest.
 
 
-4.4 The Easter Egg
+5.4 The Easter Egg
 ------------------
 
 Someone notices their lambda is orange, asks why, and learns: 'You're
@@ -244,129 +271,128 @@ Those who need to ask are in need of enlightenment. The Library is here
 to provide it. They came for the RFCs, they left understanding the
 lambda.
 
-The brahma muhurta violet isn't just pretty - it's the hour of
+The brahma muhurta violet isn't just pretty--it's the hour of
 enlightenment. If they're seeing violet, they're already up at the right
 time.
 
 
 ------------------------------------------------------------------------
-5. WEAVING BY LAMBDA
+6. LITTLE FLUFFY CLOUDS
 ------------------------------------------------------------------------
 
-Weaving by lambda - the craft. The act of building, creating, adding to
-Cyberspace.
+'What were the skies like when you were young?' -- The Orb, 1990
 
-Loch lambda - the measure of depth achieved. How far have you gone? How
-much have you woven?
+The realms in the weave are clouds--little fluffy clouds drifting in
+ambient space. The Orb understood distributed systems before we had the
+words: layers of sound, samples from elsewhere, everything floating,
+nothing anchored to a single point.
 
-The deeper you weave, the more loch lambda you've earned. A merit badge
-for the depths explored.
+Fluffy leads the weave. The name was never arbitrary.
 
-The weave thickens as lambdas accrete. Each function, each object, each
-sealed thing adds to the fabric. The loch deepens.
+The skies when we were young were phosphor green, VT100s in machine
+rooms, the hum of VAXen. Now the clouds are realms, and the realms are
+lambdas, and the lambdas float in the wilderness of mirrors.
 
-The pun layers: LOC (lines of code) -> loc/lambda (lambdas as unit) ->
-loch lambda (the depths).
-
-Zen is below 10. Enlightened code is under 10 loc/lambda. Small,
-focused, one thing done well.
+Ambient for the ages. Distributed for the future.
 
 
 ------------------------------------------------------------------------
-6. FORMAT PHILOSOPHY
-------------------------------------------------------------------------
-
-The web forgot that good enough is good enough.
-
-JPEG worked. PNG worked. FLAC worked. But someone always needs 3% better
-compression at the cost of yet another decoder in every browser, another
-format to support forever, another thing that might not render in ten
-years.
-
-Plan 9 had one image format. Unix had pipes and text. Lisp has
-s-expressions. The power comes from composing a few things well, not
-accumulating special cases.
-
-SVG is in the right spirit - just XML describing geometry. The browser
-already has the renderer. No new codec, no binary blob, no patent
-minefield.
-
-The dumb web optimizes for benchmarks. The good web optimizes for
-durability.
-
-
-------------------------------------------------------------------------
-7. HUMAN INTERFACE PRINCIPLES
+7. DERIVATION VS. DISCOVERY
 ------------------------------------------------------------------------
 
 
-7.1 Output Philosophy
----------------------
+7.1 Lamport Time
+----------------
 
-  * Silence is default - Success prints nothing. Failure is an error.
-  * No developer notes - If it's not for the user, it doesn't print.
-  * Verbose is opt-in - --verbose for play-by-play, otherwise quiet.
-  * Consequential operations may announce - Enrollment, federation changes, realm joins.
+In the absence of global clock synchronization, distributed systems
+establish causal ordering through logical clocks (Lamport, 1978). Each
+node maintains a local counter incremented on message send/receive,
+establishing a happens-before relation that provides partial ordering
+without requiring synchronized wall-clock time.
 
-
-7.2 Async Model
----------------
-
-  * Prompts return frequently, don't block on long operations.
-  * Background work runs async, notify on completion.
-  * Notifications are optional - check when you want, never modal, never blocking.
-  * Your response is never required.
+The happens-before relation was always there--Lamport gave it a name and
+a notation. That's discovery. Seeing what was already true.
 
 
-7.3 Introspection by Semantic Type
-----------------------------------
+7.2 call/cc
+-----------
 
-Not a generic notification queue. Organized by type of operation:
-enrollments, syncs, votes, federation requests. Each reflected where it
-makes sense. Introspect by what it *is*, not dig through a queue.
+Most language features are about what you can say. call/cc is about what
+exists.
 
+call/cc says: the future of the computation is a value you can hold,
+store, invoke later. Continuations. Time as a first-class object. That's
+not syntax preference--that's ontology.
 
-7.4 Governance
---------------
+The continuation exists whether you capture it or not--call/cc just lets
+you name it. The future was always there, implicit in every expression.
+Scheme made it explicit.
 
-Passive consent: silence is assent to federation consensus. If you don't
-vote, you live with the federation's decision. Fork your own security
-policy in your realm if you disagree.
-
-
-7.5 VMS Lessons
----------------
-
-  * $FAO-style formatted output for the TCB - clean ASCII.
-  * No calling the runtime from the TCB.
-  * The audit and protected subsystems live in their own UI layer.
+SICP wasn't about parentheses. It was a course in thinking, disguised as
+a programming textbook. Streams, lazy evaluation, the environment model,
+the metacircular evaluator--and then call/cc, which breaks your brain
+the right way.
 
 
-7.6 Help Command Behavior
--------------------------
+7.3 The Y Combinator
+--------------------
 
-/?/ (and help variants) should always be useful across the REPL. When
-there's nothing contextual to offer, still try to be helpful - offer
-general guidance, suggest related commands, or at minimum apologize for
-not being able to offer specific help.
+The Y combinator (Y = λf.(λx.f(x x))(λx.f(x x))) is a fixed-point
+combinator enabling recursion without explicit self-reference. It's
+elegant. It's also just math that falls out of lambda
+calculus--derivation, not discovery.
+
+A certain Silicon Valley venture capital firm took the name as borrowed
+plumage. Value signaling to people who recognize the symbol but don't
+work in the calculus. The firm's founder wrote 'On Lisp', evangelized
+the aesthetic--but Arc didn't have call/cc. Common Lisp doesn't have it.
+He came from the CL side, where continuations aren't primitive.
+
+Naming the firm 'Y Combinator' signals: I read the cool parts. Not
+naming it 'call/cc' signals: I stopped before it got weird.
+
+The Y combinator is page 300 of SICP. call/cc is the last chapter. Most
+people don't finish.
+
+
+7.4 The Distinction
+-------------------
+
+Derivation: The Y combinator. Recursion falling out of self-application.
+True but not illuminating.
+
+Discovery: Lamport clocks. call/cc. Seeing structure that was always
+there, giving it a name, making it usable.
+
+Cyberspace is built on discoveries: happens-before for distributed time,
+continuations for control flow, SPKI for authorization. The derivations
+are implementation details.
 
 
 ------------------------------------------------------------------------
-CHANGELOG
+8. TIMELINE
 ------------------------------------------------------------------------
 
-- 2026-01-13 - Section 1.2 TGV and IPsec: Secure/IP, GSS-API/IKE draft,
-Vendor Payload, AlchemyOS
 
-- 2026-01-13 - Rich Bouchard, $IMPERSONATION, Mitnick, Trusting Trust
+    1969  Bill Wulf creates BLISS at CMU
+    1984  VAXcluster, VMS security work begins
+    1985  VMS C2 certification
+    1992  Dylan released (Apple Cambridge)
+    1993  VMS 6.0 release
+    1994  SDSI proposed at IETF 29 Seattle
+    1999  SPKI RFC 2693
+    2026  Cyberspace - synthesis of all the above
 
-- 2026-01-13 - Section 1.5 System Service Vocabulary (CHP$_*,
-$PERSONA_*)
 
-- 2026-01-13 - Section 7 Human Interface Principles
+------------------------------------------------------------------------
+CLOSING
+------------------------------------------------------------------------
 
-- 2026-01-13 - Weaving by lambda, loch lambda as merit
+In Scheme and Dylan with Newton soup.
 
-- 2026-01-13 - Initial specification, migrated from DESIGNER-NOTES.md
+Forty years from asking permission to enter the kernel, to owning the
+whole stack.
+
+The Lisper finally gets to write Lisp.
 
 ------------------------------------------------------------------------
