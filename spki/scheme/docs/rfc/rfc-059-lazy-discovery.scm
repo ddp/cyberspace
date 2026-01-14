@@ -42,10 +42,15 @@
       (p "Notifications announce existence, not content. Interested realms pull the object via normal gossip.")))
 
   (section
-    "3. Gossip Integration"
+    "3. Gossip as Tala"
+    (p "In Indian classical music, tala is the rhythmic cycle underlying the raga. Without tala, the melody has no structure. Without gossip, the weave has no coherence.")
+    (p "Gossip is the tala of cyberspace - the steady beat that carries forge and discovery alike. Realms may create in isolation, but the rhythm connects them."))
+
+  (section
+    "4. Gossip Integration"
 
     (subsection
-      "3.1 Notification Propagation"
+      "4.1 Notification Propagation"
       (p "Change notifications piggyback on gossip protocol (RFC-010). They are small, signed, and expire:")
       (list
         (item "Notifications included in gossip heartbeat")
@@ -53,18 +58,18 @@
         (item "Deduplication by (realm, lamport, hash) tuple")))
 
     (subsection
-      "3.2 Pull on Interest"
+      "4.2 Request on Interest"
       (p "When a notification matches a subscription:")
       (code scheme "(on-change notification
   (when (matches-subscription? notification subscriptions)
     (request-object (change-hash notification) (change-realm notification))))")
-      (p "The pull is lazy - realms may defer, batch, or ignore based on priority.")))
+      (p "The request is lazy - realms may defer, batch, or ignore based on priority.")))
 
   (section
-    "4. Subscription Certificates"
+    "5. Subscription Certificates"
 
     (subsection
-      "4.1 Structure"
+      "5.1 Structure"
       (code scheme "(cert
   (issuer realm-key)
   (subject subscription)
@@ -74,7 +79,7 @@
       (p "Subscriptions are first-class objects in the SPKI model. They can be stored in vaults, shared, and audited."))
 
     (subsection
-      "4.2 Privacy Considerations"
+      "5.2 Privacy Considerations"
       (p "Subscriptions reveal interest. Realms may:")
       (list
         (item "Subscribe through intermediaries")
@@ -82,10 +87,10 @@
         (item "Accept latency for privacy (poll instead of subscribe)"))))
 
   (section
-    "5. Implementation"
+    "6. Implementation"
 
     (subsection
-      "5.1 Subscription Registry"
+      "6.1 Subscription Registry"
       (code scheme "(define *subscriptions* '())
 
 (define (subscribe #!key realm key topic pattern)
@@ -102,7 +107,7 @@
   (announce-revocation sub))"))
 
     (subsection
-      "5.2 Change Emission"
+      "6.2 Change Emission"
       (code scheme "(define (emit-change object)
   \"Announce a newly forged object.\"
   (let ((notification (make-change-notification
@@ -114,7 +119,7 @@
     (sign-and-gossip notification)))")))
 
   (section
-    "6. Relationship to Forge"
+    "7. Relationship to Forge"
     (p "Lazy discovery complements, not replaces, the forge:")
     (code "Forge:     Active. You create, you seal, you sign.
 Discovery: Reactive. You express interest, you're notified.
@@ -122,7 +127,7 @@ Gossip:    Transport. Carries both forged objects and notifications.")
     (p "The weave remains a system of forges. Lazy discovery is how forges hear about each other's work."))
 
   (section
-    "7. Security Considerations"
+    "8. Security Considerations"
     (list
       (item "Notification spam: Rate limiting per realm (RFC-032)")
       (item "Subscription flooding: Quota on active subscriptions")
