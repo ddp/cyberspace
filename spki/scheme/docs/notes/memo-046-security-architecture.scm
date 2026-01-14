@@ -367,7 +367,7 @@
     (subsection
       "Catalog Generation"
       (p "The assertion catalog is generated automatically:")
-      (code "$ ./docs/rfc/extract-assertions.sh\n  -> docs/rfc/assertion-catalog.scm\n     18 instrumentation, 10 security errors, 12 guards (40 total)")
+      (code "$ ./docs/notes/extract-assertions.sh\n  -> docs/notes/assertion-catalog.scm\n     18 instrumentation, 10 security errors, 12 guards (40 total)")
       (p "The catalog is a first-class S-expression that can be loaded and queried:")
       (code scheme "(load \"assertion-catalog.scm\")\n(assertion-summary)\n;; => ((instrumentation-points . 18)\n;;     (security-errors . 10)\n;;     (precondition-guards . 12)\n;;     (total . 40))")
       (p "Adding assertions to code automatically updates the documentation on next regeneration.")))

@@ -303,7 +303,7 @@
                           (string-append "grep -l '^(module' " base-dir "/*.scm 2>/dev/null | wc -l")))
            ;; Count RFCs
            (rfc-count (shell-command
-                       (string-append "ls " base-dir "/docs/rfc/rfc-*.md 2>/dev/null | wc -l")))
+                       (string-append "ls " base-dir "/docs/notes/rfc-*.md 2>/dev/null | wc -l")))
            ;; Count TCB (OCaml) - excluding tests
            ;; base-dir is spki/scheme, tcb is sibling at spki/tcb
            (tcb-dir (make-pathname (pathname-directory (string-chomp base-dir "/")) "tcb"))
@@ -346,7 +346,7 @@
     "Introspect the Library of Cyberspace - RFC catalog from .txt files"
     (let* ((base-dir (or (get-environment-variable "CYBERSPACE_HOME")
                          (make-pathname (current-directory) "")))
-           (rfc-dir (make-pathname base-dir "docs/rfc"))
+           (rfc-dir (make-pathname base-dir "docs/notes"))
            (rfc-files (shell-command
                        (string-append "ls " rfc-dir "/rfc-*.txt 2>/dev/null | sort"))))
       (if (not rfc-files)

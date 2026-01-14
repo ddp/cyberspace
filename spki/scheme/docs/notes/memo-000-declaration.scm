@@ -92,4 +92,4 @@ THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.")
   witness:    threshold(2,3) via RFC-007
   seal:       BLAKE2b-256")
     (p "The principal coordinates identify the signer in cyberspace. The +{sign,delegate} capabilities authorize this document and permit others to co-sign. The realm is the local sovereign domain. The federation is the trust boundary. The witness quorum ensures no single point of authority. The seal binds intent to mathematics.")
-    (link "https://www.yoyodyne.com/ddp/cyberspace/spki/scheme/docs/rfc/index.html" "Enter the Library")))
+    (link "https://www.yoyodyne.com/ddp/cyberspace/spki/scheme/docs/notes/index.html" "Enter the Library")))

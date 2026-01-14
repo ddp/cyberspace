@@ -5758,7 +5758,7 @@ Cyberspace REPL - Available Commands
                       (string-pad-left (symbol->string num) 3 #\0)))
          (base-dir (or (get-environment-variable "CYBERSPACE_HOME")
                        (make-pathname (current-directory) "")))
-         (rfc-dir (make-pathname base-dir "docs/rfc"))
+         (rfc-dir (make-pathname base-dir "docs/notes"))
          (fmt (or format 'txt))
          (ext (case fmt
                 ((html) ".html")

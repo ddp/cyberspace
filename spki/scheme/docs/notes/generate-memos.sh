@@ -377,14 +377,14 @@ echo "=== Publishing to yoyodyne ==="
 YOYODYNE_HOST="ddp@www.yoyodyne.com"
 YOYODYNE_BASE="/www/yoyodyne/ddp/cyberspace"
 YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
-YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/rfc/"
+YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/notes/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_RFC_PATH"
   rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
   echo "  -> $YOYODYNE_RFC_PATH"
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
-  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/rfc/"
+  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/notes/"
 else
   echo "  [skip] Cannot reach yoyodyne"
 fi
