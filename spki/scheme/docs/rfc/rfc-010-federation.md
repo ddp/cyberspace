@@ -46,7 +46,9 @@ The security architecture was real:
 - **The auditing subsystem** - in its final form, comprehensive privilege and access logging
 - **C2/B1 certified security model** - Orange Book compliance, proven secure
 
-When Cutler left for Microsoft, his modules were inherited. The privilege auditing rototill required fluency in MACRO-32. The people who understood the security architecture intimately were the ones who maintained it—and they understood that trust was binary. You had the privilege or you didn't. You were in the cluster or you weren't.
+Prism/Mica was being designed for TCSEC B1—that's the legacy, the mindset, the trust model, and the codebase that Gates was gifted in an offer he couldn't refuse. Of all the people at DEC, Cutler—designer of the MicroVAX—could also see the writing on the wall. The age of PCs had been born, and Digital missed the train.
+
+When Cutler left for Microsoft, his modules were inherited by those who remained. The privilege auditing rototill required fluency in MACRO-32. The people who understood the security architecture intimately were the ones who maintained it—and they understood that trust was binary. You had the privilege or you didn't. You were in the cluster or you weren't.
 
 Then the market went another way. Firewalls and perimeters instead of capabilities. Identity instead of authorization. "Zero trust" that paradoxically trusts everything except the things that should be trusted.
 
