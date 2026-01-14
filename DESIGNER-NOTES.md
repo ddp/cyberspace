@@ -31,7 +31,7 @@ Of all the people at DEC, Cutler—designer of the MicroVAX—could see the writ
 
 - DEC → Microsoft → Cisco → here
 - Peter Lofgren was there. There's a photograph of that meeting floating around in PDP-10 space.
-- The designer is good friends with Peter. He ended up at Cisco—our nexus.
+- The designer is friends with Peter. He ended up at Cisco—our nexus.
 
 The thread is unbroken. From the people who built it, through the people who maintained it, to the people who understood what was lost. And now into the code.
 
