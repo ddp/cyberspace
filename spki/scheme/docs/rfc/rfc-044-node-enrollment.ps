@@ -1,0 +1,1361 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 24 24 571 818
+%%Title: Enscript Output
+%%For: Derrell Piper
+%%Creator: GNU Enscript 1.6.6
+%%CreationDate: Fri Jan  9 15:06:20 2026
+%%Orientation: Portrait
+%%Pages: (atend)
+%%DocumentMedia: A4 595 842 0 () ()
+%%DocumentNeededResources: (atend)
+%%EndComments
+%%BeginProlog
+%%BeginResource: procset Enscript-Prolog 1.6 6
+%
+% Procedures.
+%
+
+/_S {	% save current state
+  /_s save def
+} def
+/_R {	% restore from saved state
+  _s restore
+} def
+
+/S {	% showpage protecting gstate
+  gsave
+  showpage
+  grestore
+} bind def
+
+/MF {	% fontname newfontname -> -	make a new encoded font
+  /newfontname exch def
+  /fontname exch def
+
+  /fontdict fontname findfont def
+  /newfont fontdict maxlength dict def
+
+  fontdict {
+    exch
+    dup /FID eq {
+      % skip FID pair
+      pop pop
+    } {
+      % copy to the new font dictionary
+      exch newfont 3 1 roll put
+    } ifelse
+  } forall
+
+  newfont /FontName newfontname put
+
+  % insert only valid encoding vectors
+  encoding_vector length 256 eq {
+    newfont /Encoding encoding_vector put
+  } if
+
+  newfontname newfont definefont pop
+} def
+
+/MF_PS { % fontname newfontname -> -	make a new font preserving its enc
+  /newfontname exch def
+  /fontname exch def
+
+  /fontdict fontname findfont def
+  /newfont fontdict maxlength dict def
+
+  fontdict {
+    exch
+    dup /FID eq {
+      % skip FID pair
+      pop pop
+    } {
+      % copy to the new font dictionary
+      exch newfont 3 1 roll put
+    } ifelse
+  } forall
+
+  newfont /FontName newfontname put
+
+  newfontname newfont definefont pop
+} def
+
+/SF { % fontname width height -> -	set a new font
+  /height exch def
+  /width exch def
+
+  findfont
+  [width 0 0 height 0 0] makefont setfont
+} def
+
+/SUF { % fontname width height -> -	set a new user font
+  /height exch def
+  /width exch def
+
+  /F-gs-user-font MF
+  /F-gs-user-font width height SF
+} def
+
+/SUF_PS { % fontname width height -> -	set a new user font preserving its enc
+  /height exch def
+  /width exch def
+
+  /F-gs-user-font MF_PS
+  /F-gs-user-font width height SF
+} def
+
+/M {moveto} bind def
+/s {show} bind def
+
+/Box {	% x y w h -> -			define box path
+  /d_h exch def /d_w exch def /d_y exch def /d_x exch def
+  d_x d_y  moveto
+  d_w 0 rlineto
+  0 d_h rlineto
+  d_w neg 0 rlineto
+  closepath
+} def
+
+/bgs {	% x y height blskip gray str -> -	show string with bg color
+  /str exch def
+  /gray exch def
+  /blskip exch def
+  /height exch def
+  /y exch def
+  /x exch def
+
+  gsave
+    x y blskip sub str stringwidth pop height Box
+    gray setgray
+    fill
+  grestore
+  x y M str s
+} def
+
+/bgcs { % x y height blskip red green blue str -> -  show string with bg color
+  /str exch def
+  /blue exch def
+  /green exch def
+  /red exch def
+  /blskip exch def
+  /height exch def
+  /y exch def
+  /x exch def
+
+  gsave
+    x y blskip sub str stringwidth pop height Box
+    red green blue setrgbcolor
+    fill
+  grestore
+  x y M str s
+} def
+
+% Highlight bars.
+/highlight_bars {	% nlines lineheight output_y_margin gray -> -
+  gsave
+    setgray
+    /ymarg exch def
+    /lineheight exch def
+    /nlines exch def
+
+    % This 2 is just a magic number to sync highlight lines to text.
+    0 d_header_y ymarg sub 2 sub translate
+
+    /cw d_output_w cols div def
+    /nrows d_output_h ymarg 2 mul sub lineheight div cvi def
+
+    % for each column
+    0 1 cols 1 sub {
+      cw mul /xp exch def
+
+      % for each rows
+      0 1 nrows 1 sub {
+        /rn exch def
+        rn lineheight mul neg /yp exch def
+        rn nlines idiv 2 mod 0 eq {
+	  % Draw highlight bar.  4 is just a magic indentation.
+	  xp 4 add yp cw 8 sub lineheight neg Box fill
+	} if
+      } for
+    } for
+
+  grestore
+} def
+
+% Line highlight bar.
+/line_highlight {	% x y width height gray -> -
+  gsave
+    /gray exch def
+    Box gray setgray fill
+  grestore
+} def
+
+% Column separator lines.
+/column_lines {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h translate
+    /cw d_output_w cols div def
+    1 1 cols 1 sub {
+      cw mul 0 moveto
+      0 d_output_h rlineto stroke
+    } for
+  grestore
+} def
+
+% Column borders.
+/column_borders {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h moveto
+    0 d_output_h rlineto
+    d_output_w 0 rlineto
+    0 d_output_h neg rlineto
+    closepath stroke
+  grestore
+} def
+
+% Do the actual underlay drawing
+/draw_underlay {
+  ul_style 0 eq {
+    ul_str true charpath stroke
+  } {
+    ul_str show
+  } ifelse
+} def
+
+% Underlay
+/underlay {	% - -> -
+  gsave
+    0 d_page_h translate
+    d_page_h neg d_page_w atan rotate
+
+    ul_gray setgray
+    ul_font setfont
+    /dw d_page_h dup mul d_page_w dup mul add sqrt def
+    ul_str stringwidth pop dw exch sub 2 div ul_h_ptsize -2 div moveto
+    draw_underlay
+  grestore
+} def
+
+/user_underlay {	% - -> -
+  gsave
+    ul_x ul_y translate
+    ul_angle rotate
+    ul_gray setgray
+    ul_font setfont
+    0 0 ul_h_ptsize 2 div sub moveto
+    draw_underlay
+  grestore
+} def
+
+% Page prefeed
+/page_prefeed {		% bool -> -
+  statusdict /prefeed known {
+    statusdict exch /prefeed exch put
+  } {
+    pop
+  } ifelse
+} def
+
+% Wrapped line markers
+/wrapped_line_mark {	% x y charwith charheight type -> -
+  /type exch def
+  /h exch def
+  /w exch def
+  /y exch def
+  /x exch def
+
+  type 2 eq {
+    % Black boxes (like TeX does)
+    gsave
+      0 setlinewidth
+      x w 4 div add y M
+      0 h rlineto w 2 div 0 rlineto 0 h neg rlineto
+      closepath fill
+    grestore
+  } {
+    type 3 eq {
+      % Small arrows
+      gsave
+        .2 setlinewidth
+        x w 2 div add y h 2 div add M
+        w 4 div 0 rlineto
+        x w 4 div add y lineto stroke
+
+        x w 4 div add w 8 div add y h 4 div add M
+        x w 4 div add y lineto
+	w 4 div h 8 div rlineto stroke
+      grestore
+    } {
+      % do nothing
+    } ifelse
+  } ifelse
+} def
+
+% EPSF import.
+
+/BeginEPSF {
+  /b4_Inc_state save def    		% Save state for cleanup
+  /dict_count countdictstack def	% Count objects on dict stack
+  /op_count count 1 sub def		% Count objects on operand stack
+  userdict begin
+  /showpage { } def
+  0 setgray 0 setlinecap
+  1 setlinewidth 0 setlinejoin
+  10 setmiterlimit [ ] 0 setdash newpath
+  /languagelevel where {
+    pop languagelevel
+    1 ne {
+      false setstrokeadjust false setoverprint
+    } if
+  } if
+} bind def
+
+/EndEPSF {
+  count op_count sub { pos } repeat	% Clean up stacks
+  countdictstack dict_count sub { end } repeat
+  b4_Inc_state restore
+} bind def
+
+% Check PostScript language level.
+/languagelevel where {
+  pop /gs_languagelevel languagelevel def
+} {
+  /gs_languagelevel 1 def
+} ifelse
+%%EndResource
+%%BeginResource: procset Enscript-Encoding-88591 1.6 6
+/encoding_vector [
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclam       	/quotedbl     	/numbersign   	
+/dollar       	/percent      	/ampersand    	/quoteright   	
+/parenleft    	/parenright   	/asterisk     	/plus         	
+/comma        	/hyphen       	/period       	/slash        	
+/zero         	/one          	/two          	/three        	
+/four         	/five         	/six          	/seven        	
+/eight        	/nine         	/colon        	/semicolon    	
+/less         	/equal        	/greater      	/question     	
+/at           	/A            	/B            	/C            	
+/D            	/E            	/F            	/G            	
+/H            	/I            	/J            	/K            	
+/L            	/M            	/N            	/O            	
+/P            	/Q            	/R            	/S            	
+/T            	/U            	/V            	/W            	
+/X            	/Y            	/Z            	/bracketleft  	
+/backslash    	/bracketright 	/asciicircum  	/underscore   	
+/quoteleft    	/a            	/b            	/c            	
+/d            	/e            	/f            	/g            	
+/h            	/i            	/j            	/k            	
+/l            	/m            	/n            	/o            	
+/p            	/q            	/r            	/s            	
+/t            	/u            	/v            	/w            	
+/x            	/y            	/z            	/braceleft    	
+/bar          	/braceright   	/tilde        	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclamdown   	/cent         	/sterling     	
+/currency     	/yen          	/brokenbar    	/section      	
+/dieresis     	/copyright    	/ordfeminine  	/guillemotleft	
+/logicalnot   	/hyphen       	/registered   	/macron       	
+/degree       	/plusminus    	/twosuperior  	/threesuperior	
+/acute        	/mu           	/paragraph    	/bullet       	
+/cedilla      	/onesuperior  	/ordmasculine 	/guillemotright	
+/onequarter   	/onehalf      	/threequarters	/questiondown 	
+/Agrave       	/Aacute       	/Acircumflex  	/Atilde       	
+/Adieresis    	/Aring        	/AE           	/Ccedilla     	
+/Egrave       	/Eacute       	/Ecircumflex  	/Edieresis    	
+/Igrave       	/Iacute       	/Icircumflex  	/Idieresis    	
+/Eth          	/Ntilde       	/Ograve       	/Oacute       	
+/Ocircumflex  	/Otilde       	/Odieresis    	/multiply     	
+/Oslash       	/Ugrave       	/Uacute       	/Ucircumflex  	
+/Udieresis    	/Yacute       	/Thorn        	/germandbls   	
+/agrave       	/aacute       	/acircumflex  	/atilde       	
+/adieresis    	/aring        	/ae           	/ccedilla     	
+/egrave       	/eacute       	/ecircumflex  	/edieresis    	
+/igrave       	/iacute       	/icircumflex  	/idieresis    	
+/eth          	/ntilde       	/ograve       	/oacute       	
+/ocircumflex  	/otilde       	/odieresis    	/divide       	
+/oslash       	/ugrave       	/uacute       	/ucircumflex  	
+/udieresis    	/yacute       	/thorn        	/ydieresis    	
+] def
+%%EndResource
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier-Bold
+%%IncludeResource: font Courier
+/HFpt_w 10 def
+/HFpt_h 10 def
+/Courier-Bold /HF-gs-font MF
+/HF /HF-gs-font findfont [HFpt_w 0 0 HFpt_h 0 0] makefont def
+/Courier /F-gs-font MF
+/F-gs-font 10 10 SF
+/#copies 1 def
+% Pagedevice definitions:
+gs_languagelevel 1 gt {
+  <<
+    /PageSize [595 842] 
+  >> setpagedevice
+} if
+/d_page_w 547 def
+/d_page_h 794 def
+/d_header_x 0 def
+/d_header_y 794 def
+/d_header_w 547 def
+/d_header_h 0 def
+/d_footer_x 0 def
+/d_footer_y 0 def
+/d_footer_w 547 def
+/d_footer_h 0 def
+/d_output_w 547 def
+/d_output_h 794 def
+/cols 1 def
+%%EndSetup
+%%Page: (1) 1
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 1 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(RFC-044: Node Enrollment Protocol) s
+5 759 M
+(Status: Draft) s
+5 748 M
+(Date: January 2026) s
+5 737 M
+(Author: Derrell Piper <ddp@eludom.net>) s
+5 726 M
+(Implementation: Proposed) s
+5 704 M
+(------------------------------------------------------------------------------) s
+5 682 M
+(Abstract) s
+5 660 M
+(This RFC specifies how a new node joins the Library of Cyberspace) s
+5 649 M
+(confederation. The goal: a simple, memorable process that a human can) s
+5 638 M
+(complete in five minutes with no special knowledge.) s
+5 616 M
+(If you can verify a phone number by reading back a code, you can enroll) s
+5 605 M
+(a node.) s
+5 583 M
+(------------------------------------------------------------------------------) s
+5 561 M
+(Motivation) s
+5 539 M
+(Starlight just arrived. It's a beautiful machine. Now what?) s
+5 517 M
+(The question every new node faces:) s
+5 495 M
+(    "How do I become part of the confederation?") s
+5 473 M
+(This should be obvious. Like plugging in a new device and having it) s
+5 462 M
+(just work. But we also need:) s
+5 440 M
+(- Cryptographic identity - the node proves it is who it claims) s
+5 429 M
+(- Human verification - a person confirms this is the right machine) s
+5 418 M
+(- No blind trust - the master doesn't just accept any stranger) s
+5 396 M
+(The challenge: make it simple enough for anyone, secure enough for) s
+5 385 M
+(cryptographers.) s
+5 363 M
+(------------------------------------------------------------------------------) s
+5 341 M
+(Design Principles) s
+5 319 M
+(1. Physical Presence Is Attestation) s
+5 297 M
+(    If you're sitting at the keyboard, you can vouch for the machine.) s
+5 286 M
+(    No TPM, no attestation servers, no remote proof. Just you.) s
+5 264 M
+(2. The Master Blesses, The Node Requests) s
+5 242 M
+(    The node never decides on its own identity. It generates keys,) s
+5 231 M
+(    presents them, and asks: "Will you name me?") s
+5 209 M
+(3. Human-Readable Verification) s
+5 187 M
+(    No comparing 64-character hex strings. Use words humans can speak) s
+5 176 M
+(    aloud and verify by ear.) s
+5 154 M
+(4. One Command Each Side) s
+5 132 M
+(    On the new node: one command to request enrollment.) s
+5 121 M
+(    On the master: one command to approve.) s
+5 99 M
+(------------------------------------------------------------------------------) s
+5 77 M
+(The Protocol) s
+5 55 M
+(Overview) s
+5 33 M
+(    \342\\224\\214\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 22 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220                      \342\\224\\214\342\\224) s
+5 11 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+_R
+S
+%%Page: (2) 2
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 2 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\220) s
+5 770 M
+(    \342\\224\\202  starlight  \342\\224\\202                      \342\\224\\202   fluffy    \342\\224\\202) s
+5 759 M
+(    \342\\224\\202  \(new node\) \342\\224\\202                      \342\\224\\202  \(master\)   \342\\224\\202) s
+5 748 M
+(    \342\\224\\224\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\254\342\\224\\200\342\\224) s
+5 737 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\230                      \342\\224\\224\342\\224\\200) s
+5 726 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\254\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 715 M
+(\\224\\200\342\\224\\200\342\\224\\230) s
+5 704 M
+(           \342\\224\\202                                    \342\\224\\202) s
+5 693 M
+(           \342\\224\\202  1. Generate keypair               \342\\224\\202) s
+5 682 M
+(           \342\\224\\202  2. Display verification words     \342\\224\\202) s
+5 671 M
+(           \342\\224\\202                                    \342\\224\\202) s
+5 660 M
+(           \342\\224\\202\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200 enrollment request \342\\224\\200\342) s
+5 649 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 638 M
+(>\342\\224\\202) s
+5 627 M
+(           \342\\224\\202     \(pubkey, proposed name\)        \342\\224\\202) s
+5 616 M
+(           \342\\224\\202                                    \342\\224\\202) s
+5 605 M
+(           \342\\224\\202                      3. Display words) s
+5 594 M
+(           \342\\224\\202                      4. Human verifies) s
+5 583 M
+(           \342\\224\\202                      5. Master signs cert) s
+5 572 M
+(           \342\\224\\202                                    \342\\224\\202) s
+5 561 M
+(           \342\\224\\202<\342\\224\\200\342\\224\\200\342\\224\\200 enrollment response \342\\224\\200\342\\224\\200\342) s
+5 550 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\202) s
+5 539 M
+(           \342\\224\\202     \(signed certificate\)           \342\\224\\202) s
+5 528 M
+(           \342\\224\\202                                    \342\\224\\202) s
+5 517 M
+(           \342\\224\\202  6. Store certificate              \342\\224\\202) s
+5 506 M
+(           \342\\224\\202  7. Node is enrolled               \342\\224\\202) s
+5 495 M
+(           \342\\224\\202                                    \342\\224\\202) s
+5 484 M
+(           \342\\226\274                                    \342\\226\274) s
+5 462 M
+(------------------------------------------------------------------------------) s
+5 440 M
+(Step 1: New Node Generates Keys) s
+5 418 M
+(On starlight, run:) s
+5 396 M
+(    $ cyberspace enroll starlight) s
+5 374 M
+(The node:) s
+5 352 M
+(1. Generates an Ed25519 keypair) s
+5 341 M
+(2. Computes verification words from the public key) s
+5 330 M
+(3. Displays them prominently) s
+5 308 M
+(    \342\\225\255\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 297 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 286 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 275 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 264 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 253 M
+(\\224\\200\342\\225\256) s
+5 242 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 231 M
+(    \342\\224\\202  Requesting enrollment as: starlight           \342\\224\\202) s
+5 220 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 209 M
+(    \342\\224\\202  Verification words:                           \342\\224\\202) s
+5 198 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 187 M
+(    \342\\224\\202      castle  river  orange  lighthouse         \342\\224\\202) s
+5 176 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 165 M
+(    \342\\224\\202  Waiting for master to approve...              \342\\224\\202) s
+5 154 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 143 M
+(    \342\\225\260\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 132 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 121 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 110 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 99 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 88 M
+(\\224\\200\342\\225\257) s
+5 66 M
+(The node broadcasts its enrollment request on the local network) s
+5 55 M
+(\(mDNS/Bonjour\) and waits.) s
+5 33 M
+(------------------------------------------------------------------------------) s
+5 11 M
+(Step 2: Master Receives Request) s
+_R
+S
+%%Page: (3) 3
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 3 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 770 M
+(On fluffy, the master sees:) s
+5 748 M
+(    \342\\225\255\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 737 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 726 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 715 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 704 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 693 M
+(\\224\\200\342\\225\256) s
+5 682 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 671 M
+(    \342\\224\\202  Enrollment request received                   \342\\224\\202) s
+5 660 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 649 M
+(    \342\\224\\202  Proposed name: starlight                      \342\\224\\202) s
+5 638 M
+(    \342\\224\\202  From: 192.168.0.42                            \342\\224\\202) s
+5 627 M
+(    \342\\224\\202  Hardware: MacBook Air \(M4\)                    \342\\224\\202) s
+5 616 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 605 M
+(    \342\\224\\202  Verification words:                           \342\\224\\202) s
+5 594 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 583 M
+(    \342\\224\\202      castle  river  orange  lighthouse         \342\\224\\202) s
+5 572 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 561 M
+(    \342\\224\\202  Do these match what you see on starlight?     \342\\224\\202) s
+5 550 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 539 M
+(    \342\\224\\202  [y] Approve   [n] Reject   [?] Help           \342\\224\\202) s
+5 528 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 517 M
+(    \342\\225\260\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 506 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 495 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 484 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 473 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 462 M
+(\\224\\200\342\\225\257) s
+5 440 M
+(The human:) s
+5 418 M
+(1. Walks over to starlight \(or looks at it across the room\)) s
+5 407 M
+(2. Reads the words displayed there) s
+5 396 M
+(3. Confirms they match) s
+5 374 M
+(This is the attestation. Physical presence. Human verification.) s
+5 352 M
+(------------------------------------------------------------------------------) s
+5 330 M
+(Step 3: Master Signs Certificate) s
+5 308 M
+(If approved, the master:) s
+5 286 M
+(1. Creates an SPKI certificate binding the name to the public key) s
+5 275 M
+(2. Signs it with the master key) s
+5 264 M
+(3. Sends it back to the node) s
+5 242 M
+(    \(spki-cert) s
+5 231 M
+(      \(issuer \(public-key \(ed25519 "fluffy-master-key..."\)\)\)) s
+5 220 M
+(      \(subject \(public-key \(ed25519 "starlight-pubkey..."\)\)\)) s
+5 209 M
+(      \(name starlight\)) s
+5 198 M
+(      \(capability) s
+5 187 M
+(        \(action vault-read vault-write sync-participate\)\)) s
+5 176 M
+(      \(validity) s
+5 165 M
+(        \(not-before 2026-01-09\)) s
+5 154 M
+(        \(not-after 2027-01-09\)\)) s
+5 143 M
+(      \(signature ...\)\)) s
+5 121 M
+(The certificate says: "I, fluffy, declare that this key is starlight,) s
+5 110 M
+(and starlight may read, write, and sync.") s
+5 88 M
+(------------------------------------------------------------------------------) s
+5 66 M
+(Step 4: Node Receives Certificate) s
+5 44 M
+(Starlight receives and stores the certificate:) s
+5 22 M
+(    \342\\225\255\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 11 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+_R
+S
+%%Page: (4) 4
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 4 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 770 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 759 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 748 M
+(\\224\\200\342\\225\256) s
+5 737 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 726 M
+(    \342\\224\\202  Enrollment complete!                          \342\\224\\202) s
+5 715 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 704 M
+(    \342\\224\\202  You are now: starlight                        \342\\224\\202) s
+5 693 M
+(    \342\\224\\202  Blessed by: fluffy                            \342\\224\\202) s
+5 682 M
+(    \342\\224\\202  Role: full                                    \342\\224\\202) s
+5 671 M
+(    \342\\224\\202  Valid until: 2027-01-09                       \342\\224\\202) s
+5 660 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 649 M
+(    \342\\224\\202  Certificate stored in ~/.cyberspace/          \342\\224\\202) s
+5 638 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 627 M
+(    \342\\224\\202  Run 'cyberspace status' to verify.            \342\\224\\202) s
+5 616 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 605 M
+(    \342\\225\260\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 594 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 583 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 572 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 561 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 550 M
+(\\224\\200\342\\225\257) s
+5 528 M
+(Done. Five minutes. No hex strings. No manual key copying.) s
+5 506 M
+(------------------------------------------------------------------------------) s
+5 484 M
+(Verification Words) s
+5 462 M
+(The word list uses the PGP Word List \(or similar\):) s
+5 440 M
+(- 256 even-position words \(two syllables\)) s
+5 429 M
+(- 256 odd-position words \(three syllables\)) s
+5 418 M
+(- Phonetically distinct \(no rhymes, no similar sounds\)) s
+5 407 M
+(- Easy to speak over the phone) s
+5 385 M
+(Converting public key to words:) s
+5 363 M
+(    \(define \(pubkey->words pubkey\)) s
+5 352 M
+(      "Convert public key to verification words") s
+5 341 M
+(      \(let* \(\(hash \(sha256 pubkey\)\)) s
+5 330 M
+(             \(bytes \(take hash 4\)\)\)  ; First 4 bytes = 4 words) s
+5 319 M
+(        \(map byte->word bytes\)\)\)) s
+5 297 M
+(    ;; Example) s
+5 286 M
+(    \(pubkey->words starlight-pubkey\)) s
+5 275 M
+(    => \("castle" "river" "orange" "lighthouse"\)) s
+5 253 M
+(Why only 4 words?) s
+5 231 M
+(- 32 bits of entropy) s
+5 220 M
+(- Enough to prevent accidental confusion) s
+5 209 M
+(- Not trying to prevent brute force \(physical presence does that\)) s
+5 198 M
+(- Short enough to remember while walking across the room) s
+5 176 M
+(------------------------------------------------------------------------------) s
+5 154 M
+(Local Discovery) s
+5 132 M
+(Enrollment uses mDNS \(Bonjour\) for local discovery:) s
+5 110 M
+(    Service: _cyberspace-enroll._tcp.local) s
+5 99 M
+(    TXT record: name=starlight, pubkey=<base64>) s
+5 77 M
+(The master listens for enrollment requests on the local network only.) s
+5 66 M
+(No enrollment over the internet. Physical proximity required.) s
+5 44 M
+(    \(define \(broadcast-enrollment-request name pubkey\)) s
+5 33 M
+(      \(mdns-register) s
+5 22 M
+(        service: "_cyberspace-enroll._tcp.local") s
+5 11 M
+(        port: 7654) s
+_R
+S
+%%Page: (5) 5
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 5 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(        txt: `\(\(name ,name\)) s
+5 770 M
+(               \(pubkey ,\(base64-encode pubkey\)\)) s
+5 759 M
+(               \(timestamp ,\(current-time\)\)\)\)\)) s
+5 737 M
+(------------------------------------------------------------------------------) s
+5 715 M
+(Roles and Capabilities) s
+5 693 M
+(When approving, the master assigns a role:) s
+5 671 M
+(    \342\\225\255\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 660 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 649 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 638 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 627 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 616 M
+(\\224\\200\342\\225\256) s
+5 605 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 594 M
+(    \342\\224\\202  Assign role for starlight:                    \342\\224\\202) s
+5 583 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 572 M
+(    \342\\224\\202  [1] full     - Read, write, sync, witness     \342\\224\\202) s
+5 561 M
+(    \342\\224\\202  [2] witness  - Read, sync, witness votes      \342\\224\\202) s
+5 550 M
+(    \342\\224\\202  [3] archive  - Read-only backup               \342\\224\\202) s
+5 539 M
+(    \342\\224\\202  [4] custom   - Choose specific capabilities   \342\\224\\202) s
+5 528 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 517 M
+(    \342\\225\260\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 506 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 495 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 484 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 473 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 462 M
+(\\224\\200\342\\225\257) s
+5 440 M
+(Roles map to SPKI capabilities:) s
+5 418 M
+(    \(define roles) s
+5 407 M
+(      '\(\(full    \(vault-read vault-write sync-participate witness-vote\)\)) s
+5 396 M
+(        \(witness \(vault-read sync-participate witness-vote\)\)) s
+5 385 M
+(        \(archive \(vault-read sync-receive\)\)\)\)) s
+5 363 M
+(------------------------------------------------------------------------------) s
+5 341 M
+(Certificate Renewal) s
+5 319 M
+(Certificates expire \(default: 1 year\). Before expiry:) s
+5 297 M
+(    \342\\225\255\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 286 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 275 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 264 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 253 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 242 M
+(\\224\\200\342\\225\256) s
+5 231 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 220 M
+(    \342\\224\\202  Certificate expires in 30 days               \342\\224\\202) s
+5 209 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 198 M
+(    \342\\224\\202  Run 'cyberspace renew' to request renewal    \342\\224\\202) s
+5 187 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 176 M
+(    \342\\225\260\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 165 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 154 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 143 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 132 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 121 M
+(\\224\\200\342\\225\257) s
+5 99 M
+(Renewal is simpler than initial enrollment - the node already has a) s
+5 88 M
+(valid certificate, so it can authenticate the renewal request) s
+5 77 M
+(cryptographically. No word verification needed.) s
+5 55 M
+(    $ cyberspace renew) s
+5 33 M
+(    \342\\225\255\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 22 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 11 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+_R
+S
+%%Page: (6) 6
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 6 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 781 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 770 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 759 M
+(\\224\\200\342\\225\256) s
+5 748 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 737 M
+(    \342\\224\\202  Renewal request sent to fluffy               \342\\224\\202) s
+5 726 M
+(    \342\\224\\202  ...                                           \342\\224\\202) s
+5 715 M
+(    \342\\224\\202  Certificate renewed until 2028-01-09          \342\\224\\202) s
+5 704 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 693 M
+(    \342\\225\260\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 682 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 671 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 660 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 649 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 638 M
+(\\224\\200\342\\225\257) s
+5 616 M
+(------------------------------------------------------------------------------) s
+5 594 M
+(Revocation) s
+5 572 M
+(If a node is compromised or retired:) s
+5 550 M
+(    $ cyberspace revoke starlight) s
+5 528 M
+(    \342\\225\255\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 517 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 506 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 495 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 484 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 473 M
+(\\224\\200\342\\225\256) s
+5 462 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 451 M
+(    \342\\224\\202  Revoke certificate for: starlight            \342\\224\\202) s
+5 440 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 429 M
+(    \342\\224\\202  This will:                                    \342\\224\\202) s
+5 418 M
+(    \342\\224\\202  - Add starlight to the revocation list       \342\\224\\202) s
+5 407 M
+(    \342\\224\\202  - Notify all confederation nodes             \342\\224\\202) s
+5 396 M
+(    \342\\224\\202  - Prevent starlight from syncing             \342\\224\\202) s
+5 385 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 374 M
+(    \342\\224\\202  Type 'starlight' to confirm: _               \342\\224\\202) s
+5 363 M
+(    \342\\224\\202                                                \342\\224\\202) s
+5 352 M
+(    \342\\225\260\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 341 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 330 M
+(\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200) s
+5 319 M
+(\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224) s
+5 308 M
+(\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342\\224\\200\342) s
+5 297 M
+(\\224\\200\342\\225\257) s
+5 275 M
+(Revocation propagates via the sync protocol. All nodes learn that) s
+5 264 M
+(starlight is no longer trusted.) s
+5 242 M
+(------------------------------------------------------------------------------) s
+5 220 M
+(Implementation) s
+5 198 M
+(Node-Side CLI) s
+5 176 M
+(    \(define \(cmd-enroll name\)) s
+5 165 M
+(      "Request enrollment in the confederation") s
+5 143 M
+(      ;; Generate keypair) s
+5 132 M
+(      \(let* \(\(keypair \(ed25519-generate-keypair\)\)) s
+5 121 M
+(             \(pubkey \(keypair-public keypair\)\)) s
+5 110 M
+(             \(words \(pubkey->words pubkey\)\)\)) s
+5 88 M
+(        ;; Save private key locally) s
+5 77 M
+(        \(save-private-key keypair\)) s
+5 55 M
+(        ;; Display verification words) s
+5 44 M
+(        \(display-enrollment-ui name words\)) s
+5 22 M
+(        ;; Broadcast enrollment request) s
+5 11 M
+(        \(broadcast-enrollment-request name pubkey\)) s
+_R
+S
+%%Page: (7) 7
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 7 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 770 M
+(        ;; Wait for response) s
+5 759 M
+(        \(let \(\(response \(wait-for-enrollment-response\)\)\)) s
+5 748 M
+(          \(if \(enrollment-approved? response\)) s
+5 737 M
+(              \(begin) s
+5 726 M
+(                \(save-certificate \(enrollment-certificate response\)\)) s
+5 715 M
+(                \(display-success name\)\)) s
+5 704 M
+(              \(display-rejection response\)\)\)\)\)) s
+5 682 M
+(Master-Side Handler) s
+5 660 M
+(    \(define \(handle-enrollment-request request\)) s
+5 649 M
+(      "Process incoming enrollment request") s
+5 638 M
+(      \(let* \(\(name \(request-name request\)\)) s
+5 627 M
+(             \(pubkey \(request-pubkey request\)\)) s
+5 616 M
+(             \(words \(pubkey->words pubkey\)\)\)) s
+5 594 M
+(        ;; Display for human verification) s
+5 583 M
+(        \(display-approval-ui name words\)) s
+5 561 M
+(        ;; Get human decision) s
+5 550 M
+(        \(let \(\(decision \(prompt-approval\)\)\)) s
+5 539 M
+(          \(case decision) s
+5 528 M
+(            \(\(approve\)) s
+5 517 M
+(             \(let* \(\(role \(prompt-role\)\)) s
+5 506 M
+(                    \(cert \(create-enrollment-cert name pubkey role\)\)\)) s
+5 495 M
+(               \(send-enrollment-response request cert\)\)\)) s
+5 473 M
+(            \(\(reject\)) s
+5 462 M
+(             \(send-rejection request "Rejected by operator"\)\)\)\)\)\)) s
+5 440 M
+(------------------------------------------------------------------------------) s
+5 418 M
+(Security Considerations) s
+5 396 M
+(Physical Presence Requirement) s
+5 374 M
+(    The entire security model rests on physical presence:) s
+5 352 M
+(    - Enrollment only works on local network) s
+5 341 M
+(    - Human must visually verify words) s
+5 330 M
+(    - No remote enrollment possible) s
+5 308 M
+(    If an attacker has physical access to your network AND can) s
+5 297 M
+(    intercept your visual verification, you have bigger problems.) s
+5 275 M
+(Word Collision) s
+5 253 M
+(    With 32 bits, collision probability is ~1 in 4 billion.) s
+5 242 M
+(    If you're enrolling billions of nodes, use more words.) s
+5 231 M
+(    For a small confederation, 4 words is plenty.) s
+5 209 M
+(Certificate Theft) s
+5 187 M
+(    If someone steals a node's private key:) s
+5 165 M
+(    1. Revoke the certificate immediately) s
+5 154 M
+(    2. Re-enroll with a new keypair) s
+5 143 M
+(    3. The old key is useless once revoked) s
+5 121 M
+(Man-in-the-Middle) s
+5 99 M
+(    An attacker could intercept the enrollment and substitute their) s
+5 88 M
+(    own public key. But then the words wouldn't match. The human) s
+5 77 M
+(    verification defeats this attack.) s
+5 55 M
+(------------------------------------------------------------------------------) s
+5 33 M
+(Future Extensions) s
+5 11 M
+(Multi-Master Enrollment) s
+_R
+S
+%%Page: (8) 8
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 8 def
+/fname (rfc-044-node-enrollment.txt) def
+/fdir (.) def
+/ftail (rfc-044-node-enrollment.txt) def
+/user_header_p false def
+/user_footer_p false def
+%%EndPageSetup
+5 770 M
+(    For confederations with multiple masters, enrollment could require) s
+5 759 M
+(    approval from K-of-N masters \(threshold enrollment\). This is) s
+5 748 M
+(    explicitly deferred to keep the initial protocol simple.) s
+5 726 M
+(Remote Enrollment) s
+5 704 M
+(    For nodes that can't be physically present, a ceremony involving) s
+5 693 M
+(    video call + word verification could work. Also deferred.) s
+5 671 M
+(Hardware Attestation) s
+5 649 M
+(    TPM-based attestation could supplement \(not replace\) human) s
+5 638 M
+(    verification. This adds complexity without clear benefit for) s
+5 627 M
+(    small confederations.) s
+5 605 M
+(------------------------------------------------------------------------------) s
+5 583 M
+(User Experience Summary) s
+5 561 M
+(For the person enrolling starlight:) s
+5 539 M
+(    1. Run: cyberspace enroll starlight) s
+5 528 M
+(    2. See four words on screen) s
+5 517 M
+(    3. Walk to the master) s
+5 506 M
+(    4. Confirm the same words appear there) s
+5 495 M
+(    5. Press 'y') s
+5 484 M
+(    6. Done) s
+5 462 M
+(That's it. Four words. One confirmation. Welcome to the confederation.) s
+5 440 M
+(------------------------------------------------------------------------------) s
+5 418 M
+(References) s
+5 396 M
+(1. RFC-000: The Library of Cyberspace) s
+5 385 M
+(2. RFC-022: Key Ceremony Protocol) s
+5 374 M
+(3. RFC-010: Federation) s
+5 363 M
+(4. PGP Word List - https://en.wikipedia.org/wiki/PGP_word_list) s
+5 352 M
+(5. RFC 2693 - SPKI Certificate Theory) s
+5 330 M
+(------------------------------------------------------------------------------) s
+5 308 M
+(Changelog) s
+5 286 M
+(- 2026-01-09: Initial draft, inspired by starlight's arrival) s
+5 264 M
+(------------------------------------------------------------------------------) s
+5 242 M
+(Implementation Status: Draft) s
+5 231 M
+(Dependencies: spki, mdns, word-list) s
+5 220 M
+(Integration: cyberspace CLI, vault initialization) s
+_R
+S
+%%Trailer
+%%Pages: 8
+%%DocumentNeededResources: font Courier-Bold Courier 
+%%EOF
