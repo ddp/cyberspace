@@ -23,6 +23,10 @@ DEC was a family. This was merely one specialty.
 
 ### The Road Not Taken
 
+We all built VAX/VMS V6.0 and then we threw it away—literally tossing our green bar printouts of our respective subsystems into an empty cube on ZK03/4. The code of what could have been. The end of DEC.
+
+They must have done something similar after Prism/Mica was cancelled, ahead of that fateful offer to Gates & Co. that gifted Microsoft dominance in COTS computing.
+
 **Prism/Mica** was being designed for TCSEC B1. That's the legacy—the mindset, the trust model, and the codebase—that Gates was gifted in an offer they couldn't refuse.
 
 Of all the people at DEC, Cutler—designer of the MicroVAX—could see the writing on the wall. The age of PCs had been born. Digital missed the train.
