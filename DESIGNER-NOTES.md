@@ -183,6 +183,21 @@ The brahma muhurta violet isn't just pretty—it's the hour of enlightenment. If
 
 ---
 
+## Little Fluffy Clouds
+
+*"What were the skies like when you were young?"*
+— The Orb, 1990
+
+The realms in the weave are clouds—little fluffy clouds drifting in ambient space. The Orb understood distributed systems before we had the words: layers of sound, samples from elsewhere, everything floating, nothing anchored to a single point.
+
+Fluffy leads the weave. The name was never arbitrary.
+
+The skies when we were young were phosphor green, VT100s in machine rooms, the hum of VAXen. Now the clouds are realms, and the realms are lambdas, and the lambdas float in the wilderness of mirrors.
+
+Ambient for the ages. Distributed for the future.
+
+---
+
 *In Scheme and Dylan with Newton soup.*
 
 *Forty years from asking permission to enter the kernel, to owning the whole stack.*
