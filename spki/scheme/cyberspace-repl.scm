@@ -5087,7 +5087,7 @@ Cyberspace REPL - Available Commands
     (clear     . clear)
     (open      . open)
     (theme     . theme!)
-    (thinga!   . thinga!)
+    (publish!  . thinga!)
     (thanga!   . thinga!)
     (help      . help)
     (quit      . exit)
