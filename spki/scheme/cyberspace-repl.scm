@@ -23,6 +23,7 @@
         (chicken time)
         (chicken time posix)
         (chicken process-context)
+        (chicken process-context posix)  ; hostname
         (chicken process)
         (chicken blob)
         (chicken file posix)
