@@ -72,14 +72,14 @@
       (item "Tone consistency - memos vs help vs errors")
       (item "S-expression exposure - Scheme leaking to surface"))
     (p "Interface:")
-    (code scheme "(scrutinize)              ; both passes (default)
-(scrutinize 'library)     ; memos only
-(scrutinize 'code)        ; code only
-(scrutinize #f)           ; disable
+    (code scheme "(scrutinize)               ; both passes (default)
+(scrutinize 'library)      ; memos only
+(scrutinize 'code)         ; code only
+(scrutinize #f)            ; disable
 
-*scrutinize-realtime*     ; parameter, default #f
-(scrutinize-realtime! #t) ; enable during dev")
-    (p "Real-time mode hooks into module load, flags inconsistencies during development. Off in production, on in beta."))
+*scrutinize-realmtime*     ; parameter, default #f
+(scrutinize-realmtime! #t) ; enable during dev")
+    (p "Realmtime mode invokes spacetime - scrutiny flows through the realm as time passes. When enabled, violations surface as modules load. Off in production, on in beta."))
 
   (section
     "Changelog"
