@@ -3,17 +3,17 @@
 
 (memo
   (number 51)
-  (title "The Normie Interface")
+  (title "The Newcomer Interface")
   (reserved)
   (section
     "Abstract"
     (p "Cyberspace must be approachable by normal people. The terminal is for operators. This Memo specifies a friendly interface layer for everyone else."))
   (section
     "1. The Problem"
-    (p "A normie asked: \"Why would I want to use this? I have Tahoe 26.2. They have recipes and cat pictures.\"")
+    (p "A newcomer asked: \"Why would I want to use this? I have Tahoe 26.2. They have recipes and cat pictures.\"")
     (p "Valid question. The answer must be compelling without mentioning: - Ed25519 - SPKI certificates - Hash chains - Merkle trees - S-expressions"))
   (section
-    "2. What Normies Want"
+    "2. What Newcomers Want"
     (code "What they have now:          What they actually want:\n────────────────────         ────────────────────────\niCloud                       My stuff, always there\nPhotos app                   My pictures, forever\nNotes                        My recipes, shareable\nMessages                     Talk to people I trust")
     (p "They don't want a distributed cryptographic vault. They want:")
     (p "1. My stuff is mine - Not rented from a corporation 2. It survives - No company shutdown deletes my photos 3. I control sharing - Family, not platforms 4. Privacy - My recipes aren't AI training data 5. Legacy - Grandkids can inherit the vault 6. No ads - I'm not the product"))
@@ -22,19 +22,19 @@
     (code "┌─────────────────────────────────────────────────────────────────┐\n│                                                                 │\n│  A family vault, not a rental locker.                          │\n│                                                                 │\n│  Your photos. Your recipes. Your letters.                      │\n│  Shared with who you choose.                                   │\n│  Kept forever. Passed down.                                    │\n│                                                                 │\n│  No company in the middle.                                     │\n│  No terms of service.                                          │\n│  No sudden shutdowns.                                          │\n│                                                                 │\n│  Just you and the people you trust.                            │\n│                                                                 │\n└─────────────────────────────────────────────────────────────────┘"))
   (section
     "4. Two Doors"
-    (code "                    CYBERSPACE\n                        │\n           ┌────────────┴────────────┐\n           │                         │\n      ┌────▼────┐              ┌─────▼─────┐\n      │ Terminal │              │  Friendly  │\n      │  (cs)    │              │    Door    │\n      └────┬────┘              └─────┬─────┘\n           │                         │\n      Operators                   Normies\n      Hackers                     Family\n      Admins                      Everyone")
+    (code "                    CYBERSPACE\n                        │\n           ┌────────────┴────────────┐\n           │                         │\n      ┌────▼────┐              ┌─────▼─────┐\n      │ Terminal │              │  Friendly  │\n      │  (cs)    │              │    Door    │\n      └────┬────┘              └─────┬─────┘\n           │                         │\n      Operators                   Newcomers\n      Hackers                     Family\n      Admins                      Everyone")
     (subsection
       "4.1 The Terminal (Operators)"
       (code scheme ": (seal-commit \"vacation photos\")\n: (enroll-request 'mom)\n: (federation?)")
       (p "Full power. Full complexity. For those who want it."))
     (subsection
-      "4.2 The Friendly Door (Normies)"
+      "4.2 The Friendly Door (Newcomers)"
       (code "┌─────────────────────────────────────────┐\n│  Your Vault                    [+ Add]  │\n├─────────────────────────────────────────┤\n│  📷 Photos         1,234 items          │\n│  📝 Recipes          47 items           │\n│  📁 Documents       156 items           │\n├─────────────────────────────────────────┤\n│  Shared with: Mom, Dad, Sister          │\n│  [Invite someone]                       │\n└─────────────────────────────────────────┘")
       (p "Drag and drop. Click to share. No parens.")))
   (section
     "5. Interface Mapping"
     (table
-      (header "Normie Action " "What Happens ")
+      (header "Newcomer Action " "What Happens ")
       (row "Drag photo to vault " "(seal-commit \"photo.jpg\") ")
       (row "Click \"Invite Mom\" " "(enroll-request 'mom) ")
       (row "View shared items " "(soup 'shared) ")
@@ -57,10 +57,10 @@
     (p "All doors lead to the same vault. All use the same Scheme underneath."))
   (section
     "8. Principles"
-    (p "1. Never dumb down the core - Scheme stays Scheme 2. Add layers, don't subtract - Friendly is additional, not replacement 3. Same operations - Both doors do the same things 4. Gradual revelation - Normies can discover the terminal if curious 5. Family friendly - Grandma can use it"))
+    (p "1. Never dumb down the core - Scheme stays Scheme 2. Add layers, don't subtract - Friendly is additional, not replacement 3. Same operations - Both doors do the same things 4. Gradual revelation - Newcomers can discover the terminal if curious 5. Family friendly - Grandma can use it"))
   (section
     "9. The Test"
-    (p "If a normie can: - Create a vault in 30 seconds - Add a photo in 5 seconds - Invite family in 1 minute - Understand what they have")
+    (p "If a newcomer can: - Create a vault in 30 seconds - Add a photo in 5 seconds - Invite family in 1 minute - Understand what they have")
     (p "Then we've succeeded."))
   (section
     "10. References"

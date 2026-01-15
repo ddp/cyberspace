@@ -59,7 +59,7 @@
 
   (define *banned-vocabulary*
     '(;; Internal jargon - NEVER in user-facing strings or memos
-      ("normie"      . "casual user, newcomer, or just omit")
+      ("normie"      . "newcomer, casual user, or just omit")
       ("sheeple"     . "users, people")
       ("luser"       . "user")
       ("RTFM"        . "see help, see documentation")
@@ -132,7 +132,7 @@
 
   (define *whitelist-contexts*
     '(;; Reserved memos can use internal vocabulary
-      ("memo-0056" . (normie internal-jargon))
+      ("memo-0056" . (internal-jargon))
       ;; The scrutinizer documents banned terms
       ("scrutinizer.scm" . (all-banned-terms))
       ;; Test files can use anything

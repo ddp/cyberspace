@@ -49,7 +49,7 @@
 
   (section
     "5. The Scheme Beneath"
-    (p "Scheme is the implementation language, not the user interface. The normie sees a shell; the schemer sees a REPL. Same system, different lenses.")
+    (p "Scheme is the implementation language, not the user interface. The newcomer sees a shell; the schemer sees a REPL. Same system, different lenses.")
     (p "By default, Scheme internals are hidden:")
     (list
       (item "Inspector disabled - errors show simple messages, not debug> prompts")
