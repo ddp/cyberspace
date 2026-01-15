@@ -30,7 +30,7 @@
   (section
     "The Prime Directive"
     (p "Uniform abstractions. No special cases. Composition over complexity.")
-    (p "This is the shape that systems take when they are allowed to find their natural form. Plan 9 found it in files. Lisp found it in S-expressions. SPKI found it in capabilities. We find it in the soup.")
+    (p "This is the shape that systems take when they are allowed to find their natural form. Plan 9 found it in files. Lisp found it in S-expressions. Simple Public Key Infrastructure (SPKI) found it in capabilities. We find it in the soup.")
     (p "The language is incidental. The shape is inevitable."))
 
   (section
@@ -40,7 +40,7 @@
       (row "I" "Replication Layer" "Distribution without permission")
       (row "II" "Architecture" "Separation of mechanism and policy")
       (row "III" "Audit Trail" "Accountability through transparency")
-      (row "IV" "SPKI Authorization" "Authority without identity")
+      (row "IV" "Public Key Authorization" "Authority without identity")
       (row "V" "Metadata Levels" "Progressive disclosure")
       (row "VI" "Vault Architecture" "Sealed truth")
       (row "VII" "Threshold Governance" "Democracy in code")
