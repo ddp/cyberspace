@@ -356,9 +356,13 @@
         ((eq? target 'code)
          (scrutinize-code))
 
+        ((eq? target 'plans)
+         (scrutinize-plans))
+
         (else
          (scrutinize-library)
-         (scrutinize-code)))))
+         (scrutinize-code)
+         (scrutinize-plans)))))
 
   (define (scrutinize-library)
     "Scrutinize memo library (vocabulary only, skip reserved)"
@@ -383,6 +387,23 @@
     (let ((files (glob-scheme-files ".")))
       (for-each scrutinize-file files)
       (report-findings 'code)))
+
+  (define (scrutinize-plans)
+    "Scrutinize Claude plan files"
+    (clear-findings!)
+    (print "")
+    (print "Scrutinizing plans...")
+    (let* ((plans-dir (or (get-environment-variable "CLAUDE_PLANS")
+                          (make-pathname (get-environment-variable "HOME")
+                                         ".claude/plans")))
+           (files (glob-plans plans-dir)))
+      (for-each (lambda (f) (scrutinize-text-file f 'memo)) files)
+      (report-findings 'plans)))
+
+  (define (glob-plans dir)
+    "Find plan markdown files"
+    (let ((pattern (make-pathname dir "*.md")))
+      (glob-files pattern)))
 
   (define (glob-memos dir)
     "Find memo files"
