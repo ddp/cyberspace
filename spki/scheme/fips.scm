@@ -11,7 +11,6 @@
 ;;;   - SHA-256/512: NIST FIPS 180-4 examples
 ;;;   - Ed25519: RFC 8032 test vectors
 ;;;
-;;; Copyright (c) 2026 Derrell Piper. See LICENSE.
 
 (module fips
   (;; Self-test entry point

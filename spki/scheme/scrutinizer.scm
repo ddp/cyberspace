@@ -11,8 +11,6 @@
 ;;;   1. Vocabulary audit - banned terms in user-facing strings
 ;;;   2. Tone consistency - memos vs help vs errors
 ;;;   3. S-expression exposure - Scheme leaking to surface
-;;;
-;;; Copyright (c) 2026 Yoyodyne. See LICENSE.
 
 (module scrutinizer
   (;; Main interface
@@ -97,6 +95,17 @@
       ;; Error internals - these leak implementation details
       ("exn:"         . "exception prefix exposed")
       ("call-chain"   . "internal call stack exposed")))
+
+  ;; ----------------------------------------------------------
+  ;; Header Patterns (module-level comments)
+  ;; ----------------------------------------------------------
+  ;; Patterns that should not appear in ;;; header comments.
+  ;; Keep headers clean - no legal boilerplate.
+
+  (define *header-banned*
+    '(("Copyright"    . "no copyright in headers")
+      ("LICENSE"      . "no license refs in headers")
+      ("All rights"   . "no legal boilerplate")))
 
   ;; ----------------------------------------------------------
   ;; Tone Rules by Context
@@ -220,16 +229,41 @@
         (let loop ((line-num 1)
                    (in-string #f)
                    (in-comment #f)
+                   (in-header #t)
                    (findings '()))
           (let ((line (read-line port)))
             (if (eof-object? line)
                 findings
                 (let* ((context (detect-context line in-comment))
-                       (result (scrutinize-line line path line-num context)))
+                       ;; Header ends at first non-comment line
+                       (still-header (and in-header
+                                          (or (string-prefix? ";;;" line)
+                                              (string-prefix? ";;;" line)
+                                              (string=? "" (string-trim-both line)))))
+                       (result (scrutinize-line line path line-num context))
+                       ;; Check header patterns in ;;; comments
+                       (header-result (if (and in-header (string-prefix? ";;;" line))
+                                          (scrutinize-header line path line-num)
+                                          '())))
                   (loop (+ line-num 1)
                         (in-string-literal? line in-string)
                         (in-block-comment? line in-comment)
-                        (append result findings)))))))))
+                        still-header
+                        (append header-result result findings)))))))))
+
+  (define (scrutinize-header line path line-num)
+    "Check header comment for banned patterns"
+    (let ((violations '()))
+      (for-each
+        (lambda (rule)
+          (let ((banned (car rule))
+                (reason (cdr rule)))
+            (when (str-contains? line banned)
+              (add-finding! 'warning path line-num 'header
+                            (sprintf "~s: ~a" banned reason))
+              (set! violations (cons (list 'header banned reason) violations)))))
+        *header-banned*)
+      violations))
 
   (define (scrutinize-text-file path context)
     "Scrutinize a text/markdown file"

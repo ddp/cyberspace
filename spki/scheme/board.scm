@@ -5,7 +5,6 @@
 ;;;
 ;;; Heritage: PLATO Notes -> VAX Notes -> Cyberspace
 ;;;
-;;; Copyright (c) 2026 Derrell Piper. See LICENSE.
 
 (module board
   (;; Board navigation

@@ -8,8 +8,6 @@
 ;;;   - Restarts
 ;;;
 ;;; Heritage: Symbolics, LispWorks, Dylan, CCL, Mach ddb, NT kd
-;;;
-;;; Copyright (c) 2026 Yoyodyne. See LICENSE.
 
 (module inspector
   (;; Entry points
