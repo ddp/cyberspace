@@ -4,6 +4,7 @@
 (memo
   (number 51)
   (title "The Normie Interface")
+  (reserved)
   (section
     "Abstract"
     (p "Cyberspace must be approachable by normal people. The terminal is for operators. This Memo specifies a friendly interface layer for everyone else."))
