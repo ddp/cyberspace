@@ -5087,6 +5087,8 @@ Cyberspace REPL - Available Commands
     (clear     . clear)
     (open      . open)
     (theme     . theme!)
+    (thinga!   . thinga!)
+    (thanga!   . thinga!)
     (help      . help)
     (quit      . exit)
     (exit      . exit)))
@@ -5335,6 +5337,19 @@ Cyberspace REPL - Available Commands
                             (with-output-to-string (lambda () (pp content)))
                             "</pre>\n"))))))
     (open-in-browser html-content)))
+
+;; Full toolchain: commit → push → regen-all → publish
+(define (thinga!)
+  "Do all the th[i,a]nga: commit, push, regen-all, publish.
+   Ideas forged through the full cycle become golden artifacts."
+  (print "[thinga!: commit → push → regen-all → publish]")
+  (print "")
+  (let ((result (system "git add -A && git commit -m 'thinga' && git push && ./cyberspace-repl regen && rsync -avz --exclude '.git' --exclude '*.so' --exclude '*.o' --exclude '*.c' . www.yoyodyne.com:cyberspace/spki/scheme/")))
+    (if (zero? result)
+        (print "[thinga!: complete]")
+        (print "[thinga!: failed with code " result "]"))))
+
+(define thanga! thinga!)  ; Tamil: gold
 
 ;; Show principals (identity + keys)
 (define (principals)
