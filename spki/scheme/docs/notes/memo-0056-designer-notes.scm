@@ -103,8 +103,18 @@
     (subsection
       "7.3 Languages"
       (p "Original VMS languages: English, Latin, Italian, Dutch, Sindarin (Elvish - vocabulary typed from Tolkien by DEC enthusiasts). The VT100 diacriticals were encoded in DEC MCS (Multinational Character Set).")
-      (p "Cyberspace expansion: NATO member languages (German, French, Spanish, Portuguese, Polish, Swedish, Norwegian, Danish, etc.), updated word lists from SCOWL, OpenTaal, Hunspell, and Eldamo. Diacriticals converted to UTF-8.")
-      (p "The Sindarin database preserves Tolkien's circumflexes: Manwë, Aulë, Andúril, Barad-dûr. An easter egg within an easter egg."))
+      (p "Cyberspace expansion brings the total to 30+ languages:")
+      (list
+        (item "Romance: Spanish, Portuguese, French, Italian, Catalan, Galician, Romanian")
+        (item "Germanic: German, Swedish, Norwegian, Danish")
+        (item "Baltic/Finnic: Finnish, Estonian, Latvian")
+        (item "Central/Eastern: Polish, Czech, Slovak, Hungarian, Turkish")
+        (item "Cyrillic: Russian, Ukrainian, Bulgarian")
+        (item "Greek alphabet")
+        (item "Southeast Asian: Vietnamese, Thai, Lao, Korean (tonal diacriticals)")
+        (item "Literary: Dante's Divina Commedia (12,777 unique words from Princeton Dante Project)"))
+      (p "Word lists sourced from SCOWL, OpenTaal, Hunspell, Eldamo, and LibreOffice dictionaries. All diacriticals converted to UTF-8.")
+      (p "The Sindarin database preserves Tolkien's circumflexes: Manwë, Aulë, Andúril, Barad-dûr. Dante's medieval Italian sits alongside - easter eggs within easter eggs."))
 
     (subsection
       "7.4 Related Standards"
@@ -122,9 +132,22 @@
 (forge 'latin 3)     ; three Latin words
 (forge 'passphrase)  ; 4-word passphrase
 (forge 'german 'passphrase 6) ; 6-word German passphrase")
-      (p "Each word reports its entropy. Passphrases join words with hyphens. The forge is an easter egg - undocumented in help, discovered by schemers exploring the REPL.")))
+      (p "Each word reports its entropy. Passphrases join words with hyphens. The forge is an easter egg - undocumented in help, discovered by schemers exploring the REPL."))
+
+    (subsection
+      "7.6 Cryptographic Entropy"
+      (p "Passwords fall naturally out of pronounceable words when the entropy source is sound. Forge uses /dev/urandom for cryptographically secure randomness, not pseudo-random generators.")
+      (p "Boot-time verification runs automatically on module load:")
+      (list
+        (item "Confirms /dev/urandom exists and is readable")
+        (item "Reads 256 test bytes and checks byte distribution")
+        (item "Verifies no single byte appears more than ~10% (bias detection)")
+        (item "Confirms at least 100 distinct byte values (diversity check)"))
+      (p "If verification fails, the module refuses to load. An easter egg with real security - someone exploring the REPL discovers (forge) and gets actual cryptographic passwords, not toys.")))
 
   (section
     "Changelog"
+    (p "- 2026-01-15 — Added cryptographic RNG with boot-time verification (section 7.6)")
+    (p "- 2026-01-15 — Expanded to 30+ languages including Asian and Dante (section 7.3)")
     (p "- 2026-01-15 — Added forge/smelter heritage (section 7)")
     (p "- 2026-01-15 — Initial draft, heritage notes")))
