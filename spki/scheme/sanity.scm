@@ -18,7 +18,8 @@
         (chicken sort)
         (chicken process)
         (chicken irregex)
-        srfi-1)
+        srfi-1
+        srfi-13)
 
 (define *errors* 0)
 (define *warnings* 0)
@@ -144,6 +145,35 @@
     '(sexp crypto-ffi vault audit cert)))
 
 ;;; ============================================================
+;;; Boot Regression Tests
+;;; ============================================================
+;;; These catch errors like missing imports that only surface at runtime.
+
+(define (check-repl-boot)
+  (print "\n=== REPL Boot Test ===")
+
+  ;; Test 1: REPL can reach prompt without error (shadow mode, immediate exit)
+  (let* ((cmd "echo '(exit 0)' | ./cyberspace-repl shadow 2>&1")
+         (output (with-input-from-pipe cmd read-string)))
+    (if (string-contains output "Error:")
+        (error! "REPL boot failed - check for unbound symbols")
+        (ok! "REPL boots without error")))
+
+  ;; Test 2: os module exports hostname (caught the hostname bug)
+  (let* ((cmd "csi -q -e \"(import os) (print (hostname))\" 2>&1")
+         (output (with-input-from-pipe cmd read-string)))
+    (if (string-contains output "Error")
+        (error! "os: hostname not exported")
+        (ok! "os: hostname available")))
+
+  ;; Test 3: No deprecated API warnings in compile
+  (let* ((cmd "csc -check-syntax cyberspace-repl.scm 2>&1 | grep -c 'deprecated' || echo 0")
+         (result (with-input-from-pipe cmd read-line)))
+    (if (equal? result "0")
+        (ok! "No deprecated API usage")
+        (warn! (sprintf "~a deprecated API warnings" result)))))
+
+;;; ============================================================
 ;;; Main
 ;;; ============================================================
 
@@ -155,6 +185,7 @@
   (check-memo-numbering)
   (check-cross-references)
   (check-module-exports)
+  (check-repl-boot)
 
   (print "\n=== Summary ===")
   (printf "  Errors:   ~a~n" *errors*)

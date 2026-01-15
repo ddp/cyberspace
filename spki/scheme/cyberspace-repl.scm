@@ -5339,16 +5339,29 @@ Cyberspace REPL - Available Commands
                             "</pre>\n"))))))
     (open-in-browser html-content)))
 
-;; Full toolchain: commit → push → regen-all → publish
+;; Full toolchain: sanity → commit → push → regen-all → publish
 (define (thinga!)
-  "Do all the th[i,a]nga: commit, push, regen-all, publish.
-   Ideas forged through the full cycle become golden artifacts."
-  (print "[thinga!: commit → push → regen-all → publish]")
+  "Do all the th[i,a]nga: sanity, commit, push, regen-all, publish.
+   Ideas forged through the full cycle become golden artifacts.
+   Returns #f if regression tests fail - nothing publishes broken."
+  (print "[thinga!: sanity → commit → push → regen-all → publish]")
   (print "")
-  (let ((result (system "git add -A && git commit -m 'thinga' && git push && ./cyberspace-repl regen && rsync -avz --exclude '.git' --exclude '*.so' --exclude '*.o' --exclude '*.c' . www.yoyodyne.com:cyberspace/spki/scheme/")))
-    (if (zero? result)
-        (print "[thinga!: complete]")
-        (print "[thinga!: failed with code " result "]"))))
+  ;; Gate 1: regression tests
+  (print "[scrutinizer: running sanity checks...]")
+  (let ((sanity (system "./sanity.scm")))
+    (if (not (zero? sanity))
+        (begin
+          (print "[thinga!: BLOCKED - sanity check failed]")
+          #f)
+        ;; Gate passed - proceed with publish
+        (let ((result (system "git add -A && git commit -m 'thinga' && git push && ./cyberspace-repl regen && rsync -avz --exclude '.git' --exclude '*.so' --exclude '*.o' --exclude '*.c' . www.yoyodyne.com:cyberspace/spki/scheme/")))
+          (if (zero? result)
+              (begin
+                (print "[thinga!: complete]")
+                #t)
+              (begin
+                (print "[thinga!: failed with code " result "]")
+                #f))))))
 
 (define thanga! thinga!)  ; Tamil: gold
 
