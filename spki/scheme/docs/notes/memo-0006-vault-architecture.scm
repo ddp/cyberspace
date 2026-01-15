@@ -3,7 +3,7 @@
 
 (memo
   (number 6)
-  (title "Vault System Architecture")
+  (title "Vault Architecture")
   (section
     "Abstract"
     (p "This Memo specifies the Vault system for the Library of Cyberspace: cryptographically sealed version control with SPKI authorization, progressive metadata, archival support, and integrated audit trails."))
@@ -96,8 +96,7 @@
         (item "Zstd compression (faster, better ratio than gzip)")
         (item "Age encryption (X25519/Ed25519 compatible)")
         (item "SHA-512 hash + Ed25519 signature")
-        (item "Encrypted at rest")
-        (item "See Memo-018: Sealed Archive Format for full specification"))
+        (item "Encrypted at rest")))
       (p "Cryptographic Archive Structure:")
       (code "vault-1.0.0.archive        # Manifest\nvault-1.0.0.archive.tar.gz # Tarball (cryptographic)")
       (p "Zstd+Age Archive Structure:")
@@ -221,7 +220,7 @@
     (p "All formats are first-class citizens in the Vault. RFCs and declarations SHOULD be published in all three formats for maximum preservation and accessibility. No proprietary formats."))
   (section
     "References"
-    (p "1. Git Internals - Plumbing and Porcelain 2. Memo-0002: Replication Layer 3. Memo-003: Cryptographic Audit Trail 4. Memo-004: SPKI Authorization 5. Memo-005: Progressive Metadata Levels 6. Memo-018: Sealed Archive Format 7. Semantic Versioning 2.0.0"))
+    (p "1. Git Internals - Plumbing and Porcelain 2. Memo-0002: Replication Layer 3. Memo-0003: Cryptographic Audit Trail 4. Memo-0004: SPKI Authorization 5. Memo-0005: Progressive Metadata Levels 6. Semantic Versioning 2.0.0"))
   (section
     "Changelog"
     (list

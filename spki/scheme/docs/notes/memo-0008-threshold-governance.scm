@@ -2,7 +2,7 @@
 ;; Review and edit as needed
 
 (memo
-  (number 7)
+  (number 8)
   (title "Threshold Signature Governance")
   (section
     "Abstract"
@@ -67,7 +67,7 @@
       (code "Each party: own keypair\nSigning:    each signs independently\nVerify:     count valid signatures ≥ K\nUse case:   governance, approvals")
       (p "Advantages: - Each party maintains own key - Clear audit trail (who signed) - Simple revocation (by key) - No key reconstruction"))
     (subsection
-      "Shamir Splitting (Memo-008)"
+      "Shamir Splitting (Memo-007)"
       (code "Single key: split into N shares\nSigning:    K parties reconstruct, sign once\nVerify:     single signature\nUse case:   key backup, recovery")
       (p "Advantages: - Single signature output - Key never fully assembled (in advanced schemes) - Smaller signature files")
       (p "For governance, multi-signature is preferred: - Accountability (which individuals approved) - No reconstruction ceremony - Works asynchronously")))

@@ -117,7 +117,7 @@
     (subsection
       "Rollback Attacks"
       (p "Attacker forces rollback to vulnerable version.")
-      (p "Mitigation: - Threshold signatures for rollback (Memo-007) - Protected version list - Audit trail detection"))
+      (p "Mitigation: - Threshold signatures for rollback (Memo-008) - Protected version list - Audit trail detection"))
     (subsection
       "History Manipulation"
       (p "Hard rollback can hide evidence.")

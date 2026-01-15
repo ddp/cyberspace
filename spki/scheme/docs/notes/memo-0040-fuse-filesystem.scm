@@ -3,7 +3,7 @@
 
 (memo
   (number 40)
-  (title "Wormholes (FUSE Filesystem Layer)")
+  (title "Wormholes")
   (section
     "Abstract"
     (p "This Memo specifies wormholes—FUSE-based bidirectional portals between the macOS filesystem and the Library of Cyberspace vault. Wormholes preserve full metadata including extended attributes, Finder tags, and ACLs. All operations are auditable (Memo-003) and rate-limited (Memo-032).[^h1]")

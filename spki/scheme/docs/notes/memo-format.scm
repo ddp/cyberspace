@@ -466,6 +466,20 @@
   (let ((entry (assq field (cdr doc))))
     (if entry (cadr entry) default)))
 
+(define (validate-title title filename)
+  (let ((warnings '()))
+    (when (irregex-search "\\(" title)
+      (set! warnings (cons (format "~a: parentheses: ~a" filename title) warnings)))
+    (when (irregex-search "\\b[A-Z]{3,}\\b" title)
+      (set! warnings (cons (format "~a: acronym: ~a" filename title) warnings)))
+    warnings))
+
+(define (validate-memo doc filename)
+  (let ((title (get-field doc 'title #f)))
+    (if title
+        (validate-title title filename)
+        (list (format "~a: missing title" filename)))))
+
 (define (doc-type doc)
   "Return document type: 'memo or 'document."
   (if (pair? doc) (car doc) 'unknown))

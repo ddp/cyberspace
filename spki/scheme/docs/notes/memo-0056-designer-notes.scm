@@ -4,6 +4,7 @@
 (memo
   (number 56)
   (title "Designer Notes")
+  (reserved)
   (status "Draft")
   (date "January 2026")
   (author "Derrell Piper" "ddp@archlinux.us")
@@ -45,6 +46,18 @@
       (item "Linux (x86_64) - including MIT Athena dialup")
       (item "Any POSIX system with CHICKEN Scheme 5.x"))
     (p "The system should feel native on a Mac, work cleanly on Athena, and build anywhere Scheme runs."))
+
+  (section
+    "5. The Scheme Beneath"
+    (p "Scheme is the implementation language, not the user interface. The normie sees a shell; the schemer sees a REPL. Same system, different lenses.")
+    (p "By default, Scheme internals are hidden:")
+    (list
+      (item "Inspector disabled - errors show simple messages, not debug> prompts")
+      (item "Exception display uses plain language, not 'unbound variable'")
+      (item "Help shows commands, not S-expressions")
+      (item "The : prompt is a portal, not a lambda"))
+    (p "Schemers opt in with (enable-inspector!) and see the machinery. The abstraction layer is permeable but not transparent.")
+    (p "This is not dumbing down. It is layered revelation - the same principle that makes Cyberspace.app feel native on Mac while running pure Scheme underneath."))
 
   (section
     "Changelog"

@@ -6,7 +6,7 @@
   (title "Quorum Protocol with Homomorphic Voting")
   (section
     "Abstract"
-    (p "This Memo specifies the quorum protocol for the Library of Cyberspace: how principals reach collective decisions through homomorphic encryption-based voting, enabling private ballot tallying without revealing individual votes. Quorum integrates with threshold governance (Memo-007) and Byzantine consensus (Memo-011)."))
+    (p "This Memo specifies the quorum protocol for the Library of Cyberspace: how principals reach collective decisions through homomorphic encryption-based voting, enabling private ballot tallying without revealing individual votes. Quorum integrates with threshold governance (Memo-008) and Byzantine consensus (Memo-011)."))
   (section
     "Motivation"
     (p "Collective decisions require:")
@@ -113,7 +113,7 @@
   (section
     "Integration with Governance"
     (subsection
-      "Memo-007 Threshold Governance"
+      "Memo-008 Threshold Governance"
       (code scheme ";; Quorum voting for threshold operations\n(define (threshold-operation-vote operation trustees)\n  \"Vote on threshold operation\"\n  (let ((ballot (create-ballot\n                  question: (format \"Approve ~a?\" operation)\n                  options: '(approve reject)\n                  threshold: '(supermajority 2/3)\n                  deadline: (+ (current-time) 86400)\n                  trustees: trustees)))\n    ;; Wait for voting\n    (await-ballot-result ballot)))"))
     (subsection
       "Memo-011 Byzantine Consensus"
@@ -171,7 +171,7 @@
       (p "Recommended implementations: - OpenFHE (C++) - Full HE library - python-paillier - Reference implementation - threshold-paillier - Distributed key generation")))
   (section
     "References"
-    (p "1. Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes 2. Benaloh, J. (1994). Dense Probabilistic Encryption 3. Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and Optimally Efficient Multi-Authority Election Scheme 4. Memo-007: Threshold Signature Governance 5. Memo-011: Byzantine Consensus 6. Memo-022: Key Ceremony Protocol"))
+    (p "1. Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes 2. Benaloh, J. (1994). Dense Probabilistic Encryption 3. Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and Optimally Efficient Multi-Authority Election Scheme 4. Memo-008: Threshold Signature Governance 5. Memo-011: Byzantine Consensus 6. Memo-022: Key Ceremony Protocol"))
   (section
     "Changelog"
     (list

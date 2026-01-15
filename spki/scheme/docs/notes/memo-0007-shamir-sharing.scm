@@ -2,7 +2,7 @@
 ;; Review and edit as needed
 
 (memo
-  (number 8)
+  (number 7)
   (title "Shamir Secret Sharing")
   (section
     "Abstract"
@@ -105,7 +105,7 @@
       "Shamir for Key Backup (This Memo)"
       (code "Private key → split → N shares\nRecovery: K shares → reconstruct → use key"))
     (subsection
-      "Multi-Signature for Governance (Memo-007)"
+      "Multi-Signature for Governance (Memo-008)"
       (code "N parties → N keys → N signatures\nVerification: count valid ≥ K")
       (p "Use Shamir when: - Backing up existing keys - Emergency recovery scenarios - Single key must be reconstructable")
       (p "Use Multi-Sig when: - Ongoing governance decisions - Need audit trail of who signed - Asynchronous authorization")))

@@ -59,10 +59,15 @@
 
       (condition-case
         (let ((doc (read-memo memo-file)))
-          (memo->txt doc txt-file)
-          (memo->html doc html-file)
-          (memo->ps doc ps-file)
-          (print "  " base ": txt html ps"))
+          (if (assq 'reserved (cdr doc))
+              (print "  " base ": <reserved>")
+              (begin
+                (let ((title-warnings (validate-memo doc memo-file)))
+                  (for-each (lambda (w) (print "  [TITLE] " w)) title-warnings))
+                (memo->txt doc txt-file)
+                (memo->html doc html-file)
+                (memo->ps doc ps-file)
+                (print "  " base ": txt html ps"))))
         (e ()
           (print "  " base ": FAILED - " (get-condition-property e 'exn 'message "")))))))
 
@@ -86,15 +91,24 @@
       (set! errors (cons "suspiciously short content" errors)))
     errors))
 
+(define (is-eluded? base)
+  (let ((scm-file (string-append base ".scm")))
+    (and (file-exists? scm-file)
+         (let ((doc (with-input-from-file scm-file read)))
+           (and (pair? doc) (assq 'reserved (cdr doc)))))))
+
 (define (validate-outputs base)
-  "Validate all output files for an Memo."
-  (let* ((txt-file (string-append base ".txt"))
-         (errors (if (file-exists? txt-file)
-                     (validate-txt-file txt-file)
-                     '("txt file missing"))))
-    (when (not (null? errors))
-      (print "  [WARN] " base ": " (string-intersperse errors ", ")))
-    (null? errors)))
+  "Validate all output files for a Memo."
+  (cond
+    ((is-eluded? base) #t)
+    (else
+     (let* ((txt-file (string-append base ".txt"))
+            (errors (if (file-exists? txt-file)
+                        (validate-txt-file txt-file)
+                        '("txt file missing"))))
+       (when (not (null? errors))
+         (print "  [WARN] " base ": " (string-intersperse errors ", ")))
+       (null? errors)))))
 
 (define (main)
   (print "=== Memo Generation (S-expression Pipeline) ===")

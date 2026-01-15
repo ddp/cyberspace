@@ -35,7 +35,7 @@
   (section
     "Cyberspace Protocol Specifications"
     (subsection
-      "Threshold Signatures (Memo-007)"
+      "Threshold Signatures (Memo-008)"
       (code tla "--------------------------- MODULE ThresholdSig ---------------------------\nEXTENDS Integers, FiniteSets\n\nCONSTANTS Signers, Threshold, Script\n\nVARIABLES signatures, verified\n\nInit ==\n  /\\ signatures = {}\n  /\\ verified = FALSE\n\nSign(s) ==\n  /\\ s \\in Signers\n  /\\ s \\notin {sig.signer : sig \\in signatures}\n  /\\ signatures' = signatures \\union\n       {[signer |-> s, script |-> Script, valid |-> TRUE]}\n  /\\ verified' = verified\n\nVerify ==\n  /\\ Cardinality({sig \\in signatures : sig.valid}) >= Threshold\n  /\\ verified' = TRUE\n  /\\ UNCHANGED signatures\n\nNext ==\n  \\/ \\E s \\in Signers: Sign(s)\n  \\/ Verify\n\n\\ Safety: Never verify with insufficient signatures\nSafety ==\n  verified => Cardinality({sig \\in signatures : sig.valid}) >= Threshold\n\n\\ Liveness: If enough sign, eventually verify\nLiveness ==\n  (Cardinality(Signers) >= Threshold) => <>(verified)\n\n============================================================================="))
     (subsection
       "Audit Trail (Memo-003)"

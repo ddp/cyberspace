@@ -38,7 +38,7 @@
       (row "certificate " "Memo-004 " "SPKI capability grant ")
       (row "tag " "Memo-004 " "Authorization scope (read, write, etc.) ")
       (row "signature " "Memo-004 " "Ed25519 attestation ")
-      (row "share " "Memo-008 " "Shamir secret fragment ")
+      (row "share " "Memo-007 " "Shamir secret fragment ")
       (row "quorum " "Memo-036 " "Voting threshold specification ")
       (row "Storage ")
       (row "vault " "Memo-006 " "Sovereign storage realm ")

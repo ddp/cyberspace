@@ -68,7 +68,7 @@
   ;; State
   ;; ============================================================
 
-  (define *inspector-enabled* #t)
+  (define *inspector-enabled* #f)
   (define *current-condition* #f)
   (define *current-frames* '())
   (define *current-frame-index* 0)
@@ -391,8 +391,17 @@
            #f)
 
           ((member input '("?" ":?" ":h" ":help" "help"))
-           (print "(.) proceed  (?) help  (exit) quit")
-           (print "frame N  inspect EXPR  restarts")
+           (print "")
+           (print "Cyberspace Scheme")
+           (print "")
+           (print "  (library)         - Enter the Library")
+           (print "  (search 'topic)   - Search everything")
+           (print "  (status)          - Node status")
+           (print "  (inspect OBJ)     - Inspect anything")
+           (print "")
+           (print "  (help 'topics)    - All help topics")
+           (print "  (.) proceed  (?) help  (exit) quit")
+           (print "")
            (loop))
 
           ;; Frame commands: :f N or frame N

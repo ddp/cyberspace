@@ -168,7 +168,7 @@
         (item "Revocation checks add latency - use short-lived certs when possible"))))
   (section
     "References"
-    (p "1. SPKI/SDSI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication - Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller, Yee, Shapiro (preserved) 4. Memo-004: SPKI Authorization 5. Memo-020: Content-Addressed Storage 6. Memo-007: Threshold Signature Governance"))
+    (p "1. SPKI/SDSI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication - Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller, Yee, Shapiro (preserved) 4. Memo-004: SPKI Authorization 5. Memo-020: Content-Addressed Storage 6. Memo-008: Threshold Signature Governance"))
   (section
     "Changelog"
     (list

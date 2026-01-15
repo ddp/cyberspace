@@ -14,7 +14,7 @@ extract_memo_num() {
 # Discover Memos from filesystem (unique basenames, sorted by number)
 discover_memos() {
   shopt -s nullglob
-  for f in memo-*.md memo-*.txt; do
+  for f in memo-[0-9]*.scm memo-[0-9]*.md memo-[0-9]*.txt; do
     [[ -f "$f" ]] && echo "${f%.*}"
   done | sort -u | sort -t- -k2,2n
 }
@@ -54,9 +54,16 @@ is_stop_word() {
   return 1
 }
 
+is_reserved() {
+  local base="$1"
+  [[ -f "${base}.scm" ]] && grep -q '(reserved)' "${base}.scm"
+}
+
 get_title() {
   local base="$1"
-  if [[ -f "${base}.txt" ]]; then
+  if is_reserved "$base"; then
+    echo "&lt;reserved&gt;"
+  elif [[ -f "${base}.txt" ]]; then
     head -1 "${base}.txt"
   elif [[ -f "${base}.md" ]]; then
     head -1 "${base}.md" | sed 's/^# //'
@@ -114,7 +121,11 @@ HEADER
 for memo in "${MEMOS[@]}"; do
   title=$(get_title "$memo")
   num=$(extract_memo_num "$memo")
-  formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.html">Hypertext</a>'
+  if is_reserved "$memo"; then
+    formats=""
+  else
+    formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.html">Hypertext</a>'
+  fi
 
   cat >> index.html << EOF
       <tr>
@@ -137,6 +148,8 @@ MIDDLE
 
 # Generate KWIC entries
 for memo in "${MEMOS[@]}"; do
+  # Skip reserved memos
+  is_reserved "$memo" && continue
   title=$(get_title "$memo")
   # Strip "Memo NNNN: " prefix
   bare_title=$(echo "$title" | sed 's/^Memo [0-9]*: //')

@@ -46,7 +46,7 @@
       (code scheme "(consensus-propose\n  (action release-publish)\n  (version \"2.0.0\")\n  (proposer #${alice-key}))\n\n;; After consensus:\n(consensus-decided\n  (sequence 42)\n  (action release-publish)\n  (version \"2.0.0\")\n  (decided-by (quorum ...)))"))
     (subsection
       "Threshold Governance Integration"
-      (p "Combine with Memo-007: - Consensus on what to do - Threshold signatures on authorization")
+      (p "Combine with Memo-008: - Consensus on what to do - Threshold signatures on authorization")
       (code scheme "(governance-decision\n  (consensus-sequence 42)\n  (action deploy-production)\n  (threshold-met 3-of-5)\n  (signers (alice carol dave)))")))
   (section
     "Optimizations"
@@ -97,7 +97,7 @@
         (item "Network transport (TCP, QUIC)"))))
   (section
     "References"
-    (p "1. Lamport, L., Shostak, R., & Pease, M. (1982). The Byzantine Generals Problem. 2. Castro, M., & Liskov, B. (1999). Practical Byzantine Fault Tolerance. 3. Yin, M., et al. (2019). HotStuff: BFT Consensus with Linearity and Responsiveness. 4. Memo-007: Threshold Signature Governance 5. Memo-010: Federation Protocol"))
+    (p "1. Lamport, L., Shostak, R., & Pease, M. (1982). The Byzantine Generals Problem. 2. Castro, M., & Liskov, B. (1999). Practical Byzantine Fault Tolerance. 3. Yin, M., et al. (2019). HotStuff: BFT Consensus with Linearity and Responsiveness. 4. Memo-008: Threshold Signature Governance 5. Memo-010: Federation Protocol"))
   (section
     "Changelog"
     (list

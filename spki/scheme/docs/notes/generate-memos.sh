@@ -67,10 +67,18 @@ MEMOS=("${(@f)$(discover_memos)}")
 echo "Discovered ${#MEMOS[@]} Memos"
 check_duplicates "${MEMOS[@]}"
 
+# Check if memo is reserved/eluded
+is_reserved() {
+  local base="$1"
+  [[ -f "${base}.scm" ]] && grep -q '(reserved)' "${base}.scm"
+}
+
 # Extract title from S-expression file
 get_title() {
   local base="$1"
-  if [[ -f "${base}.scm" ]]; then
+  if is_reserved "$base"; then
+    echo "&lt;reserved&gt;"
+  elif [[ -f "${base}.scm" ]]; then
     # Extract (title "...") from S-expression
     grep -o '(title "[^"]*")' "${base}.scm" 2>/dev/null | sed 's/(title "//; s/")//' | head -1
   else
@@ -118,8 +126,9 @@ kwic_for_doc() {
 # Generate KWIC permuted index entries
 # Output: "keyword|left-context|right-context|doc-name"
 generate_kwic_entries() {
-  # Memos
+  # Memos (skip reserved)
   for memo in "${MEMOS[@]}"; do
+    is_reserved "$memo" && continue
     kwic_for_doc "$memo" "$(get_title "$memo")"
   done
 
@@ -224,7 +233,12 @@ HEADER
   for memo in "${MEMOS[@]}"; do
     local title=$(get_title "$memo")
     local num=$(extract_memo_num "$memo")
-    local formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.html">Hypertext</a>'
+    local formats
+    if is_reserved "$memo"; then
+      formats=""
+    else
+      formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.html">Hypertext</a>'
+    fi
 
     cat >> index.html << EOF
       <tr>
@@ -308,9 +322,12 @@ sanity_check() {
     echo "  [OK] KWIC index: $kwic_entries entries"
   fi
 
-  # Check all Memo files exist
+  # Check all Memo files exist (skip reserved/eluded)
   local missing=0
+  local checked=0
   for memo in "${MEMOS[@]}"; do
+    is_reserved "$memo" && continue
+    checked=$((checked + 1))
     [[ ! -f "${memo}.html" ]] && missing=$((missing + 1))
   done
 
@@ -318,7 +335,7 @@ sanity_check() {
     echo "  [FAIL] $missing Memo HTML files missing"
     errors=$((errors + 1))
   else
-    echo "  [OK] All ${#MEMOS[@]} Memo HTML files present"
+    echo "  [OK] All $checked Memo HTML files present"
   fi
 
   # Check index.html is not tiny

@@ -105,7 +105,7 @@
     "Recovery"
     (subsection
       "Threshold Shares"
-      (p "For high-value realms, split the key into k-of-n shares (Memo-007):")
+      (p "For high-value realms, split the key into k-of-n shares (Memo-008):")
       (code scheme "(keystore-backup\n  threshold: 2                   ; k - shares needed\n  shares: 3)                     ; n - shares created\n\n;; Output:\n;; Share 1 of 3 (requires 2 to recover):\n;; CYBER-SHARE-1-7f3a2b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2\n;;\n;; Share 2 of 3 (requires 2 to recover):\n;; CYBER-SHARE-2-8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8\n;;\n;; Share 3 of 3 (requires 2 to recover):\n;; CYBER-SHARE-3-9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9\n;;\n;; STORE THESE SEPARATELY. Any 2 can recover your realm.")
       (p "Recovery:")
       (code scheme "(keystore-recover\n  \"CYBER-SHARE-1-7f3a2b4c...\"\n  \"CYBER-SHARE-3-9b0c1d2e...\")\n\n;; Realm recovered. Set new passphrase:\n;; New passphrase: \n;; Confirm: \n;; Keystore restored."))
@@ -228,7 +228,7 @@
     (p "Ed25519 replacement: SPHINCS+ or CRYSTALS-Dilithium for signatures. That's a separate RFC."))
   (section
     "References"
-    (p "1. libsodium documentation - Password Hashing, Secret-key Encryption 2. Argon2 specification - https://github.com/P-H-C/phc-winner-argon2 3. Shamir's Secret Sharing - Shamir, A., \"How to Share a Secret\", 1979 4. Memo-007 - Threshold Governance 5. Memo-040 - Cyberspace Security Architecture"))
+    (p "1. libsodium documentation - Password Hashing, Secret-key Encryption 2. Argon2 specification - https://github.com/P-H-C/phc-winner-argon2 3. Shamir's Secret Sharing - Shamir, A., \"How to Share a Secret\", 1979 4. Memo-008 - Threshold Governance 5. Memo-040 - Cyberspace Security Architecture"))
   (section
     "Changelog"
     (list

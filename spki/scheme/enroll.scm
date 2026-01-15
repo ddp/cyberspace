@@ -301,9 +301,10 @@
            ;; Count modules (files with (module ...))
            (module-count (shell-command
                           (string-append "grep -l '^(module' " base-dir "/*.scm 2>/dev/null | wc -l")))
-           ;; Count memos
+           ;; Count memos (numbered, excluding reserved)
            (memo-count (shell-command
-                       (string-append "ls " base-dir "/docs/notes/memo-*.scm 2>/dev/null | wc -l")))
+                       (string-append "ls " base-dir "/docs/notes/memo-[0-9]*.scm 2>/dev/null | "
+                                      "xargs grep -L '(reserved)' 2>/dev/null | wc -l")))
            ;; Count TCB (OCaml) - excluding tests
            ;; base-dir is spki/scheme, tcb is sibling at spki/tcb
            (tcb-dir (make-pathname (pathname-directory (string-chomp base-dir "/")) "tcb"))
@@ -348,7 +349,7 @@
                          (make-pathname (current-directory) "")))
            (memo-dir (make-pathname base-dir "docs/notes"))
            (files (shell-lines
-                   (string-append "ls " memo-dir "/memo-*.txt 2>/dev/null | sort"))))
+                   (string-append "ls " memo-dir "/memo-[0-9]*.txt 2>/dev/null | sort"))))
       (if (null? files)
           '(library (count 0) (memos ()))
           (let ((memos (filter-map

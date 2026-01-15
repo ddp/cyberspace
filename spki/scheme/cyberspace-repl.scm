@@ -5274,7 +5274,8 @@ Cyberspace REPL - Available Commands
      (print "  (status)          - Node status")
      (print "  (inspect OBJ)     - Inspect anything")
      (print "")
-     (print "  (help 'topics)    - All help topics (52 commands)")
+     (printf "  (help 'topics)    - All help topics (~a commands)~%"
+             (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
      (print "  (.) status  (?) help  (bye) exit")
      (print "")))
   (void))

@@ -203,7 +203,7 @@
     (code "G1. Preservation default\n    default-mode = archival → no-automatic-collection\n\nG2. Age increases protection\n    age(obj) > age(obj') → protection(obj) ≥ protection(obj')\n\nG3. Evaporation requires consent\n    evaporate(hash) requires signed-certificate(hash)\n\nG4. Quorum scales with age\n    generation = archival → quorum = governance-level\n\nG5. Archival objects are sacred\n    age > 30-days → no-automatic-evaporation\n\nG6. Audit trail preserved\n    evaporate(hash) → audit-append(hash, certificate, reason, signers)\n\nG7. Mark-and-sweep authoritative\n    truly-unreachable(hash) ↔ ¬member(hash, mark-reachable())\n\nG8. Cycles preserved\n    cycle(A, B, C) ∧ archival-mode → preserve(A, B, C)"))
   (section
     "References"
-    (p "1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. Memo-020: Content-Addressed Storage 4. Memo-003: Cryptographic Audit Trail 5. Memo-036: Quorum Protocol with Homomorphic Voting 6. Memo-007: Threshold Signature Governance"))
+    (p "1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. Memo-020: Content-Addressed Storage 4. Memo-003: Cryptographic Audit Trail 5. Memo-036: Quorum Protocol with Homomorphic Voting 6. Memo-008: Threshold Signature Governance"))
   (section
     "Changelog"
     (list

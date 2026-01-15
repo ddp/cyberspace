@@ -3,7 +3,7 @@
 
 (memo
   (number 44)
-  (title "Cryptographic Imprint Protocol (CIP)")
+  (title "Cryptographic Imprint Protocol")
   (section
     "Abstract"
     (p "CIP establishes secure channels between Cyberspace nodes using stateless cookies for DoS resistance, ephemeral key exchange for forward secrecy, and capability attestation for authorization. Each imprint is an authoritative affirmation of trust - signed and sealed by the issuing principal in their realm. No X.509. No CA hierarchy. No algorithm negotiation."))

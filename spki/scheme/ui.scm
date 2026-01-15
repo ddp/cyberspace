@@ -86,13 +86,19 @@
       (printf "  Mobile: ~a~n" (if (cadr (assq 'mobile (cdr hw))) "yes" "no"))))
 
   (define (show-help)
-    (printf "~nCommands:~n")
+    (printf "~nCyberspace Scheme~n~n")
+    (printf "  (library)         - Enter the Library~n")
+    (printf "  (search 'topic)   - Search everything~n")
+    (printf "  (status)          - Node status~n")
+    (printf "  (inspect OBJ)     - Inspect anything~n~n")
+    (printf "  (help 'topics)    - All help topics~n")
+    (printf "  (.) status  (?) help  (bye) exit~n~n")
+    (printf "Enrollment:~n")
     (printf "  enroll <name>        Start/join realm as <name>~n")
     (printf "  join <name> <host>   Join realm at <host>~n")
     (printf "  status               Show realm status~n")
     (printf "  peers                Show peer scaling~n")
     (printf "  hw                   Show hardware info~n")
-    (printf "  help                 Show this help~n")
     (printf "  quit                 Exit~n"))
 
   ;; ============================================================
