@@ -142,7 +142,7 @@ commit.   → stage, execute, propagate to the weave")
       "3.5 Do All the Th[i,a]nga"
       (p "The full toolchain invocation: commit, push, regen-all, publish. An idea isn't complete until it's self-contained and self-documenting in the weave.")
       (code "thinga := commit → push → regen-all → publish")
-      (p "regen-all is the totality of sanity checking before publishing: recompile all modules, verify types, run tests, regenerate documentation. Nothing reaches the weave without passing the gauntlet.")
+      (p "regen-all is the totality of sanity checking before publishing: recompile all modules, verify types, run tests, regenerate documentation. Nothing reaches the weave without passing the scrutinizer.")
       (p "The spelling nods to both 'things' and 'thanga' (Tamil: gold). Ideas forged through the full cycle become permanent--golden artifacts in the weave.")
       (p "Partial work stays local. Published work is proven. The toolchain is the crucible.")))
 
