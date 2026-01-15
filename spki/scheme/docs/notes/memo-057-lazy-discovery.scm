@@ -1,4 +1,4 @@
-;; Memo-059: Lazy Discovery
+;; Memo-057: Lazy Discovery
 ;; Reactive change propagation in the weave
 
 (memo
