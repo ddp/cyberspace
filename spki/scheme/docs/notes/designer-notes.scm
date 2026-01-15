@@ -136,7 +136,14 @@ Messages:    Multilingual (the command line speaks your tongue)"))
       (p "Cyberspace borrows this: any command suffixed with '.' implies execution and propagation. 'commit.' means commit and sync. 'fix.' means fix and make it so.")
       (code "commit    → stage the intention
 commit.   → stage, execute, propagate to the weave")
-      (p "The period is not punctuation. It's the imperative mood. Smalltalk understood that the moment of action deserves its own syntax.")))
+      (p "The period is not punctuation. It's the imperative mood. Smalltalk understood that the moment of action deserves its own syntax."))
+
+    (subsection
+      "3.5 Do All the Th[i,a]nga"
+      (p "The full toolchain invocation: commit, push, regen-all, publish. An idea isn't complete until it's self-contained and self-documenting in the weave.")
+      (code "thinga := commit → push → regen-all → publish")
+      (p "The spelling nods to both 'things' and 'thanga' (Tamil: gold). Ideas forged through the full cycle become permanent--golden artifacts in the weave.")
+      (p "Partial work stays local. Published work is proven. The toolchain is the crucible.")))
 
   (section
     "4. The Soup"
