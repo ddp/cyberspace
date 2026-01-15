@@ -1,6 +1,15 @@
 #!/bin/bash
-# Generate RFC index with KWIC
-# Auto-discovers all rfc-*.md and rfc-*.txt files
+# Generate Memo index with KWIC
+# Auto-discovers all memo-*.txt files
+
+# Memo namespace configuration - single source of truth
+# Width increases when namespace overflows (0000-9999 -> 00000-99999)
+MEMO_NUMBER_WIDTH=4
+
+# Extract memo number from filename (preserves padding)
+extract_memo_num() {
+  echo "$1" | sed 's/memo-\([0-9]*\)-.*/\1/'
+}
 
 # Discover RFCs from filesystem (unique basenames, sorted by number)
 discover_rfcs() {
@@ -104,7 +113,7 @@ HEADER
 # Generate Memo table
 for rfc in "${RFCS[@]}"; do
   title=$(get_title "$rfc")
-  num=$(echo "$rfc" | sed -E 's/memo-([0-9]{4})-.*/\1/')
+  num=$(extract_memo_num "$rfc")
   formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
   cat >> index.html << EOF
@@ -151,7 +160,7 @@ for rfc in "${RFCS[@]}"; do
       right="$right ${words[$j]}"
     done
 
-    num=$(echo "$rfc" | sed -E 's/memo-([0-9]{4})-.*/\1/')
+    num=$(extract_memo_num "$rfc")
     echo "${word}|${left}|${right}|${rfc}|${num}"
   done
 done | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc num; do

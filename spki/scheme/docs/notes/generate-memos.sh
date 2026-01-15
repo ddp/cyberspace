@@ -4,6 +4,21 @@ setopt null_glob
 
 # Always run from script's directory
 cd "$(dirname "$0")"
+
+# Memo namespace configuration
+# Width may increase when namespace wraps (0000-9999 -> 00000-99999)
+MEMO_NUMBER_WIDTH=4
+
+# Format memo number with leading zeros
+format_memo_num() {
+  printf "%0${MEMO_NUMBER_WIDTH}d" "$1"
+}
+
+# Extract memo number from filename (preserves padding from filename)
+extract_memo_num() {
+  echo "$1" | sed 's/memo-\([0-9]*\)-.*/\1/'
+}
+
 # Generates all Memo formats and index catalog
 # Auto-discovers all memo-*.scm source files
 #
@@ -35,7 +50,7 @@ check_duplicates() {
   local prev_num=""
   local prev_rfc=""
   for rfc in "$@"; do
-    local num=$(echo "$rfc" | sed 's/memo-\([0-9]*\)-.*/\1/')
+    local num=$(extract_memo_num "$rfc")
     if [[ -n "$prev_num" && "$num" == "$prev_num" ]]; then
       echo "WARNING: Duplicate Memo number $num:" >&2
       echo "  - $prev_rfc" >&2
@@ -208,7 +223,7 @@ HEADER
 
   for rfc in "${MEMOS[@]}"; do
     local title=$(get_title "$rfc")
-    local num=$(echo "$rfc" | sed 's/memo-\([0-9]*\)-.*/\1/')
+    local num=$(extract_memo_num "$rfc")
     local formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
     cat >> index.html << EOF
@@ -232,7 +247,7 @@ MIDDLE
 
   # Generate and sort KWIC entries alphabetically by keyword
   generate_kwic_entries | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc; do
-    local num=$(echo "$rfc" | sed 's/memo-\([0-9]*\)-.*/\1/')
+    local num=$(extract_memo_num "$rfc")
     cat >> index.html << EOF
       <tr>
         <td class="left">${left}</td>

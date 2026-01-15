@@ -264,10 +264,18 @@
              (or (codepoint->ascii cp) char-str)))
          (utf8-chars text))))
 
+;; Memo namespace: 0000-9999 (4 digits)
+;; This is the single source of truth for memo number formatting
+(define *memo-number-width* 4)
+
 ;; Zero-pad a number to width
 (define (zero-pad n width)
   (let ((s (number->string n)))
     (string-append (make-string (max 0 (- width (string-length s))) #\0) s)))
+
+;; Format memo number using canonical width
+(define (memo-number->string n)
+  (zero-pad n *memo-number-width*))
 
 ;;; ============================================================
 ;;; Document Reader
@@ -476,7 +484,7 @@
 
         ;; Header
         (if is-rfc
-            (display (format "Memo ~a: ~a~%" (zero-pad num 4) title) port)
+            (display (format "Memo ~a: ~a~%" (memo-number->string num) title) port)
             (display (format "~a~%" title) port))
         (when subtitle
           (display (format "~a~%" subtitle) port))
@@ -652,7 +660,7 @@
         (display "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"dark\">\n<head>\n" port)
         (display "  <meta charset=\"UTF-8\">\n" port)
         (if is-rfc
-            (display (format "  <title>Memo ~a: ~a</title>\n" (zero-pad num 4) (html-escape title)) port)
+            (display (format "  <title>Memo ~a: ~a</title>\n" (memo-number->string num) (html-escape title)) port)
             (display (format "  <title>~a</title>\n" (html-escape title)) port))
         (display "  <link rel=\"icon\" id=\"favicon\" href=\"data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>\">\n" port)
         ;; Raga favicon - color follows time of day
@@ -677,7 +685,7 @@
 
         ;; Title block
         (if is-rfc
-            (display (format "<h1>Memo ~a: ~a</h1>\n" (zero-pad num 4) (html-escape title)) port)
+            (display (format "<h1>Memo ~a: ~a</h1>\n" (memo-number->string num) (html-escape title)) port)
             (display (format "<h1>~a</h1>\n" (html-escape title)) port))
         (when subtitle
           (display (format "<p class=\"subtitle\"><em>~a</em></p>\n" (html-escape subtitle)) port))
@@ -873,7 +881,7 @@
         (display ".nr PS 10\n" port)
         (display ".nr VS 12\n" port)
         (if is-rfc
-            (display (format ".ds LH Memo ~a\n" (zero-pad num 4)) port)
+            (display (format ".ds LH Memo ~a\n" (memo-number->string num)) port)
             (display ".ds LH\n" port))
         (display ".ds CH\n" port)
         (display ".ds RH \\n%\n" port)
@@ -881,7 +889,7 @@
         ;; Title
         (display ".TL\n" port)
         (if is-rfc
-            (display (format "Memo ~a: ~a\n" (zero-pad num 4) (ms-escape title)) port)
+            (display (format "Memo ~a: ~a\n" (memo-number->string num) (ms-escape title)) port)
             (display (format "~a\n" (ms-escape title)) port))
         (when subtitle
           (display (format ".br\n\\fI~a\\fP\n" (ms-escape subtitle)) port))
@@ -1098,7 +1106,7 @@
          (title (get-field doc 'title "Untitled"))
          (is-rfc (eq? (doc-type doc) 'memo))
          (default-name (if is-rfc
-                           (format "/tmp/rfc-~a.md" (zero-pad num 4))
+                           (format "/tmp/rfc-~a.md" (memo-number->string num))
                            "/tmp/doc.md"))
          (outfile (or filename default-name)))
     (call-with-output-file outfile
@@ -1111,7 +1119,7 @@
           ;; Title
           (display "# " port)
           (if is-rfc
-              (display (format "Memo ~a: ~a" (zero-pad num 4) title) port)
+              (display (format "Memo ~a: ~a" (memo-number->string num) title) port)
               (display title port))
           (newline port)
           (when subtitle
