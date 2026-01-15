@@ -186,7 +186,7 @@
         (session-stat! 'packets-ipv4)))
 
   ;; ============================================================
-  ;; Lamport-Timestamped Messaging (RFC-012)
+  ;; Lamport-Timestamped Messaging (Memo-0012)
   ;; ============================================================
 
   (define (gossip-write-timestamped data out)

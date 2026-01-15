@@ -5722,10 +5722,10 @@ Cyberspace REPL - Available Commands
     (printf "Library of Cyberspace (~a memos)~%" count)
     (print "")
     (for-each
-     (lambda (rfc)
-       (let* ((num (cadr (assq 'number (cdr rfc))))
-              (title (cadr (assq 'title (cdr rfc))))
-              (status (cadr (assq 'status (cdr rfc))))
+     (lambda (m)
+       (let* ((num (cadr (assq 'number (cdr m))))
+              (title (cadr (assq 'title (cdr m))))
+              (status (cadr (assq 'status (cdr m))))
               (title-short (if (> (string-length title) 45)
                                (string-append (substring title 0 42) "...")
                                title)))
@@ -5765,18 +5765,18 @@ Cyberspace REPL - Available Commands
     (let* ((lib (introspect-library))
            (memos (cadr (assq 'memos (cdr lib))))
            (matches (filter
-                     (lambda (rfc)
-                       (let ((title (cadr (assq 'title (cdr rfc))))
-                             (num (cadr (assq 'number (cdr rfc)))))
+                     (lambda (m)
+                       (let ((title (cadr (assq 'title (cdr m))))
+                             (num (cadr (assq 'number (cdr m)))))
                          (or (string-contains-ci title term-str)
                              (string-contains-ci num term-str))))
                      memos)))
       (when (not (null? matches))
         (print "Library:")
         (for-each
-         (lambda (rfc)
-           (let ((num (cadr (assq 'number (cdr rfc))))
-                 (title (cadr (assq 'title (cdr rfc)))))
+         (lambda (m)
+           (let ((num (cadr (assq 'number (cdr m))))
+                 (title (cadr (assq 'title (cdr m)))))
              (printf "  Memo-~a  ~a~%"
                      (string-pad-left num 3 #\0)
                      (if (> (string-length title) 45)
@@ -5835,7 +5835,7 @@ Cyberspace REPL - Available Commands
           (void)))))
 
 ;; Alias for backward compatibility
-(define rfc memo)
+(define rfc memo)  ; backwards compat alias
 
 ;;; Navigation - travellers leave trails
 (define (back)

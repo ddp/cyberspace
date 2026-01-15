@@ -87,7 +87,7 @@
       (code "index.html                # Hypertext catalog"))
     (subsection
       "Generation"
-      (code bash "./generate-rfcs.sh")
+      (code bash "./generate-memos.sh")
       (p "The script handles all format generation automatically."))
     (subsection
       "Table of Contents"
@@ -133,7 +133,7 @@
       (p "[^d3]: Design: Overloaded vocabulary reflects reality. \"Sync\" universally means bidirectional reconciliation. Fighting this creates cognitive load. Embrace it."))
     (subsection
       "Commit (Local)"
-      (code bash "# Generate all formats\n./generate-rfcs.sh\n\n# Commit to vault\ngit add -A && git commit -m \"Regenerate RFC documentation\""))
+      (code bash "# Generate all formats\n./generate-memos.sh\n\n# Commit to vault\ngit add -A && git commit -m \"Regenerate Memo documentation\""))
     (subsection
       "Sync (GitHub)"
       (code bash "# Sync with remote\ngit pull && git push"))
@@ -147,7 +147,7 @@
     "Rich Formatting Pipeline"
     (subsection
       "HTML: Modern, Themeable"
-      (p "HTML output uses rfc.css for rich presentation:")
+      (p "HTML output uses memo.css for rich presentation:")
       (list
         (item "Light/dark themes: Respects prefers-color-scheme, toggleable")
         (item "Typography: System fonts with monospace fallbacks for code")

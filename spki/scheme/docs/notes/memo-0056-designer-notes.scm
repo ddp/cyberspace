@@ -32,7 +32,13 @@
     (p "The interaction model: human provides vision and constraints, AI provides implementation and exploration. Neither could have built this alone."))
 
   (section
-    "3. Target Environments"
+    "3. Naming Coherence"
+    (p "Knuth's principle from TAOCP: names should be consistent across the totality of a system. When we renamed 'RFC' to 'Memo' internally, we applied s/rfc/memo/g globally - not just to files being edited, but to every reference in the codebase.")
+    (p "Single source of truth extends to terminology. MEMO_NUMBER_WIDTH is defined once; the four-digit format flows from that constant through Scheme and shell. When the namespace overflows to five digits, one change propagates everywhere.")
+    (p "Piecemeal renaming creates inconsistent states where variables say one thing and filenames say another. The systematic approach is the only approach."))
+
+  (section
+    "4. Target Environments"
     (p "Primary targets:")
     (list
       (item "macOS (Apple Silicon) - Cyberspace.app native shell")
