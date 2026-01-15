@@ -347,18 +347,11 @@
     (let* ((base-dir (or (get-environment-variable "CYBERSPACE_HOME")
                          (make-pathname (current-directory) "")))
            (memo-dir (make-pathname base-dir "docs/notes"))
-           (memo-files (shell-command
-                       (string-append "ls " memo-dir "/memo-*.txt 2>/dev/null | sort"))))
-      (if (not memo-files)
+           (files (shell-lines
+                   (string-append "ls " memo-dir "/memo-*.txt 2>/dev/null | sort"))))
+      (if (null? files)
           '(library (count 0) (memos ()))
-          (let* ((files (with-input-from-string memo-files
-                          (lambda ()
-                            (let loop ((files '()))
-                              (let ((line (read-line)))
-                                (if (eof-object? line)
-                                    (reverse files)
-                                    (loop (cons line files))))))))
-                 (memos (filter-map
+          (let ((memos (filter-map
                         (lambda (path)
                           (let ((meta (parse-memo-txt path)))
                             (and meta
