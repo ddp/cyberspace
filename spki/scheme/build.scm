@@ -13,6 +13,7 @@
         (chicken process-context)
         (chicken format)
         (chicken file)
+        (chicken file posix)
         (chicken pathname))
 
 (define *library-modules*
@@ -35,27 +36,47 @@
   (printf "  ~a~n" cmd)
   (system cmd))
 
+(define (newer? src dst)
+  "True if src exists and is newer than dst (or dst doesn't exist)"
+  (and (file-exists? src)
+       (or (not (file-exists? dst))
+           (> (file-modification-time src) (file-modification-time dst)))))
+
 (define (build-library)
   (print "\n=== Building library modules ===")
-  (for-each
-    (lambda (mod)
-      (let ((src (string-append mod ".scm")))
-        (when (file-exists? src)
-          (printf "~a.so~n" mod)
-          ;; crypto-ffi needs libsodium flags
-          (if (string=? mod "crypto-ffi")
-              (run "csc -s -J -O2 crypto-ffi.scm -C \"`pkg-config --cflags libsodium`\" -L \"`pkg-config --libs libsodium`\"")
-              (run (sprintf "csc -s -J -O2 ~a" src))))))
-    *library-modules*))
+  (let ((built 0))
+    (for-each
+      (lambda (mod)
+        (let ((src (string-append mod ".scm"))
+              (dst (string-append mod ".so")))
+          (when (newer? src dst)
+            (set! built (+ built 1))
+            (printf "~a.so~n" mod)
+            ;; crypto-ffi needs libsodium flags
+            (if (string=? mod "crypto-ffi")
+                (run "csc -s -J -O2 crypto-ffi.scm -C \"`pkg-config --cflags libsodium`\" -L \"`pkg-config --libs libsodium`\"")
+                (run (sprintf "csc -s -J -O2 ~a" src))))))
+      *library-modules*)
+    (when (zero? built)
+      (print "  (all modules current)"))))
 
 (define (build-repl)
   (print "\n=== Building cyberspace-repl ===")
-  (run "csc -O2 -d1 cyberspace-repl.scm -o cyberspace-repl"))
+  (if (newer? "cyberspace-repl.scm" "cyberspace-repl")
+      (run "csc -O2 -d1 cyberspace-repl.scm -o cyberspace-repl")
+      (print "  (current)")))
 
 (define (build-app)
   (print "\n=== Building Cyberspace.app ===")
-  (let ((app-dir (make-pathname (current-directory) "app")))
-    (run (sprintf "cd ~a && ./build.sh" app-dir))))
+  (let* ((app-dir (make-pathname (current-directory) "app"))
+         (server-src "cyberspace-server.scm")
+         (server-dst (make-pathname app-dir "Cyberspace.app/Contents/Resources/cyberspace-server"))
+         (main-src (make-pathname app-dir "main.m"))
+         (main-dst (make-pathname app-dir "Cyberspace.app/Contents/MacOS/Cyberspace")))
+    (if (or (newer? server-src server-dst)
+            (newer? main-src main-dst))
+        (run (sprintf "cd ~a && ./build.sh" app-dir))
+        (print "  (current)"))))
 
 (define (build-all)
   (build-library)

@@ -1,0 +1,46 @@
+#!/bin/bash
+# Cyberspace launcher - rebuilds if sources are newer, then launches app
+#
+# Usage: ./cyberspace
+
+cd "$(dirname "$0")"
+
+APP="app/Cyberspace.app"
+SERVER="$APP/Contents/Resources/cyberspace-server"
+REPL="cyberspace-repl"
+
+needs_rebuild() {
+  # Check if any .scm is newer than compiled server or repl
+  for scm in *.scm; do
+    [[ "$scm" == "cyberspace-repl.scm" ]] && continue
+    [[ "$scm" == "cyberspace-server.scm" ]] && continue
+    if [[ -f "$scm" && "$scm" -nt "enroll.so" ]]; then
+      return 0
+    fi
+  done
+
+  # Check server source
+  if [[ "cyberspace-server.scm" -nt "$SERVER" ]]; then
+    return 0
+  fi
+
+  # Check repl source
+  if [[ "cyberspace-repl.scm" -nt "$REPL" ]]; then
+    return 0
+  fi
+
+  # Check app main.m
+  if [[ "app/main.m" -nt "$APP/Contents/MacOS/Cyberspace" ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+if needs_rebuild; then
+  echo "Sources changed, rebuilding..."
+  ./build.scm all 2>&1 | grep -E "^(===|Done|Error)"
+fi
+
+echo "Launching Cyberspace.app"
+open "$APP"
