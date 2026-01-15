@@ -40,6 +40,13 @@
    has-notarytool?
    has-homebrew?
 
+   ;; System utilities (platform-abstracted)
+   open-keychain          ; open keychain/credential manager
+   open-tickets           ; open Kerberos ticket viewer
+   open-console           ; open system log viewer
+   open-monitor           ; open process/activity monitor
+   open-finder            ; reveal working directory
+
    ;; Shell utilities
    shell-command
    shell-lines
@@ -72,6 +79,7 @@
           (chicken format)
           (chicken string)
           (chicken process)
+          (chicken process-context)
           (chicken condition)
           srfi-1
           srfi-13
@@ -241,6 +249,145 @@
   (define (has-homebrew?)
     "Check if Homebrew is installed"
     (not (not (homebrew-prefix))))
+
+  ;; ============================================================
+  ;; System Utilities (Platform-Abstracted)
+  ;; ============================================================
+
+  (define (in-cyberspace-app?)
+    "True if running inside Cyberspace.app"
+    (get-environment-variable "CYBERSPACE_APP"))
+
+  (define (open-keychain)
+    "Open the system keychain/credential manager.
+     macOS: Keychain Access.app (background unless in app)
+     Linux: seahorse (GNOME Keyring GUI) or secret-tool"
+    (cond
+     ((darwin?)
+      (if (in-cyberspace-app?)
+          (system "open -a 'Keychain Access'")
+          (system "open -g -a 'Keychain Access'"))
+      'keychain-access)
+     ((linux?)
+      (cond
+       ((shell-success? "which seahorse")
+        (system "seahorse &")
+        'seahorse)
+       ((shell-success? "which gnome-keyring")
+        (system "gnome-keyring &")
+        'gnome-keyring)
+       (else
+        (print "No keychain GUI found. Try: secret-tool or seahorse")
+        #f)))
+     (else
+      (print "Keychain access not supported on this platform")
+      #f)))
+
+  (define (open-tickets)
+    "Open the Kerberos ticket viewer.
+     macOS: Ticket Viewer.app (background unless in app)
+     Linux: klist (command-line) or krb5-auth-dialog"
+    (cond
+     ((darwin?)
+      (if (in-cyberspace-app?)
+          (system "open -a 'Ticket Viewer'")
+          (system "open -g -a 'Ticket Viewer'"))
+      'ticket-viewer)
+     ((linux?)
+      (cond
+       ((shell-success? "which krb5-auth-dialog")
+        (system "krb5-auth-dialog &")
+        'krb5-auth-dialog)
+       ((shell-success? "which klist")
+        ;; No GUI, show tickets in terminal
+        (print "=== Kerberos Tickets ===")
+        (system "klist")
+        'klist)
+       (else
+        (print "No Kerberos tools found. Try: krb5-user")
+        #f)))
+     (else
+      (print "Ticket viewer not supported on this platform")
+      #f)))
+
+  (define (open-console)
+    "Open system log viewer.
+     macOS: Console.app
+     Linux: gnome-logs or journalctl"
+    (cond
+     ((darwin?)
+      (if (in-cyberspace-app?)
+          (system "open -a 'Console'")
+          (system "open -g -a 'Console'"))
+      'console)
+     ((linux?)
+      (cond
+       ((shell-success? "which gnome-logs")
+        (system "gnome-logs &")
+        'gnome-logs)
+       ((shell-success? "which journalctl")
+        (system "journalctl -f &")
+        'journalctl)
+       (else
+        (print "No log viewer found. Try: gnome-logs")
+        #f)))
+     (else
+      (print "Console not supported on this platform")
+      #f)))
+
+  (define (open-monitor)
+    "Open process/activity monitor.
+     macOS: Activity Monitor.app
+     Linux: gnome-system-monitor or htop"
+    (cond
+     ((darwin?)
+      (if (in-cyberspace-app?)
+          (system "open -a 'Activity Monitor'")
+          (system "open -g -a 'Activity Monitor'"))
+      'activity-monitor)
+     ((linux?)
+      (cond
+       ((shell-success? "which gnome-system-monitor")
+        (system "gnome-system-monitor &")
+        'gnome-system-monitor)
+       ((shell-success? "which htop")
+        (print "Opening htop in terminal...")
+        (system "htop &")
+        'htop)
+       (else
+        (print "No monitor found. Try: gnome-system-monitor or htop")
+        #f)))
+     (else
+      (print "Monitor not supported on this platform")
+      #f)))
+
+  (define (open-finder)
+    "Reveal current working directory in file manager.
+     macOS: Finder
+     Linux: nautilus, thunar, or xdg-open"
+    (cond
+     ((darwin?)
+      (if (in-cyberspace-app?)
+          (system "open .")
+          (system "open -g ."))
+      'finder)
+     ((linux?)
+      (cond
+       ((shell-success? "which nautilus")
+        (system "nautilus . &")
+        'nautilus)
+       ((shell-success? "which thunar")
+        (system "thunar . &")
+        'thunar)
+       ((shell-success? "which xdg-open")
+        (system "xdg-open . &")
+        'xdg-open)
+       (else
+        (print "No file manager found")
+        #f)))
+     (else
+      (print "File manager not supported on this platform")
+      #f)))
 
   ;; ============================================================
   ;; Session Statistics

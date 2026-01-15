@@ -5939,6 +5939,13 @@ Cyberspace REPL - Available Commands
 (define q repl-goodbye)
 (define bye repl-goodbye)
 
+;; System utilities (platform-abstracted)
+(define (keychain) (open-keychain))   ; Keychain Access / seahorse
+(define (tickets) (open-tickets))     ; Ticket Viewer / klist
+(define (console) (open-console))     ; Console.app / journalctl
+(define (monitor) (open-monitor))     ; Activity Monitor / htop
+(define (finder) (open-finder))       ; Reveal cwd in file manager
+
 ;; Hot reload REPL definitions (for development)
 (define (reload!)
   "Hot reload REPL definitions without restart.

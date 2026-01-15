@@ -484,6 +484,11 @@ didFinishNavigation:(WKNavigation *)navigation {
     self.schemeBackend.arguments = arguments;
     self.schemeBackend.currentDirectoryPath = schemeDir;
 
+    // Set environment so REPL knows it's running in the app
+    NSMutableDictionary *env = [[[NSProcessInfo processInfo] environment] mutableCopy];
+    env[@"CYBERSPACE_APP"] = @"1";
+    self.schemeBackend.environment = env;
+
     // Capture output for logging
     NSPipe *outputPipe = [NSPipe pipe];
     self.schemeBackend.standardOutput = outputPipe;
