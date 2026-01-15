@@ -41,7 +41,7 @@
     (security-error write-denied "./cyberspace-repl.scm" 2186)
 
     ;; === Precondition Guards ===
-    (precondition directory-exists? keystore-path "./enroll.scm" 503)
+    (precondition directory-exists? keystore-path "./enroll.scm" 496)
     (precondition directory-exists? *board-path* "./board.scm" 53)
     (precondition directory-exists? ".forge" "./cyberspace-repl.scm" 266)
     (precondition chaotic? thing "./cyberspace-repl.scm" 806)

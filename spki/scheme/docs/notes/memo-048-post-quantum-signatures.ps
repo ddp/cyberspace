@@ -1,0 +1,569 @@
+%!PS-Adobe-3.0
+%%Title: memo-048-post-quantum-signatures
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 048: Post-Quantum Signatures) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Ed25519 won't survive. Shor's algorithm breaks elliptic curve) show newline
+(cryptography in polynomial time. When quantum computers arrive, every) show newline
+(capability ever signed, every realm identity ever created, becomes) show newline
+(forgeable. This Memo specifies the transition from Ed25519 to) show newline
+(post-quantum signature schemes: SPHINCS+ and CRYSTALS-Dilithium.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE THREAT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Ed25519 security relies on the hardness of the elliptic curve discrete) show newline
+(logarithm problem. Shor's algorithm solves this in polynomial time on a) show newline
+(quantum computer.) show newline
+() show newline
+() show newline
+(  Algorithm      Classical Security   Quantum Security   ) show newline
+(  Ed25519        128 bits             0 bits \(broken\)    ) show newline
+(  RSA-2048       112 bits             0 bits \(broken\)    ) show newline
+(  SPHINCS+-256   256 bits             128 bits           ) show newline
+(  Dilithium3     192 bits             128 bits           ) show newline
+() show newline
+(When Q-Day arrives: - Every Ed25519 signature becomes forgeable - Every) show newline
+(SPKI certificate can be counterfeited - Every realm identity can be) show newline
+(stolen - Every sealed release can be replaced) show newline
+() show newline
+(The capability chain breaks. The sealed closure unseals. Cyberspace) show newline
+(falls.) show newline
+() show newline
+(We must migrate before Q-Day.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE CANDIDATES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(NIST Post-Quantum Cryptography standardization selected:) show newline
+() show newline
+() show newline
+(SPHINCS+ \(Hash-Based\)) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    Type:           Stateless hash-based signatures) show newline
+(    Security basis: Hash function security \(SHAKE256\)) show newline
+(    Key size:       32 bytes \(private\), 32 bytes \(public\)) show newline
+(    Signature size: 7,856 - 49,856 bytes \(parameter dependent\)) show newline
+(    Speed:          Slow signing, fast verification) show newline
+(    Maturity:       Conservative, well-understood) show newline
+() show newline
+(Why SPHINCS+: - Security reduces to hash function security - No) show newline
+(number-theoretic assumptions - Stateless \(no state management headaches\)) show newline
+(- Uses SHAKE256 \(same as our Merkle trees\)) show newline
+() show newline
+(Tradeoff: Large signatures. A SPHINCS+-256s signature is ~8 KB.) show newline
+() show newline
+() show newline
+(CRYSTALS-Dilithium \(Lattice-Based\)) show newline
+(----------------------------------) show newline
+() show newline
+() show newline
+(    Type:           Lattice-based \(Module-LWE\)) show newline
+(    Security basis: Learning With Errors hardness) show newline
+(    Key size:       1,312 bytes \(private\), 1,952 bytes \(public\)) show newline
+(    Signature size: 2,420 - 4,595 bytes \(parameter dependent\)) show newline
+(    Speed:          Fast signing, fast verification) show newline
+(    Maturity:       Newer, but extensively analyzed) show newline
+() show newline
+(Why Dilithium: - Smaller signatures than SPHINCS+ - Faster operations -) show newline
+(NIST primary recommendation) show newline
+() show newline
+(Tradeoff: Relies on lattice assumptions \(less conservative than) show newline
+(hash-based\).) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CYBERSPACE STRATEGY: BOTH) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(We support both. Different use cases, different tradeoffs:) show newline
+() show newline
+() show newline
+(  Use Case                    Recommended   Why                                        ) show newline
+(  Realm identity \(keystore\)   SPHINCS+      Maximum conservatism for long-lived keys   ) show newline
+(  Capability certificates     Dilithium     Smaller signatures, many certs             ) show newline
+(  Sealed releases             SPHINCS+      Archival, must survive                     ) show newline
+(  Agent delegation            Dilithium     Short-lived, performance matters           ) show newline
+(  Audit entries               Dilithium     High volume                                ) show newline
+() show newline
+(The keystore can hold multiple key types:) show newline
+() show newline
+() show newline
+(    \(keystore) show newline
+(      \(realm-keys) show newline
+(        \(ed25519 #${legacy-key...}\)           ; Legacy \(sunset\)) show newline
+(        \(sphincs+ #${pq-primary...}\)          ; Post-quantum primary) show newline
+(        \(dilithium #${pq-operational...}\)\)    ; Post-quantum operational) show newline
+(      \(active-signing 'sphincs+\)) show newline
+(      \(accept-verification '\(sphincs+ dilithium ed25519\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CERTIFICATE FORMAT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Current \(Ed25519\)) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer "ed25519:alice..."\)) show newline
+(      \(subject "ed25519:bob..."\)) show newline
+(      \(tag \(read "sha512:doc..."\)\)) show newline
+(      \(signature #${64-byte-ed25519-sig}\)\)) show newline
+() show newline
+() show newline
+(Post-Quantum \(SPHINCS+\)) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer "sphincs+:alice..."\)) show newline
+(      \(subject "sphincs+:bob..."\)) show newline
+(      \(tag \(read "shake256:doc..."\)\)           ; Merkle root) show newline
+(      \(signature-algorithm "sphincs+-shake-256s"\)) show newline
+(      \(signature #${7856-byte-sphincs-sig}\)\)) show newline
+() show newline
+() show newline
+(Post-Quantum \(Dilithium\)) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer "dilithium:alice..."\)) show newline
+(      \(subject "dilithium:bob..."\)) show newline
+(      \(tag \(read "shake256:doc..."\)\)) show newline
+(      \(signature-algorithm "dilithium3"\)) show newline
+(      \(signature #${3293-byte-dilithium-sig}\)\)) show newline
+() show newline
+() show newline
+(Hybrid \(Transition\)) show newline
+(-------------------) show newline
+() show newline
+(During transition, sign with both:) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer "hybrid:alice..."\)               ; Hybrid identity) show newline
+(      \(subject "hybrid:bob..."\)) show newline
+(      \(tag \(read "shake256:doc..."\)\)) show newline
+(      \(signatures) show newline
+(        \(ed25519 #${64-byte-sig}\)              ; Legacy) show newline
+(        \(sphincs+ #${7856-byte-sig}\)\)\)         ; Post-quantum) show newline
+() show newline
+(Both signatures must verify. If Ed25519 is later broken, SPHINCS+ still) show newline
+(holds.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(KEY GENERATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(SPHINCS+-SHAKE-256s) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(sphincs+-keygen\)) show newline
+(      "Generate SPHINCS+ keypair using SHAKE256") show newline
+(      \(let* \(\(seed \(random-bytes 96\)\)          ; 3 × 32-byte seeds) show newline
+(             \(sk-seed \(subbytevector seed 0 32\)\)) show newline
+(             \(sk-prf \(subbytevector seed 32 64\)\)) show newline
+(             \(pk-seed \(subbytevector seed 64 96\)\)) show newline
+(             \(keypair \(sphincs+-generate sk-seed sk-prf pk-seed\)\)\)) show newline
+(        keypair\)\)) show newline
+(    ;; Keystore storage \(encrypted\)) show newline
+(    \(realm-private-key) show newline
+(      \(version 1\)) show newline
+(      \(algorithm "sphincs+-shake-256s"\)) show newline
+(      \(parameters) show newline
+(        \(n 32\)                                 ; Security parameter) show newline
+(        \(h 64\)                                 ; Tree height) show newline
+(        \(d 8\)                                  ; Hypertree layers) show newline
+(        \(k 22\)                                 ; FORS trees) show newline
+(        \(w 16\)\)                                ; Winternitz parameter) show newline
+(      \(protection "passphrase"\)) show newline
+(      \(kdf "argon2id"\)) show newline
+(      \(ciphertext #${encrypted-sk}\)\)) show newline
+() show newline
+() show newline
+(Dilithium3) show newline
+(----------) show newline
+() show newline
+() show newline
+(    \(define \(dilithium-keygen\)) show newline
+(      "Generate Dilithium3 keypair") show newline
+(      \(let* \(\(seed \(random-bytes 32\)\)) show newline
+(             \(keypair \(dilithium3-generate seed\)\)\)) show newline
+(        keypair\)\)) show newline
+(    \(realm-private-key) show newline
+(      \(version 1\)) show newline
+(      \(algorithm "dilithium3"\)) show newline
+(      \(parameters) show newline
+(        \(k 6\)                                  ; Module dimension) show newline
+(        \(l 5\)) show newline
+(        \(eta 4\)) show newline
+(        \(beta 175\)) show newline
+(        \(omega 55\)\)) show newline
+(      \(protection "passphrase"\)) show newline
+(      \(kdf "argon2id"\)) show newline
+(      \(ciphertext #${encrypted-sk}\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SIGNING OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(SPHINCS+ Signing) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(sphincs+-sign message private-key\)) show newline
+(      "Sign message with SPHINCS+") show newline
+(      \(let* \(\(opt-rand \(random-bytes 32\)\)      ; Optional randomness) show newline
+(             \(signature \(sphincs+-sign-internal message private-key opt-rand\)\)\)) show newline
+(        signature\)\)) show newline
+(    ;; Signature is large: 7,856 bytes for SPHINCS+-SHAKE-256s) show newline
+() show newline
+() show newline
+(Dilithium Signing) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(dilithium-sign message private-key\)) show newline
+(      "Sign message with Dilithium3") show newline
+(      \(let* \(\(signature \(dilithium3-sign-internal message private-key\)\)\)) show newline
+(        signature\)\)) show newline
+(    ;; Signature is moderate: 3,293 bytes for Dilithium3) show newline
+() show newline
+() show newline
+(Hybrid Signing) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(hybrid-sign message ed25519-sk sphincs+-sk\)) show newline
+(      "Sign with both algorithms for transition security") show newline
+(      \(let \(\(ed25519-sig \(ed25519-sign message ed25519-sk\)\)) show newline
+(            \(sphincs+-sig \(sphincs+-sign message sphincs+-sk\)\)\)) show newline
+(        `\(hybrid-signature) show newline
+(          \(ed25519 ,ed25519-sig\)) show newline
+(          \(sphincs+ ,sphincs+-sig\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VERIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Multi-Algorithm Verification) show newline
+(----------------------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-signature message signature public-key\)) show newline
+(      "Verify signature, handling multiple algorithms") show newline
+(      \(let \(\(algorithm \(signature-algorithm signature\)\)\)) show newline
+(        \(case algorithm) show newline
+(          \(\(ed25519\) \(ed25519-verify message \(sig-bytes signature\) public-key\)\)) show newline
+(          \(\(sphincs+\) \(sphincs+-verify message \(sig-bytes signature\) public-key\)\)) show newline
+(          \(\(dilithium\) \(dilithium-verify message \(sig-bytes signature\) public-key\)\)) show newline
+(          \(\(hybrid\) \(verify-hybrid message signature public-key\)\)) show newline
+(          \(else \(error "Unknown signature algorithm" algorithm\)\)\)\)\)) show newline
+(    \(define \(verify-hybrid message signature public-keys\)) show newline
+(      "Both signatures must verify") show newline
+(      \(and \(ed25519-verify message \(hybrid-ed25519 signature\) \(keys-ed25519 public-keys\)\)) show newline
+(           \(sphincs+-verify message \(hybrid-sphincs+ signature\) \(keys-sphincs+ public-keys\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REALM IDENTITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(A realm's principal expands to include algorithm:) show newline
+() show newline
+() show newline
+(    Current:   ed25519:7f3a2b4c5d6e...) show newline
+(    Future:    sphincs+:8a9b0c1d2e3f...) show newline
+(               dilithium:4e5f6a7b8c9d...) show newline
+(               hybrid:7f3a2b4c|8a9b0c1d...) show newline
+() show newline
+(The principal is still coordinates in cyberspace - a place you can) show newline
+(teleport to. The algorithm prefix tells you what cryptography guards the) show newline
+(gate.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CAPABILITY CHAIN IMPLICATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Capability chains must handle mixed algorithms:) show newline
+() show newline
+() show newline
+(    ;; Alice \(Ed25519\) delegates to Bob \(Dilithium\) who delegates to Carol \(SPHINCS+\)) show newline
+(    \(cert-chain) show newline
+(      \(cert-1) show newline
+(        \(issuer "ed25519:alice..."\)) show newline
+(        \(subject "dilithium:bob..."\)) show newline
+(        \(signature #${ed25519-sig}\)\)) show newline
+(      \(cert-2) show newline
+(        \(issuer "dilithium:bob..."\)) show newline
+(        \(subject "sphincs+:carol..."\)) show newline
+(        \(signature #${dilithium-sig}\)\)\)) show newline
+() show newline
+(Each link verified with its own algorithm. The chain is as strong as its) show newline
+(weakest link - but even one post-quantum link prevents total collapse) show newline
+(after Q-Day.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MIGRATION TIMELINE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Phase 1: Preparation \(Now\)) show newline
+(--------------------------) show newline
+() show newline
+(  * Implement SPHINCS+ and Dilithium in crypto-ffi) show newline
+(  * Add multi-algorithm support to keystore) show newline
+(  * Test hybrid signatures) show newline
+() show newline
+() show newline
+(Phase 2: Hybrid Default \(Now + 1 year\)) show newline
+(--------------------------------------) show newline
+() show newline
+(  * New realms generate hybrid keys \(Ed25519 + SPHINCS+\)) show newline
+(  * All signatures include both) show newline
+(  * Legacy realms can upgrade) show newline
+() show newline
+() show newline
+(Phase 3: Post-Quantum Primary \(Q-Day - 3 years\)) show newline
+(-----------------------------------------------) show newline
+() show newline
+(  * SPHINCS+/Dilithium become primary) show newline
+(  * Ed25519 becomes secondary) show newline
+(  * Capability chains require at least one PQ signature) show newline
+() show newline
+() show newline
+(Phase 4: Legacy Sunset \(Q-Day\)) show newline
+(------------------------------) show newline
+() show newline
+(  * Ed25519 signatures no longer trusted) show newline
+(  * Hybrid signatures verified by PQ component only) show newline
+(  * Legacy-only realms frozen \(read-only\)) show newline
+() show newline
+() show newline
+(Phase 5: Pure Post-Quantum \(Q-Day + 2 years\)) show newline
+(--------------------------------------------) show newline
+() show newline
+(  * Ed25519 removed from new certificates) show newline
+(  * Historical certificates retain for audit) show newline
+(  * Cyberspace survives) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(STORAGE IMPLICATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Post-quantum signatures are larger:) show newline
+() show newline
+() show newline
+(  Component       Ed25519   Dilithium3   SPHINCS+-256s   ) show newline
+(  Public key      32 B      1,952 B      32 B            ) show newline
+(  Private key     64 B      4,000 B      128 B           ) show newline
+(  Signature       64 B      3,293 B      7,856 B         ) show newline
+(  Cert overhead   ~200 B    ~3,500 B     ~8,100 B        ) show newline
+() show newline
+(A realm with 10,000 capabilities: - Ed25519: ~2 MB - Dilithium: ~35 MB -) show newline
+(SPHINCS+: ~81 MB) show newline
+() show newline
+(Storage is cheap. Quantum resistance is not.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PERFORMANCE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(  Operation   Ed25519   Dilithium3   SPHINCS+-256s   ) show newline
+(  Keygen      0.03 ms   0.15 ms      2 ms            ) show newline
+(  Sign        0.05 ms   0.5 ms       50 ms           ) show newline
+(  Verify      0.1 ms    0.3 ms       1 ms            ) show newline
+() show newline
+(SPHINCS+ signing is slow \(50ms\). Acceptable for: - Realm identity \(rare\)) show newline
+(- Sealed releases \(rare\) - Capability grants \(occasional\)) show newline
+() show newline
+(Use Dilithium for: - Agent delegation \(frequent\) - Audit entries) show newline
+(\(constant\) - Bulk operations) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(LIBRARY SUPPORT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Required Libraries) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Library       SPHINCS+   Dilithium   Notes                       ) show newline
+(  liboqs        Yes        Yes         Open Quantum Safe project   ) show newline
+(  libsodium     No         No          Not yet                     ) show newline
+(  OpenSSL 3.x   Provider   Provider    Via oqsprovider             ) show newline
+(  BoringSSL     No         Partial     Google internal             ) show newline
+() show newline
+(Recommended: liboqs \(Open Quantum Safe\) - Reference implementations -) show newline
+(Actively maintained - C library, easy FFI) show newline
+() show newline
+() show newline
+(    ;; crypto-ffi.scm addition) show newline
+(    \(define sphincs+-sign \(foreign-lambda ...\)\)) show newline
+(    \(define sphincs+-verify \(foreign-lambda ...\)\)) show newline
+(    \(define dilithium-sign \(foreign-lambda ...\)\)) show newline
+(    \(define dilithium-verify \(foreign-lambda ...\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Algorithm Agility) show newline
+(-----------------) show newline
+() show newline
+(Cyberspace must survive algorithm obsolescence:) show newline
+() show newline
+() show newline
+(    \(define supported-algorithms) show newline
+(      '\(\(signatures . \(ed25519 sphincs+ dilithium\)\)) show newline
+(        \(hashes . \(sha512 shake256 blake3\)\)) show newline
+(        \(encryption . \(xchacha20-poly1305 aes-256-gcm\)\)\)\)) show newline
+(    \(define \(algorithm-status alg\)) show newline
+(      \(case alg) show newline
+(        \(\(ed25519\) 'deprecated\)    ; Quantum-vulnerable) show newline
+(        \(\(sphincs+\) 'recommended\)  ; Post-quantum, conservative) show newline
+(        \(\(dilithium\) 'recommended\) ; Post-quantum, performant) show newline
+(        \(\(sha512\) 'legacy\)         ; Quantum-reduced) show newline
+(        \(\(shake256\) 'recommended\)  ; Post-quantum) show newline
+(        ...\)\)) show newline
+() show newline
+() show newline
+(Side Channels) show newline
+(-------------) show newline
+() show newline
+(Post-quantum implementations must be constant-time: - SPHINCS+: Hash) show newline
+(operations are naturally constant-time - Dilithium: Requires careful NTT) show newline
+(implementation) show newline
+() show newline
+(Use only audited implementations \(liboqs reference, or formally) show newline
+(verified\).) show newline
+() show newline
+() show newline
+(Hybrid Security) show newline
+(---------------) show newline
+() show newline
+(During transition, hybrid signatures provide defense in depth: - If) show newline
+(Ed25519 is broken > SPHINCS+ holds - If SPHINCS+ has unknown flaw >) show newline
+(Ed25519 holds \(pre-Q-Day\)) show newline
+() show newline
+(Both must be broken to forge. Belt and suspenders.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INVARIANTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    S1. Post-quantum signatures are unforgeable \(given hash security\)) show newline
+(        forge\(sphincs+-sig\) requires break\(shake256\)) show newline
+(    S2. Hybrid requires both valid) show newline
+(        valid\(hybrid-sig\) ↔ valid\(ed25519-sig\) ∧ valid\(pq-sig\)) show newline
+(    S3. Algorithm indicated in signature) show newline
+(        verify\(sig\) uses algorithm\(sig\), not ambient config) show newline
+(    S4. Key algorithm matches signature algorithm) show newline
+(        sign\(sphincs+-key, msg\) produces sphincs+-signature) show newline
+(    S5. Migration preserves capability validity) show newline
+(        valid-pre-migration\(cert\) > valid-post-migration\(cert\) [during transition]) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE QUANTUM WINTER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Q-Day is coming. We don't know when - estimates range from 2030 to 2040.) show newline
+(But the harvest-now-decrypt-later threat is real today. Every Ed25519) show newline
+(signature captured now can be forged after Q-Day.) show newline
+() show newline
+(Cyberspace is built to last. The Library of Alexandria must not burn) show newline
+(twice.) show newline
+() show newline
+(When the quantum winter comes: - Merkle trees \(Memo-042\) protect object) show newline
+(identity - SPHINCS+/Dilithium protect signatures - The sealed closure) show newline
+(remains sealed - The wilderness of mirrors endures) show newline
+() show newline
+(Prepare now. Migrate early. Survive.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. NIST Post-Quantum Cryptography Standardization 2. SPHINCS+) show newline
+(specification - https://sphincs.org/ 3. CRYSTALS-Dilithium specification) show newline
+(- https://pq-crystals.org/dilithium/ 4. Open Quantum Safe project -) show newline
+(https://openquantumsafe.org/ 5. Shor, P., "Algorithms for Quantum) show newline
+(Computation", 1994 6. Memo-041 - Keystore and Attestation 7. Memo-042 -) show newline
+(Quantum-Resistant Merkle Trees) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-08) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF
