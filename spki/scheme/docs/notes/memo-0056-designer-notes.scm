@@ -83,13 +83,15 @@
 
   (section
     "7. Forge and Smelter"
-    (p "The forge module generates pronounceable passwords using Markov chains on digraph statistics. This is a resurrection of work from VAX/VMS 6.0, circa 1991.")
+    (p "The forge module generates pronounceable passwords using Markov chains on digraph statistics. The lineage traces back to Multics.")
 
     (subsection
       "7.1 Heritage"
-      (p "Joint design by Derrell Piper and Jon Callas at Digital Equipment Corporation. Piper wrote the TCB (Trusted Computing Base) BLISS system service; Callas wrote the user-mode TPU smelter that compiled dictionaries into digraph databases.")
+      (p "Original design by Morrie Gasser in PL/1 on Multics. Gasser, author of 'Building a Secure Computer System' (1988), carried the code forward to VAX/VMS where it remained in PL/1 until the Alpha transition.")
+      (p "When DEC moved to Alpha architecture, PL/1 wasn't in the initial compiler release. The code had to be expunged from the TCB. Derrell Piper and Jon Callas rewrote it for VMS 6.0 (circa 1991): Piper wrote the BLISS system service for the Trusted Computing Base; Callas wrote the user-mode TPU smelter.")
       (p "US and EU DEC patents were filed on the design (now expired). The terminology - forge, smelter - comes from metallurgy: the smelter refines raw ore (word lists) into workable material (digraph statistics); the forge shapes the final product (pronounceable words).")
-      (p "Callas later became a principal author of OpenPGP (RFC 4880) and co-founded PGP Corporation and Silent Circle. He remains a planned beta tester for Cyberspace."))
+      (p "Callas later became a principal author of OpenPGP (RFC 4880) and co-founded PGP Corporation and Silent Circle. He remains a planned beta tester for Cyberspace.")
+      (p "The chain of custody: Gasser (Multics PL/1) → Piper/Callas (VMS 6.0 BLISS/TPU) → Cyberspace (Scheme)."))
 
     (subsection
       "7.2 Design"
@@ -151,6 +153,7 @@
 
   (section
     "Changelog"
+    (p "- 2026-01-15 — Gasser Multics provenance added (section 7.1)")
     (p "- 2026-01-15 — OSS operational geography framing, 40+ languages (section 7.3)")
     (p "- 2026-01-15 — Added cryptographic RNG with boot-time verification (section 7.6)")
     (p "- 2026-01-15 — Added forge/smelter heritage (section 7)")
