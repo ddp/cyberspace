@@ -2,11 +2,11 @@
 ;; S-expression source → txt, ps, html
 ;;
 ;; Usage:
-;;   (load "rfc-format.scm")
-;;   (define doc (read-memo "memo-000-declaration.scm"))
-;;   (memo->txt doc "memo-000-declaration.txt")
-;;   (memo->ps doc "memo-000-declaration.ps")
-;;   (memo->html doc "memo-000-declaration.html")
+;;   (load "memo-format.scm")
+;;   (define doc (read-memo "memo-0000-declaration.scm"))
+;;   (memo->txt doc "memo-0000-declaration.txt")
+;;   (memo->ps doc "memo-0000-declaration.ps")
+;;   (memo->html doc "memo-0000-declaration.html")
 
 (import scheme
         (chicken base)
@@ -474,7 +474,7 @@
   "Convert Memo or document S-expression to plain text."
   (call-with-output-file filename
     (lambda (port)
-      (let ((is-rfc (eq? (doc-type doc) 'memo))
+      (let ((is-memo (eq? (doc-type doc) 'memo))
             (num (get-field doc 'number 0))
             (title (get-field doc 'title "Untitled"))
             (subtitle (get-field doc 'subtitle #f))
@@ -483,7 +483,7 @@
             (author (assq 'author (cdr doc))))
 
         ;; Header
-        (if is-rfc
+        (if is-memo
             (display (format "Memo ~a: ~a~%" (memo-number->string num) title) port)
             (display (format "~a~%" title) port))
         (when subtitle
@@ -648,7 +648,7 @@
   "Convert Memo or document S-expression to HTML."
   (call-with-output-file filename
     (lambda (port)
-      (let ((is-rfc (eq? (doc-type doc) 'memo))
+      (let ((is-memo (eq? (doc-type doc) 'memo))
             (num (get-field doc 'number 0))
             (title (get-field doc 'title "Untitled"))
             (subtitle (get-field doc 'subtitle #f))
@@ -659,7 +659,7 @@
         ;; HTML header
         (display "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"dark\">\n<head>\n" port)
         (display "  <meta charset=\"UTF-8\">\n" port)
-        (if is-rfc
+        (if is-memo
             (display (format "  <title>Memo ~a: ~a</title>\n" (memo-number->string num) (html-escape title)) port)
             (display (format "  <title>~a</title>\n" (html-escape title)) port))
         (display "  <link rel=\"icon\" id=\"favicon\" href=\"data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>\">\n" port)
@@ -684,7 +684,7 @@
         (display "<span class=\"theme-toggle\" onclick=\"toggleTheme()\" title=\"Toggle light/dark\">[theme]</span>\n" port)
 
         ;; Title block
-        (if is-rfc
+        (if is-memo
             (display (format "<h1>Memo ~a: ~a</h1>\n" (memo-number->string num) (html-escape title)) port)
             (display (format "<h1>~a</h1>\n" (html-escape title)) port))
         (when subtitle
@@ -869,7 +869,7 @@
   "Convert Memo or document S-expression to groff ms macros."
   (call-with-output-file filename
     (lambda (port)
-      (let ((is-rfc (eq? (doc-type doc) 'memo))
+      (let ((is-memo (eq? (doc-type doc) 'memo))
             (num (get-field doc 'number 0))
             (title (get-field doc 'title "Untitled"))
             (subtitle (get-field doc 'subtitle #f))
@@ -880,7 +880,7 @@
         ;; ms preamble
         (display ".nr PS 10\n" port)
         (display ".nr VS 12\n" port)
-        (if is-rfc
+        (if is-memo
             (display (format ".ds LH Memo ~a\n" (memo-number->string num)) port)
             (display ".ds LH\n" port))
         (display ".ds CH\n" port)
@@ -888,7 +888,7 @@
 
         ;; Title
         (display ".TL\n" port)
-        (if is-rfc
+        (if is-memo
             (display (format "Memo ~a: ~a\n" (memo-number->string num) (ms-escape title)) port)
             (display (format "~a\n" (ms-escape title)) port))
         (when subtitle
@@ -1104,9 +1104,9 @@
   "Convert Memo to Markdown in /tmp for local viewing."
   (let* ((num (get-field doc 'number 0))
          (title (get-field doc 'title "Untitled"))
-         (is-rfc (eq? (doc-type doc) 'memo))
-         (default-name (if is-rfc
-                           (format "/tmp/rfc-~a.md" (memo-number->string num))
+         (is-memo (eq? (doc-type doc) 'memo))
+         (default-name (if is-memo
+                           (format "/tmp/memo-~a.md" (memo-number->string num))
                            "/tmp/doc.md"))
          (outfile (or filename default-name)))
     (call-with-output-file outfile
@@ -1118,7 +1118,7 @@
 
           ;; Title
           (display "# " port)
-          (if is-rfc
+          (if is-memo
               (display (format "Memo ~a: ~a" (memo-number->string num) title) port)
               (display title port))
           (newline port)
@@ -1172,4 +1172,4 @@
     (print "Generated: " base ".{txt,html,ps}")))
 
 ;; Example usage:
-;; (memo-generate "memo-000-declaration.scm")
+;; (memo-generate "memo-0000-declaration.scm")
