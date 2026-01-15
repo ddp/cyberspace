@@ -48,16 +48,16 @@ discover_memos() {
 # Check for duplicate Memo numbers
 check_duplicates() {
   local prev_num=""
-  local prev_rfc=""
-  for rfc in "$@"; do
-    local num=$(extract_memo_num "$rfc")
+  local prev_memo=""
+  for memo in "$@"; do
+    local num=$(extract_memo_num "$memo")
     if [[ -n "$prev_num" && "$num" == "$prev_num" ]]; then
       echo "WARNING: Duplicate Memo number $num:" >&2
-      echo "  - $prev_rfc" >&2
-      echo "  - $rfc" >&2
+      echo "  - $prev_memo" >&2
+      echo "  - $memo" >&2
     fi
     prev_num="$num"
-    prev_rfc="$rfc"
+    prev_memo="$memo"
   done
 }
 
@@ -119,8 +119,8 @@ kwic_for_doc() {
 # Output: "keyword|left-context|right-context|doc-name"
 generate_kwic_entries() {
   # Memos
-  for rfc in "${MEMOS[@]}"; do
-    kwic_for_doc "$rfc" "$(get_title "$rfc")"
+  for memo in "${MEMOS[@]}"; do
+    kwic_for_doc "$memo" "$(get_title "$memo")"
   done
 
   # README excluded from KWIC - it's not a Memo
@@ -193,7 +193,7 @@ generate_index() {
     .kwic .left { text-align: right; color: var(--fg-dim); }
     .kwic .keyword { font-weight: bold; color: var(--fg); }
     .kwic .right { text-align: left; color: var(--fg-dim); }
-    .kwic .rfc { text-align: left; }
+    .kwic .memo { text-align: left; }
     .theme-toggle { float: right; font-size: 8pt; cursor: pointer; color: var(--fg-dim); }
     .theme-toggle:hover { color: var(--fg); }
   </style>
@@ -221,10 +221,10 @@ generate_index() {
     <tbody>
 HEADER
 
-  for rfc in "${MEMOS[@]}"; do
-    local title=$(get_title "$rfc")
-    local num=$(extract_memo_num "$rfc")
-    local formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
+  for memo in "${MEMOS[@]}"; do
+    local title=$(get_title "$memo")
+    local num=$(extract_memo_num "$memo")
+    local formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.html">Hypertext</a>'
 
     cat >> index.html << EOF
       <tr>
@@ -246,14 +246,14 @@ EOF
 MIDDLE
 
   # Generate and sort KWIC entries alphabetically by keyword
-  generate_kwic_entries | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc; do
-    local num=$(extract_memo_num "$rfc")
+  generate_kwic_entries | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right memo; do
+    local num=$(extract_memo_num "$memo")
     cat >> index.html << EOF
       <tr>
         <td class="left">${left}</td>
         <td class="keyword">${keyword}</td>
         <td class="right">${right}</td>
-        <td class="memo"><a href="${rfc}.html">${num}</a></td>
+        <td class="memo"><a href="${memo}.html">${num}</a></td>
       </tr>
 EOF
   done
@@ -310,8 +310,8 @@ sanity_check() {
 
   # Check all Memo files exist
   local missing=0
-  for rfc in "${MEMOS[@]}"; do
-    [[ ! -f "${rfc}.html" ]] && missing=$((missing + 1))
+  for memo in "${MEMOS[@]}"; do
+    [[ ! -f "${memo}.html" ]] && missing=$((missing + 1))
   done
 
   if [[ $missing -gt 0 ]]; then
@@ -392,14 +392,14 @@ echo "=== Publishing to yoyodyne ==="
 YOYODYNE_HOST="ddp@www.yoyodyne.com"
 YOYODYNE_BASE="/www/yoyodyne/ddp/cyberspace"
 YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
-YOYODYNE_RFC_PATH="$YOYODYNE_BASE/spki/scheme/docs/rfc/"
+YOYODYNE_MEMO_PATH="$YOYODYNE_BASE/spki/scheme/docs/memo/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
-  /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_RFC_PATH"
-  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_RFC_PATH"
-  echo "  -> $YOYODYNE_RFC_PATH"
+  /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_MEMO_PATH"
+  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_MEMO_PATH"
+  echo "  -> $YOYODYNE_MEMO_PATH"
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
-  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/rfc/"
+  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/memo/"
 else
   echo "  [skip] Cannot reach yoyodyne"
 fi

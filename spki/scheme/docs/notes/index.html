@@ -1,35 +1,82 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Library of Cyberspace - Memo Index</title>
+  <title>Library of Cyberspace - Memos from Cyberspace</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+  </script>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem;
-      line-height: 1.6;
-      color: #333;
+    :root {
+      /* Dark theme (default) - terminal phosphor */
+      --bg: #000; --fg: #0f0; --fg-dim: #080; --fg-bright: #fff;
+      --border: #0f0; --border-dim: #040; --bg-alt: #010;
+      --link: #0f0; --link-visited: #0c0; --link-hover: #fff;
     }
-    h1 { border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
-    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background: #f5f5f5; }
-    .formats a { margin-right: 0.5rem; }
-    .kwic { font-family: monospace; font-size: 0.85rem; }
-    .kwic td { padding: 0.25rem 0.5rem; white-space: nowrap; }
-    .kwic .left { text-align: right; color: #666; }
-    .kwic .keyword { font-weight: bold; }
-    .kwic .right { text-align: left; color: #666; }
+    [data-theme="light"] {
+      /* Light theme - parchment */
+      --bg: #f4f1e8; --fg: #1a1a1a; --fg-dim: #555; --fg-bright: #000;
+      --border: #1a1a1a; --border-dim: #ccc; --bg-alt: #e8e4d8;
+      --link: #0645ad; --link-visited: #551a8b; --link-hover: #000;
+    }
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --bg: #f4f1e8; --fg: #1a1a1a; --fg-dim: #555; --fg-bright: #000;
+        --border: #1a1a1a; --border-dim: #ccc; --bg-alt: #e8e4d8;
+        --link: #0645ad; --link-visited: #551a8b; --link-hover: #000;
+      }
+    }
+    body {
+      font-family: "SF Mono", Monaco, Inconsolata, "Fira Code", Consolas, monospace;
+      max-width: 900px; margin: 0 auto; padding: 1rem;
+      line-height: 1.25; background: var(--bg); color: var(--fg);
+    }
+    h1 { border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; font-size: 14pt; margin: 0 0 0.5rem 0; }
+    h2 { font-size: 11pt; margin: 1rem 0 0.3rem 0; border-bottom: 1px solid var(--border-dim); }
+    p { margin: 0.3rem 0; font-size: 9pt; color: var(--fg-dim); }
+    table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+    th, td { padding: 0.2rem 0.4rem; text-align: left; border-bottom: 1px solid var(--border-dim); font-size: 9pt; }
+    th { background: var(--bg-alt); color: var(--fg); }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { color: var(--link-hover); text-decoration: underline; }
+    a:visited { color: var(--link-visited); }
+    .formats a { margin-right: 0.4rem; font-size: 8pt; }
+    footer { margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid var(--border-dim); font-size: 8pt; color: var(--fg-dim); }
+    .kwic { font-size: 8pt; }
+    .kwic td { padding: 0.1rem 0.3rem; white-space: nowrap; }
+    .kwic .left { text-align: right; color: var(--fg-dim); }
+    .kwic .keyword { font-weight: bold; color: var(--fg); }
+    .kwic .right { text-align: left; color: var(--fg-dim); }
     .kwic .memo { text-align: left; }
+    .theme-toggle { float: right; font-size: 8pt; cursor: pointer; color: var(--fg-dim); }
+    .theme-toggle:hover { color: var(--fg); }
   </style>
 </head>
 <body>
-  <h1>Library of Cyberspace - Memo Index</h1>
+  <span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+  <h1>Library of Cyberspace - Memos from Cyberspace</h1>
   <p>Request for Comments documents for the Library of Cyberspace preservation architecture.</p>
 
+  <p>
+    <a href="README.html">About the Library</a>
+    [<a href="README.txt">txt</a>]
+    [<a href="README.ps">ps</a>]
+  </p>
+
+  <h2>Memos</h2>
   <table>
     <thead>
       <tr>
@@ -41,292 +88,292 @@
     <tbody>
       <tr>
         <td>0000</td>
-        <td>Memo 0000: Declaration of Cyberspace</td>
+        <td>Declaration of Cyberspace</td>
         <td class="formats"><a href="memo-0000-declaration.txt">Text</a> <a href="memo-0000-declaration.ps">PostScript</a> <a href="memo-0000-declaration.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0001</td>
-        <td>Memo 0001: Replication Layer for Library of Cyberspace</td>
+        <td>Replication Layer for Library of Cyberspace</td>
         <td class="formats"><a href="memo-0001-replication-layer.txt">Text</a> <a href="memo-0001-replication-layer.ps">PostScript</a> <a href="memo-0001-replication-layer.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0002</td>
-        <td>Memo 0002: Cyberspace Architecture</td>
+        <td>Cyberspace Architecture</td>
         <td class="formats"><a href="memo-0002-architecture.txt">Text</a> <a href="memo-0002-architecture.ps">PostScript</a> <a href="memo-0002-architecture.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0003</td>
-        <td>Memo 0003: Cryptographic Audit Trail</td>
+        <td>Cryptographic Audit Trail</td>
         <td class="formats"><a href="memo-0003-audit-trail.txt">Text</a> <a href="memo-0003-audit-trail.ps">PostScript</a> <a href="memo-0003-audit-trail.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0004</td>
-        <td>Memo 0004: SPKI Authorization Integration</td>
+        <td>SPKI Authorization Integration</td>
         <td class="formats"><a href="memo-0004-spki-authorization.txt">Text</a> <a href="memo-0004-spki-authorization.ps">PostScript</a> <a href="memo-0004-spki-authorization.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0005</td>
-        <td>Memo 0005: Progressive Metadata Levels</td>
+        <td>Progressive Metadata Levels</td>
         <td class="formats"><a href="memo-0005-metadata-levels.txt">Text</a> <a href="memo-0005-metadata-levels.ps">PostScript</a> <a href="memo-0005-metadata-levels.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0006</td>
-        <td>Memo 0006: Vault System Architecture</td>
+        <td>Vault System Architecture</td>
         <td class="formats"><a href="memo-0006-vault-architecture.txt">Text</a> <a href="memo-0006-vault-architecture.ps">PostScript</a> <a href="memo-0006-vault-architecture.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0007</td>
-        <td>Memo 0007: Threshold Signature Governance</td>
+        <td>Threshold Signature Governance</td>
         <td class="formats"><a href="memo-0007-threshold-governance.txt">Text</a> <a href="memo-0007-threshold-governance.ps">PostScript</a> <a href="memo-0007-threshold-governance.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0008</td>
-        <td>Memo 0008: Shamir Secret Sharing</td>
+        <td>Shamir Secret Sharing</td>
         <td class="formats"><a href="memo-0008-shamir-sharing.txt">Text</a> <a href="memo-0008-shamir-sharing.ps">PostScript</a> <a href="memo-0008-shamir-sharing.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0009</td>
-        <td>Memo 0009: Library Directory System</td>
+        <td>Library Directory System</td>
         <td class="formats"><a href="memo-0009-library-directory.txt">Text</a> <a href="memo-0009-library-directory.ps">PostScript</a> <a href="memo-0009-library-directory.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0010</td>
-        <td>Memo 0010: Federation Protocol</td>
+        <td>Federation Protocol</td>
         <td class="formats"><a href="memo-0010-federation.txt">Text</a> <a href="memo-0010-federation.ps">PostScript</a> <a href="memo-0010-federation.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0011</td>
-        <td>Memo 0011: Byzantine Consensus</td>
+        <td>Byzantine Consensus</td>
         <td class="formats"><a href="memo-0011-byzantine-consensus.txt">Text</a> <a href="memo-0011-byzantine-consensus.ps">PostScript</a> <a href="memo-0011-byzantine-consensus.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0012</td>
-        <td>Memo 0012: Lamport Logical Clocks</td>
+        <td>Lamport Logical Clocks</td>
         <td class="formats"><a href="memo-0012-lamport-clocks.txt">Text</a> <a href="memo-0012-lamport-clocks.ps">PostScript</a> <a href="memo-0012-lamport-clocks.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0013</td>
-        <td>Memo 0013: TLA+ Formal Specification</td>
+        <td>TLA+ Formal Specification</td>
         <td class="formats"><a href="memo-0013-tla-specification.txt">Text</a> <a href="memo-0013-tla-specification.ps">PostScript</a> <a href="memo-0013-tla-specification.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0014</td>
-        <td>Memo 0014: Coq Extraction for TCB</td>
+        <td>Coq Extraction for TCB</td>
         <td class="formats"><a href="memo-0014-coq-extraction.txt">Text</a> <a href="memo-0014-coq-extraction.ps">PostScript</a> <a href="memo-0014-coq-extraction.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0015</td>
-        <td>Memo 0015: Versioning and Rollback</td>
+        <td>Versioning and Rollback</td>
         <td class="formats"><a href="memo-0015-versioning-rollback.txt">Text</a> <a href="memo-0015-versioning-rollback.ps">PostScript</a> <a href="memo-0015-versioning-rollback.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0016</td>
-        <td>Memo 0016: Lazy Clustering</td>
+        <td>Lazy Clustering</td>
         <td class="formats"><a href="memo-0016-lazy-clustering.txt">Text</a> <a href="memo-0016-lazy-clustering.ps">PostScript</a> <a href="memo-0016-lazy-clustering.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0017</td>
-        <td>Memo 0017: The Burning of Alexandria</td>
+        <td>The Burning of Alexandria</td>
         <td class="formats"><a href="memo-0017-opera.txt">Text</a> <a href="memo-0017-opera.ps">PostScript</a> <a href="memo-0017-opera.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0018</td>
-        <td>Memo 0018: Sealed Archive Format</td>
+        <td>Sealed Archive Format</td>
         <td class="formats"><a href="memo-0018-sealed-archive.txt">Text</a> <a href="memo-0018-sealed-archive.ps">PostScript</a> <a href="memo-0018-sealed-archive.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0019</td>
-        <td>Memo 0019: Documentation Pipeline</td>
+        <td>Documentation Pipeline</td>
         <td class="formats"><a href="memo-0019-documentation-pipeline.txt">Text</a> <a href="memo-0019-documentation-pipeline.ps">PostScript</a> <a href="memo-0019-documentation-pipeline.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0020</td>
-        <td>Memo 0020: Content-Addressed Storage</td>
+        <td>Content-Addressed Storage</td>
         <td class="formats"><a href="memo-0020-content-addressed-storage.txt">Text</a> <a href="memo-0020-content-addressed-storage.ps">PostScript</a> <a href="memo-0020-content-addressed-storage.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0021</td>
-        <td>Memo 0021: Capability Delegation Patterns</td>
+        <td>Capability Delegation Patterns</td>
         <td class="formats"><a href="memo-0021-capability-delegation.txt">Text</a> <a href="memo-0021-capability-delegation.ps">PostScript</a> <a href="memo-0021-capability-delegation.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0022</td>
-        <td>Memo 0022: Key Ceremony Protocol</td>
+        <td>Key Ceremony Protocol</td>
         <td class="formats"><a href="memo-0022-key-ceremony.txt">Text</a> <a href="memo-0022-key-ceremony.ps">PostScript</a> <a href="memo-0022-key-ceremony.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0023</td>
-        <td>Memo 0023: Demonic Agents</td>
+        <td>Demonic Agents</td>
         <td class="formats"><a href="memo-0023-agent-sandboxing.txt">Text</a> <a href="memo-0023-agent-sandboxing.ps">PostScript</a> <a href="memo-0023-agent-sandboxing.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0024</td>
-        <td>Memo 0024: Network Protocol</td>
+        <td>Network Protocol</td>
         <td class="formats"><a href="memo-0024-network-protocol.txt">Text</a> <a href="memo-0024-network-protocol.ps">PostScript</a> <a href="memo-0024-network-protocol.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0025</td>
-        <td>Memo 0025: Soup Query Language</td>
+        <td>Soup Query Language</td>
         <td class="formats"><a href="memo-0025-query-language.txt">Text</a> <a href="memo-0025-query-language.ps">PostScript</a> <a href="memo-0025-query-language.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0026</td>
-        <td>Memo 0026: Garbage Collection</td>
+        <td>Garbage Collection</td>
         <td class="formats"><a href="memo-0026-garbage-collection.txt">Text</a> <a href="memo-0026-garbage-collection.ps">PostScript</a> <a href="memo-0026-garbage-collection.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0027</td>
-        <td>Memo 0027: Vault Migration</td>
+        <td>Vault Migration</td>
         <td class="formats"><a href="memo-0027-vault-migration.txt">Text</a> <a href="memo-0027-vault-migration.ps">PostScript</a> <a href="memo-0027-vault-migration.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0028</td>
-        <td>Memo 0028: Error Handling and Recovery</td>
+        <td>Error Handling and Recovery</td>
         <td class="formats"><a href="memo-0028-error-handling.txt">Text</a> <a href="memo-0028-error-handling.ps">PostScript</a> <a href="memo-0028-error-handling.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0029</td>
-        <td>Memo 0029: Compression and Deduplication</td>
+        <td>Compression and Deduplication</td>
         <td class="formats"><a href="memo-0029-compression.txt">Text</a> <a href="memo-0029-compression.ps">PostScript</a> <a href="memo-0029-compression.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0030</td>
-        <td>Memo 0030: Encryption at Rest</td>
+        <td>Encryption at Rest</td>
         <td class="formats"><a href="memo-0030-encryption-at-rest.txt">Text</a> <a href="memo-0030-encryption-at-rest.ps">PostScript</a> <a href="memo-0030-encryption-at-rest.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0031</td>
-        <td>Memo 0031: Monitoring and Observability</td>
+        <td>Monitoring and Observability</td>
         <td class="formats"><a href="memo-0031-monitoring.txt">Text</a> <a href="memo-0031-monitoring.ps">PostScript</a> <a href="memo-0031-monitoring.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0032</td>
-        <td>Memo 0032: Rate Limiting and Quotas</td>
+        <td>Rate Limiting and Quotas</td>
         <td class="formats"><a href="memo-0032-rate-limiting.txt">Text</a> <a href="memo-0032-rate-limiting.ps">PostScript</a> <a href="memo-0032-rate-limiting.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0033</td>
-        <td>Memo 0033: Schema Evolution</td>
+        <td>Schema Evolution</td>
         <td class="formats"><a href="memo-0033-schema-evolution.txt">Text</a> <a href="memo-0033-schema-evolution.ps">PostScript</a> <a href="memo-0033-schema-evolution.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0034</td>
-        <td>Memo 0034: Audit Log Protection</td>
+        <td>Audit Log Protection</td>
         <td class="formats"><a href="memo-0034-audit-protection.txt">Text</a> <a href="memo-0034-audit-protection.ps">PostScript</a> <a href="memo-0034-audit-protection.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0035</td>
-        <td>Memo 0035: Mobile Agents and Pub/Sub</td>
+        <td>Mobile Agents and Pub/Sub</td>
         <td class="formats"><a href="memo-0035-mobile-agents.txt">Text</a> <a href="memo-0035-mobile-agents.ps">PostScript</a> <a href="memo-0035-mobile-agents.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0036</td>
-        <td>Memo 0036: Quorum Protocol with Homomorphic Voting</td>
+        <td>Quorum Protocol with Homomorphic Voting</td>
         <td class="formats"><a href="memo-0036-quorum-voting.txt">Text</a> <a href="memo-0036-quorum-voting.ps">PostScript</a> <a href="memo-0036-quorum-voting.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0037</td>
-        <td>Memo 0037: Node Roles and Capabilities</td>
+        <td>Node Roles and Capabilities</td>
         <td class="formats"><a href="memo-0037-node-roles.txt">Text</a> <a href="memo-0037-node-roles.ps">PostScript</a> <a href="memo-0037-node-roles.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0038</td>
-        <td>Memo 0038: Local Inference Integration</td>
+        <td>Local Inference Integration</td>
         <td class="formats"><a href="memo-0038-local-inference.txt">Text</a> <a href="memo-0038-local-inference.ps">PostScript</a> <a href="memo-0038-local-inference.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0039</td>
-        <td>Memo 0039: Scaling Architecture for IPv6</td>
+        <td>Scaling Architecture for IPv6</td>
         <td class="formats"><a href="memo-0039-ipv6-scaling.txt">Text</a> <a href="memo-0039-ipv6-scaling.ps">PostScript</a> <a href="memo-0039-ipv6-scaling.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0040</td>
-        <td>Memo 0040: Wormholes (FUSE Filesystem Layer)</td>
+        <td>Wormholes (FUSE Filesystem Layer)</td>
         <td class="formats"><a href="memo-0040-fuse-filesystem.txt">Text</a> <a href="memo-0040-fuse-filesystem.ps">PostScript</a> <a href="memo-0040-fuse-filesystem.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0041</td>
-        <td>Memo 0041: IETF Normative Reference</td>
+        <td>IETF Normative Reference</td>
         <td class="formats"><a href="memo-0041-ietf-normative.txt">Text</a> <a href="memo-0041-ietf-normative.ps">PostScript</a> <a href="memo-0041-ietf-normative.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0042</td>
-        <td>Memo 0042: Memo Conventions</td>
+        <td>Memo Conventions</td>
         <td class="formats"><a href="memo-0042-memo-conventions.txt">Text</a> <a href="memo-0042-memo-conventions.ps">PostScript</a> <a href="memo-0042-memo-conventions.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0043</td>
-        <td>Memo 0043: Cryptographic Entropy Sources</td>
+        <td>Cryptographic Entropy Sources</td>
         <td class="formats"><a href="memo-0043-cryptographic-entropy.txt">Text</a> <a href="memo-0043-cryptographic-entropy.ps">PostScript</a> <a href="memo-0043-cryptographic-entropy.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0044</td>
-        <td>Memo 0044: Cryptographic Imprint Protocol (CIP)</td>
+        <td>Cryptographic Imprint Protocol (CIP)</td>
         <td class="formats"><a href="memo-0044-cip.txt">Text</a> <a href="memo-0044-cip.ps">PostScript</a> <a href="memo-0044-cip.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0045</td>
-        <td>Memo 0045: Cyberspace Security Architecture</td>
+        <td>Cyberspace Security Architecture</td>
         <td class="formats"><a href="memo-0045-security-architecture.txt">Text</a> <a href="memo-0045-security-architecture.ps">PostScript</a> <a href="memo-0045-security-architecture.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0046</td>
-        <td>Memo 0046: Realm Keystore and Attestation</td>
+        <td>Realm Keystore and Attestation</td>
         <td class="formats"><a href="memo-0046-keystore-and-attestation.txt">Text</a> <a href="memo-0046-keystore-and-attestation.ps">PostScript</a> <a href="memo-0046-keystore-and-attestation.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0047</td>
-        <td>Memo 0047: Quantum-Resistant Merkle Trees</td>
+        <td>Quantum-Resistant Merkle Trees</td>
         <td class="formats"><a href="memo-0047-quantum-resistant-merkle.txt">Text</a> <a href="memo-0047-quantum-resistant-merkle.ps">PostScript</a> <a href="memo-0047-quantum-resistant-merkle.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0048</td>
-        <td>Memo 0048: Post-Quantum Signatures</td>
+        <td>Post-Quantum Signatures</td>
         <td class="formats"><a href="memo-0048-post-quantum-signatures.txt">Text</a> <a href="memo-0048-post-quantum-signatures.ps">PostScript</a> <a href="memo-0048-post-quantum-signatures.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0049</td>
-        <td>Memo 0049: Access Control and Audit Co-Design</td>
+        <td>Access Control and Audit Co-Design</td>
         <td class="formats"><a href="memo-0049-access-audit-codesign.txt">Text</a> <a href="memo-0049-access-audit-codesign.ps">PostScript</a> <a href="memo-0049-access-audit-codesign.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0050</td>
-        <td>Memo 0050: The Wilderness</td>
+        <td>The Wilderness</td>
         <td class="formats"><a href="memo-0050-wilderness.txt">Text</a> <a href="memo-0050-wilderness.ps">PostScript</a> <a href="memo-0050-wilderness.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0051</td>
-        <td>Memo 0051: The Normie Interface</td>
+        <td>The Normie Interface</td>
         <td class="formats"><a href="memo-0051-normie-interface.txt">Text</a> <a href="memo-0051-normie-interface.ps">PostScript</a> <a href="memo-0051-normie-interface.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0052</td>
-        <td>Memo 0052: Terminal Interface Conventions</td>
+        <td>Terminal Interface Conventions</td>
         <td class="formats"><a href="memo-0052-terminal-interface.txt">Text</a> <a href="memo-0052-terminal-interface.ps">PostScript</a> <a href="memo-0052-terminal-interface.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0053</td>
-        <td>Memo 0053: Compilation and Debugging Manual</td>
+        <td>Compilation and Debugging Manual</td>
         <td class="formats"><a href="memo-0053-compilation.txt">Text</a> <a href="memo-0053-compilation.ps">PostScript</a> <a href="memo-0053-compilation.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0054</td>
-        <td>Memo 0054: AI Assistants</td>
+        <td>AI Assistants</td>
         <td class="formats"><a href="memo-0054-ai-assistants.txt">Text</a> <a href="memo-0054-ai-assistants.ps">PostScript</a> <a href="memo-0054-ai-assistants.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0055</td>
-        <td>Memo 0055: Federation Operational Security</td>
+        <td>Federation Operational Security</td>
         <td class="formats"><a href="memo-0055-federation-opsec.txt">Text</a> <a href="memo-0055-federation-opsec.ps">PostScript</a> <a href="memo-0055-federation-opsec.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0056</td>
-        <td>Memo 0056: Designer Notes</td>
+        <td>Designer Notes</td>
         <td class="formats"><a href="memo-0056-designer-notes.txt">Text</a> <a href="memo-0056-designer-notes.ps">PostScript</a> <a href="memo-0056-designer-notes.html">Hypertext</a></td>
       </tr>
       <tr>
         <td>0057</td>
-        <td>Memo 0057: Lazy Discovery</td>
+        <td>Lazy Discovery</td>
         <td class="formats"><a href="memo-0057-lazy-discovery.txt">Text</a> <a href="memo-0057-lazy-discovery.ps">PostScript</a> <a href="memo-0057-lazy-discovery.html">Hypertext</a></td>
       </tr>
     </tbody>
@@ -336,18 +383,6 @@
   <p>Key Word In Context index for discovery by concept.</p>
   <table class="kwic">
     <tbody>
-      <tr>
-        <td class="left">Cryptographic Imprint Protocol </td>
-        <td class="keyword">(CIP)</td>
-        <td class="right"></td>
-        <td class="memo"><a href="memo-0044-cip.html">0044</a></td>
-      </tr>
-      <tr>
-        <td class="left">Wormholes </td>
-        <td class="keyword">(FUSE</td>
-        <td class="right"> Filesystem Layer)</td>
-        <td class="memo"><a href="memo-0040-fuse-filesystem.html">0040</a></td>
-      </tr>
       <tr>
         <td class="left"></td>
         <td class="keyword">Access</td>
@@ -475,6 +510,12 @@
         <td class="memo"><a href="memo-0022-key-ceremony.html">0022</a></td>
       </tr>
       <tr>
+        <td class="left">Cryptographic Imprint Protocol </td>
+        <td class="keyword">CIP</td>
+        <td class="right"></td>
+        <td class="memo"><a href="memo-0044-cip.html">0044</a></td>
+      </tr>
+      <tr>
         <td class="left">Lamport Logical </td>
         <td class="keyword">Clocks</td>
         <td class="right"></td>
@@ -561,7 +602,7 @@
       <tr>
         <td class="left"></td>
         <td class="keyword">Cryptographic</td>
-        <td class="right"> Imprint Protocol (CIP)</td>
+        <td class="right"> Imprint Protocol CIP</td>
         <td class="memo"><a href="memo-0044-cip.html">0044</a></td>
       </tr>
       <tr>
@@ -685,9 +726,9 @@
         <td class="memo"><a href="memo-0010-federation.html">0010</a></td>
       </tr>
       <tr>
-        <td class="left">Wormholes (FUSE </td>
+        <td class="left">Wormholes FUSE </td>
         <td class="keyword">Filesystem</td>
-        <td class="right"> Layer)</td>
+        <td class="right"> Layer</td>
         <td class="memo"><a href="memo-0040-fuse-filesystem.html">0040</a></td>
       </tr>
       <tr>
@@ -701,6 +742,12 @@
         <td class="keyword">Format</td>
         <td class="right"></td>
         <td class="memo"><a href="memo-0018-sealed-archive.html">0018</a></td>
+      </tr>
+      <tr>
+        <td class="left">Wormholes </td>
+        <td class="keyword">FUSE</td>
+        <td class="right"> Filesystem Layer</td>
+        <td class="memo"><a href="memo-0040-fuse-filesystem.html">0040</a></td>
       </tr>
       <tr>
         <td class="left"></td>
@@ -735,7 +782,7 @@
       <tr>
         <td class="left">Cryptographic </td>
         <td class="keyword">Imprint</td>
-        <td class="right"> Protocol (CIP)</td>
+        <td class="right"> Protocol CIP</td>
         <td class="memo"><a href="memo-0044-cip.html">0044</a></td>
       </tr>
       <tr>
@@ -805,8 +852,8 @@
         <td class="memo"><a href="memo-0001-replication-layer.html">0001</a></td>
       </tr>
       <tr>
-        <td class="left">Wormholes (FUSE Filesystem </td>
-        <td class="keyword">Layer)</td>
+        <td class="left">Wormholes FUSE Filesystem </td>
+        <td class="keyword">Layer</td>
         <td class="right"></td>
         <td class="memo"><a href="memo-0040-fuse-filesystem.html">0040</a></td>
       </tr>
@@ -981,7 +1028,7 @@
       <tr>
         <td class="left">Cryptographic Imprint </td>
         <td class="keyword">Protocol</td>
-        <td class="right"> (CIP)</td>
+        <td class="right"> CIP</td>
         <td class="memo"><a href="memo-0044-cip.html">0044</a></td>
       </tr>
       <tr>
@@ -1257,7 +1304,7 @@
       <tr>
         <td class="left"></td>
         <td class="keyword">Wormholes</td>
-        <td class="right"> (FUSE Filesystem Layer)</td>
+        <td class="right"> FUSE Filesystem Layer</td>
         <td class="memo"><a href="memo-0040-fuse-filesystem.html">0040</a></td>
       </tr>
     </tbody>
@@ -1265,8 +1312,24 @@
 
   <footer>
     <p>Generated by the Library of Cyberspace.</p>
-    <p>Node: starlight | 2026-01-15 06:50Z (22:50 PST) | 58 Memos</p>
-    <p>Newton for the data model. Stephenson for the prose. Not Gibson.</p>
+    <p>S-expression source. Text: immortal. PostScript: open. Hypertext: accessible.</p>
   </footer>
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+    (function() {
+      const saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
 </body>
 </html>
