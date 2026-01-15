@@ -82,5 +82,49 @@
     (p "Realmtime mode invokes spacetime - scrutiny flows through the realm as time passes. When enabled, violations surface as modules load. Off in production, on in beta."))
 
   (section
+    "7. Forge and Smelter"
+    (p "The forge module generates pronounceable passwords using Markov chains on digraph statistics. This is a resurrection of work from VAX/VMS 6.0, circa 1991.")
+
+    (subsection
+      "7.1 Heritage"
+      (p "Joint design by Derrell Piper and Jon Callas at Digital Equipment Corporation. Piper wrote the TCB (Trusted Computing Base) BLISS system service; Callas wrote the user-mode TPU smelter that compiled dictionaries into digraph databases.")
+      (p "US and EU DEC patents were filed on the design (now expired). The terminology - forge, smelter - comes from metallurgy: the smelter refines raw ore (word lists) into workable material (digraph statistics); the forge shapes the final product (pronounceable words).")
+      (p "Callas later became a principal author of OpenPGP (RFC 4880) and co-founded PGP Corporation and Silent Circle. He remains a planned beta tester for Cyberspace."))
+
+    (subsection
+      "7.2 Design"
+      (p "The smelter reads word lists and extracts digraph (character pair) statistics:")
+      (list
+        (item "Starting pair frequency - which pairs begin words")
+        (item "Transition probability - given 'ab', what characters follow")
+        (item "Termination markers - which pairs end words"))
+      (p "The forge walks these statistics with weighted random selection, producing words that follow the phonetic patterns of the source language. Entropy is tracked in 'decibits' (tenths of bits) to quantify password strength."))
+
+    (subsection
+      "7.3 Languages"
+      (p "Original VMS languages: English, Latin, Italian, Dutch, Sindarin (Elvish - vocabulary typed from Tolkien by DEC enthusiasts). The VT100 diacriticals were encoded in DEC MCS (Multinational Character Set).")
+      (p "Cyberspace expansion: NATO member languages (German, French, Spanish, Portuguese, Polish, Swedish, Norwegian, Danish, etc.), updated word lists from SCOWL, OpenTaal, Hunspell, and Eldamo. Diacriticals converted to UTF-8.")
+      (p "The Sindarin database preserves Tolkien's circumflexes: Manwë, Aulë, Andúril, Barad-dûr. An easter egg within an easter egg."))
+
+    (subsection
+      "7.4 Related Standards"
+      (p "Forge predates but relates to two password generation standards:")
+      (list
+        (item "FIPS 181 (1993) - Automated Password Generator. Uses trigraph (3-letter) statistics and hyphenation rules. More structured but less natural. Forge's digraph approach (1991) produces smoother results by learning from actual language patterns rather than syllable rules.")
+        (item "OPIE/S/Key - One-time Passwords In Everything. Uses a fixed 2048-word dictionary optimized for spoken communication over phone lines. Words are short and phonetically distinct. Different goal: memorability for one-time use vs. pronounceability for permanent passwords."))
+      (p "Forge's contribution was combining Markov chain language modeling with entropy tracking - knowing not just that a password sounds right, but exactly how many bits of randomness it contains."))
+
+    (subsection
+      "7.5 Interface"
+      (code scheme "(forge)              ; one English word
+(forge 5)            ; five English words
+(forge 'sindarin)    ; one Elvish word
+(forge 'latin 3)     ; three Latin words
+(forge 'passphrase)  ; 4-word passphrase
+(forge 'german 'passphrase 6) ; 6-word German passphrase")
+      (p "Each word reports its entropy. Passphrases join words with hyphens. The forge is an easter egg - undocumented in help, discovered by schemers exploring the REPL.")))
+
+  (section
     "Changelog"
+    (p "- 2026-01-15 — Added forge/smelter heritage (section 7)")
     (p "- 2026-01-15 — Initial draft, heritage notes")))

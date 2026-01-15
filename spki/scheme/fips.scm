@@ -53,6 +53,13 @@
               (lo (hex-char->int (string-ref hex-str (+ (* i 2) 1)))))
           (u8vector-set! vec i (+ (* hi 16) lo))))))
 
+  (define (byte->hex b)
+    "Convert byte to 2-char hex string"
+    (let ((hi (quotient b 16))
+          (lo (modulo b 16)))
+      (string (integer->char (+ (if (< hi 10) 48 87) hi))
+              (integer->char (+ (if (< lo 10) 48 87) lo)))))
+
   (define (blob->hex blob)
     "Convert blob to hex string"
     (let* ((vec (blob->u8vector blob))
@@ -61,9 +68,9 @@
         (if (= i len)
             (apply string-append (reverse acc))
             (loop (+ i 1)
-                  (cons (sprintf "~2,'0x" (u8vector-ref vec i)) acc))))))
+                  (cons (byte->hex (u8vector-ref vec i)) acc))))))
 
-  (define (blob=? a b)
+  (define (blobs-equal? a b)
     "Compare two blobs for equality"
     (let ((av (blob->u8vector a))
           (bv (blob->u8vector b)))
@@ -88,7 +95,7 @@
     "KAT for SHA-256. Returns #t on pass, #f on fail."
     (let* ((hash (sha256-hash *sha256-test-input*))
            (expected (hex->blob *sha256-test-expected*)))
-      (blob=? hash expected)))
+      (blobs-equal? hash expected)))
 
   ;;; ============================================================
   ;;; SHA-512 KAT (NIST FIPS 180-4)
@@ -106,7 +113,7 @@
     "KAT for SHA-512. Returns #t on pass, #f on fail."
     (let* ((hash (sha512-hash *sha512-test-input*))
            (expected (hex->blob *sha512-test-expected*)))
-      (blob=? hash expected)))
+      (blobs-equal? hash expected)))
 
   ;;; ============================================================
   ;;; Ed25519 KAT (RFC 8032 Test Vector 1)
@@ -150,7 +157,7 @@
       ;; Sign the message
       (let ((sig (ed25519-sign sk message)))
         ;; Verify signature matches expected
-        (and (blob=? sig expected-sig)
+        (and (blobs-equal? sig expected-sig)
              ;; Also verify the signature is valid
              (ed25519-verify expected-pk message sig)))))
 
@@ -168,7 +175,7 @@
           (r2 (random-bytes 32)))
       (and (= (blob-size r1) 32)
            (= (blob-size r2) 32)
-           (not (blob=? r1 r2))
+           (not (blobs-equal? r1 r2))
            ;; Check not all zeros
            (let ((v1 (blob->u8vector r1)))
              (let loop ((i 0) (sum 0))
