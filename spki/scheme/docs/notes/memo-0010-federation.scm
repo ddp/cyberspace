@@ -56,7 +56,7 @@
     (subsection
       "Synchronization"
       (code scheme "(federation-sync peer\n  #!key direction verify-key)")
-      (p "Bidirectional sync (from Memo-001): 1. Exchange release lists 2. Identify missing releases 3. Push/pull as configured 4. Verify all signatures 5. Update audit trails")))
+      (p "Bidirectional sync (from Memo-0002): 1. Exchange release lists 2. Identify missing releases 3. Push/pull as configured 4. Verify all signatures 5. Update audit trails")))
   (section
     "Message Format"
     (subsection
@@ -156,7 +156,7 @@
         (item "Conflict resolution UI"))))
   (section
     "References"
-    (p "1. Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols. 2. Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance. 3. Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types. 4. Memo-001: Replication Layer 5. Memo-004: SPKI Authorization"))
+    (p "1. Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols. 2. Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance. 3. Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types. 4. Memo-0002: Replication Layer 5. Memo-004: SPKI Authorization"))
   (section
     "Changelog"
     (list

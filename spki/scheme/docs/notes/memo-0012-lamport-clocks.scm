@@ -80,7 +80,7 @@
       "With Consensus (Memo-011)"
       (code scheme "(consensus-message\n  (sequence 573)          ; Consensus sequence\n  (lamport-clock 2891)    ; Causal context\n  ...)"))
     (subsection
-      "With Replication (Memo-001)"
+      "With Replication (Memo-0002)"
       (code scheme "(seal-publish \"2.0.0\"\n  (logical-time 892)\n  ...)")))
   (section
     "Security Considerations"

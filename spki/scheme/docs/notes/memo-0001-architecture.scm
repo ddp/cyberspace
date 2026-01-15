@@ -2,7 +2,7 @@
 ;; Review and edit as needed
 
 (memo
-  (number 2)
+  (number 1)
   (title "Cyberspace Architecture")
   (section
     "Abstract"

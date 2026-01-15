@@ -125,7 +125,7 @@
       (code scheme "(define (archive-to-cas archive-path)\n  (let* ((content (read-blob archive-path))\n         (hash (cas-put content)))\n    (ref-set (string-append \"archives/\" (archive-version archive-path)) hash)\n    hash))"))
     (subsection
       "Replication"
-      (p "Content addressing enables efficient replication (Memo-001):")
+      (p "Content addressing enables efficient replication (Memo-0002):")
       (code scheme ";; Only transfer objects receiver doesn't have\n(define (replicate-to remote root-hash)\n  (for-each\n    (lambda (hash)\n      (unless (remote-has? remote hash)\n        (remote-put remote hash (cas-get hash))))\n    (trace-reachable root-hash)))"))
     (subsection
       "SPKI Integration"

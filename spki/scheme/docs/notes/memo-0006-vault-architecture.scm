@@ -114,7 +114,7 @@
       (p "Process: 1. Read manifest 2. Verify hash (archive integrity) 3. Verify signature (if key provided) 4. Decrypt (zstd-age only, requires identity) 5. Extract to target directory")))
   (section
     "Replication Layer"
-    (p "See Memo-001 for complete specification.")
+    (p "See Memo-0002 for complete specification.")
     (subsection
       "seal-publish"
       (p "Publish release to remote.")
@@ -221,7 +221,7 @@
     (p "All formats are first-class citizens in the Vault. RFCs and declarations SHOULD be published in all three formats for maximum preservation and accessibility. No proprietary formats."))
   (section
     "References"
-    (p "1. Git Internals - Plumbing and Porcelain 2. Memo-001: Replication Layer 3. Memo-003: Cryptographic Audit Trail 4. Memo-004: SPKI Authorization 5. Memo-005: Progressive Metadata Levels 6. Memo-018: Sealed Archive Format 7. Semantic Versioning 2.0.0"))
+    (p "1. Git Internals - Plumbing and Porcelain 2. Memo-0002: Replication Layer 3. Memo-003: Cryptographic Audit Trail 4. Memo-004: SPKI Authorization 5. Memo-005: Progressive Metadata Levels 6. Memo-018: Sealed Archive Format 7. Semantic Versioning 2.0.0"))
   (section
     "Changelog"
     (list

@@ -63,7 +63,7 @@
     (p "Then we've succeeded."))
   (section
     "10. References"
-    (p "1. Memo-002 - Architecture (\"English on top, Scheme underneath\") 2. Memo-050 - The Wilderness (onboarding state)"))
+    (p "1. Memo-0001 - Architecture (\"English on top, Scheme underneath\") 2. Memo-050 - The Wilderness (onboarding state)"))
   (section
     "Changelog"
     (list
