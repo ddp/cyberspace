@@ -45,14 +45,14 @@
     (if (directory-exists? dir)
         (sort
           (filter (lambda (f)
-                    (irregex-match "^memo-[0-9]{3}-.*\\.scm$" f))
+                    (irregex-match "^memo-[0-9]{4}-.*\\.scm$" f))
                   (directory dir))
           string<?)
         '())))
 
 (define (extract-number-from-filename f)
   "memo-042-foo.scm -> 42"
-  (let ((m (irregex-search "memo-([0-9]{3})-" f)))
+  (let ((m (irregex-search "memo-([0-9]{4})-" f)))
     (and m (string->number (irregex-match-substring m 1)))))
 
 (define (extract-number-from-content path)

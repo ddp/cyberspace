@@ -1,0 +1,787 @@
+%!PS-Adobe-3.0
+%%Title: memo-0023-agent-sandboxing
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 023: Demonic Agents) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies demonic agents for the Library of Cyberspace: how) show newline
+(autonomous agents—daemons in the BSD tradition—are spawned,) show newline
+(constrained, monitored, and terminated. Agents are helpful spirits that) show newline
+(operate with capability-based authority in isolated sandboxes, enabling) show newline
+(safe delegation of tasks while maintaining security boundaries. The) show newline
+(vault daemons watch over all.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(The BSD Daemon Tradition) show newline
+(------------------------) show newline
+() show newline
+(In Unix mythology, a daemon is a helpful spirit—a background process) show newline
+(that tends to the system without being asked. The term comes from) show newline
+(Maxwell's demon, the thought experiment about a creature that sorts) show newline
+(molecules. BSD gave this concept a face: Beastie, the cheerful daemon) show newline
+(with a pitchfork, watching over the system.) show newline
+() show newline
+(The Library embraces this tradition. Our agents are daemons—helpful) show newline
+(spirits that carry authority, travel between vaults, and do work while) show newline
+(their principals sleep.) show newline
+() show newline
+() show newline
+(The General Magic Vision) show newline
+(------------------------) show newline
+() show newline
+(Telescript, from 1994:) show newline
+() show newline
+() show newline
+(    "Programs that travel from machine to machine, carrying your authority, doing things while you sleep.") show newline
+() show newline
+(That vision failed because:) show newline
+() show newline
+(  * No security model) show newline
+(  * Agents ran with ambient authority) show newline
+(  * No isolation) show newline
+(  * One agent could corrupt another) show newline
+(  * No accountability) show newline
+(  * No audit of agent actions) show newline
+(  * No revocation) show newline
+(  * Once launched, agents were uncontrollable) show newline
+() show newline
+() show newline
+(The Demonic Solution) show newline
+(--------------------) show newline
+() show newline
+(The Library realizes this vision with proper daemonology:) show newline
+() show newline
+(  * Capability-based authority) show newline
+(  * Daemons have only granted permissions) show newline
+(  * Sandbox isolation) show newline
+(  * Process, filesystem, network boundaries) show newline
+(  * Full audit trail) show newline
+(  * The Audit Daemon witnesses every action) show newline
+(  * Remote termination) show newline
+(  * Daemons can be banished at any time) show newline
+() show newline
+(Daemons don't rule—they serve. They don't watch over—they watch) show newline
+(with.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DAEMON MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(What is a Daemon?) show newline
+(-----------------) show newline
+() show newline
+(A daemon is a helpful spirit—an autonomous agent that serves its) show newline
+(principal:) show newline
+() show newline
+() show newline
+(    \(agent) show newline
+(      \(id "agent-2026-001"\)) show newline
+(      \(spawned-by user-principal\)) show newline
+(      \(purpose "Monitor RSS feeds and archive new papers"\)) show newline
+(      \(capabilities) show newline
+(        \(read \(url "https://arxiv.org/rss/"\)\)) show newline
+(        \(write \(path "/vault/papers/"\)\)) show newline
+(        \(network \(hosts \("arxiv.org" "doi.org"\)\)\)\)) show newline
+(      \(constraints) show newline
+(        \(max-runtime \( 24 3600\)\)  ; 24 hours) show newline
+(        \(max-memory \( 512 1024 1024\)\)  ; 512MB) show newline
+(        \(max-storage \( 1 1024 1024 1024\)\)\)  ; 1GB) show newline
+(      \(sandbox posix-sandbox\)) show newline
+(      \(status running\)\)) show newline
+() show newline
+() show newline
+(Agent Lifecycle) show newline
+(---------------) show newline
+() show newline
+() show newline
+(        +---------+) show newline
+(        | DEFINED | Agent specification created) show newline
+(        +----+----+) show newline
+(             | spawn) show newline
+(             v) show newline
+(        +---------+) show newline
+(        | SPAWNED | Process created, sandbox initialized) show newline
+(        +----+----+) show newline
+(             | activate) show newline
+(             v) show newline
+(        +---------+) show newline
+(        | RUNNING | Agent executing with capabilities) show newline
+(        +----+----+) show newline
+(             | pause/resume/terminate) show newline
+(             v) show newline
+(        +---------+) show newline
+(        | PAUSED  | Execution suspended, state preserved) show newline
+(        +----+----+) show newline
+(             | terminate/timeout/error) show newline
+(             v) show newline
+(        +---------+) show newline
+(        | FINISHED| Execution complete, cleanup pending) show newline
+(        +----+----+) show newline
+(             | cleanup) show newline
+(             v) show newline
+(        +---------+) show newline
+(        | ARCHIVED| Audit log preserved, resources released) show newline
+(        +---------+) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPAWNING AGENTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Spawn Request) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(spawn-agent spec\)) show newline
+(      "Spawn new agent from specification") show newline
+(      \(let* \(\(agent-id \(generate-agent-id\)\)) show newline
+(             \(spawner \(current-principal\)\)) show newline
+(             ;; Validate spawner has required capabilities) show newline
+(             \(_ \(verify-spawn-authority spawner \(spec-capabilities spec\)\)\)) show newline
+(             ;; Create sandbox) show newline
+(             \(sandbox \(create-sandbox \(spec-sandbox-type spec\)) show newline
+(                                      \(spec-constraints spec\)\)\)) show newline
+(             ;; Create agent record) show newline
+(             \(agent \(make-agent) show newline
+(                     id: agent-id) show newline
+(                     spawned-by: spawner) show newline
+(                     spec: spec) show newline
+(                     sandbox: sandbox) show newline
+(                     status: 'spawned\)\)\)) show newline
+(        ;; Audit spawn) show newline
+(        \(audit-append) show newline
+(          action: `\(agent-spawn ,agent-id\)) show newline
+(          motivation: \(spec-purpose spec\)\)) show newline
+(        ;; Initialize agent process) show newline
+(        \(sandbox-exec sandbox \(spec-code spec\)\)) show newline
+(        ;; Return agent handle) show newline
+(        agent\)\)) show newline
+() show newline
+() show newline
+(Capability Verification) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-spawn-authority spawner requested-caps\)) show newline
+(      "Verify spawner can grant requested capabilities") show newline
+(      \(for-each) show newline
+(        \(lambda \(cap\)) show newline
+(          \(unless \(authorized? spawner 'delegate cap\)) show newline
+(            \(error "Cannot delegate capability" cap\)\)\)) show newline
+(        requested-caps\)\)) show newline
+() show newline
+() show newline
+(Agent Code Loading) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(load-agent-code spec\)) show newline
+(      "Load and verify agent code") show newline
+(      \(let* \(\(code-hash \(spec-code-hash spec\)\)) show newline
+(             \(code \(cas-get code-hash\)\)\)) show newline
+(        ;; Verify code hash) show newline
+(        \(unless \(equal? code-hash \(sha256 code\)\)) show newline
+(          \(error "Code integrity failure"\)\)) show newline
+(        ;; Verify code signature \(if required\)) show newline
+(        \(when \(spec-require-signed? spec\)) show newline
+(          \(unless \(verify-code-signature code \(spec-signer spec\)\)) show newline
+(            \(error "Code signature invalid"\)\)\)) show newline
+(        code\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SANDBOX TYPES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(POSIX Sandbox) show newline
+(-------------) show newline
+() show newline
+(Process isolation using OS primitives:) show newline
+() show newline
+() show newline
+(    \(define \(create-posix-sandbox constraints\)) show newline
+(      "Create POSIX-based sandbox") show newline
+(      \(sandbox) show newline
+(        \(type posix\)) show newline
+(        ;; Process isolation) show newline
+(        \(process) show newline
+(          \(uid \(allocate-sandbox-uid\)\)) show newline
+(          \(gid \(allocate-sandbox-gid\)\)) show newline
+(          \(chroot \(create-sandbox-root\)\)) show newline
+(          \(rlimits) show newline
+(            \(cpu ,\(constraints-max-cpu constraints\)\)) show newline
+(            \(memory ,\(constraints-max-memory constraints\)\)) show newline
+(            \(files ,\(constraints-max-files constraints\)\)) show newline
+(            \(processes 1\)\)\)  ; No forking) show newline
+(        ;; Filesystem isolation) show newline
+(        \(filesystem) show newline
+(          \(root ,\(sandbox-root\)\)) show newline
+(          \(mounts) show newline
+(            \(\("/lib" read-only\)) show newline
+(             \("/usr/lib" read-only\)) show newline
+(             ,\(sandbox-work-dir\) read-write\)\)\)) show newline
+(        ;; Network isolation) show newline
+(        \(network) show newline
+(          \(allowed-hosts ,\(constraints-network-hosts constraints\)\)) show newline
+(          \(allowed-ports ,\(constraints-network-ports constraints\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Scheme Sandbox) show newline
+(--------------) show newline
+() show newline
+(Language-level isolation for Scheme agents:) show newline
+() show newline
+() show newline
+(    \(define \(create-scheme-sandbox constraints\)) show newline
+(      "Create Scheme-level sandbox") show newline
+(      \(sandbox) show newline
+(        \(type scheme\)) show newline
+(        ;; Safe environment - no dangerous primitives) show newline
+(        \(environment) show newline
+(          \(import \(scheme base\)) show newline
+(                  \(scheme write\)) show newline
+(                  \(library sandbox-io\)) show newline
+(                  \(library sandbox-net\)\)) show newline
+(          \(exclude system exit eval load) show newline
+(                   file-delete directory-delete) show newline
+(                   process-fork process-exec\)\)) show newline
+(        ;; Resource limits via fuel) show newline
+(        \(fuel) show newline
+(          \(computation ,\(constraints-max-steps constraints\)\)) show newline
+(          \(allocation ,\(constraints-max-memory constraints\)\)\)) show newline
+(        ;; Capability-restricted I/O) show newline
+(        \(io-capabilities ,\(constraints-io constraints\)\)\)\)) show newline
+() show newline
+() show newline
+(Container Sandbox) show newline
+(-----------------) show newline
+() show newline
+(OCI container isolation:) show newline
+() show newline
+() show newline
+(    \(define \(create-container-sandbox constraints image\)) show newline
+(      "Create container-based sandbox") show newline
+(      \(sandbox) show newline
+(        \(type container\)) show newline
+(        ;; Container configuration) show newline
+(        \(container) show newline
+(          \(image ,image\)) show newline
+(          \(readonly-rootfs #t\)) show newline
+(          \(no-new-privileges #t\)) show newline
+(          \(cap-drop ALL\)) show newline
+(          \(cap-add ,\(minimal-caps constraints\)\)\)) show newline
+(        ;; Resource limits) show newline
+(        \(resources) show newline
+(          \(memory ,\(constraints-max-memory constraints\)\)) show newline
+(          \(cpu-shares ,\(constraints-cpu-shares constraints\)\)) show newline
+(          \(pids-limit 10\)\)) show newline
+(        ;; Network policy) show newline
+(        \(network) show newline
+(          \(mode bridge\)) show newline
+(          \(egress-policy ,\(network-policy constraints\)\)\)\)\)) show newline
+() show newline
+() show newline
+(WASM Sandbox) show newline
+(------------) show newline
+() show newline
+(WebAssembly isolation:) show newline
+() show newline
+() show newline
+(    \(define \(create-wasm-sandbox constraints\)) show newline
+(      "Create WebAssembly sandbox") show newline
+(      \(sandbox) show newline
+(        \(type wasm\)) show newline
+(        ;; WASM runtime configuration) show newline
+(        \(runtime) show newline
+(          \(memory-limit ,\(constraints-max-memory constraints\)\)) show newline
+(          \(table-limit 10000\)) show newline
+(          \(fuel ,\(constraints-max-steps constraints\)\)\)) show newline
+(        ;; WASI capabilities) show newline
+(        \(wasi) show newline
+(          \(preopens ,\(wasi-preopens constraints\)\)) show newline
+(          \(env ,\(wasi-env constraints\)\)) show newline
+(          \(args ,\(wasi-args constraints\)\)\)) show newline
+(        ;; Host function imports \(minimal\)) show newline
+(        \(imports) show newline
+(          \(log "library:log"\)) show newline
+(          \(cas-get "library:casget"\)) show newline
+(          \(cas-put "library:casput"\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CAPABILITY ENFORCEMENT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Capability Proxy) show newline
+(----------------) show newline
+() show newline
+(All agent I/O goes through capability-checking proxies:) show newline
+() show newline
+() show newline
+(    \(define \(make-capability-proxy agent capabilities\)) show newline
+(      "Create proxy that enforces capability checks") show newline
+(      \(lambda \(operation . args\)) show newline
+(        \(let \(\(required-cap \(operation->capability operation args\)\)\)) show newline
+(          ;; Check capability) show newline
+(          \(unless \(capability-granted? capabilities required-cap\)) show newline
+(            \(audit-violation agent operation required-cap\)) show newline
+(            \(error "Capability denied" operation\)\)) show newline
+(          ;; Audit allowed operation) show newline
+(          \(audit-agent-action agent operation args\)) show newline
+(          ;; Execute operation) show newline
+(          \(apply \(operation->handler operation\) args\)\)\)\)) show newline
+(    \(define \(operation->capability op args\)) show newline
+(      "Map operation to required capability") show newline
+(      \(case op) show newline
+(        \(\(read-file\)) show newline
+(         \(read \(path ,\(car args\)\)\)\)) show newline
+(        \(\(write-file\)) show newline
+(         \(write \(path ,\(car args\)\)\)\)) show newline
+(        \(\(http-get\)) show newline
+(         \(network \(url ,\(car args\)\)\)\)) show newline
+(        \(\(cas-get\)) show newline
+(         \(read \(hash ,\(car args\)\)\)\)) show newline
+(        \(else) show newline
+(         \(error "Unknown operation" op\)\)\)\)) show newline
+() show newline
+() show newline
+(Attenuation on Delegation) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    \(define \(agent-spawn-child parent-agent child-spec\)) show newline
+(      "Agent spawning child agent with attenuated capabilities") show newline
+(      \(let* \(\(parent-caps \(agent-capabilities parent-agent\)\)) show newline
+(             \(requested-caps \(spec-capabilities child-spec\)\)) show newline
+(             ;; Child can only have subset of parent's capabilities) show newline
+(             \(child-caps \(capability-intersect parent-caps requested-caps\)\)\)) show newline
+(        \(unless \(equal? child-caps requested-caps\)) show newline
+(          \(warn "Child capabilities attenuated"\)\)) show newline
+(        \(spawn-agent \(spec-with-capabilities child-spec child-caps\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(AGENT COMMUNICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Message Passing) show newline
+(---------------) show newline
+() show newline
+(Agents communicate via typed, capability-checked messages:) show newline
+() show newline
+() show newline
+(    \(define \(agent-send from-agent to-agent message\)) show newline
+(      "Send message between agents") show newline
+(      ;; Verify sender has send capability to receiver) show newline
+(      \(unless \(capability-granted? \(agent-capabilities from-agent\)) show newline
+(                                   \(send \(agent ,\(agent-id to-agent\)\)\)\)) show newline
+(        \(error "Cannot send to agent"\)\)) show newline
+(      ;; Verify message type allowed) show newline
+(      \(unless \(message-type-allowed? from-agent to-agent \(message-type message\)\)) show newline
+(        \(error "Message type not allowed"\)\)) show newline
+(      ;; Queue message) show newline
+(      \(mailbox-enqueue \(agent-mailbox to-agent\)) show newline
+(                       \(signed-message from-agent message\)\)) show newline
+(      ;; Audit) show newline
+(      \(audit-append) show newline
+(        action: \(agent-message ,\(agent-id from-agent\) ,\(agent-id to-agent\)\)) show newline
+(        motivation: \(message-type message\)\)\)) show newline
+(    \(define \(agent-receive agent #!key timeout\)) show newline
+(      "Receive message from mailbox") show newline
+(      \(let \(\(msg \(mailbox-dequeue \(agent-mailbox agent\) timeout: timeout\)\)\)) show newline
+(        \(when msg) show newline
+(          ;; Verify signature) show newline
+(          \(verify-message-signature msg\)) show newline
+(          msg\)\)\)) show newline
+() show newline
+() show newline
+(Shared State) show newline
+(------------) show newline
+() show newline
+(Agents can share state through CAS:) show newline
+() show newline
+() show newline
+(    \(define \(agent-share agent hash recipients\)) show newline
+(      "Share CAS object with other agents") show newline
+(      ;; Verify agent can read the object) show newline
+(      \(unless \(capability-granted? \(agent-capabilities agent\)) show newline
+(                                   \(read \(hash ,hash\)\)\)) show newline
+(        \(error "Cannot read object to share"\)\)) show newline
+(      ;; Grant read capability to recipients) show newline
+(      \(for-each) show newline
+(        \(lambda \(recipient\)) show newline
+(          \(grant-capability agent recipient \(read \(hash ,hash\)\)\)\)) show newline
+(        recipients\)) show newline
+(      ;; Audit sharing) show newline
+(      \(audit-append) show newline
+(        action: `\(agent-share ,hash ,recipients\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MONITORING AND CONTROL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Agent Status) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define \(agent-status agent\)) show newline
+(      "Get current agent status") show newline
+(      `\(agent-status) show newline
+(        \(id ,\(agent-id agent\)\)) show newline
+(        \(status ,\(agent-state agent\)\)) show newline
+(        \(uptime ,\(- \(current-time\) \(agent-start-time agent\)\)\)) show newline
+(        \(resources) show newline
+(          \(memory ,\(sandbox-memory-usage \(agent-sandbox agent\)\)\)) show newline
+(          \(cpu ,\(sandbox-cpu-usage \(agent-sandbox agent\)\)\)) show newline
+(          \(storage ,\(sandbox-storage-usage \(agent-sandbox agent\)\)\)\)) show newline
+(        \(actions ,\(agent-action-count agent\)\)) show newline
+(        \(messages-sent ,\(agent-messages-sent agent\)\)) show newline
+(        \(messages-received ,\(agent-messages-received agent\)\)\)\)) show newline
+() show newline
+() show newline
+(Agent Control) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(agent-pause agent #!key reason\)) show newline
+(      "Pause agent execution") show newline
+(      \(unless \(authorized? \(current-principal\) 'control agent\)) show newline
+(        \(error "Not authorized to control agent"\)\)) show newline
+(      \(sandbox-pause \(agent-sandbox agent\)\)) show newline
+(      \(set-agent-state! agent 'paused\)) show newline
+(      \(audit-append action: \(agent-pause ,\(agent-id agent\)\) motivation: reason\)\)) show newline
+(    \(define \(agent-resume agent\)) show newline
+(      "Resume paused agent") show newline
+(      \(unless \(authorized? \(current-principal\) 'control agent\)) show newline
+(        \(error "Not authorized to control agent"\)\)) show newline
+(      \(sandbox-resume \(agent-sandbox agent\)\)) show newline
+(      \(set-agent-state! agent 'running\)) show newline
+(      \(audit-append action: \(agent-resume ,\(agent-id agent\)\)\)\)) show newline
+(    \(define \(agent-terminate agent #!key reason\)) show newline
+(      "Terminate agent immediately") show newline
+(      \(unless \(authorized? \(current-principal\) 'control agent\)) show newline
+(        \(error "Not authorized to control agent"\)\)) show newline
+(      \(sandbox-kill \(agent-sandbox agent\)\)) show newline
+(      \(set-agent-state! agent 'terminated\)) show newline
+(      \(audit-append) show newline
+(        action: `\(agent-terminate ,\(agent-id agent\)\)) show newline
+(        motivation: reason) show newline
+(        priority: 'high\)) show newline
+(      \(cleanup-agent agent\)\)) show newline
+() show newline
+() show newline
+(Watchdog Daemon) show newline
+(---------------) show newline
+() show newline
+(The watchdog daemon tends the flock of agents—a daemon watching) show newline
+(daemons:) show newline
+() show newline
+() show newline
+(    \(define \(agent-watchdog\)) show newline
+(      "Monitor all agents, enforce constraints") show newline
+(      \(for-each) show newline
+(        \(lambda \(agent\)) show newline
+(          \(when \(eq? \(agent-state agent\) 'running\)) show newline
+(            ;; Check resource limits) show newline
+(            \(when \(> \(sandbox-memory-usage \(agent-sandbox agent\)\)) show newline
+(                     \(agent-max-memory agent\)\)) show newline
+(              \(agent-terminate agent reason: "Memory limit exceeded"\)\)) show newline
+(            ;; Check runtime limit) show newline
+(            \(when \(> \(agent-uptime agent\) \(agent-max-runtime agent\)\)) show newline
+(              \(agent-terminate agent reason: "Runtime limit exceeded"\)\)) show newline
+(            ;; Check heartbeat) show newline
+(            \(when \(> \(- \(current-time\) \(agent-last-heartbeat agent\)\)) show newline
+(                     agent-heartbeat-timeout\)) show newline
+(              \(agent-terminate agent reason: "Heartbeat timeout"\)\)\)\)) show newline
+(        \(all-agents\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SOUP INTEGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Agents in the Soup) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(soup-object) show newline
+(      \(name "agent/2026-001"\)) show newline
+(      \(type agent\)) show newline
+(      \(size "145KB"\)) show newline
+(      \(status running\)) show newline
+(      \(spawned-by "ddp@eludom.net"\)) show newline
+(      \(purpose "Archive arxiv papers"\)) show newline
+(      \(runtime "4h 23m"\)) show newline
+(      \(resources \(memory "234MB"\) \(storage "890MB"\)\)) show newline
+(      \(capabilities \(read "arxiv.org/*"\) \(write "/vault/papers/"\)\)\)) show newline
+() show newline
+() show newline
+(Querying Agents) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; All running agents) show newline
+(    \(soup-query type: 'agent status: 'running\)) show newline
+(    ;; Agents spawned by user) show newline
+(    \(soup-query type: 'agent spawned-by: user-principal\)) show newline
+(    ;; Agents with network access) show newline
+(    \(soup-query type: 'agent has-capability: 'network\)) show newline
+(    ;; Resource hogs) show newline
+(    \(soup-query type: 'agent min-memory: \(* 256 1024 1024\)\)) show newline
+() show newline
+() show newline
+(Agent Introspection) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Agent can query itself) show newline
+(    \(define \(agent-self-inspect\)) show newline
+(      `\(self) show newline
+(        \(id ,\(current-agent-id\)\)) show newline
+(        \(capabilities ,\(current-capabilities\)\)) show newline
+(        \(resources-remaining) show newline
+(          \(memory ,\(- max-memory \(current-memory\)\)\)) show newline
+(          \(runtime ,\(- max-runtime \(current-uptime\)\)\)) show newline
+(          \(fuel ,\(remaining-fuel\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(AGENT PATTERNS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Pattern 1: Periodic Task Agent) show newline
+(------------------------------) show newline
+() show newline
+() show newline
+(    \(spawn-agent) show newline
+(      \(code '\(lambda \(\)) show newline
+(               \(let loop \(\)) show newline
+(                 \(perform-task\)) show newline
+(                 \(sleep 3600\)  ; hourly) show newline
+(                 \(loop\)\)\)\)) show newline
+(      \(capabilities) show newline
+(        \(read "/vault/feeds/"\)) show newline
+(        \(write "/vault/archive/"\)) show newline
+(        \(network \("rss.example.com"\)\)\)) show newline
+(      \(constraints) show newline
+(        \(max-runtime \( 30 24 3600\)\)  ; 30 days) show newline
+(        \(max-memory \( 128 1024 1024\)\)\)\)) show newline
+() show newline
+() show newline
+(Pattern 2: One-Shot Processing Agent) show newline
+(------------------------------------) show newline
+() show newline
+() show newline
+(    \(spawn-agent) show newline
+(      \(code '\(lambda \(\)) show newline
+(               \(let \(\(input \(cas-get input-hash\)\)\)) show newline
+(                 \(let \(\(result \(process input\)\)\)) show newline
+(                   \(cas-put result\)\)\)\)\)) show newline
+(      \(capabilities) show newline
+(        \(read \(hash input-hash\)\)) show newline
+(        \(write "/vault/results/"\)\)) show newline
+(      \(constraints) show newline
+(        \(max-runtime 3600\)) show newline
+(        \(max-memory \(* 1024 1024 1024\)\)\)\)) show newline
+() show newline
+() show newline
+(Pattern 3: Reactive Agent) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    \(spawn-agent) show newline
+(      \(code '\(lambda \(\)) show newline
+(               \(let loop \(\)) show newline
+(                 \(let \(\(msg \(agent-receive timeout: 60000\)\)\)) show newline
+(                   \(when msg) show newline
+(                     \(handle-message msg\)\)) show newline
+(                   \(loop\)\)\)\)\)) show newline
+(      \(capabilities) show newline
+(        \(receive \(from supervisor-agent\)\)) show newline
+(        \(send \(to worker-agents\)\)) show newline
+(        \(read "/vault/tasks/"\)) show newline
+(        \(write "/vault/results/"\)\)) show newline
+(      \(constraints) show newline
+(        \(max-runtime #f\)  ; runs until terminated) show newline
+(        \(max-memory \(* 256 1024 1024\)\)\)\)) show newline
+() show newline
+() show newline
+(Pattern 4: Mobile Agent) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Agent that migrates between vaults) show newline
+(    \(spawn-agent) show newline
+(      \(code '\(lambda \(\)) show newline
+(               \(let \(\(data \(gather-local-data\)\)\)) show newline
+(                 \(migrate-to remote-vault data\)) show newline
+(                 \(process-remote data\)) show newline
+(                 \(migrate-home results\)\)\)\)) show newline
+(      \(capabilities) show newline
+(        \(read "/vault/local/"\)) show newline
+(        \(migrate \(vaults \(vault-a vault-b vault-c\)\)\)\)) show newline
+(      \(constraints) show newline
+(        \(max-migrations 10\)) show newline
+(        \(max-runtime \(* 24 3600\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Escape Prevention) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Sandbox escape mitigations) show newline
+(    \(define sandbox-security) show newline
+(      '\(\(seccomp "restrict system calls"\)) show newline
+(        \(namespaces "process/network/mount isolation"\)) show newline
+(        \(capabilities "drop all Linux capabilities"\)) show newline
+(        \(no-setuid "prevent privilege escalation"\)) show newline
+(        \(read-only-root "immutable rootfs"\)) show newline
+(        \(no-raw-sockets "prevent network attacks"\)\)\)) show newline
+() show newline
+() show newline
+(Resource Exhaustion) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Prevent denial of service) show newline
+(    \(define resource-limits) show newline
+(      '\(\(memory "hard limit, OOM killer"\)) show newline
+(        \(cpu "cgroups CPU quota"\)) show newline
+(        \(disk "quota or sparse files"\)) show newline
+(        \(network "bandwidth limiting"\)) show newline
+(        \(processes "prevent fork bombs"\)) show newline
+(        \(file-descriptors "prevent fd exhaustion"\)\)\)) show newline
+() show newline
+() show newline
+(Information Leakage) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Prevent covert channels) show newline
+(    \(define isolation-measures) show newline
+(      '\(\(timing "fuel-based execution, no precise timers"\)) show newline
+(        \(filesystem "no access outside sandbox"\)) show newline
+(        \(network "egress filtering"\)) show newline
+(        \(ipc "message passing only, no shared memory"\)) show newline
+(        \(environment "sanitized env vars"\)\)\)) show newline
+() show newline
+() show newline
+(Malicious Agents) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(detect-malicious-behavior agent\)) show newline
+(      "Heuristics for detecting malicious agents") show newline
+(      \(or) show newline
+(        ;; Excessive resource usage) show newline
+(        \(> \(agent-resource-velocity agent\) threshold\)) show newline
+(        ;; Unusual network patterns) show newline
+(        \(suspicious-network-activity? agent\)) show newline
+(        ;; Repeated capability violations) show newline
+(        \(> \(agent-violation-count agent\) max-violations\)) show newline
+(        ;; Anomalous message patterns) show newline
+(        \(anomalous-messaging? agent\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Dependencies) show newline
+(------------) show newline
+() show newline
+() show newline
+(  Component           Implementation                             ) show newline
+(  Process sandbox     pledge/unveil \(OpenBSD\), seccomp \(Linux\)   ) show newline
+(  Container sandbox   runc, crun                                 ) show newline
+(  WASM sandbox        wasmtime, wasmer                           ) show newline
+(  Scheme sandbox      custom safe environment                    ) show newline
+() show newline
+() show newline
+(Performance) show newline
+(-----------) show newline
+() show newline
+(  * Sandbox creation: ~100ms \(container\), ~10ms \(process\), ~1ms \(WASM\)) show newline
+(  * Message passing: ~10μs \(local\), ~1ms \(cross-sandbox\)) show newline
+(  * Capability check: ~100ns \(cached\), ~10μs \(chain validation\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [Telescript Technology: Mobile) show newline
+(Agents]\(https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html\)) show newline
+(2. [Capsicum: Practical Capabilities for) show newline
+(UNIX]\(https://www.cl.cam.ac.uk/research/security/capsicum/\) 3.) show newline
+([WebAssembly System Interface \(WASI\)]\(https://wasi.dev/\) 4. [Memo-021:) show newline
+(Capability Delegation]\(memo-021-capability-delegation.html\) 5.) show newline
+([Memo-003: Cryptographic Audit Trail]\(memo-003-audit-trail.html\) 6. [E) show newline
+(Programming Language]\(http://erights.org/\) - Object capabilities) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

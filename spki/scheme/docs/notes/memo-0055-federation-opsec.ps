@@ -1,0 +1,423 @@
+%!PS-Adobe-3.0
+%%Title: memo-0055-federation-opsec
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 055: Federation Operational Security) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Federation \(Memo-010\) enables peer-to-peer synchronization between) show newline
+(vaults. This Memo specifies operational security considerations for) show newline
+(federation: what information flows between peers, how to minimize) show newline
+(information leakage, and techniques for protecting node identity and) show newline
+(capabilities from covert channel analysis.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(1. THE PROBLEM SPACE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(When vaults federate, they exchange more than just releases. Every) show newline
+(message, timing pattern, and capability advertisement creates an) show newline
+(information flow. An adversary observing federation traffic—or a) show newline
+(malicious peer—can build a profile of your node.) show newline
+() show newline
+() show newline
+(              +-----------------------------------------+) show newline
+(              |           FEDERATION TRAFFIC               |) show newline
+(              +---------------------------------------------+) show newline
+(              |  Explicit:                                  |) show newline
+(              |    • Release announcements                  |) show newline
+(              |    • Sync requests                          |) show newline
+(              |    • Public keys                            |) show newline
+(              |                                             |) show newline
+(              |  Implicit \(covert channels\):                |) show newline
+(              |    • Timing patterns                        |) show newline
+(              |    • Response latencies                     |) show newline
+(              |    • Capability advertisements \(weave\)      |) show newline
+(              |    • Connection frequencies                 |) show newline
+(              |    • Online/offline patterns                |) show newline
+(              +---------------------------------------------+) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(2. THREAT MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(2.1 Adversary Capabilities) show newline
+(--------------------------) show newline
+() show newline
+(  * Passive observer: Can see federation traffic) show newline
+(  * Active participant: Can be a peer in your federation) show newline
+(  * Traffic analyst: Can correlate timing and volume) show newline
+(  * Long-term observer: Can build profiles over time) show newline
+() show newline
+() show newline
+(2.2 Information at Risk) show newline
+(-----------------------) show newline
+() show newline
+(  * Node identity: Hardware fingerprinting via benchmarks) show newline
+(  * Location: Timezone from activity patterns) show newline
+(  * Capabilities: Computational power from weave) show newline
+(  * Behavior: Usage patterns from sync timing) show newline
+(  * Network topology: Who talks to whom) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(3. WEAVE AS COVERT CHANNEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(3.1 The Weave Metric) show newline
+(--------------------) show newline
+() show newline
+(Weave measures cryptographic throughput: SHA-512 operations per) show newline
+(millisecond. This correlates directly with:) show newline
+() show newline
+(  * CPU architecture \(ARM vs x86, Apple Silicon vs Intel\)) show newline
+(  * Core count and frequency) show newline
+(  * Thermal state and power constraints) show newline
+(  * Competing workload) show newline
+() show newline
+(A raw weave value is a fingerprint.) show newline
+() show newline
+() show newline
+(3.2 Attack Scenario) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    Attacker observes: weave = 1667 \(your actual value\)) show newline
+(    Known profiles:) show newline
+(      Apple M4 \(10-core\):  1600-1700) show newline
+(      Apple M3 \(8-core\):   1200-1400) show newline
+(      Raspberry Pi 4:       150-200) show newline
+(      Cloud VM \(shared\):    400-600) show newline
+(    Conclusion: You're running Apple M4 Silicon on macOS.) show newline
+(    Cross-reference with other traffic: Likely a specific model.) show newline
+() show newline
+() show newline
+(3.3 Quantized Weave Strata) show newline
+(--------------------------) show newline
+() show newline
+(Never share raw weave values in federation. Use quantized strata:) show newline
+() show newline
+() show newline
+(    \(define *weave-strata*) show newline
+(      '\(\(constrained . 500\)     ; IoT, embedded, RPi) show newline
+(        \(standard    . 1000\)    ; Laptops, desktops) show newline
+(        \(capable     . 2000\)    ; Workstations, servers) show newline
+(        \(powerful    . 4000\)\)\)  ; HPC, GPU-accelerated) show newline
+(    \(define \(weave-stratum weave\)) show newline
+(      "Which stratum of the lattice does this weave occupy?") show newline
+(      \(cond) show newline
+(        \(\(< weave 500\)  'constrained\)) show newline
+(        \(\(< weave 1000\) 'standard\)) show newline
+(        \(\(< weave 2000\) 'capable\)) show newline
+(        \(else           'powerful\)\)\)) show newline
+() show newline
+(Federation messages advertise stratum, not value:) show newline
+() show newline
+() show newline
+(    \(federation-message) show newline
+(      \(type capability\)) show newline
+(      \(from #${my-pubkey}\)) show newline
+(      \(payload) show newline
+(        \(weave-stratum capable\)   ; NOT: \(weave 1667\)) show newline
+(        \(storage-tier large\)\)) show newline
+(      \(signature #${sig}\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(4. TIMING ANALYSIS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(4.1 Response Timing) show newline
+(-------------------) show newline
+() show newline
+(Response latency reveals:) show newline
+() show newline
+(  * Storage speed \(SSD vs HDD vs network\)) show newline
+(  * Vault size \(query time scales with objects\)) show newline
+(  * Current load) show newline
+() show newline
+(Mitigation: Add random jitter to responses.) show newline
+() show newline
+() show newline
+(    \(define \(jittered-response response\)) show newline
+(      "Add 50-500ms random delay to mask timing.") show newline
+(      \(thread-sleep! \(+ 0.05 \(* 0.45 \(random\)\)\)\)) show newline
+(      response\)) show newline
+() show newline
+() show newline
+(4.2 Sync Timing) show newline
+(---------------) show newline
+() show newline
+(Regular sync patterns reveal:) show newline
+() show newline
+(  * Timezone \(sync at 'morning' = your morning\)) show newline
+(  * Work patterns \(gaps during meetings\)) show newline
+(  * Geographic region) show newline
+() show newline
+(Mitigation: Randomize sync intervals around configured period.) show newline
+() show newline
+() show newline
+(    \(define \(next-sync-time base-interval\)) show newline
+(      "Randomize by +/- 20% to mask patterns.") show newline
+(      \(let \(\(jitter \(* base-interval 0.2 \(- \(* 2 \(random\)\) 1\)\)\)\)) show newline
+(        \(+ \(current-seconds\) base-interval jitter\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(5. METADATA MINIMIZATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(5.1 Principle) show newline
+(-------------) show newline
+() show newline
+(Share the minimum information needed for federation to work. Everything) show newline
+(else is unnecessary exposure.) show newline
+() show newline
+() show newline
+(5.2 Required Information) show newline
+(------------------------) show newline
+() show newline
+(  * Public key: Identity \(unavoidable\)) show newline
+(  * Release hashes: Content verification) show newline
+(  * Timestamps: Ordering \(can be coarsened\)) show newline
+() show newline
+() show newline
+(5.3 Unnecessary Information) show newline
+(---------------------------) show newline
+() show newline
+(  * Hostname: Use pubkey hash instead) show newline
+(  * OS/version: Protocol version suffices) show newline
+(  * Raw benchmarks: Use capability strata) show newline
+(  * Vault statistics: Object counts, sizes) show newline
+(  * Uptime: Session duration) show newline
+() show newline
+() show newline
+(5.4 Minimal Federation Message) show newline
+(------------------------------) show newline
+() show newline
+() show newline
+(    \(federation-message) show newline
+(      \(type announcement\)) show newline
+(      \(from #${pubkey-hash}\)        ; Not hostname) show newline
+(      \(epoch 1767686400\)            ; Coarsened to hour) show newline
+(      \(payload) show newline
+(        \(release "2.0.0"\)) show newline
+(        \(hash "sha512:..."\)\)) show newline
+(      \(signature #${sig}\)\)          ; No extras) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(6. NETWORK TOPOLOGY PROTECTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(6.1 Peer Enumeration) show newline
+(--------------------) show newline
+() show newline
+(A malicious peer can probe your federation graph:) show newline
+() show newline
+() show newline
+(    1. Register as your peer) show newline
+(    2. Announce fake releases) show newline
+(    3. Observe which peers request them) show newline
+(    4. Map your federation network) show newline
+() show newline
+() show newline
+(6.2 Mitigation) show newline
+(--------------) show newline
+() show newline
+(Do not automatically propagate announcements. Verify before forwarding.) show newline
+() show newline
+() show newline
+(    \(define \(should-propagate? announcement\)) show newline
+(      "Only propagate releases we have verified.") show newline
+(      \(and \(release-in-vault? \(announcement-release announcement\)\)) show newline
+(           \(signature-verified? announcement\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(7. NODE IDENTITY SEPARATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(7.1 Multiple Personas) show newline
+(---------------------) show newline
+() show newline
+(Consider separate identities for different federation contexts:) show newline
+() show newline
+(  * Personal vault: Friends and family) show newline
+(  * Professional vault: Work colleagues) show newline
+(  * Public vault: Open source releases) show newline
+() show newline
+(Cross-correlation between personas weakens privacy.) show newline
+() show newline
+() show newline
+(7.2 Implementation) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(federation-identity) show newline
+(      \(persona personal) show newline
+(        \(keypair personal-keys\)) show newline
+(        \(peers alice bob carol\)\)) show newline
+(      \(persona professional) show newline
+(        \(keypair work-keys\)) show newline
+(        \(peers company-vault\)\)) show newline
+(      \(persona public) show newline
+(        \(keypair oss-keys\)) show newline
+(        \(peers community-mirror\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(8. TRAFFIC ANALYSIS RESISTANCE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(8.1 Constant-Rate Traffic) show newline
+(-------------------------) show newline
+() show newline
+(Advanced: Maintain constant traffic rate regardless of actual activity.) show newline
+() show newline
+() show newline
+(    \(define \(constant-rate-sync interval\)) show newline
+(      "Send traffic at fixed intervals, real or dummy.") show newline
+(      \(if \(have-pending-sync?\)) show newline
+(          \(do-real-sync\)) show newline
+(          \(send-dummy-heartbeat\)\)\)) show newline
+() show newline
+() show newline
+(8.2 Transport Considerations) show newline
+(----------------------------) show newline
+() show newline
+(  * TLS: Minimum for transport encryption) show newline
+(  * Tor: For strong anonymity \(adds latency\)) show newline
+(  * I2P: Alternative anonymity network) show newline
+(  * VPN: Masks source IP \(trust VPN provider\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(9. CONFIGURATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    \(federation-opsec-config) show newline
+(      ;; Capability advertisement) show newline
+(      \(advertise-weave-stratum #t\)  ; Quantized, not raw) show newline
+(      \(advertise-storage-tier #t\)   ; large/medium/small) show newline
+(      \(advertise-raw-metrics #f\)    ; NEVER) show newline
+(      ;; Timing) show newline
+(      \(response-jitter-ms 50 500\)   ; Min/max jitter) show newline
+(      \(sync-jitter-percent 20\)      ; +/- randomization) show newline
+(      ;; Metadata) show newline
+(      \(coarsen-timestamps 3600\)     ; Round to hour) show newline
+(      \(use-pubkey-hash #t\)          ; Not hostname) show newline
+(      \(hide-vault-stats #t\)         ; No object counts) show newline
+(      ;; Network) show newline
+(      \(verify-before-propagate #t\)) show newline
+(      \(constant-rate-traffic #f\)    ; Advanced, optional) show newline
+(      \(transport tls\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(10. AUDIT INTEGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(OPSEC events should be recorded locally but not shared:) show newline
+() show newline
+() show newline
+(    \(federation-opsec-audit) show newline
+(      \(event weave-query\)           ; Someone asked our weave) show newline
+(      \(peer #${peer-pubkey}\)) show newline
+(      \(response stratum:capable\)    ; What we sent) show newline
+(      \(actual 1667\)                 ; What we have \(local only\)) show newline
+(      \(timestamp 1767686400\)\)) show newline
+() show newline
+(This creates an audit trail of information disclosure without leaking it) show newline
+(further.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(11. CHECKLIST) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Federation OPSEC review:) show newline
+() show newline
+(  * [ ] Weave shared as stratum, not raw value) show newline
+(  * [ ] Response timing has jitter) show newline
+(  * [ ] Sync intervals randomized) show newline
+(  * [ ] Timestamps coarsened appropriately) show newline
+(  * [ ] Hostname not in protocol messages) show newline
+(  * [ ] Vault statistics not exposed) show newline
+(  * [ ] Releases verified before propagation) show newline
+(  * [ ] Transport encrypted \(TLS minimum\)) show newline
+(  * [ ] Personas separated if needed) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(12. REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Memo-010 — Federation Protocol) show newline
+() show newline
+(2. Memo-024 — Network Protocol) show newline
+() show newline
+(3. Memo-046 — Security Architecture) show newline
+() show newline
+(4. Dingledine, R., et al. \(2004\). Tor: The Second-Generation Onion) show newline
+(Router) show newline
+() show newline
+(5. Danezis, G., Diaz, C. \(2008\). A Survey of Anonymous Communication) show newline
+(Channels) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(- 2026-01-13 — Purge OOP: class > stratum, storage-class >) show newline
+(storage-tier) show newline
+() show newline
+(- 2026-01-13 — Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

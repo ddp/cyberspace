@@ -1,0 +1,742 @@
+%!PS-Adobe-3.0
+%%Title: memo-0022-key-ceremony
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 022: Key Ceremony Protocol) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies key ceremony protocols for the Library of) show newline
+(Cyberspace: the ritualized generation, distribution, and activation of) show newline
+(cryptographic keys with witnessed verification. Key ceremonies establish) show newline
+(roots of trust through transparent, auditable, multi-party processes.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Keys are the foundation of all cryptographic trust:) show newline
+() show newline
+(  * Generate wrong) show newline
+(  * Everything built on them fails) show newline
+(  * Store wrong) show newline
+(  * Compromise propagates everywhere) show newline
+(  * Distribute wrong) show newline
+(  * Man-in-the-middle forever) show newline
+(  * No witnesses) show newline
+(  * No one believes you did it right) show newline
+() show newline
+(Key ceremonies solve this through:) show newline
+() show newline
+(  * Witnessed generation) show newline
+(  * Multiple parties verify randomness) show newline
+(  * Split custody) show newline
+(  * No single point of compromise) show newline
+(  * Documented process) show newline
+(  * Reproducible and auditable) show newline
+(  * Air-gapped execution) show newline
+(  * Network isolation during critical operations) show newline
+() show newline
+(The Library requires key ceremonies for:) show newline
+() show newline
+(  * Vault master keys) show newline
+(  * Threshold signing keys) show newline
+(  * Root certificates) show newline
+(  * Recovery keys) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CEREMONY TYPES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Type 1: Single Key Generation) show newline
+(-----------------------------) show newline
+() show newline
+(For individual vault keys:) show newline
+() show newline
+() show newline
+(    +-----------------------------------------+) show newline
+(    |          SINGLE KEY CEREMONY            |) show newline
+(    +-----------------------------------------+) show newline
+(    | Participants: 1 generator, 2+ witnesses |) show newline
+(    | Duration: ~30 minutes                   |) show newline
+(    | Output: 1 keypair                       |) show newline
+(    +-----------------------------------------+) show newline
+() show newline
+() show newline
+(Type 2: Threshold Key Generation) show newline
+(--------------------------------) show newline
+() show newline
+(For M-of-N shared keys \(Memo-007, Memo-008\):) show newline
+() show newline
+() show newline
+(    +-----------------------------------------+) show newline
+(    |        THRESHOLD KEY CEREMONY           |) show newline
+(    +-----------------------------------------+) show newline
+(    | Participants: N shareholders, 2+ witnesses |) show newline
+(    | Duration: ~2 hours                      |) show newline
+(    | Output: N shares, 1 public key          |) show newline
+(    +-----------------------------------------+) show newline
+() show newline
+() show newline
+(Type 3: Root Certificate Ceremony) show newline
+(---------------------------------) show newline
+() show newline
+(For establishing certificate authority:) show newline
+() show newline
+() show newline
+(    +-----------------------------------------+) show newline
+(    |       ROOT CERTIFICATE CEREMONY         |) show newline
+(    +-----------------------------------------+) show newline
+(    | Participants: 3-5 officers, auditor     |) show newline
+(    | Duration: ~4 hours                      |) show newline
+(    | Output: Root cert, subordinate certs    |) show newline
+(    +-----------------------------------------+) show newline
+() show newline
+() show newline
+(Type 4: Recovery Key Ceremony) show newline
+(-----------------------------) show newline
+() show newline
+(For generating disaster recovery keys:) show newline
+() show newline
+() show newline
+(    +-----------------------------------------+) show newline
+(    |        RECOVERY KEY CEREMONY            |) show newline
+(    +-----------------------------------------+) show newline
+(    | Participants: Board members, escrow     |) show newline
+(    | Duration: ~3 hours                      |) show newline
+(    | Output: Recovery shares in escrow       |) show newline
+(    +-----------------------------------------+) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CEREMONY ENVIRONMENT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Physical Requirements) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    SECURE ROOM CHECKLIST:) show newline
+(    [ ] No network connectivity) show newline
+(    [ ] No wireless devices) show newline
+(    [ ] Faraday shielding \(ideal\)) show newline
+(    [ ] Physical access control) show newline
+(    [ ] Video recording \(optional\)) show newline
+(    [ ] Tamper-evident bags for media) show newline
+(    [ ] Multiple witnesses present) show newline
+() show newline
+() show newline
+(Equipment) show newline
+(---------) show newline
+() show newline
+() show newline
+(    \(ceremony-equipment) show newline
+(      \(primary) show newline
+(        \(air-gapped-computer "dedicated ceremony machine"\)) show newline
+(        \(hardware-rng "dice, hardware token, or both"\)) show newline
+(        \(secure-storage "HSM or encrypted USB drives"\)) show newline
+(        \(printer "for paper backup"\)\)) show newline
+(      \(verification) show newline
+(        \(independent-computer "verify signatures"\)) show newline
+(        \(hash-calculator "verify digests"\)\)) show newline
+(      \(documentation) show newline
+(        \(camera "photograph key steps"\)) show newline
+(        \(ceremony-log "paper record"\)) show newline
+(        \(witness-signatures "attestation forms"\)\)\)) show newline
+() show newline
+() show newline
+(Software) show newline
+(--------) show newline
+() show newline
+() show newline
+(    \(ceremony-software) show newline
+(      \(os "minimal Linux, verified hash"\)) show newline
+(      \(key-generator "library keygen or gpg"\)) show newline
+(      \(shamir-split "ssss or library implementation"\)) show newline
+(      \(hash-tool "sha256sum"\)) show newline
+(      \(encryption "age for share protection"\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SINGLE KEY CEREMONY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Pre-Ceremony) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define \(pre-ceremony-checklist ceremony-id\)) show newline
+(      '\(\(verify-room "Secure room confirmed"\)) show newline
+(        \(verify-equipment "All equipment present and functional"\)) show newline
+(        \(verify-participants "All participants identified"\)) show newline
+(        \(verify-software "Software hashes match expected"\)) show newline
+(        \(document-start "Record ceremony start time"\)) show newline
+(        \(collect-devices "All phones/devices collected"\)\)\)) show newline
+() show newline
+() show newline
+(Entropy Generation) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(generate-entropy witnesses\)) show newline
+(      "Generate verifiable randomness") show newline
+(      \(let* \(;; Hardware RNG contribution) show newline
+(             \(hw-entropy \(read-hardware-rng 32\)\)) show newline
+(             ;; Dice rolls - each witness rolls) show newline
+(             \(dice-entropy) show newline
+(              \(apply bytes-append) show newline
+(                     \(map \(lambda \(w\)) show newline
+(                            \(let \(\(rolls \(witness-dice-rolls w 20\)\)\)) show newline
+(                              \(sha256 \(rolls->bytes rolls\)\)\)\)) show newline
+(                          witnesses\)\)\)) show newline
+(             ;; Timestamp contribution) show newline
+(             \(time-entropy \(sha256 \(timestamp->bytes \(current-time\)\)\)\)) show newline
+(             ;; Combine all sources) show newline
+(             \(combined \(bytes-append hw-entropy dice-entropy time-entropy\)\)\)) show newline
+(        ;; Final mixing) show newline
+(        \(sha256 combined\)\)\)) show newline
+(    \(define \(witness-dice-rolls witness count\)) show newline
+(      "Witness rolls dice, records each result") show newline
+(      \(let loop \(\(i 0\) \(rolls '\(\)\)\)) show newline
+(        \(if \(= i count\)) show newline
+(            \(reverse rolls\)) show newline
+(            \(let \(\(roll \(read-dice-roll witness\)\)\)) show newline
+(              \(announce \(format "Witness ~a roll ~a: ~a" witness i roll\)\)) show newline
+(              \(loop \(+ i 1\) \(cons roll rolls\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Key Generation) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(generate-ceremony-key entropy purpose\)) show newline
+(      "Generate key from ceremony entropy") show newline
+(      \(let* \(;; Derive key material) show newline
+(             \(key-material \(hkdf entropy) show newline
+(                                 salt: \(string->bytes purpose\)) show newline
+(                                 info: "ceremony-key") show newline
+(                                 length: 32\)\)) show newline
+(             ;; Generate Ed25519 keypair) show newline
+(             \(keypair \(ed25519-keypair-from-seed key-material\)\)) show newline
+(             \(public-key \(keypair-public keypair\)\)) show newline
+(             \(secret-key \(keypair-secret keypair\)\)\)) show newline
+(        ;; Announce public key) show newline
+(        \(announce "Public key generated:"\)) show newline
+(        \(announce \(bytes->hex public-key\)\)) show newline
+(        ;; Return both \(secret handled carefully\)) show newline
+(        keypair\)\)) show newline
+() show newline
+() show newline
+(Verification) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-key-generation keypair witnesses\)) show newline
+(      "Witnesses verify key was generated correctly") show newline
+(      ;; Sign test message) show newline
+(      \(let* \(\(test-message "ceremony verification test"\)) show newline
+(             \(signature \(ed25519-sign \(keypair-secret keypair\) test-message\)\)\)) show newline
+(        ;; Each witness verifies on independent machine) show newline
+(        \(for-each) show newline
+(          \(lambda \(witness\)) show newline
+(            \(let \(\(verified \(witness-verify witness) show newline
+(                                            \(keypair-public keypair\)) show newline
+(                                            test-message) show newline
+(                                            signature\)\)\)) show newline
+(              \(announce \(format "Witness ~a verification: ~a") show newline
+(                               witness) show newline
+(                               \(if verified "PASS" "FAIL"\)\)\)) show newline
+(              \(unless verified) show newline
+(                \(error "Verification failed - abort ceremony"\)\)\)\)) show newline
+(          witnesses\)\)\)) show newline
+() show newline
+() show newline
+(Key Storage) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define \(store-ceremony-key keypair ceremony-id storage-method\)) show newline
+(      "Securely store generated key") show newline
+(      \(case storage-method) show newline
+(        \(\(hsm\)) show newline
+(         ;; Store in hardware security module) show newline
+(         \(hsm-store ceremony-id \(keypair-secret keypair\)\)\)) show newline
+(        \(\(encrypted-usb\)) show newline
+(         ;; Encrypt to USB drive) show newline
+(         \(let \(\(passphrase \(generate-passphrase 6\)\)\)) show newline
+(           \(announce "Passphrase for USB backup:"\)) show newline
+(           \(announce passphrase\)) show newline
+(           \(write-encrypted-usb ceremony-id) show newline
+(                               \(keypair-secret keypair\)) show newline
+(                               passphrase\)\)\)) show newline
+(        \(\(paper\)) show newline
+(         ;; Print paper backup) show newline
+(         \(print-paper-backup ceremony-id) show newline
+(                            \(keypair-secret keypair\)) show newline
+(                            \(keypair-public keypair\)\)\)) show newline
+(        \(\(shamir\)) show newline
+(         ;; Split into shares \(see threshold ceremony\)) show newline
+(         \(shamir-split-key keypair ceremony-id\)\)\)\)) show newline
+() show newline
+() show newline
+(Ceremony Record) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(create-ceremony-record ceremony-id keypair witnesses\)) show newline
+(      "Create signed ceremony record") show newline
+(      \(let \(\(record) show newline
+(             \(key-ceremony) show newline
+(               \(id ,ceremony-id\)) show newline
+(               \(type single-key\)) show newline
+(               \(timestamp ,\(current-time\)\)) show newline
+(               \(public-key ,\(bytes->hex \(keypair-public keypair\)\)\)) show newline
+(               \(algorithm ed25519\)) show newline
+(               \(witnesses) show newline
+(                ,\(map \(lambda \(w\)) show newline
+(                        \(witness) show newline
+(                          \(name ,\(witness-name w\)\)) show newline
+(                          \(public-key ,\(witness-pubkey w\)\)) show newline
+(                          \(attestation "I witnessed this key ceremony"\)\)\)) show newline
+(                      witnesses\)\)) show newline
+(               \(entropy-sources \(hardware-rng dice timestamps\)\)) show newline
+(               \(storage-method ,\(storage-method\)\)\)\)\)) show newline
+(        ;; Sign by ceremony officer) show newline
+(        \(let \(\(signed \(sign-ceremony-record record\)\)\)) show newline
+(          ;; Counter-sign by witnesses) show newline
+(          \(for-each) show newline
+(            \(lambda \(w\)) show newline
+(              \(witness-countersign signed w\)\)) show newline
+(            witnesses\)) show newline
+(          ;; Store in audit trail) show newline
+(          \(audit-append) show newline
+(            action: `\(key-ceremony ,ceremony-id\)) show newline
+(            motivation: "Key generation ceremony completed"\)) show newline
+(          signed\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THRESHOLD KEY CEREMONY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Share Distribution) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(threshold-ceremony n k ceremony-id\)) show newline
+(      "Generate threshold key with N shares, K required") show newline
+(      ;; Generate master entropy \(same as single key\)) show newline
+(      \(let* \(\(entropy \(generate-entropy witnesses\)\)) show newline
+(             \(keypair \(generate-ceremony-key entropy ceremony-id\)\)) show newline
+(             ;; Split secret into shares) show newline
+(             \(shares \(shamir-split \(keypair-secret keypair\) n k\)\)\)) show newline
+(        ;; Distribute shares to shareholders) show newline
+(        \(for-each) show newline
+(          \(lambda \(i share shareholder\)) show newline
+(            \(announce \(format "Distributing share ~a to ~a" i shareholder\)\)) show newline
+(            \(distribute-share share shareholder ceremony-id\)\)) show newline
+(          \(iota n\)) show newline
+(          shares) show newline
+(          shareholders\)) show newline
+(        ;; Verify reconstruction \(with K volunteers\)) show newline
+(        \(verify-threshold-reconstruction shares k keypair\)) show newline
+(        ;; Create ceremony record) show newline
+(        \(create-threshold-ceremony-record ceremony-id) show newline
+(                                          keypair) show newline
+(                                          n k) show newline
+(                                          shareholders) show newline
+(                                          witnesses\)\)\)) show newline
+() show newline
+() show newline
+(Share Protection) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(distribute-share share shareholder ceremony-id\)) show newline
+(      "Encrypt share for specific shareholder") show newline
+(      \(let* \(;; Encrypt share to shareholder's key) show newline
+(             \(encrypted \(age-encrypt share \(shareholder-pubkey shareholder\)\)\)) show newline
+(             ;; Create share package) show newline
+(             \(package) show newline
+(              `\(share-package) show newline
+(                \(ceremony-id ,ceremony-id\)) show newline
+(                \(shareholder ,\(shareholder-id shareholder\)\)) show newline
+(                \(share-number ,\(share-index share\)\)) show newline
+(                \(encrypted-share ,\(bytes->base64 encrypted\)\)) show newline
+(                \(verification-hash ,\(sha256 share\)\)\)\)\)) show newline
+(        ;; Print or store) show newline
+(        \(deliver-share-package package shareholder\)\)\)) show newline
+() show newline
+() show newline
+(Reconstruction Test) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-threshold-reconstruction shares k expected-keypair\)) show newline
+(      "Verify shares reconstruct correctly") show newline
+(      ;; Select K volunteers) show newline
+(      \(let* \(\(volunteers \(take \(shuffle shareholders\) k\)\)) show newline
+(             \(volunteer-shares \(map get-share-from-volunteer volunteers\)\)) show newline
+(             ;; Reconstruct secret) show newline
+(             \(reconstructed \(shamir-reconstruct volunteer-shares\)\)) show newline
+(             ;; Verify matches) show newline
+(             \(matches \(equal? reconstructed \(keypair-secret expected-keypair\)\)\)\)) show newline
+(        \(announce \(format "Reconstruction test with ~a shareholders: ~a") show newline
+(                         k) show newline
+(                         \(if matches "PASS" "FAIL"\)\)\)) show newline
+(        \(unless matches) show newline
+(          \(error "Reconstruction failed - shares may be corrupted"\)\)) show newline
+(        ;; Securely clear reconstructed secret from memory) show newline
+(        \(secure-clear reconstructed\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ROOT CERTIFICATE CEREMONY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Certificate Generation) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    \(define \(root-certificate-ceremony ceremony-id validity-years\)) show newline
+(      "Generate root certificate authority") show newline
+(      \(let \(;; Generate root keypair) show newline
+(             \(root-keypair \(ceremony-generate-key "root-ca"\)\)) show newline
+(             ;; Create self-signed root certificate) show newline
+(             \(root-cert) show newline
+(              `\(spki-cert) show newline
+(                \(issuer ,\(keypair-public root-keypair\)\)) show newline
+(                \(subject ,\(keypair-public root-keypair\)\)) show newline
+(                \(capability \(action sign-certificates\)\)) show newline
+(                \(validity) show newline
+(                  \(not-before ,\(current-time\)\)) show newline
+(                  \(not-after ,\(+ \(current-time\)) show newline
+(                                \( validity-years 365 24 3600\)\)\)\)) show newline
+(                \(extensions) show newline
+(                  \(basic-constraints \(ca #t\) \(path-length 2\)\)) show newline
+(                  \(key-usage \(cert-sign crl-sign\)\)\)\)\)) show newline
+(             ;; Sign root certificate) show newline
+(             \(signed-root \(sign-cert root-keypair root-cert\)\)\)) show newline
+(        ;; Witnesses verify root certificate) show newline
+(        \(verify-root-certificate signed-root witnesses\)) show newline
+(        ;; Generate subordinate CA certificates) show newline
+(        \(let \(\(subordinates \(generate-subordinate-certs root-keypair\)\)\)) show newline
+(          ;; Create ceremony record) show newline
+(          \(create-root-ceremony-record ceremony-id) show newline
+(                                      signed-root) show newline
+(                                      subordinates) show newline
+(                                      witnesses\)\)\)\)) show newline
+() show newline
+() show newline
+(Trust Anchor Publication) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(define \(publish-trust-anchor root-cert ceremony-record\)) show newline
+(      "Publish root certificate as trust anchor") show newline
+(      ;; Multiple publication channels) show newline
+(      \(publish-to-vault root-cert ceremony-record\)) show newline
+(      \(publish-to-website root-cert ceremony-record\)) show newline
+(      \(publish-to-transparency-log root-cert ceremony-record\)) show newline
+(      ;; Generate human-readable fingerprint) show newline
+(      \(let \(\(fingerprint \(cert-fingerprint root-cert\)\)\)) show newline
+(        \(announce "Root certificate fingerprint:"\)) show newline
+(        \(announce \(fingerprint->words fingerprint\)\)) show newline
+(        \(announce \(fingerprint->hex fingerprint\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(RECOVERY KEY CEREMONY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Escrow Protocol) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(recovery-key-ceremony n k escrow-agents\)) show newline
+(      "Generate recovery keys with escrow") show newline
+(      \(let* \(;; Generate recovery keypair) show newline
+(             \(recovery-keypair \(ceremony-generate-key "recovery"\)\)) show newline
+(             ;; Split into shares) show newline
+(             \(shares \(shamir-split \(keypair-secret recovery-keypair\) n k\)\)) show newline
+(             ;; Encrypt each share to escrow agent) show newline
+(             \(escrowed-shares) show newline
+(              \(map \(lambda \(share agent\)) show newline
+(                     \(escrow-share share agent\)\)) show newline
+(                   shares) show newline
+(                   escrow-agents\)\)\)) show newline
+(        ;; Store escrow metadata \(not shares\)) show newline
+(        \(create-escrow-record recovery-keypair escrowed-shares\)) show newline
+(        ;; Test recovery \(with k agents\)) show newline
+(        \(test-recovery-process escrowed-shares k recovery-keypair\)\)\)) show newline
+(    \(define \(escrow-share share agent\)) show newline
+(      "Encrypt share for escrow agent") show newline
+(      `\(escrowed-share) show newline
+(        \(agent ,\(agent-id agent\)\)) show newline
+(        \(encrypted ,\(age-encrypt share \(agent-pubkey agent\)\)\)) show newline
+(        \(verification ,\(sha256 share\)\)) show newline
+(        \(escrow-date ,\(current-time\)\)\)\)) show newline
+() show newline
+() show newline
+(Recovery Execution) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(execute-recovery escrowed-shares agents\)) show newline
+(      "Execute recovery using escrowed shares") show newline
+(      ;; Verify quorum present) show newline
+(      \(unless \(>= \(length agents\) recovery-threshold\)) show newline
+(        \(error "Insufficient agents for recovery"\)\)) show newline
+(      ;; Each agent decrypts their share) show newline
+(      \(let* \(\(decrypted-shares) show newline
+(              \(map \(lambda \(agent escrowed\)) show newline
+(                     \(agent-decrypt-share agent escrowed\)\)) show newline
+(                   agents) show newline
+(                   \(filter-by-agent escrowed-shares agents\)\)\)) show newline
+(             ;; Verify share hashes) show newline
+(             \(_ \(verify-share-hashes decrypted-shares escrowed-shares\)\)) show newline
+(             ;; Reconstruct) show newline
+(             \(recovered-secret \(shamir-reconstruct decrypted-shares\)\)\)) show newline
+(        ;; Audit recovery event) show newline
+(        \(audit-append) show newline
+(          action: '\(recovery-executed\)) show newline
+(          motivation: "Disaster recovery initiated") show newline
+(          priority: 'critical\)) show newline
+(        recovered-secret\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CEREMONY AUDIT TRAIL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Ceremony Log Format) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(ceremony-log) show newline
+(      \(ceremony-id "KC-2026-001"\)) show newline
+(      \(type root-certificate\)) show newline
+(      \(date "2026-01-07"\)) show newline
+(      \(location "Secure facility, Building A, Room 101"\)) show newline
+(      \(participants) show newline
+(        \(officer "Alice Smith" \(role ceremony-officer\)\)) show newline
+(        \(officer "Bob Jones" \(role key-custodian\)\)) show newline
+(        \(witness "Carol White" \(role witness\)\)) show newline
+(        \(witness "David Brown" \(role witness\)\)) show newline
+(        \(auditor "Eve Green" \(role auditor\)\)\)) show newline
+(      \(timeline) show newline
+(        \(event "09:00" "Room secured, equipment verified"\)) show newline
+(        \(event "09:15" "Participants identified, devices collected"\)) show newline
+(        \(event "09:30" "Software verification complete"\)) show newline
+(        \(event "09:45" "Entropy generation started"\)) show newline
+(        \(event "10:00" "Dice rolls complete, 100 rolls recorded"\)) show newline
+(        \(event "10:15" "Key generation complete"\)) show newline
+(        \(event "10:30" "Share distribution complete"\)) show newline
+(        \(event "10:45" "Reconstruction test PASSED"\)) show newline
+(        \(event "11:00" "Ceremony concluded"\)\)) show newline
+(      \(artifacts) show newline
+(        \(public-key "sha256:abc123..."\)) show newline
+(        \(ceremony-record "sha256:def456..."\)) show newline
+(        \(video-hash "sha256:789xyz..."\)\)) show newline
+(      \(attestations) show newline
+(        \(signed-by "Alice Smith" "sha256:sig1..."\)) show newline
+(        \(signed-by "Bob Jones" "sha256:sig2..."\)) show newline
+(        \(signed-by "Carol White" "sha256:sig3..."\)) show newline
+(        \(signed-by "David Brown" "sha256:sig4..."\)) show newline
+(        \(signed-by "Eve Green" "sha256:sig5..."\)\)\)) show newline
+() show newline
+() show newline
+(Soup Integration) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(soup-object) show newline
+(      \(name "ceremony/KC-2026-001"\)) show newline
+(      \(type key-ceremony\)) show newline
+(      \(size "4.2KB"\)) show newline
+(      \(crypto \(ed25519 sha256 "ceremony-hash..."\)\)) show newline
+(      \(ceremony-type root-certificate\)) show newline
+(      \(participants 5\)) show newline
+(      \(date "2026-01-07"\)) show newline
+(      \(status completed\)) show newline
+(      \(public-key "sha256:abc123..."\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Entropy Quality) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; Multiple entropy sources required) show newline
+(    \(define \(verify-entropy-quality entropy-sources\)) show newline
+(      \(unless \(>= \(length entropy-sources\) 3\)) show newline
+(        \(error "Insufficient entropy sources"\)\)) show newline
+(      \(unless \(member 'hardware-rng entropy-sources\)) show newline
+(        \(warn "No hardware RNG - ceremony quality reduced"\)\)) show newline
+(      \(unless \(member 'dice entropy-sources\)) show newline
+(        \(warn "No dice rolls - verifiability reduced"\)\)\)) show newline
+() show newline
+() show newline
+(Side Channel Protection) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Constant-time operations during key generation) show newline
+(    \(define \(secure-key-operations\)) show newline
+(      '\(\(constant-time-comparison "for all secret comparisons"\)) show newline
+(        \(memory-clearing "zero secrets after use"\)) show newline
+(        \(no-branching-on-secrets "avoid timing leaks"\)) show newline
+(        \(power-analysis-resistance "for HSM operations"\)\)\)) show newline
+() show newline
+() show newline
+(Witness Collusion) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Mitigations for witness collusion) show newline
+(    \(define witness-requirements) show newline
+(      '\(\(minimum-witnesses 2\)) show newline
+(        \(independent-verification "each witness verifies independently"\)) show newline
+(        \(no-communication "witnesses cannot confer during ceremony"\)) show newline
+(        \(video-recording "optional but recommended"\)) show newline
+(        \(external-auditor "for high-value ceremonies"\)\)\)) show newline
+() show newline
+() show newline
+(Ceremony Compromise Recovery) show newline
+(----------------------------) show newline
+() show newline
+() show newline
+(    \(define \(ceremony-compromise-response ceremony-id\)) show newline
+(      "Response if ceremony is compromised") show newline
+(      \(let \(\(cert \(get-ceremony-certificate ceremony-id\)\)\)) show newline
+(        ;; Immediate revocation) show newline
+(        \(emergency-revoke cert "Ceremony compromise suspected"\)) show newline
+(        ;; Notify all relying parties) show newline
+(        \(broadcast-revocation cert\)) show newline
+(        ;; Schedule new ceremony) show newline
+(        \(schedule-replacement-ceremony ceremony-id\)) show newline
+(        ;; Forensic preservation) show newline
+(        \(preserve-ceremony-artifacts ceremony-id\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Ceremony Script) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(run-ceremony type\)) show newline
+(      "Main ceremony execution script") show newline
+(      \(let \(\(ceremony-id \(generate-ceremony-id\)\)\)) show newline
+(        \(display-banner ceremony-id type\)) show newline
+(        ;; Pre-ceremony) show newline
+(        \(run-checklist \(pre-ceremony-checklist ceremony-id\)\)) show newline
+(        ;; Main ceremony) show newline
+(        \(case type) show newline
+(          \(\(single-key\)) show newline
+(           \(single-key-ceremony ceremony-id\)\)) show newline
+(          \(\(threshold\)) show newline
+(           \(threshold-ceremony \(prompt "N?"\) \(prompt "K?"\) ceremony-id\)\)) show newline
+(          \(\(root-cert\)) show newline
+(           \(root-certificate-ceremony ceremony-id \(prompt "Validity years?"\)\)\)) show newline
+(          \(\(recovery\)) show newline
+(           \(recovery-key-ceremony \(prompt "N?"\) \(prompt "K?"\)) show newline
+(                                  \(collect-escrow-agents\)\)\)\)) show newline
+(        ;; Post-ceremony) show newline
+(        \(run-checklist \(post-ceremony-checklist ceremony-id\)\)) show newline
+(        \(announce "Ceremony complete."\)) show newline
+(        ceremony-id\)\)) show newline
+() show newline
+() show newline
+(Offline Tool) show newline
+(------------) show newline
+() show newline
+() show newline
+(    # Ceremony tool - runs air-gapped) show newline
+(    $ seal-ceremony --type threshold --shares 5 --threshold 3) show newline
+(    Library of Cyberspace - Key Ceremony Tool) show newline
+(    =========================================) show newline
+(    Ceremony ID: KC-2026-001) show newline
+(    Type: Threshold \(5-of-3\)) show newline
+(    Pre-ceremony checklist:) show newline
+(    [x] Network disabled) show newline
+(    [x] Wireless disabled) show newline
+(    [x] Software verified) show newline
+(    [x] Witnesses present \(3\)) show newline
+(    Generating entropy...) show newline
+(      Hardware RNG: 32 bytes collected) show newline
+(      Dice rolls: Witness 1, roll 1: _) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [DNSSEC Root Key Ceremony]\(https://www.iana.org/dnssec/ceremonies\) 2.) show newline
+([RFC 2693 - SPKI Certificate) show newline
+(Theory]\(https://tools.ietf.org/html/rfc2693\) 3. [Memo-007: Threshold) show newline
+(Signature Governance]\(memo-007-threshold-governance.html\) 4. [Memo-008:) show newline
+(Shamir Secret Sharing]\(memo-008-shamir-sharing.html\) 5. [Memo-021:) show newline
+(Capability Delegation]\(memo-021-capability-delegation.html\) 6. [Key) show newline
+(Ceremony Best Practices - NIST SP) show newline
+(800-57]\(https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

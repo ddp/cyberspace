@@ -1,0 +1,414 @@
+%!PS-Adobe-3.0
+%%Title: memo-0008-shamir-sharing
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 008: Shamir Secret Sharing) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies Shamir's Secret Sharing implementation for the) show newline
+(Library of Cyberspace, enabling K-of-N threshold splitting and) show newline
+(reconstruction of cryptographic keys and other secrets.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Private keys are single points of failure:) show newline
+() show newline
+(  * Key loss: Funds locked forever) show newline
+(  * Key theft: Complete compromise) show newline
+(  * Key escrow: Trust a third party?) show newline
+() show newline
+(Shamir's Secret Sharing provides:) show newline
+() show newline
+(1. Threshold recovery: Any K of N shares reconstruct 2.) show newline
+(Information-theoretic security: K-1 shares reveal nothing 3. Distributed) show newline
+(custody: No single holder 4. Backup flexibility: Geographic distribution) show newline
+() show newline
+(From Adi Shamir's 1979 paper "How to Share a Secret":) show newline
+() show newline
+() show newline
+(    "Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing.") show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Share Record) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <shamir-share>) show newline
+(      \(make-shamir-share id threshold x y\)) show newline
+(      shamir-share?) show newline
+(      \(id share-id\)            ; Symbol: share-1, share-2, etc.) show newline
+(      \(threshold share-threshold\)  ; K value) show newline
+(      \(x share-x\)              ; X-coordinate \(1 to N\)) show newline
+(      \(y share-y\)\)             ; Y-coordinate \(blob, same size as secret\)) show newline
+() show newline
+() show newline
+(Splitting a Secret) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(shamir-split secret #!key \(threshold 3\) \(total 5\)\)) show newline
+() show newline
+(Parameters: - secret - Blob to split \(any size, typically 32 or 64) show newline
+(bytes\) - threshold - Minimum shares to reconstruct \(K\) - total - Total) show newline
+(shares to create \(N\)) show newline
+() show newline
+(Returns: List of N shamir-share records) show newline
+() show newline
+(Algorithm: 1. For each byte of secret: - Generate K-1 random) show newline
+(coefficients - Coefficient[0] = secret byte - Polynomial: f\(x\) = a₀ +) show newline
+(a₁x + a₂x² + ... + aₖ₋₁xᵏ⁻¹ 2. Evaluate polynomial at x) show newline
+(= 1, 2, ..., N 3. Package \(x, f\(x\)\) pairs as shares) show newline
+() show newline
+() show newline
+(Reconstructing a Secret) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(shamir-reconstruct shares\)) show newline
+() show newline
+(Parameters: - shares - List of at least K shamir-share records) show newline
+() show newline
+(Returns: Reconstructed secret blob) show newline
+() show newline
+(Algorithm: 1. Take first K shares 2. For each byte position: - Use) show newline
+(Lagrange interpolation - Compute f\(0\) = secret byte 3. Assemble) show newline
+(reconstructed secret) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(GALOIS FIELD ARITHMETIC) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Operations performed in GF\(2⁸\) with irreducible polynomial x⁸ + x⁴) show newline
+(+ x³ + x + 1:) show newline
+() show newline
+() show newline
+(    \(define gf256-primitive #x11b\)  ; x^8 + x^4 + x^3 + x + 1) show newline
+(    \(define \(gf256-mul a b\)) show newline
+(      "Multiply in GF\(2^8\)") show newline
+(      ...\)) show newline
+(    \(define \(gf256-inv a\)) show newline
+(      "Multiplicative inverse in GF\(2^8\)") show newline
+(      ...\)) show newline
+(    \(define \(gf256-poly-eval coeffs x\)) show newline
+(      "Evaluate polynomial at x using Horner's method") show newline
+(      ...\)) show newline
+() show newline
+(GF\(2⁸\) ensures: - All operations stay within byte range - No overflow) show newline
+(issues - Proper field properties \(every non-zero element has inverse\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(USAGE EXAMPLES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Basic Secret Splitting) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    \(import crypto-ffi\)) show newline
+(    \(sodium-init\)) show newline
+(    ;; Create a 32-byte secret) show newline
+(    \(define secret \(make-blob 32\)\)) show newline
+(    ;; ... fill with secret data ...) show newline
+(    ;; Split into 5 shares, threshold 3) show newline
+(    \(define shares \(shamir-split secret threshold: 3 total: 5\)\)) show newline
+(    ;; Distribute shares to custodians) show newline
+(    \(print "Created " \(length shares\) " shares"\)) show newline
+(    \(print "Threshold: " \(share-threshold \(car shares\)\)\)) show newline
+() show newline
+() show newline
+(Reconstruction from K Shares) show newline
+(----------------------------) show newline
+() show newline
+() show newline
+(    ;; Collect any 3 shares) show newline
+(    \(define collected \(list share-1 share-3 share-5\)\)) show newline
+(    ;; Reconstruct) show newline
+(    \(define reconstructed \(shamir-reconstruct collected\)\)) show newline
+(    ;; Verify) show newline
+(    \(if \(equal? \(blob->hex secret\) \(blob->hex reconstructed\)\)) show newline
+(        \(print "✓ Reconstruction successful!"\)) show newline
+(        \(print "✗ Reconstruction failed"\)\)) show newline
+() show newline
+() show newline
+(Ed25519 Key Backup) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; Generate keypair) show newline
+(    \(define keypair \(ed25519-keypair\)\)) show newline
+(    \(define public-key \(car keypair\)\)) show newline
+(    \(define private-key \(cadr keypair\)\)) show newline
+(    ;; Split private key \(5-of-7 for production\)) show newline
+(    \(define key-shares \(shamir-split private-key threshold: 5 total: 7\)\)) show newline
+(    ;; Later: reconstruct and verify) show newline
+(    \(define recovered-key \(shamir-reconstruct \(take key-shares 5\)\)\)) show newline
+(    ;; Test: sign with recovered key) show newline
+(    \(define message "Test message"\)) show newline
+(    \(define signature \(ed25519-sign recovered-key message\)\)) show newline
+(    \(define valid? \(ed25519-verify public-key message signature\)\)) show newline
+(    \(if valid?) show newline
+(        \(print "✓ Recovered key produces valid signatures!"\)) show newline
+(        \(print "✗ Key recovery failed"\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY PROPERTIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Information-Theoretic Security) show newline
+(------------------------------) show newline
+() show newline
+(With K-1 shares: - No information about secret is revealed - Not) show newline
+(computationally hard - literally impossible - Even infinite compute) show newline
+(power cannot break) show newline
+() show newline
+(This is because K-1 points determine infinitely many degree-\(K-1\)) show newline
+(polynomials.) show newline
+() show newline
+() show newline
+(Share Independence) show newline
+(------------------) show newline
+() show newline
+(Each share is uniformly random: - Looks like random bytes - No) show newline
+(correlation between shares - Safe to store on untrusted media) show newline
+() show newline
+() show newline
+(Threshold Guarantee) show newline
+(-------------------) show newline
+() show newline
+(Exactly K shares required: - K shares: reconstruction succeeds - K-1) show newline
+(shares: no information - K+1 shares: still works \(overdetermined\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THRESHOLD SELECTION GUIDELINES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(  Use Case            Threshold   Total                  Rationale   ) show newline
+(  Personal backup     2-of-3      Simple recovery        ) show newline
+(  Team key            3-of-5      Majority required      ) show newline
+(  Organization root   5-of-7      Supermajority          ) show newline
+(  Hardware ceremony   7-of-11     High assurance         ) show newline
+(  Paranoid            11-of-15    Maximum distribution   ) show newline
+() show newline
+() show newline
+(Considerations) show newline
+(--------------) show newline
+() show newline
+(  * Availability: Higher K = harder to recover) show newline
+(  * Security: Lower K = easier to collude) show newline
+(  * Geography: Consider time zones for ceremonies) show newline
+(  * Succession: What if custodians unavailable?) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SHARE DISTRIBUTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Physical Security) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    Share 1: Safe deposit box \(Bank A\)) show newline
+(    Share 2: Home safe) show newline
+(    Share 3: Attorney's vault) show newline
+(    Share 4: Trusted family member) show newline
+(    Share 5: Offshore location) show newline
+() show newline
+() show newline
+(Digital Storage) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    Share 1: Hardware security module) show newline
+(    Share 2: Air-gapped laptop) show newline
+(    Share 3: Encrypted USB \(passphrase protected\)) show newline
+(    Share 4: Paper printout \(secure location\)) show newline
+(    Share 5: Tattoo \(not recommended\)) show newline
+() show newline
+() show newline
+(Geographic Distribution) show newline
+(-----------------------) show newline
+() show newline
+(  * Different jurisdictions) show newline
+(  * Different failure domains) show newline
+(  * Different time zones \(for ceremonies\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VERIFICATION WITHOUT RECONSTRUCTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(For periodic verification that shares are intact:) show newline
+() show newline
+() show newline
+(    ;; Each custodian verifies their share) show newline
+(    \(define \(verify-share share expected-id expected-threshold\)) show newline
+(      \(and \(eq? \(share-id share\) expected-id\)) show newline
+(           \(= \(share-threshold share\) expected-threshold\)) show newline
+(           \(= \(blob-size \(share-y share\)\) expected-length\)\)\)) show newline
+() show newline
+(Full reconstruction should be rare: - Key rotation ceremonies -) show newline
+(Emergency recovery - Succession events) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRATION WITH THRESHOLD SIGNATURES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Two complementary approaches:) show newline
+() show newline
+() show newline
+(Shamir for Key Backup \(This Memo\)) show newline
+(---------------------------------) show newline
+() show newline
+() show newline
+(    Private key > split > N shares) show newline
+(    Recovery: K shares > reconstruct > use key) show newline
+() show newline
+() show newline
+(Multi-Signature for Governance \(Memo-007\)) show newline
+(-----------------------------------------) show newline
+() show newline
+() show newline
+(    N parties > N keys > N signatures) show newline
+(    Verification: count valid ≥ K) show newline
+() show newline
+(Use Shamir when: - Backing up existing keys - Emergency recovery) show newline
+(scenarios - Single key must be reconstructable) show newline
+() show newline
+(Use Multi-Sig when: - Ongoing governance decisions - Need audit trail of) show newline
+(who signed - Asynchronous authorization) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Threats Mitigated) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(  Threat              Mitigation                            ) show newline
+(  Key loss            Any K shares recover                  ) show newline
+(  Single compromise   Need K colluding                      ) show newline
+(  Insider attack      Distribute to independent parties     ) show newline
+(  Coercion            Geographic/jurisdictional diversity   ) show newline
+() show newline
+() show newline
+(Threats Remaining) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(  Threat                                Notes                     ) show newline
+(  K colluding parties                   Fundamental limitation    ) show newline
+(  Poor share storage                    Operational security      ) show newline
+(  Side channels during reconstruction   Use secure environments   ) show newline
+(  Weak random generation                Use libsodium             ) show newline
+() show newline
+() show newline
+(Operational Security) show newline
+(--------------------) show newline
+() show newline
+(1. Generation: Air-gapped machine, secure random 2. Distribution:) show newline
+(Out-of-band verification 3. Storage: Encrypted, physically secure 4.) show newline
+(Reconstruction: Secure room, witnesses 5. Destruction: Secure wipe after) show newline
+(use) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Dependencies) show newline
+(------------) show newline
+() show newline
+(  * libsodium) show newline
+(  * Secure random number generation - srfi-4 - u8vectors for byte manipulation) show newline
+() show newline
+() show newline
+(Performance) show newline
+(-----------) show newline
+() show newline
+(  * Split: O\(N × K × secretlength\)) show newline
+(  * Reconstruct: O\(K² × secretlength\)) show newline
+(  * GF\(2⁸\) operations: O\(1\) per byte) show newline
+() show newline
+() show newline
+(Limitations) show newline
+(-----------) show newline
+() show newline
+(  * Secret size: Arbitrary \(but typically ≤ 64 bytes\)) show newline
+(  * Share count: Practical limit ~255 \(byte x-coordinates\)) show newline
+(  * Threshold: 2 ≤ K ≤ N) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Shamir, A. \(1979\). How to share a secret. Communications of the ACM.) show newline
+(2. Blakley, G. R. \(1979\). Safeguarding cryptographic keys. 3. Beimel, A.) show newline
+(\(2011\). Secret-Sharing Schemes: A Survey. 4. NIST SP 800-57.) show newline
+(Recommendation for Key Management.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

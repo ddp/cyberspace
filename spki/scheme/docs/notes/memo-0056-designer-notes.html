@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Memo 056: Designer Notes</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 056: Designer Notes</h1>
+<dl class="metadata">
+  <dt>Status</dt><dd>Draft</dd>
+  <dt>Date</dt><dd>January 2026</dd>
+  <dt>Author</dt><dd>Derrell Piper &lt;ddp@archlinux.us&gt;</dd>
+</dl>
+<hr>
+<section>
+<h2>Notice</h2>
+<p>This is a living document, not a specification. It records the intellectual heritage, design philosophy, and collaborative process behind Cyberspace.</p>
+</section>
+<section>
+<h2>1. Intellectual Heritage</h2>
+<h3>1.1 MIT Athena and DSSA</h3>
+<p>Cyberspace traces its lineage to MIT's Athena project and the Distributed System Security Architecture (DSSA) research that produced SPKI.</p>
+<p>Athena introduced Kerberos, distributed authentication, and the concept of a unified computing environment across heterogeneous systems. DSSA, led by Rivest, Lampson, and Ellison, gave us SPKI - capability-based authorization through certificate chains.</p>
+<p>These ideas were absorbed during the same lamport epoch as R4RS Scheme (1991) and SDSI (1996), alongside the practical education of Boston traffic negotiation - both exercises in asserting authority without central coordination.</p>
+<h3>1.2 Why Scheme</h3>
+<p>Scheme was chosen not for nostalgia but for precision. Homoiconicity makes S-expressions natural for both code and data - certificates, audit records, and configuration are all readable by the same parser that reads the implementation.</p>
+<p>The language that Abelson and Sussman used to teach computational thinking at MIT is the same language used to implement the security architecture that MIT research defined. Full circle.</p>
+</section>
+<section>
+<h2>2. Collaborative Design</h2>
+<p>Cyberspace was designed in collaboration with Claude (Anthropic), an AI assistant. This collaboration is documented in Memo-056.</p>
+<p>The interaction model: human provides vision and constraints, AI provides implementation and exploration. Neither could have built this alone.</p>
+</section>
+<section>
+<h2>3. Target Environments</h2>
+<p>Primary targets:</p>
+<ul>
+<li>macOS (Apple Silicon) - Cyberspace.app native shell</li>
+<li>Linux (x86_64) - including MIT Athena dialup</li>
+<li>Any POSIX system with CHICKEN Scheme 5.x</li>
+</ul>
+<p>The system should feel native on a Mac, work cleanly on Athena, and build anywhere Scheme runs.</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<p>- 2026-01-15 — Initial draft, heritage notes</p>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

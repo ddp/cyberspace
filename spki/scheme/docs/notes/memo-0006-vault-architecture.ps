@@ -1,0 +1,599 @@
+%!PS-Adobe-3.0
+%%Title: memo-0006-vault-architecture
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 006: Vault System Architecture) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies the Vault system for the Library of Cyberspace:) show newline
+(cryptographically sealed version control with SPKI authorization,) show newline
+(progressive metadata, archival support, and integrated audit trails.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Git is powerful but lacks:) show newline
+() show newline
+(1. Cryptographic sealing - GPG signing is optional and awkward 2.) show newline
+(Authorization model - Anyone with access can commit 3. Archival features) show newline
+(- No first-class backup/restore 4. Audit integration - History is) show newline
+(mutable) show newline
+() show newline
+(The Vault wraps Git with:) show newline
+() show newline
+(  * seal- commands that cryptographically sign operations) show newline
+(  * SPKI certificates for authorization) show newline
+(  * Three archive formats for different use cases) show newline
+(  * Integrated audit trail for non-repudiation) show newline
+() show newline
+() show newline
+(                        +--------------------------------+) show newline
+(                        |         CYBERSPACE VAULT       |) show newline
+(                        +--------------------------------+) show newline
+(                        |  seal-commit    seal-release   |) show newline
+(                        |  seal-archive   seal-publish   |) show newline
+(                        |  seal-verify    seal-subscribe |) show newline
+(                        +--------------------------------+) show newline
+(                        |         Audit Trail            |) show newline
+(                        +--------------------------------+) show newline
+(                        |         SPKI Certs             |) show newline
+(                        +--------------------------------+) show newline
+(                        |            Git                 |) show newline
+(                        +--------------------------------+) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CORE OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(seal-commit) show newline
+(-----------) show newline
+() show newline
+(Stage and commit changes in one operation.) show newline
+() show newline
+() show newline
+(    \(seal-commit message) show newline
+(      #!key files catalog subjects keywords description preserve\)) show newline
+() show newline
+(Parameters: - message - Commit message \(required\) - files - Specific) show newline
+(files to stage \(optional\) - catalog - Enable catalog metadata - subjects) show newline
+(- Subject headings - keywords - Search keywords - description - Extended) show newline
+(description - preserve - Enable preservation metadata) show newline
+() show newline
+(Process: 1. Stage specified files \(or all modified\) 2. Create git commit) show newline
+(3. Save metadata \(if catalog or preserve\) 4. Record in audit trail \(if) show newline
+(signing key configured\)) show newline
+() show newline
+(Example:) show newline
+() show newline
+() show newline
+(    \(seal-commit "Add authentication module") show newline
+(      files: '\("auth.scm" "auth-test.scm"\)) show newline
+(      catalog: #t) show newline
+(      subjects: '\("security" "authentication"\)) show newline
+(      keywords: '\("login" "oauth"\)\)) show newline
+() show newline
+() show newline
+(seal-update) show newline
+(-----------) show newline
+() show newline
+(Pull latest changes from remote.) show newline
+() show newline
+() show newline
+(    \(seal-update #!key branch\)) show newline
+() show newline
+(Like svn update - fetches and fast-forwards.) show newline
+() show newline
+() show newline
+(seal-undo) show newline
+(---------) show newline
+() show newline
+(Undo changes.) show newline
+() show newline
+() show newline
+(    \(seal-undo #!key file hard\)) show newline
+() show newline
+(  * file) show newline
+(  * Restore specific file - hard) show newline
+(  * Discard all uncommitted changes) show newline
+() show newline
+() show newline
+(seal-history) show newline
+(------------) show newline
+() show newline
+(Show commit history.) show newline
+() show newline
+() show newline
+(    \(seal-history #!key count\)) show newline
+() show newline
+(Displays decorated graph log.) show newline
+() show newline
+() show newline
+(seal-branch / seal-merge) show newline
+(------------------------) show newline
+() show newline
+(Branch and merge operations.) show newline
+() show newline
+() show newline
+(    \(seal-branch "feature-auth" #!key from\)) show newline
+(    \(seal-merge "feature-auth" #!key strategy\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VERSION MANAGEMENT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(seal-release) show newline
+(------------) show newline
+() show newline
+(Create cryptographically sealed release.) show newline
+() show newline
+() show newline
+(    \(seal-release version #!key message migrate-from\)) show newline
+() show newline
+(Parameters: - version - Semantic version \(X.Y.Z required\) - message -) show newline
+(Release notes - migrate-from - Previous version for migration tracking) show newline
+() show newline
+(Process: 1. Validate semantic version format 2. Get current commit hash) show newline
+(3. Create annotated git tag 4. Sign with SPKI \(if configured\) 5. Create) show newline
+(migration marker \(if migrate-from specified\)) show newline
+() show newline
+(Signature Storage:) show newline
+() show newline
+() show newline
+(    ;; .vault/releases/1.0.0.sig) show newline
+(    \(signature) show newline
+(      \(version "1.0.0"\)) show newline
+(      \(hash "abc123..."\)) show newline
+(      \(manifest "\(release \\"1.0.0\\" \\"abc123\\" 1767685100\)"\)) show newline
+(      \(signature #${ed25519-signature}\)\)) show newline
+() show newline
+() show newline
+(seal-verify) show newline
+(-----------) show newline
+() show newline
+(Verify release signature.) show newline
+() show newline
+() show newline
+(    \(seal-verify version #!key verify-key\)) show newline
+() show newline
+(Process: 1. Load signature file 2. Recompute manifest hash 3. Verify) show newline
+(Ed25519 signature) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ARCHIVAL SYSTEM) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(seal-archive) show newline
+(------------) show newline
+() show newline
+(Create sealed archive of a version.) show newline
+() show newline
+() show newline
+(    \(seal-archive version #!key format output\)) show newline
+() show newline
+(Formats:) show newline
+() show newline
+(#### Tarball \(default\)) show newline
+() show newline
+() show newline
+(    \(seal-archive "1.0.0" format: 'tarball\)) show newline
+() show newline
+(  * Standard gzipped tarball) show newline
+(  * No history included) show newline
+(  * Smallest size) show newline
+() show newline
+(#### Git Bundle) show newline
+() show newline
+() show newline
+(    \(seal-archive "1.0.0" format: 'bundle\)) show newline
+() show newline
+(  * Full git history) show newline
+(  * Can clone directly) show newline
+(  * Medium size) show newline
+() show newline
+(#### Cryptographic \(legacy\)) show newline
+() show newline
+() show newline
+(    \(seal-archive "1.0.0" format: 'cryptographic\)) show newline
+() show newline
+(  * Tarball + SHA-512 hash + Ed25519 signature) show newline
+(  * Tamper-evident) show newline
+(  * Manifest for verification) show newline
+() show newline
+(#### Zstd+Age \(preferred\)) show newline
+() show newline
+() show newline
+(    \(seal-archive "1.0.0" format: 'zstd-age\)) show newline
+() show newline
+(  * Zstd compression \(faster, better ratio than gzip\)) show newline
+(  * Age encryption \(X25519/Ed25519 compatible\)) show newline
+(  * SHA-512 hash + Ed25519 signature) show newline
+(  * Encrypted at rest) show newline
+(  * See Memo-018: Sealed Archive Format for full specification) show newline
+() show newline
+(Cryptographic Archive Structure:) show newline
+() show newline
+() show newline
+(    vault-1.0.0.archive        # Manifest) show newline
+(    vault-1.0.0.archive.tar.gz # Tarball \(cryptographic\)) show newline
+() show newline
+(Zstd+Age Archive Structure:) show newline
+() show newline
+() show newline
+(    vault-1.0.0.archive            # Manifest) show newline
+(    vault-1.0.0.archive.tar.zst.age # Encrypted archive) show newline
+() show newline
+(Manifest \(cryptographic\):) show newline
+() show newline
+() show newline
+(    \(sealed-archive) show newline
+(      \(version "1.0.0"\)) show newline
+(      \(format cryptographic\)) show newline
+(      \(tarball "vault-1.0.0.archive.tar.gz"\)) show newline
+(      \(hash "sha512:..."\)) show newline
+(      \(signature "ed25519:..."\)\)) show newline
+() show newline
+(Manifest \(zstd-age\):) show newline
+() show newline
+() show newline
+(    \(sealed-archive) show newline
+(      \(version "1.0.0"\)) show newline
+(      \(format zstd-age\)) show newline
+(      \(archive "vault-1.0.0.archive.tar.zst.age"\)) show newline
+(      \(compression zstd\)) show newline
+(      \(encryption age\)) show newline
+(      \(recipients \("age1..."\)\)) show newline
+(      \(hash "sha512:..."\)) show newline
+(      \(signature "ed25519:..."\)\)) show newline
+() show newline
+() show newline
+(seal-restore) show newline
+(------------) show newline
+() show newline
+(Restore from sealed archive.) show newline
+() show newline
+() show newline
+(    \(seal-restore archive #!key verify-key target identity\)) show newline
+() show newline
+(Parameters: - verify-key - SPKI public key for signature verification -) show newline
+(target - Extraction directory - identity - Age identity file for) show newline
+(decryption \(zstd-age format\)) show newline
+() show newline
+(Process: 1. Read manifest 2. Verify hash \(archive integrity\) 3. Verify) show newline
+(signature \(if key provided\) 4. Decrypt \(zstd-age only, requires) show newline
+(identity\) 5. Extract to target directory) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REPLICATION LAYER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(See Memo-001 for complete specification.) show newline
+() show newline
+() show newline
+(seal-publish) show newline
+(------------) show newline
+() show newline
+(Publish release to remote.) show newline
+() show newline
+() show newline
+(    \(seal-publish version #!key remote archive-format message\)) show newline
+() show newline
+(Supports: - Git remotes \(push tags\) - HTTP endpoints \(POST\) - Filesystem) show newline
+(paths \(copy\)) show newline
+() show newline
+() show newline
+(seal-subscribe) show newline
+(--------------) show newline
+() show newline
+(Subscribe to releases from remote.) show newline
+() show newline
+() show newline
+(    \(seal-subscribe remote #!key target verify-key\)) show newline
+() show newline
+(Downloads and optionally verifies remote releases.) show newline
+() show newline
+() show newline
+(seal-synchronize) show newline
+(----------------) show newline
+() show newline
+(Bidirectional sync.) show newline
+() show newline
+() show newline
+(    \(seal-synchronize remote #!key direction verify-key\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONFIGURATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(vault-init) show newline
+(----------) show newline
+() show newline
+(Initialize vault for repository.) show newline
+() show newline
+() show newline
+(    \(vault-init #!key signing-key\)) show newline
+() show newline
+(Sets up: - Signing key configuration - Audit trail directory - Metadata) show newline
+(directory) show newline
+() show newline
+() show newline
+(vault-config) show newline
+(------------) show newline
+() show newline
+(Get/set configuration.) show newline
+() show newline
+() show newline
+(    \(vault-config 'signing-key\)              ; Get) show newline
+(    \(vault-config 'signing-key some-key\)     ; Set) show newline
+() show newline
+(Configuration Options:) show newline
+() show newline
+() show newline
+(  Key              Type      Description                                            ) show newline
+(  signing-key      blob      Ed25519 private key for signing                        ) show newline
+(  verify-key       string    Path to verification public key                        ) show newline
+(  archive-format   symbol    Default: tarball, bundle, cryptographic, or zstd-age   ) show newline
+(  age-recipients   list      Age public keys for encryption \(zstd-age format\)       ) show newline
+(  age-identity     string    Path to age identity file for decryption               ) show newline
+(  migration-dir    string    Directory for migration scripts                        ) show newline
+(  track-metadata   boolean   Auto-stage metadata files                              ) show newline
+(  publish-remote   string    Default publication target                             ) show newline
+(  subscribe-dir    string    Directory for subscriptions                            ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DIRECTORY STRUCTURE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    project/) show newline
+(    +-- .vault/) show newline
+(    |   +-- metadata/           # Commit metadata files) show newline
+(    |   |   +-- abc123.sexp) show newline
+(    |   |   +-- def456.sexp) show newline
+(    |   +-- releases/           # Release signatures) show newline
+(    |   |   +-- 1.0.0.sig) show newline
+(    |   |   +-- 1.1.0.sig) show newline
+(    |   +-- audit/              # Audit trail) show newline
+(    |   |   +-- 1.sexp) show newline
+(    |   |   +-- 2.sexp) show newline
+(    |   +-- subscriptions/      # Downloaded releases) show newline
+(    |       +-- vault-1.0.0.archive) show newline
+(    +-- migrations/             # Version migration scripts) show newline
+(    |   +-- 1.0.0-to-2.0.0.scm) show newline
+(    +-- .git/                   # Git repository) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MIGRATION SUPPORT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Creating Migrations) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(seal-release "2.0.0" migrate-from: "1.0.0"\)) show newline
+() show newline
+(Generates template:) show newline
+() show newline
+() show newline
+(    ;; migrations/1.0.0-to-2.0.0.scm) show newline
+(    ;;; Migration: 1.0.0 -> 2.0.0) show newline
+(    ;;; Generated: 1767685100) show newline
+(    \(define \(migrate-1.0.0-to-2.0.0\)) show newline
+(      ;; Define migration logic here) show newline
+(      #t\)) show newline
+(    \(migrate-1.0.0-to-2.0.0\)) show newline
+() show newline
+() show newline
+(Running Migrations) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(seal-migrate "1.0.0" "2.0.0" #!key script dry-run\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRITY CHECKING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(seal-check) show newline
+(----------) show newline
+() show newline
+(Verify vault integrity.) show newline
+() show newline
+() show newline
+(    \(seal-check #!key deep\)) show newline
+() show newline
+(Checks: - Git repository health \(git fsck\) - Release signature validity) show newline
+(\(if deep\) - Audit trail chain \(if deep\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Signing Key Handling) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    ;; Key is 64-byte Ed25519 secret key) show newline
+(    ;; First 32 bytes: seed) show newline
+(    ;; Last 32 bytes: public key) show newline
+(    \(define \(get-vault-principal signing-key\)) show newline
+(      "Extract public key from signing key") show newline
+(      \(blob-copy signing-key 32 32\)\)) show newline
+() show newline
+() show newline
+(Authorization Flow) show newline
+(------------------) show newline
+() show newline
+(1. Configure: \(vault-init signing-key: key\) 2. Operate: \(seal-commit) show newline
+(...\) signs with configured key 3. Audit: Entry includes actor's public) show newline
+(key 4. Verify: \(seal-verify ...\) checks signature) show newline
+() show newline
+() show newline
+(Threat Mitigations) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Threat                 Mitigation                    ) show newline
+(  Unauthorized commits   SPKI certificates required    ) show newline
+(  Release tampering      Ed25519 signatures            ) show newline
+(  History rewriting      Audit trail non-repudiation   ) show newline
+(  Archive corruption     SHA-512 hash verification     ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRATION POINTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(With Audit Trail \(Memo-003\)) show newline
+(---------------------------) show newline
+() show newline
+(All vault operations create audit entries:) show newline
+() show newline
+() show newline
+(    \(audit-append) show newline
+(      actor: \(get-vault-principal signing-key\)) show newline
+(      action: '\(seal-commit "hash123"\)) show newline
+(      motivation: message\)) show newline
+() show newline
+() show newline
+(With SPKI \(Memo-004\)) show newline
+(--------------------) show newline
+() show newline
+(Signing keys are SPKI principals:) show newline
+() show newline
+() show newline
+(    \(make-key-principal \(get-vault-principal signing-key\)\)) show newline
+() show newline
+() show newline
+(With Metadata \(Memo-005\)) show newline
+(------------------------) show newline
+() show newline
+(Progressive metadata via seal-commit parameters:) show newline
+() show newline
+() show newline
+(    \(seal-commit "msg" preserve: #t\)  ; Full preservation) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(USAGE EXAMPLES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Basic Workflow) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; Initialize) show newline
+(    \(vault-init signing-key: my-key\)) show newline
+(    ;; Daily work) show newline
+(    \(seal-commit "Add feature"\)) show newline
+(    \(seal-commit "Fix bug"\)) show newline
+(    ;; Release) show newline
+(    \(seal-release "1.0.0" message: "Initial release"\)) show newline
+(    ;; Archive) show newline
+(    \(seal-archive "1.0.0" format: 'cryptographic\)) show newline
+(    ;; Verify) show newline
+(    \(seal-verify "1.0.0" verify-key: "my.public"\)) show newline
+() show newline
+() show newline
+(Federation Workflow) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Publisher) show newline
+(    \(seal-release "1.0.0"\)) show newline
+(    \(seal-publish "1.0.0" remote: "/shared/releases"\)) show newline
+(    ;; Subscriber) show newline
+(    \(seal-subscribe "/shared/releases" verify-key: publisher-pub\)) show newline
+(    ;; Bidirectional) show newline
+(    \(seal-synchronize peer-remote direction: 'both\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DOCUMENT FORMATS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The Vault preserves documents in canonical open formats:) show newline
+() show newline
+() show newline
+(  Format                      Extension   Purpose                                             ) show newline
+(  Text                        .txt        Universal compatibility, IETF tradition, immortal   ) show newline
+(  PostScript                  .ps         Archival, printing, open since 1984                 ) show newline
+(  Hypertext Markup Language   .html       Web viewing                                         ) show newline
+() show newline
+(All formats are first-class citizens in the Vault. RFCs and declarations) show newline
+(SHOULD be published in all three formats for maximum preservation and) show newline
+(accessibility. No proprietary formats.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Git Internals - Plumbing and Porcelain 2. Memo-001: Replication Layer) show newline
+(3. Memo-003: Cryptographic Audit Trail 4. Memo-004: SPKI Authorization) show newline
+(5. Memo-005: Progressive Metadata Levels 6. Memo-018: Sealed Archive) show newline
+(Format 7. Semantic Versioning 2.0.0) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF
