@@ -60,5 +60,27 @@
     (p "This is not dumbing down. It is layered revelation - the same principle that makes Cyberspace.app feel native on Mac while running pure Scheme underneath."))
 
   (section
+    "6. The Scrutinizer"
+    (p "Consistency requires tooling. The scrutinizer audits tone and terminology across library and code.")
+    (p "Two failure modes:")
+    (list
+      (item "Overreach - poetry where precision needed, whimsy in error messages")
+      (item "Underreach - dry jargon where warmth appropriate, internal vocabulary leaking through"))
+    (p "Passes:")
+    (list
+      (item "Vocabulary audit - banned terms in user-facing strings")
+      (item "Tone consistency - memos vs help vs errors")
+      (item "S-expression exposure - Scheme leaking to surface"))
+    (p "Interface:")
+    (code scheme "(scrutinize)              ; both passes (default)
+(scrutinize 'library)     ; memos only
+(scrutinize 'code)        ; code only
+(scrutinize #f)           ; disable
+
+*scrutinize-realtime*     ; parameter, default #f
+(scrutinize-realtime! #t) ; enable during dev")
+    (p "Real-time mode hooks into module load, flags inconsistencies during development. Off in production, on in beta."))
+
+  (section
     "Changelog"
     (p "- 2026-01-15 — Initial draft, heritage notes")))
