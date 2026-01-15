@@ -5,7 +5,7 @@
 # Discover RFCs from filesystem (unique basenames, sorted by number)
 discover_rfcs() {
   shopt -s nullglob
-  for f in rfc-*.md rfc-*.txt; do
+  for f in memo-*.md memo-*.txt; do
     [[ -f "$f" ]] && echo "${f%.*}"
   done | sort -u | sort -t- -k2,2n
 }
@@ -104,7 +104,7 @@ HEADER
 # Generate Memo table
 for rfc in "${RFCS[@]}"; do
   title=$(get_title "$rfc")
-  num=$(echo "$rfc" | sed -E 's/rfc-0*([0-9]+)-.*/\1/')
+  num=$(echo "$rfc" | sed -E 's/memo-([0-9]{4})-.*/\1/')
   formats='<a href="'"${rfc}"'.txt">Text</a> <a href="'"${rfc}"'.ps">PostScript</a> <a href="'"${rfc}"'.html">Hypertext</a>'
 
   cat >> index.html << EOF
@@ -129,8 +129,8 @@ MIDDLE
 # Generate KWIC entries
 for rfc in "${RFCS[@]}"; do
   title=$(get_title "$rfc")
-  # Strip "RFC-NNN: " prefix
-  bare_title=$(echo "$title" | sed 's/^RFC-[0-9]*: //')
+  # Strip "Memo NNNN: " prefix
+  bare_title=$(echo "$title" | sed 's/^Memo [0-9]*: //')
   words=($bare_title)
   num_words=${#words[@]}
 
@@ -151,7 +151,7 @@ for rfc in "${RFCS[@]}"; do
       right="$right ${words[$j]}"
     done
 
-    num=$(echo "$rfc" | sed -E 's/rfc-0*([0-9]+)-.*/\1/')
+    num=$(echo "$rfc" | sed -E 's/memo-([0-9]{4})-.*/\1/')
     echo "${word}|${left}|${right}|${rfc}|${num}"
   done
 done | sort -t'|' -k1,1 -f | while IFS='|' read -r keyword left right rfc num; do
