@@ -128,7 +128,15 @@ Messages:    Multilingual (the command line speaks your tongue)"))
     (subsection
       "3.3 Workstations and Terminals"
       (p "Workstations and terminals weren't wrong. PCs aren't the answer to everything. The right interface for the job at hand. Sometimes your native language is superior.")
-      (p "Cyberspace runs on terminals because that's what operators use.")))
+      (p "Cyberspace runs on terminals because that's what operators use."))
+
+    (subsection
+      "3.4 The Period as Imperative (Smalltalk Heritage)"
+      (p "In Smalltalk, the period terminates a statement. It's the moment of commitment--everything before it is preparation, the period makes it so.")
+      (p "Cyberspace borrows this: any command suffixed with '.' implies execution and propagation. 'commit.' means commit and sync. 'fix.' means fix and make it so.")
+      (code "commit    → stage the intention
+commit.   → stage, execute, propagate to the weave")
+      (p "The period is not punctuation. It's the imperative mood. Smalltalk understood that the moment of action deserves its own syntax.")))
 
   (section
     "4. The Soup"
