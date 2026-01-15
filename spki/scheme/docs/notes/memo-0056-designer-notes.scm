@@ -102,19 +102,23 @@
 
     (subsection
       "7.3 Languages"
-      (p "Original VMS languages: English, Latin, Italian, Dutch, Sindarin (Elvish - vocabulary typed from Tolkien by DEC enthusiasts). The VT100 diacriticals were encoded in DEC MCS (Multinational Character Set).")
-      (p "Cyberspace expansion brings the total to 30+ languages:")
+      (p "Original VMS languages: English, Latin, Italian, Dutch, Sindarin, Webster. The VT100 diacriticals were encoded in DEC MCS (Multinational Character Set).")
+      (p "Cyberspace expansion to 40+ languages follows roughly the operational map of the Office of Strategic Services - another egg for those who recognize the geography:")
       (list
-        (item "Romance: Spanish, Portuguese, French, Italian, Catalan, Galician, Romanian")
-        (item "Germanic: German, Swedish, Norwegian, Danish")
-        (item "Baltic/Finnic: Finnish, Estonian, Latvian")
-        (item "Central/Eastern: Polish, Czech, Slovak, Hungarian, Turkish")
-        (item "Cyrillic: Russian, Ukrainian, Bulgarian")
-        (item "Greek alphabet")
-        (item "Southeast Asian: Vietnamese, Thai, Lao, Korean (tonal diacriticals)")
-        (item "Literary: Dante's Divina Commedia (12,777 unique words from Princeton Dante Project)"))
-      (p "Word lists sourced from SCOWL, OpenTaal, Hunspell, Eldamo, and LibreOffice dictionaries. All diacriticals converted to UTF-8.")
-      (p "The Sindarin database preserves Tolkien's circumflexes: Manwë, Aulë, Andúril, Barad-dûr. Dante's medieval Italian sits alongside - easter eggs within easter eggs."))
+        (item "Western Europe: French, German, Spanish, Portuguese")
+        (item "Iberia: Catalan, Galician, Basque")
+        (item "Nordic (resistance networks): Swedish, Norwegian, Danish, Finnish")
+        (item "Atlantic fringe: Irish, Welsh, Scottish Gaelic, Breton")
+        (item "Balkans (partisan country): Greek, Albanian, Serbian, Croatian, Slovenian, Macedonian")
+        (item "Eastern front: Polish, Czech, Slovak, Hungarian, Romanian")
+        (item "Baltic: Lithuanian, Latvian, Estonian")
+        (item "Soviet theater: Russian, Ukrainian, Bulgarian")
+        (item "Near East: Turkish, Armenian")
+        (item "Mediterranean (George Cross island): Maltese")
+        (item "Detachment 101: Vietnamese, Thai, Lao, Korean")
+        (item "Literary: Sindarin (Tolkien's Elvish), Dante's Divina Commedia"))
+      (p "Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo, and the Princeton Dante Project. All diacriticals converted to UTF-8.")
+      (p "Sindarin preserves Tolkien's circumflexes: Manwë, Aulë, Andúril. Dante's medieval Italian sits alongside. The OSS framing is itself an easter egg - layers of meaning for those who dig."))
 
     (subsection
       "7.4 Related Standards"
@@ -147,7 +151,7 @@
 
   (section
     "Changelog"
+    (p "- 2026-01-15 — OSS operational geography framing, 40+ languages (section 7.3)")
     (p "- 2026-01-15 — Added cryptographic RNG with boot-time verification (section 7.6)")
-    (p "- 2026-01-15 — Expanded to 30+ languages including Asian and Dante (section 7.3)")
     (p "- 2026-01-15 — Added forge/smelter heritage (section 7)")
     (p "- 2026-01-15 — Initial draft, heritage notes")))

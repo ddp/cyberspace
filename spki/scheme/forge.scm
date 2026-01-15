@@ -50,23 +50,32 @@
                          "src/lisp/forge"))))
 
   (define *forge-languages*
-    '(;; Original VMS languages
+    '(;; DEC heritage (VMS 1991)
       english latin italian dutch sindarin webster
-      ;; Romance languages
-      spanish portuguese french catalan galician romanian
-      ;; Germanic languages
-      german swedish norwegian danish
-      ;; Baltic/Finnic
-      finnish estonian latvian
-      ;; Central/Eastern Europe
-      polish czech slovak hungarian turkish
-      ;; Former Soviet bloc (Cyrillic - requires UTF-8 terminal)
+      ;; Western Europe
+      french german spanish portuguese
+      ;; Iberia
+      catalan galician basque
+      ;; Alpine (Bern station)
+      ;; Nordic (resistance networks)
+      swedish norwegian danish finnish
+      ;; Atlantic fringe
+      irish welsh scottish breton
+      ;; Balkans (partisan country)
+      greek albanian serbian croatian slovenian macedonian
+      ;; Eastern front
+      polish czech slovak hungarian romanian
+      ;; Baltic
+      lithuanian latvian estonian
+      ;; Soviet theater
       russian ukrainian bulgarian
-      ;; Greek alphabet - requires UTF-8 terminal
-      greek
-      ;; Southeast Asia (tonal languages with diacriticals)
+      ;; Near East
+      turkish armenian
+      ;; Mediterranean (George Cross island)
+      maltese
+      ;; Detachment 101
       vietnamese thai lao korean
-      ;; Literary easter eggs
+      ;; Literary
       dante))
 
   ;; ============================================================
