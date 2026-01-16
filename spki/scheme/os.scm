@@ -159,7 +159,7 @@
   ;; ============================================================
 
   (define (hostname)
-    (or (shell-command "hostname -s") "localhost"))
+    (or (shell-command "/bin/hostname -s") "localhost"))
 
   (define (cpu-brand)
     "Return CPU brand string"
