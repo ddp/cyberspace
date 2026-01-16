@@ -12,7 +12,7 @@
     "The Manifesto"
     (blockquote "Authorized capability set with auditing. No central authority.")
     (p "You can have a central authority if you want one. That's up to you. But you don't need one. The architecture doesn't require it. Trust flows from keys you choose to trust, not from a hierarchy imposed upon you.")
-    (p "These principles were proven in VAXcluster security (1984-1994), proposed in Simple Distributed Security Infrastructure (SDSI) at Internet Engineering Task Force (IETF) 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.")
+    (p "These principles were proven in VAXcluster security (1984-1994), proposed in SDSI at IETF 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.")
     (subsection
       "Design Lineage"
       (table
@@ -22,7 +22,7 @@
         (row "1990 " "DigiCash " "Blind signatures, unlinkable credentials (Chaum) ")
         (row "1993 " "VMS 6.0 " "Cluster-wide intrusion detection, TLV object store ")
         (row "1994 " "SDSI " "Self-certifying keys, local names (Rivest, IETF 29) ")
-        (row "1999 " "Simple Public Key Infrastructure (SPKI) " "Authorization certificates, capability delegation (Ellison, RFC 2693) ")
+        (row "1999 " "SPKI " "Authorization certificates, capability delegation (Ellison, RFC 2693) ")
         (row "2026 " "Cyberspace " "Synthesis: SPKI + Chaum + audit + IPv6 mesh + no central authority "))
       (p "DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.")))
   (section
@@ -134,11 +134,7 @@
     (p "Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP SECRET.")
     (p "In cyberspace, classification is a capability you hold:")
     (code scheme ";; Security officer grants SECRET clearance\n(spki-cert\n  (issuer \"ed25519:security-officer...\")\n  (subject \"ed25519:analyst...\")\n  (tag (clearance secret))\n  (valid (not-after 1767225600)))    ; Annual renewal\n\n;; Program manager grants compartment access\n(spki-cert\n  (issuer \"ed25519:program-manager...\")\n  (subject \"ed25519:engineer...\")\n  (tag (compartment \"project-atlas\")))")
-    (p "Access to a classified object requires:")
-    (list
-      (item "Capability to read the object itself")
-      (item "Appropriate clearance capability")
-      (item "All required compartment capabilities"))
+    (p "Access to a classified object requires: 1. Capability to read the object itself 2. Appropriate clearance capability 3. All required compartment capabilities")
     (p "The object has no labels. The policy lives in the certificates."))
   (section
     "Information Flow"
@@ -221,8 +217,7 @@
       (list
         (item "Writes - usually need to know who modified")
         (item "Delegation - must name the delegate")
-        (item "Administrative actions - audit trail essential"))
-      (p "Unlinkability is appropriate when the system needs to verify authorization without building a profile of behavior. Accountability requirements determine which operations use registered versus bearer capabilities."))
+        (item "Administrative actions - audit trail essential")))
     (subsection
       "The Tradeoff"
       (p "Bearer capabilities sacrifice traceability for privacy. Once issued, the issuer cannot:")
@@ -268,7 +263,6 @@
         (item "Wear leveling moves data without notification")
         (item "Trim/discard doesn't guarantee overwrite")
         (item "Encryption is the only reliable approach"))
-      (p "Flash storage abstracts physical location from logical address, making direct overwrite impossible. Encryption converts the erasure problem to key destruction, which is solvable.")
       (p "Our answer: Encrypt at rest (Memo-030). Erasing the key erases the data.")
       (code scheme ";; With encryption at rest, key destruction = data destruction\n(define (secure-erase-encrypted hash)\n  \"For encrypted objects: destroy decryption key\"\n  (let ((dek (object-data-encryption-key hash)))\n    (key-destroy! dek)\n    ;; The ciphertext remains but is now meaningless\n    'erased-via-key-destruction))")))
   (section
@@ -463,16 +457,7 @@
     (code "I1. No access without valid capability\n    access(s,o,r) → ∃c: valid_chain(s,o,r,c)\n\nI2. Delegation cannot amplify\n    delegated(c₂,c₁) → rights(c₂) ⊆ rights(c₁)\n\nI3. Object identity is content hash\n    id(o) = sha512(content(o))\n\nI4. Audit is ordered\n    sequence(e₁) < sequence(e₂) → time(e₁) ≤ time(e₂)\n\nI5. Revocation is permanent\n    revoked(c,t) → ∀t' > t: ¬valid(c,t')\n\nI6. No ambient authority\n    ¬∃c: grants(c,,)"))
   (section
     "References"
-    (list
-      (item "Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999")
-      (item "Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966")
-      (item "Miller, M., Robust Composition, 2006")
-      (item "Lampson, B., A Note on the Confinement Problem, 1973")
-      (item "DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens")
-      (item "Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model")
-      (item "Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model")
-      (item "Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982")
-      (item "Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985")))
+    (p "1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model 8. Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982 9. Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985"))
   (section
     "Changelog"
     (list
