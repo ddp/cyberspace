@@ -19,10 +19,11 @@
         (header "Era " "System " "Contribution ")
         (row "1984 " "VAXcluster " "\"Behave as one\" - N nodes, one security domain ")
         (row "1985 " "VMS C2 " "Audit trails, access control, TCSEC security primitives ")
+        (row "1990 " "DigiCash " "Blind signatures, unlinkable credentials (Chaum) ")
         (row "1993 " "VMS 6.0 " "Cluster-wide intrusion detection, TLV object store ")
         (row "1994 " "SDSI " "Self-certifying keys, local names (Rivest, IETF 29) ")
-        (row "1999 " "SPKI " "Authorization certificates, capability delegation ")
-        (row "2026 " "Cyberspace " "Synthesis: SPKI + audit + IPv6 mesh + no central authority "))
+        (row "1999 " "SPKI " "Authorization certificates, capability delegation (Ellison, RFC 2693) ")
+        (row "2026 " "Cyberspace " "Synthesis: SPKI + Chaum + audit + IPv6 mesh + no central authority "))
       (p "DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.")))
   (section
     "Security Object Types"
@@ -35,7 +36,8 @@
       (row "key " "Memo-022 " "Keypair with ceremony provenance ")
       (row "attestation " "Memo-041 " "Signed claim about identity or state ")
       (row "Authorization ")
-      (row "certificate " "Memo-004 " "SPKI capability grant ")
+      (row "certificate " "Memo-004 " "SPKI capability grant (registered) ")
+      (row "bearer-capability " "Memo-045 " "Blind-signed anonymous capability ")
       (row "tag " "Memo-004 " "Authorization scope (read, write, etc.) ")
       (row "signature " "Memo-004 " "Ed25519 attestation ")
       (row "share " "Memo-007 " "Shamir secret fragment ")
@@ -179,6 +181,54 @@
       (code "        full\n          │\n    ┌─────┼─────┐\n    │     │     │\n  admin synch read-write\n    │     │     │\n    └─────┼─────┘\n          │\n      read-only\n          │\n        none")
       (p "Delegation can only move DOWN the lattice. This is attenuation. You cannot delegate admin if you hold read-only. You cannot grant write if you hold read.")
       (p "The math is sound. We just speak it in capabilities.")))
+  (section
+    "Unlinkability"
+    (p "Chaum's insight (1983): you can prove authorization without revealing identity. Blind signatures create credentials that are verifiable but unlinkable - the issuer cannot connect the credential to the presentation.")
+    (p "This creates architectural tension with audit trails. Cyberspace values both accountability and privacy. The resolution: capabilities come in two forms.")
+    (subsection
+      "Registered vs Bearer Capabilities"
+      (table
+        (header "Property " "Registered (SPKI) " "Bearer (Blinded) ")
+        (row "Subject field " "Principal identified " "Anonymous holder ")
+        (row "Audit trail " "Who did what " "What was done ")
+        (row "Revocation " "By subject " "By capability hash ")
+        (row "Delegation " "To named principals " "Not delegable ")
+        (row "Use case " "Accountability " "Privacy "))
+      (p "Registered capabilities are checks - they name the bearer. Bearer capabilities are cash - whoever holds them can spend them."))
+    (subsection
+      "Blind Signature Protocol"
+      (p "Alice wants to exercise a capability without revealing she's Alice:")
+      (code "1. Alice proves to Issuer she holds capability C\n2. Alice generates random blinding factor r\n3. Alice computes blinded = blind(token, r)\n4. Issuer signs: sig = sign(blinded)\n5. Alice unblinds: bearer_sig = unblind(sig, r)\n6. Alice presents (token, bearer_sig) anonymously\n7. Verifier confirms Issuer's signature without learning Alice's identity")
+      (p "The Issuer knows Alice was authorized (step 1) but cannot link the bearer credential (step 6) to Alice. Unlinkability is mathematical, not policy."))
+    (subsection
+      "Cyberspace Integration"
+      (code scheme ";; Request blinded capability (proves eligibility, gets blind-signed token)\n(define (capability-blind issuer tag)\n  \"Get bearer capability for tag, unlinkable to principal\"\n  (let* ((token (random-bytes 32))\n         (r (blind-factor-generate))\n         (blinded (blind token r)))\n    ;; Prove we hold registered capability for this tag\n    ;; Issuer signs blinded token\n    (let ((blind-sig (issuer-sign-blinded issuer blinded tag)))\n      ;; Unblind locally\n      (make-bearer-capability\n        token: token\n        signature: (unblind blind-sig r)\n        tag: tag\n        issuer: issuer))))\n\n;; Exercise bearer capability\n(define (capability-exercise-bearer cap object)\n  \"Exercise capability without revealing identity\"\n  (let ((token (bearer-capability-token cap))\n        (sig (bearer-capability-signature cap))\n        (tag (bearer-capability-tag cap))\n        (issuer (bearer-capability-issuer cap)))\n    ;; Verify issuer signed this token for this tag\n    (unless (blind-signature-verify issuer token sig tag)\n      (error 'invalid-bearer-capability))\n    ;; Audit records capability exercise, not principal\n    (audit-append action: 'bearer-exercise\n                  capability: (sha512 token)\n                  tag: tag\n                  actor: 'anonymous)\n    ;; Perform operation\n    (perform-operation tag object)))")
+      (p "The audit trail records that a valid bearer capability was exercised, but not who exercised it. The capability hash enables revocation without identification."))
+    (subsection
+      "Use Cases"
+      (table
+        (header "Operation " "Why Unlinkability ")
+        (row "Quorum voting " "Prove eligibility without linking vote to voter ")
+        (row "Whistleblower submission " "Submit evidence without identification ")
+        (row "Anonymous reads " "Access sensitive content without tracking ")
+        (row "Credential presentation " "Prove role without revealing principal ")
+        (row "Rate-limited tokens " "Prevent abuse without profiling users "))
+      (p "Non-use-cases (accountability required):")
+      (list
+        (item "Writes - usually need to know who modified")
+        (item "Delegation - must name the delegate")
+        (item "Administrative actions - audit trail essential")))
+    (subsection
+      "The Tradeoff"
+      (p "Bearer capabilities sacrifice traceability for privacy. Once issued, the issuer cannot:")
+      (list
+        (item "Determine who exercised the capability")
+        (item "Link multiple exercises to the same principal")
+        (item "Revoke based on principal (only by capability hash)"))
+      (p "This is the point. Chaum solved the double-spending problem for digital cash without a public ledger - the bank couldn't track who spent what. Bitcoin retreated from this by making all transactions public. Cyberspace preserves the choice: registered capabilities when you need accountability, bearer capabilities when you need privacy.")
+      (p "The axioms still hold:")
+      (code "A1. No Ambient Authority - still need a capability\nA2. Capabilities Are Unforgeable - blind signatures are Ed25519\nA3. Capabilities Only Attenuate - bearer caps cannot delegate\nA4. Objects Are Immutable - unchanged")
+      (p "Unlinkability is orthogonal to authorization. You still need permission; you just don't have to identify yourself to use it.")))
   (section
     "Secure Erasure"
     (p "When sensitive data must be destroyed, it must be destroyed completely.")
@@ -407,10 +457,12 @@
     (code "I1. No access without valid capability\n    access(s,o,r) → ∃c: valid_chain(s,o,r,c)\n\nI2. Delegation cannot amplify\n    delegated(c₂,c₁) → rights(c₂) ⊆ rights(c₁)\n\nI3. Object identity is content hash\n    id(o) = sha512(content(o))\n\nI4. Audit is ordered\n    sequence(e₁) < sequence(e₂) → time(e₁) ≤ time(e₂)\n\nI5. Revocation is permanent\n    revoked(c,t) → ∀t' > t: ¬valid(c,t')\n\nI6. No ambient authority\n    ¬∃c: grants(c,,)"))
   (section
     "References"
-    (p "1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model"))
+    (p "1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model 8. Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982 9. Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985"))
   (section
     "Changelog"
     (list
+      (item "2026-01-16")
+      (item "Add Unlinkability section: blind signatures, bearer capabilities, Chaum integration")
       (item "2026-01-08")
       (item "Initial draft"))))
 
