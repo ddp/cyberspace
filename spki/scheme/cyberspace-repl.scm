@@ -39,9 +39,8 @@
         srfi-69   ; hash tables
         (chicken tcp))
 
-;; Early hostname fallback - overwritten when os module loads
-;; Prevents "unbound variable: hostname" during early initialization
-(define hostname (lambda () "localhost"))
+;; os is Level 0 (no cyberspace deps) - import early for hostname
+(import os)
 
 ;;; ============================================================
 ;;; Startup Timing
@@ -645,7 +644,7 @@
 (bootstrap-modules!)
 
 ;; Load cyberspace modules (now guaranteed to be correct arch)
-(import os)
+;; Note: os already imported at top for early hostname access
 (import crypto-ffi)
 (import fips)
 (import vault)
