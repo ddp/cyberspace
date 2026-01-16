@@ -39,6 +39,10 @@
         srfi-69   ; hash tables
         (chicken tcp))
 
+;; Early hostname fallback - overwritten when os module loads
+;; Prevents "unbound variable: hostname" during early initialization
+(define hostname (lambda () "localhost"))
+
 ;;; ============================================================
 ;;; Startup Timing
 ;;; ============================================================
