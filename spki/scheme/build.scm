@@ -17,20 +17,33 @@
         (chicken pathname))
 
 (define *library-modules*
-  '(;; Core
+  '(;; Layer 0: No internal dependencies
     "sexp" "crypto-ffi" "fips" "wordlist"
-    ;; SPKI
-    "cert" "capability" "security" "keyring"
-    ;; Storage
-    "vault" "catalog" "bloom" "audit"
-    ;; Network
-    "gossip" "mdns" "portal"
-    ;; Enrollment
-    "enroll" "auto-enroll"
-    ;; UI
-    "os" "ui" "display" "inspector"
-    ;; High-level
-    "board" "seal" "script" "cyberspace"))
+    "display" "inspector" "catalog" "bloom" "os"
+    "smelter" "scrutinizer" "board"
+    ;; Layer 1: Single deps
+    "cert"          ; needs sexp
+    "script"        ; needs cert
+    "capability"    ; no internal deps
+    "keyring"       ; needs display
+    "audit"         ; needs crypto-ffi
+    "forge"         ; needs smelter
+    ;; Layer 2
+    "security"      ; needs cert, capability, sexp
+    ;; Layer 3
+    "vault"         ; needs cert, crypto-ffi, audit, os
+    "mdns"          ; needs os
+    "portal"        ; needs os
+    "enroll"        ; needs crypto-ffi, wordlist
+    ;; Layer 4
+    "seal"          ; needs vault
+    "gossip"        ; needs bloom, catalog, crypto-ffi, os
+    ;; Layer 5
+    "auto-enroll"   ; needs enroll, capability, mdns, gossip, crypto-ffi
+    ;; Layer 6
+    "ui"            ; needs enroll, capability, auto-enroll
+    ;; Layer 7
+    "cyberspace"))  ; needs script
 
 (define (run cmd)
   (printf "  ~a~n" cmd)
