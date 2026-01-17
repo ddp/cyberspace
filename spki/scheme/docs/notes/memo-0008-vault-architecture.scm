@@ -31,7 +31,12 @@
       (p "Stage and commit changes in one operation.")
       (code scheme "(seal-commit message\n  #!key files catalog subjects keywords description preserve)")
       (p "Parameters: - message - Commit message (required) - files - Specific files to stage (optional) - catalog - Enable catalog metadata - subjects - Subject headings - keywords - Search keywords - description - Extended description - preserve - Enable preservation metadata")
-      (p "Process: 1. Stage specified files (or all modified) 2. Create git commit 3. Save metadata (if catalog or preserve) 4. Record in audit trail (if signing key configured)")
+      (p "Process:")
+      (list
+        (item "Stage specified files (or all modified)")
+        (item "Create git commit")
+        (item "Save metadata (if catalog or preserve)")
+        (item "Record in audit trail (if signing key configured)"))
       (p "Example:")
       (code scheme "(seal-commit \"Add authentication module\"\n  files: '(\"auth.scm\" \"auth-test.scm\")\n  catalog: #t\n  subjects: '(\"security\" \"authentication\")\n  keywords: '(\"login\" \"oauth\"))"))
     (subsection
@@ -63,14 +68,24 @@
       (p "Create cryptographically sealed release.")
       (code scheme "(seal-release version #!key message migrate-from)")
       (p "Parameters: - version - Semantic version (X.Y.Z required) - message - Release notes - migrate-from - Previous version for migration tracking")
-      (p "Process: 1. Validate semantic version format 2. Get current commit hash 3. Create annotated git tag 4. Sign with SPKI (if configured) 5. Create migration marker (if migrate-from specified)")
+      (p "Process:")
+      (list
+        (item "Validate semantic version format")
+        (item "Get current commit hash")
+        (item "Create annotated git tag")
+        (item "Sign with SPKI (if configured)")
+        (item "Create migration marker (if migrate-from specified)"))
       (p "Signature Storage:")
       (code scheme ";; .vault/releases/1.0.0.sig\n(signature\n  (version \"1.0.0\")\n  (hash \"abc123...\")\n  (manifest \"(release \\\"1.0.0\\\" \\\"abc123\\\" 1767685100)\")\n  (signature #${ed25519-signature}))"))
     (subsection
       "seal-verify"
       (p "Verify release signature.")
       (code scheme "(seal-verify version #!key verify-key)")
-      (p "Process: 1. Load signature file 2. Recompute manifest hash 3. Verify Ed25519 signature")))
+      (p "Process:")
+      (list
+        (item "Load signature file")
+        (item "Recompute manifest hash")
+        (item "Verify Ed25519 signature"))))
   (section
     "Archival System"
     (subsection
@@ -116,7 +131,13 @@
       (p "Restore from sealed archive.")
       (code scheme "(seal-restore archive #!key verify-key target identity)")
       (p "Parameters: - verify-key - SPKI public key for signature verification - target - Extraction directory - identity - Age identity file for decryption (zstd-age format)")
-      (p "Process: 1. Read manifest 2. Verify hash (archive integrity) 3. Verify signature (if key provided) 4. Decrypt (zstd-age only, requires identity) 5. Extract to target directory")))
+      (p "Process:")
+      (list
+        (item "Read manifest")
+        (item "Verify hash (archive integrity)")
+        (item "Verify signature (if key provided)")
+        (item "Decrypt (zstd-age only, requires identity)")
+        (item "Extract to target directory"))))
   (section
     "Replication Layer"
     (p "See Memo-0002 for complete specification.")

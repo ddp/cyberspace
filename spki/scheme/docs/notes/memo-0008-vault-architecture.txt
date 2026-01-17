@@ -19,10 +19,14 @@ MOTIVATION
 
 Git is powerful but lacks:
 
-1. Cryptographic sealing - GPG signing is optional and awkward 2.
-Authorization model - Anyone with access can commit 3. Archival features
-- No first-class backup/restore 4. Audit integration - History is
-mutable
+  * Cryptographic sealing - GPG signing is optional and awkward
+  * Authorization model - Anyone with access can commit
+  * Archival features - No first-class backup/restore
+  * Audit integration - History is mutable
+
+These gaps leave security as an afterthought rather than a foundation,
+requiring external tools and manual discipline to achieve what should be
+built-in.
 
 The Vault wraps Git with:
 
@@ -30,6 +34,10 @@ The Vault wraps Git with:
   * SPKI certificates for authorization
   * Three archive formats for different use cases
   * Integrated audit trail for non-repudiation
+
+The seal- prefix makes cryptographic operations explicit; security is
+not hidden behind flags or configuration but part of the command
+vocabulary.
 
 
                         +--------------------------------+
@@ -66,9 +74,12 @@ files to stage (optional) - catalog - Enable catalog metadata - subjects
 - Subject headings - keywords - Search keywords - description - Extended
 description - preserve - Enable preservation metadata
 
-Process: 1. Stage specified files (or all modified) 2. Create git commit
-3. Save metadata (if catalog or preserve) 4. Record in audit trail (if
-signing key configured)
+Process:
+
+  * Stage specified files (or all modified)
+  * Create git commit
+  * Save metadata (if catalog or preserve)
+  * Record in audit trail (if signing key configured)
 
 Example:
 
@@ -141,9 +152,13 @@ Create cryptographically sealed release.
 Parameters: - version - Semantic version (X.Y.Z required) - message -
 Release notes - migrate-from - Previous version for migration tracking
 
-Process: 1. Validate semantic version format 2. Get current commit hash
-3. Create annotated git tag 4. Sign with SPKI (if configured) 5. Create
-migration marker (if migrate-from specified)
+Process:
+
+  * Validate semantic version format
+  * Get current commit hash
+  * Create annotated git tag
+  * Sign with SPKI (if configured)
+  * Create migration marker (if migrate-from specified)
 
 Signature Storage:
 
@@ -164,8 +179,11 @@ Verify release signature.
 
     (seal-verify version #!key verify-key)
 
-Process: 1. Load signature file 2. Recompute manifest hash 3. Verify
-Ed25519 signature
+Process:
+
+  * Load signature file
+  * Recompute manifest hash
+  * Verify Ed25519 signature
 
 
 ------------------------------------------------------------------------

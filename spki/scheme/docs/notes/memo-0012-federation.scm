@@ -42,7 +42,12 @@
     (subsection
       "Peer Discovery"
       (code scheme "(federation-discover)\n;; Returns: List of known peers and their status")
-      (p "Discovery mechanisms: 1. Explicit configuration: Known peer list 2. Git remotes: Extract from repository 3. Directory service: Optional, not required 4. mDNS/Bonjour: Local network discovery via cyberspace.tcp"))
+      (p "Discovery mechanisms:")
+      (list
+        (item "Explicit configuration: Known peer list")
+        (item "Git remotes: Extract from repository")
+        (item "Directory service: Optional, not required")
+        (item "mDNS/Bonjour: Local network discovery via cyberspace.tcp")))
     (subsection
       "mDNS Service Discovery"
       (p "Cyberspace nodes announce themselves via mDNS using the cyberspace.tcp service type:")
@@ -55,15 +60,32 @@
     (subsection
       "Release Announcement"
       (code scheme "(federation-announce version\n  #!key peers message)")
-      (p "Pushes release notification to peers: 1. Create signed announcement 2. Send to specified peers (or all) 3. Peers verify signature 4. Peers decide whether to pull"))
+      (p "Pushes release notification to peers:")
+      (list
+        (item "Create signed announcement")
+        (item "Send to specified peers (or all)")
+        (item "Peers verify signature")
+        (item "Peers decide whether to pull")))
     (subsection
       "Release Request"
       (code scheme "(federation-request version peer\n  #!key verify-key)")
-      (p "Pulls specific release from peer: 1. Request release metadata 2. Verify signature 3. Download archive 4. Verify integrity 5. Record in audit trail"))
+      (p "Pulls specific release from peer:")
+      (list
+        (item "Request release metadata")
+        (item "Verify signature")
+        (item "Download archive")
+        (item "Verify integrity")
+        (item "Record in audit trail")))
     (subsection
       "Synchronization"
       (code scheme "(federation-sync peer\n  #!key direction verify-key)")
-      (p "Bidirectional sync (from Memo-0002): 1. Exchange release lists 2. Identify missing releases 3. Push/pull as configured 4. Verify all signatures 5. Update audit trails")))
+      (p "Bidirectional sync (from Memo-0002):")
+      (list
+        (item "Exchange release lists")
+        (item "Identify missing releases")
+        (item "Push/pull as configured")
+        (item "Verify all signatures")
+        (item "Update audit trails"))))
   (section
     "Message Format"
     (subsection

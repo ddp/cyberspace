@@ -35,6 +35,9 @@ introduced:
   * TLV-encoded object store
   * The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records
 
+These innovations established that security events must be visible
+across an entire distributed system, not just the node where they occur.
+
 The design principle then, as now: cluster nodes behave identically. N
 nodes, one security domain. Every significant action audited, every
 audit record signed.
@@ -49,11 +52,13 @@ Traditional logging fails on all counts: - Tamperable: Text files can be
 edited - Anonymous: No cryptographic identity - Disconnected: No
 provable ordering - Unverifiable: No mathematical proof of integrity
 
-Cyberspace audit trails provide: 1. Content-addressed entries -
-Tamper-evident by hash 2. Hash-chained structure - Append-only ordering
-3. SPKI attribution - Cryptographic actor identity 4. Ed25519 seals -
-Mathematical proof of authenticity 5. Dual context - Human-readable
-motivation + machine-parseable environment
+Cyberspace audit trails provide:
+
+  * Content-addressed entries - Tamper-evident by hash
+  * Hash-chained structure - Append-only ordering
+  * SPKI attribution - Cryptographic actor identity
+  * Ed25519 seals - Mathematical proof of authenticity
+  * Dual context - Human-readable motivation + machine-parseable environment
 
 
 ------------------------------------------------------------------------
@@ -189,10 +194,15 @@ Create and sign a new audit entry.
       motivation: "Added new feature"
       signing-key: private-key-blob)
 
-Process: 1. Increment sequence counter 2. Get parent entry ID (hash
-chain link) 3. Build unsealed entry structure 4. Compute SHA-512 hash of
-canonical S-expression 5. Sign hash with Ed25519 6. Create seal record
-7. Save entry to disk
+Process:
+
+  * Increment sequence counter
+  * Get parent entry ID (hash chain link)
+  * Build unsealed entry structure
+  * Compute SHA-512 hash of canonical S-expression
+  * Sign hash with Ed25519
+  * Create seal record
+  * Save entry to disk
 
 
 audit-verify
@@ -203,8 +213,12 @@ Verify cryptographic seal on an entry.
 
     (audit-verify entry public-key: key)
 
-Verification steps: 1. Reconstruct unsealed entry 2. Compute SHA-512
-hash 3. Compare with stored content-hash 4. Verify Ed25519 signature
+Verification steps:
+
+  * Reconstruct unsealed entry
+  * Compute SHA-512 hash
+  * Compare with stored content-hash
+  * Verify Ed25519 signature
 
 
 audit-chain
@@ -378,11 +392,10 @@ Performance Considerations
 REFERENCES
 ------------------------------------------------------------------------
 
-1. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital
-document. 2. Merkle, R. C. (1987). A digital signature based on a
-conventional encryption function. 3. Bernstein, D. J. (2006).
-Curve25519: new Diffie-Hellman speed records. 4. SDSI/SPKI - RFC 2693,
-RFC 2692
+  * Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document.
+  * Merkle, R. C. (1987). A digital signature based on a conventional encryption function.
+  * Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records.
+  * SDSI/SPKI - RFC 2693, RFC 2692
 
 
 ------------------------------------------------------------------------

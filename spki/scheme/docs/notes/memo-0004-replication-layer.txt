@@ -35,11 +35,15 @@ Requirements
 
 The Library of Cyberspace requires a distribution mechanism that:
 
-1. Preserves cryptographic authenticity - Signatures travel with
-artifacts 2. Enables offline verification - No centralized authority
-required 3. Records provenance - All publication events are audited 4.
-Supports multiple transports - Git, HTTP, filesystem 5. Maintains loose
-coupling - Works for confederations of friends
+  * Preserves cryptographic authenticity - Signatures travel with artifacts
+  * Enables offline verification - No centralized authority required
+  * Records provenance - All publication events are audited
+  * Supports multiple transports - Git, HTTP, filesystem
+  * Maintains loose coupling - Works for confederations of friends
+
+These requirements reflect the reality of distributed archival: networks
+partition, authorities disappear, and trust must be verifiable without
+phoning home.
 
 Traditional package managers and distribution systems assume centralized
 registries and online verification. This replication layer is designed
@@ -52,12 +56,15 @@ cryptographic seals.
 DESIGN PRINCIPLES
 ------------------------------------------------------------------------
 
-1. Sealed Releases - Only cryptographically signed releases can be
-published 2. Transport Agnostic - Same API works for git, HTTP,
-filesystem 3. Audit Everything - All replication events are recorded in
-tamper-evident log 4. Verify Before Trust - Subscribers must verify
-cryptographic seals 5. Explicit Authorization - SPKI certificates
-determine who can publish
+  * Sealed Releases - Only cryptographically signed releases can be published
+  * Transport Agnostic - Same API works for git, HTTP, filesystem
+  * Audit Everything - All replication events are recorded in tamper-evident log
+  * Verify Before Trust - Subscribers must verify cryptographic seals
+  * Explicit Authorization - SPKI certificates determine who can publish
+
+These principles ensure that trust is established cryptographically
+rather than administratively, and that the system works regardless of
+network topology or transport mechanism.
 
 
 ------------------------------------------------------------------------
@@ -83,15 +90,12 @@ Parameters: - version - Semantic version string (e.g., "1.0.0") - remote
 archive-format - 'tarball, 'bundle, or 'cryptographic (default) -
 message - Release notes (optional)
 
-Behavior: 1. Verify release exists (creates if needed via seal-release)
-2. Create cryptographic archive with: - Tarball of repository at version
-tag - SHA-512 hash of tarball - Ed25519 signature of hash - Manifest
-with version, hash, signature 3. Publish to remote based on type: - Git
-remote: Push tag, optionally upload archive - HTTP URL: POST archive to
-endpoint - Filesystem: Copy archive to directory 4. Record publication
-in audit trail with: - Actor (public key from signing key) - Action
-(seal-publish version remote) - Motivation (release notes) -
-Cryptographic seal (signature)
+Behavior:
+
+  * Verify release exists (creates if needed via seal-release)
+  * Create cryptographic archive with: tarball of repository at version tag, SHA-512 hash of tarball, Ed25519 signature of hash, manifest with version, hash, signature
+  * Publish to remote based on type: Git remote (push tag, optionally upload archive), HTTP URL (POST archive to endpoint), Filesystem (copy archive to directory)
+  * Record publication in audit trail with: actor (public key from signing key), action (seal-publish version remote), motivation (release notes), cryptographic seal (signature)
 
 Audit Entry Format:
 
@@ -131,13 +135,13 @@ Parameters: - remote - Source location (git remote, URL, or directory) -
 target - Local path for downloaded archives (optional) - verify-key -
 Public key for signature verification (optional)
 
-Behavior: 1. Discover available releases from remote: - Git remote: List
-tags - HTTP URL: GET /releases endpoint - Filesystem: List .archive
-files 2. Download cryptographic archives 3. Verify each archive: - Check
-manifest structure - Verify SHA-512 hash of tarball - Verify Ed25519
-signature (if verify-key provided) 4. Extract verified archives to
-target directory 5. Record subscription in audit trail: - Count of
-releases downloaded - Source location - Verification status
+Behavior:
+
+  * Discover available releases from remote: Git remote (list tags), HTTP URL (GET /releases endpoint), Filesystem (list .archive files)
+  * Download cryptographic archives
+  * Verify each archive: check manifest structure, verify SHA-512 hash of tarball, verify Ed25519 signature (if verify-key provided)
+  * Extract verified archives to target directory
+  * Record subscription in audit trail: count of releases downloaded, source location, verification status
 
 Security Consideration: Without verify-key, subscription downloads
 archives but cannot verify authenticity. SPKI certificate chains should
@@ -156,11 +160,13 @@ Parameters: - remote - Sync target (git remote, URL, or directory) -
 direction - 'both (default), 'push-only, or 'pull-only - verify-key -
 Public key for signature verification (optional)
 
-Behavior: 1. Discover local and remote releases 2. Compare versions to
-determine: - Releases to push (local but not remote) - Releases to pull
-(remote but not local) 3. Execute publication for new local releases 4.
-Execute subscription for new remote releases 5. Record synchronization
-in audit trail: - Count pushed and pulled - Remote location - Direction
+Behavior:
+
+  * Discover local and remote releases
+  * Compare versions to determine: releases to push (local but not remote), releases to pull (remote but not local)
+  * Execute publication for new local releases
+  * Execute subscription for new remote releases
+  * Record synchronization in audit trail: count pushed and pulled, remote location, direction
 
 Use Case: Periodic sync between trusted peers in a confederation.
 
@@ -189,9 +195,13 @@ Manifest S-expression:
       (timestamp 1767685100)
       (sealer #${public-key-blob}))
 
-Verification Steps: 1. Read manifest 2. Hash tarball with SHA-512 3.
-Verify hash matches manifest 4. Verify Ed25519 signature on hash 5.
-Check SPKI authorization (optional)
+Verification Steps:
+
+  * Read manifest
+  * Hash tarball with SHA-512
+  * Verify hash matches manifest
+  * Verify Ed25519 signature on hash
+  * Check SPKI authorization (optional)
 
 
 ------------------------------------------------------------------------
@@ -229,10 +239,11 @@ AUDIT INTEGRATION
 
 Every replication operation creates an audit entry with:
 
-1. Content-addressed ID - SHA-512 hash of entry 2. Chained structure -
-References parent entry 3. SPKI principal - Public key of actor 4. Dual
-context - Human motivation + machine environment 5. Cryptographic seal -
-Ed25519 signature
+  * Content-addressed ID - SHA-512 hash of entry
+  * Chained structure - References parent entry
+  * SPKI principal - Public key of actor
+  * Dual context - Human motivation + machine environment
+  * Cryptographic seal - Ed25519 signature
 
 This provides: - Non-repudiation - Cannot deny publication - Tamper
 evidence - Changes are detectable - Causality - Chain shows temporal
@@ -257,26 +268,26 @@ archives - Remote publishers (until SPKI verified)
 Attack Scenarios
 ----------------
 
-1. Malicious Archive Substitution - Attacker replaces archive on remote
-- Mitigation: Signature verification fails
+  * Malicious Archive Substitution - Attacker replaces archive on remote - Mitigation: Signature verification fails
+  * Version Rollback Attack - Attacker removes newer releases - Mitigation: Audit trail shows previous versions
+  * Unauthorized Publication - Attacker publishes fake release - Mitigation: SPKI authorization chain required
+  * Transport Tampering - Network attacker modifies download - Mitigation: Hash and signature verification
 
-2. Version Rollback Attack - Attacker removes newer releases -
-Mitigation: Audit trail shows previous versions
-
-3. Unauthorized Publication - Attacker publishes fake release -
-Mitigation: SPKI authorization chain required
-
-4. Transport Tampering - Network attacker modifies download -
-Mitigation: Hash and signature verification
+Each attack is addressed at the cryptographic layer rather than the
+transport layer, ensuring protection regardless of network conditions.
 
 
 Best Practices
 --------------
 
-1. Always verify signatures - Use verify-key parameter 2. Check SPKI
-certificates - Verify authorization chain 3. Maintain audit trail -
-Detect suspicious patterns 4. Use HTTPS for HTTP transport - Prevent
-network attacks 5. Backup signing keys - Use Shamir secret sharing
+  * Always verify signatures - Use verify-key parameter
+  * Check SPKI certificates - Verify authorization chain
+  * Maintain audit trail - Detect suspicious patterns
+  * Use HTTPS for HTTP transport - Prevent network attacks
+  * Backup signing keys - Use Shamir secret sharing
+
+Defense in depth: cryptographic verification is primary, but transport
+security and operational practices add additional layers.
 
 
 ------------------------------------------------------------------------
@@ -351,9 +362,11 @@ See test-replication.scm:
 REFERENCES
 ------------------------------------------------------------------------
 
-1. SDSI/SPKI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git
-internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 -
-Bernstein et al. 5. Audit Trails - Memo-002 (Cryptographic Audit Trail)
+  * SDSI/SPKI - RFC 2693, RFC 2692
+  * Content-Addressed Storage - Git internals, IPFS
+  * Semantic Versioning - semver.org
+  * Ed25519 - Bernstein et al.
+  * Audit Trails - Memo-002 (Cryptographic Audit Trail)
 
 
 ------------------------------------------------------------------------

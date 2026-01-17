@@ -105,7 +105,11 @@
       (p "Recommendation: Use preserve level only for internal archives. Strip when publishing externally."))
     (subsection
       "Metadata Integrity"
-      (p "Metadata files are not automatically signed. For tamper-evidence: 1. Enable track-metadata to include in commits 2. Use seal-release for cryptographic sealing 3. Audit trail captures metadata operations")))
+      (p "Metadata files are not automatically signed. For tamper-evidence:")
+      (list
+        (item "Enable track-metadata to include in commits")
+        (item "Use seal-release for cryptographic sealing")
+        (item "Audit trail captures metadata operations"))))
   (section
     "Design Rationale"
     (subsection

@@ -51,7 +51,12 @@
     (subsection
       "Fuzzy Matching"
       (code scheme "(fuzzy-match \"Lamp\" author-list)\n;; => (\"Lampson\" \"Lamport\")\n\n(fuzzy-match \"crypto\" topic-list)\n;; => (\"cryptography\" \"cryptographic\" \"encryption\")")
-      (p "Matching strategies: 1. Exact match (highest priority) 2. Case-insensitive match 3. Prefix match 4. Substring match"))
+      (p "Matching strategies:")
+      (list
+        (item "Exact match (highest priority)")
+        (item "Case-insensitive match")
+        (item "Prefix match")
+        (item "Substring match")))
     (subsection
       "Query Functions"
       (code scheme "(find-by-author library \"Lampson\")\n(find-by-topic library \"SPKI\")\n(find-by-year library 1978)\n(find-by-collection library \"lampson\")\n(find-related library document)")))

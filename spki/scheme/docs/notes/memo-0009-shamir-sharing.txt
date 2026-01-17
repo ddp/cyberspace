@@ -22,11 +22,19 @@ Private keys are single points of failure:
   * Key theft: Complete compromise
   * Key escrow: Trust a third party?
 
+Any centralized solution to these problems requires trusting someone,
+which moves rather than eliminates the single point of failure.
+
 Shamir's Secret Sharing provides:
 
-1. Threshold recovery: Any K of N shares reconstruct 2.
-Information-theoretic security: K-1 shares reveal nothing 3. Distributed
-custody: No single holder 4. Backup flexibility: Geographic distribution
+  * Threshold recovery: Any K of N shares reconstruct
+  * Information-theoretic security: K-1 shares reveal nothing
+  * Distributed custody: No single holder
+  * Backup flexibility: Geographic distribution
+
+These properties eliminate single points of failure mathematically
+rather than administratively, distributing trust across multiple
+independent parties.
 
 From Adi Shamir's 1979 paper "How to Share a Secret":
 
@@ -64,10 +72,11 @@ shares to create (N)
 
 Returns: List of N shamir-share records
 
-Algorithm: 1. For each byte of secret: - Generate K-1 random
-coefficients - Coefficient[0] = secret byte - Polynomial: f(x) = a₀ +
-a₁x + a₂x² + ... + aₖ₋₁xᵏ⁻¹ 2. Evaluate polynomial at x
-= 1, 2, ..., N 3. Package (x, f(x)) pairs as shares
+Algorithm:
+
+  * For each byte of secret: generate K-1 random coefficients, set coefficient[0] = secret byte, construct polynomial f(x) = a0 + a1*x + a2*x^2 + ... + a(k-1)*x^(k-1)
+  * Evaluate polynomial at x = 1, 2, ..., N
+  * Package (x, f(x)) pairs as shares
 
 
 Reconstructing a Secret
@@ -80,9 +89,11 @@ Parameters: - shares - List of at least K shamir-share records
 
 Returns: Reconstructed secret blob
 
-Algorithm: 1. Take first K shares 2. For each byte position: - Use
-Lagrange interpolation - Compute f(0) = secret byte 3. Assemble
-reconstructed secret
+Algorithm:
+
+  * Take first K shares
+  * For each byte position: use Lagrange interpolation, compute f(0) = secret byte
+  * Assemble reconstructed secret
 
 
 ------------------------------------------------------------------------
@@ -215,6 +226,10 @@ Considerations
   * Geography: Consider time zones for ceremonies
   * Succession: What if custodians unavailable?
 
+Threshold selection balances the probability of legitimate recovery
+against the probability of malicious collusion, tailored to the specific
+threat model.
+
 
 ------------------------------------------------------------------------
 SHARE DISTRIBUTION
@@ -327,10 +342,15 @@ Threats Remaining
 Operational Security
 --------------------
 
-1. Generation: Air-gapped machine, secure random 2. Distribution:
-Out-of-band verification 3. Storage: Encrypted, physically secure 4.
-Reconstruction: Secure room, witnesses 5. Destruction: Secure wipe after
-use
+  * Generation: Air-gapped machine, secure random
+  * Distribution: Out-of-band verification
+  * Storage: Encrypted, physically secure
+  * Reconstruction: Secure room, witnesses
+  * Destruction: Secure wipe after use
+
+Shamir's mathematical security is only as strong as the operational
+procedures surrounding share generation, distribution, and
+reconstruction.
 
 
 ------------------------------------------------------------------------
@@ -365,10 +385,10 @@ Limitations
 REFERENCES
 ------------------------------------------------------------------------
 
-1. Shamir, A. (1979). How to share a secret. Communications of the ACM.
-2. Blakley, G. R. (1979). Safeguarding cryptographic keys. 3. Beimel, A.
-(2011). Secret-Sharing Schemes: A Survey. 4. NIST SP 800-57.
-Recommendation for Key Management.
+  * Shamir, A. (1979). How to share a secret. Communications of the ACM.
+  * Blakley, G. R. (1979). Safeguarding cryptographic keys.
+  * Beimel, A. (2011). Secret-Sharing Schemes: A Survey.
+  * NIST SP 800-57. Recommendation for Key Management.
 
 
 ------------------------------------------------------------------------

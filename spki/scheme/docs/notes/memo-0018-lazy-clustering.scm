@@ -37,7 +37,12 @@
       (p "Crypto overhead (constant):")
       (code "Signature verify: ~10 μs (Ed25519)\nHash verify:      ~1 ms (SHA-512, 10MB)\nTotal overhead:   ~1 ms (negligible vs transfer)")
       (p "\"Lazy\" means when, not how fast. When you sync, it saturates the pipe.")
-      (p "Design priorities: 1. Optimized for Starlink and satellite links 2. Tolerant of high latency (no chatty protocols) 3. Graceful degradation to minimum bandwidth 4. Bursty transfer patterns (sync then idle)"))
+      (p "Design priorities:")
+      (list
+        (item "Optimized for Starlink and satellite links")
+        (item "Tolerant of high latency (no chatty protocols)")
+        (item "Graceful degradation to minimum bandwidth")
+        (item "Bursty transfer patterns (sync then idle)")))
     (subsection
       "Heartbeat and Timekeeping"
       (p "No mandatory heartbeat. That's the design.")

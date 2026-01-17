@@ -34,13 +34,21 @@
       (code scheme "(shamir-split secret #!key (threshold 3) (total 5))")
       (p "Parameters: - secret - Blob to split (any size, typically 32 or 64 bytes) - threshold - Minimum shares to reconstruct (K) - total - Total shares to create (N)")
       (p "Returns: List of N shamir-share records")
-      (p "Algorithm: 1. For each byte of secret:    - Generate K-1 random coefficients    - Coefficient[0] = secret byte    - Polynomial: f(x) = a₀ + a₁x + a₂x² + ... + aₖ₋₁xᵏ⁻¹ 2. Evaluate polynomial at x = 1, 2, ..., N 3. Package (x, f(x)) pairs as shares"))
+      (p "Algorithm:")
+      (list
+        (item "For each byte of secret: generate K-1 random coefficients, set coefficient[0] = secret byte, construct polynomial f(x) = a0 + a1*x + a2*x^2 + ... + a(k-1)*x^(k-1)")
+        (item "Evaluate polynomial at x = 1, 2, ..., N")
+        (item "Package (x, f(x)) pairs as shares")))
     (subsection
       "Reconstructing a Secret"
       (code scheme "(shamir-reconstruct shares)")
       (p "Parameters: - shares - List of at least K shamir-share records")
       (p "Returns: Reconstructed secret blob")
-      (p "Algorithm: 1. Take first K shares 2. For each byte position:    - Use Lagrange interpolation    - Compute f(0) = secret byte 3. Assemble reconstructed secret")))
+      (p "Algorithm:")
+      (list
+        (item "Take first K shares")
+        (item "For each byte position: use Lagrange interpolation, compute f(0) = secret byte")
+        (item "Assemble reconstructed secret"))))
   (section
     "Galois Field Arithmetic"
     (p "Operations performed in GF(2⁸) with irreducible polynomial x⁸ + x⁴ + x³ + x + 1:")

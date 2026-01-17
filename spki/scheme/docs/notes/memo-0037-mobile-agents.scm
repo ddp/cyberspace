@@ -72,7 +72,13 @@
       "teleport (migrate)"
       (p "Move agent to another realm:")
       (code scheme "(teleport agent-id target-realm\n  #!key superpose)  ; checkpoint before teleport")
-      (p "Process: 1. Serialize agent code + state 2. Create migration certificate (signed by current realm) 3. Transmit to target realm 4. Target validates credentials against its policy 5. Resume execution")
+      (p "Process:")
+      (list
+        (item "Serialize agent code + state")
+        (item "Create migration certificate (signed by current realm)")
+        (item "Transmit to target realm")
+        (item "Target validates credentials against its policy")
+        (item "Resume execution"))
       (p "Migration Certificate:")
       (code scheme "(spki-cert\n  (issuer source-realm-key)\n  (subject agent-id)\n  (capability (action execute) (object target-realm))\n  (validity (not-after migration-timeout)))"))
     (subsection
@@ -141,7 +147,11 @@
       (code scheme "(coordinator-kill agent-id\n  #!key reason grace-period)")
       (p "Kill Signal:")
       (code scheme "(kill-signal\n  (target agent-id)\n  (issuer coordinator-key)\n  (reason (policy-violation \"exceeded-cpu-quota\"))\n  (grace-period 5)  ; seconds to superpose\n  (signature #${ed25519-sig}))")
-      (p "Agents MUST honor kill signals. Failure to terminate results in: 1. Resource revocation (network, storage access removed) 2. Forced decoherence by runtime 3. Blacklisting of spawning principal")))
+      (p "Agents MUST honor kill signals. Failure to terminate results in:")
+      (list
+        (item "Resource revocation (network, storage access removed)")
+        (item "Forced decoherence by runtime")
+        (item "Blacklisting of spawning principal"))))
   (section
     "Distributed Locking (SCS-Style)"
     (subsection
@@ -155,7 +165,11 @@
       "Distributed Locks (Cross-Realm)"
       (p "For resources spanning realms:")
       (code scheme "(distributed-lock resource realms\n  #!key timeout coordinator)")
-      (p "Uses two-phase locking: 1. Prepare - All realms vote to grant lock 2. Commit - Lock granted if all vote yes 3. Abort - Any no vote aborts"))
+      (p "Uses two-phase locking:")
+      (list
+        (item "Prepare - All realms vote to grant lock")
+        (item "Commit - Lock granted if all vote yes")
+        (item "Abort - Any no vote aborts")))
     (subsection
       "Deadlock Detection"
       (p "Lock manager maintains wait-for graph:")
@@ -173,7 +187,12 @@
         (row "Signaling " "Pub/sub presence " "Dummy traffic ")))
     (subsection
       "Credential Validation"
-      (p "On every operation: 1. Verify agent's SPKI certificate chain 2. Check capability grants requested action 3. Validate certificates not revoked 4. Enforce monotonic attenuation"))
+      (p "On every operation:")
+      (list
+        (item "Verify agent's SPKI certificate chain")
+        (item "Check capability grants requested action")
+        (item "Validate certificates not revoked")
+        (item "Enforce monotonic attenuation")))
     (subsection
       "Migration Security"
       (code scheme "(define (validate-migration agent target-realm)\n  (and (valid-credentials? (agent-credentials agent))\n       (realm-admits? target-realm agent)\n       (not-revoked? (agent-credentials agent))\n       (within-quota? target-realm agent)))"))

@@ -38,6 +38,9 @@ In archival garbage collection, the opposite holds:
   * Preservation is the default
   * When in doubt, keep it
 
+This inverts the runtime GC assumption that most objects die young; in
+an archive, age confers value.
+
 The Library of Alexandria burned once. We will not let it burn again.
 
 
@@ -57,6 +60,9 @@ pruned:
   * Temporary objects
   * Intermediate computation results
 
+Without collection, storage grows without bound; the question is not
+whether to collect but how conservatively.
+
 But deletion is dangerous:
 
   * Hash as capability
@@ -67,6 +73,9 @@ But deletion is dangerous:
   * May need historical data
   * Resurrection
   * Deleted objects may be re-added
+
+Each risk represents a real failure mode; premature collection has
+caused data loss in every major distributed system.
 
 GC must be conservative, consensual, and auditable.
 
@@ -212,8 +221,9 @@ Tricolor Abstraction
 The naive recursive mark algorithm risks stack overflow on deep object
 graphs. The tricolor abstraction provides:
 
-1. White: Unvisited, potentially garbage 2. Gray: Visited but references
-not yet scanned 3. Black: Visited and all references scanned
+  * White: Unvisited, potentially garbage
+  * Gray: Visited but references not yet scanned
+  * Black: Visited and all references scanned
 
 
     ;; Tricolor sets - explicit worklist avoids stack overflow
@@ -681,9 +691,12 @@ Archival Object Evaporation
 Archival objects (>30 days) receive maximum protection. They can only
 evaporate via:
 
-1. Legal requirement - With proof of legal order 2. Data corruption -
-With cryptographic proof of corruption 3. Governance vote - Per Memo-036
-quorum protocol
+  * Legal requirement - With proof of legal order
+  * Data corruption - With cryptographic proof of corruption
+  * Governance vote - Per Memo-036 quorum protocol
+
+These narrow exceptions exist because even sacred objects sometimes must
+go, but only with extraordinary justification.
 
 
     (define (archival-evaporation-authorized? cert)
@@ -992,11 +1005,12 @@ INVARIANTS
 REFERENCES
 ------------------------------------------------------------------------
 
-1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly
-Garbage Collection - Dijkstra et al. 3. Memo-020: Content-Addressed
-Storage 4. Memo-003: Cryptographic Audit Trail 5. Memo-036: Quorum
-Protocol with Homomorphic Voting 6. Memo-008: Threshold Signature
-Governance
+  * The Garbage Collection Handbook - Jones, Hosking, Moss
+  * On-the-Fly Garbage Collection - Dijkstra et al.
+  * Memo-020: Content-Addressed Storage
+  * Memo-003: Cryptographic Audit Trail
+  * Memo-036: Quorum Protocol with Homomorphic Voting
+  * Memo-008: Threshold Signature Governance
 
 
 ------------------------------------------------------------------------

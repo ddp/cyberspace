@@ -63,15 +63,32 @@
     (subsection
       "Signing Certificates"
       (code scheme "(define signed-cert\n  (sign-cert cert alice-private))")
-      (p "Process: 1. Convert certificate to canonical S-expression 2. Hash with SHA-512 3. Sign hash with Ed25519 4. Create signature record 5. Combine into signed certificate"))
+      (p "Process:")
+      (list
+        (item "Convert certificate to canonical S-expression")
+        (item "Hash with SHA-512")
+        (item "Sign hash with Ed25519")
+        (item "Create signature record")
+        (item "Combine into signed certificate")))
     (subsection
       "Verifying Certificates"
       (code scheme "(verify-signed-cert signed-cert alice-public)")
-      (p "Verification: 1. Recompute canonical S-expression 2. Hash with SHA-512 3. Compare with stored hash 4. Verify Ed25519 signature"))
+      (p "Verification:")
+      (list
+        (item "Recompute canonical S-expression")
+        (item "Hash with SHA-512")
+        (item "Compare with stored hash")
+        (item "Verify Ed25519 signature")))
     (subsection
       "Verifying Delegation Chains"
       (code scheme "(verify-chain root-key cert-list target-tag)")
-      (p "Chain verification ensures: 1. Each certificate is validly signed 2. Issuer of cert[n+1] matches subject of cert[n] 3. Tags are properly delegated (each implies the next) 4. Propagation is allowed (except final cert) 5. Final tag implies target tag")))
+      (p "Chain verification ensures:")
+      (list
+        (item "Each certificate is validly signed")
+        (item "Issuer of cert[n+1] matches subject of cert[n]")
+        (item "Tags are properly delegated (each implies the next)")
+        (item "Propagation is allowed (except final cert)")
+        (item "Final tag implies target tag"))))
   (section
     "CLI Tools"
     (subsection

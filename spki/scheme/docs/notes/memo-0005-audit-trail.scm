@@ -26,7 +26,13 @@
     (subsection
       "The Problem"
       (p "Traditional logging fails on all counts: - Tamperable: Text files can be edited - Anonymous: No cryptographic identity - Disconnected: No provable ordering - Unverifiable: No mathematical proof of integrity")
-      (p "Cyberspace audit trails provide: 1. Content-addressed entries - Tamper-evident by hash 2. Hash-chained structure - Append-only ordering 3. SPKI attribution - Cryptographic actor identity 4. Ed25519 seals - Mathematical proof of authenticity 5. Dual context - Human-readable motivation + machine-parseable environment")))
+      (p "Cyberspace audit trails provide:")
+      (list
+        (item "Content-addressed entries - Tamper-evident by hash")
+        (item "Hash-chained structure - Append-only ordering")
+        (item "SPKI attribution - Cryptographic actor identity")
+        (item "Ed25519 seals - Mathematical proof of authenticity")
+        (item "Dual context - Human-readable motivation + machine-parseable environment"))))
   (section
     "Specification"
     (subsection
@@ -70,12 +76,25 @@
       "audit-append"
       (p "Create and sign a new audit entry.")
       (code scheme "(audit-append\n  actor: public-key-blob\n  action: '(seal-commit \"hash123\")\n  motivation: \"Added new feature\"\n  signing-key: private-key-blob)")
-      (p "Process: 1. Increment sequence counter 2. Get parent entry ID (hash chain link) 3. Build unsealed entry structure 4. Compute SHA-512 hash of canonical S-expression 5. Sign hash with Ed25519 6. Create seal record 7. Save entry to disk"))
+      (p "Process:")
+      (list
+        (item "Increment sequence counter")
+        (item "Get parent entry ID (hash chain link)")
+        (item "Build unsealed entry structure")
+        (item "Compute SHA-512 hash of canonical S-expression")
+        (item "Sign hash with Ed25519")
+        (item "Create seal record")
+        (item "Save entry to disk")))
     (subsection
       "audit-verify"
       (p "Verify cryptographic seal on an entry.")
       (code scheme "(audit-verify entry public-key: key)")
-      (p "Verification steps: 1. Reconstruct unsealed entry 2. Compute SHA-512 hash 3. Compare with stored content-hash 4. Verify Ed25519 signature"))
+      (p "Verification steps:")
+      (list
+        (item "Reconstruct unsealed entry")
+        (item "Compute SHA-512 hash")
+        (item "Compare with stored content-hash")
+        (item "Verify Ed25519 signature")))
     (subsection
       "audit-chain"
       (p "Verify entire audit chain.")

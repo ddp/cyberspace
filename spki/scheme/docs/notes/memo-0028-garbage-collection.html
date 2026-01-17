@@ -49,6 +49,7 @@
 <li>Preservation is the default</li>
 <li>When in doubt, keep it</li>
 </ul>
+<p>This inverts the runtime GC assumption that most objects die young; in an archive, age confers value.</p>
 <p>The Library of Alexandria burned once. We will not let it burn again.</p>
 </section>
 <section>
@@ -64,6 +65,7 @@
 <li>Temporary objects</li>
 <li>Intermediate computation results</li>
 </ul>
+<p>Without collection, storage grows without bound; the question is not whether to collect but how conservatively.</p>
 <p>But deletion is dangerous:</p>
 <ul>
 <li>Hash as capability</li>
@@ -75,6 +77,7 @@
 <li>Resurrection</li>
 <li>Deleted objects may be re-added</li>
 </ul>
+<p>Each risk represents a real failure mode; premature collection has caused data loss in every major distributed system.</p>
 <p>GC must be conservative, consensual, and auditable.</p>
 <p>The default is: never collect. Collection requires explicit action.</p>
 </section>
@@ -408,7 +411,11 @@
 <h2>Mark and Sweep</h2>
 <h3>Tricolor Abstraction</h3>
 <p>The naive recursive mark algorithm risks stack overflow on deep object graphs. The tricolor abstraction provides:</p>
-<p>1. White: Unvisited, potentially garbage 2. Gray: Visited but references not yet scanned 3. Black: Visited and all references scanned</p>
+<ul>
+<li>White: Unvisited, potentially garbage</li>
+<li>Gray: Visited but references not yet scanned</li>
+<li>Black: Visited and all references scanned</li>
+</ul>
 <pre class="language-scheme">
 ;; Tricolor sets - explicit worklist avoids stack overflow
 (define white-set (make-hash-set))  ; Candidates for collection
@@ -841,7 +848,12 @@
 </pre>
 <h3>Archival Object Evaporation</h3>
 <p>Archival objects (&gt;30 days) receive maximum protection. They can only evaporate via:</p>
-<p>1. Legal requirement - With proof of legal order 2. Data corruption - With cryptographic proof of corruption 3. Governance vote - Per Memo-036 quorum protocol</p>
+<ul>
+<li>Legal requirement - With proof of legal order</li>
+<li>Data corruption - With cryptographic proof of corruption</li>
+<li>Governance vote - Per Memo-036 quorum protocol</li>
+</ul>
+<p>These narrow exceptions exist because even sacred objects sometimes must go, but only with extraordinary justification.</p>
 <pre class="language-scheme">
 (define (archival-evaporation-authorized? cert)
   "Check if archival evaporation is properly authorized"
@@ -1674,7 +1686,14 @@
 </section>
 <section>
 <h2>References</h2>
-<p>1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. Memo-020: Content-Addressed Storage 4. Memo-003: Cryptographic Audit Trail 5. Memo-036: Quorum Protocol with Homomorphic Voting 6. Memo-008: Threshold Signature Governance</p>
+<ul>
+<li>The Garbage Collection Handbook - Jones, Hosking, Moss</li>
+<li>On-the-Fly Garbage Collection - Dijkstra et al.</li>
+<li>Memo-020: Content-Addressed Storage</li>
+<li>Memo-003: Cryptographic Audit Trail</li>
+<li>Memo-036: Quorum Protocol with Homomorphic Voting</li>
+<li>Memo-008: Threshold Signature Governance</li>
+</ul>
 </section>
 <section>
 <h2>Changelog</h2>

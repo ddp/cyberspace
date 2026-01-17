@@ -37,7 +37,12 @@
 <h2>Motivation</h2>
 <h3>The Fundamental Requirement</h3>
 <p>All cryptography requires true quantum randomness. The math doesn't work otherwise.</p>
-<p>Cryptographic proofs assume a source of bits that are: 1. Statistically uniform - Each bit equally likely 0 or 1 2. Independent - No correlations between bits 3. Unpredictable in principle - Not just hard to predict, but impossible</p>
+<p>Cryptographic proofs assume a source of bits that are:</p>
+<ul>
+<li>Statistically uniform - Each bit equally likely 0 or 1</li>
+<li>Independent - No correlations between bits</li>
+<li>Unpredictable in principle - Not just hard to predict, but impossible</li>
+</ul>
 <p>Only quantum mechanical processes satisfy condition 3. Classical chaotic systems (lava lamps, thermal noise, ring oscillators) are deterministic - an adversary with sufficient knowledge of initial conditions could, in theory, predict their output. Quantum processes have no "initial conditions" to know - the randomness is fundamental to physics itself.</p>
 <p>Why this matters: - Security proofs assume perfect randomness - Key security = min(algorithmbits, entropybits) - A 256-bit key from a 32-bit PRNG seed provides only 32 bits of security - Nation-state adversaries may have capabilities to model classical entropy sources</p>
 <h3>Cryptographic Operations Requiring Entropy</h3>
@@ -49,7 +54,7 @@
 <li>Challenge-response protocols</li>
 <li>Zero-knowledge proofs</li>
 </ul>
-<p>Weak or predictable entropy destroys security completely. A realm's sovereignty depends on unpredictable secrets.</p>
+<p>Every cryptographic primitive assumes access to uniformly random bits. Without true entropy, key generation produces predictable keys, nonces repeat, and mathematical security guarantees collapse. A realm's sovereignty rests entirely on the unpredictability of its secrets.</p>
 </section>
 <section>
 <h2>Specification</h2>
@@ -60,7 +65,14 @@ randombytes_buf(buffer, size)
 </pre>
 <p>libsodium automatically selects the best available source: - Linux: getrandom(2) syscall, falls back to /dev/urandom - macOS/iOS: arc4randombuf() - Windows: RtlGenRandom() - OpenBSD: arc4randombuf() (ChaCha20-based)</p>
 <h3>Why libsodium?</h3>
-<p>1. Cross-platform consistency - Same API everywhere 2. Automatic best-source selection - No platform-specific code 3. Initialization safety - Blocks until entropy available 4. Fork safety - Handles process forking correctly 5. Audited implementation - Widely reviewed cryptographic library</p>
+<ul>
+<li>Cross-platform consistency - Same API everywhere</li>
+<li>Automatic best-source selection - No platform-specific code</li>
+<li>Initialization safety - Blocks until entropy available</li>
+<li>Fork safety - Handles process forking correctly</li>
+<li>Audited implementation - Widely reviewed cryptographic library</li>
+</ul>
+<p>libsodium provides a single canonical interface for entropy across all platforms. Using one audited implementation eliminates the class of bugs where platform-specific entropy code diverges or contains subtle flaws.</p>
 <h3>Platform Requirements</h3>
 <p>#### Scheme (CHICKEN)</p>
 <pre class="language-scheme">
@@ -1079,7 +1091,12 @@ randombytes_buf(buffer, size)
 <p>Critical distinction: Everything below the security boundary is computationally secure (hard to predict), not information-theoretically secure (impossible to predict). For operations like key generation that must withstand future advances in computation and modeling, only quantum sources provide provable security.</p>
 <h3>Practical Access to Quantum Randomness</h3>
 <p>The ideal: Every cryptographic operation sources entropy from a local quantum RNG.</p>
-<p>Current reality: Most systems rely on: 1. Hardware RNG (thermal noise, ring oscillators) - classical, but unpredictable at human scales 2. OS mixing of multiple sources - defense in depth 3. NIST beacon - quantum-sourced, publicly verifiable, but network-dependent</p>
+<p>Current reality: Most systems rely on:</p>
+<ul>
+<li>Hardware RNG (thermal noise, ring oscillators) - classical, but unpredictable at human scales</li>
+<li>OS mixing of multiple sources - defense in depth</li>
+<li>NIST beacon - quantum-sourced, publicly verifiable, but network-dependent</li>
+</ul>
 <p>Path forward for Cyberspace: - Phase 1 (Now): libsodium with OS entropy (relies on hardware quality) - Phase 2: Optional quantum RNG hardware support (USB devices, PCIe cards) - Phase 3: Attestation of entropy source in realm metadata - Phase 4: Quantum RNG as standard infrastructure (as quantum internet develops)</p>
 <p>Minimum acceptable: Modern Intel/AMD RDSEED instruction, which samples thermal noise at the silicon level. While not provably quantum, it has no known exploits and is mixed with other sources.</p>
 <p>Goal: True quantum randomness as the foundation. The math requires it; the engineering will catch up.</p>
@@ -1101,7 +1118,13 @@ randombytes_buf(buffer, size)
                (hardware "ID-Quantique-QUANTIS")
                (timestamp 1736344800)))
 </pre>
-<p>Entropy services: 1. Local generation - Realm uses its best available source 2. Federated entropy - Request quantum entropy from realms with quantum hardware 3. Beacon aggregation - Mix NIST + drand + realm sources 4. Attestation chain - Prove the entropy source for audit</p>
+<p>Entropy services:</p>
+<ul>
+<li>Local generation - Realm uses its best available source</li>
+<li>Federated entropy - Request quantum entropy from realms with quantum hardware</li>
+<li>Beacon aggregation - Mix NIST + drand + realm sources</li>
+<li>Attestation chain - Prove the entropy source for audit</li>
+</ul>
 <p>Long-term vision: A network of realms with quantum RNG hardware providing verifiable, quantum-sourced entropy to all participants. The soup carries randomness as naturally as it carries data.</p>
 <h3>True Random Number Generators (TRNG)</h3>
 <p>True randomness comes from physical processes that are fundamentally unpredictable:</p>
@@ -1637,7 +1660,13 @@ randombytes_buf(buffer, size)
 </svg>
 </div>
 <p>#### Why Lava Lamps?</p>
-<p>1. Chaotic fluid dynamics - Wax movement is unpredictable 2. Thermal convection - Heat creates complex flow patterns 3. High bandwidth - Each video frame yields fresh entropy 4. Tamper-evident - Physical installation is visible 5. Independent source - Not correlated with CPU state</p>
+<ul>
+<li>Chaotic fluid dynamics - Wax movement is unpredictable</li>
+<li>Thermal convection - Heat creates complex flow patterns</li>
+<li>High bandwidth - Each video frame yields fresh entropy</li>
+<li>Tamper-evident - Physical installation is visible</li>
+<li>Independent source - Not correlated with CPU state</li>
+</ul>
 <p>Cloudflare's wall of 100 lava lamps generates entropy for ~10% of internet HTTPS traffic.</p>
 <p>#### Other Environmental Sources</p>
 <table>

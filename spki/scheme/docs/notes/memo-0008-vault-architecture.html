@@ -36,7 +36,13 @@
 <section>
 <h2>Motivation</h2>
 <p>Git is powerful but lacks:</p>
-<p>1. Cryptographic sealing - GPG signing is optional and awkward 2. Authorization model - Anyone with access can commit 3. Archival features - No first-class backup/restore 4. Audit integration - History is mutable</p>
+<ul>
+<li>Cryptographic sealing - GPG signing is optional and awkward</li>
+<li>Authorization model - Anyone with access can commit</li>
+<li>Archival features - No first-class backup/restore</li>
+<li>Audit integration - History is mutable</li>
+</ul>
+<p>These gaps leave security as an afterthought rather than a foundation, requiring external tools and manual discipline to achieve what should be built-in.</p>
 <p>The Vault wraps Git with:</p>
 <ul>
 <li>seal- commands that cryptographically sign operations</li>
@@ -44,6 +50,7 @@
 <li>Three archive formats for different use cases</li>
 <li>Integrated audit trail for non-repudiation</li>
 </ul>
+<p>The seal- prefix makes cryptographic operations explicit; security is not hidden behind flags or configuration but part of the command vocabulary.</p>
 <div class="diagram-container">
 <svg class="diagram" viewBox="0 0 540 260" width="540" height="260" xmlns="http://www.w3.org/2000/svg">
 <style>
@@ -402,7 +409,13 @@
   #!key files catalog subjects keywords description preserve)
 </pre>
 <p>Parameters: - message - Commit message (required) - files - Specific files to stage (optional) - catalog - Enable catalog metadata - subjects - Subject headings - keywords - Search keywords - description - Extended description - preserve - Enable preservation metadata</p>
-<p>Process: 1. Stage specified files (or all modified) 2. Create git commit 3. Save metadata (if catalog or preserve) 4. Record in audit trail (if signing key configured)</p>
+<p>Process:</p>
+<ul>
+<li>Stage specified files (or all modified)</li>
+<li>Create git commit</li>
+<li>Save metadata (if catalog or preserve)</li>
+<li>Record in audit trail (if signing key configured)</li>
+</ul>
 <p>Example:</p>
 <pre class="language-scheme">
 (seal-commit "Add authentication module"
@@ -448,7 +461,14 @@
 (seal-release version #!key message migrate-from)
 </pre>
 <p>Parameters: - version - Semantic version (X.Y.Z required) - message - Release notes - migrate-from - Previous version for migration tracking</p>
-<p>Process: 1. Validate semantic version format 2. Get current commit hash 3. Create annotated git tag 4. Sign with SPKI (if configured) 5. Create migration marker (if migrate-from specified)</p>
+<p>Process:</p>
+<ul>
+<li>Validate semantic version format</li>
+<li>Get current commit hash</li>
+<li>Create annotated git tag</li>
+<li>Sign with SPKI (if configured)</li>
+<li>Create migration marker (if migrate-from specified)</li>
+</ul>
 <p>Signature Storage:</p>
 <pre class="language-scheme">
 ;; .vault/releases/1.0.0.sig
@@ -463,7 +483,12 @@
 <pre class="language-scheme">
 (seal-verify version #!key verify-key)
 </pre>
-<p>Process: 1. Load signature file 2. Recompute manifest hash 3. Verify Ed25519 signature</p>
+<p>Process:</p>
+<ul>
+<li>Load signature file</li>
+<li>Recompute manifest hash</li>
+<li>Verify Ed25519 signature</li>
+</ul>
 </section>
 <section>
 <h2>Archival System</h2>

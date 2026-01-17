@@ -30,12 +30,18 @@ generation capabilities for:
   * Content annotation and metadata extraction
   * Inter-agent communication in natural language
 
+These tasks require linguistic intelligence that rules-based systems
+cannot provide at scale.
+
 External API dependencies (OpenAI, Anthropic, etc.) introduce:
 
-1. Privacy leakage — document content leaves the realm 2. Availability
-risk — network partitions break agent operation 3. Cost
-unpredictability — metered APIs scale poorly 4. Vendor lock-in —
-proprietary formats and rate limits
+  * Privacy leakage - document content leaves the realm
+  * Availability risk - network partitions break agent operation
+  * Cost unpredictability - metered APIs scale poorly
+  * Vendor lock-in - proprietary formats and rate limits
+
+Each dependency on external APIs undermines the self-sovereign
+architecture; intelligence that phones home is not truly yours.
 
 Local inference eliminates these concerns while maintaining
 capability.[^d1]
@@ -232,10 +238,13 @@ Fallback Behavior
 
 When local inference is unavailable:
 
-1. Queue — buffer requests for later processing 2. Degrade — use
-simpler heuristics (keyword extraction vs. LLM) 3. Federate — request
-inference from trusted peer realm 4. Fail — return error to requesting
-agent
+  * Queue - buffer requests for later processing
+  * Degrade - use simpler heuristics (keyword extraction vs. LLM)
+  * Federate - request inference from trusted peer realm
+  * Fail - return error to requesting agent
+
+Graceful degradation ensures agents remain functional even when full
+inference capacity is unavailable.
 
 
     (define (inference-with-fallback server model prompt)
@@ -297,124 +306,7 @@ Sensitive documents require isolated inference contexts:
   * Clear KV cache between requests from different agents
   * No persistent memory across security boundaries
 
-
-------------------------------------------------------------------------
-OLLAMA INTEGRATION
-------------------------------------------------------------------------
-
-Ollama is the reference implementation for local inference.[^h2]
-
-[^h2]: Historical: Ollama follows the Unix philosophy—do one thing
-well. It manages models and serves inference. Nothing more.
-
-
-Installation
-------------
-
-
-    # macOS / Linux
-    curl -fsSL https://ollama.com/install.sh | sh
-    # Verify
-    ollama --version
-
-
-Model Management
-----------------
-
-
-    # Pull models
-    ollama pull llama3
-    ollama pull nomic-embed-text
-    # List available
-    ollama list
-    # Remove
-    ollama rm unused-model
-
-
-API Endpoints
--------------
-
-Table 4: Ollama API Endpoints
-
-
-  Endpoint          Method   Purpose             
-  /api/generate     POST     Text completion     
-  /api/chat         POST     Multi-turn chat     
-  /api/embeddings   POST     Vector embeddings   
-  /api/tags         GET      List models         
-  /api/show         POST     Model details       
-
-
-Scheme Bindings
----------------
-
-
-    (define ollama-base "http://localhost:11434")
-    (define (ollama-generate model prompt #!key (options '()))
-      (http-post (string-append ollama-base "/api/generate")
-                 ((model . ,model)
-                   (prompt . ,prompt)
-                   (stream . #f)
-                   ,@options)))
-    (define (ollama-chat model messages #!key (options '()))
-      (http-post (string-append ollama-base "/api/chat")
-                 ((model . ,model)
-                   (messages . ,messages)
-                   (stream . #f)
-                   ,@options)))
-    (define (ollama-embed model text)
-      (http-post (string-append ollama-base "/api/embeddings")
-                 `((model . ,model)
-                   (prompt . ,text))))
-
-
-------------------------------------------------------------------------
-COMPATIBILITY
-------------------------------------------------------------------------
-
-
-Alternative Backends
---------------------
-
-The protocol supports any OpenAI-compatible inference server:
-
-  * llama.cpp — server binary with --host flag - vLLM — production serving with PagedAttention
-  * LocalAI — drop-in OpenAI replacement
-  * LM Studio — GUI with server mode
-
-
-Cloud Fallback
---------------
-
-For realms without local GPU resources, cloud inference MAY be used as
-fallback with explicit user consent and encryption:
-
-
-    (define (cloud-inference-fallback prompt)
-      (when (user-consent? 'cloud-inference)
-        (let ((encrypted (encrypt-for-cloud prompt)))
-          ;; Use cloud API with encrypted prompt
-          ;; Decrypt response locally
-          )))
-
-This is NOT RECOMMENDED for sensitive documents.
-
-
-------------------------------------------------------------------------
-REFERENCES
-------------------------------------------------------------------------
-
-1. Memo-023: Demonic Agent Sandboxing 2. Memo-025: Query Language 3.
-Memo-035: Mobile Agents and Pub/Sub 4. Ollama Documentation:
-https://ollama.com/ 5. Lewis et al., "Retrieval-Augmented Generation"
-(2020)
-
-
-------------------------------------------------------------------------
-CHANGELOG
-------------------------------------------------------------------------
-
-  * 2026-01-07
-  * Initial specification
+LLMs have memory; cross-agent inference without isolation is cross-agent
+information leakage.
 
 ------------------------------------------------------------------------

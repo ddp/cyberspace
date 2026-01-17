@@ -38,7 +38,13 @@
 <h2>Motivation</h2>
 <p>Users need seamless integration between their existing filesystem and the vault. Manual import/export creates friction and risks metadata loss.</p>
 <p>A wormhole provides:</p>
-<p>1. Transparency — Finder, cp, rsync work unchanged 2. Bidirectionality — No separate sync step; it IS the filesystem 3. Metadata preservation — Full macOS attributes captured automatically 4. Content addressing — Deduplication and integrity built-in 5. Security — First-class Simple Public Key Infrastructure (SPKI) object with audit and rate-limit</p>
+<ul>
+<li>Transparency - Finder, cp, rsync work unchanged</li>
+<li>Bidirectionality - No separate sync step; it IS the filesystem</li>
+<li>Metadata preservation - Full macOS attributes captured automatically</li>
+<li>Content addressing - Deduplication and integrity built-in</li>
+<li>Security - First-class Simple Public Key Infrastructure (SPKI) object with audit and rate-limit</li>
+</ul>
 <p>The filesystem abstraction is the right boundary—everything above it (apps, shell, Finder) works without modification.[^d1]</p>
 <p>[^d1]: Design: FUSE inverts the usual model. Instead of teaching applications about vaults, we teach the vault to speak filesystem. Unix got this right: everything is a file.</p>
 </section>
@@ -52,6 +58,7 @@
 <li>Rate Limiting (Memo-032) — Configurable ops/minute</li>
 <li>Sandboxing (Memo-023) — Agents access wormholes through capabilities</li>
 </ul>
+<p>Wormholes bridge two security domains—the filesystem and the vault—making them inherently privileged operations. Treating wormholes as first-class security objects ensures that filesystem access remains under cryptographic control, not just ambient POSIX permissions.</p>
 <p>[^d2]: Design: Wormholes are attack surface. Unrestricted filesystem access defeats vault security. Every wormhole must be explicitly authorized, continuously audited, and rate-limited against abuse.</p>
 <h3>Wormhole Certificate</h3>
 <pre class="language-scheme">
@@ -1042,7 +1049,12 @@
 </pre>
 <h3>Conflict Resolution</h3>
 <p>When merging manifests from different devices (Memo-016 lazy clustering):</p>
-<p>1. Same hash → No conflict (identical content) 2. Different hash, one newer → Take newer 3. Different hash, concurrent → Conflict, apply lazy-resolve</p>
+<ul>
+<li>Same hash - No conflict (identical content)</li>
+<li>Different hash, one newer - Take newer</li>
+<li>Different hash, concurrent - Conflict, apply lazy-resolve</li>
+</ul>
+<p>Content-addressing eliminates most conflicts at the object level; the manifest's version vectors resolve the remainder. Lazy clustering defers conflicts to user decision rather than attempting automatic resolution that may lose work.</p>
 <pre class="language-scheme">
 (define (merge-manifests local remote)
   (for-each
@@ -1151,7 +1163,13 @@ brew install macfuse
 </section>
 <section>
 <h2>References</h2>
-<p>1. Memo-012: Lamport Clocks 2. Memo-016: Lazy Clustering 3. Memo-020: Content-Addressed Storage 4. FUSE documentation: https://libfuse.github.io/ 5. FUSE-T: https://github.com/macos-fuse-t/fuse-t</p>
+<ul>
+<li>Memo-012: Lamport Clocks</li>
+<li>Memo-016: Lazy Clustering</li>
+<li>Memo-020: Content-Addressed Storage</li>
+<li>FUSE documentation: https://libfuse.github.io/</li>
+<li>FUSE-T: https://github.com/macos-fuse-t/fuse-t</li>
+</ul>
 </section>
 <section>
 <h2>Changelog</h2>

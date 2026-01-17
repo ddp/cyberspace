@@ -24,10 +24,11 @@ The Fundamental Requirement
 All cryptography requires true quantum randomness. The math doesn't work
 otherwise.
 
-Cryptographic proofs assume a source of bits that are: 1. Statistically
-uniform - Each bit equally likely 0 or 1 2. Independent - No
-correlations between bits 3. Unpredictable in principle - Not just hard
-to predict, but impossible
+Cryptographic proofs assume a source of bits that are:
+
+  * Statistically uniform - Each bit equally likely 0 or 1
+  * Independent - No correlations between bits
+  * Unpredictable in principle - Not just hard to predict, but impossible
 
 Only quantum mechanical processes satisfy condition 3. Classical chaotic
 systems (lava lamps, thermal noise, ring oscillators) are deterministic
@@ -51,8 +52,10 @@ Cryptographic Operations Requiring Entropy
   * Challenge-response protocols
   * Zero-knowledge proofs
 
-Weak or predictable entropy destroys security completely. A realm's
-sovereignty depends on unpredictable secrets.
+Every cryptographic primitive assumes access to uniformly random bits.
+Without true entropy, key generation produces predictable keys, nonces
+repeat, and mathematical security guarantees collapse. A realm's
+sovereignty rests entirely on the unpredictability of its secrets.
 
 
 ------------------------------------------------------------------------
@@ -78,11 +81,15 @@ arc4randombuf() - Windows: RtlGenRandom() - OpenBSD: arc4randombuf()
 Why libsodium?
 --------------
 
-1. Cross-platform consistency - Same API everywhere 2. Automatic
-best-source selection - No platform-specific code 3. Initialization
-safety - Blocks until entropy available 4. Fork safety - Handles process
-forking correctly 5. Audited implementation - Widely reviewed
-cryptographic library
+  * Cross-platform consistency - Same API everywhere
+  * Automatic best-source selection - No platform-specific code
+  * Initialization safety - Blocks until entropy available
+  * Fork safety - Handles process forking correctly
+  * Audited implementation - Widely reviewed cryptographic library
+
+libsodium provides a single canonical interface for entropy across all
+platforms. Using one audited implementation eliminates the class of bugs
+where platform-specific entropy code diverges or contains subtle flaws.
 
 
 Platform Requirements
@@ -230,10 +237,11 @@ Practical Access to Quantum Randomness
 The ideal: Every cryptographic operation sources entropy from a local
 quantum RNG.
 
-Current reality: Most systems rely on: 1. Hardware RNG (thermal noise,
-ring oscillators) - classical, but unpredictable at human scales 2. OS
-mixing of multiple sources - defense in depth 3. NIST beacon -
-quantum-sourced, publicly verifiable, but network-dependent
+Current reality: Most systems rely on:
+
+  * Hardware RNG (thermal noise, ring oscillators) - classical, but unpredictable at human scales
+  * OS mixing of multiple sources - defense in depth
+  * NIST beacon - quantum-sourced, publicly verifiable, but network-dependent
 
 Path forward for Cyberspace: - Phase 1 (Now): libsodium with OS entropy
 (relies on hardware quality) - Phase 2: Optional quantum RNG hardware
@@ -271,10 +279,12 @@ Cyberspace realms can serve as entropy sources for their users:
                    (hardware "ID-Quantique-QUANTIS")
                    (timestamp 1736344800)))
 
-Entropy services: 1. Local generation - Realm uses its best available
-source 2. Federated entropy - Request quantum entropy from realms with
-quantum hardware 3. Beacon aggregation - Mix NIST + drand + realm
-sources 4. Attestation chain - Prove the entropy source for audit
+Entropy services:
+
+  * Local generation - Realm uses its best available source
+  * Federated entropy - Request quantum entropy from realms with quantum hardware
+  * Beacon aggregation - Mix NIST + drand + realm sources
+  * Attestation chain - Prove the entropy source for audit
 
 Long-term vision: A network of realms with quantum RNG hardware
 providing verifiable, quantum-sourced entropy to all participants. The
@@ -350,11 +360,11 @@ the modern successor.
 
 #### Why Lava Lamps?
 
-1. Chaotic fluid dynamics - Wax movement is unpredictable 2. Thermal
-convection - Heat creates complex flow patterns 3. High bandwidth - Each
-video frame yields fresh entropy 4. Tamper-evident - Physical
-installation is visible 5. Independent source - Not correlated with CPU
-state
+  * Chaotic fluid dynamics - Wax movement is unpredictable
+  * Thermal convection - Heat creates complex flow patterns
+  * High bandwidth - Each video frame yields fresh entropy
+  * Tamper-evident - Physical installation is visible
+  * Independent source - Not correlated with CPU state
 
 Cloudflare's wall of 100 lava lamps generates entropy for ~10% of
 internet HTTPS traffic.

@@ -29,11 +29,11 @@ loss.
 
 A wormhole provides:
 
-1. Transparency — Finder, cp, rsync work unchanged 2. Bidirectionality
-— No separate sync step; it IS the filesystem 3. Metadata preservation
-— Full macOS attributes captured automatically 4. Content addressing
-— Deduplication and integrity built-in 5. Security — First-class
-Simple Public Key Infrastructure (SPKI) object with audit and rate-limit
+  * Transparency - Finder, cp, rsync work unchanged
+  * Bidirectionality - No separate sync step; it IS the filesystem
+  * Metadata preservation - Full macOS attributes captured automatically
+  * Content addressing - Deduplication and integrity built-in
+  * Security - First-class Simple Public Key Infrastructure (SPKI) object with audit and rate-limit
 
 The filesystem abstraction is the right boundary—everything above it
 (apps, shell, Finder) works without modification.[^d1]
@@ -55,6 +55,11 @@ to:[^d2]
   * Audit Trail (Memo-003) — All operations logged
   * Rate Limiting (Memo-032) — Configurable ops/minute
   * Sandboxing (Memo-023) — Agents access wormholes through capabilities
+
+Wormholes bridge two security domains—the filesystem and the
+vault—making them inherently privileged operations. Treating wormholes
+as first-class security objects ensures that filesystem access remains
+under cryptographic control, not just ambient POSIX permissions.
 
 [^d2]: Design: Wormholes are attack surface. Unrestricted filesystem
 access defeats vault security. Every wormhole must be explicitly
@@ -423,9 +428,14 @@ Conflict Resolution
 When merging manifests from different devices (Memo-016 lazy
 clustering):
 
-1. Same hash > No conflict (identical content) 2. Different hash, one
-newer > Take newer 3. Different hash, concurrent > Conflict, apply
-lazy-resolve
+  * Same hash - No conflict (identical content)
+  * Different hash, one newer - Take newer
+  * Different hash, concurrent - Conflict, apply lazy-resolve
+
+Content-addressing eliminates most conflicts at the object level; the
+manifest's version vectors resolve the remainder. Lazy clustering defers
+conflicts to user decision rather than attempting automatic resolution
+that may lose work.
 
 
     (define (merge-manifests local remote)
@@ -581,10 +591,11 @@ DEPENDENCIES
 REFERENCES
 ------------------------------------------------------------------------
 
-1. Memo-012: Lamport Clocks 2. Memo-016: Lazy Clustering 3. Memo-020:
-Content-Addressed Storage 4. FUSE documentation:
-https://libfuse.github.io/ 5. FUSE-T:
-https://github.com/macos-fuse-t/fuse-t
+  * Memo-012: Lamport Clocks
+  * Memo-016: Lazy Clustering
+  * Memo-020: Content-Addressed Storage
+  * FUSE documentation: https://libfuse.github.io/
+  * FUSE-T: https://github.com/macos-fuse-t/fuse-t
 
 
 ------------------------------------------------------------------------

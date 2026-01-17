@@ -41,20 +41,37 @@
       (p "Publish a sealed release to a remote location.")
       (code scheme "(seal-publish version\n              remote: target\n              archive-format: format\n              message: notes)")
       (p "Parameters: - version - Semantic version string (e.g., \"1.0.0\") - remote - Publication target (git remote, URL, or directory path) - archive-format - 'tarball, 'bundle, or 'cryptographic (default) - message - Release notes (optional)")
-      (p "Behavior: 1. Verify release exists (creates if needed via seal-release) 2. Create cryptographic archive with:    - Tarball of repository at version tag    - SHA-512 hash of tarball    - Ed25519 signature of hash    - Manifest with version, hash, signature 3. Publish to remote based on type:    - Git remote: Push tag, optionally upload archive    - HTTP URL: POST archive to endpoint    - Filesystem: Copy archive to directory 4. Record publication in audit trail with:    - Actor (public key from signing key)    - Action (seal-publish version remote)    - Motivation (release notes)    - Cryptographic seal (signature)")
+      (p "Behavior:")
+      (list
+        (item "Verify release exists (creates if needed via seal-release)")
+        (item "Create cryptographic archive with: tarball of repository at version tag, SHA-512 hash of tarball, Ed25519 signature of hash, manifest with version, hash, signature")
+        (item "Publish to remote based on type: Git remote (push tag, optionally upload archive), HTTP URL (POST archive to endpoint), Filesystem (copy archive to directory)")
+        (item "Record publication in audit trail with: actor (public key from signing key), action (seal-publish version remote), motivation (release notes), cryptographic seal (signature)"))
       (p "Audit Entry Format:")
       (code scheme "(audit-entry\n  (id \"sha512:...\")\n  (timestamp \"Mon Jan 5 23:38:20 2026\")\n  (sequence 1)\n  (actor\n    (principal #${public-key-blob})\n    (authorization-chain))\n  (action\n    (verb seal-publish)\n    (object \"1.0.0\")\n    (parameters \"/path/to/remote\"))\n  (context\n    (motivation \"Published to filesystem\")\n    (language \"en\"))\n  (environment\n    (platform \"unknown\")\n    (timestamp 1767685100))\n  (seal\n    (algorithm \"ed25519-sha512\")\n    (content-hash \"...\")\n    (signature \"...\")))")
       (p "#### 2. seal-subscribe")
       (p "Subscribe to sealed releases from a remote source.")
       (code scheme "(seal-subscribe remote\n                target: local-path\n                verify-key: public-key)")
       (p "Parameters: - remote - Source location (git remote, URL, or directory) - target - Local path for downloaded archives (optional) - verify-key - Public key for signature verification (optional)")
-      (p "Behavior: 1. Discover available releases from remote:    - Git remote: List tags    - HTTP URL: GET /releases endpoint    - Filesystem: List .archive files 2. Download cryptographic archives 3. Verify each archive:    - Check manifest structure    - Verify SHA-512 hash of tarball    - Verify Ed25519 signature (if verify-key provided) 4. Extract verified archives to target directory 5. Record subscription in audit trail:    - Count of releases downloaded    - Source location    - Verification status")
+      (p "Behavior:")
+      (list
+        (item "Discover available releases from remote: Git remote (list tags), HTTP URL (GET /releases endpoint), Filesystem (list .archive files)")
+        (item "Download cryptographic archives")
+        (item "Verify each archive: check manifest structure, verify SHA-512 hash of tarball, verify Ed25519 signature (if verify-key provided)")
+        (item "Extract verified archives to target directory")
+        (item "Record subscription in audit trail: count of releases downloaded, source location, verification status"))
       (p "Security Consideration: Without verify-key, subscription downloads archives but cannot verify authenticity. SPKI certificate chains should be used to establish trust.")
       (p "#### 3. seal-synchronize")
       (p "Bidirectional synchronization of sealed releases.")
       (code scheme "(seal-synchronize remote\n                  direction: 'both\n                  verify-key: public-key)")
       (p "Parameters: - remote - Sync target (git remote, URL, or directory) - direction - 'both (default), 'push-only, or 'pull-only - verify-key - Public key for signature verification (optional)")
-      (p "Behavior: 1. Discover local and remote releases 2. Compare versions to determine:    - Releases to push (local but not remote)    - Releases to pull (remote but not local) 3. Execute publication for new local releases 4. Execute subscription for new remote releases 5. Record synchronization in audit trail:    - Count pushed and pulled    - Remote location    - Direction")
+      (p "Behavior:")
+      (list
+        (item "Discover local and remote releases")
+        (item "Compare versions to determine: releases to push (local but not remote), releases to pull (remote but not local)")
+        (item "Execute publication for new local releases")
+        (item "Execute subscription for new remote releases")
+        (item "Record synchronization in audit trail: count pushed and pulled, remote location, direction"))
       (p "Use Case: Periodic sync between trusted peers in a confederation.")))
   (section
     "Archive Format"
@@ -63,7 +80,13 @@
       (code "vault-1.0.0.archive          # Manifest file\nvault-1.0.0.archive.tar.gz   # Actual tarball")
       (p "Manifest S-expression:")
       (code scheme "(sealed-archive\n  (version \"1.0.0\")\n  (format cryptographic)\n  (tarball \"vault-1.0.0.archive.tar.gz\")\n  (hash \"sha512:...\")\n  (signature \"ed25519:...\")\n  (timestamp 1767685100)\n  (sealer #${public-key-blob}))")
-      (p "Verification Steps: 1. Read manifest 2. Hash tarball with SHA-512 3. Verify hash matches manifest 4. Verify Ed25519 signature on hash 5. Check SPKI authorization (optional)")))
+      (p "Verification Steps:")
+      (list
+        (item "Read manifest")
+        (item "Hash tarball with SHA-512")
+        (item "Verify hash matches manifest")
+        (item "Verify Ed25519 signature on hash")
+        (item "Check SPKI authorization (optional)"))))
   (section
     "Transport Implementations"
     (subsection

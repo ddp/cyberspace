@@ -40,12 +40,26 @@
 <p>DECnet Phase IV's 24-bit addressing was fatal for internet scale. Cyberspace applies the same principle to IPv6's 128-bit address space. Federated nodes, behaving as one.</p>
 <h3>Requirements</h3>
 <p>The Library of Cyberspace requires a distribution mechanism that:</p>
-<p>1. Preserves cryptographic authenticity - Signatures travel with artifacts 2. Enables offline verification - No centralized authority required 3. Records provenance - All publication events are audited 4. Supports multiple transports - Git, HTTP, filesystem 5. Maintains loose coupling - Works for confederations of friends</p>
+<ul>
+<li>Preserves cryptographic authenticity - Signatures travel with artifacts</li>
+<li>Enables offline verification - No centralized authority required</li>
+<li>Records provenance - All publication events are audited</li>
+<li>Supports multiple transports - Git, HTTP, filesystem</li>
+<li>Maintains loose coupling - Works for confederations of friends</li>
+</ul>
+<p>These requirements reflect the reality of distributed archival: networks partition, authorities disappear, and trust must be verifiable without phoning home.</p>
 <p>Traditional package managers and distribution systems assume centralized registries and online verification. This replication layer is designed for decentralized, long-term preservation where trust is established through Simple Public Key Infrastructure (SPKI) certificates and cryptographic seals.</p>
 </section>
 <section>
 <h2>Design Principles</h2>
-<p>1. Sealed Releases - Only cryptographically signed releases can be published 2. Transport Agnostic - Same API works for git, HTTP, filesystem 3. Audit Everything - All replication events are recorded in tamper-evident log 4. Verify Before Trust - Subscribers must verify cryptographic seals 5. Explicit Authorization - SPKI certificates determine who can publish</p>
+<ul>
+<li>Sealed Releases - Only cryptographically signed releases can be published</li>
+<li>Transport Agnostic - Same API works for git, HTTP, filesystem</li>
+<li>Audit Everything - All replication events are recorded in tamper-evident log</li>
+<li>Verify Before Trust - Subscribers must verify cryptographic seals</li>
+<li>Explicit Authorization - SPKI certificates determine who can publish</li>
+</ul>
+<p>These principles ensure that trust is established cryptographically rather than administratively, and that the system works regardless of network topology or transport mechanism.</p>
 </section>
 <section>
 <h2>Specification</h2>
@@ -59,7 +73,13 @@
               message: notes)
 </pre>
 <p>Parameters: - version - Semantic version string (e.g., "1.0.0") - remote - Publication target (git remote, URL, or directory path) - archive-format - 'tarball, 'bundle, or 'cryptographic (default) - message - Release notes (optional)</p>
-<p>Behavior: 1. Verify release exists (creates if needed via seal-release) 2. Create cryptographic archive with:    - Tarball of repository at version tag    - SHA-512 hash of tarball    - Ed25519 signature of hash    - Manifest with version, hash, signature 3. Publish to remote based on type:    - Git remote: Push tag, optionally upload archive    - HTTP URL: POST archive to endpoint    - Filesystem: Copy archive to directory 4. Record publication in audit trail with:    - Actor (public key from signing key)    - Action (seal-publish version remote)    - Motivation (release notes)    - Cryptographic seal (signature)</p>
+<p>Behavior:</p>
+<ul>
+<li>Verify release exists (creates if needed via seal-release)</li>
+<li>Create cryptographic archive with: tarball of repository at version tag, SHA-512 hash of tarball, Ed25519 signature of hash, manifest with version, hash, signature</li>
+<li>Publish to remote based on type: Git remote (push tag, optionally upload archive), HTTP URL (POST archive to endpoint), Filesystem (copy archive to directory)</li>
+<li>Record publication in audit trail with: actor (public key from signing key), action (seal-publish version remote), motivation (release notes), cryptographic seal (signature)</li>
+</ul>
 <p>Audit Entry Format:</p>
 <pre class="language-scheme">
 (audit-entry
@@ -92,7 +112,14 @@
                 verify-key: public-key)
 </pre>
 <p>Parameters: - remote - Source location (git remote, URL, or directory) - target - Local path for downloaded archives (optional) - verify-key - Public key for signature verification (optional)</p>
-<p>Behavior: 1. Discover available releases from remote:    - Git remote: List tags    - HTTP URL: GET /releases endpoint    - Filesystem: List .archive files 2. Download cryptographic archives 3. Verify each archive:    - Check manifest structure    - Verify SHA-512 hash of tarball    - Verify Ed25519 signature (if verify-key provided) 4. Extract verified archives to target directory 5. Record subscription in audit trail:    - Count of releases downloaded    - Source location    - Verification status</p>
+<p>Behavior:</p>
+<ul>
+<li>Discover available releases from remote: Git remote (list tags), HTTP URL (GET /releases endpoint), Filesystem (list .archive files)</li>
+<li>Download cryptographic archives</li>
+<li>Verify each archive: check manifest structure, verify SHA-512 hash of tarball, verify Ed25519 signature (if verify-key provided)</li>
+<li>Extract verified archives to target directory</li>
+<li>Record subscription in audit trail: count of releases downloaded, source location, verification status</li>
+</ul>
 <p>Security Consideration: Without verify-key, subscription downloads archives but cannot verify authenticity. SPKI certificate chains should be used to establish trust.</p>
 <p>#### 3. seal-synchronize</p>
 <p>Bidirectional synchronization of sealed releases.</p>
@@ -102,7 +129,14 @@
                   verify-key: public-key)
 </pre>
 <p>Parameters: - remote - Sync target (git remote, URL, or directory) - direction - 'both (default), 'push-only, or 'pull-only - verify-key - Public key for signature verification (optional)</p>
-<p>Behavior: 1. Discover local and remote releases 2. Compare versions to determine:    - Releases to push (local but not remote)    - Releases to pull (remote but not local) 3. Execute publication for new local releases 4. Execute subscription for new remote releases 5. Record synchronization in audit trail:    - Count pushed and pulled    - Remote location    - Direction</p>
+<p>Behavior:</p>
+<ul>
+<li>Discover local and remote releases</li>
+<li>Compare versions to determine: releases to push (local but not remote), releases to pull (remote but not local)</li>
+<li>Execute publication for new local releases</li>
+<li>Execute subscription for new remote releases</li>
+<li>Record synchronization in audit trail: count pushed and pulled, remote location, direction</li>
+</ul>
 <p>Use Case: Periodic sync between trusted peers in a confederation.</p>
 </section>
 <section>
@@ -123,7 +157,14 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
   (timestamp 1767685100)
   (sealer #${public-key-blob}))
 </pre>
-<p>Verification Steps: 1. Read manifest 2. Hash tarball with SHA-512 3. Verify hash matches manifest 4. Verify Ed25519 signature on hash 5. Check SPKI authorization (optional)</p>
+<p>Verification Steps:</p>
+<ul>
+<li>Read manifest</li>
+<li>Hash tarball with SHA-512</li>
+<li>Verify hash matches manifest</li>
+<li>Verify Ed25519 signature on hash</li>
+<li>Check SPKI authorization (optional)</li>
+</ul>
 </section>
 <section>
 <h2>Transport Implementations</h2>
@@ -149,7 +190,13 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 <section>
 <h2>Audit Integration</h2>
 <p>Every replication operation creates an audit entry with:</p>
-<p>1. Content-addressed ID - SHA-512 hash of entry 2. Chained structure - References parent entry 3. SPKI principal - Public key of actor 4. Dual context - Human motivation + machine environment 5. Cryptographic seal - Ed25519 signature</p>
+<ul>
+<li>Content-addressed ID - SHA-512 hash of entry</li>
+<li>Chained structure - References parent entry</li>
+<li>SPKI principal - Public key of actor</li>
+<li>Dual context - Human motivation + machine environment</li>
+<li>Cryptographic seal - Ed25519 signature</li>
+</ul>
 <p>This provides: - Non-repudiation - Cannot deny publication - Tamper evidence - Changes are detectable - Causality - Chain shows temporal order - Accountability - Know who published what when</p>
 </section>
 <section>
@@ -158,12 +205,22 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 <p>Trusted: - Local filesystem and vault - SPKI private keys - Cryptographic primitives (libsodium)</p>
 <p>Untrusted: - Remote repositories - Network transport - Downloaded archives - Remote publishers (until SPKI verified)</p>
 <h3>Attack Scenarios</h3>
-<p>1. Malicious Archive Substitution    - Attacker replaces archive on remote    - Mitigation: Signature verification fails</p>
-<p>2. Version Rollback Attack    - Attacker removes newer releases    - Mitigation: Audit trail shows previous versions</p>
-<p>3. Unauthorized Publication    - Attacker publishes fake release    - Mitigation: SPKI authorization chain required</p>
-<p>4. Transport Tampering    - Network attacker modifies download    - Mitigation: Hash and signature verification</p>
+<ul>
+<li>Malicious Archive Substitution - Attacker replaces archive on remote - Mitigation: Signature verification fails</li>
+<li>Version Rollback Attack - Attacker removes newer releases - Mitigation: Audit trail shows previous versions</li>
+<li>Unauthorized Publication - Attacker publishes fake release - Mitigation: SPKI authorization chain required</li>
+<li>Transport Tampering - Network attacker modifies download - Mitigation: Hash and signature verification</li>
+</ul>
+<p>Each attack is addressed at the cryptographic layer rather than the transport layer, ensuring protection regardless of network conditions.</p>
 <h3>Best Practices</h3>
-<p>1. Always verify signatures - Use verify-key parameter 2. Check SPKI certificates - Verify authorization chain 3. Maintain audit trail - Detect suspicious patterns 4. Use HTTPS for HTTP transport - Prevent network attacks 5. Backup signing keys - Use Shamir secret sharing</p>
+<ul>
+<li>Always verify signatures - Use verify-key parameter</li>
+<li>Check SPKI certificates - Verify authorization chain</li>
+<li>Maintain audit trail - Detect suspicious patterns</li>
+<li>Use HTTPS for HTTP transport - Prevent network attacks</li>
+<li>Backup signing keys - Use Shamir secret sharing</li>
+</ul>
+<p>Defense in depth: cryptographic verification is primary, but transport security and operational practices add additional layers.</p>
 </section>
 <section>
 <h2>Implementation Notes</h2>
@@ -221,7 +278,13 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 </section>
 <section>
 <h2>References</h2>
-<p>1. SDSI/SPKI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 - Bernstein et al. 5. Audit Trails - Memo-002 (Cryptographic Audit Trail)</p>
+<ul>
+<li>SDSI/SPKI - RFC 2693, RFC 2692</li>
+<li>Content-Addressed Storage - Git internals, IPFS</li>
+<li>Semantic Versioning - semver.org</li>
+<li>Ed25519 - Bernstein et al.</li>
+<li>Audit Trails - Memo-002 (Cryptographic Audit Trail)</li>
+</ul>
 </section>
 <section>
 <h2>Changelog</h2>

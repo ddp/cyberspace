@@ -30,7 +30,13 @@
     (subsection
       "Signing a Script"
       (code scheme "(define (sign-script script-content private-key #!optional public-key)\n  \"Sign script content with a private key\"\n  ...)")
-      (p "Process: 1. Convert content to blob if string 2. Derive public key from private (if not provided) 3. Sign content with Ed25519 4. Record timestamp 5. Return script-signature record"))
+      (p "Process:")
+      (list
+        (item "Convert content to blob if string")
+        (item "Derive public key from private (if not provided)")
+        (item "Sign content with Ed25519")
+        (item "Record timestamp")
+        (item "Return script-signature record")))
     (subsection
       "Verifying Single Signature"
       (code scheme "(define (verify-script script-content signature-record)\n  \"Verify a script signature\"\n  (ed25519-verify (signature-signer signature-record)\n                  content-blob\n                  (signature-value signature-record)))"))

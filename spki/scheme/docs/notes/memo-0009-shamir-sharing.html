@@ -41,8 +41,15 @@
 <li>Key theft: Complete compromise</li>
 <li>Key escrow: Trust a third party?</li>
 </ul>
+<p>Any centralized solution to these problems requires trusting someone, which moves rather than eliminates the single point of failure.</p>
 <p>Shamir's Secret Sharing provides:</p>
-<p>1. Threshold recovery: Any K of N shares reconstruct 2. Information-theoretic security: K-1 shares reveal nothing 3. Distributed custody: No single holder 4. Backup flexibility: Geographic distribution</p>
+<ul>
+<li>Threshold recovery: Any K of N shares reconstruct</li>
+<li>Information-theoretic security: K-1 shares reveal nothing</li>
+<li>Distributed custody: No single holder</li>
+<li>Backup flexibility: Geographic distribution</li>
+</ul>
+<p>These properties eliminate single points of failure mathematically rather than administratively, distributing trust across multiple independent parties.</p>
 <p>From Adi Shamir's 1979 paper "How to Share a Secret":</p>
 <blockquote>
 <p>Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing.</p>
@@ -66,14 +73,24 @@
 </pre>
 <p>Parameters: - secret - Blob to split (any size, typically 32 or 64 bytes) - threshold - Minimum shares to reconstruct (K) - total - Total shares to create (N)</p>
 <p>Returns: List of N shamir-share records</p>
-<p>Algorithm: 1. For each byte of secret:    - Generate K-1 random coefficients    - Coefficient[0] = secret byte    - Polynomial: f(x) = a₀ + a₁x + a₂x² + ... + aₖ₋₁xᵏ⁻¹ 2. Evaluate polynomial at x = 1, 2, ..., N 3. Package (x, f(x)) pairs as shares</p>
+<p>Algorithm:</p>
+<ul>
+<li>For each byte of secret: generate K-1 random coefficients, set coefficient[0] = secret byte, construct polynomial f(x) = a0 + a1*x + a2*x^2 + ... + a(k-1)*x^(k-1)</li>
+<li>Evaluate polynomial at x = 1, 2, ..., N</li>
+<li>Package (x, f(x)) pairs as shares</li>
+</ul>
 <h3>Reconstructing a Secret</h3>
 <pre class="language-scheme">
 (shamir-reconstruct shares)
 </pre>
 <p>Parameters: - shares - List of at least K shamir-share records</p>
 <p>Returns: Reconstructed secret blob</p>
-<p>Algorithm: 1. Take first K shares 2. For each byte position:    - Use Lagrange interpolation    - Compute f(0) = secret byte 3. Assemble reconstructed secret</p>
+<p>Algorithm:</p>
+<ul>
+<li>Take first K shares</li>
+<li>For each byte position: use Lagrange interpolation, compute f(0) = secret byte</li>
+<li>Assemble reconstructed secret</li>
+</ul>
 </section>
 <section>
 <h2>Galois Field Arithmetic</h2>
@@ -955,6 +972,7 @@
 <li>Geography: Consider time zones for ceremonies</li>
 <li>Succession: What if custodians unavailable?</li>
 </ul>
+<p>Threshold selection balances the probability of legitimate recovery against the probability of malicious collusion, tailored to the specific threat model.</p>
 </section>
 <section>
 <h2>Share Distribution</h2>
@@ -1148,7 +1166,14 @@ Share 5: Tattoo (not recommended)
 <tr><td>Weak random generation </td><td>Use libsodium </td></tr>
 </table>
 <h3>Operational Security</h3>
-<p>1. Generation: Air-gapped machine, secure random 2. Distribution: Out-of-band verification 3. Storage: Encrypted, physically secure 4. Reconstruction: Secure room, witnesses 5. Destruction: Secure wipe after use</p>
+<ul>
+<li>Generation: Air-gapped machine, secure random</li>
+<li>Distribution: Out-of-band verification</li>
+<li>Storage: Encrypted, physically secure</li>
+<li>Reconstruction: Secure room, witnesses</li>
+<li>Destruction: Secure wipe after use</li>
+</ul>
+<p>Shamir's mathematical security is only as strong as the operational procedures surrounding share generation, distribution, and reconstruction.</p>
 </section>
 <section>
 <h2>Implementation Notes</h2>
@@ -1172,7 +1197,12 @@ Share 5: Tattoo (not recommended)
 </section>
 <section>
 <h2>References</h2>
-<p>1. Shamir, A. (1979). How to share a secret. Communications of the ACM. 2. Blakley, G. R. (1979). Safeguarding cryptographic keys. 3. Beimel, A. (2011). Secret-Sharing Schemes: A Survey. 4. NIST SP 800-57. Recommendation for Key Management.</p>
+<ul>
+<li>Shamir, A. (1979). How to share a secret. Communications of the ACM.</li>
+<li>Blakley, G. R. (1979). Safeguarding cryptographic keys.</li>
+<li>Beimel, A. (2011). Secret-Sharing Schemes: A Survey.</li>
+<li>NIST SP 800-57. Recommendation for Key Management.</li>
+</ul>
 </section>
 <section>
 <h2>Changelog</h2>

@@ -134,7 +134,11 @@
     (p "Traditional MAC puts labels on objects: UNCLASSIFIED, SECRET, TOP SECRET.")
     (p "In cyberspace, classification is a capability you hold:")
     (code scheme ";; Security officer grants SECRET clearance\n(spki-cert\n  (issuer \"ed25519:security-officer...\")\n  (subject \"ed25519:analyst...\")\n  (tag (clearance secret))\n  (valid (not-after 1767225600)))    ; Annual renewal\n\n;; Program manager grants compartment access\n(spki-cert\n  (issuer \"ed25519:program-manager...\")\n  (subject \"ed25519:engineer...\")\n  (tag (compartment \"project-atlas\")))")
-    (p "Access to a classified object requires: 1. Capability to read the object itself 2. Appropriate clearance capability 3. All required compartment capabilities")
+    (p "Access to a classified object requires:")
+    (list
+      (item "Capability to read the object itself")
+      (item "Appropriate clearance capability")
+      (item "All required compartment capabilities"))
     (p "The object has no labels. The policy lives in the certificates."))
   (section
     "Information Flow"

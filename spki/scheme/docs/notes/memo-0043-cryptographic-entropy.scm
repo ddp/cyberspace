@@ -12,7 +12,11 @@
     (subsection
       "The Fundamental Requirement"
       (p "All cryptography requires true quantum randomness. The math doesn't work otherwise.")
-      (p "Cryptographic proofs assume a source of bits that are: 1. Statistically uniform - Each bit equally likely 0 or 1 2. Independent - No correlations between bits 3. Unpredictable in principle - Not just hard to predict, but impossible")
+      (p "Cryptographic proofs assume a source of bits that are:")
+      (list
+        (item "Statistically uniform - Each bit equally likely 0 or 1")
+        (item "Independent - No correlations between bits")
+        (item "Unpredictable in principle - Not just hard to predict, but impossible"))
       (p "Only quantum mechanical processes satisfy condition 3. Classical chaotic systems (lava lamps, thermal noise, ring oscillators) are deterministic - an adversary with sufficient knowledge of initial conditions could, in theory, predict their output. Quantum processes have no \"initial conditions\" to know - the randomness is fundamental to physics itself.")
       (p "Why this matters: - Security proofs assume perfect randomness - Key security = min(algorithmbits, entropybits) - A 256-bit key from a 32-bit PRNG seed provides only 32 bits of security - Nation-state adversaries may have capabilities to model classical entropy sources"))
     (subsection
@@ -84,7 +88,11 @@
     (subsection
       "Practical Access to Quantum Randomness"
       (p "The ideal: Every cryptographic operation sources entropy from a local quantum RNG.")
-      (p "Current reality: Most systems rely on: 1. Hardware RNG (thermal noise, ring oscillators) - classical, but unpredictable at human scales 2. OS mixing of multiple sources - defense in depth 3. NIST beacon - quantum-sourced, publicly verifiable, but network-dependent")
+      (p "Current reality: Most systems rely on:")
+      (list
+        (item "Hardware RNG (thermal noise, ring oscillators) - classical, but unpredictable at human scales")
+        (item "OS mixing of multiple sources - defense in depth")
+        (item "NIST beacon - quantum-sourced, publicly verifiable, but network-dependent"))
       (p "Path forward for Cyberspace: - Phase 1 (Now): libsodium with OS entropy (relies on hardware quality) - Phase 2: Optional quantum RNG hardware support (USB devices, PCIe cards) - Phase 3: Attestation of entropy source in realm metadata - Phase 4: Quantum RNG as standard infrastructure (as quantum internet develops)")
       (p "Minimum acceptable: Modern Intel/AMD RDSEED instruction, which samples thermal noise at the silicon level. While not provably quantum, it has no known exploits and is mixed with other sources.")
       (p "Goal: True quantum randomness as the foundation. The math requires it; the engineering will catch up."))
@@ -93,7 +101,12 @@
       (p "We will provide all the randomness that our users need - on demand, for whatever their cryptographic desires.")
       (p "Cyberspace realms can serve as entropy sources for their users:")
       (code scheme ";; Request entropy from the realm\n(realm-entropy-request\n  (bytes 32)\n  (purpose \"key-generation\")\n  (attestation-required #t))\n\n;; Response includes attestation of entropy source\n(realm-entropy-response\n  (value #${...32 bytes...})\n  (source \"quantum-rng\")\n  (attestation (signed-by realm-principal)\n               (hardware \"ID-Quantique-QUANTIS\")\n               (timestamp 1736344800)))")
-      (p "Entropy services: 1. Local generation - Realm uses its best available source 2. Federated entropy - Request quantum entropy from realms with quantum hardware 3. Beacon aggregation - Mix NIST + drand + realm sources 4. Attestation chain - Prove the entropy source for audit")
+      (p "Entropy services:")
+      (list
+        (item "Local generation - Realm uses its best available source")
+        (item "Federated entropy - Request quantum entropy from realms with quantum hardware")
+        (item "Beacon aggregation - Mix NIST + drand + realm sources")
+        (item "Attestation chain - Prove the entropy source for audit"))
       (p "Long-term vision: A network of realms with quantum RNG hardware providing verifiable, quantum-sourced entropy to all participants. The soup carries randomness as naturally as it carries data."))
     (subsection
       "True Random Number Generators (TRNG)"

@@ -46,11 +46,19 @@
 <li>TLV-encoded object store</li>
 <li>The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records</li>
 </ul>
+<p>These innovations established that security events must be visible across an entire distributed system, not just the node where they occur.</p>
 <p>The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.</p>
 <p>Cyberspace audit trails apply the same principle at IPv6 scale.</p>
 <h3>The Problem</h3>
 <p>Traditional logging fails on all counts: - Tamperable: Text files can be edited - Anonymous: No cryptographic identity - Disconnected: No provable ordering - Unverifiable: No mathematical proof of integrity</p>
-<p>Cyberspace audit trails provide: 1. Content-addressed entries - Tamper-evident by hash 2. Hash-chained structure - Append-only ordering 3. SPKI attribution - Cryptographic actor identity 4. Ed25519 seals - Mathematical proof of authenticity 5. Dual context - Human-readable motivation + machine-parseable environment</p>
+<p>Cyberspace audit trails provide:</p>
+<ul>
+<li>Content-addressed entries - Tamper-evident by hash</li>
+<li>Hash-chained structure - Append-only ordering</li>
+<li>SPKI attribution - Cryptographic actor identity</li>
+<li>Ed25519 seals - Mathematical proof of authenticity</li>
+<li>Dual context - Human-readable motivation + machine-parseable environment</li>
+</ul>
 </section>
 <section>
 <h2>Specification</h2>
@@ -147,13 +155,28 @@
   motivation: "Added new feature"
   signing-key: private-key-blob)
 </pre>
-<p>Process: 1. Increment sequence counter 2. Get parent entry ID (hash chain link) 3. Build unsealed entry structure 4. Compute SHA-512 hash of canonical S-expression 5. Sign hash with Ed25519 6. Create seal record 7. Save entry to disk</p>
+<p>Process:</p>
+<ul>
+<li>Increment sequence counter</li>
+<li>Get parent entry ID (hash chain link)</li>
+<li>Build unsealed entry structure</li>
+<li>Compute SHA-512 hash of canonical S-expression</li>
+<li>Sign hash with Ed25519</li>
+<li>Create seal record</li>
+<li>Save entry to disk</li>
+</ul>
 <h3>audit-verify</h3>
 <p>Verify cryptographic seal on an entry.</p>
 <pre class="language-scheme">
 (audit-verify entry public-key: key)
 </pre>
-<p>Verification steps: 1. Reconstruct unsealed entry 2. Compute SHA-512 hash 3. Compare with stored content-hash 4. Verify Ed25519 signature</p>
+<p>Verification steps:</p>
+<ul>
+<li>Reconstruct unsealed entry</li>
+<li>Compute SHA-512 hash</li>
+<li>Compare with stored content-hash</li>
+<li>Verify Ed25519 signature</li>
+</ul>
 <h3>audit-chain</h3>
 <p>Verify entire audit chain.</p>
 <pre class="language-scheme">
@@ -432,7 +455,12 @@ Entry #2
 </section>
 <section>
 <h2>References</h2>
-<p>1. Haber, S., &amp; Stornetta, W. S. (1991). How to time-stamp a digital document. 2. Merkle, R. C. (1987). A digital signature based on a conventional encryption function. 3. Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records. 4. SDSI/SPKI - RFC 2693, RFC 2692</p>
+<ul>
+<li>Haber, S., &amp; Stornetta, W. S. (1991). How to time-stamp a digital document.</li>
+<li>Merkle, R. C. (1987). A digital signature based on a conventional encryption function.</li>
+<li>Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records.</li>
+<li>SDSI/SPKI - RFC 2693, RFC 2692</li>
+</ul>
 </section>
 <section>
 <h2>Changelog</h2>

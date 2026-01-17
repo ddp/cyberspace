@@ -136,15 +136,30 @@
     (subsection
       "Sybil Resistance"
       (p "Problem: Attacker creates many fake nodes to dominate network.")
-      (p "Mitigations: 1. Stake-weighted voting (not proof-of-work, just reputation) 2. Web of trust - new nodes introduced by existing trusted nodes 3. Rate limiting - bound resources per principal 4. Coordinator consensus - Byzantine-resistant core"))
+      (p "Mitigations:")
+      (list
+        (item "Stake-weighted voting (not proof-of-work, just reputation)")
+        (item "Web of trust - new nodes introduced by existing trusted nodes")
+        (item "Rate limiting - bound resources per principal")
+        (item "Coordinator consensus - Byzantine-resistant core")))
     (subsection
       "Eclipse Attack Resistance"
       (p "Problem: Attacker isolates a node by controlling all its peers.")
-      (p "Mitigations: 1. Diverse bootstrap - multiple independent entry points 2. Random peer selection - can't predict who you'll connect to 3. Peer rotation - periodically reconnect to new peers 4. Out-of-band verification - publish peer lists via DNS, blockchain, etc."))
+      (p "Mitigations:")
+      (list
+        (item "Diverse bootstrap - multiple independent entry points")
+        (item "Random peer selection - can't predict who you'll connect to")
+        (item "Peer rotation - periodically reconnect to new peers")
+        (item "Out-of-band verification - publish peer lists via DNS, blockchain, etc.")))
     (subsection
       "Denial of Service"
       (p "Problem: Attacker floods network with junk.")
-      (p "Mitigations: 1. Proof of work on announcements (small, CPU cost) 2. Rate limiting per principal 3. Reputation scoring - misbehaving peers deprioritized 4. Content validation - reject malformed objects immediately")))
+      (p "Mitigations:")
+      (list
+        (item "Proof of work on announcements (small, CPU cost)")
+        (item "Rate limiting per principal")
+        (item "Reputation scoring - misbehaving peers deprioritized")
+        (item "Content validation - reject malformed objects immediately"))))
   (section
     "Implementation Phases"
     (subsection

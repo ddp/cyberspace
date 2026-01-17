@@ -325,8 +325,16 @@
 <li>Trust concentration: Must trust operator</li>
 <li>Survival: Company folds, data lost</li>
 </ul>
+<p>These failures are not bugs but features of centralized design; the only remedy is architectural, not operational.</p>
 <p>Federation provides:</p>
-<p>1. Decentralized - No master server 2. Resilient - Survives node failures 3. Autonomous - Each peer controls own data 4. Cryptographic - Trust through math, not authority 5. Eventual consistency - Convergence without coordination</p>
+<ul>
+<li>Decentralized - No master server</li>
+<li>Resilient - Survives node failures</li>
+<li>Autonomous - Each peer controls own data</li>
+<li>Cryptographic - Trust through math, not authority</li>
+<li>Eventual consistency - Convergence without coordination</li>
+</ul>
+<p>Federation trades coordination complexity for availability and autonomy, accepting that nodes may temporarily disagree in exchange for never being unable to operate.</p>
 </section>
 <section>
 <h2>Federation Model</h2>
@@ -361,7 +369,13 @@ Relationships:
 (federation-discover)
 ;; Returns: List of known peers and their status
 </pre>
-<p>Discovery mechanisms: 1. Explicit configuration: Known peer list 2. Git remotes: Extract from repository 3. Directory service: Optional, not required 4. mDNS/Bonjour: Local network discovery via cyberspace.tcp</p>
+<p>Discovery mechanisms:</p>
+<ul>
+<li>Explicit configuration: Known peer list</li>
+<li>Git remotes: Extract from repository</li>
+<li>Directory service: Optional, not required</li>
+<li>mDNS/Bonjour: Local network discovery via cyberspace.tcp</li>
+</ul>
 <h3>mDNS Service Discovery</h3>
 <p>Cyberspace nodes announce themselves via mDNS using the cyberspace.tcp service type:</p>
 <pre class="language-scheme">
@@ -385,19 +399,39 @@ Relationships:
 (federation-announce version
   #!key peers message)
 </pre>
-<p>Pushes release notification to peers: 1. Create signed announcement 2. Send to specified peers (or all) 3. Peers verify signature 4. Peers decide whether to pull</p>
+<p>Pushes release notification to peers:</p>
+<ul>
+<li>Create signed announcement</li>
+<li>Send to specified peers (or all)</li>
+<li>Peers verify signature</li>
+<li>Peers decide whether to pull</li>
+</ul>
 <h3>Release Request</h3>
 <pre class="language-scheme">
 (federation-request version peer
   #!key verify-key)
 </pre>
-<p>Pulls specific release from peer: 1. Request release metadata 2. Verify signature 3. Download archive 4. Verify integrity 5. Record in audit trail</p>
+<p>Pulls specific release from peer:</p>
+<ul>
+<li>Request release metadata</li>
+<li>Verify signature</li>
+<li>Download archive</li>
+<li>Verify integrity</li>
+<li>Record in audit trail</li>
+</ul>
 <h3>Synchronization</h3>
 <pre class="language-scheme">
 (federation-sync peer
   #!key direction verify-key)
 </pre>
-<p>Bidirectional sync (from Memo-0002): 1. Exchange release lists 2. Identify missing releases 3. Push/pull as configured 4. Verify all signatures 5. Update audit trails</p>
+<p>Bidirectional sync (from Memo-0002):</p>
+<ul>
+<li>Exchange release lists</li>
+<li>Identify missing releases</li>
+<li>Push/pull as configured</li>
+<li>Verify all signatures</li>
+<li>Update audit trails</li>
+</ul>
 </section>
 <section>
 <h2>Message Format</h2>
@@ -481,7 +515,13 @@ Sync:     rsync --update
 </pre>
 <p>Default: Reject conflicts, require human decision.</p>
 <h3>Resolution Strategies</h3>
-<p>1. Reject: Stop sync, alert human 2. Prefer-local: Keep local version 3. Prefer-remote: Take remote version 4. Rename: Keep both as 2.0.0-local, 2.0.0-remote 5. Merge: If content mergeable (future)</p>
+<ul>
+<li>Reject: Stop sync, alert human</li>
+<li>Prefer-local: Keep local version</li>
+<li>Prefer-remote: Take remote version</li>
+<li>Rename: Keep both as 2.0.0-local, 2.0.0-remote</li>
+<li>Merge: If content mergeable (future)</li>
+</ul>
 </section>
 <section>
 <h2>Consistency Model</h2>
@@ -538,7 +578,13 @@ Result: Epidemic spread without central broadcast
 <section>
 <h2>Bootstrap Procedure</h2>
 <h3>New Peer Joining</h3>
-<p>1. Generate keypair 2. Register with known peer 3. Exchange public keys (out-of-band verification) 4. Initial sync to get current releases 5. Begin participating in federation</p>
+<ul>
+<li>Generate keypair</li>
+<li>Register with known peer</li>
+<li>Exchange public keys (out-of-band verification)</li>
+<li>Initial sync to get current releases</li>
+<li>Begin participating in federation</li>
+</ul>
 <h3>Network Partitions</h3>
 <ul>
 <li>Partitions heal automatically on reconnection</li>
@@ -590,7 +636,13 @@ Result: Epidemic spread without central broadcast
 </section>
 <section>
 <h2>References</h2>
-<p>1. Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols. 2. Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance. 3. Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types. 4. Memo-0002: Replication Layer 5. Memo-004: SPKI Authorization</p>
+<ul>
+<li>Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols.</li>
+<li>Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance.</li>
+<li>Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types.</li>
+<li>Memo-0002: Replication Layer</li>
+<li>Memo-004: SPKI Authorization</li>
+</ul>
 </section>
 <section>
 <h2>Changelog</h2>
