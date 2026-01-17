@@ -166,15 +166,31 @@
   "Count Unicode characters in UTF-8 string."
   (length (utf8-chars str)))
 
+(define (string-ends-with-box-edge? str)
+  "Check if string ends with a box right edge (│ or ┐ or ┘ or ┤)."
+  (let ((chars (utf8-chars str)))
+    (and (pair? chars)
+         (let ((last-cp (car (last-pair chars))))
+           (memv (car last-cp) '(#x2502 #x2510 #x2518 #x2524 #x2551 #x2557 #x255D))))))
+
 (define (normalize-box-lines lines)
-  "Pad all lines to same width for consistent right-edge alignment."
+  "Pad lines to same width, inserting space before right box edge."
   (let* ((char-counts (map utf8-length lines))
          (max-len (apply max 1 char-counts)))
     (map (lambda (line count)
            (let ((pad (- max-len count)))
-             (if (> pad 0)
-                 (string-append line (make-string pad #\space))
-                 line)))
+             (cond
+               ((= pad 0) line)  ; Already correct width
+               ((string-ends-with-box-edge? line)
+                ;; Insert padding before the final box character
+                (let* ((chars (utf8-chars line))
+                       (last-char (cdr (last-pair chars)))  ; Get the string for last char
+                       (prefix-chars (reverse (cdr (reverse chars))))  ; All but last
+                       (prefix (apply string-append (map cdr prefix-chars))))
+                  (string-append prefix (make-string pad #\space) last-char)))
+               (else
+                ;; No box edge - just pad at end
+                (string-append line (make-string pad #\space))))))
          lines char-counts)))
 
 (define (text->svg-diagram text)
