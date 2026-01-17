@@ -21,6 +21,7 @@
       (item "What's failing and why?")
       (item "Security")
       (item "Who's accessing what?"))
+    (p "Without visibility, operators cannot distinguish working systems from silently failing ones; observability is the difference between confidence and hope.")
     (p "But observability must not compromise:")
     (list
       (item "Privacy")
@@ -30,7 +31,8 @@
       (item "Performance")
       (item "Minimal overhead")
       (item "Storage")
-      (item "Observability data is bounded")))
+      (item "Observability data is bounded"))
+    (p "Monitoring systems that expose secrets or overwhelm the systems they monitor are worse than no monitoring at all.")))
   (section
     "Metrics"
     (subsection

@@ -217,7 +217,8 @@
       (list
         (item "Writes - usually need to know who modified")
         (item "Delegation - must name the delegate")
-        (item "Administrative actions - audit trail essential")))
+        (item "Administrative actions - audit trail essential"))
+      (p "Unlinkability is appropriate when the system needs to verify authorization without building a profile of behavior. Accountability requirements determine which operations use registered versus bearer capabilities."))
     (subsection
       "The Tradeoff"
       (p "Bearer capabilities sacrifice traceability for privacy. Once issued, the issuer cannot:")
@@ -263,6 +264,7 @@
         (item "Wear leveling moves data without notification")
         (item "Trim/discard doesn't guarantee overwrite")
         (item "Encryption is the only reliable approach"))
+      (p "Flash storage abstracts physical location from logical address, making direct overwrite impossible. Encryption converts the erasure problem to key destruction, which is solvable.")
       (p "Our answer: Encrypt at rest (Memo-030). Erasing the key erases the data.")
       (code scheme ";; With encryption at rest, key destruction = data destruction\n(define (secure-erase-encrypted hash)\n  \"For encrypted objects: destroy decryption key\"\n  (let ((dek (object-data-encryption-key hash)))\n    (key-destroy! dek)\n    ;; The ciphertext remains but is now meaningless\n    'erased-via-key-destruction))")))
   (section

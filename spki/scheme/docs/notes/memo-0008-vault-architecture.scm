@@ -15,12 +15,14 @@
       (item "Authorization model - Anyone with access can commit")
       (item "Archival features - No first-class backup/restore")
       (item "Audit integration - History is mutable"))
+    (p "These gaps leave security as an afterthought rather than a foundation, requiring external tools and manual discipline to achieve what should be built-in.")
     (p "The Vault wraps Git with:")
     (list
       (item "seal- commands that cryptographically sign operations")
       (item "SPKI certificates for authorization")
       (item "Three archive formats for different use cases")
       (item "Integrated audit trail for non-repudiation"))
+    (p "The seal- prefix makes cryptographic operations explicit; security is not hidden behind flags or configuration but part of the command vocabulary.")
     (code "                    ╭────────────────────────────────╮\n                    │         CYBERSPACE VAULT       │\n                    ├────────────────────────────────┤\n                    │  seal-commit    seal-release   │\n                    │  seal-archive   seal-publish   │\n                    │  seal-verify    seal-subscribe │\n                    ├────────────────────────────────┤\n                    │         Audit Trail            │\n                    ├────────────────────────────────┤\n                    │         SPKI Certs             │\n                    ├────────────────────────────────┤\n                    │            Git                 │\n                    ╰────────────────────────────────╯"))
   (section
     "Core Operations"

@@ -15,11 +15,13 @@
       (item "Byzantine failures: Nodes lie, equivocate, or attack")
       (item "Network partitions: Messages delayed or lost")
       (item "Sybil attacks: Fake identities flood the network"))
+    (p "These failure modes require protocols that assume the worst about participants rather than hoping for the best.")
     (p "Byzantine consensus provides:")
     (list
       (item "Safety: Honest nodes agree on same value")
       (item "Liveness: System makes progress despite failures")
       (item "Fault tolerance: Survives f failures with 3f+1 nodes"))
+    (p "The 3f+1 bound is fundamental: fewer nodes cannot distinguish a slow honest node from a fast malicious one.")
     (p "From Lamport, Shostak, and Pease (1982):")
     (blockquote "The Byzantine Generals Problem: reaching agreement in the presence of traitors."))
   (section

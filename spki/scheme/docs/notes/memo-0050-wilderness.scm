@@ -55,7 +55,8 @@
         (item "Trust is not given, it is established cryptographically")
         (item "Identity is not assumed, it is proven with keys")
         (item "Every claim requires verification")
-        (item "The default stance is skepticism")))
+        (item "The default stance is skepticism"))
+      (p "Angleton's insight applies directly: in a world where deception is the norm, mathematical proof is the only reliable foundation. The Wilderness makes this explicit rather than pretending safety exists."))
     (subsection
       "4.2 The Tribal Wilderness"
       (p "The older meaning: outside civilization, unaffiliated with any tribe.")
@@ -64,6 +65,7 @@
         (item "No federation protects you")
         (item "You belong to no one")
         (item "You are alone"))
+      (p "The tribal meaning grounds the metaphor in human experience. Affiliation is not automatic; it must be chosen and earned. The Wilderness is honest about starting conditions.")
       (p "Both meanings apply. The unaffiliated user is: - In a world where trust must be earned (Angleton) - Outside any group until they join one (tribal)")
       (p "The Wilderness is honest about both. You are alone. Trust nothing but your own crypto keys.")))
   (section

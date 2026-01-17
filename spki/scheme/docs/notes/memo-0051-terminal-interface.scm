@@ -69,7 +69,8 @@
         (item "Yellow: Warning, attention needed")
         (item "Blue: Informational highlights")
         (item "Dim: Secondary information")
-        (item "Bold: Headers, important values")))
+        (item "Bold: Headers, important values"))
+      (p "Color conveys urgency and category at a glance. Consistent usage across the interface builds muscle memory: red always means stop, green always means proceed."))
     (subsection
       "5.3 Principle"
       (p "Color is enhancement, not information. All output MUST be readable without color (plain terminal, logging, piped output).")))

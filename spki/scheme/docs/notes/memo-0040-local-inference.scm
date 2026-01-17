@@ -16,12 +16,14 @@
       (item "Natural language query translation (Memo-025)")
       (item "Content annotation and metadata extraction")
       (item "Inter-agent communication in natural language"))
+    (p "These tasks require linguistic intelligence that rules-based systems cannot provide at scale.")
     (p "External API dependencies (OpenAI, Anthropic, etc.) introduce:")
     (list
       (item "Privacy leakage - document content leaves the realm")
       (item "Availability risk - network partitions break agent operation")
       (item "Cost unpredictability - metered APIs scale poorly")
       (item "Vendor lock-in - proprietary formats and rate limits"))
+    (p "Each dependency on external APIs undermines the self-sovereign architecture; intelligence that phones home is not truly yours.")
     (p "Local inference eliminates these concerns while maintaining capability.[^d1]")
     (p "[^d1]: Design: We deliberately avoid specifying model architectures. The interface is model-agnostic—agents negotiate capabilities at runtime."))
   (section
@@ -91,6 +93,7 @@
         (item "Degrade - use simpler heuristics (keyword extraction vs. LLM)")
         (item "Federate - request inference from trusted peer realm")
         (item "Fail - return error to requesting agent"))
+      (p "Graceful degradation ensures agents remain functional even when full inference capacity is unavailable.")
       (code scheme "(define (inference-with-fallback server model prompt)\n  (or (try-inference server model prompt)\n      (try-queued-inference prompt)\n      (try-degraded-processing prompt)\n      (try-federated-inference prompt)\n      (error 'inference-unavailable)))")))
   (section
     "Security Considerations"
@@ -110,7 +113,8 @@
       (list
         (item "Separate model instances per security domain")
         (item "Clear KV cache between requests from different agents")
-        (item "No persistent memory across security boundaries"))))
+        (item "No persistent memory across security boundaries"))
+      (p "LLMs have memory; cross-agent inference without isolation is cross-agent information leakage."))))
   (section
     "Ollama Integration"
     (p "Ollama is the reference implementation for local inference.[^h2]")

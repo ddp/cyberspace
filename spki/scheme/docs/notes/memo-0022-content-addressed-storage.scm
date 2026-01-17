@@ -21,6 +21,7 @@
       (item "Link rot - Addresses become invalid when content moves")
       (item "Duplication - Identical content stored multiple times")
       (item "No verification - Address doesn't prove content integrity"))
+    (p "These problems are architectural, not operational; no amount of careful administration can fix a model where names and content are decoupled.")
     (p "Content-addressed storage inverts this:")
     (code "Location-based:  address → content (many-to-one, mutable)\nContent-based:   content → address (one-to-one, immutable)")
     (p "The address IS the content's cryptographic fingerprint. If the content changes, the address changes. If two files have the same address, they are byte-for-byte identical."))
@@ -46,6 +47,7 @@
         (item "Preimage-resistant - Cannot derive content from hash")
         (item "Deterministic - Same content always produces same hash")
         (item "Fast - Practical for large objects"))
+      (p "The hash function is the foundation of trust; weakening any property undermines the entire addressing model.")
       (p "Specified hash: SHA-256 (32 bytes, 64 hex characters)")
       (code scheme ";; Example content address\n\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n;; This is the SHA-256 of the empty string")))
   (section
@@ -146,6 +148,7 @@
       (item "Deduplication at sub-file granularity")
       (item "Parallel transfer")
       (item "Incremental updates"))
+    (p "Chunking trades storage metadata overhead for dramatic improvements in network efficiency and deduplication across related files.")
     (subsection
       "Fixed-Size Chunking"
       (code scheme "(define chunk-size (* 64 1024))  ; 64KB\n\n(define (chunk-fixed data)\n  (let loop ((offset 0) (chunks '()))\n    (if (>= offset (blob-length data))\n        (reverse chunks)\n        (loop (+ offset chunk-size)\n              (cons (blob-copy data offset (min chunk-size (- (blob-length data) offset)))\n                    chunks)))))"))

@@ -21,6 +21,7 @@
       (item "Out of memory, disk, connections")
       (item "Protocol violations")
       (item "Malformed messages, invalid state"))
+    (p "These failure modes are not exceptional but routine; a distributed system that does not plan for them is planning to fail.")
     (p "Recovery must be:")
     (list
       (item "Deterministic")
@@ -30,7 +31,8 @@
       (item "Automatic")
       (item "Self-healing where possible")
       (item "Graceful")
-      (item "Degrade rather than crash")))
+      (item "Degrade rather than crash"))
+    (p "These requirements enable both automated recovery and post-mortem analysis; systems that crash silently cannot be trusted or debugged.")))
   (section
     "Error Model"
     (subsection

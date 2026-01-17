@@ -101,7 +101,8 @@
         (item "Natural language understanding")
         (item "Fuzzy matching catches typos")
         (item "Suggestions for empty results")
-        (item "Encouraging prompts")))
+        (item "Encouraging prompts"))
+      (p "Research discovery should lower barriers, not raise them; the interface should anticipate what users need rather than demanding precise query syntax."))
     (subsection
       "Beautiful Output"
       (list

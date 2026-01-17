@@ -19,6 +19,7 @@
       (item "Extraction: Generate OCaml from proofs")
       (item "Correctness by construction: Implementation matches specification")
       (item "Eternal validity: Proofs don't expire"))
+    (p "Extraction bridges the gap between specification and implementation: the code that runs is the code that was proven.")
     (p "From the Coq motto:")
     (blockquote "The proof is in the code."))
   (section

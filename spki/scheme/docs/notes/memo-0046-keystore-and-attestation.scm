@@ -20,7 +20,7 @@
       (item "Protected storage - keys encrypted at rest")
       (item "Recovery path - don't lose your realm to a forgotten passphrase")
       (item "Rotation support - keys age, compromise happens"))
-    (p "The keystore solves this."))
+    (p "A realm without persistent identity cannot accumulate trust, cannot be referenced by peers, and loses all context on restart. The keystore provides the cryptographic continuity that makes realm sovereignty meaningful."))
   (section
     "Realm Continuity"
     (p "A realm is not a snapshot. It accumulates.")

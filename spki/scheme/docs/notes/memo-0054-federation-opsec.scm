@@ -32,7 +32,8 @@
         (item "Passive observer: Can see federation traffic")
         (item "Active participant: Can be a peer in your federation")
         (item "Traffic analyst: Can correlate timing and volume")
-        (item "Long-term observer: Can build profiles over time")))
+        (item "Long-term observer: Can build profiles over time"))
+      (p "Adversaries range from casual observers to nation-state actors. Each capability level requires corresponding countermeasures; defense must be proportional to the threat model."))
     (subsection
       "2.2 Information at Risk"
       (list
@@ -40,7 +41,8 @@
         (item "Location: Timezone from activity patterns")
         (item "Capabilities: Computational power from weave")
         (item "Behavior: Usage patterns from sync timing")
-        (item "Network topology: Who talks to whom"))))
+        (item "Network topology: Who talks to whom"))
+      (p "Every piece of leaked information constrains the adversary's search space. Combined over time, small leaks enable deanonymization.")))
   (section
     "3. Weave as Covert Channel"
     (subsection

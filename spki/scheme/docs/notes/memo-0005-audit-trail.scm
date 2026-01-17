@@ -20,6 +20,7 @@
         (item "Breakin attempts detected across all nodes as one")
         (item "TLV-encoded object store")
         (item "The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records"))
+      (p "These innovations established that security events must be visible across an entire distributed system, not just the node where they occur.")
       (p "The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.")
       (p "Cyberspace audit trails apply the same principle at IPv6 scale."))
     (subsection

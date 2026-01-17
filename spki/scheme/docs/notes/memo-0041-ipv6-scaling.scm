@@ -168,7 +168,8 @@
       "Phase 4: Scale Testing"
       (list
         (item "100 nodes - 1000 nodes - 10000 nodes")
-        (item "Measure: latency, convergence time, bandwidth")))
+        (item "Measure: latency, convergence time, bandwidth"))
+      (p "Implementation proceeds from working local storage to network protocols to discovery to scale testing. Each phase validates assumptions before the next builds on them. Git deprecation comes last—the proven system remains as fallback until the native system earns trust."))
     (subsection
       "Phase 5: Git Deprecation"
       (list

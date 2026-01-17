@@ -19,6 +19,7 @@
       (item "Different vaults may have different schema versions")
       (item "Rollback")
       (item "Must handle downgrades gracefully"))
+    (p "Any archival system that cannot evolve its data format is frozen in amber; any that cannot read old formats is no archive.")
     (p "Schema evolution must be:")
     (list
       (item "Non-breaking")
@@ -28,7 +29,8 @@
       (item "Explicit")
       (item "Changes documented and versioned")
       (item "Verifiable")
-      (item "Schema validation at boundaries")))
+      (item "Schema validation at boundaries"))
+    (p "Schema changes that break existing data or lack migration paths convert evolution into extinction.")))
   (section
     "Schema Model"
     (subsection

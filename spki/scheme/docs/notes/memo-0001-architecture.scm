@@ -32,7 +32,8 @@
       (item "S-expressions for everything: readable, parseable, auditable")
       (item "Minimal TCB: prove the crypto, evolve the rest")
       (item "No central authority: SPKI/SDSI namespaces over PKI hierarchies")
-      (item "Running code: every feature traces to research, runs, and is tested")))
+      (item "Running code: every feature traces to research, runs, and is tested"))
+    (p "These principles prioritize auditability and evolution over optimization, recognizing that security systems fail when they become too complex to understand or too rigid to adapt."))
   (section
     "2. The Prime Directive"
     (blockquote "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.")
@@ -135,19 +136,22 @@
       (list
         (item "Formally specified")
         (item "Proven in Coq")
-        (item "Frozen (rarely changes)")))
+        (item "Frozen (rarely changes)"))
+      (p "Minimizing the TCB reduces the attack surface to code that can be exhaustively verified, leaving everything else free to evolve without security implications."))
     (subsection
       "7.2 No Single Point of Failure"
       (list
         (item "No CA: SPKI namespaces are local")
         (item "No central server: Federation, not empire")
-        (item "No single key: Threshold signatures, Shamir sharing")))
+        (item "No single key: Threshold signatures, Shamir sharing"))
+      (p "Eliminating single points of failure means the system degrades gracefully and cannot be compromised by attacking any one component, authority, or key holder."))
     (subsection
       "7.3 Auditability"
       (list
         (item "All security policy is human-readable S-expressions")
         (item "All history is hash-chained and signed")
-        (item "All audit trails are exportable text"))))
+        (item "All audit trails are exportable text"))
+      (p "Auditability ensures that security failures can be diagnosed and that the system's behavior can be verified by inspection rather than faith.")))
   (section
     "8. Getting Started"
     (code bash "git clone git@github.com:ddp/cyberspace.git\ncd cyberspace/spki/scheme\n./spki-keygen alice\n./seal init --key alice.private\n./seal commit -m \"Hello, Cyberspace\""))

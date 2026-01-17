@@ -22,6 +22,7 @@
       (item "Once collected, an object is gone from this vault forever")
       (item "Preservation is the default")
       (item "When in doubt, keep it"))
+    (p "This inverts the runtime GC assumption that most objects die young; in an archive, age confers value.")
     (p "The Library of Alexandria burned once. We will not let it burn again."))
   (section
     "Motivation"
@@ -35,6 +36,7 @@
       (item "Partial or abandoned writes")
       (item "Temporary objects")
       (item "Intermediate computation results"))
+    (p "Without collection, storage grows without bound; the question is not whether to collect but how conservatively.")
     (p "But deletion is dangerous:")
     (list
       (item "Hash as capability")
@@ -45,6 +47,7 @@
       (item "May need historical data")
       (item "Resurrection")
       (item "Deleted objects may be re-added"))
+    (p "Each risk represents a real failure mode; premature collection has caused data loss in every major distributed system.")
     (p "GC must be conservative, consensual, and auditable.")
     (p "The default is: never collect. Collection requires explicit action."))
   (section
@@ -153,6 +156,7 @@
         (item "Legal requirement - With proof of legal order")
         (item "Data corruption - With cryptographic proof of corruption")
         (item "Governance vote - Per Memo-036 quorum protocol"))
+      (p "These narrow exceptions exist because even sacred objects sometimes must go, but only with extraordinary justification.")
       (code scheme "(define (archival-evaporation-authorized? cert)\n  \"Check if archival evaporation is properly authorized\"\n  (case (evap-reason cert)\n    ((legal-requirement)\n     ;; Must include legal order reference\n     (and (evap-legal-order cert)\n          (verify-legal-order (evap-legal-order cert))))\n\n    ((data-corruption)\n     ;; Must include corruption proof\n     (and (evap-corruption-proof cert)\n          (verify-corruption (evap-hash cert) (evap-corruption-proof cert))))\n\n    ((federation-consensus)\n     ;; Must have governance quorum (Memo-036)\n     (governance-quorum-met? cert))\n\n    (else #f)))  ; No other reasons valid for archival")))
   (section
     "Distributed GC"

@@ -29,6 +29,7 @@
       (item "Audit Trail (Memo-003) — All operations logged")
       (item "Rate Limiting (Memo-032) — Configurable ops/minute")
       (item "Sandboxing (Memo-023) — Agents access wormholes through capabilities"))
+    (p "Wormholes bridge two security domains—the filesystem and the vault—making them inherently privileged operations. Treating wormholes as first-class security objects ensures that filesystem access remains under cryptographic control, not just ambient POSIX permissions.")
     (p "[^d2]: Design: Wormholes are attack surface. Unrestricted filesystem access defeats vault security. Every wormhole must be explicitly authorized, continuously audited, and rate-limited against abuse.")
     (subsection
       "Wormhole Certificate"
@@ -147,6 +148,7 @@
         (item "Same hash - No conflict (identical content)")
         (item "Different hash, one newer - Take newer")
         (item "Different hash, concurrent - Conflict, apply lazy-resolve"))
+      (p "Content-addressing eliminates most conflicts at the object level; the manifest's version vectors resolve the remainder. Lazy clustering defers conflicts to user decision rather than attempting automatic resolution that may lose work.")
       (code scheme "(define (merge-manifests local remote)\n  (for-each\n   (lambda (path)\n     (let ((l (manifest-lookup local path))\n           (r (manifest-lookup remote path)))\n       (cond\n        ((not l) (manifest-add! local r))\n        ((not r) 'keep-local)\n        ((equal? (vault-file-hash l) (vault-file-hash r)) 'identical)\n        ((version-newer? r l) (manifest-update! local r))\n        ((version-newer? l r) 'keep-local)\n        (else (queue-conflict! path l r)))))\n   (union (manifest-paths local) (manifest-paths remote))))")))
   (section
     "Mount Commands"

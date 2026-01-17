@@ -19,6 +19,7 @@
       (item "More copies fit in same space")
       (item "Longevity")
       (item "Smaller archives survive longer"))
+    (p "For archival systems, efficiency directly enables preservation; resources saved on storage can fund additional replicas.")
     (p "But compression must not compromise:")
     (list
       (item "Integrity")
@@ -28,7 +29,8 @@
       (item "Deduplication")
       (item "Identical content stored once")
       (item "Accessibility")
-      (item "Data remains retrievable")))
+      (item "Data remains retrievable"))
+    (p "Compression that breaks these properties saves storage at the cost of trustworthiness; that is no savings at all.")))
   (section
     "Compression Model"
     (subsection

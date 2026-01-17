@@ -15,7 +15,7 @@
       (item "Inconsistent records: Different formats at different points")
       (item "Performance surprises: Auditing added late without cost analysis")
       (item "Policy gaps: No framework for what to log when"))
-    (p "The solution: co-design access control and auditing from the start."))
+    (p "These failures arise from treating auditing as an afterthought. Access control without auditing cannot detect attacks; auditing without access control cannot prevent them. Co-design ensures both work together from the start."))
   (section
     "Design Principle"
     (p "Access control and auditing are co-designed, not bolted on.")

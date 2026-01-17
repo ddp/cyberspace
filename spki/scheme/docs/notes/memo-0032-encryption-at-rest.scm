@@ -19,6 +19,7 @@
       (item "Forced disclosure orders")
       (item "Decommissioning")
       (item "Data remnants on old hardware"))
+    (p "These threats exist regardless of how careful the operators are; encryption transforms security from an operational problem to a cryptographic one.")
     (p "Encryption must be:")
     (list
       (item "Transparent")
@@ -28,7 +29,8 @@
       (item "Recoverable")
       (item "Key loss doesn't mean data loss")
       (item "Auditable")
-      (item "All key operations logged")))
+      (item "All key operations logged"))
+    (p "Encryption that applications must think about gets implemented inconsistently; encryption that loses data on key loss is a liability.")))
   (section
     "Encryption Model"
     (subsection

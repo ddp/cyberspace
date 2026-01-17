@@ -15,6 +15,7 @@
       (item "Deployment: Operations team quorum required")
       (item "Key ceremonies: Distributed trust for root keys")
       (item "Emergency response: Prevent unilateral action"))
+    (p "Each scenario involves irreversible or high-impact actions where single-party authorization creates unacceptable risk.")
     (p "Traditional approaches fail: - Shared passwords: Who has it? Who used it? - Sudo access: Root is root - Approval workflows: Soft controls, bypassable")
     (p "Threshold signatures provide cryptographic enforcement:")
     (blockquote "K valid signatures required. Not K-1. Not bypass. Mathematics."))
@@ -83,7 +84,8 @@
         (item "Generation: Secure random via libsodium")
         (item "Storage: Hardware tokens preferred, encrypted files acceptable")
         (item "Distribution: Out-of-band verification of public keys")
-        (item "Rotation: New ceremony, revoke old keys")))
+        (item "Rotation: New ceremony, revoke old keys"))
+      (p "Each party maintains their own key independently, ensuring no single compromise affects the system and providing clear accountability for each signature."))
     (subsection
       "Threshold Selection"
       (table

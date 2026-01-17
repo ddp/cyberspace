@@ -57,6 +57,7 @@
       (item "Security Considerations - Required in every specification")
       (item "Rough consensus - General agreement over voting")
       (item "Running code - Implementations validate specifications"))
+    (p "These practices provide precision without bureaucracy, ensuring specifications are unambiguous while remaining accessible to implementers.")
     (p "What we skip:")
     (list
       (item "Working group charters")

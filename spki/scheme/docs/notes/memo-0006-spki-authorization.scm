@@ -136,7 +136,8 @@
         (item "Generation: Use secure random (libsodium)")
         (item "Storage: Private keys in protected files")
         (item "Backup: Shamir secret sharing (see Memo-0007)")
-        (item "Rotation: Issue new certs, revoke old"))))
+        (item "Rotation: Issue new certs, revoke old"))
+      (p "Key management is the operational foundation of SPKI security; cryptographic strength means nothing if keys are generated predictably, stored carelessly, or lost irretrievably.")))
   (section
     "Integration Points"
     (subsection

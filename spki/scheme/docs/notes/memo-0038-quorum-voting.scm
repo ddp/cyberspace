@@ -19,6 +19,7 @@
       (item "Can't prove how you voted to others")
       (item "Availability")
       (item "Voting continues despite failures"))
+    (p "Voting systems that sacrifice any of these properties enable manipulation; true collective decision requires all four.")
     (p "Traditional approaches fail:")
     (list
       (item "Open ballot")
@@ -27,12 +28,15 @@
       (item "Single point of compromise")
       (item "Secure multi-party computation")
       (item "Complex, high communication overhead"))
+    (p "Each failure mode represents a fundamental architectural limitation, not merely an implementation weakness.")
+    (p "None of these approaches fits a decentralized, trustless environment.")
     (p "Homomorphic encryption provides:")
     (list
       (item "Vote on encrypted ballots")
       (item "Sum without decryption")
       (item "Decrypt only the final tally")
-      (item "Mathematical proof of correctness")))
+      (item "Mathematical proof of correctness"))
+    (p "Homomorphic encryption resolves the apparent paradox: computing on data without seeing it.")))
   (section
     "Cryptographic Foundation"
     (subsection

@@ -23,7 +23,8 @@
       (item "Faster compression - Zstd is 3-5x faster than gzip")
       (item "Better ratios - Zstd typically achieves 10-20% better compression")
       (item "Key alignment - Age uses X25519/Ed25519, same curve family as SPKI")
-      (item "Parallel support - zstd -T0 uses all cores")))
+      (item "Parallel support - zstd -T0 uses all cores"))
+    (p "Modern tooling should not leave data unencrypted when encryption is effectively free in CPU time and key management complexity."))
   (section
     "Specification"
     (subsection

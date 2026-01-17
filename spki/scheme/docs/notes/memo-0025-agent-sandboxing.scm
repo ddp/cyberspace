@@ -26,7 +26,8 @@
         (item "No accountability")
         (item "No audit of agent actions")
         (item "No revocation")
-        (item "Once launched, agents were uncontrollable")))
+        (item "Once launched, agents were uncontrollable"))
+      (p "Telescript's failure was not technical but architectural: mobile code without capability discipline is indistinguishable from malware.")))
     (subsection
       "The Demonic Solution"
       (p "The Library realizes this vision with proper daemonology:")
@@ -39,6 +40,7 @@
         (item "The Audit Daemon witnesses every action")
         (item "Remote termination")
         (item "Daemons can be banished at any time"))
+      (p "Each constraint corresponds to a Telescript failure mode; together they form a complete remediation of the original vision's security gaps.")
       (p "Daemons don't rule—they serve. They don't watch over—they watch with.")))
   (section
     "Daemon Model"

@@ -23,7 +23,8 @@
       (item "Selective disclosure - Prove a chunk exists without revealing siblings")
       (item "Streaming verification - Verify chunks as they arrive")
       (item "Parallelizable - Hash chunks concurrently")
-      (item "Quantum-resistant - SHAKE256 at every node")))
+      (item "Quantum-resistant - SHAKE256 at every node"))
+    (p "Tree structure provides logarithmic verification costs and enables partial proofs. Combined with SHAKE256, the same structure that improves efficiency also provides quantum resistance."))
   (section
     "Hash Function: SHAKE256"
     (p "SHAKE256 is an extendable-output function (XOF) from the SHA-3 (Keccak) family.")

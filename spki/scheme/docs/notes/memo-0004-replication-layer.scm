@@ -22,6 +22,7 @@
         (item "Records provenance - All publication events are audited")
         (item "Supports multiple transports - Git, HTTP, filesystem")
         (item "Maintains loose coupling - Works for confederations of friends"))
+      (p "These requirements reflect the reality of distributed archival: networks partition, authorities disappear, and trust must be verifiable without phoning home.")
       (p "Traditional package managers and distribution systems assume centralized registries and online verification. This replication layer is designed for decentralized, long-term preservation where trust is established through Simple Public Key Infrastructure (SPKI) certificates and cryptographic seals.")))
   (section
     "Design Principles"
@@ -30,7 +31,8 @@
       (item "Transport Agnostic - Same API works for git, HTTP, filesystem")
       (item "Audit Everything - All replication events are recorded in tamper-evident log")
       (item "Verify Before Trust - Subscribers must verify cryptographic seals")
-      (item "Explicit Authorization - SPKI certificates determine who can publish")))
+      (item "Explicit Authorization - SPKI certificates determine who can publish"))
+    (p "These principles ensure that trust is established cryptographically rather than administratively, and that the system works regardless of network topology or transport mechanism."))
   (section
     "Specification"
     (subsection
@@ -104,7 +106,8 @@
         (item "Malicious Archive Substitution - Attacker replaces archive on remote - Mitigation: Signature verification fails")
         (item "Version Rollback Attack - Attacker removes newer releases - Mitigation: Audit trail shows previous versions")
         (item "Unauthorized Publication - Attacker publishes fake release - Mitigation: SPKI authorization chain required")
-        (item "Transport Tampering - Network attacker modifies download - Mitigation: Hash and signature verification")))
+        (item "Transport Tampering - Network attacker modifies download - Mitigation: Hash and signature verification"))
+      (p "Each attack is addressed at the cryptographic layer rather than the transport layer, ensuring protection regardless of network conditions."))
     (subsection
       "Best Practices"
       (list
@@ -112,7 +115,8 @@
         (item "Check SPKI certificates - Verify authorization chain")
         (item "Maintain audit trail - Detect suspicious patterns")
         (item "Use HTTPS for HTTP transport - Prevent network attacks")
-        (item "Backup signing keys - Use Shamir secret sharing"))))
+        (item "Backup signing keys - Use Shamir secret sharing"))
+      (p "Defense in depth: cryptographic verification is primary, but transport security and operational practices add additional layers.")))
   (section
     "Implementation Notes"
     (subsection

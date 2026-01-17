@@ -134,7 +134,8 @@
       (list
         (item "Sequence numbers per direction")
         (item "Nonce never reused (fatal if violated)")
-        (item "AEAD authentication fails on replay"))))
+        (item "AEAD authentication fails on replay"))
+      (p "Each security property addresses a specific attack class. DoS resistance prevents resource exhaustion before authentication; forward secrecy limits damage from key compromise; identity protection prevents traffic analysis; replay protection ensures message freshness.")))
   (section
     "Comparison"
     (table

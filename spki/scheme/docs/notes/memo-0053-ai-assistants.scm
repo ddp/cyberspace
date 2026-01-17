@@ -18,7 +18,8 @@
       (item "Realms attract and bind assistants")
       (item "Assistants gain context about the realms they inhabit")
       (item "Conversations replace configuration")
-      (item "Multiple assistants coexist with distinct perspectives")))
+      (item "Multiple assistants coexist with distinct perspectives"))
+    (p "Assistants are not tools to be configured but collaborators to be welcomed. A realm's relationship with its assistants shapes what tasks can be accomplished and how naturally users interact with the system."))
 
   (section
     "Philosophy"

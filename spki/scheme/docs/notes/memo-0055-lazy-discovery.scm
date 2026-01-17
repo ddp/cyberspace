@@ -132,7 +132,8 @@ Gossip:    Transport. Carries both forged objects and notifications.")
       (item "Notification spam: Rate limiting per realm (Memo-032)")
       (item "Subscription flooding: Quota on active subscriptions")
       (item "Privacy leakage: Subscriptions reveal interest graphs")
-      (item "Replay attacks: Lamport ordering prevents stale notifications")))
+      (item "Replay attacks: Lamport ordering prevents stale notifications"))
+    (p "Lazy discovery introduces new attack surfaces. Each concern requires explicit mitigation; the system cannot assume good faith from all participants.")))
 
   (section
     "References"

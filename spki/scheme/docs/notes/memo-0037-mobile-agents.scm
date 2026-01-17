@@ -19,7 +19,8 @@
       (item "Pub/sub enables loose coupling across realms")
       (item "Accountability")
       (item "Every agent action is auditable"))
-    (p "General Magic's Telescript (1994) pioneered these ideas. We preserve the good parts while integrating with SPKI capabilities and content-addressed storage."))
+    (p "These requirements cannot be met by traditional RPC; they demand code that travels, not just data that moves.")
+    (p "General Magic's Telescript (1994) pioneered these ideas. We preserve the good parts while integrating with SPKI capabilities and content-addressed storage.")))
   (section
     "Agent Model"
     (subsection
@@ -30,6 +31,8 @@
         (item "Credentialed - Carries SPKI certificates granting capabilities")
         (item "Accountable - Every action recorded in audit trail")
         (item "Supervised - Realm coordinator can inspect, suspend, terminate"))
+      (p "These four properties work in concert: mobility provides flexibility, credentials constrain authority, accountability provides forensics, and supervision provides control.")
+      (p "Without all four, agents become liabilities rather than assets.")
       (code scheme "(define-record-type <agent>\n  (make-agent id principal code state credentials realm)\n  agent?\n  (id agent-id)                    ; Content hash of initial code+state\n  (principal agent-principal)      ; SPKI key that spawned this agent\n  (code agent-code)                ; Scheme closure (serializable)\n  (state agent-state)              ; Mutable state (content-addressed)\n  (credentials agent-credentials)  ; SPKI certificate chain\n  (realm agent-realm))             ; Current realm location"))
     (subsection
       "Agent Lifecycle"

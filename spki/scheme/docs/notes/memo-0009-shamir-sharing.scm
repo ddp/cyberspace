@@ -14,12 +14,14 @@
       (item "Key loss: Funds locked forever")
       (item "Key theft: Complete compromise")
       (item "Key escrow: Trust a third party?"))
+    (p "Any centralized solution to these problems requires trusting someone, which moves rather than eliminates the single point of failure.")
     (p "Shamir's Secret Sharing provides:")
     (list
       (item "Threshold recovery: Any K of N shares reconstruct")
       (item "Information-theoretic security: K-1 shares reveal nothing")
       (item "Distributed custody: No single holder")
       (item "Backup flexibility: Geographic distribution"))
+    (p "These properties eliminate single points of failure mathematically rather than administratively, distributing trust across multiple independent parties.")
     (p "From Adi Shamir's 1979 paper \"How to Share a Secret\":")
     (blockquote "Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing."))
   (section
@@ -82,7 +84,8 @@
         (item "Availability: Higher K = harder to recover")
         (item "Security: Lower K = easier to collude")
         (item "Geography: Consider time zones for ceremonies")
-        (item "Succession: What if custodians unavailable?"))))
+        (item "Succession: What if custodians unavailable?"))
+      (p "Threshold selection balances the probability of legitimate recovery against the probability of malicious collusion, tailored to the specific threat model.")))
   (section
     "Share Distribution"
     (subsection
@@ -138,7 +141,8 @@
         (item "Distribution: Out-of-band verification")
         (item "Storage: Encrypted, physically secure")
         (item "Reconstruction: Secure room, witnesses")
-        (item "Destruction: Secure wipe after use"))))
+        (item "Destruction: Secure wipe after use"))
+      (p "Shamir's mathematical security is only as strong as the operational procedures surrounding share generation, distribution, and reconstruction.")))
   (section
     "Implementation Notes"
     (subsection

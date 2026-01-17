@@ -15,6 +15,7 @@
       (item "Bandwidth costs: Continuous sync is expensive")
       (item "Offline operation: Internet isn't always available")
       (item "Simplicity: Complex protocols have complex bugs"))
+    (p "Protocol complexity should match trust assumptions; using Byzantine consensus among friends wastes resources and adds failure modes.")
     (p "Lazy Clustering provides:")
     (list
       (item "Sync when ready: Push/pull at human pace")
@@ -22,6 +23,7 @@
       (item "Conflict detection: Know when divergence happens")
       (item "Manual resolution: Humans resolve, not algorithms")
       (item "Audit everything: Full history preserved"))
+    (p "These properties prioritize simplicity and autonomy over consistency, appropriate when participants have aligned interests and can tolerate temporary divergence.")
     (blockquote "The best protocol is the one you don't run."))
   (section
     "Specification"

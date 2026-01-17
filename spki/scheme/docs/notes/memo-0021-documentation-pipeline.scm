@@ -15,6 +15,7 @@
       (item "Accessible - Viewable in any environment")
       (item "Readable - Human-readable output")
       (item "Discoverable - Indexed for navigation"))
+    (p "Documentation that cannot be read in a century is not documentation; it is a time bomb disguised as an archive.")
     (subsection
       "Why PostScript, Not PDF"
       (p "PDF is Adobe's proprietary format dressed in ISO clothing.[^h1] PostScript is:")

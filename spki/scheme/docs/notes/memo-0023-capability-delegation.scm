@@ -21,6 +21,7 @@
       (item "Authority flows from source to delegate")
       (item "Threshold signatures")
       (item "M-of-N for critical operations"))
+    (p "These principles eliminate the central authority problem: authorization decisions are local, verifiable, and require no trusted third party.")
     (p "The Library integrates SPKI with content-addressed storage, creating capabilities that are themselves content-addressed and introspectable."))
   (section
     "Capability Model"

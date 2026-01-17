@@ -114,7 +114,8 @@
         (item "Performance: Environment capture adds latency")
         (item "Noise: Not every commit needs forensic detail")
         (item "Privacy: Some metadata reveals sensitive info")
-        (item "Storage: Full metadata increases repository size")))
+        (item "Storage: Full metadata increases repository size"))
+      (p "Progressive levels let developers choose the right tradeoff between speed and forensic detail for each commit."))
     (subsection
       "Why S-expressions?"
       (list

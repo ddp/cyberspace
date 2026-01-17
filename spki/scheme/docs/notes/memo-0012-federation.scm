@@ -19,13 +19,15 @@
       (item "Censorship: Authority can deny access")
       (item "Trust concentration: Must trust operator")
       (item "Survival: Company folds, data lost"))
+    (p "These failures are not bugs but features of centralized design; the only remedy is architectural, not operational.")
     (p "Federation provides:")
     (list
       (item "Decentralized - No master server")
       (item "Resilient - Survives node failures")
       (item "Autonomous - Each peer controls own data")
       (item "Cryptographic - Trust through math, not authority")
-      (item "Eventual consistency - Convergence without coordination")))
+      (item "Eventual consistency - Convergence without coordination"))
+    (p "Federation trades coordination complexity for availability and autonomy, accepting that nodes may temporarily disagree in exchange for never being unable to operate."))
   (section
     "Federation Model"
     (subsection

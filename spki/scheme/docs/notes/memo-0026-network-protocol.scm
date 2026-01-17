@@ -19,6 +19,7 @@
       (item "Receive updates from publishers")
       (item "Query")
       (item "Search the distributed soup"))
+    (p "Without network communication, vaults are isolated archives; with it, they form a distributed library.")
     (p "The protocol must handle:")
     (list
       (item "Intermittent connectivity")
@@ -28,7 +29,8 @@
       (item "Large objects")
       (item "Efficient chunked transfer")
       (item "Partial sync")
-      (item "Resume interrupted transfers")))
+      (item "Resume interrupted transfers"))
+    (p "These constraints reflect the reality of distributed systems: the network is hostile, connections are ephemeral, and transfers fail midway.")))
   (section
     "Protocol Layers"
     (code "┌─────────────────────────────────────────┐\n│           APPLICATION LAYER             │\n│  (vault operations, soup queries)       │\n├─────────────────────────────────────────┤\n│           MESSAGE LAYER                 │\n│  (request/response, streaming)          │\n├─────────────────────────────────────────┤\n│           SECURITY LAYER                │\n│  (authentication, encryption)           │\n├─────────────────────────────────────────┤\n│           TRANSPORT LAYER               │\n│  (TCP, QUIC, Unix socket, etc.)         │\n└─────────────────────────────────────────┘"))

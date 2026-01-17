@@ -17,6 +17,7 @@
       (item "No synchronization: No NTP, no GPS, no trusted time")
       (item "Causality tracking: If a caused b, then C(a) < C(b)")
       (item "Consistency: All nodes agree on partial order"))
+    (p "Logical clocks capture what matters in distributed systems: which events could have influenced which others, regardless of wall-clock time.")
     (p "From Lamport (1978):")
     (blockquote "Time, Clocks, and the Ordering of Events in a Distributed System"))
   (section

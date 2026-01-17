@@ -19,6 +19,7 @@
       (item "Reconstruct state after failure")
       (item "Trust")
       (item "Foundation of the security model"))
+    (p "The audit log is the ultimate source of truth; if it can be corrupted, forged, or destroyed, no other security property holds.")
     (p "But the audit log is also a target:")
     (list
       (item "Flooding")
@@ -29,7 +30,9 @@
       (item "Overwhelm to prevent logging of real attacks")
       (item "Amplification")
       (item "Small action triggers large log entries"))
-    (p "The audit log must protect itself while never failing to record."))
+    (p "Each attack vector weaponizes the log's own integrity requirements against itself.")
+    (p "The attacker knows that disrupting the log disrupts accountability.")
+    (p "The audit log must protect itself while never failing to record.")))
   (section
     "Threat Model"
     (subsection

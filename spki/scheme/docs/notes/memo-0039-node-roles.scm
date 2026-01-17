@@ -20,7 +20,9 @@
       (item "Self-assess - Nodes should know their own capabilities")
       (item "Declare - Nodes should advertise their role to peers")
       (item "Adapt - Operations should degrade gracefully based on available roles")
-      (item "Persist - Role assignments should survive restarts")))
+      (item "Persist - Role assignments should survive restarts"))
+    (p "Automatic role detection enables heterogeneous hardware to participate appropriately without manual configuration.")
+    (p "Without explicit role management, the system either assumes all nodes are equal or requires manual configuration; neither scales.")))
   (section
     "Node Roles"
     (subsection
@@ -106,14 +108,16 @@
         (item "Capability proofs: Require benchmark results")
         (item "Peer validation: Other nodes can challenge claims")
         (item "Reputation: Track role fulfillment history")
-        (item "Threshold trust: Multiple witnesses needed")))
+        (item "Threshold trust: Multiple witnesses needed"))
+      (p "These mitigations layer defense in depth; no single spoofing technique defeats all of them.")))
     (subsection
       "Role Downgrade Attacks"
       (p "An attacker could force nodes to operate at lower roles:")
       (list
         (item "Signed role declarations: Can't forge")
         (item "Local override: Node controls own role")
-        (item "Audit trail: Role changes are logged"))))
+        (item "Audit trail: Role changes are logged"))
+      (p "A node's sovereignty over its own role prevents external actors from dictating its participation level."))))
   (section
     "References"
     (list

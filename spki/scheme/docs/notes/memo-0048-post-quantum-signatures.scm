@@ -125,7 +125,8 @@
       (list
         (item "Ed25519 removed from new certificates")
         (item "Historical certificates retain for audit")
-        (item "Cyberspace survives"))))
+        (item "Cyberspace survives"))
+      (p "Migration must complete before Q-Day, not after. Each phase reduces exposure while maintaining interoperability with peers at earlier phases. The timeline assumes conservative estimates; if quantum computers arrive sooner, later phases compress.")))
   (section
     "Storage Implications"
     (p "Post-quantum signatures are larger:")

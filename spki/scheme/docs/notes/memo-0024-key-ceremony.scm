@@ -19,6 +19,7 @@
       (item "Man-in-the-middle forever")
       (item "No witnesses")
       (item "No one believes you did it right"))
+    (p "Key generation errors are silent and total; unlike software bugs, they produce no symptoms until catastrophic failure.")
     (p "Key ceremonies solve this through:")
     (list
       (item "Witnessed generation")
@@ -29,12 +30,14 @@
       (item "Reproducible and auditable")
       (item "Air-gapped execution")
       (item "Network isolation during critical operations"))
+    (p "Ceremony formalism converts trust from social obligation to cryptographic proof; the record demonstrates correctness rather than merely asserting it.")
     (p "The Library requires key ceremonies for:")
     (list
       (item "Vault master keys")
       (item "Threshold signing keys")
       (item "Root certificates")
-      (item "Recovery keys")))
+      (item "Recovery keys"))
+    (p "These are the keys that cannot be rotated without significant disruption; getting them right the first time is not optional.")))
   (section
     "Ceremony Types"
     (subsection

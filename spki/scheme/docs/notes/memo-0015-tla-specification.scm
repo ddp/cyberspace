@@ -14,12 +14,14 @@
       (item "Tests check examples: Not all possible executions")
       (item "Reviews check logic: Not all interleavings")
       (item "Bugs hide in corners: Race conditions, edge cases"))
+    (p "Distributed systems have exponentially many execution paths; exhaustive testing is impossible, but exhaustive specification checking is not.")
     (p "TLA+ provides:")
     (list
       (item "Precise specification: Mathematical description of behavior")
       (item "Model checking: Exhaustive state space exploration")
       (item "Proof capability: Formal verification of properties")
       (item "Design tool: Find bugs before writing code"))
+    (p "Formal specification forces clarity of thought; ambiguities that hide in prose become contradictions in mathematics.")
     (p "From Lamport:")
     (blockquote "If you're thinking without writing, you only think you're thinking."))
   (section

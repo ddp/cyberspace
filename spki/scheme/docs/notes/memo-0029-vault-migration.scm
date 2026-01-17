@@ -21,6 +21,7 @@
       (item "Move closer to users")
       (item "Cost")
       (item "Cheaper storage becomes available"))
+    (p "Any archive that cannot outlive its current host is not truly an archive; migration capability is survival capability.")
     (p "Migration must be:")
     (list
       (item "Complete")
@@ -30,7 +31,8 @@
       (item "Resumable")
       (item "Handle interruptions gracefully")
       (item "Auditable")
-      (item "Full trail of what moved where")))
+      (item "Full trail of what moved where"))
+    (p "Incomplete or unverifiable migration is data loss with extra steps.")))
   (section
     "Migration Types"
     (subsection

@@ -24,7 +24,7 @@
         (item "Shamir secret sharing")
         (item "Challenge-response protocols")
         (item "Zero-knowledge proofs"))
-      (p "Weak or predictable entropy destroys security completely. A realm's sovereignty depends on unpredictable secrets.")))
+      (p "Every cryptographic primitive assumes access to uniformly random bits. Without true entropy, key generation produces predictable keys, nonces repeat, and mathematical security guarantees collapse. A realm's sovereignty rests entirely on the unpredictability of its secrets.")))
   (section
     "Specification"
     (subsection
@@ -39,7 +39,8 @@
         (item "Automatic best-source selection - No platform-specific code")
         (item "Initialization safety - Blocks until entropy available")
         (item "Fork safety - Handles process forking correctly")
-        (item "Audited implementation - Widely reviewed cryptographic library")))
+        (item "Audited implementation - Widely reviewed cryptographic library"))
+      (p "libsodium provides a single canonical interface for entropy across all platforms. Using one audited implementation eliminates the class of bugs where platform-specific entropy code diverges or contains subtle flaws."))
     (subsection
       "Platform Requirements"
       (p "#### Scheme (CHICKEN)")

@@ -19,6 +19,7 @@
       (item "Equal access for all users")
       (item "Cost control")
       (item "Prevent unbounded consumption"))
+    (p "Shared resources without limits become tragedy of the commons; one runaway client can deny service to all.")
     (p "Limits must be:")
     (list
       (item "Configurable")
@@ -28,7 +29,8 @@
       (item "Transparent")
       (item "Users know their limits")
       (item "Auditable")
-      (item "All limiting decisions logged")))
+      (item "All limiting decisions logged"))
+    (p "Opaque or abrupt limits frustrate legitimate users; predictable limits enable clients to adapt their behavior.")))
   (section
     "Rate Limiting"
     (subsection

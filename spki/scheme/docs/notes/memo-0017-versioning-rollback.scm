@@ -15,6 +15,7 @@
       (item "What versions exist?")
       (item "How do I go back?")
       (item "What if I make a mistake?"))
+    (p "These questions are universal but git answers them with mechanisms rather than semantics, requiring users to understand implementation details.")
     (p "Git provides mechanisms. Cyberspace provides semantics:")
     (code "seal-version         → \"2.1.0\"\nseal-versions        → [1.0.0, 1.1.0, 2.0.0, 2.1.0]\nseal-rollback 2.0.0  → Done. Now at 2.0.0.\nseal-recover         → Here's what you can recover."))
   (section
