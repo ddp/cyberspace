@@ -79,8 +79,9 @@
                (loop (cdr bytes) result))))))))
 
 ;; Character cell dimensions (in SVG units)
-(define cell-width 9.6)   ; Width of monospace char
-(define cell-height 19.2) ; Height including line spacing
+;; Using integers to avoid subpixel rendering artifacts
+(define cell-width 10)    ; Width of monospace char
+(define cell-height 20)   ; Height including line spacing
 
 ;; Convert box character codepoint to SVG path segments
 ;; Returns list of (type x1 y1 x2 y2) where type is 'line or 'text
@@ -194,77 +195,95 @@
                 (string-append line (make-string pad #\space))))))
          lines char-counts)))
 
+(define (box-drawing-codepoint? cp)
+  "Check if codepoint is a box-drawing character."
+  (or (<= #x2500 cp #x257F)   ; Box Drawing
+      (<= #x2580 cp #x259F)   ; Block Elements
+      (= cp #x2190) (= cp #x2191) (= cp #x2192) (= cp #x2193)  ; Arrows
+      (= cp #x25B2) (= cp #x25B6) (= cp #x25BC) (= cp #x25C0)  ; Triangles
+      (= cp #x25BA) (= cp #x25C4)))  ; More triangles
+
+;; SVG diagram rendering - converts box-drawing text to geometric SVG
 (define (text->svg-diagram text)
-  "Convert multi-line text with box-drawing to SVG string."
-  (let* ((lines (string-split text "\n" #t))
-         ;; NOTE: normalize-box-lines disabled - breaks multi-column diagrams
-         ;; Fix source diagrams to have consistent line widths instead
-         ;; Parse each line into Unicode chars (codepoint . char-string)
-         (parsed-lines (map utf8-chars lines))
+  "Convert text with box-drawing characters to SVG.
+   Box characters become geometric primitives (lines/rects).
+   Text characters are positioned at exact pixel coordinates."
+  (let* ((lines (string-split text "\n"))
          (nrows (length lines))
-         (ncols (apply max 1 (map length parsed-lines)))
+         (ncols (apply max 1 (map utf8-length lines)))
          (width (* ncols cell-width))
          (height (* nrows cell-height))
-         (svg-lines '())
-         (svg-texts '()))
+         (elements '()))
 
     ;; Process each character
-    (let loop-rows ((parsed-lines parsed-lines) (row 0))
-      (when (pair? parsed-lines)
-        (let ((chars (car parsed-lines)))  ; list of (codepoint . char-string)
-          (let loop-cols ((chars chars) (col 0))
+    (let row-loop ((lines lines) (row 0))
+      (when (pair? lines)
+        (let* ((line (car lines))
+               (chars (utf8-chars line)))
+          (let col-loop ((chars chars) (col 0))
             (when (pair? chars)
               (let* ((char-pair (car chars))
                      (cp (car char-pair))
                      (char-str (cdr char-pair))
+                     ;; Center of this cell
                      (cx (+ (* col cell-width) (/ cell-width 2)))
-                     (cy (+ (* row cell-height) (/ cell-height 2)))
-                     (elems (codepoint->svg cp cx cy)))
-                (if (null? elems)
-                    ;; Regular character - emit as text if not space
-                    (when (not (= cp 32))  ; space
-                      (set! svg-texts
-                            (cons (format "<text x=\"~a\" y=\"~a\" text-anchor=\"middle\" dominant-baseline=\"central\">~a</text>"
-                                         cx cy (html-escape char-str))
-                                  svg-texts)))
-                    ;; Box character - emit SVG elements
-                    (for-each
-                      (lambda (elem)
-                        (case (car elem)
-                          ((line)
-                           (set! svg-lines
-                                 (cons (format "<line x1=\"~a\" y1=\"~a\" x2=\"~a\" y2=\"~a\"/>"
-                                              (cadr elem) (caddr elem)
-                                              (cadddr elem) (car (cddddr elem)))
-                                       svg-lines)))
-                          ((text)
-                           (set! svg-texts
-                                 (cons (format "<text x=\"~a\" y=\"~a\" text-anchor=\"middle\" dominant-baseline=\"central\">~a</text>"
-                                              (cadr elem) (caddr elem) (cadddr elem))
-                                       svg-texts)))
-                          ((rect)
-                           (set! svg-lines
-                                 (cons (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\" fill=\"currentColor\" opacity=\"~a\"/>"
-                                              (cadr elem) (caddr elem)
-                                              (cadddr elem) (car (cddddr elem))
-                                              (cadr (cddddr elem)))
-                                       svg-lines)))))
-                      elems)))
-              (loop-cols (cdr chars) (+ col 1)))))
-        (loop-rows (cdr parsed-lines) (+ row 1))))
+                     (cy (+ (* row cell-height) (/ cell-height 2))))
+                (cond
+                  ;; Box-drawing character - get SVG primitives
+                  ((box-drawing-codepoint? cp)
+                   (let ((prims (codepoint->svg cp cx cy)))
+                     (set! elements (append elements prims))))
+                  ;; Space - skip
+                  ((= cp 32) #f)
+                  ;; Regular text character - emit as text element
+                  (else
+                   (set! elements
+                         (append elements
+                                 `((text ,cx ,cy ,char-str))))))
+                (col-loop (cdr chars) (+ col 1))))))
+        (row-loop (cdr lines) (+ row 1))))
 
-    ;; Build SVG
-    (string-append
-      (format "<svg class=\"diagram\" viewBox=\"0 0 ~a ~a\" width=\"~a\" height=\"~a\" xmlns=\"http://www.w3.org/2000/svg\">\n"
-              width height width height)
-      "<style>\n"
-      "  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }\n"
-      "  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 16px; fill: currentColor; }\n"
-      "</style>\n"
-      (string-intersperse (reverse svg-lines) "\n")
-      "\n"
-      (string-intersperse (reverse svg-texts) "\n")
-      "\n</svg>")))
+    ;; Build SVG string
+    (let ((out (open-output-string)))
+      (display (format "<svg class=\"diagram\" viewBox=\"0 0 ~a ~a\" " width height) out)
+      (display (format "width=\"~a\" height=\"~a\" " width height) out)
+      (display "xmlns=\"http://www.w3.org/2000/svg\">\n" out)
+      ;; Style for lines and text
+      (display "<style>\n" out)
+      (display "  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }\n" out)
+      (display "  .diagram rect { fill: currentColor; }\n" out)
+      (display "  .diagram text { font-family: monospace; font-size: 14px; fill: currentColor; text-anchor: middle; dominant-baseline: central; }\n" out)
+      (display "</style>\n" out)
+
+      ;; Emit elements
+      (for-each
+       (lambda (elem)
+         (case (car elem)
+           ((line)
+            (let ((x1 (list-ref elem 1))
+                  (y1 (list-ref elem 2))
+                  (x2 (list-ref elem 3))
+                  (y2 (list-ref elem 4)))
+              (display (format "<line x1=\"~a\" y1=\"~a\" x2=\"~a\" y2=\"~a\"/>\n"
+                               x1 y1 x2 y2) out)))
+           ((rect)
+            (let ((x (list-ref elem 1))
+                  (y (list-ref elem 2))
+                  (w (list-ref elem 3))
+                  (h (list-ref elem 4)))
+              (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\"/>\n"
+                               x y w h) out)))
+           ((text)
+            (let ((x (list-ref elem 1))
+                  (y (list-ref elem 2))
+                  (s (list-ref elem 3)))
+              ;; Escape text for SVG
+              (let ((escaped (string-translate* s '(("&" . "&amp;") ("<" . "&lt;") (">" . "&gt;")))))
+                (display (format "<text x=\"~a\" y=\"~a\">~a</text>\n" x y escaped) out))))))
+       elements)
+
+      (display "</svg>" out)
+      (get-output-string out))))
 
 ;; ASCII conversion for text output (using codepoints)
 (define (codepoint->ascii cp)
@@ -643,7 +662,7 @@
                  (lang (if has-lang (symbol->string (cadr elem)) ""))
                  (content (if has-lang (caddr elem) (cadr elem))))
             (if (string-has-box-chars? content)
-                ;; Box-drawing detected - render as SVG
+                ;; Box-drawing detected - render as SVG (client-independent geometry)
                 (begin
                   (display "<div class=\"diagram-container\">\n" port)
                   (display (text->svg-diagram content) port)
@@ -707,6 +726,10 @@
         ;; HTML header
         (display "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"dark\">\n<head>\n" port)
         (display "  <meta charset=\"UTF-8\">\n" port)
+        ;; Embed JetBrains Mono - known good box-drawing alignment
+        (display "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n" port)
+        (display "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n" port)
+        (display "  <link href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap\" rel=\"stylesheet\">\n" port)
         (if is-memo
             (display (format "  <title>Memo ~a: ~a</title>\n" (memo-number->string num) (html-escape title)) port)
             (display (format "  <title>~a</title>\n" (html-escape title)) port))
