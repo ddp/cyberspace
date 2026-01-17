@@ -16,7 +16,7 @@
       (row "RSA-2048 " "112 bits " "0 bits (broken) ")
       (row "SPHINCS+-256 " "256 bits " "128 bits ")
       (row "Dilithium3 " "192 bits " "128 bits "))
-    (p "When Q-Day arrives: - Every Ed25519 signature becomes forgeable - Every SPKI certificate can be counterfeited - Every realm identity can be stolen - Every sealed release can be replaced")
+    (p "When Q-Day arrives: - Every Ed25519 signature becomes forgeable - Every Simple Public Key Infrastructure (SPKI) certificate can be counterfeited - Every realm identity can be stolen - Every sealed release can be replaced")
     (p "The capability chain breaks. The sealed closure unseals. Cyberspace falls.")
     (p "We must migrate before Q-Day."))
   (section

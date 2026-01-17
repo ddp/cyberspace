@@ -59,7 +59,7 @@
   (section
     "Phase 4: ATTEST"
     (p "All subsequent messages encrypted.")
-    (p "Both parties prove identity using SPKI principals.")
+    (p "Both parties prove identity using Simple Public Key Infrastructure (SPKI) principals.")
     (code "ATTEST payload (encrypted):\n  principal-hash \"|\" signature")
     (p "- principal-hash: SPKI principal (hex-encoded public key hash) - signature: Ed25519 signature over transcript")
     (p "Identity is cryptographic, not nominal. A principal is identified solely by its public key hash, never by a human-readable name. This is a prime directive.")

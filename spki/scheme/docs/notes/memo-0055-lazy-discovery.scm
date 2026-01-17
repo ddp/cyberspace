@@ -27,7 +27,7 @@
 (subscribe key: hash)                 ; changes to specific object
 (subscribe topic: 'rfc)               ; semantic topic
 (subscribe pattern: \"spki/scheme/*\") ; glob pattern")
-      (p "Subscriptions are SPKI certificates - signed expressions of interest that can be delegated and revoked."))
+      (p "Subscriptions are Simple Public Key Infrastructure (SPKI) certificates - signed expressions of interest that can be delegated and revoked."))
 
     (subsection
       "2.2 Notification Format"

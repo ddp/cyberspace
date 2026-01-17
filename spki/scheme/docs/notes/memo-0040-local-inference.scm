@@ -61,7 +61,7 @@
     (subsection
       "Demonic Agent Inference"
       (p "Sandboxed agents (Memo-023) access inference through capability tokens:[^d2]")
-      (p "[^d2]: Design: Inference capability is granted like any other—via SPKI certificate. An agent cannot infer without explicit authorization.")
+      (p "[^d2]: Design: Inference capability is granted like any other—via Simple Public Key Infrastructure (SPKI) certificate. An agent cannot infer without explicit authorization.")
       (code scheme "(define (demonic-inference agent prompt)\n  (let ((cap (agent-capability agent 'inference)))\n    (if (not cap)\n        (error 'unauthorized \"Agent lacks inference capability\")\n        (let ((limits (capability-limits cap)))\n          (enforce-limits limits)\n          (inference-complete (capability-server cap)\n                              (capability-model cap)\n                              prompt\n                              limits)))))")))
   (section
     "Resource Management"

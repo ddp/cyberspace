@@ -48,7 +48,7 @@
     "Security Layer"
     (subsection
       "Handshake Protocol"
-      (p "Mutual authentication using SPKI certificates:")
+      (p "Mutual authentication using Simple Public Key Infrastructure (SPKI) certificates:")
       (code "Client                                   Server\n  │                                        │\n  │──── ClientHello ──────────────────────▶│\n  │     (protocol version, capabilities)   │\n  │                                        │\n  │◀──── ServerHello ─────────────────────│\n  │      (protocol version, certificate)   │\n  │                                        │\n  │──── ClientAuth ───────────────────────▶│\n  │     (certificate, challenge-response)  │\n  │                                        │\n  │◀──── ServerAuth ──────────────────────│\n  │      (challenge-response)              │\n  │                                        │\n  │══════ Encrypted Channel ══════════════│"))
     (subsection
       "Handshake Implementation"

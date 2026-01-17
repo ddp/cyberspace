@@ -12,7 +12,7 @@
     "Motivation"
     (p "Users need seamless integration between their existing filesystem and the vault. Manual import/export creates friction and risks metadata loss.")
     (p "A wormhole provides:")
-    (p "1. Transparency — Finder, cp, rsync work unchanged 2. Bidirectionality — No separate sync step; it IS the filesystem 3. Metadata preservation — Full macOS attributes captured automatically 4. Content addressing — Deduplication and integrity built-in 5. Security — First-class SPKI object with audit and rate-limit")
+    (p "1. Transparency — Finder, cp, rsync work unchanged 2. Bidirectionality — No separate sync step; it IS the filesystem 3. Metadata preservation — Full macOS attributes captured automatically 4. Content addressing — Deduplication and integrity built-in 5. Security — First-class Simple Public Key Infrastructure (SPKI) object with audit and rate-limit")
     (p "The filesystem abstraction is the right boundary—everything above it (apps, shell, Finder) works without modification.[^d1]")
     (p "[^d1]: Design: FUSE inverts the usual model. Instead of teaching applications about vaults, we teach the vault to speak filesystem. Unix got this right: everything is a file."))
   (section

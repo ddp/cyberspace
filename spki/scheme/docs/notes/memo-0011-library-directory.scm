@@ -15,7 +15,7 @@
     (p "The Library of Cyberspace contains 421+ research papers spanning 50 years of computing history. Without a catalog:")
     (list
       (item "Discoverability: How to find Lamport's clock paper?")
-      (item "Connections: What relates to SPKI?")
+      (item "Connections: What relates to Simple Public Key Infrastructure (SPKI)?")
       (item "Context: When was this written? By whom?"))
     (p "The Directory System provides:")
     (p "1. Natural language search - \"papers by Lampson about protection\" 2. Multi-index access - By author, topic, year, collection 3. Fuzzy matching - \"Lamp\" finds Lampson and Lamport 4. Beautiful output - Unicode, emoji, formatted results 5. S-expression export - Machine-readable catalogs"))
