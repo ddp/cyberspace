@@ -5143,6 +5143,41 @@ Cyberspace REPL - Available Commands
   (set! *inspector-enabled* #f)
   (print "Inspector disabled. Errors show stack trace."))
 
+;; Domain-aware inspect - handles high-level Cyberspace objects
+;; before falling back to generic inspector
+(define (cyberspace-inspect obj)
+  "Inspect any object with domain awareness"
+  (cond
+    ;; Symbols that name domain concepts - call function and show result
+    ((eq? obj 'soup) (soup))
+    ((eq? obj 'vault) (status))
+    ((eq? obj 'keys) (soup 'keys))
+    ((eq? obj 'releases) (soup 'releases))
+    ((eq? obj 'audits) (soup 'audit))
+    ((eq? obj 'certs) (soup 'certs))
+    ((eq? obj 'forge) (soup 'forge))
+    ((eq? obj 'realm) (realm-info))
+
+    ;; Procedure that matches known domain functions - call and inspect result
+    ((and (procedure? obj)
+          (or (eq? obj soup)
+              (eq? obj keys)
+              (eq? obj releases)))
+     (let ((result (obj)))
+       (inspector#describe result)
+       result))
+
+    ;; String that looks like a version or object name - use soup-inspect
+    ((and (string? obj)
+          (or (irregex-match "^[0-9]+\\.[0-9]+" obj)  ; version
+              (string-suffix? ".archive" obj)         ; archive
+              (string-suffix? ".sig" obj)))           ; signature
+     (soup-inspect obj))
+
+    ;; Everything else - generic inspector
+    (else
+     (inspector#inspect obj))))
+
 ;;; ============================================================
 ;;; Help System
 ;;; ============================================================
@@ -6218,6 +6253,41 @@ Cyberspace REPL - Available Commands
 ;; Settable prompt
 (define *prompt* ": ")
 
+;; Help invocation tracking - second ? shows more detail
+(define *help-call-count* 0)
+
+;; User mode: novice (command mode) vs schemer (full Scheme)
+;; Affects help detail, prompts, and suggestions
+(define *user-mode* 'novice)
+(define *paren-count* 0)      ; track Scheme expression usage
+(define *command-count* 0)    ; track bare command usage
+(define *mode-threshold* 5)   ; expressions before auto-switch
+
+(define (novice)
+  "Switch to novice mode - simpler help, command-focused"
+  (set! *user-mode* 'novice)
+  (set! *prompt* ": ")
+  (print "Novice mode. Bare commands work: status, keys, soup")
+  (print "Type ? for help"))
+
+(define (schemer)
+  "Switch to schemer mode - full power, detailed help"
+  (set! *user-mode* 'schemer)
+  (set! *prompt* "λ ")
+  (print "Schemer mode. Full Scheme: (soup 'keys), (map f list)")
+  (print "Type (help 'topics) for command index"))
+
+(define (check-mode-shift!)
+  "Auto-detect mode shift based on usage patterns"
+  (when (and (eq? *user-mode* 'novice)
+             (>= *paren-count* *mode-threshold*)
+             (> *paren-count* (* 2 *command-count*)))
+    (set! *user-mode* 'schemer)
+    (set! *prompt* "λ ")
+    (print "")
+    (print "Detected Scheme usage - switching to schemer mode.")
+    (print "Type (novice) to switch back.")))
+
 ;; Result history
 ;; Use _ for last result (like Python), _1 _2 _3 for previous
 ;; And ($ n) for numbered access
@@ -6284,8 +6354,17 @@ Cyberspace REPL - Available Commands
          (loop))
 
         ;; Single-char shortcuts (bare ? and . invoke help/status)
+        ;; Novice: first ? = brief, second = topics
+        ;; Schemer: always show topics
         ((string=? line "?")
-         (help)
+         (set! *help-call-count* (+ 1 *help-call-count*))
+         (cond
+           ((eq? *user-mode* 'schemer)
+            (help 'topics))
+           ((= *help-call-count* 1)
+            (help))
+           (else
+            (help 'topics)))
          (loop))
         ((string=? line ".")
          (status)
@@ -6402,19 +6481,30 @@ Cyberspace REPL - Available Commands
               (print "Try ,? for help")
               (loop)))))
 
-        ;; Regular Scheme expression
+        ;; Regular input - parse with command mode support
         (else
          (repl-history-add line)
-         (handle-exceptions exn
-           (if *inspector-enabled*
-               (begin
-                 (inspector-repl exn)
-                 (loop))
-               (rich-exception-display exn))
-           (let ((result (eval (with-input-from-string line read))))
-             (unless (eq? result (void))
-               (push-result! result)
-               (pp result))))
+         (let* ((trimmed (string-trim-both line))
+                (is-scheme? (and (> (string-length trimmed) 0)
+                                 (char=? (string-ref trimmed 0) #\()))
+                (expr (parse-command-line line)))
+           ;; Track usage for mode detection
+           (if is-scheme?
+               (set! *paren-count* (+ 1 *paren-count*))
+               (set! *command-count* (+ 1 *command-count*)))
+           (check-mode-shift!)
+
+           (when expr
+             (handle-exceptions exn
+               (if *inspector-enabled*
+                   (begin
+                     (inspector-repl exn)
+                     (loop))
+                   (rich-exception-display exn))
+               (let ((result (eval expr)))
+                 (unless (eq? result (void))
+                   (push-result! result)
+                   (pp result))))))
          (loop))))))
 
 (module-end! "repl")
@@ -6454,6 +6544,14 @@ Cyberspace REPL - Available Commands
                        (format "~as" elapsed-sec))
                    (realm-signature))))
   (print ""))
+
+;; Inject bindings into the interaction environment
+;; (compiled code's namespace is separate from eval's environment)
+(eval `(define inspect ,cyberspace-inspect))
+(eval `(define i ,cyberspace-inspect))  ; short alias
+(eval `(define describe ,inspector#describe))
+(eval `(define novice ,novice))
+(eval `(define schemer ,schemer))
 
 ;; Start custom REPL
 (command-repl)
