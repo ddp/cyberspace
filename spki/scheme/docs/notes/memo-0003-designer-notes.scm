@@ -48,7 +48,7 @@
 
   (section
     "5. The Scheme Beneath"
-    (p "Scheme is the implementation language, not the user interface. The newcomer sees a shell; the schemer sees a REPL. Same system, different lenses.")
+    (p "Scheme is the implementation language, not the user interface. The novice sees a shell; the schemer sees a REPL. Same system, different lenses.")
     (p "By default, Scheme internals are hidden:")
     (list
       (item "Inspector disabled - errors show simple messages, not debug> prompts")
@@ -151,16 +151,16 @@
       (p "If verification fails, the module refuses to load. An easter egg with real security - someone exploring the REPL discovers (forge) and gets actual cryptographic passwords, not toys.")))
 
   (section
-    "8. The Newcomer Interface"
+    "8. The Novice Interface"
     (p "Cyberspace must be approachable by normal people. The terminal is for operators. A friendly interface layer serves everyone else.")
 
     (subsection
       "8.1 The Problem"
-      (p "A newcomer asked: \"Why would I want to use this? I have iCloud. They have recipes and cat pictures.\"")
+      (p "A novice asked: \"Why would I want to use this? I have iCloud. They have recipes and cat pictures.\"")
       (p "Valid question. The answer must be compelling without mentioning Ed25519, SPKI certificates, hash chains, Merkle trees, or S-expressions."))
 
     (subsection
-      "8.2 What Newcomers Want"
+      "8.2 What Novices Want"
       (p "They don't want a distributed cryptographic vault. They want:")
       (list
         (item "My stuff is mine - Not rented from a corporation")
@@ -181,7 +181,7 @@
       |  (cs)    |              |    Door    |
       +----+----+              +-----+-----+
            |                         |
-      Operators                   Newcomers
+      Operators                   Novices
       Hackers                     Family
       Admins                      Everyone")
       (p "The terminal offers full power and complexity for those who want it. The friendly door offers drag-and-drop simplicity - same operations, different presentation.")
@@ -193,16 +193,16 @@
         (item "Never dumb down the core - Scheme stays Scheme")
         (item "Add layers, don't subtract - Friendly is additional, not replacement")
         (item "Same operations - Both doors do the same things")
-        (item "Gradual revelation - Newcomers can discover the terminal if curious")
+        (item "Gradual revelation - Novices can discover the terminal if curious")
         (item "Family friendly - Grandma can use it")))
 
     (subsection
       "8.5 The Test"
-      (p "If a newcomer can create a vault in 30 seconds, add a photo in 5 seconds, invite family in 1 minute, and understand what they have - we've succeeded.")))
+      (p "If a novice can create a vault in 30 seconds, add a photo in 5 seconds, invite family in 1 minute, and understand what they have - we've succeeded.")))
 
   (section
     "Changelog"
-    (p "- 2026-01-17 — Added Newcomer Interface section (section 8)")
+    (p "- 2026-01-17 — Added Novice Interface section (section 8)")
     (p "- 2026-01-15 — Gasser Multics provenance added (section 7.1)")
     (p "- 2026-01-15 — OSS operational geography framing, 40+ languages (section 7.3)")
     (p "- 2026-01-15 — Added cryptographic RNG with boot-time verification (section 7.6)")
