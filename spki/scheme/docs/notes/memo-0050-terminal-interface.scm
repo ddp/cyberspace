@@ -2,7 +2,7 @@
 ;; Review and edit as needed
 
 (memo
-  (number 51)
+  (number 50)
   (title "Terminal Interface Conventions")
   (section
     "Abstract"

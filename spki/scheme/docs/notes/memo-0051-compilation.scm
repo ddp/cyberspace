@@ -1,5 +1,5 @@
 (memo
-  (number 52)
+  (number 51)
   (title "Compilation and Debugging Manual")
   (section
     "Abstract"

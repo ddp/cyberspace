@@ -1,0 +1,409 @@
+%!PS-Adobe-3.0
+%%Title: memo-0054-designer-notes
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0054: Designer Notes) show newline
+() show newline
+(Status: Draft) show newline
+(Date: January 2026) show newline
+(Author: Derrell Piper <ddp@archlinux.us>) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(NOTICE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This is a living document, not a specification. It records the) show newline
+(intellectual heritage, design philosophy, and collaborative process) show newline
+(behind Cyberspace.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(1. INTELLECTUAL HERITAGE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(1.1 MIT Athena and DSSA) show newline
+(-----------------------) show newline
+() show newline
+(Cyberspace traces its lineage to MIT's Athena project and the) show newline
+(Distributed System Security Architecture \(DSSA\) research that produced) show newline
+(SPKI.) show newline
+() show newline
+(Athena introduced Kerberos, distributed authentication, and the concept) show newline
+(of a unified computing environment across heterogeneous systems. DSSA,) show newline
+(led by Rivest, Lampson, and Ellison, gave us SPKI - capability-based) show newline
+(authorization through certificate chains.) show newline
+() show newline
+(These ideas were absorbed during the same lamport epoch as R4RS Scheme) show newline
+(\(1991\) and SDSI \(1996\), alongside the practical education of Boston) show newline
+(traffic negotiation - both exercises in asserting authority without) show newline
+(central coordination.) show newline
+() show newline
+() show newline
+(1.2 Why Scheme) show newline
+(--------------) show newline
+() show newline
+(Scheme was chosen not for nostalgia but for precision. Homoiconicity) show newline
+(makes S-expressions natural for both code and data - certificates, audit) show newline
+(records, and configuration are all readable by the same parser that) show newline
+(reads the implementation.) show newline
+() show newline
+(The language that Abelson and Sussman used to teach computational) show newline
+(thinking at MIT is the same language used to implement the security) show newline
+(architecture that MIT research defined. Full circle.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(2. COLLABORATIVE DESIGN) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Cyberspace was designed in collaboration with Claude \(Anthropic\), an AI) show newline
+(assistant. This collaboration is documented in Memo-056.) show newline
+() show newline
+(The interaction model: human provides vision and constraints, AI) show newline
+(provides implementation and exploration. Neither could have built this) show newline
+(alone.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(3. NAMING COHERENCE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Knuth's principle from TAOCP: names should be consistent across the) show newline
+(totality of a system. When we renamed 'RFC' to 'Memo' internally, we) show newline
+(applied s/rfc/memo/g globally - not just to files being edited, but to) show newline
+(every reference in the codebase.) show newline
+() show newline
+(Single source of truth extends to terminology. MEMO_NUMBER_WIDTH is) show newline
+(defined once; the four-digit format flows from that constant through) show newline
+(Scheme and shell. When the namespace overflows to five digits, one) show newline
+(change propagates everywhere.) show newline
+() show newline
+(Piecemeal renaming creates inconsistent states where variables say one) show newline
+(thing and filenames say another. The systematic approach is the only) show newline
+(approach.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(4. TARGET ENVIRONMENTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Primary targets:) show newline
+() show newline
+(  * macOS \(Apple Silicon\) - Cyberspace.app native shell) show newline
+(  * Linux \(x86_64\) - including MIT Athena dialup) show newline
+(  * Any POSIX system with CHICKEN Scheme 5.x) show newline
+() show newline
+(The system should feel native on a Mac, work cleanly on Athena, and) show newline
+(build anywhere Scheme runs.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(5. THE SCHEME BENEATH) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Scheme is the implementation language, not the user interface. The) show newline
+(newcomer sees a shell; the schemer sees a REPL. Same system, different) show newline
+(lenses.) show newline
+() show newline
+(By default, Scheme internals are hidden:) show newline
+() show newline
+(  * Inspector disabled - errors show simple messages, not debug> prompts) show newline
+(  * Exception display uses plain language, not 'unbound variable') show newline
+(  * Help shows commands, not S-expressions) show newline
+(  * The : prompt is a portal, not a lambda) show newline
+() show newline
+(Schemers opt in with \(enable-inspector!\) and see the machinery. The) show newline
+(abstraction layer is permeable but not transparent.) show newline
+() show newline
+(This is not dumbing down. It is layered revelation - the same principle) show newline
+(that makes Cyberspace.app feel native on Mac while running pure Scheme) show newline
+(underneath.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(6. THE SCRUTINIZER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Consistency requires tooling. The scrutinizer audits tone and) show newline
+(terminology across library and code.) show newline
+() show newline
+(Two failure modes:) show newline
+() show newline
+(  * Overreach - poetry where precision needed, whimsy in error messages) show newline
+(  * Underreach - dry jargon where warmth appropriate, internal vocabulary leaking through) show newline
+() show newline
+(Passes:) show newline
+() show newline
+(  * Vocabulary audit - banned terms in user-facing strings) show newline
+(  * Tone consistency - memos vs help vs errors) show newline
+(  * S-expression exposure - Scheme leaking to surface) show newline
+() show newline
+(Interface:) show newline
+() show newline
+() show newline
+(    \(scrutinize\)               ; both passes \(default\)) show newline
+(    \(scrutinize 'library\)      ; memos only) show newline
+(    \(scrutinize 'code\)         ; code only) show newline
+(    \(scrutinize #f\)            ; disable) show newline
+(    *scrutinize-realmtime*     ; parameter, default #f) show newline
+(    \(scrutinize-realmtime! #t\) ; enable during dev) show newline
+() show newline
+(Realmtime mode invokes spacetime - scrutiny flows through the realm as) show newline
+(time passes. When enabled, violations surface as modules load. Off in) show newline
+(production, on in beta.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(7. FORGE AND SMELTER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The forge module generates pronounceable passwords using Markov chains) show newline
+(on digraph statistics. The lineage traces back to Multics.) show newline
+() show newline
+() show newline
+(7.1 Heritage) show newline
+(------------) show newline
+() show newline
+(Original design by Morrie Gasser in PL/1 on Multics. Gasser, author of) show newline
+('Building a Secure Computer System' \(1988\), carried the code forward to) show newline
+(VAX/VMS where it remained in PL/1 until the Alpha transition.) show newline
+() show newline
+(When DEC moved to Alpha architecture, PL/1 wasn't in the initial) show newline
+(compiler release. The code had to be expunged from the TCB. Derrell) show newline
+(Piper and Jon Callas rewrote it for VMS 6.0 \(circa 1991\): Piper wrote) show newline
+(the BLISS system service for the Trusted Computing Base; Callas wrote) show newline
+(the user-mode TPU smelter.) show newline
+() show newline
+(US and EU DEC patents were filed on the design \(now expired\). The) show newline
+(terminology - forge, smelter - comes from metallurgy: the smelter) show newline
+(refines raw ore \(word lists\) into workable material \(digraph) show newline
+(statistics\); the forge shapes the final product \(pronounceable words\).) show newline
+() show newline
+(Callas later became a principal author of OpenPGP \(RFC 4880\) and) show newline
+(co-founded PGP Corporation and Silent Circle. He remains a planned beta) show newline
+(tester for Cyberspace.) show newline
+() show newline
+(The chain of custody: Gasser \(Multics PL/1\) > Piper/Callas \(VMS 6.0) show newline
+(BLISS/TPU\) > Cyberspace \(Scheme\).) show newline
+() show newline
+() show newline
+(7.2 Design) show newline
+(----------) show newline
+() show newline
+(The smelter reads word lists and extracts digraph \(character pair\)) show newline
+(statistics:) show newline
+() show newline
+(  * Starting pair frequency - which pairs begin words) show newline
+(  * Transition probability - given 'ab', what characters follow) show newline
+(  * Termination markers - which pairs end words) show newline
+() show newline
+(The forge walks these statistics with weighted random selection,) show newline
+(producing words that follow the phonetic patterns of the source) show newline
+(language. Entropy is tracked in 'decibits' \(tenths of bits\) to quantify) show newline
+(password strength.) show newline
+() show newline
+() show newline
+(7.3 Languages) show newline
+(-------------) show newline
+() show newline
+(Original VMS languages: English, Latin, Italian, Dutch, Sindarin,) show newline
+(Webster. The VT100 diacriticals were encoded in DEC MCS \(Multinational) show newline
+(Character Set\).) show newline
+() show newline
+(Cyberspace expansion to 40+ languages follows roughly the operational) show newline
+(map of the Office of Strategic Services - another egg for those who) show newline
+(recognize the geography:) show newline
+() show newline
+(  * Western Europe: French, German, Spanish, Portuguese) show newline
+(  * Iberia: Catalan, Galician, Basque) show newline
+(  * Nordic \(resistance networks\): Swedish, Norwegian, Danish, Finnish) show newline
+(  * Atlantic fringe: Irish, Welsh, Scottish Gaelic, Breton) show newline
+(  * Balkans \(partisan country\): Greek, Albanian, Serbian, Croatian, Slovenian, Macedonian) show newline
+(  * Eastern front: Polish, Czech, Slovak, Hungarian, Romanian) show newline
+(  * Baltic: Lithuanian, Latvian, Estonian) show newline
+(  * Soviet theater: Russian, Ukrainian, Bulgarian) show newline
+(  * Near East: Turkish, Armenian) show newline
+(  * Mediterranean \(George Cross island\): Maltese) show newline
+(  * Detachment 101: Vietnamese, Thai, Lao, Korean) show newline
+(  * Literary: Sindarin \(Tolkien's Elvish\), Dante's Divina Commedia) show newline
+() show newline
+(Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo,) show newline
+(and the Princeton Dante Project. All diacriticals converted to UTF-8.) show newline
+() show newline
+(Sindarin preserves Tolkien's circumflexes: Manwë, Aulë, Andúril.) show newline
+(Dante's medieval Italian sits alongside. The OSS framing is itself an) show newline
+(easter egg - layers of meaning for those who dig.) show newline
+() show newline
+() show newline
+(7.4 Related Standards) show newline
+(---------------------) show newline
+() show newline
+(Forge predates but relates to two password generation standards:) show newline
+() show newline
+(  * FIPS 181 \(1993\) - Automated Password Generator. Uses trigraph \(3-letter\) statistics and hyphenation rules. More structured but less natural. Forge's digraph approach \(1991\) produces smoother results by learning from actual language patterns rather than syllable rules.) show newline
+(  * OPIE/S/Key - One-time Passwords In Everything. Uses a fixed 2048-word dictionary optimized for spoken communication over phone lines. Words are short and phonetically distinct. Different goal: memorability for one-time use vs. pronounceability for permanent passwords.) show newline
+() show newline
+(Forge's contribution was combining Markov chain language modeling with) show newline
+(entropy tracking - knowing not just that a password sounds right, but) show newline
+(exactly how many bits of randomness it contains.) show newline
+() show newline
+() show newline
+(7.5 Interface) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(forge\)              ; one English word) show newline
+(    \(forge 5\)            ; five English words) show newline
+(    \(forge 'sindarin\)    ; one Elvish word) show newline
+(    \(forge 'latin 3\)     ; three Latin words) show newline
+(    \(forge 'passphrase\)  ; 4-word passphrase) show newline
+(    \(forge 'german 'passphrase 6\) ; 6-word German passphrase) show newline
+() show newline
+(Each word reports its entropy. Passphrases join words with hyphens. The) show newline
+(forge is an easter egg - undocumented in help, discovered by schemers) show newline
+(exploring the REPL.) show newline
+() show newline
+() show newline
+(7.6 Cryptographic Entropy) show newline
+(-------------------------) show newline
+() show newline
+(Passwords fall naturally out of pronounceable words when the entropy) show newline
+(source is sound. Forge uses /dev/urandom for cryptographically secure) show newline
+(randomness, not pseudo-random generators.) show newline
+() show newline
+(Boot-time verification runs automatically on module load:) show newline
+() show newline
+(  * Confirms /dev/urandom exists and is readable) show newline
+(  * Reads 256 test bytes and checks byte distribution) show newline
+(  * Verifies no single byte appears more than ~10% \(bias detection\)) show newline
+(  * Confirms at least 100 distinct byte values \(diversity check\)) show newline
+() show newline
+(If verification fails, the module refuses to load. An easter egg with) show newline
+(real security - someone exploring the REPL discovers \(forge\) and gets) show newline
+(actual cryptographic passwords, not toys.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(8. THE NEWCOMER INTERFACE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Cyberspace must be approachable by normal people. The terminal is for) show newline
+(operators. A friendly interface layer serves everyone else.) show newline
+() show newline
+() show newline
+(8.1 The Problem) show newline
+(---------------) show newline
+() show newline
+(A newcomer asked: "Why would I want to use this? I have iCloud. They) show newline
+(have recipes and cat pictures.") show newline
+() show newline
+(Valid question. The answer must be compelling without mentioning) show newline
+(Ed25519, SPKI certificates, hash chains, Merkle trees, or S-expressions.) show newline
+() show newline
+() show newline
+(8.2 What Newcomers Want) show newline
+(-----------------------) show newline
+() show newline
+(They don't want a distributed cryptographic vault. They want:) show newline
+() show newline
+(  * My stuff is mine - Not rented from a corporation) show newline
+(  * It survives - No company shutdown deletes my photos) show newline
+(  * I control sharing - Family, not platforms) show newline
+(  * Privacy - My recipes aren't AI training data) show newline
+(  * Legacy - Grandkids can inherit the vault) show newline
+(  * No ads - I'm not the product) show newline
+() show newline
+() show newline
+(8.3 Two Doors) show newline
+(-------------) show newline
+() show newline
+() show newline
+(                        CYBERSPACE) show newline
+(                            |) show newline
+(               +------------+------------+) show newline
+(               |                         |) show newline
+(          +----v----+              +-----v-----+) show newline
+(          | Terminal |              |  Friendly  |) show newline
+(          |  \(cs\)    |              |    Door    |) show newline
+(          +----+----+              +-----+-----+) show newline
+(               |                         |) show newline
+(          Operators                   Newcomers) show newline
+(          Hackers                     Family) show newline
+(          Admins                      Everyone) show newline
+() show newline
+(The terminal offers full power and complexity for those who want it. The) show newline
+(friendly door offers drag-and-drop simplicity - same operations,) show newline
+(different presentation.) show newline
+() show newline
+(Both doors lead to the same vault. Both use the same Scheme underneath.) show newline
+() show newline
+() show newline
+(8.4 Principles) show newline
+(--------------) show newline
+() show newline
+(  * Never dumb down the core - Scheme stays Scheme) show newline
+(  * Add layers, don't subtract - Friendly is additional, not replacement) show newline
+(  * Same operations - Both doors do the same things) show newline
+(  * Gradual revelation - Newcomers can discover the terminal if curious) show newline
+(  * Family friendly - Grandma can use it) show newline
+() show newline
+() show newline
+(8.5 The Test) show newline
+(------------) show newline
+() show newline
+(If a newcomer can create a vault in 30 seconds, add a photo in 5) show newline
+(seconds, invite family in 1 minute, and understand what they have -) show newline
+(we've succeeded.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(- 2026-01-17 — Added Newcomer Interface section \(section 8\)) show newline
+() show newline
+(- 2026-01-15 — Gasser Multics provenance added \(section 7.1\)) show newline
+() show newline
+(- 2026-01-15 — OSS operational geography framing, 40+ languages) show newline
+(\(section 7.3\)) show newline
+() show newline
+(- 2026-01-15 — Added cryptographic RNG with boot-time verification) show newline
+(\(section 7.6\)) show newline
+() show newline
+(- 2026-01-15 — Added forge/smelter heritage \(section 7\)) show newline
+() show newline
+(- 2026-01-15 — Initial draft, heritage notes) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

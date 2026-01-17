@@ -1,7 +1,7 @@
 ;; Memo-057: Federation Operational Security
 
 (memo
-  (number 54)
+  (number 53)
   (title "Federation Operational Security")
   (section
     "Abstract"

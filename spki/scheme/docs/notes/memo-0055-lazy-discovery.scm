@@ -2,7 +2,7 @@
 ;; Reactive change propagation in the weave
 
 (memo
-  (number 56)
+  (number 55)
   (title "Lazy Discovery")
   (status "Draft")
   (date "January 2026")

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Memo 0054: Designer Notes</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0054: Designer Notes</h1>
+<dl class="metadata">
+  <dt>Status</dt><dd>Draft</dd>
+  <dt>Date</dt><dd>January 2026</dd>
+  <dt>Author</dt><dd>Derrell Piper &lt;ddp@archlinux.us&gt;</dd>
+</dl>
+<hr>
+<section>
+<h2>Notice</h2>
+<p>This is a living document, not a specification. It records the intellectual heritage, design philosophy, and collaborative process behind Cyberspace.</p>
+</section>
+<section>
+<h2>1. Intellectual Heritage</h2>
+<h3>1.1 MIT Athena and DSSA</h3>
+<p>Cyberspace traces its lineage to MIT's Athena project and the Distributed System Security Architecture (DSSA) research that produced SPKI.</p>
+<p>Athena introduced Kerberos, distributed authentication, and the concept of a unified computing environment across heterogeneous systems. DSSA, led by Rivest, Lampson, and Ellison, gave us SPKI - capability-based authorization through certificate chains.</p>
+<p>These ideas were absorbed during the same lamport epoch as R4RS Scheme (1991) and SDSI (1996), alongside the practical education of Boston traffic negotiation - both exercises in asserting authority without central coordination.</p>
+<h3>1.2 Why Scheme</h3>
+<p>Scheme was chosen not for nostalgia but for precision. Homoiconicity makes S-expressions natural for both code and data - certificates, audit records, and configuration are all readable by the same parser that reads the implementation.</p>
+<p>The language that Abelson and Sussman used to teach computational thinking at MIT is the same language used to implement the security architecture that MIT research defined. Full circle.</p>
+</section>
+<section>
+<h2>2. Collaborative Design</h2>
+<p>Cyberspace was designed in collaboration with Claude (Anthropic), an AI assistant. This collaboration is documented in Memo-056.</p>
+<p>The interaction model: human provides vision and constraints, AI provides implementation and exploration. Neither could have built this alone.</p>
+</section>
+<section>
+<h2>3. Naming Coherence</h2>
+<p>Knuth's principle from TAOCP: names should be consistent across the totality of a system. When we renamed 'RFC' to 'Memo' internally, we applied s/rfc/memo/g globally - not just to files being edited, but to every reference in the codebase.</p>
+<p>Single source of truth extends to terminology. MEMO_NUMBER_WIDTH is defined once; the four-digit format flows from that constant through Scheme and shell. When the namespace overflows to five digits, one change propagates everywhere.</p>
+<p>Piecemeal renaming creates inconsistent states where variables say one thing and filenames say another. The systematic approach is the only approach.</p>
+</section>
+<section>
+<h2>4. Target Environments</h2>
+<p>Primary targets:</p>
+<ul>
+<li>macOS (Apple Silicon) - Cyberspace.app native shell</li>
+<li>Linux (x86_64) - including MIT Athena dialup</li>
+<li>Any POSIX system with CHICKEN Scheme 5.x</li>
+</ul>
+<p>The system should feel native on a Mac, work cleanly on Athena, and build anywhere Scheme runs.</p>
+</section>
+<section>
+<h2>5. The Scheme Beneath</h2>
+<p>Scheme is the implementation language, not the user interface. The newcomer sees a shell; the schemer sees a REPL. Same system, different lenses.</p>
+<p>By default, Scheme internals are hidden:</p>
+<ul>
+<li>Inspector disabled - errors show simple messages, not debug&gt; prompts</li>
+<li>Exception display uses plain language, not 'unbound variable'</li>
+<li>Help shows commands, not S-expressions</li>
+<li>The : prompt is a portal, not a lambda</li>
+</ul>
+<p>Schemers opt in with (enable-inspector!) and see the machinery. The abstraction layer is permeable but not transparent.</p>
+<p>This is not dumbing down. It is layered revelation - the same principle that makes Cyberspace.app feel native on Mac while running pure Scheme underneath.</p>
+</section>
+<section>
+<h2>6. The Scrutinizer</h2>
+<p>Consistency requires tooling. The scrutinizer audits tone and terminology across library and code.</p>
+<p>Two failure modes:</p>
+<ul>
+<li>Overreach - poetry where precision needed, whimsy in error messages</li>
+<li>Underreach - dry jargon where warmth appropriate, internal vocabulary leaking through</li>
+</ul>
+<p>Passes:</p>
+<ul>
+<li>Vocabulary audit - banned terms in user-facing strings</li>
+<li>Tone consistency - memos vs help vs errors</li>
+<li>S-expression exposure - Scheme leaking to surface</li>
+</ul>
+<p>Interface:</p>
+<pre class="language-scheme">
+(scrutinize)               ; both passes (default)
+(scrutinize 'library)      ; memos only
+(scrutinize 'code)         ; code only
+(scrutinize #f)            ; disable
+
+*scrutinize-realmtime*     ; parameter, default #f
+(scrutinize-realmtime! #t) ; enable during dev
+</pre>
+<p>Realmtime mode invokes spacetime - scrutiny flows through the realm as time passes. When enabled, violations surface as modules load. Off in production, on in beta.</p>
+</section>
+<section>
+<h2>7. Forge and Smelter</h2>
+<p>The forge module generates pronounceable passwords using Markov chains on digraph statistics. The lineage traces back to Multics.</p>
+<h3>7.1 Heritage</h3>
+<p>Original design by Morrie Gasser in PL/1 on Multics. Gasser, author of 'Building a Secure Computer System' (1988), carried the code forward to VAX/VMS where it remained in PL/1 until the Alpha transition.</p>
+<p>When DEC moved to Alpha architecture, PL/1 wasn't in the initial compiler release. The code had to be expunged from the TCB. Derrell Piper and Jon Callas rewrote it for VMS 6.0 (circa 1991): Piper wrote the BLISS system service for the Trusted Computing Base; Callas wrote the user-mode TPU smelter.</p>
+<p>US and EU DEC patents were filed on the design (now expired). The terminology - forge, smelter - comes from metallurgy: the smelter refines raw ore (word lists) into workable material (digraph statistics); the forge shapes the final product (pronounceable words).</p>
+<p>Callas later became a principal author of OpenPGP (RFC 4880) and co-founded PGP Corporation and Silent Circle. He remains a planned beta tester for Cyberspace.</p>
+<p>The chain of custody: Gasser (Multics PL/1) → Piper/Callas (VMS 6.0 BLISS/TPU) → Cyberspace (Scheme).</p>
+<h3>7.2 Design</h3>
+<p>The smelter reads word lists and extracts digraph (character pair) statistics:</p>
+<ul>
+<li>Starting pair frequency - which pairs begin words</li>
+<li>Transition probability - given 'ab', what characters follow</li>
+<li>Termination markers - which pairs end words</li>
+</ul>
+<p>The forge walks these statistics with weighted random selection, producing words that follow the phonetic patterns of the source language. Entropy is tracked in 'decibits' (tenths of bits) to quantify password strength.</p>
+<h3>7.3 Languages</h3>
+<p>Original VMS languages: English, Latin, Italian, Dutch, Sindarin, Webster. The VT100 diacriticals were encoded in DEC MCS (Multinational Character Set).</p>
+<p>Cyberspace expansion to 40+ languages follows roughly the operational map of the Office of Strategic Services - another egg for those who recognize the geography:</p>
+<ul>
+<li>Western Europe: French, German, Spanish, Portuguese</li>
+<li>Iberia: Catalan, Galician, Basque</li>
+<li>Nordic (resistance networks): Swedish, Norwegian, Danish, Finnish</li>
+<li>Atlantic fringe: Irish, Welsh, Scottish Gaelic, Breton</li>
+<li>Balkans (partisan country): Greek, Albanian, Serbian, Croatian, Slovenian, Macedonian</li>
+<li>Eastern front: Polish, Czech, Slovak, Hungarian, Romanian</li>
+<li>Baltic: Lithuanian, Latvian, Estonian</li>
+<li>Soviet theater: Russian, Ukrainian, Bulgarian</li>
+<li>Near East: Turkish, Armenian</li>
+<li>Mediterranean (George Cross island): Maltese</li>
+<li>Detachment 101: Vietnamese, Thai, Lao, Korean</li>
+<li>Literary: Sindarin (Tolkien's Elvish), Dante's Divina Commedia</li>
+</ul>
+<p>Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo, and the Princeton Dante Project. All diacriticals converted to UTF-8.</p>
+<p>Sindarin preserves Tolkien's circumflexes: Manwë, Aulë, Andúril. Dante's medieval Italian sits alongside. The OSS framing is itself an easter egg - layers of meaning for those who dig.</p>
+<h3>7.4 Related Standards</h3>
+<p>Forge predates but relates to two password generation standards:</p>
+<ul>
+<li>FIPS 181 (1993) - Automated Password Generator. Uses trigraph (3-letter) statistics and hyphenation rules. More structured but less natural. Forge's digraph approach (1991) produces smoother results by learning from actual language patterns rather than syllable rules.</li>
+<li>OPIE/S/Key - One-time Passwords In Everything. Uses a fixed 2048-word dictionary optimized for spoken communication over phone lines. Words are short and phonetically distinct. Different goal: memorability for one-time use vs. pronounceability for permanent passwords.</li>
+</ul>
+<p>Forge's contribution was combining Markov chain language modeling with entropy tracking - knowing not just that a password sounds right, but exactly how many bits of randomness it contains.</p>
+<h3>7.5 Interface</h3>
+<pre class="language-scheme">
+(forge)              ; one English word
+(forge 5)            ; five English words
+(forge 'sindarin)    ; one Elvish word
+(forge 'latin 3)     ; three Latin words
+(forge 'passphrase)  ; 4-word passphrase
+(forge 'german 'passphrase 6) ; 6-word German passphrase
+</pre>
+<p>Each word reports its entropy. Passphrases join words with hyphens. The forge is an easter egg - undocumented in help, discovered by schemers exploring the REPL.</p>
+<h3>7.6 Cryptographic Entropy</h3>
+<p>Passwords fall naturally out of pronounceable words when the entropy source is sound. Forge uses /dev/urandom for cryptographically secure randomness, not pseudo-random generators.</p>
+<p>Boot-time verification runs automatically on module load:</p>
+<ul>
+<li>Confirms /dev/urandom exists and is readable</li>
+<li>Reads 256 test bytes and checks byte distribution</li>
+<li>Verifies no single byte appears more than ~10% (bias detection)</li>
+<li>Confirms at least 100 distinct byte values (diversity check)</li>
+</ul>
+<p>If verification fails, the module refuses to load. An easter egg with real security - someone exploring the REPL discovers (forge) and gets actual cryptographic passwords, not toys.</p>
+</section>
+<section>
+<h2>8. The Newcomer Interface</h2>
+<p>Cyberspace must be approachable by normal people. The terminal is for operators. A friendly interface layer serves everyone else.</p>
+<h3>8.1 The Problem</h3>
+<p>A newcomer asked: "Why would I want to use this? I have iCloud. They have recipes and cat pictures."</p>
+<p>Valid question. The answer must be compelling without mentioning Ed25519, SPKI certificates, hash chains, Merkle trees, or S-expressions.</p>
+<h3>8.2 What Newcomers Want</h3>
+<p>They don't want a distributed cryptographic vault. They want:</p>
+<ul>
+<li>My stuff is mine - Not rented from a corporation</li>
+<li>It survives - No company shutdown deletes my photos</li>
+<li>I control sharing - Family, not platforms</li>
+<li>Privacy - My recipes aren't AI training data</li>
+<li>Legacy - Grandkids can inherit the vault</li>
+<li>No ads - I'm not the product</li>
+</ul>
+<h3>8.3 Two Doors</h3>
+<pre>
+                    CYBERSPACE
+                        |
+           +------------+------------+
+           |                         |
+      +----v----+              +-----v-----+
+      | Terminal |              |  Friendly  |
+      |  (cs)    |              |    Door    |
+      +----+----+              +-----+-----+
+           |                         |
+      Operators                   Newcomers
+      Hackers                     Family
+      Admins                      Everyone
+</pre>
+<p>The terminal offers full power and complexity for those who want it. The friendly door offers drag-and-drop simplicity - same operations, different presentation.</p>
+<p>Both doors lead to the same vault. Both use the same Scheme underneath.</p>
+<h3>8.4 Principles</h3>
+<ul>
+<li>Never dumb down the core - Scheme stays Scheme</li>
+<li>Add layers, don't subtract - Friendly is additional, not replacement</li>
+<li>Same operations - Both doors do the same things</li>
+<li>Gradual revelation - Newcomers can discover the terminal if curious</li>
+<li>Family friendly - Grandma can use it</li>
+</ul>
+<h3>8.5 The Test</h3>
+<p>If a newcomer can create a vault in 30 seconds, add a photo in 5 seconds, invite family in 1 minute, and understand what they have - we've succeeded.</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<p>- 2026-01-17 — Added Newcomer Interface section (section 8)</p>
+<p>- 2026-01-15 — Gasser Multics provenance added (section 7.1)</p>
+<p>- 2026-01-15 — OSS operational geography framing, 40+ languages (section 7.3)</p>
+<p>- 2026-01-15 — Added cryptographic RNG with boot-time verification (section 7.6)</p>
+<p>- 2026-01-15 — Added forge/smelter heritage (section 7)</p>
+<p>- 2026-01-15 — Initial draft, heritage notes</p>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>
