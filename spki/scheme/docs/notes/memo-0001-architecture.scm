@@ -3,7 +3,7 @@
 
 (memo
   (number 1)
-  (title "Cyberspace Architecture")
+  (title "Architecture")
   (section
     "Abstract"
     (p "Cyberspace is a distributed systems architecture built on S-expressions and Scheme, designed for cryptographic security without complexity. This Memo describes the overall system design, philosophy, and components."))
