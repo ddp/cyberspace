@@ -366,8 +366,144 @@ succeeded.
 
 
 ------------------------------------------------------------------------
+9. CRYPTOGRAPHIC SELECTIONS
+------------------------------------------------------------------------
+
+Every cryptographic algorithm in Cyberspace was chosen for specific
+properties. This section documents the selections and their rationale.
+
+
+9.1 Signatures
+--------------
+
+
+  Algorithm  Use                       Selection Rationale                                               
+  Ed25519    Primary signatures        Small keys (32B), fast, constant-time, no RNG needed for signing  
+  SPHINCS+   Post-quantum (planned)    Hash-based, conservative security, stateless                      
+  Dilithium  Post-quantum (planned)    Lattice-based, smaller signatures than SPHINCS+, NIST selected    
+  Lamport    Reference implementation  Educational, hash-only security, foundation for SPHINCS+          
+
+Ed25519 is the current standard. Post-quantum migration uses hybrid
+signatures (Ed25519 + SPHINCS+ or Dilithium) to preserve security if
+either scheme breaks.
+
+
+9.2 Hash Functions
+------------------
+
+
+  Algorithm  Use                            Selection Rationale                                   
+  SHA-512    Object identity, signatures    Conservative choice, 256-bit quantum security         
+  BLAKE2b    Content addressing, KDF        Faster than SHA-2, proven design, libsodium native    
+  SHAKE256   Post-quantum Merkle (planned)  XOF for variable output, SHA-3 family, NIST standard  
+  Argon2id   Passphrase stretching          Memory-hard, resists GPU/ASIC, winner of PHC          
+
+SHA-512 provides 256-bit post-quantum security (Grover's algorithm
+halves effective bits). BLAKE2b for speed-critical paths where 128-bit
+post-quantum suffices.
+
+
+9.3 Symmetric Encryption
+------------------------
+
+
+  Algorithm           Use                Selection Rationale                       
+  XSalsa20-Poly1305   Vault encryption   NaCl default, 24-byte nonce, proven AEAD  
+  ChaCha20-Poly1305   Object encryption  IETF standard, 12-byte nonce, streaming   
+  XChaCha20-Poly1305  Keystore           Extended nonce (24B), random nonce safe   
+
+The Salsa20/ChaCha20 family was chosen over AES: no timing attacks, no
+hardware requirements, Poly1305 is provably secure MAC. The 'X' variants
+use extended nonces, safe for random generation.
+
+
+9.4 Key Exchange
+----------------
+
+
+  Algorithm  Use                     Selection Rationale                               
+  X25519     Ephemeral key exchange  Curve25519 ECDH, constant-time, small keys        
+  HKDF       Key derivation          RFC 5869, extract-then-expand, domain separation  
+
+X25519 provides forward secrecy for CIP channels. Session keys are
+derived via HKDF with protocol-specific info strings for domain
+separation.
+
+
+9.5 Secret Sharing
+------------------
+
+
+  Algorithm   Use                             Selection Rationale                                 
+  Shamir SSS  Key backup, threshold recovery  Information-theoretic security, GF(2^8) arithmetic  
+
+Shamir's scheme splits secrets into n shares where any k can
+reconstruct. Used for master key backup (5-of-9) and threshold
+governance.
+
+
+9.6 Blind Signatures (Chaum)
+----------------------------
+
+David Chaum's 1982 blind signature scheme enables anonymous credentials.
+The Library holds four Chaum papers:
+
+  * Blind Signatures for Untraceable Payments (1982) — the foundation
+  * Untraceable Electronic Cash (1988, with Fiat & Naor)
+  * Untraceable Electronic Mail (1981) — mix networks
+  * The Dining Cryptographers Problem (1988) — unconditional anonymity
+
+Cyberspace uses Chaum-style blind signatures for bearer capabilities:
+prove authorization without revealing identity. The issuer signs a
+blinded credential; when unblinded and presented, the signature verifies
+but cannot be linked to issuance.
+
+This preserves the choice Bitcoin abandoned: registered capabilities
+when you need accountability, bearer capabilities when you need privacy.
+
+
+9.7 Merkle Trees
+----------------
+
+Content authentication via binary hash trees. Current implementation
+uses SHA-512; post-quantum migration to SHAKE256 or BLAKE3.
+
+Properties: O(log n) inclusion proofs, streaming verification,
+append-only audit logs. Merkle's 1987 paper is in the Library.
+
+
+9.8 Random Number Generation
+----------------------------
+
+All randomness flows through libsodium's randombytes_buf(), which uses:
+
+  * Linux: getrandom(2) syscall
+  * macOS: arc4random_buf()
+  * OpenBSD: arc4random_buf() (ChaCha20-based)
+
+Hardware entropy (RDRAND/RDSEED) feeds the OS pool. Quantum RNG (ID
+Quantique, drand beacons) planned for Phase 3+.
+
+
+9.9 The TCB Principle
+---------------------
+
+The Trusted Computing Base holds only:
+
+  * Ed25519 sign/verify
+  * SHA-512 hash
+  * Certificate chain verification
+
+Everything else is policy. The TCB is ~1000 lines of OCaml calling
+libsodium, proven in Coq, frozen. This minimizes the attack surface:
+prove the crypto, evolve the rest freely.
+
+
+------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
+
+- 2026-01-17 — Added Cryptographic Selections section (section 9)
 
 - 2026-01-17 — Corrected heritage: SDSI/Rivest, SPKI/Ellison, IETF
 merger (section 1.1)

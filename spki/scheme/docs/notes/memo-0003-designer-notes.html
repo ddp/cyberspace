@@ -398,7 +398,80 @@
 <p>If a novice can create a vault in 30 seconds, add a photo in 5 seconds, invite family in 1 minute, and understand what they have - we've succeeded.</p>
 </section>
 <section>
+<h2>9. Cryptographic Selections</h2>
+<p>Every cryptographic algorithm in Cyberspace was chosen for specific properties. This section documents the selections and their rationale.</p>
+<h3>9.1 Signatures</h3>
+<table>
+<tr><th>Algorithm</th><th>Use</th><th>Selection Rationale</th></tr>
+<tr><td>Ed25519</td><td>Primary signatures</td><td>Small keys (32B), fast, constant-time, no RNG needed for signing</td></tr>
+<tr><td>SPHINCS+</td><td>Post-quantum (planned)</td><td>Hash-based, conservative security, stateless</td></tr>
+<tr><td>Dilithium</td><td>Post-quantum (planned)</td><td>Lattice-based, smaller signatures than SPHINCS+, NIST selected</td></tr>
+<tr><td>Lamport</td><td>Reference implementation</td><td>Educational, hash-only security, foundation for SPHINCS+</td></tr>
+</table>
+<p>Ed25519 is the current standard. Post-quantum migration uses hybrid signatures (Ed25519 + SPHINCS+ or Dilithium) to preserve security if either scheme breaks.</p>
+<h3>9.2 Hash Functions</h3>
+<table>
+<tr><th>Algorithm</th><th>Use</th><th>Selection Rationale</th></tr>
+<tr><td>SHA-512</td><td>Object identity, signatures</td><td>Conservative choice, 256-bit quantum security</td></tr>
+<tr><td>BLAKE2b</td><td>Content addressing, KDF</td><td>Faster than SHA-2, proven design, libsodium native</td></tr>
+<tr><td>SHAKE256</td><td>Post-quantum Merkle (planned)</td><td>XOF for variable output, SHA-3 family, NIST standard</td></tr>
+<tr><td>Argon2id</td><td>Passphrase stretching</td><td>Memory-hard, resists GPU/ASIC, winner of PHC</td></tr>
+</table>
+<p>SHA-512 provides 256-bit post-quantum security (Grover's algorithm halves effective bits). BLAKE2b for speed-critical paths where 128-bit post-quantum suffices.</p>
+<h3>9.3 Symmetric Encryption</h3>
+<table>
+<tr><th>Algorithm</th><th>Use</th><th>Selection Rationale</th></tr>
+<tr><td>XSalsa20-Poly1305</td><td>Vault encryption</td><td>NaCl default, 24-byte nonce, proven AEAD</td></tr>
+<tr><td>ChaCha20-Poly1305</td><td>Object encryption</td><td>IETF standard, 12-byte nonce, streaming</td></tr>
+<tr><td>XChaCha20-Poly1305</td><td>Keystore</td><td>Extended nonce (24B), random nonce safe</td></tr>
+</table>
+<p>The Salsa20/ChaCha20 family was chosen over AES: no timing attacks, no hardware requirements, Poly1305 is provably secure MAC. The 'X' variants use extended nonces, safe for random generation.</p>
+<h3>9.4 Key Exchange</h3>
+<table>
+<tr><th>Algorithm</th><th>Use</th><th>Selection Rationale</th></tr>
+<tr><td>X25519</td><td>Ephemeral key exchange</td><td>Curve25519 ECDH, constant-time, small keys</td></tr>
+<tr><td>HKDF</td><td>Key derivation</td><td>RFC 5869, extract-then-expand, domain separation</td></tr>
+</table>
+<p>X25519 provides forward secrecy for CIP channels. Session keys are derived via HKDF with protocol-specific info strings for domain separation.</p>
+<h3>9.5 Secret Sharing</h3>
+<table>
+<tr><th>Algorithm</th><th>Use</th><th>Selection Rationale</th></tr>
+<tr><td>Shamir SSS</td><td>Key backup, threshold recovery</td><td>Information-theoretic security, GF(2^8) arithmetic</td></tr>
+</table>
+<p>Shamir's scheme splits secrets into n shares where any k can reconstruct. Used for master key backup (5-of-9) and threshold governance.</p>
+<h3>9.6 Blind Signatures (Chaum)</h3>
+<p>David Chaum's 1982 blind signature scheme enables anonymous credentials. The Library holds four Chaum papers:</p>
+<ul>
+<li>Blind Signatures for Untraceable Payments (1982) — the foundation</li>
+<li>Untraceable Electronic Cash (1988, with Fiat &amp; Naor)</li>
+<li>Untraceable Electronic Mail (1981) — mix networks</li>
+<li>The Dining Cryptographers Problem (1988) — unconditional anonymity</li>
+</ul>
+<p>Cyberspace uses Chaum-style blind signatures for bearer capabilities: prove authorization without revealing identity. The issuer signs a blinded credential; when unblinded and presented, the signature verifies but cannot be linked to issuance.</p>
+<p>This preserves the choice Bitcoin abandoned: registered capabilities when you need accountability, bearer capabilities when you need privacy.</p>
+<h3>9.7 Merkle Trees</h3>
+<p>Content authentication via binary hash trees. Current implementation uses SHA-512; post-quantum migration to SHAKE256 or BLAKE3.</p>
+<p>Properties: O(log n) inclusion proofs, streaming verification, append-only audit logs. Merkle's 1987 paper is in the Library.</p>
+<h3>9.8 Random Number Generation</h3>
+<p>All randomness flows through libsodium's randombytes_buf(), which uses:</p>
+<ul>
+<li>Linux: getrandom(2) syscall</li>
+<li>macOS: arc4random_buf()</li>
+<li>OpenBSD: arc4random_buf() (ChaCha20-based)</li>
+</ul>
+<p>Hardware entropy (RDRAND/RDSEED) feeds the OS pool. Quantum RNG (ID Quantique, drand beacons) planned for Phase 3+.</p>
+<h3>9.9 The TCB Principle</h3>
+<p>The Trusted Computing Base holds only:</p>
+<ul>
+<li>Ed25519 sign/verify</li>
+<li>SHA-512 hash</li>
+<li>Certificate chain verification</li>
+</ul>
+<p>Everything else is policy. The TCB is ~1000 lines of OCaml calling libsodium, proven in Coq, frozen. This minimizes the attack surface: prove the crypto, evolve the rest freely.</p>
+</section>
+<section>
 <h2>Changelog</h2>
+<p>- 2026-01-17 — Added Cryptographic Selections section (section 9)</p>
 <p>- 2026-01-17 — Corrected heritage: SDSI/Rivest, SPKI/Ellison, IETF merger (section 1.1)</p>
 <p>- 2026-01-17 — Added Novice Interface section (section 8)</p>
 <p>- 2026-01-15 — Gasser Multics provenance added (section 7.1)</p>

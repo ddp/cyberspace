@@ -394,8 +394,144 @@ margin topmargin moveto
 () show newline
 () show newline
 (------------------------------------------------------------------------) show newline
+(9. CRYPTOGRAPHIC SELECTIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Every cryptographic algorithm in Cyberspace was chosen for specific) show newline
+(properties. This section documents the selections and their rationale.) show newline
+() show newline
+() show newline
+(9.1 Signatures) show newline
+(--------------) show newline
+() show newline
+() show newline
+(  Algorithm  Use                       Selection Rationale                                               ) show newline
+(  Ed25519    Primary signatures        Small keys \(32B\), fast, constant-time, no RNG needed for signing  ) show newline
+(  SPHINCS+   Post-quantum \(planned\)    Hash-based, conservative security, stateless                      ) show newline
+(  Dilithium  Post-quantum \(planned\)    Lattice-based, smaller signatures than SPHINCS+, NIST selected    ) show newline
+(  Lamport    Reference implementation  Educational, hash-only security, foundation for SPHINCS+          ) show newline
+() show newline
+(Ed25519 is the current standard. Post-quantum migration uses hybrid) show newline
+(signatures \(Ed25519 + SPHINCS+ or Dilithium\) to preserve security if) show newline
+(either scheme breaks.) show newline
+() show newline
+() show newline
+(9.2 Hash Functions) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Algorithm  Use                            Selection Rationale                                   ) show newline
+(  SHA-512    Object identity, signatures    Conservative choice, 256-bit quantum security         ) show newline
+(  BLAKE2b    Content addressing, KDF        Faster than SHA-2, proven design, libsodium native    ) show newline
+(  SHAKE256   Post-quantum Merkle \(planned\)  XOF for variable output, SHA-3 family, NIST standard  ) show newline
+(  Argon2id   Passphrase stretching          Memory-hard, resists GPU/ASIC, winner of PHC          ) show newline
+() show newline
+(SHA-512 provides 256-bit post-quantum security \(Grover's algorithm) show newline
+(halves effective bits\). BLAKE2b for speed-critical paths where 128-bit) show newline
+(post-quantum suffices.) show newline
+() show newline
+() show newline
+(9.3 Symmetric Encryption) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(  Algorithm           Use                Selection Rationale                       ) show newline
+(  XSalsa20-Poly1305   Vault encryption   NaCl default, 24-byte nonce, proven AEAD  ) show newline
+(  ChaCha20-Poly1305   Object encryption  IETF standard, 12-byte nonce, streaming   ) show newline
+(  XChaCha20-Poly1305  Keystore           Extended nonce \(24B\), random nonce safe   ) show newline
+() show newline
+(The Salsa20/ChaCha20 family was chosen over AES: no timing attacks, no) show newline
+(hardware requirements, Poly1305 is provably secure MAC. The 'X' variants) show newline
+(use extended nonces, safe for random generation.) show newline
+() show newline
+() show newline
+(9.4 Key Exchange) show newline
+(----------------) show newline
+() show newline
+() show newline
+(  Algorithm  Use                     Selection Rationale                               ) show newline
+(  X25519     Ephemeral key exchange  Curve25519 ECDH, constant-time, small keys        ) show newline
+(  HKDF       Key derivation          RFC 5869, extract-then-expand, domain separation  ) show newline
+() show newline
+(X25519 provides forward secrecy for CIP channels. Session keys are) show newline
+(derived via HKDF with protocol-specific info strings for domain) show newline
+(separation.) show newline
+() show newline
+() show newline
+(9.5 Secret Sharing) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Algorithm   Use                             Selection Rationale                                 ) show newline
+(  Shamir SSS  Key backup, threshold recovery  Information-theoretic security, GF\(2^8\) arithmetic  ) show newline
+() show newline
+(Shamir's scheme splits secrets into n shares where any k can) show newline
+(reconstruct. Used for master key backup \(5-of-9\) and threshold) show newline
+(governance.) show newline
+() show newline
+() show newline
+(9.6 Blind Signatures \(Chaum\)) show newline
+(----------------------------) show newline
+() show newline
+(David Chaum's 1982 blind signature scheme enables anonymous credentials.) show newline
+(The Library holds four Chaum papers:) show newline
+() show newline
+(  * Blind Signatures for Untraceable Payments \(1982\) — the foundation) show newline
+(  * Untraceable Electronic Cash \(1988, with Fiat & Naor\)) show newline
+(  * Untraceable Electronic Mail \(1981\) — mix networks) show newline
+(  * The Dining Cryptographers Problem \(1988\) — unconditional anonymity) show newline
+() show newline
+(Cyberspace uses Chaum-style blind signatures for bearer capabilities:) show newline
+(prove authorization without revealing identity. The issuer signs a) show newline
+(blinded credential; when unblinded and presented, the signature verifies) show newline
+(but cannot be linked to issuance.) show newline
+() show newline
+(This preserves the choice Bitcoin abandoned: registered capabilities) show newline
+(when you need accountability, bearer capabilities when you need privacy.) show newline
+() show newline
+() show newline
+(9.7 Merkle Trees) show newline
+(----------------) show newline
+() show newline
+(Content authentication via binary hash trees. Current implementation) show newline
+(uses SHA-512; post-quantum migration to SHAKE256 or BLAKE3.) show newline
+() show newline
+(Properties: O\(log n\) inclusion proofs, streaming verification,) show newline
+(append-only audit logs. Merkle's 1987 paper is in the Library.) show newline
+() show newline
+() show newline
+(9.8 Random Number Generation) show newline
+(----------------------------) show newline
+() show newline
+(All randomness flows through libsodium's randombytes_buf\(\), which uses:) show newline
+() show newline
+(  * Linux: getrandom\(2\) syscall) show newline
+(  * macOS: arc4random_buf\(\)) show newline
+(  * OpenBSD: arc4random_buf\(\) \(ChaCha20-based\)) show newline
+() show newline
+(Hardware entropy \(RDRAND/RDSEED\) feeds the OS pool. Quantum RNG \(ID) show newline
+(Quantique, drand beacons\) planned for Phase 3+.) show newline
+() show newline
+() show newline
+(9.9 The TCB Principle) show newline
+(---------------------) show newline
+() show newline
+(The Trusted Computing Base holds only:) show newline
+() show newline
+(  * Ed25519 sign/verify) show newline
+(  * SHA-512 hash) show newline
+(  * Certificate chain verification) show newline
+() show newline
+(Everything else is policy. The TCB is ~1000 lines of OCaml calling) show newline
+(libsodium, proven in Coq, frozen. This minimizes the attack surface:) show newline
+(prove the crypto, evolve the rest freely.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
 (CHANGELOG) show newline
 (------------------------------------------------------------------------) show newline
+() show newline
+(- 2026-01-17 — Added Cryptographic Selections section \(section 9\)) show newline
 () show newline
 (- 2026-01-17 — Corrected heritage: SDSI/Rivest, SPKI/Ellison, IETF) show newline
 (merger \(section 1.1\)) show newline
