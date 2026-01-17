@@ -16,9 +16,14 @@
     "1. Intellectual Heritage"
 
     (subsection
-      "1.1 MIT Athena and DSSA"
-      (p "Cyberspace traces its lineage to MIT's Athena project and the Distributed System Security Architecture (DSSA) research that produced SPKI.")
-      (p "Athena introduced Kerberos, distributed authentication, and the concept of a unified computing environment across heterogeneous systems. DSSA, led by Rivest, Lampson, and Ellison, gave us SPKI - capability-based authorization through certificate chains.")
+      "1.1 MIT Athena and SPKI"
+      (p "Cyberspace traces its lineage to MIT's Project Athena and the SDSI/SPKI work that emerged from MIT and IETF.")
+      (p "Athena (1983-1991) introduced Kerberos, distributed authentication, and the concept of a unified computing environment across heterogeneous systems. DEC funded Athena and contributed workstations.")
+      (p "Two independent threads merged at IETF to form SPKI/SDSI:")
+      (list
+        (item "SDSI (Simple Distributed Security Infrastructure) - Ron Rivest at MIT, focusing on naming and local name spaces")
+        (item "SPKI (Simple Public Key Infrastructure) - Carl Ellison at IETF, focusing on authorization and capabilities"))
+      (p "Ellison's SPKI RFCs (2693, 2692) formalized capability-based authorization through certificate chains. When IETF standardized this work, Rivest's SDSI naming merged in. The result (SPKI/SDSI 2.0) gave us both authorization and naming.")
       (p "These ideas were absorbed during the same lamport epoch as R4RS Scheme (1991) and SDSI (1996), alongside the practical education of Boston traffic negotiation - both exercises in asserting authority without central coordination."))
 
     (subsection
@@ -202,6 +207,7 @@
 
   (section
     "Changelog"
+    (p "- 2026-01-17 — Corrected heritage: SDSI/Rivest, SPKI/Ellison, IETF merger (section 1.1)")
     (p "- 2026-01-17 — Added Novice Interface section (section 8)")
     (p "- 2026-01-15 — Gasser Multics provenance added (section 7.1)")
     (p "- 2026-01-15 — OSS operational geography framing, 40+ languages (section 7.3)")
