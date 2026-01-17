@@ -24,7 +24,7 @@
   (section
     "The Simple Idea"
     (p "What if preserving things worked like borrowing books from friends?")
-    (code "    You ◄────► Friend ◄────► Friend\n     │           │             │\n     └───────────┴─────────────┘\n                 │\n      Everyone helps everyone.\n      Like a neighborhood library,\n      but for anything digital.")
+    (code "    You ←────→ Friend ←────→ Friend\n     │           │             │\n     └───────────┴─────────────┘\n                 │\n      Everyone helps everyone.\n      Like a neighborhood library,\n      but for anything digital.")
     (p "That's really all this is."))
 
   (section
@@ -58,7 +58,7 @@
       (row "VMS Clusters" "1983" "SET HOST - distributed presence")
       (row "Newton" "1993" "The soup - objects as medium, queries as navigation")
       (row "General Magic" "1994" "Agents that travel, carry intent, return with results")
-      (row "SDSI/SPKI" "1996" "Capabilities, not identities")
+      (row "SPKI/SDSI" "1996" "Capabilities, not identities")
       (row "AS/400" "1988" "Capability-based addressing")
       (row "Cambridge CAP" "1970s" "Hardware capabilities"))
     (p "Cyberspace is their synthesis: local-first realms, federated via capabilities, with agents swimming in the soup."))

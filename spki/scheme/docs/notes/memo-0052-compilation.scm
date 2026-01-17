@@ -202,7 +202,11 @@
       (p "Invocation:")
       (code scheme "(bootstrap-modules!)  ; Called automatically at REPL start")
       (p "Output format:")
-      (code "┌──────────────── forge: portal ────────────────┐\n│ csc -shared -J -strict-types portal.scm       │\n│ ✓ 241K + 677B import in 921ms                 │\n│   296 LOC · 42 λ · 7 LOC/λ                    │\n└───────────────────────────────────────────────┘")
+      (code "┌──────────────── forge: portal ────────────────┐
+│ csc -shared -J -strict-types portal.scm       │
+│ ✓ 241K + 677B import in 921ms                 │
+│   296 LOC · 42 λ · 7 LOC/λ                    │
+└───────────────────────────────────────────────┘")
       (p "The SICP metrics line shows:")
       (list
         (item "LOC: Lines of code (excluding blanks and comments)")
@@ -386,7 +390,16 @@ spki/scheme/.*.arch")
     (subsection
       "6.3 Rich Exception Display"
       (p "The REPL provides rich exception display with box formatting:")
-      (code "┌────────────── Exception ───────────────┐\n│ division by zero                       │\n│ Location: quotient                     │\n│ Arguments: (42 0)                      │\n├─────────────────────────────────────────┤\n│ Call Chain:                            │\n│   divide-values                        │\n│   process-input                        │\n│   main-loop                            │\n└─────────────────────────────────────────┘")
+      (code "┌────────────── Exception ───────────────┐
+│ division by zero                       │
+│ Location: quotient                     │
+│ Arguments: (42 0)                      │
+├─────────────────────────────────────────┤
+│ Call Chain:                            │
+│   divide-values                        │
+│   process-input                        │
+│   main-loop                            │
+└─────────────────────────────────────────┘")
       (p "Implementation uses the centralized box-drawing API from os.scm.")))
 
   (section
@@ -459,7 +472,17 @@ foo -> 8"))
         (row ":r" "Show references to object")))
     (subsection
       "8.3 Object Display Format"
-      (code "┌────────── Inspecting: pair ─────────────┐\n│ Type: pair                             │\n│ Address: 0x7fff5fbff8a0                │\n├─────────────────────────────────────────┤\n│ [0] car: symbol 'foo                   │\n│ [1] cdr: pair (...)                    │\n├─────────────────────────────────────────┤\n│ :d 0  - inspect car                    │\n│ :d 1  - inspect cdr                    │\n│ :u    - go back                        │\n└─────────────────────────────────────────┘"))
+      (code "┌────────── Inspecting: pair ─────────────┐
+│ Type: pair                             │
+│ Address: 0x7fff5fbff8a0                │
+├─────────────────────────────────────────┤
+│ [0] car: symbol 'foo                   │
+│ [1] cdr: pair (...)                    │
+├─────────────────────────────────────────┤
+│ :d 0  - inspect car                    │
+│ :d 1  - inspect cdr                    │
+│ :u    - go back                        │
+└─────────────────────────────────────────┘"))
     (subsection
       "8.4 Type-Specific Inspectors"
       (p "Specialized display for common types:")
@@ -501,7 +524,12 @@ foo -> 8"))
     (subsection
       "9.3 Error Recovery"
       (p "After an error, the REPL captures context:")
-      (code "> (/ 1 0)\n┌────────────── Exception ───────────────┐\n│ division by zero                       │\n└─────────────────────────────────────────┘\n\n> ,n
+      (code "> (/ 1 0)
+┌────────────── Exception ───────────────┐
+│ division by zero                       │
+└─────────────────────────────────────────┘
+
+> ,n
 Call chain:
   (/ 1 0)
   <toplevel>
