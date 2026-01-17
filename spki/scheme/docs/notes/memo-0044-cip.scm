@@ -19,7 +19,7 @@
   (section
     "Message Format"
     (p "All messages use TLV encoding:")
-    (code "+------+--------+------------------+\n| Type | Length | Payload          |\n| 1B   | 4B BE  | variable         |\n+------+--------+------------------+")
+    (code "┌──────┬────────┬──────────────────┐\n│ Type │ Length │ Payload          │\n│ 1B   │ 4B BE  │ variable         │\n└──────┴────────┴──────────────────┘")
     (subsection
       "Message Types"
       (table
