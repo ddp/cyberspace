@@ -129,7 +129,7 @@
       (code scheme ";; Only transfer objects receiver doesn't have\n(define (replicate-to remote root-hash)\n  (for-each\n    (lambda (hash)\n      (unless (remote-has? remote hash)\n        (remote-put remote hash (cas-get hash))))\n    (trace-reachable root-hash)))"))
     (subsection
       "SPKI Integration"
-      (p "Content hashes can be authorization subjects (Memo-004):")
+      (p "Content hashes can be Simple Public Key Infrastructure (SPKI) authorization subjects (Memo-004):")
       (code scheme ";; Grant permission to specific content\n(spki-cert\n  (issuer publisher-key)\n  (subject (hash sha256 \"abc123...\"))\n  (permission read)\n  (validity (not-after \"2027-01-01\")))")))
   (section
     "Chunking for Large Objects"

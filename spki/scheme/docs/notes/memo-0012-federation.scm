@@ -29,7 +29,7 @@
     (subsection
       "Trust Model"
       (code scheme "(federation-trust\n  (peer alice-pubkey\n    (role publisher)\n    (trust-level verified)     ; Signature verified\n    (sync-policy automatic))\n\n  (peer bob-pubkey\n    (role subscriber)\n    (trust-level known)        ; Key known, not verified\n    (sync-policy manual)))")
-      (p "Trust levels: - unknown: Never seen, reject - known: Key registered, manual approval - verified: Signature chain verified via SPKI - trusted: Full automatic sync")))
+      (p "Trust levels: - unknown: Never seen, reject - known: Key registered, manual approval - verified: Signature chain verified via Simple Public Key Infrastructure (SPKI) - trusted: Full automatic sync")))
   (section
     "Protocol Operations"
     (subsection
