@@ -47,7 +47,7 @@
     (p "Primary targets:")
     (list
       (item "macOS (Apple Silicon) - Cyberspace.app native shell")
-      (item "Linux - including MIT Athena dialup")
+      (item "Linux - including MIT Athena")
       (item "Any POSIX system with CHICKEN Scheme 5.x"))
     (p "The system should feel native on a Mac, work cleanly on Athena, and build anywhere Scheme runs."))
 
