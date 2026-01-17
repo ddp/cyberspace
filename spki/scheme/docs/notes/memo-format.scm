@@ -225,7 +225,7 @@
               width height width height)
       "<style>\n"
       "  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }\n"
-      "  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }\n"
+      "  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 16px; fill: currentColor; }\n"
       "</style>\n"
       (string-intersperse (reverse svg-lines) "\n")
       "\n"
