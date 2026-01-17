@@ -6,7 +6,7 @@
   (subtitle "Loch Lambda")
   (status "Living Document")
   (date "January 2026")
-  (author "Derrell Piper" "ddp@electric-loft.org")
+  (author "Derrell Piper" "ddp@eludom.net")
 
   (section
     "Abstract"

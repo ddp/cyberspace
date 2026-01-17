@@ -113,7 +113,7 @@
     "Soup Integration"
     (subsection
       "Agents in the Soup"
-      (code scheme "(soup-object\n  (name \"agent/2026-001\")\n  (type agent)\n  (size \"145KB\")\n  (status running)\n  (spawned-by \"ddp@electric-loft.org\")\n  (purpose \"Archive arxiv papers\")\n  (runtime \"4h 23m\")\n  (resources (memory \"234MB\") (storage \"890MB\"))\n  (capabilities (read \"arxiv.org/*\") (write \"/vault/papers/\")))"))
+      (code scheme "(soup-object\n  (name \"agent/2026-001\")\n  (type agent)\n  (size \"145KB\")\n  (status running)\n  (spawned-by \"ddp@eludom.net\")\n  (purpose \"Archive arxiv papers\")\n  (runtime \"4h 23m\")\n  (resources (memory \"234MB\") (storage \"890MB\"))\n  (capabilities (read \"arxiv.org/*\") (write \"/vault/papers/\")))"))
     (subsection
       "Querying Agents"
       (code scheme ";; All running agents\n(soup-query type: 'agent status: 'running)\n\n;; Agents spawned by user\n(soup-query type: 'agent spawned-by: user-principal)\n\n;; Agents with network access\n(soup-query type: 'agent has-capability: 'network)\n\n;; Resource hogs\n(soup-query type: 'agent min-memory: (* 256 1024 1024))"))

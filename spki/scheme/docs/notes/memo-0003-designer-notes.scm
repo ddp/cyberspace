@@ -6,7 +6,7 @@
   (title "Designer Notes")
   (status "Draft")
   (date "January 2026")
-  (author "Derrell Piper" "ddp@electric-loft.org")
+  (author "Derrell Piper" "ddp@eludom.net")
 
   (section
     "Notice"
