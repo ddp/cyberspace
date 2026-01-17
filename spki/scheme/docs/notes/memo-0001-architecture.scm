@@ -16,7 +16,7 @@
     (p "Modern distributed systems are drowning in complexity. X.509 certificates require decoder rings. Container orchestration demands armies of SREs. Security policies hide in YAML nested seventeen levels deep.")
     (p "The Manifesto:")
     (blockquote "Authorized capability set with auditing. No central authority.")
-    (p "These three principles - SPKI authorization, cryptographic audit trails, and optional centralization - are not new. They were proven in VAXcluster security (1984-1994), proposed in SDSI at IETF 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.")
+    (p "These three principles - Simple Public Key Infrastructure (SPKI) authorization, cryptographic audit trails, and optional centralization - are not new. They were proven in VAXcluster security (1984-1994), proposed in Simple Distributed Security Infrastructure (SDSI) at Internet Engineering Task Force (IETF) 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.")
     (p "Design Lineage:")
     (table
       (header "Era " "System " "Contribution ")
@@ -31,7 +31,7 @@
     (list
       (item "S-expressions for everything: readable, parseable, auditable")
       (item "Minimal TCB: prove the crypto, evolve the rest")
-      (item "No central authority: SPKI/SDSI namespaces over PKI hierarchies")
+      (item "No central authority: SDSI/SPKI namespaces over PKI hierarchies")
       (item "Running code: every feature traces to research, runs, and is tested")))
   (section
     "2. The Prime Directive"
@@ -109,7 +109,7 @@
     (subsection
       "4.2 No Central Authority"
       (code "     Alice                    Bob                     Carol\n       │                       │                        │\n       │    ┌─────────────┐    │    ┌─────────────┐    │\n       └───►│ Alice's     │◄───┴───►│ Bob's       │◄───┘\n            │ Namespace   │         │ Namespace   │\n            │             │         │             │\n            │ bob → key   │         │ alice → key │\n            │ carol → key │         │ carol → key │\n            └─────────────┘         └─────────────┘\n\n         No DNS. No CA. No single point of failure.\n         Just keys and local names.")
-      (p "SPKI/SDSI gives you: - Local namespaces: \"bob\" means what you say it means - Authorization without identity: Grant permissions to keys, not people - Delegation chains: Alice → Bob → Carol, each step verified")))
+      (p "SDSI/SPKI gives you: - Local namespaces: \"bob\" means what you say it means - Authorization without identity: Grant permissions to keys, not people - Delegation chains: Alice → Bob → Carol, each step verified")))
   (section
     "5. Research Foundations"
     (p "Every feature traces to a foundational paper:")

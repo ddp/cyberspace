@@ -6,7 +6,7 @@
   (title "Cryptographic Audit Trail")
   (section
     "Abstract"
-    (p "This Memo specifies the cryptographic audit trail system for the Library of Cyberspace, providing tamper-evident, hash-chained logging with SPKI principal attribution and Ed25519 signatures."))
+    (p "This Memo specifies the cryptographic audit trail system for the Library of Cyberspace, providing tamper-evident, hash-chained logging with Simple Public Key Infrastructure (SPKI) principal attribution and Ed25519 signatures."))
   (section
     "Motivation"
     (p "Distributed systems require accountability. Who did what, when, and under whose authority?")
@@ -147,7 +147,7 @@
         (item "Lazy verification: verify on read, not on load"))))
   (section
     "References"
-    (p "1. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document. 2. Merkle, R. C. (1987). A digital signature based on a conventional encryption function. 3. Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records. 4. SPKI/SDSI - RFC 2693, RFC 2692"))
+    (p "1. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document. 2. Merkle, R. C. (1987). A digital signature based on a conventional encryption function. 3. Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records. 4. SDSI/SPKI - RFC 2693, RFC 2692"))
   (section
     "Changelog"
     (list

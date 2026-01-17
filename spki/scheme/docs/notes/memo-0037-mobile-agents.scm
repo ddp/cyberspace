@@ -6,7 +6,7 @@
   (title "Mobile Agents and Pub/Sub")
   (section
     "Abstract"
-    (p "This Memo specifies the mobile agent architecture for the Library of Cyberspace: Telescript-inspired agents that migrate between realms, carry SPKI credentials, communicate via pub/sub channels, and operate under realm coordinator supervision. Agents are first-class citizens with cryptographic identity."))
+    (p "This Memo specifies the mobile agent architecture for the Library of Cyberspace: Telescript-inspired agents that migrate between realms, carry Simple Public Key Infrastructure (SPKI) credentials, communicate via pub/sub channels, and operate under realm coordinator supervision. Agents are first-class citizens with cryptographic identity."))
   (section
     "Motivation"
     (p "Distributed computation requires mobile code:")

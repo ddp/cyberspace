@@ -58,7 +58,7 @@
       (row "VMS Clusters" "1983" "SET HOST - distributed presence")
       (row "Newton" "1993" "The soup - objects as medium, queries as navigation")
       (row "General Magic" "1994" "Agents that travel, carry intent, return with results")
-      (row "SPKI/SDSI" "1996" "Capabilities, not identities")
+      (row "SDSI/SPKI" "1996" "Capabilities, not identities")
       (row "AS/400" "1988" "Capability-based addressing")
       (row "Cambridge CAP" "1970s" "Hardware capabilities"))
     (p "Cyberspace is their synthesis: local-first realms, federated via capabilities, with agents swimming in the soup."))

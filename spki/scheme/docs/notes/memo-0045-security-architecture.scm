@@ -12,7 +12,7 @@
     "The Manifesto"
     (blockquote "Authorized capability set with auditing. No central authority.")
     (p "You can have a central authority if you want one. That's up to you. But you don't need one. The architecture doesn't require it. Trust flows from keys you choose to trust, not from a hierarchy imposed upon you.")
-    (p "These principles were proven in VAXcluster security (1984-1994), proposed in SDSI at IETF 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.")
+    (p "These principles were proven in VAXcluster security (1984-1994), proposed in Simple Distributed Security Infrastructure (SDSI) at Internet Engineering Task Force (IETF) 29 Seattle (1994), and implemented partially in products that didn't survive their parent companies. Cyberspace completes what was started.")
     (subsection
       "Design Lineage"
       (table
@@ -22,7 +22,7 @@
         (row "1990 " "DigiCash " "Blind signatures, unlinkable credentials (Chaum) ")
         (row "1993 " "VMS 6.0 " "Cluster-wide intrusion detection, TLV object store ")
         (row "1994 " "SDSI " "Self-certifying keys, local names (Rivest, IETF 29) ")
-        (row "1999 " "SPKI " "Authorization certificates, capability delegation (Ellison, RFC 2693) ")
+        (row "1999 " "Simple Public Key Infrastructure (SPKI) " "Authorization certificates, capability delegation (Ellison, RFC 2693) ")
         (row "2026 " "Cyberspace " "Synthesis: SPKI + Chaum + audit + IPv6 mesh + no central authority "))
       (p "DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.")))
   (section

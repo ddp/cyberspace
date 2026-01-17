@@ -100,7 +100,7 @@ Cyberspace stands on giants:
   VMS Clusters   1983   SET HOST - distributed presence                        
   Newton         1993   The soup - objects as medium, queries as navigation    
   General Magic  1994   Agents that travel, carry intent, return with results  
-  SPKI/SDSI      1996   Capabilities, not identities                           
+  SDSI/SPKI      1996   Capabilities, not identities                           
   AS/400         1988   Capability-based addressing                            
   Cambridge CAP  1970s  Hardware capabilities                                  
 

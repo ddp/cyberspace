@@ -6,7 +6,7 @@
   (title "Vault Architecture")
   (section
     "Abstract"
-    (p "This Memo specifies the Vault system for the Library of Cyberspace: cryptographically sealed version control with SPKI authorization, progressive metadata, archival support, and integrated audit trails."))
+    (p "This Memo specifies the Vault system for the Library of Cyberspace: cryptographically sealed version control with Simple Public Key Infrastructure (SPKI) authorization, progressive metadata, archival support, and integrated audit trails."))
   (section
     "Motivation"
     (p "Git is powerful but lacks:")

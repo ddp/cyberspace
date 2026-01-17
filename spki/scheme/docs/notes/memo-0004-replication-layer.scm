@@ -17,7 +17,7 @@
       "Requirements"
       (p "The Library of Cyberspace requires a distribution mechanism that:")
       (p "1. Preserves cryptographic authenticity - Signatures travel with artifacts 2. Enables offline verification - No centralized authority required 3. Records provenance - All publication events are audited 4. Supports multiple transports - Git, HTTP, filesystem 5. Maintains loose coupling - Works for confederations of friends")
-      (p "Traditional package managers and distribution systems assume centralized registries and online verification. This replication layer is designed for decentralized, long-term preservation where trust is established through SPKI certificates and cryptographic seals.")))
+      (p "Traditional package managers and distribution systems assume centralized registries and online verification. This replication layer is designed for decentralized, long-term preservation where trust is established through Simple Public Key Infrastructure (SPKI) certificates and cryptographic seals.")))
   (section
     "Design Principles"
     (p "1. Sealed Releases - Only cryptographically signed releases can be published 2. Transport Agnostic - Same API works for git, HTTP, filesystem 3. Audit Everything - All replication events are recorded in tamper-evident log 4. Verify Before Trust - Subscribers must verify cryptographic seals 5. Explicit Authorization - SPKI certificates determine who can publish"))
@@ -119,7 +119,7 @@
       (item "Universal archive format")
       (item "S-expressions")
       (item "LISP/Scheme readable format")
-      (item "SPKI/SDSI")
+      (item "SDSI/SPKI")
       (item "Authorization certificates"))
     (p "Future extensions may add: - IPFS transport - Content-addressed distribution - Tor hidden services - Anonymous publication - Encrypted archives - Confidential distribution - Multi-signature releases - Threshold authorization"))
   (section
@@ -128,7 +128,7 @@
     (code scheme ";; Test seal-publish to filesystem\n(seal-publish \"1.0.0\"\n              remote: \"/tmp/cyberspace-publish-test\"\n              message: \"Published to filesystem\")\n\n;; Verify archive exists\n(file-exists? \"/tmp/cyberspace-publish-test/vault-1.0.0.archive\")\n\n;; Verify audit entry created\n(audit-read sequence: 1)"))
   (section
     "References"
-    (p "1. SPKI/SDSI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 - Bernstein et al. 5. Audit Trails - Memo-002 (Cryptographic Audit Trail)"))
+    (p "1. SDSI/SPKI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 - Bernstein et al. 5. Audit Trails - Memo-002 (Cryptographic Audit Trail)"))
   (section
     "Changelog"
     (list

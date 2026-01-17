@@ -11,7 +11,7 @@
     "Motivation"
     (p "Authorization in distributed systems is hard:")
     (p "- ACLs don't scale - Central lists become bottlenecks - Identity is fragile - Names change, keys rotate - Ambient authority is dangerous - \"Run as root\" is not a security model - Revocation is an afterthought - Usually bolted on badly")
-    (p "SPKI (Simple Public Key Infrastructure) solved this decades ago:")
+    (p "Simple Distributed Security Infrastructure/Simple Public Key Infrastructure (SDSI/SPKI) solved this decades ago:")
     (list
       (item "Capabilities, not identities")
       (item "What you can do, not who you are")
@@ -168,7 +168,7 @@
         (item "Revocation checks add latency - use short-lived certs when possible"))))
   (section
     "References"
-    (p "1. SPKI/SDSI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication - Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller, Yee, Shapiro (preserved) 4. Memo-004: SPKI Authorization 5. Memo-020: Content-Addressed Storage 6. Memo-008: Threshold Signature Governance"))
+    (p "1. SDSI/SPKI 2.0 - RFC 2693 (preserved) 2. A Logic of Authentication - Burrows, Abadi, Needham (preserved) 3. Capability Myths Demolished - Miller, Yee, Shapiro (preserved) 4. Memo-004: SPKI Authorization 5. Memo-020: Content-Addressed Storage 6. Memo-008: Threshold Signature Governance"))
   (section
     "Changelog"
     (list

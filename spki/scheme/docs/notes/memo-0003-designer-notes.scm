@@ -17,13 +17,13 @@
 
     (subsection
       "1.1 MIT Athena and SPKI"
-      (p "Cyberspace traces its lineage to MIT's Project Athena and the SDSI/SPKI work that emerged from MIT and IETF.")
-      (p "Athena (1983-1991) introduced Kerberos, distributed authentication, and the concept of a unified computing environment across heterogeneous systems. DEC funded Athena and contributed workstations.")
-      (p "Two independent threads merged at IETF to form SPKI/SDSI:")
+      (p "Cyberspace traces its lineage to MIT's Project Athena and the Simple Public Key Infrastructure (SPKI) work that emerged from MIT and the Internet Engineering Task Force (IETF).")
+      (p "Athena (1983-1991) introduced Kerberos, distributed authentication, and the concept of a unified computing environment across heterogeneous systems. Digital Equipment Corporation (DEC) funded Athena and contributed workstations.")
+      (p "Two independent threads merged at IETF to form SDSI/SPKI:")
       (list
-        (item "SDSI (Simple Distributed Security Infrastructure) - Ron Rivest at MIT, focusing on naming and local name spaces")
-        (item "SPKI (Simple Public Key Infrastructure) - Carl Ellison at IETF, focusing on authorization and capabilities"))
-      (p "Ellison's SPKI RFCs (2693, 2692) formalized capability-based authorization through certificate chains. When IETF standardized this work, Rivest's SDSI naming merged in. The result (SPKI/SDSI 2.0) gave us both authorization and naming.")
+        (item "Simple Distributed Security Infrastructure (SDSI) - Ron Rivest at MIT, focusing on naming and local name spaces")
+        (item "SPKI - Carl Ellison at IETF, focusing on authorization and capabilities"))
+      (p "Ellison's SPKI RFCs (2693, 2692) formalized capability-based authorization through certificate chains. When IETF standardized this work, Rivest's SDSI naming merged in. The result (SDSI/SPKI 2.0) gave us both authorization and naming.")
       (p "These ideas were absorbed during the same lamport epoch as R4RS Scheme (1991) and SDSI (1996), alongside the practical education of Boston traffic negotiation - both exercises in asserting authority without central coordination."))
 
     (subsection

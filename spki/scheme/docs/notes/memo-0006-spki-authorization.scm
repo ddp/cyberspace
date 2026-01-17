@@ -6,13 +6,13 @@
   (title "Public Key Authorization")
   (section
     "Abstract"
-    (p "This Memo specifies the SPKI/SDSI certificate system for Cyberspace, providing authorization without identity. Principals are identified by cryptographic keys, not names. Authorization flows through verifiable delegation chains."))
+    (p "This Memo specifies the Simple Distributed Security Infrastructure/Simple Public Key Infrastructure (SDSI/SPKI) certificate system for Cyberspace, providing authorization without identity. Principals are identified by cryptographic keys, not names. Authorization flows through verifiable delegation chains."))
   (section
     "Motivation"
     (subsection
       "Heritage: SDSI at IETF 29"
-      (p "Ron Rivest presented SDSI (A Simple Distributed Security Infrastructure) at IETF 29 in Seattle (March 28 - April 1, 1994). The idea was elegant: self-certifying keys and local names. No global namespace. No certificate authorities. Just cryptographic principals naming what they choose to name.")
-      (p "SDSI later merged with SPKI to form SPKI/SDSI, standardized in RFC 2692 and RFC 2693 (1999).")
+      (p "Ron Rivest presented SDSI at Internet Engineering Task Force (IETF) 29 in Seattle (March 28 - April 1, 1994). The idea was elegant: self-certifying keys and local names. No global namespace. No certificate authorities. Just cryptographic principals naming what they choose to name.")
+      (p "SDSI later merged with SPKI to form SDSI/SPKI, standardized in RFC 2692 and RFC 2693 (1999).")
       (p "Some in the PKI industry understood SPKI was technically superior. But they saw a monopoly to be mined—certificate authorities as toll booths on the internet. SPKI threatened that model. It was too decentralized to profit from.")
       (p "HP quietly adopted SPKI for their E-speak middleware and printer authorization. Printers. The technology worked. The politics didn't favor it.")
       (p "Cyberspace picks up where SPKI left off."))
