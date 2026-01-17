@@ -3,7 +3,7 @@
 
 (memo
   (number 37)
-  (title "Node Roles and Capabilities")
+  (title "Realm Roles and Capabilities")
   (section
     "Abstract"
     (p "This Memo defines functional roles for nodes in a Library of Cyberspace confederation based on compute, storage, network, and security capabilities. Roles determine what operations a node can perform and how it participates in the distributed system."))
