@@ -173,14 +173,14 @@
     (subsection
       "8.3 Two Doors"
       (code "                    CYBERSPACE
-                        |
-           +------------+------------+
-           |                         |
-      +----v----+              +-----v-----+
-      | Terminal |              |  Friendly  |
-      |  (cs)    |              |    Door    |
-      +----+----+              +-----+-----+
-           |                         |
+                        │
+           ┌────────────┴────────────┐
+           │                         │
+      ┌────▼────┐              ┌─────▼─────┐
+      │ Terminal │              │  Friendly  │
+      │   (cs)   │              │    Door    │
+      └────┬────┘              └─────┬─────┘
+           │                         │
       Operators                   Novices
       Hackers                     Family
       Admins                      Everyone")
