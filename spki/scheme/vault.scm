@@ -1282,7 +1282,8 @@
       (certs     . "SPKI certificates")
       (audit     . "Audit trail entries")
       (keys      . "Cryptographic keys")
-      (metadata  . "Commit metadata")))
+      (metadata  . "Commit metadata")
+      (forge     . "Compiled module metadata")))
 
   (define (soup? . args)
     "Show soup help and available object types (JSYS ? command)"
@@ -1299,6 +1300,7 @@ SOUP - Object Store Query Syntax
   (soup 'audit)
   (soup 'keys)
   (soup 'metadata)
+  (soup 'forge)
 
   (soup \"pattern\")           Glob pattern (* = any, ? = single char)
   (soup \"genesis*\")          All objects starting with 'genesis'
@@ -1408,6 +1410,17 @@ Object Types:
         (let ((stat (file-stat ".vault/node.sexp")))
           (set! objects (cons (list 'identity "node" (vector-ref stat 5) (get-node-info)) objects))))
 
+      ;; Forge metadata (.forge/*.meta) - compiled module info
+      (when (directory-exists? ".forge")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".meta" f)
+             (let* ((path (sprintf ".forge/~a" f))
+                    (stat (file-stat path))
+                    (module (pathname-strip-extension f)))
+               (set! objects (cons (list 'forge module (vector-ref stat 5) (get-forge-info path)) objects)))))
+         (directory ".forge")))
+
       (reverse objects)))
 
   (define (get-node-info)
@@ -1431,6 +1444,24 @@ Object Types:
         (if (and (pair? data) (eq? 'node-identity (car data)))
             (cdr data)
             #f))))
+
+  (define (get-forge-info path)
+    "Extract forge metadata attributes for soup listing"
+    (handle-exceptions exn
+      '("unknown")
+      (let ((data (with-input-from-file path read)))
+        (if (pair? data)
+            (let* ((metrics (assq 'metrics data))
+                   (loc (and metrics (assq 'loc (cdr metrics))))
+                   (lambdas (and metrics (assq 'lambdas (cdr metrics))))
+                   (loc/lambda (and metrics (assq 'loc/lambda (cdr metrics))))
+                   (so-size (assq 'so-size data))
+                   (compile-ms (assq 'compile-time-ms data)))
+              (list (if loc (sprintf "~aL" (cdr loc)) "?")
+                    (if lambdas (sprintf "~aλ" (cdr lambdas)) "?")
+                    (if loc/lambda (sprintf "~a/λ" (cdr loc/lambda)) "?")
+                    (if so-size (format-size (cdr so-size)) "?")))
+            '("invalid")))))
 
   (define (get-archive-crypto path)
     "Extract crypto attributes from archive manifest"
@@ -1680,6 +1711,30 @@ Object Types:
               (sprintf "~a (~a)" (car info) (cadr info))
               "configured"))))
 
+  (define (soup-summary-forge objs)
+    "Smart summary for forge metadata - total LOC and average λ-density"
+    (if (null? objs)
+        ""
+        (let* ((total-loc 0)
+               (total-lambdas 0))
+          ;; Sum up LOC and lambdas from info lists
+          (for-each
+           (lambda (o)
+             (let ((info (cadddr o)))
+               (when (and (list? info) (>= (length info) 2))
+                 (let ((loc-str (car info))
+                       (lambda-str (cadr info)))
+                   (when (string-suffix? "L" loc-str)
+                     (set! total-loc (+ total-loc
+                                        (or (string->number (substring loc-str 0 (- (string-length loc-str) 1))) 0))))
+                   (when (string-suffix? "λ" lambda-str)
+                     (set! total-lambdas (+ total-lambdas
+                                            (or (string->number (substring lambda-str 0 (- (string-length lambda-str) 2))) 0))))))))
+           objs)
+          (if (> total-lambdas 0)
+              (sprintf "~aL ~aλ (~a/λ)" total-loc total-lambdas (quotient total-loc total-lambdas))
+              (sprintf "~a modules" (length objs))))))
+
   (define (soup-get-summary type objs)
     "Get smart summary for a type"
     (case type
@@ -1690,6 +1745,7 @@ Object Types:
       ((metadata) (soup-summary-metadata objs))
       ((certs) (soup-summary-certs objs))
       ((identity) (soup-summary-identity objs))
+      ((forge) (soup-summary-forge objs))
       (else "")))
 
   (define (soup-tree-view grouped types)

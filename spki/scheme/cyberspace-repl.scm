@@ -3525,9 +3525,9 @@ Cyberspace REPL - Available Commands
 (define (rich-exception-display exn #!key (frames 5))
   "Display exception with rich formatting and mini-traceback"
   (capture-exception exn)
-  (let ((b (make-box 66)))
+  (let ((b (os#make-box 66)))
     (print "")
-    (print (box-top b "Exception"))
+    (print (os#box-top b "Exception"))
 
     ;; Extract exception properties
     (let* ((msg (get-condition-property exn 'exn 'message ""))
@@ -3541,27 +3541,27 @@ Cyberspace REPL - Available Commands
 
       ;; Exception type if available
       (when kind
-        (box-print b (sprintf "Type: ~a" kind)))
+        (os#box-print b (sprintf "Type: ~a" kind)))
 
       ;; Error message
-      (box-print b msg)
+      (os#box-print b msg)
 
       ;; Location if available
       (when loc
-        (box-print b (sprintf "In: ~a" loc)))
+        (os#box-print b (sprintf "In: ~a" loc)))
 
       ;; Arguments if available
       (when (and args (not (null? args)))
-        (box-print b "Arguments:")
+        (os#box-print b "Arguments:")
         (for-each
           (lambda (arg)
             (let ((s (with-output-to-string (lambda () (write arg)))))
-              (box-print b (sprintf "  ~a" s))))
+              (os#box-print b (sprintf "  ~a" s))))
           args)))
 
-    (print (box-separator b))
-    (box-print b "(bt) backtrace  (frame N) inspect  (exception-info) details")
-    (print (box-bottom b))))
+    (print (os#box-separator b))
+    (os#box-print b "(bt) backtrace  (frame N) inspect  (exception-info) details")
+    (print (os#box-bottom b))))
 
 ;;; ============================================================
 ;;; Enrollment Status Display
