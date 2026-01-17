@@ -10,7 +10,6 @@
 ;;;   GET /static/*   - Static assets (CSS, JS)
 ;;;   WS  /ws         - WebSocket REPL connection
 ;;;
-;;; Copyright (c) 2026 Yoyodyne. See LICENSE.
 
 (import scheme
         (chicken base)
