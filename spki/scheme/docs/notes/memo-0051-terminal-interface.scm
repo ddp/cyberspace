@@ -176,10 +176,24 @@
   (section
     "14. Linting Checklist"
     (p "When auditing terminal output:")
-    (p "1. [ ] Boxes use Unicode box-drawing characters 2. [ ] Trees use ├─ and └─ consistently 3. [ ] Prompt is :  (colon-space) 4. [ ] Colors are optional, not required for meaning 5. [ ] Error messages are actionable 6. [ ] Functions returning output use (void) 7. [ ] Long values are truncated with ... 8. [ ] Blank lines follow the convention 9. [ ] No ASCII art boxes (+---, |, etc.) 10. [ ] No tabs in output (spaces only)"))
+    (list
+      (item "[ ] Boxes use Unicode box-drawing characters")
+      (item "[ ] Trees use pipe-tee and pipe-corner consistently")
+      (item "[ ] Prompt is :  (colon-space)")
+      (item "[ ] Colors are optional, not required for meaning")
+      (item "[ ] Error messages are actionable")
+      (item "[ ] Functions returning output use (void)")
+      (item "[ ] Long values are truncated with ...")
+      (item "[ ] Blank lines follow the convention")
+      (item "[ ] No ASCII art boxes (+---, |, etc.)")
+      (item "[ ] No tabs in output (spaces only)")))
   (section
     "15. References"
-    (p "1. Memo-0051 — Friendly Interface (GUI counterpart) 2. Memo-0001 — Architecture (\"English on top, Scheme underneath\") 3. Unicode Standard — Box Drawing (U+2500–U+257F) 4. ECMA-48 — Control Functions for Coded Character Sets (VT100)"))
+    (list
+      (item "Memo-0051 - Friendly Interface (GUI counterpart)")
+      (item "Memo-0001 - Architecture (\"English on top, Scheme underneath\")")
+      (item "Unicode Standard - Box Drawing (U+2500-U+257F)")
+      (item "ECMA-48 - Control Functions for Coded Character Sets (VT100)")))
   (section
     "Changelog"
     (p "- 2026-01-13 — Add boot verbosity levels (shadow, whisper, portal, chronicle, oracle)")

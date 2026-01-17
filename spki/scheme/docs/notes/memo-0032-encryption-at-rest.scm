@@ -131,7 +131,11 @@
       (code scheme ";; Constant-time operations\n(define (constant-time-compare a b)\n  \"Compare without timing leaks\"\n  (let ((result 0))\n    (do ((i 0 (+ i 1)))\n        ((= i (bytevector-length a)) (= result 0))\n      (set! result (bitwise-ior result\n                    (bitwise-xor (bytevector-u8-ref a i)\n                                 (bytevector-u8-ref b i)))))))")))
   (section
     "References"
-    (p "1. [age](https://age-encryption.org/) - Modern file encryption 2. [LUKS](https://gitlab.com/cryptsetup/cryptsetup) - Linux Unified Key Setup 3. [Memo-022: Key Ceremony Protocol](memo-022-key-ceremony.html) 4. [Memo-018: Sealed Archive Format](memo-018-sealed-archive.html)"))
+    (list
+      (item "[age](https://age-encryption.org/) - Modern file encryption")
+      (item "[LUKS](https://gitlab.com/cryptsetup/cryptsetup) - Linux Unified Key Setup")
+      (item "[Memo-022: Key Ceremony Protocol](memo-022-key-ceremony.html)")
+      (item "[Memo-018: Sealed Archive Format](memo-018-sealed-archive.html)")))
   (section
     "Changelog"
     (list

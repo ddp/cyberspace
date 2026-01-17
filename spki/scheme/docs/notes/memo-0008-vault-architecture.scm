@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Git is powerful but lacks:")
-    (p "1. Cryptographic sealing - GPG signing is optional and awkward 2. Authorization model - Anyone with access can commit 3. Archival features - No first-class backup/restore 4. Audit integration - History is mutable")
+    (list
+      (item "Cryptographic sealing - GPG signing is optional and awkward")
+      (item "Authorization model - Anyone with access can commit")
+      (item "Archival features - No first-class backup/restore")
+      (item "Audit integration - History is mutable"))
     (p "The Vault wraps Git with:")
     (list
       (item "seal- commands that cryptographically sign operations")
@@ -178,7 +182,11 @@
       (code scheme ";; Key is 64-byte Ed25519 secret key\n;; First 32 bytes: seed\n;; Last 32 bytes: public key\n\n(define (get-vault-principal signing-key)\n  \"Extract public key from signing key\"\n  (blob-copy signing-key 32 32))"))
     (subsection
       "Authorization Flow"
-      (p "1. Configure: (vault-init signing-key: key) 2. Operate: (seal-commit ...) signs with configured key 3. Audit: Entry includes actor's public key 4. Verify: (seal-verify ...) checks signature"))
+      (list
+        (item "Configure: (vault-init signing-key: key)")
+        (item "Operate: (seal-commit ...) signs with configured key")
+        (item "Audit: Entry includes actor's public key")
+        (item "Verify: (seal-verify ...) checks signature")))
     (subsection
       "Threat Mitigations"
       (table
@@ -220,7 +228,13 @@
     (p "All formats are first-class citizens in the Vault. RFCs and declarations SHOULD be published in all three formats for maximum preservation and accessibility. No proprietary formats."))
   (section
     "References"
-    (p "1. Git Internals - Plumbing and Porcelain 2. Memo-0002: Replication Layer 3. Memo-0003: Cryptographic Audit Trail 4. Memo-0004: SPKI Authorization 5. Memo-0005: Progressive Metadata Levels 6. Semantic Versioning 2.0.0"))
+    (list
+      (item "Git Internals - Plumbing and Porcelain")
+      (item "Memo-0002: Replication Layer")
+      (item "Memo-0003: Cryptographic Audit Trail")
+      (item "Memo-0004: SPKI Authorization")
+      (item "Memo-0005: Progressive Metadata Levels")
+      (item "Semantic Versioning 2.0.0")))
   (section
     "Changelog"
     (list

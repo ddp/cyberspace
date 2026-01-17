@@ -79,7 +79,11 @@
       (p "Not protected against: - K compromised keys - All parties colluding - Side-channel on signing devices"))
     (subsection
       "Key Management"
-      (p "1. Generation: Secure random via libsodium 2. Storage: Hardware tokens preferred, encrypted files acceptable 3. Distribution: Out-of-band verification of public keys 4. Rotation: New ceremony, revoke old keys"))
+      (list
+        (item "Generation: Secure random via libsodium")
+        (item "Storage: Hardware tokens preferred, encrypted files acceptable")
+        (item "Distribution: Out-of-band verification of public keys")
+        (item "Rotation: New ceremony, revoke old keys")))
     (subsection
       "Threshold Selection"
       (table
@@ -111,7 +115,11 @@
         (item "No network round-trips (offline verification)"))))
   (section
     "References"
-    (p "1. Boneh, D., et al. (2001). Short Signatures from the Weil Pairing. 2. Gennaro, R., et al. (2016). Threshold-optimal DSA/ECDSA signatures. 3. NIST SP 800-57. Recommendation for Key Management. 4. Memo-004: SPKI Authorization Integration"))
+    (list
+      (item "Boneh, D., et al. (2001). Short Signatures from the Weil Pairing.")
+      (item "Gennaro, R., et al. (2016). Threshold-optimal DSA/ECDSA signatures.")
+      (item "NIST SP 800-57. Recommendation for Key Management.")
+      (item "Memo-004: SPKI Authorization Integration")))
   (section
     "Changelog"
     (list

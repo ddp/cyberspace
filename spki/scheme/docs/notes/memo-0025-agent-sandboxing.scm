@@ -166,7 +166,13 @@
         (item "Capability check: ~100ns (cached), ~10μs (chain validation)"))))
   (section
     "References"
-    (p "1. [Telescript Technology: Mobile Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html) 2. [Capsicum: Practical Capabilities for UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/) 3. [WebAssembly System Interface (WASI)](https://wasi.dev/) 4. [Memo-021: Capability Delegation](memo-021-capability-delegation.html) 5. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 6. [E Programming Language](http://erights.org/) - Object capabilities"))
+    (list
+      (item "[Telescript Technology: Mobile Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html)")
+      (item "[Capsicum: Practical Capabilities for UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/)")
+      (item "[WebAssembly System Interface (WASI)](https://wasi.dev/)")
+      (item "[Memo-021: Capability Delegation](memo-021-capability-delegation.html)")
+      (item "[Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html)")
+      (item "[E Programming Language](http://erights.org/) - Object capabilities")))
   (section
     "Changelog"
     (list

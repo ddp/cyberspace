@@ -17,7 +17,11 @@
       (item "Content annotation and metadata extraction")
       (item "Inter-agent communication in natural language"))
     (p "External API dependencies (OpenAI, Anthropic, etc.) introduce:")
-    (p "1. Privacy leakage — document content leaves the realm 2. Availability risk — network partitions break agent operation 3. Cost unpredictability — metered APIs scale poorly 4. Vendor lock-in — proprietary formats and rate limits")
+    (list
+      (item "Privacy leakage - document content leaves the realm")
+      (item "Availability risk - network partitions break agent operation")
+      (item "Cost unpredictability - metered APIs scale poorly")
+      (item "Vendor lock-in - proprietary formats and rate limits"))
     (p "Local inference eliminates these concerns while maintaining capability.[^d1]")
     (p "[^d1]: Design: We deliberately avoid specifying model architectures. The interface is model-agnostic—agents negotiate capabilities at runtime."))
   (section
@@ -82,7 +86,11 @@
     (subsection
       "Fallback Behavior"
       (p "When local inference is unavailable:")
-      (p "1. Queue — buffer requests for later processing 2. Degrade — use simpler heuristics (keyword extraction vs. LLM) 3. Federate — request inference from trusted peer realm 4. Fail — return error to requesting agent")
+      (list
+        (item "Queue - buffer requests for later processing")
+        (item "Degrade - use simpler heuristics (keyword extraction vs. LLM)")
+        (item "Federate - request inference from trusted peer realm")
+        (item "Fail - return error to requesting agent"))
       (code scheme "(define (inference-with-fallback server model prompt)\n  (or (try-inference server model prompt)\n      (try-queued-inference prompt)\n      (try-degraded-processing prompt)\n      (try-federated-inference prompt)\n      (error 'inference-unavailable)))")))
   (section
     "Security Considerations"
@@ -142,7 +150,12 @@
       (p "This is NOT RECOMMENDED for sensitive documents.")))
   (section
     "References"
-    (p "1. Memo-023: Demonic Agent Sandboxing 2. Memo-025: Query Language 3. Memo-035: Mobile Agents and Pub/Sub 4. Ollama Documentation: https://ollama.com/ 5. Lewis et al., \"Retrieval-Augmented Generation\" (2020)"))
+    (list
+      (item "Memo-023: Demonic Agent Sandboxing")
+      (item "Memo-025: Query Language")
+      (item "Memo-035: Mobile Agents and Pub/Sub")
+      (item "Ollama Documentation: https://ollama.com/")
+      (item "Lewis et al., \"Retrieval-Augmented Generation\" (2020)")))
   (section
     "Changelog"
     (list

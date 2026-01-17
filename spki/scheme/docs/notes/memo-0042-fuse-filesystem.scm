@@ -12,7 +12,12 @@
     "Motivation"
     (p "Users need seamless integration between their existing filesystem and the vault. Manual import/export creates friction and risks metadata loss.")
     (p "A wormhole provides:")
-    (p "1. Transparency — Finder, cp, rsync work unchanged 2. Bidirectionality — No separate sync step; it IS the filesystem 3. Metadata preservation — Full macOS attributes captured automatically 4. Content addressing — Deduplication and integrity built-in 5. Security — First-class Simple Public Key Infrastructure (SPKI) object with audit and rate-limit")
+    (list
+      (item "Transparency - Finder, cp, rsync work unchanged")
+      (item "Bidirectionality - No separate sync step; it IS the filesystem")
+      (item "Metadata preservation - Full macOS attributes captured automatically")
+      (item "Content addressing - Deduplication and integrity built-in")
+      (item "Security - First-class Simple Public Key Infrastructure (SPKI) object with audit and rate-limit"))
     (p "The filesystem abstraction is the right boundary—everything above it (apps, shell, Finder) works without modification.[^d1]")
     (p "[^d1]: Design: FUSE inverts the usual model. Instead of teaching applications about vaults, we teach the vault to speak filesystem. Unix got this right: everything is a file."))
   (section
@@ -138,7 +143,10 @@
     (subsection
       "Conflict Resolution"
       (p "When merging manifests from different devices (Memo-016 lazy clustering):")
-      (p "1. Same hash → No conflict (identical content) 2. Different hash, one newer → Take newer 3. Different hash, concurrent → Conflict, apply lazy-resolve")
+      (list
+        (item "Same hash - No conflict (identical content)")
+        (item "Different hash, one newer - Take newer")
+        (item "Different hash, concurrent - Conflict, apply lazy-resolve"))
       (code scheme "(define (merge-manifests local remote)\n  (for-each\n   (lambda (path)\n     (let ((l (manifest-lookup local path))\n           (r (manifest-lookup remote path)))\n       (cond\n        ((not l) (manifest-add! local r))\n        ((not r) 'keep-local)\n        ((equal? (vault-file-hash l) (vault-file-hash r)) 'identical)\n        ((version-newer? r l) (manifest-update! local r))\n        ((version-newer? l r) 'keep-local)\n        (else (queue-conflict! path l r)))))\n   (union (manifest-paths local) (manifest-paths remote))))")))
   (section
     "Mount Commands"
@@ -192,7 +200,12 @@
       (row "Scheme FFI " "Bindings to libfuse ")))
   (section
     "References"
-    (p "1. Memo-012: Lamport Clocks 2. Memo-016: Lazy Clustering 3. Memo-020: Content-Addressed Storage 4. FUSE documentation: https://libfuse.github.io/ 5. FUSE-T: https://github.com/macos-fuse-t/fuse-t"))
+    (list
+      (item "Memo-012: Lamport Clocks")
+      (item "Memo-016: Lazy Clustering")
+      (item "Memo-020: Content-Addressed Storage")
+      (item "FUSE documentation: https://libfuse.github.io/")
+      (item "FUSE-T: https://github.com/macos-fuse-t/fuse-t")))
   (section
     "Changelog"
     (list

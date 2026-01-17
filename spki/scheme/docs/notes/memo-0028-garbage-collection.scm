@@ -76,7 +76,10 @@
     (subsection
       "Tricolor Abstraction"
       (p "The naive recursive mark algorithm risks stack overflow on deep object graphs. The tricolor abstraction provides:")
-      (p "1. White: Unvisited, potentially garbage 2. Gray: Visited but references not yet scanned 3. Black: Visited and all references scanned")
+      (list
+        (item "White: Unvisited, potentially garbage")
+        (item "Gray: Visited but references not yet scanned")
+        (item "Black: Visited and all references scanned"))
       (code scheme ";; Tricolor sets - explicit worklist avoids stack overflow\n(define white-set (make-hash-set))  ; Candidates for collection\n(define gray-set (make-hash-set))   ; Work queue\n(define black-set (make-hash-set))  ; Proven reachable\n\n(define (tricolor-init)\n  \"Initialize: all objects are white\"\n  (hash-set-clear! white-set)\n  (hash-set-clear! gray-set)\n  (hash-set-clear! black-set)\n  (for-each (lambda (h) (hash-set-add! white-set h))\n            (all-object-hashes)))\n\n(define (shade-gray! hash)\n  \"Move object from white to gray (discovered)\"\n  (when (hash-set-member? white-set hash)\n    (hash-set-remove! white-set hash)\n    (hash-set-add! gray-set hash)))\n\n(define (shade-black! hash)\n  \"Move object from gray to black (fully scanned)\"\n  (hash-set-remove! gray-set hash)\n  (hash-set-add! black-set hash))"))
     (subsection
       "Mark Phase (Worklist Algorithm)"
@@ -146,7 +149,10 @@
     (subsection
       "Archival Object Evaporation"
       (p "Archival objects (>30 days) receive maximum protection. They can only evaporate via:")
-      (p "1. Legal requirement - With proof of legal order 2. Data corruption - With cryptographic proof of corruption 3. Governance vote - Per Memo-036 quorum protocol")
+      (list
+        (item "Legal requirement - With proof of legal order")
+        (item "Data corruption - With cryptographic proof of corruption")
+        (item "Governance vote - Per Memo-036 quorum protocol"))
       (code scheme "(define (archival-evaporation-authorized? cert)\n  \"Check if archival evaporation is properly authorized\"\n  (case (evap-reason cert)\n    ((legal-requirement)\n     ;; Must include legal order reference\n     (and (evap-legal-order cert)\n          (verify-legal-order (evap-legal-order cert))))\n\n    ((data-corruption)\n     ;; Must include corruption proof\n     (and (evap-corruption-proof cert)\n          (verify-corruption (evap-hash cert) (evap-corruption-proof cert))))\n\n    ((federation-consensus)\n     ;; Must have governance quorum (Memo-036)\n     (governance-quorum-met? cert))\n\n    (else #f)))  ; No other reasons valid for archival")))
   (section
     "Distributed GC"
@@ -203,7 +209,13 @@
     (code "G1. Preservation default\n    default-mode = archival → no-automatic-collection\n\nG2. Age increases protection\n    age(obj) > age(obj') → protection(obj) ≥ protection(obj')\n\nG3. Evaporation requires consent\n    evaporate(hash) requires signed-certificate(hash)\n\nG4. Quorum scales with age\n    generation = archival → quorum = governance-level\n\nG5. Archival objects are sacred\n    age > 30-days → no-automatic-evaporation\n\nG6. Audit trail preserved\n    evaporate(hash) → audit-append(hash, certificate, reason, signers)\n\nG7. Mark-and-sweep authoritative\n    truly-unreachable(hash) ↔ ¬member(hash, mark-reachable())\n\nG8. Cycles preserved\n    cycle(A, B, C) ∧ archival-mode → preserve(A, B, C)"))
   (section
     "References"
-    (p "1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly Garbage Collection - Dijkstra et al. 3. Memo-020: Content-Addressed Storage 4. Memo-003: Cryptographic Audit Trail 5. Memo-036: Quorum Protocol with Homomorphic Voting 6. Memo-008: Threshold Signature Governance"))
+    (list
+      (item "The Garbage Collection Handbook - Jones, Hosking, Moss")
+      (item "On-the-Fly Garbage Collection - Dijkstra et al.")
+      (item "Memo-020: Content-Addressed Storage")
+      (item "Memo-003: Cryptographic Audit Trail")
+      (item "Memo-036: Quorum Protocol with Homomorphic Voting")
+      (item "Memo-008: Threshold Signature Governance")))
   (section
     "Changelog"
     (list

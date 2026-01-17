@@ -183,7 +183,14 @@
     (p "Prepare now. Migrate early. Survive."))
   (section
     "References"
-    (p "1. NIST Post-Quantum Cryptography Standardization 2. SPHINCS+ specification - https://sphincs.org/ 3. CRYSTALS-Dilithium specification - https://pq-crystals.org/dilithium/ 4. Open Quantum Safe project - https://openquantumsafe.org/ 5. Shor, P., \"Algorithms for Quantum Computation\", 1994 6. Memo-041 - Keystore and Attestation 7. Memo-042 - Quantum-Resistant Merkle Trees"))
+    (list
+      (item "NIST Post-Quantum Cryptography Standardization")
+      (item "SPHINCS+ specification - https://sphincs.org/")
+      (item "CRYSTALS-Dilithium specification - https://pq-crystals.org/dilithium/")
+      (item "Open Quantum Safe project - https://openquantumsafe.org/")
+      (item "Shor, P., \"Algorithms for Quantum Computation\", 1994")
+      (item "Memo-041 - Keystore and Attestation")
+      (item "Memo-042 - Quantum-Resistant Merkle Trees")))
   (section
     "Changelog"
     (list

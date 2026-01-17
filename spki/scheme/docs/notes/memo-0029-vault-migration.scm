@@ -134,7 +134,11 @@
       (code scheme ";; All migrations are fully audited\n(define (audited-migration source target)\n  (let ((migration-id (generate-migration-id)))\n    (audit-append action: 'migration-authorized\n                  migration-id: migration-id\n                  operator: (current-principal)\n                  source: source\n                  target: target)\n    ;; ... perform migration ...\n    (audit-append action: 'migration-complete\n                  migration-id: migration-id\n                  objects: (count-migrated)\n                  verification: (verification-result))))")))
   (section
     "References"
-    (p "1. [Live Migration of Virtual Machines](https://dl.acm.org/doi/10.1145/1095810.1095816) - Clark et al. 2. [Memo-018: Sealed Archive Format](memo-018-sealed-archive.html) 3. [Memo-022: Key Ceremony Protocol](memo-022-key-ceremony.html) 4. [Memo-024: Network Protocol](memo-024-network-protocol.html)"))
+    (list
+      (item "[Live Migration of Virtual Machines](https://dl.acm.org/doi/10.1145/1095810.1095816) - Clark et al.")
+      (item "[Memo-018: Sealed Archive Format](memo-018-sealed-archive.html)")
+      (item "[Memo-022: Key Ceremony Protocol](memo-022-key-ceremony.html)")
+      (item "[Memo-024: Network Protocol](memo-024-network-protocol.html)")))
   (section
     "Changelog"
     (list

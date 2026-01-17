@@ -110,7 +110,11 @@
       (code scheme "(define (recover-compressed hash)\n  \"Attempt to recover corrupted compressed object\"\n  ;; Try partial decompression\n  (let ((partial (decompress-partial hash)))\n    (when partial\n      (audit-append action: 'partial-recovery hash: hash)\n      partial))\n\n  ;; Fetch from replica\n  (let ((replica-data (fetch-from-replica hash)))\n    (when replica-data\n      (storage-put hash replica-data)\n      replica-data)))")))
   (section
     "References"
-    (p "1. [Zstandard](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Content-Defined Chunking](https://restic.net/blog/2015-09-12/restic-foundation1-cdc/) - Restic blog 3. [Memo-018: Sealed Archive Format](memo-018-sealed-archive.html) 4. [Memo-020: Content-Addressed Storage](memo-020-content-addressed-storage.html)"))
+    (list
+      (item "[Zstandard](https://github.com/facebook/zstd) - Facebook's compression algorithm")
+      (item "[Content-Defined Chunking](https://restic.net/blog/2015-09-12/restic-foundation1-cdc/) - Restic blog")
+      (item "[Memo-018: Sealed Archive Format](memo-018-sealed-archive.html)")
+      (item "[Memo-020: Content-Addressed Storage](memo-020-content-addressed-storage.html)")))
   (section
     "Changelog"
     (list

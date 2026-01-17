@@ -15,7 +15,10 @@
       (item "Feature release: Add searchable keywords")
       (item "Archival snapshot: Capture full environment"))
     (p "Traditional VCS provides one-size-fits-all commit messages. Cyberspace provides progressive levels:")
-    (p "1. Minimal - Hash, timestamp, message (default) 2. Catalog - Add subjects, keywords, descriptions (discovery) 3. Preserve - Add environment, dependencies, git state (archival)"))
+    (list
+      (item "Minimal - Hash, timestamp, message (default)")
+      (item "Catalog - Add subjects, keywords, descriptions (discovery)")
+      (item "Preserve - Add environment, dependencies, git state (archival)")))
   (section
     "Specification"
     (subsection
@@ -107,16 +110,32 @@
     "Design Rationale"
     (subsection
       "Why Not Always Full Metadata?"
-      (p "1. Performance: Environment capture adds latency 2. Noise: Not every commit needs forensic detail 3. Privacy: Some metadata reveals sensitive info 4. Storage: Full metadata increases repository size"))
+      (list
+        (item "Performance: Environment capture adds latency")
+        (item "Noise: Not every commit needs forensic detail")
+        (item "Privacy: Some metadata reveals sensitive info")
+        (item "Storage: Full metadata increases repository size")))
     (subsection
       "Why S-expressions?"
-      (p "1. Readable: Human-inspectable without tools 2. Parseable: Machine-processable 3. Extensible: Add fields without schema changes 4. Native: Scheme can read/write directly"))
+      (list
+        (item "Readable: Human-inspectable without tools")
+        (item "Parseable: Machine-processable")
+        (item "Extensible: Add fields without schema changes")
+        (item "Native: Scheme can read/write directly")))
     (subsection
       "Why Separate Files?"
-      (p "1. Git-friendly: Small files diff well 2. Query-friendly: Can glob/grep metadata 3. Optional: Metadata doesn't bloat git objects 4. Flexible: Can delete without rewriting history")))
+      (list
+        (item "Git-friendly: Small files diff well")
+        (item "Query-friendly: Can glob/grep metadata")
+        (item "Optional: Metadata doesn't bloat git objects")
+        (item "Flexible: Can delete without rewriting history"))))
   (section
     "References"
-    (p "1. Dublin Core Metadata Initiative (DCMI) 2. Library of Congress Subject Headings (LCSH) 3. Software Heritage Archive Metadata 4. Reproducible Builds Project"))
+    (list
+      (item "Dublin Core Metadata Initiative (DCMI)")
+      (item "Library of Congress Subject Headings (LCSH)")
+      (item "Software Heritage Archive Metadata")
+      (item "Reproducible Builds Project")))
   (section
     "Changelog"
     (list

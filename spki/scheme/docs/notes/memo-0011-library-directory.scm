@@ -18,7 +18,12 @@
       (item "Connections: What relates to Simple Public Key Infrastructure (SPKI)?")
       (item "Context: When was this written? By whom?"))
     (p "The Directory System provides:")
-    (p "1. Natural language search - \"papers by Lampson about protection\" 2. Multi-index access - By author, topic, year, collection 3. Fuzzy matching - \"Lamp\" finds Lampson and Lamport 4. Beautiful output - Unicode, emoji, formatted results 5. S-expression export - Machine-readable catalogs"))
+    (list
+      (item "Natural language search - \"papers by Lampson about protection\"")
+      (item "Multi-index access - By author, topic, year, collection")
+      (item "Fuzzy matching - \"Lamp\" finds Lampson and Lamport")
+      (item "Beautiful output - Unicode, emoji, formatted results")
+      (item "S-expression export - Machine-readable catalogs")))
   (section
     "Data Model"
     (subsection
@@ -140,7 +145,11 @@
       (p "Future enhancements: - Full-text search (PostScript/Text extraction) - Citation graph visualization - BibTeX export - Web API server - Semantic search with embeddings")))
   (section
     "References"
-    (p "1. Dublin Core Metadata Initiative 2. Library of Congress Subject Headings 3. BibTeX format specification 4. Unicode Standard for box drawing"))
+    (list
+      (item "Dublin Core Metadata Initiative")
+      (item "Library of Congress Subject Headings")
+      (item "BibTeX format specification")
+      (item "Unicode Standard for box drawing")))
   (section
     "Changelog"
     (list

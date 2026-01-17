@@ -12,7 +12,11 @@
     (p "Physical clocks lie:")
     (p "- Clock skew: Machines disagree on time - Clock drift: Skew grows over time - NTP failures: Synchronization breaks - Relativity: No global \"now\" anyway")
     (p "Lamport clocks provide:")
-    (p "1. Logical ordering: a → b means a happened before b 2. No synchronization: No NTP, no GPS, no trusted time 3. Causality tracking: If a caused b, then C(a) < C(b) 4. Consistency: All nodes agree on partial order")
+    (list
+      (item "Logical ordering: a -> b means a happened before b")
+      (item "No synchronization: No NTP, no GPS, no trusted time")
+      (item "Causality tracking: If a caused b, then C(a) < C(b)")
+      (item "Consistency: All nodes agree on partial order"))
     (p "From Lamport (1978):")
     (blockquote "Time, Clocks, and the Ordering of Events in a Distributed System"))
   (section
@@ -20,7 +24,10 @@
     (subsection
       "The Happened-Before Relation"
       (p "Definition: a → b (a happened before b) if:")
-      (p "1. a and b are in same process and a comes before b, or 2. a is sending a message and b is receiving it, or 3. ∃c such that a → c and c → b (transitivity)"))
+      (list
+        (item "a and b are in same process and a comes before b, or")
+        (item "a is sending a message and b is receiving it, or")
+        (item "There exists c such that a -> c and c -> b (transitivity)")))
     (subsection
       "Lamport Clock Rules"
       (p "Each process P maintains counter C(P):")
@@ -104,7 +111,12 @@
       (code scheme "(define (save-clock clock path)\n  (with-output-to-file path\n    (lambda ()\n      (write `(lamport-clock\n                (counter ,(clock-counter clock))\n                (node-id ,(clock-node-id clock)))))))")))
   (section
     "References"
-    (p "1. Lamport, L. (1978). Time, Clocks, and the Ordering of Events in a Distributed System. 2. Fidge, C. J. (1988). Timestamps in Message-Passing Systems. 3. Mattern, F. (1989). Virtual Time and Global States of Distributed Systems. 4. Memo-003: Cryptographic Audit Trail 5. Memo-010: Federation Protocol"))
+    (list
+      (item "Lamport, L. (1978). Time, Clocks, and the Ordering of Events in a Distributed System.")
+      (item "Fidge, C. J. (1988). Timestamps in Message-Passing Systems.")
+      (item "Mattern, F. (1989). Virtual Time and Global States of Distributed Systems.")
+      (item "Memo-003: Cryptographic Audit Trail")
+      (item "Memo-010: Federation Protocol")))
   (section
     "Changelog"
     (list

@@ -18,7 +18,12 @@
       (row "Key compatibility " "N/A " "X25519/Ed25519 (SPKI aligned) ")
       (row "Streaming " "Yes " "Yes "))
     (p "Why change?")
-    (p "1. Encryption at rest - Archives contain potentially sensitive data 2. Faster compression - Zstd is 3-5x faster than gzip 3. Better ratios - Zstd typically achieves 10-20% better compression 4. Key alignment - Age uses X25519/Ed25519, same curve family as SPKI 5. Parallel support - zstd -T0 uses all cores"))
+    (list
+      (item "Encryption at rest - Archives contain potentially sensitive data")
+      (item "Faster compression - Zstd is 3-5x faster than gzip")
+      (item "Better ratios - Zstd typically achieves 10-20% better compression")
+      (item "Key alignment - Age uses X25519/Ed25519, same curve family as SPKI")
+      (item "Parallel support - zstd -T0 uses all cores")))
   (section
     "Specification"
     (subsection
@@ -72,7 +77,11 @@
         (item "Non-repudiation: Signer cannot deny creating archive")))
     (subsection
       "Verification Order"
-      (p "1. Verify signature - Before decryption (fail fast on tampering) 2. Verify hash - Encrypted archive integrity 3. Decrypt - Only after signature verified 4. Extract - Only after successful decryption"))
+      (list
+        (item "Verify signature - Before decryption (fail fast on tampering)")
+        (item "Verify hash - Encrypted archive integrity")
+        (item "Decrypt - Only after signature verified")
+        (item "Extract - Only after successful decryption")))
     (subsection
       "Threat Mitigations"
       (table
@@ -128,7 +137,11 @@
       (p "Both formats can coexist. The manifest format field determines restoration method: - (format cryptographic) → seal-restore-cryptographic - (format zstd-age) → seal-restore-zstd-age")))
   (section
     "References"
-    (p "1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Age](https://age-encryption.org/) - Modern encryption tool 3. [Memo-006](memo-006-vault-architecture.html) - Vault System Architecture 4. [Memo-004](memo-004-spki-authorization.html) - SPKI Authorization"))
+    (list
+      (item "[Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm")
+      (item "[Age](https://age-encryption.org/) - Modern encryption tool")
+      (item "[Memo-006](memo-006-vault-architecture.html) - Vault System Architecture")
+      (item "[Memo-004](memo-004-spki-authorization.html) - SPKI Authorization")))
   (section
     "Changelog"
     (list

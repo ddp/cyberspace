@@ -161,7 +161,11 @@
       (row "Delegation " "Implicit (CA) " "Explicit (propagate) ")))
   (section
     "References"
-    (p "1. Ellison, C., et al. (1999). SPKI Certificate Theory. RFC 2693. 2. Ellison, C., et al. (1999). SPKI Requirements. RFC 2692. 3. Rivest, R., & Lampson, B. (1996). SDSI - A Simple Distributed Security Infrastructure. 4. Lampson, B. (1971). Protection."))
+    (list
+      (item "Ellison, C., et al. (1999). SPKI Certificate Theory. RFC 2693.")
+      (item "Ellison, C., et al. (1999). SPKI Requirements. RFC 2692.")
+      (item "Rivest, R., & Lampson, B. (1996). SDSI - A Simple Distributed Security Infrastructure.")
+      (item "Lampson, B. (1971). Protection.")))
   (section
     "Changelog"
     (list

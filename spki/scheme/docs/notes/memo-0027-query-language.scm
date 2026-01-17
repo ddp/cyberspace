@@ -156,7 +156,13 @@
         (item "S-expression syntax for Scheme integration"))))
   (section
     "References"
-    (p "1. Newton Programmer's Guide - Soup and cursor APIs 2. SQLite Query Planner - Query optimization 3. Selinger et al., \"Access Path Selection in a Relational Database Management System\" (1979) - Cost-based optimization 4. Memo-020: Content-Addressed Storage 5. Memo-021: Capability Delegation 6. Memo-026: Garbage Collection (generation-aware caching)"))
+    (list
+      (item "Newton Programmer's Guide - Soup and cursor APIs")
+      (item "SQLite Query Planner - Query optimization")
+      (item "Selinger et al., \"Access Path Selection in a Relational Database Management System\" (1979) - Cost-based optimization")
+      (item "Memo-020: Content-Addressed Storage")
+      (item "Memo-021: Capability Delegation")
+      (item "Memo-026: Garbage Collection (generation-aware caching)")))
   (section
     "Changelog"
     (list

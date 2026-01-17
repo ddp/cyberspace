@@ -116,7 +116,11 @@
       (code scheme "(define (detect-audit-gaps log)\n  \"Find gaps in audit sequence\"\n  (let loop ((entries (audit-entries log))\n             (expected-seq 1)\n             (gaps '()))\n    (if (null? entries)\n        gaps\n        (let ((seq (assoc-ref (car entries) 'sequence)))\n          (if (= seq expected-seq)\n              (loop (cdr entries) (+ seq 1) gaps)\n              (loop (cdr entries) (+ seq 1)\n                    (cons (list expected-seq (- seq 1)) gaps)))))))")))
   (section
     "References"
-    (p "1. [NIST SP 800-92: Guide to Computer Security Log Management](https://csrc.nist.gov/publications/detail/sp/800-92/final) 2. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 3. [Memo-032: Rate Limiting and Quotas](memo-032-rate-limiting.html) 4. [Memo-028: Error Handling and Recovery](memo-028-error-handling.html)"))
+    (list
+      (item "[NIST SP 800-92: Guide to Computer Security Log Management](https://csrc.nist.gov/publications/detail/sp/800-92/final)")
+      (item "[Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html)")
+      (item "[Memo-032: Rate Limiting and Quotas](memo-032-rate-limiting.html)")
+      (item "[Memo-028: Error Handling and Recovery](memo-028-error-handling.html)")))
   (section
     "Changelog"
     (list

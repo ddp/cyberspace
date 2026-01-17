@@ -118,7 +118,11 @@
       (code scheme ";; Rate limit error generation to prevent DoS\n(define error-rate-limiter\n  (make-rate-limiter 1000 60))  ; 1000 errors per minute max\n\n(define (rate-limited-record-error! err)\n  (if (rate-limiter-allow? error-rate-limiter)\n      (record-error! err)\n      (audit-append action: 'error-rate-limited)))")))
   (section
     "References"
-    (p "1. [Release It!](https://pragprog.com/titles/mnee2/release-it-second-edition/) - Nygard 2. [Hystrix](https://github.com/Netflix/Hystrix) - Netflix Circuit Breaker 3. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 4. [Memo-026: Garbage Collection](memo-026-garbage-collection.html)"))
+    (list
+      (item "[Release It!](https://pragprog.com/titles/mnee2/release-it-second-edition/) - Nygard")
+      (item "[Hystrix](https://github.com/Netflix/Hystrix) - Netflix Circuit Breaker")
+      (item "[Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html)")
+      (item "[Memo-026: Garbage Collection](memo-026-garbage-collection.html)")))
   (section
     "Changelog"
     (list

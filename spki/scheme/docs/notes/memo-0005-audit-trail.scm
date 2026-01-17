@@ -147,7 +147,11 @@
         (item "Lazy verification: verify on read, not on load"))))
   (section
     "References"
-    (p "1. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document. 2. Merkle, R. C. (1987). A digital signature based on a conventional encryption function. 3. Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records. 4. SDSI/SPKI - RFC 2693, RFC 2692"))
+    (list
+      (item "Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document.")
+      (item "Merkle, R. C. (1987). A digital signature based on a conventional encryption function.")
+      (item "Bernstein, D. J. (2006). Curve25519: new Diffie-Hellman speed records.")
+      (item "SDSI/SPKI - RFC 2693, RFC 2692")))
   (section
     "Changelog"
     (list

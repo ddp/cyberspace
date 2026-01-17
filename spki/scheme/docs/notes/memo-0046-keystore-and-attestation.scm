@@ -7,7 +7,9 @@
   (section
     "Abstract"
     (p "A realm without identity is not sovereign. This Memo defines two protected stores within the vault:")
-    (p "1. Keystore - where cryptographic identity lives (Ed25519 signing keys) 2. Attestation Store - where proofs about the realm live (hardware, software, identity claims)")
+    (list
+      (item "Keystore - where cryptographic identity lives (Ed25519 signing keys)")
+      (item "Attestation Store - where proofs about the realm live (hardware, software, identity claims)"))
     (p "Together they form the inner vault - the protected core of a realm. Keys prove who you are. Attestations prove what you are."))
   (section
     "Motivation"
@@ -188,7 +190,11 @@
     (p "realm.pub - Public by nature. This IS your identity. Share it freely.")
     (p "attestations/ - Signed claims. Tamper-evident by construction. Copy them, share them - forgery is computationally infeasible.")
     (p "The vault doesn't rely on filesystem permissions, SELinux, or any operating system mechanism. Cyberspace assumes the OS is compromised. Protection comes from:")
-    (p "1. Encryption - Private key encrypted at rest 2. Memory zeroing - Keys cleared immediately after use 3. Signatures - Everything signed, tampering detected 4. Content addressing - Hash IS identity")
+    (list
+      (item "Encryption - Private key encrypted at rest")
+      (item "Memory zeroing - Keys cleared immediately after use")
+      (item "Signatures - Everything signed, tampering detected")
+      (item "Content addressing - Hash IS identity"))
     (p "If someone has root on your machine, they can install a keylogger - that's a physical security problem, not a cryptographic one. Cyberspace protects the math. Protect the machine yourself."))
   (section
     "Integration"
@@ -228,7 +234,12 @@
     (p "Ed25519 replacement: SPHINCS+ or CRYSTALS-Dilithium for signatures. That's a separate RFC."))
   (section
     "References"
-    (p "1. libsodium documentation - Password Hashing, Secret-key Encryption 2. Argon2 specification - https://github.com/P-H-C/phc-winner-argon2 3. Shamir's Secret Sharing - Shamir, A., \"How to Share a Secret\", 1979 4. Memo-008 - Threshold Governance 5. Memo-040 - Cyberspace Security Architecture"))
+    (list
+      (item "libsodium documentation - Password Hashing, Secret-key Encryption")
+      (item "Argon2 specification - https://github.com/P-H-C/phc-winner-argon2")
+      (item "Shamir's Secret Sharing - Shamir, A., \"How to Share a Secret\", 1979")
+      (item "Memo-008 - Threshold Governance")
+      (item "Memo-040 - Cyberspace Security Architecture")))
   (section
     "Changelog"
     (list

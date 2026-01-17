@@ -34,7 +34,12 @@
       (p "libsodium automatically selects the best available source: - Linux: getrandom(2) syscall, falls back to /dev/urandom - macOS/iOS: arc4randombuf() - Windows: RtlGenRandom() - OpenBSD: arc4randombuf() (ChaCha20-based)"))
     (subsection
       "Why libsodium?"
-      (p "1. Cross-platform consistency - Same API everywhere 2. Automatic best-source selection - No platform-specific code 3. Initialization safety - Blocks until entropy available 4. Fork safety - Handles process forking correctly 5. Audited implementation - Widely reviewed cryptographic library"))
+      (list
+        (item "Cross-platform consistency - Same API everywhere")
+        (item "Automatic best-source selection - No platform-specific code")
+        (item "Initialization safety - Blocks until entropy available")
+        (item "Fork safety - Handles process forking correctly")
+        (item "Audited implementation - Widely reviewed cryptographic library")))
     (subsection
       "Platform Requirements"
       (p "#### Scheme (CHICKEN)")
@@ -120,7 +125,12 @@
       (p "#### How It Works")
       (code "┌─────────────────────────────────────────────────────────────┐\n│                     LAVARAND SYSTEM                          │\n├─────────────────────────────────────────────────────────────┤\n│                                                              │\n│   ┌─────────┐    ┌─────────┐    ┌─────────────────────┐     │\n│   │  Lava   │    │ Camera  │    │  Image → Hash       │     │\n│   │  Lamp   │───▶│  Feed   │───▶│  SHA-256 per frame  │     │\n│   │  Wall   │    │         │    │                     │     │\n│   └─────────┘    └─────────┘    └──────────┬──────────┘     │\n│                                            │                 │\n│                                            ▼                 │\n│                                  ┌─────────────────────┐     │\n│                                  │  Entropy Pool       │     │\n│                                  │  (mix with CSPRNG)  │     │\n│                                  └─────────────────────┘     │\n│                                                              │\n└─────────────────────────────────────────────────────────────┘")
       (p "#### Why Lava Lamps?")
-      (p "1. Chaotic fluid dynamics - Wax movement is unpredictable 2. Thermal convection - Heat creates complex flow patterns 3. High bandwidth - Each video frame yields fresh entropy 4. Tamper-evident - Physical installation is visible 5. Independent source - Not correlated with CPU state")
+      (list
+        (item "Chaotic fluid dynamics - Wax movement is unpredictable")
+        (item "Thermal convection - Heat creates complex flow patterns")
+        (item "High bandwidth - Each video frame yields fresh entropy")
+        (item "Tamper-evident - Physical installation is visible")
+        (item "Independent source - Not correlated with CPU state"))
       (p "Cloudflare's wall of 100 lava lamps generates entropy for ~10% of internet HTTPS traffic.")
       (p "#### Other Environmental Sources")
       (table

@@ -14,7 +14,11 @@
     (p "But even OCaml can have bugs. The TCB handles: - Ed25519 signatures - SHA-512 hashing - Signature chain verification")
     (p "A single bug breaks everything.")
     (p "Coq provides:")
-    (p "1. Machine-checked proofs: Theorems verified by computer 2. Extraction: Generate OCaml from proofs 3. Correctness by construction: Implementation matches specification 4. Eternal validity: Proofs don't expire")
+    (list
+      (item "Machine-checked proofs: Theorems verified by computer")
+      (item "Extraction: Generate OCaml from proofs")
+      (item "Correctness by construction: Implementation matches specification")
+      (item "Eternal validity: Proofs don't expire"))
     (p "From the Coq motto:")
     (blockquote "The proof is in the code."))
   (section
@@ -56,10 +60,18 @@
     "Proof Obligations"
     (subsection
       "What We Prove"
-      (p "1. Signature correctness: Valid signatures verify 2. Chain soundness: Valid chain implies authorization 3. Hash properties: Determinism, length preservation 4. Type safety: No buffer overflows, no null pointers"))
+      (list
+        (item "Signature correctness: Valid signatures verify")
+        (item "Chain soundness: Valid chain implies authorization")
+        (item "Hash properties: Determinism, length preservation")
+        (item "Type safety: No buffer overflows, no null pointers")))
     (subsection
       "What We Assume"
-      (p "1. Cryptographic hardness: Ed25519 unforgeability 2. libsodium correctness: Implementation matches spec 3. OCaml runtime: Extraction target is correct 4. Hardware: CPU executes instructions correctly"))
+      (list
+        (item "Cryptographic hardness: Ed25519 unforgeability")
+        (item "libsodium correctness: Implementation matches spec")
+        (item "OCaml runtime: Extraction target is correct")
+        (item "Hardware: CPU executes instructions correctly")))
     (subsection
       "Trust Chain"
       (code "Mathematical proof (Coq)\n    ↓\nExtraction (verified by Coq)\n    ↓\nOCaml code (typed, memory-safe)\n    ↓\nlibsodium (audited, widely deployed)\n    ↓\nCPU instructions (trust hardware)")))
@@ -115,7 +127,12 @@
       (code "Total TCB:     ~1000 lines OCaml\nVerified:      ~800 lines (extracted from ~2000 lines Coq)\nTrusted:       ~200 lines (FFI, bindings)")))
   (section
     "References"
-    (p "1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2. Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic. 3. Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*. 4. Chlipala, A. (2013). Certified Programming with Dependent Types. 5. Memo-0001: Cyberspace Architecture"))
+    (list
+      (item "Coq Development Team. The Coq Proof Assistant Reference Manual.")
+      (item "Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic.")
+      (item "Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*.")
+      (item "Chlipala, A. (2013). Certified Programming with Dependent Types.")
+      (item "Memo-0001: Cyberspace Architecture")))
   (section
     "Changelog"
     (list

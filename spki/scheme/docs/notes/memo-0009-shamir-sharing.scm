@@ -15,7 +15,11 @@
       (item "Key theft: Complete compromise")
       (item "Key escrow: Trust a third party?"))
     (p "Shamir's Secret Sharing provides:")
-    (p "1. Threshold recovery: Any K of N shares reconstruct 2. Information-theoretic security: K-1 shares reveal nothing 3. Distributed custody: No single holder 4. Backup flexibility: Geographic distribution")
+    (list
+      (item "Threshold recovery: Any K of N shares reconstruct")
+      (item "Information-theoretic security: K-1 shares reveal nothing")
+      (item "Distributed custody: No single holder")
+      (item "Backup flexibility: Geographic distribution"))
     (p "From Adi Shamir's 1979 paper \"How to Share a Secret\":")
     (blockquote "Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing."))
   (section
@@ -129,7 +133,12 @@
         (row "Weak random generation " "Use libsodium ")))
     (subsection
       "Operational Security"
-      (p "1. Generation: Air-gapped machine, secure random 2. Distribution: Out-of-band verification 3. Storage: Encrypted, physically secure 4. Reconstruction: Secure room, witnesses 5. Destruction: Secure wipe after use")))
+      (list
+        (item "Generation: Air-gapped machine, secure random")
+        (item "Distribution: Out-of-band verification")
+        (item "Storage: Encrypted, physically secure")
+        (item "Reconstruction: Secure room, witnesses")
+        (item "Destruction: Secure wipe after use"))))
   (section
     "Implementation Notes"
     (subsection
@@ -151,7 +160,11 @@
         (item "Threshold: 2 ≤ K ≤ N"))))
   (section
     "References"
-    (p "1. Shamir, A. (1979). How to share a secret. Communications of the ACM. 2. Blakley, G. R. (1979). Safeguarding cryptographic keys. 3. Beimel, A. (2011). Secret-Sharing Schemes: A Survey. 4. NIST SP 800-57. Recommendation for Key Management."))
+    (list
+      (item "Shamir, A. (1979). How to share a secret. Communications of the ACM.")
+      (item "Blakley, G. R. (1979). Safeguarding cryptographic keys.")
+      (item "Beimel, A. (2011). Secret-Sharing Schemes: A Survey.")
+      (item "NIST SP 800-57. Recommendation for Key Management.")))
   (section
     "Changelog"
     (list

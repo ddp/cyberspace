@@ -171,7 +171,13 @@
       (p "Recommended implementations: - OpenFHE (C++) - Full HE library - python-paillier - Reference implementation - threshold-paillier - Distributed key generation")))
   (section
     "References"
-    (p "1. Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes 2. Benaloh, J. (1994). Dense Probabilistic Encryption 3. Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and Optimally Efficient Multi-Authority Election Scheme 4. Memo-008: Threshold Signature Governance 5. Memo-011: Byzantine Consensus 6. Memo-022: Key Ceremony Protocol"))
+    (list
+      (item "Paillier, P. (1999). Public-Key Cryptosystems Based on Composite Degree Residuosity Classes")
+      (item "Benaloh, J. (1994). Dense Probabilistic Encryption")
+      (item "Cramer, R., Gennaro, R., Schoenmakers, B. (1997). A Secure and Optimally Efficient Multi-Authority Election Scheme")
+      (item "Memo-008: Threshold Signature Governance")
+      (item "Memo-011: Byzantine Consensus")
+      (item "Memo-022: Key Ceremony Protocol")))
   (section
     "Changelog"
     (list

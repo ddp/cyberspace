@@ -15,7 +15,11 @@
       (item "Reviews check logic: Not all interleavings")
       (item "Bugs hide in corners: Race conditions, edge cases"))
     (p "TLA+ provides:")
-    (p "1. Precise specification: Mathematical description of behavior 2. Model checking: Exhaustive state space exploration 3. Proof capability: Formal verification of properties 4. Design tool: Find bugs before writing code")
+    (list
+      (item "Precise specification: Mathematical description of behavior")
+      (item "Model checking: Exhaustive state space exploration")
+      (item "Proof capability: Formal verification of properties")
+      (item "Design tool: Find bugs before writing code"))
     (p "From Lamport:")
     (blockquote "If you're thinking without writing, you only think you're thinking."))
   (section
@@ -89,7 +93,11 @@
     (p "Mitigations: - Symmetry reduction - Abstraction - Proof for infinite cases"))
   (section
     "References"
-    (p "1. Lamport, L. (2002). Specifying Systems: The TLA+ Language. 2. Lamport, L. (2009). The PlusCal Algorithm Language. 3. Newcombe, C., et al. (2015). How Amazon Web Services Uses Formal Methods. 4. TLA+ Tools: https://lamport.azurewebsites.net/tla/tools.html"))
+    (list
+      (item "Lamport, L. (2002). Specifying Systems: The TLA+ Language.")
+      (item "Lamport, L. (2009). The PlusCal Algorithm Language.")
+      (item "Newcombe, C., et al. (2015). How Amazon Web Services Uses Formal Methods.")
+      (item "TLA+ Tools: https://lamport.azurewebsites.net/tla/tools.html")))
   (section
     "Changelog"
     (list

@@ -16,7 +16,10 @@
       (item "Network partitions: Messages delayed or lost")
       (item "Sybil attacks: Fake identities flood the network"))
     (p "Byzantine consensus provides:")
-    (p "1. Safety: Honest nodes agree on same value 2. Liveness: System makes progress despite failures 3. Fault tolerance: Survives f failures with 3f+1 nodes")
+    (list
+      (item "Safety: Honest nodes agree on same value")
+      (item "Liveness: System makes progress despite failures")
+      (item "Fault tolerance: Survives f failures with 3f+1 nodes"))
     (p "From Lamport, Shostak, and Pease (1982):")
     (blockquote "The Byzantine Generals Problem: reaching agreement in the presence of traitors."))
   (section
@@ -97,7 +100,12 @@
         (item "Network transport (TCP, QUIC)"))))
   (section
     "References"
-    (p "1. Lamport, L., Shostak, R., & Pease, M. (1982). The Byzantine Generals Problem. 2. Castro, M., & Liskov, B. (1999). Practical Byzantine Fault Tolerance. 3. Yin, M., et al. (2019). HotStuff: BFT Consensus with Linearity and Responsiveness. 4. Memo-008: Threshold Signature Governance 5. Memo-010: Federation Protocol"))
+    (list
+      (item "Lamport, L., Shostak, R., & Pease, M. (1982). The Byzantine Generals Problem.")
+      (item "Castro, M., & Liskov, B. (1999). Practical Byzantine Fault Tolerance.")
+      (item "Yin, M., et al. (2019). HotStuff: BFT Consensus with Linearity and Responsiveness.")
+      (item "Memo-008: Threshold Signature Governance")
+      (item "Memo-010: Federation Protocol")))
   (section
     "Changelog"
     (list

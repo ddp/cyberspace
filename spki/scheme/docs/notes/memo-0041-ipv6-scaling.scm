@@ -180,7 +180,14 @@
     (code scheme "(node-metrics)\n;; Returns:\n((objects-stored 150000)\n (objects-size-gb 50)\n (peers-known 500)\n (peers-connected 20)\n (sync-lag-seconds 30)\n (bandwidth-in-mbps 10)\n (bandwidth-out-mbps 5)\n (requests-per-second 100)\n (errors-per-second 0.1))"))
   (section
     "References"
-    (p "1. Memo-010: Federation Protocol 2. Memo-016: Lazy Clustering 3. Memo-037: Node Roles and Capabilities 4. Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information System 5. Rabin, M. (1981). Fingerprinting by Random Polynomials 6. IPFS Whitepaper (2014) 7. Shapiro, M. (2011). Conflict-Free Replicated Data Types"))
+    (list
+      (item "Memo-010: Federation Protocol")
+      (item "Memo-016: Lazy Clustering")
+      (item "Memo-037: Node Roles and Capabilities")
+      (item "Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information System")
+      (item "Rabin, M. (1981). Fingerprinting by Random Polynomials")
+      (item "IPFS Whitepaper (2014)")
+      (item "Shapiro, M. (2011). Conflict-Free Replicated Data Types")))
   (section
     "Changelog"
     (list

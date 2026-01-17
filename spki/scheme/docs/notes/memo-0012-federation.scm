@@ -20,7 +20,12 @@
       (item "Trust concentration: Must trust operator")
       (item "Survival: Company folds, data lost"))
     (p "Federation provides:")
-    (p "1. Decentralized - No master server 2. Resilient - Survives node failures 3. Autonomous - Each peer controls own data 4. Cryptographic - Trust through math, not authority 5. Eventual consistency - Convergence without coordination"))
+    (list
+      (item "Decentralized - No master server")
+      (item "Resilient - Survives node failures")
+      (item "Autonomous - Each peer controls own data")
+      (item "Cryptographic - Trust through math, not authority")
+      (item "Eventual consistency - Convergence without coordination")))
   (section
     "Federation Model"
     (subsection
@@ -88,7 +93,12 @@
       (p "Default: Reject conflicts, require human decision."))
     (subsection
       "Resolution Strategies"
-      (p "1. Reject: Stop sync, alert human 2. Prefer-local: Keep local version 3. Prefer-remote: Take remote version 4. Rename: Keep both as 2.0.0-local, 2.0.0-remote 5. Merge: If content mergeable (future)")))
+      (list
+        (item "Reject: Stop sync, alert human")
+        (item "Prefer-local: Keep local version")
+        (item "Prefer-remote: Take remote version")
+        (item "Rename: Keep both as 2.0.0-local, 2.0.0-remote")
+        (item "Merge: If content mergeable (future)"))))
   (section
     "Consistency Model"
     (subsection
@@ -129,7 +139,12 @@
     "Bootstrap Procedure"
     (subsection
       "New Peer Joining"
-      (p "1. Generate keypair 2. Register with known peer 3. Exchange public keys (out-of-band verification) 4. Initial sync to get current releases 5. Begin participating in federation"))
+      (list
+        (item "Generate keypair")
+        (item "Register with known peer")
+        (item "Exchange public keys (out-of-band verification)")
+        (item "Initial sync to get current releases")
+        (item "Begin participating in federation")))
     (subsection
       "Network Partitions"
       (list
@@ -156,7 +171,12 @@
         (item "Conflict resolution UI"))))
   (section
     "References"
-    (p "1. Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols. 2. Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance. 3. Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types. 4. Memo-0002: Replication Layer 5. Memo-004: SPKI Authorization"))
+    (list
+      (item "Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols.")
+      (item "Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance.")
+      (item "Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types.")
+      (item "Memo-0002: Replication Layer")
+      (item "Memo-004: SPKI Authorization")))
   (section
     "Changelog"
     (list

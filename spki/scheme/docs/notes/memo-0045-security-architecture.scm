@@ -457,7 +457,16 @@
     (code "I1. No access without valid capability\n    access(s,o,r) → ∃c: valid_chain(s,o,r,c)\n\nI2. Delegation cannot amplify\n    delegated(c₂,c₁) → rights(c₂) ⊆ rights(c₁)\n\nI3. Object identity is content hash\n    id(o) = sha512(content(o))\n\nI4. Audit is ordered\n    sequence(e₁) < sequence(e₂) → time(e₁) ≤ time(e₂)\n\nI5. Revocation is permanent\n    revoked(c,t) → ∀t' > t: ¬valid(c,t')\n\nI6. No ambient authority\n    ¬∃c: grants(c,,)"))
   (section
     "References"
-    (p "1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model 8. Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982 9. Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985"))
+    (list
+      (item "Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999")
+      (item "Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966")
+      (item "Miller, M., Robust Composition, 2006")
+      (item "Lampson, B., A Note on the Confinement Problem, 1973")
+      (item "DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens")
+      (item "Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model")
+      (item "Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model")
+      (item "Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982")
+      (item "Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985")))
   (section
     "Changelog"
     (list

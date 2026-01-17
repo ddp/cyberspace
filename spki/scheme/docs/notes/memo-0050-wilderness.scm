@@ -79,10 +79,18 @@
   (section
     "6. Design Rationale"
     (p "The Wilderness serves multiple purposes:")
-    (p "1. Honest onboarding - Users know they are not yet part of anything 2. Unified metaphor - Same space for unaffiliated and wormhole transit 3. Security clarity - No implicit trust, no assumed identity 4. Poetic resonance - Evokes the uncertainty of the unaffiliated state"))
+    (list
+      (item "Honest onboarding - Users know they are not yet part of anything")
+      (item "Unified metaphor - Same space for unaffiliated and wormhole transit")
+      (item "Security clarity - No implicit trust, no assumed identity")
+      (item "Poetic resonance - Evokes the uncertainty of the unaffiliated state")))
   (section
     "7. References"
-    (p "1. Angleton, J.J. - \"Wilderness of Mirrors\" (intelligence terminology) 2. Eliot, T.S. - \"Gerontion\" (original source of the phrase) 3. Memo-010 - Federation Protocol 4. Memo-044 - Node Enrollment"))
+    (list
+      (item "Angleton, J.J. - \"Wilderness of Mirrors\" (intelligence terminology)")
+      (item "Eliot, T.S. - \"Gerontion\" (original source of the phrase)")
+      (item "Memo-010 - Federation Protocol")
+      (item "Memo-044 - Node Enrollment")))
   (section
     "Changelog"
     (list

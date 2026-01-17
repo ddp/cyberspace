@@ -244,11 +244,12 @@ Cross-reference with other traffic: Likely a specific model."))
       (item "[ ] Personas separated if needed")))
   (section
     "12. References"
-    (p "1. Memo-010 — Federation Protocol")
-    (p "2. Memo-024 — Network Protocol")
-    (p "3. Memo-046 — Security Architecture")
-    (p "4. Dingledine, R., et al. (2004). Tor: The Second-Generation Onion Router")
-    (p "5. Danezis, G., Diaz, C. (2008). A Survey of Anonymous Communication Channels"))
+    (list
+      (item "Memo-010 - Federation Protocol")
+      (item "Memo-024 - Network Protocol")
+      (item "Memo-046 - Security Architecture")
+      (item "Dingledine, R., et al. (2004). Tor: The Second-Generation Onion Router")
+      (item "Danezis, G., Diaz, C. (2008). A Survey of Anonymous Communication Channels")))
   (section
     "Changelog"
     (p "- 2026-01-13 — Purge OOP: class → stratum, storage-class → storage-tier")

@@ -10,7 +10,11 @@
   (section
     "Motivation"
     (p "Documentation must be:")
-    (p "1. Preserved - Open formats for long-term archival 2. Accessible - Viewable in any environment 3. Readable - Human-readable output 4. Discoverable - Indexed for navigation")
+    (list
+      (item "Preserved - Open formats for long-term archival")
+      (item "Accessible - Viewable in any environment")
+      (item "Readable - Human-readable output")
+      (item "Discoverable - Indexed for navigation"))
     (subsection
       "Why PostScript, Not PDF"
       (p "PDF is Adobe's proprietary format dressed in ISO clothing.[^h1] PostScript is:")
@@ -53,7 +57,12 @@
         (row "Historic " "Superseded or deprecated ")))
     (subsection
       "Required Sections"
-      (p "1. Abstract — One paragraph summary 2. Motivation — Why this RFC exists 3. Specification — The technical details 4. Security Considerations — Required, even if \"None\" 5. References — Citations and dependencies")))
+      (list
+        (item "Abstract - One paragraph summary")
+        (item "Motivation - Why this RFC exists")
+        (item "Specification - The technical details")
+        (item "Security Considerations - Required, even if \"None\"")
+        (item "References - Citations and dependencies"))))
   (section
     "Footnote Categories"
     (p "RFCs use categorized footnotes to separate different types of annotations:[^d2]")
@@ -189,7 +198,10 @@
       (p "Remote publication uses: - SSH key authentication - No sensitive data in documents - World-readable permissions only")))
   (section
     "References"
-    (p "1. Pandoc User's Guide (preserved) 2. PostScript Language Reference Manual - Adobe (preserved) 3. Memo-006: Vault System Architecture"))
+    (list
+      (item "Pandoc User's Guide (preserved)")
+      (item "PostScript Language Reference Manual - Adobe (preserved)")
+      (item "Memo-006: Vault System Architecture")))
   (section
     "Changelog"
     (list

@@ -16,7 +16,12 @@
       (item "Offline operation: Internet isn't always available")
       (item "Simplicity: Complex protocols have complex bugs"))
     (p "Lazy Clustering provides:")
-    (p "1. Sync when ready: Push/pull at human pace 2. Offline-first: Work without network 3. Conflict detection: Know when divergence happens 4. Manual resolution: Humans resolve, not algorithms 5. Audit everything: Full history preserved")
+    (list
+      (item "Sync when ready: Push/pull at human pace")
+      (item "Offline-first: Work without network")
+      (item "Conflict detection: Know when divergence happens")
+      (item "Manual resolution: Humans resolve, not algorithms")
+      (item "Audit everything: Full history preserved"))
     (blockquote "The best protocol is the one you don't run."))
   (section
     "Specification"
@@ -181,7 +186,12 @@
       (code ".vault/\n  lazy/\n    peers.sexp        # Registered peers\n    vectors.sexp      # Version vectors\n    conflicts/        # Unresolved conflicts\n    queue/            # Pending pushes")))
   (section
     "References"
-    (p "1. Saito, Y., & Shapiro, M. (2005). Optimistic Replication. 2. Terry, D., et al. (1995). Managing Update Conflicts in Bayou. 3. DeCandia, G., et al. (2007). Dynamo: Amazon's Key-Value Store. 4. Memo-010: Federation Protocol 5. Memo-012: Lamport Logical Clocks"))
+    (list
+      (item "Saito, Y., & Shapiro, M. (2005). Optimistic Replication.")
+      (item "Terry, D., et al. (1995). Managing Update Conflicts in Bayou.")
+      (item "DeCandia, G., et al. (2007). Dynamo: Amazon's Key-Value Store.")
+      (item "Memo-010: Federation Protocol")
+      (item "Memo-012: Lamport Logical Clocks")))
   (section
     "Changelog"
     (list

@@ -151,7 +151,13 @@
     (code scheme ";; Initiator\n(define ch (node-connect \"remote.host\" 4433))\n(channel-send ch '(request object-hash))\n(channel-recv ch)\n\n;; Responder\n(node-listen 4433 \"my-node\")\n(define ch (node-accept))\n(let ((msg (channel-recv ch)))\n  (channel-send ch (process msg)))"))
   (section
     "References"
-    (p "1. Karn, P. & Simpson, W. (1999). PHOTURIS. RFC 2522. 2. Karn, P. & Simpson, W. (1999). PHOTURIS Extended Schemes. RFC 2523. 3. Bernstein, D.J. (2006). Curve25519. 4. Bernstein, D.J. (2008). ChaCha20. 5. Memo-021: Capability Delegation 6. Memo-040: Security Architecture"))
+    (list
+      (item "Karn, P. & Simpson, W. (1999). PHOTURIS. RFC 2522.")
+      (item "Karn, P. & Simpson, W. (1999). PHOTURIS Extended Schemes. RFC 2523.")
+      (item "Bernstein, D.J. (2006). Curve25519.")
+      (item "Bernstein, D.J. (2008). ChaCha20.")
+      (item "Memo-021: Capability Delegation")
+      (item "Memo-040: Security Architecture")))
   (section
     "Changelog"
     (p "- 2026-01-07: Initial specification")))

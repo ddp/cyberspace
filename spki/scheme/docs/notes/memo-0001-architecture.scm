@@ -168,7 +168,14 @@
       (item "Fault-tolerant consensus")))
   (section
     "10. References"
-    (p "1. Diffie, W., & Hellman, M. (1976). New directions in cryptography. 2. Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document. 3. Merkle, R. C. (1987). A digital signature based on a conventional encryption function. 4. Shamir, A. (1979). How to share a secret. 5. Lamport, L. (1978). Time, clocks, and the ordering of events in a distributed system. 6. Lampson, B. W. (1971). Protection. 7. Ellison, C., et al. (1999). SPKI certificate theory. RFC 2693."))
+    (list
+      (item "Diffie, W., & Hellman, M. (1976). New directions in cryptography.")
+      (item "Haber, S., & Stornetta, W. S. (1991). How to time-stamp a digital document.")
+      (item "Merkle, R. C. (1987). A digital signature based on a conventional encryption function.")
+      (item "Shamir, A. (1979). How to share a secret.")
+      (item "Lamport, L. (1978). Time, clocks, and the ordering of events in a distributed system.")
+      (item "Lampson, B. W. (1971). Protection.")
+      (item "Ellison, C., et al. (1999). SPKI certificate theory. RFC 2693.")))
   (section
     "Changelog"
     (list

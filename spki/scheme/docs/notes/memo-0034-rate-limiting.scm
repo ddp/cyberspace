@@ -110,7 +110,11 @@
       (code scheme "(define (audit-limit-event event-type principal details)\n  (audit-append\n    action: event-type\n    principal: principal\n    details: details\n    timestamp: (current-time)))")))
   (section
     "References"
-    (p "1. [Token Bucket Algorithm](https://en.wikipedia.org/wiki/Tokenbucket) 2. [Leaky Bucket Algorithm](https://en.wikipedia.org/wiki/Leakybucket) 3. [Memo-021: Capability Delegation](memo-021-capability-delegation.html) 4. [Memo-031: Monitoring](memo-031-monitoring.html)"))
+    (list
+      (item "[Token Bucket Algorithm](https://en.wikipedia.org/wiki/Tokenbucket)")
+      (item "[Leaky Bucket Algorithm](https://en.wikipedia.org/wiki/Leakybucket)")
+      (item "[Memo-021: Capability Delegation](memo-021-capability-delegation.html)")
+      (item "[Memo-031: Monitoring](memo-031-monitoring.html)")))
   (section
     "Changelog"
     (list

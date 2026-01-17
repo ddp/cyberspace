@@ -25,7 +25,11 @@
     (subsection
       "What is an Agent?"
       (p "An agent is:")
-      (p "1. Mobile code - Scheme closures that can serialize and migrate 2. Credentialed - Carries SPKI certificates granting capabilities 3. Accountable - Every action recorded in audit trail 4. Supervised - Realm coordinator can inspect, suspend, terminate")
+      (list
+        (item "Mobile code - Scheme closures that can serialize and migrate")
+        (item "Credentialed - Carries SPKI certificates granting capabilities")
+        (item "Accountable - Every action recorded in audit trail")
+        (item "Supervised - Realm coordinator can inspect, suspend, terminate"))
       (code scheme "(define-record-type <agent>\n  (make-agent id principal code state credentials realm)\n  agent?\n  (id agent-id)                    ; Content hash of initial code+state\n  (principal agent-principal)      ; SPKI key that spawned this agent\n  (code agent-code)                ; Scheme closure (serializable)\n  (state agent-state)              ; Mutable state (content-addressed)\n  (credentials agent-credentials)  ; SPKI certificate chain\n  (realm agent-realm))             ; Current realm location"))
     (subsection
       "Agent Lifecycle"
@@ -193,7 +197,16 @@
       (p "The agent computes on encrypted data, returns encrypted result. Only the principal with the decryption key can read the result.")))
   (section
     "References"
-    (p "1. Telescript Language Reference - General Magic (preserved) 2. Mobile Agents - Lange & Oshima (preserved) 3. Distributed Lock Manager - VAX/VMS SCS (preserved) 4. Concurrency Oriented Programming in Termite Scheme - Germain (preserved) 5. Memo-003: Cryptographic Audit Trail 6. Memo-004: SPKI Authorization 7. Memo-010: Federation Protocol 8. Memo-021: Capability Delegation 9. Memo-023: Agent Sandboxing"))
+    (list
+      (item "Telescript Language Reference - General Magic (preserved)")
+      (item "Mobile Agents - Lange & Oshima (preserved)")
+      (item "Distributed Lock Manager - VAX/VMS SCS (preserved)")
+      (item "Concurrency Oriented Programming in Termite Scheme - Germain (preserved)")
+      (item "Memo-003: Cryptographic Audit Trail")
+      (item "Memo-004: SPKI Authorization")
+      (item "Memo-010: Federation Protocol")
+      (item "Memo-021: Capability Delegation")
+      (item "Memo-023: Agent Sandboxing")))
   (section
     "Changelog"
     (list

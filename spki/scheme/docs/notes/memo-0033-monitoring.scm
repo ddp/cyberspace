@@ -106,7 +106,11 @@
       (code scheme ";; Sample traces to control storage\n(define trace-sample-rate 0.1)  ; 10%\n\n(define (should-sample-trace?)\n  (< (random 1.0) trace-sample-rate))\n\n(define (record-trace! trace)\n  (when (or (trace-has-error? trace)\n            (should-sample-trace?))\n    (soup-put trace type: 'trace)))")))
   (section
     "References"
-    (p "1. [OpenTelemetry](https://opentelemetry.io/) - Observability framework 2. [Prometheus](https://prometheus.io/) - Monitoring system 3. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 4. [Memo-028: Error Handling](memo-028-error-handling.html)"))
+    (list
+      (item "[OpenTelemetry](https://opentelemetry.io/) - Observability framework")
+      (item "[Prometheus](https://prometheus.io/) - Monitoring system")
+      (item "[Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html)")
+      (item "[Memo-028: Error Handling](memo-028-error-handling.html)")))
   (section
     "Changelog"
     (list

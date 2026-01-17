@@ -178,13 +178,15 @@
     "References"
     (subsection
       "Normative References"
-      (p "1. RFC 2026 - Bradner, S., \"The Internet Standards Process\", BCP 9, 1996")
-      (p "2. RFC 2119 - Bradner, S., \"Key words for use in RFCs\", BCP 14, 1997")
-      (p "3. RFC 8174 - Leiba, B., \"Ambiguity of Uppercase vs Lowercase\", BCP 14, 2017"))
+      (list
+        (item "RFC 2026 - Bradner, S., \"The Internet Standards Process\", BCP 9, 1996")
+        (item "RFC 2119 - Bradner, S., \"Key words for use in RFCs\", BCP 14, 1997")
+        (item "RFC 8174 - Leiba, B., \"Ambiguity of Uppercase vs Lowercase\", BCP 14, 2017")))
     (subsection
       "Informative References"
-      (p "4. RFC 3935 - Alvestrand, H., \"A Mission Statement for the IETF\", 2004")
-      (p "5. RFC 7322 - Flanagan, H., Ginoza, S., \"RFC Style Guide\", 2014")))
+      (list
+        (item "RFC 3935 - Alvestrand, H., \"A Mission Statement for the IETF\", 2004")
+        (item "RFC 7322 - Flanagan, H., Ginoza, S., \"RFC Style Guide\", 2014"))))
   (section
     "Acknowledgments"
     (p "The IETF community, whose 35+ years of open standards development provides the foundation we build upon. Rough consensus and running code."))

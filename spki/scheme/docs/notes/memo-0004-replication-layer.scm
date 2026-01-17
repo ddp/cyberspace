@@ -16,11 +16,21 @@
     (subsection
       "Requirements"
       (p "The Library of Cyberspace requires a distribution mechanism that:")
-      (p "1. Preserves cryptographic authenticity - Signatures travel with artifacts 2. Enables offline verification - No centralized authority required 3. Records provenance - All publication events are audited 4. Supports multiple transports - Git, HTTP, filesystem 5. Maintains loose coupling - Works for confederations of friends")
+      (list
+        (item "Preserves cryptographic authenticity - Signatures travel with artifacts")
+        (item "Enables offline verification - No centralized authority required")
+        (item "Records provenance - All publication events are audited")
+        (item "Supports multiple transports - Git, HTTP, filesystem")
+        (item "Maintains loose coupling - Works for confederations of friends"))
       (p "Traditional package managers and distribution systems assume centralized registries and online verification. This replication layer is designed for decentralized, long-term preservation where trust is established through Simple Public Key Infrastructure (SPKI) certificates and cryptographic seals.")))
   (section
     "Design Principles"
-    (p "1. Sealed Releases - Only cryptographically signed releases can be published 2. Transport Agnostic - Same API works for git, HTTP, filesystem 3. Audit Everything - All replication events are recorded in tamper-evident log 4. Verify Before Trust - Subscribers must verify cryptographic seals 5. Explicit Authorization - SPKI certificates determine who can publish"))
+    (list
+      (item "Sealed Releases - Only cryptographically signed releases can be published")
+      (item "Transport Agnostic - Same API works for git, HTTP, filesystem")
+      (item "Audit Everything - All replication events are recorded in tamper-evident log")
+      (item "Verify Before Trust - Subscribers must verify cryptographic seals")
+      (item "Explicit Authorization - SPKI certificates determine who can publish")))
   (section
     "Specification"
     (subsection
@@ -75,7 +85,12 @@
   (section
     "Audit Integration"
     (p "Every replication operation creates an audit entry with:")
-    (p "1. Content-addressed ID - SHA-512 hash of entry 2. Chained structure - References parent entry 3. SPKI principal - Public key of actor 4. Dual context - Human motivation + machine environment 5. Cryptographic seal - Ed25519 signature")
+    (list
+      (item "Content-addressed ID - SHA-512 hash of entry")
+      (item "Chained structure - References parent entry")
+      (item "SPKI principal - Public key of actor")
+      (item "Dual context - Human motivation + machine environment")
+      (item "Cryptographic seal - Ed25519 signature"))
     (p "This provides: - Non-repudiation - Cannot deny publication - Tamper evidence - Changes are detectable - Causality - Chain shows temporal order - Accountability - Know who published what when"))
   (section
     "Security Considerations"
@@ -85,13 +100,19 @@
       (p "Untrusted: - Remote repositories - Network transport - Downloaded archives - Remote publishers (until SPKI verified)"))
     (subsection
       "Attack Scenarios"
-      (p "1. Malicious Archive Substitution    - Attacker replaces archive on remote    - Mitigation: Signature verification fails")
-      (p "2. Version Rollback Attack    - Attacker removes newer releases    - Mitigation: Audit trail shows previous versions")
-      (p "3. Unauthorized Publication    - Attacker publishes fake release    - Mitigation: SPKI authorization chain required")
-      (p "4. Transport Tampering    - Network attacker modifies download    - Mitigation: Hash and signature verification"))
+      (list
+        (item "Malicious Archive Substitution - Attacker replaces archive on remote - Mitigation: Signature verification fails")
+        (item "Version Rollback Attack - Attacker removes newer releases - Mitigation: Audit trail shows previous versions")
+        (item "Unauthorized Publication - Attacker publishes fake release - Mitigation: SPKI authorization chain required")
+        (item "Transport Tampering - Network attacker modifies download - Mitigation: Hash and signature verification")))
     (subsection
       "Best Practices"
-      (p "1. Always verify signatures - Use verify-key parameter 2. Check SPKI certificates - Verify authorization chain 3. Maintain audit trail - Detect suspicious patterns 4. Use HTTPS for HTTP transport - Prevent network attacks 5. Backup signing keys - Use Shamir secret sharing")))
+      (list
+        (item "Always verify signatures - Use verify-key parameter")
+        (item "Check SPKI certificates - Verify authorization chain")
+        (item "Maintain audit trail - Detect suspicious patterns")
+        (item "Use HTTPS for HTTP transport - Prevent network attacks")
+        (item "Backup signing keys - Use Shamir secret sharing"))))
   (section
     "Implementation Notes"
     (subsection
@@ -128,7 +149,12 @@
     (code scheme ";; Test seal-publish to filesystem\n(seal-publish \"1.0.0\"\n              remote: \"/tmp/cyberspace-publish-test\"\n              message: \"Published to filesystem\")\n\n;; Verify archive exists\n(file-exists? \"/tmp/cyberspace-publish-test/vault-1.0.0.archive\")\n\n;; Verify audit entry created\n(audit-read sequence: 1)"))
   (section
     "References"
-    (p "1. SDSI/SPKI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 - Bernstein et al. 5. Audit Trails - Memo-002 (Cryptographic Audit Trail)"))
+    (list
+      (item "SDSI/SPKI - RFC 2693, RFC 2692")
+      (item "Content-Addressed Storage - Git internals, IPFS")
+      (item "Semantic Versioning - semver.org")
+      (item "Ed25519 - Bernstein et al.")
+      (item "Audit Trails - Memo-002 (Cryptographic Audit Trail)")))
   (section
     "Changelog"
     (list

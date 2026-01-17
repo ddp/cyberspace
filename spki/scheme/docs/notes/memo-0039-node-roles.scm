@@ -16,7 +16,11 @@
     "Motivation"
     (p "Memo-010 (Federation Protocol) defines trust relationships between peers (publisher, subscriber, peer). However, it does not address functional capabilities - what operations each node can actually perform based on its hardware and network constraints.")
     (p "A Raspberry Pi on a solar-powered satellite uplink has different capabilities than a rack-mounted server in a datacenter. The system should:")
-    (p "1. Self-assess - Nodes should know their own capabilities 2. Declare - Nodes should advertise their role to peers 3. Adapt - Operations should degrade gracefully based on available roles 4. Persist - Role assignments should survive restarts"))
+    (list
+      (item "Self-assess - Nodes should know their own capabilities")
+      (item "Declare - Nodes should advertise their role to peers")
+      (item "Adapt - Operations should degrade gracefully based on available roles")
+      (item "Persist - Role assignments should survive restarts")))
   (section
     "Node Roles"
     (subsection
@@ -98,14 +102,25 @@
     (subsection
       "Role Spoofing"
       (p "A node could claim a higher role than its capabilities warrant. Mitigations:")
-      (p "1. Capability proofs: Require benchmark results 2. Peer validation: Other nodes can challenge claims 3. Reputation: Track role fulfillment history 4. Threshold trust: Multiple witnesses needed"))
+      (list
+        (item "Capability proofs: Require benchmark results")
+        (item "Peer validation: Other nodes can challenge claims")
+        (item "Reputation: Track role fulfillment history")
+        (item "Threshold trust: Multiple witnesses needed")))
     (subsection
       "Role Downgrade Attacks"
       (p "An attacker could force nodes to operate at lower roles:")
-      (p "1. Signed role declarations: Can't forge 2. Local override: Node controls own role 3. Audit trail: Role changes are logged")))
+      (list
+        (item "Signed role declarations: Can't forge")
+        (item "Local override: Node controls own role")
+        (item "Audit trail: Role changes are logged"))))
   (section
     "References"
-    (p "1. Memo-010: Federation Protocol 2. Memo-011: Byzantine Consensus 3. Memo-016: Lazy Clustering 4. Memo-017: Security Considerations"))
+    (list
+      (item "Memo-010: Federation Protocol")
+      (item "Memo-011: Byzantine Consensus")
+      (item "Memo-016: Lazy Clustering")
+      (item "Memo-017: Security Considerations")))
   (section
     "Changelog"
     (list

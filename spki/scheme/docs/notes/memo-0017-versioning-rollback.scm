@@ -124,7 +124,11 @@
       (p "Mitigation: - Prefer forward rollback - Audit before hard rollback - Federation replication preserves history")))
   (section
     "References"
-    (p "1. Semantic Versioning 2.0.0 (semver.org) 2. Git Reset, Checkout, and Revert (git-scm.com) 3. Memo-003: Cryptographic Audit Trail 4. Memo-006: Vault System Architecture"))
+    (list
+      (item "Semantic Versioning 2.0.0 (semver.org)")
+      (item "Git Reset, Checkout, and Revert (git-scm.com)")
+      (item "Memo-003: Cryptographic Audit Trail")
+      (item "Memo-006: Vault System Architecture")))
   (section
     "Changelog"
     (list

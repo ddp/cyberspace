@@ -16,7 +16,11 @@
       (item "Databases: Row IDs, primary keys")
       (item "URLs: Server + path (https://example.com/doc.ps)"))
     (p "Location-based addressing has fundamental problems:")
-    (p "1. Mutability - Same address can point to different content over time 2. Link rot - Addresses become invalid when content moves 3. Duplication - Identical content stored multiple times 4. No verification - Address doesn't prove content integrity")
+    (list
+      (item "Mutability - Same address can point to different content over time")
+      (item "Link rot - Addresses become invalid when content moves")
+      (item "Duplication - Identical content stored multiple times")
+      (item "No verification - Address doesn't prove content integrity"))
     (p "Content-addressed storage inverts this:")
     (code "Location-based:  address → content (many-to-one, mutable)\nContent-based:   content → address (one-to-one, immutable)")
     (p "The address IS the content's cryptographic fingerprint. If the content changes, the address changes. If two files have the same address, they are byte-for-byte identical."))
@@ -37,7 +41,11 @@
     (subsection
       "Hash Function Requirements"
       (p "The hash function MUST be:")
-      (p "1. Collision-resistant - Computationally infeasible to find two inputs with same hash 2. Preimage-resistant - Cannot derive content from hash 3. Deterministic - Same content always produces same hash 4. Fast - Practical for large objects")
+      (list
+        (item "Collision-resistant - Computationally infeasible to find two inputs with same hash")
+        (item "Preimage-resistant - Cannot derive content from hash")
+        (item "Deterministic - Same content always produces same hash")
+        (item "Fast - Practical for large objects"))
       (p "Specified hash: SHA-256 (32 bytes, 64 hex characters)")
       (code scheme ";; Example content address\n\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n;; This is the SHA-256 of the empty string")))
   (section
@@ -134,7 +142,10 @@
   (section
     "Chunking for Large Objects"
     (p "Large files are split into chunks for:")
-    (p "1. Deduplication at sub-file granularity 2. Parallel transfer 3. Incremental updates")
+    (list
+      (item "Deduplication at sub-file granularity")
+      (item "Parallel transfer")
+      (item "Incremental updates"))
     (subsection
       "Fixed-Size Chunking"
       (code scheme "(define chunk-size (* 64 1024))  ; 64KB\n\n(define (chunk-fixed data)\n  (let loop ((offset 0) (chunks '()))\n    (if (>= offset (blob-length data))\n        (reverse chunks)\n        (loop (+ offset chunk-size)\n              (cons (blob-copy data offset (min chunk-size (- (blob-length data) offset)))\n                    chunks)))))"))
@@ -327,7 +338,14 @@
       (code scheme "(define-condition-type &cas-error &error\n  cas-error?\n  (hash cas-error-hash))\n\n(define-condition-type &cas-not-found &cas-error\n  cas-not-found?)\n\n(define-condition-type &cas-corrupt &cas-error\n  cas-corrupt?)")))
   (section
     "References"
-    (p "1. Merkle, R. (1987), \"A Digital Signature Based on a Conventional Encryption Function\" 2. Git Internals - Git Objects 3. IPFS Content Addressing 4. Putze, Sanders, Singler (2007), \"Cache-, Hash-, and Space-Efficient Bloom Filters\" 5. Bender et al. (2012), \"Don't Thrash: How to Cache Your Hash on Flash\" 6. Memo-006: Vault System Architecture 7. Memo-018: Sealed Archive Format"))
+    (list
+      (item "Merkle, R. (1987), \"A Digital Signature Based on a Conventional Encryption Function\"")
+      (item "Git Internals - Git Objects")
+      (item "IPFS Content Addressing")
+      (item "Putze, Sanders, Singler (2007), \"Cache-, Hash-, and Space-Efficient Bloom Filters\"")
+      (item "Bender et al. (2012), \"Don't Thrash: How to Cache Your Hash on Flash\"")
+      (item "Memo-006: Vault System Architecture")
+      (item "Memo-018: Sealed Archive Format")))
   (section
     "Changelog"
     (list

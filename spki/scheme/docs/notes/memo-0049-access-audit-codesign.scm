@@ -23,7 +23,10 @@
     (code "┌─────────────────────────────────────┐\n│         Access Control Point        │\n├─────────────────────────────────────┤\n│ Input:  principal, action, context  │\n├─────────────────────────────────────┤\n│ Output: decision (grant | refuse)   │\n│         effect   (what happens)     │\n│         record   (audit entry)      │\n│                  ↓                  │\n│         policy → lean: print        │\n│                  paranoid: append   │\n└─────────────────────────────────────┘")
     (subsection
       "The Three Outputs"
-      (p "1. Decision: Grant or refuse the requested action 2. Effect: The consequence of the decision (action performed, or refusal message) 3. Record: An audit entry capturing what happened"))
+      (list
+        (item "Decision: Grant or refuse the requested action")
+        (item "Effect: The consequence of the decision (action performed, or refusal message)")
+        (item "Record: An audit entry capturing what happened")))
     (subsection
       "Auditable vs. Audited"
       (list

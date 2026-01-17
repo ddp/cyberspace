@@ -18,7 +18,12 @@
     (p "Instead of hashing content as a flat blob, structure it as a tree:")
     (code "                    ┌─────────────────┐\n                    │   Merkle Root   │  ← Object identity\n                    │  shake256(...)  │\n                    └────────┬────────┘\n                             │\n              ┌──────────────┼──────────────┐\n              │              │              │\n         ┌────▼────┐    ┌────▼────┐    ┌────▼────┐\n         │ Node 0  │    │ Node 1  │    │ Node 2  │\n         └────┬────┘    └────┬────┘    └────┬────┘\n              │              │              │\n        ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐\n        │           │  │           │  │           │\n    ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ...\n    │Chunk 0│ │Chunk 1│ │Chunk 2│ │Chunk 3│ │Chunk 4│\n    │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │\n    └───────┘ └───────┘ └───────┘ └───────┘ └───────┘")
     (p "Benefits:")
-    (p "1. Incremental updates - Change one chunk, rehash one branch 2. Selective disclosure - Prove a chunk exists without revealing siblings 3. Streaming verification - Verify chunks as they arrive 4. Parallelizable - Hash chunks concurrently 5. Quantum-resistant - SHAKE256 at every node"))
+    (list
+      (item "Incremental updates - Change one chunk, rehash one branch")
+      (item "Selective disclosure - Prove a chunk exists without revealing siblings")
+      (item "Streaming verification - Verify chunks as they arrive")
+      (item "Parallelizable - Hash chunks concurrently")
+      (item "Quantum-resistant - SHAKE256 at every node")))
   (section
     "Hash Function: SHAKE256"
     (p "SHAKE256 is an extendable-output function (XOF) from the SHA-3 (Keccak) family.")
@@ -139,7 +144,12 @@
     (code "M1. Object identity is Merkle root\n    id(o) = merkle-root(shake256, chunks(o))\n\nM2. Any chunk is provable\n    chunk(o,i) → ∃proof: verify(root(o), i, chunk, proof)\n\nM3. Tree structure is canonical\n    tree(content, params) is deterministic\n\nM4. Dual hashes are consistent\n    sha512(content) ↔ merkle-root(content) verify same content\n\nM5. Migration preserves identity\n    old-objects retain verifiable legacy hashes"))
   (section
     "References"
-    (p "1. NIST FIPS 202 - SHA-3 Standard (SHAKE256) 2. BLAKE3 specification - https://github.com/BLAKE3-team/BLAKE3 3. Merkle, R., \"A Digital Signature Based on a Conventional Encryption Function\", 1987 4. Grover, L., \"A Fast Quantum Mechanical Algorithm for Database Search\", 1996 5. Memo-040 - Cyberspace Security Architecture"))
+    (list
+      (item "NIST FIPS 202 - SHA-3 Standard (SHAKE256)")
+      (item "BLAKE3 specification - https://github.com/BLAKE3-team/BLAKE3")
+      (item "Merkle, R., \"A Digital Signature Based on a Conventional Encryption Function\", 1987")
+      (item "Grover, L., \"A Fast Quantum Mechanical Algorithm for Database Search\", 1996")
+      (item "Memo-040 - Cyberspace Security Architecture")))
   (section
     "Changelog"
     (list

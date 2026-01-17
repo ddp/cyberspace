@@ -115,7 +115,11 @@
       (code scheme ";; Migrations require capability\n(spki-cert\n  (issuer vault-admin)\n  (subject schema-admin)\n  (capability\n    (action migrate-schema)\n    (object (schema 'document)))\n  (validity (not-after \"2027-01-01\")))")))
   (section
     "References"
-    (p "1. [Protocol Buffers - Updating A Message Type](https://developers.google.com/protocol-buffers/docs/proto#updating) 2. [Avro Schema Evolution](https://avro.apache.org/docs/current/spec.html#Schema+Resolution) 3. [Memo-020: Content-Addressed Storage](memo-020-content-addressed-storage.html) 4. [Memo-025: Query Language](memo-025-query-language.html)"))
+    (list
+      (item "[Protocol Buffers - Updating A Message Type](https://developers.google.com/protocol-buffers/docs/proto#updating)")
+      (item "[Avro Schema Evolution](https://avro.apache.org/docs/current/spec.html#Schema+Resolution)")
+      (item "[Memo-020: Content-Addressed Storage](memo-020-content-addressed-storage.html)")
+      (item "[Memo-025: Query Language](memo-025-query-language.html)")))
   (section
     "Changelog"
     (list
