@@ -1,0 +1,553 @@
+%!PS-Adobe-3.0
+%%Title: memo-0033-rate-limiting
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0033: Rate Limiting and Quotas) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies rate limiting and quotas for the Library of) show newline
+(Cyberspace: how vaults protect themselves from abuse while ensuring fair) show newline
+(access for legitimate users. Limits are capability-aware and auditable.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Shared resources require protection:) show newline
+() show newline
+(  * Denial of Service) show newline
+(  * Malicious overload) show newline
+(  * Resource exhaustion) show newline
+(  * Runaway processes) show newline
+(  * Fair sharing) show newline
+(  * Equal access for all users) show newline
+(  * Cost control) show newline
+(  * Prevent unbounded consumption) show newline
+() show newline
+(Limits must be:) show newline
+() show newline
+(  * Configurable) show newline
+(  * Different limits for different principals) show newline
+(  * Graceful) show newline
+(  * Degrade smoothly, don't cliff) show newline
+(  * Transparent) show newline
+(  * Users know their limits) show newline
+(  * Auditable) show newline
+(  * All limiting decisions logged) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(RATE LIMITING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Token Bucket Algorithm) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    \(define \(make-token-bucket capacity fill-rate\)) show newline
+(      "Create token bucket rate limiter") show newline
+(      \(let \(\(tokens capacity\)) show newline
+(            \(last-fill \(current-time-ms\)\)\)) show newline
+(        \(lambda \(cost\)) show newline
+(          ;; Refill tokens based on elapsed time) show newline
+(          \(let \(\(now \(current-time-ms\)\)) show newline
+(                 \(elapsed \(- now last-fill\)\)) show newline
+(                 \(new-tokens \(+ tokens \( fill-rate \(/ elapsed 1000\)\)\)\)\)) show newline
+(            \(set! tokens \(min capacity new-tokens\)\)) show newline
+(            \(set! last-fill now\)) show newline
+(            ;; Try to consume tokens) show newline
+(            \(if \(>= tokens cost\)) show newline
+(                \(begin) show newline
+(                  \(set! tokens \(- tokens cost\)\)) show newline
+(                  #t\)  ; Allowed) show newline
+(                #f\)\)\)\)\) ; Denied) show newline
+(    ;; Example: 100 requests per second, burst of 200) show newline
+(    \(define request-limiter \(make-token-bucket 200 100\)\)) show newline
+() show newline
+() show newline
+(Sliding Window) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(make-sliding-window size interval\)) show newline
+(      "Sliding window rate limiter") show newline
+(      \(let \(\(events \(make-deque\)\)\)) show newline
+(        \(lambda \(\)) show newline
+(          ;; Remove old events) show newline
+(          \(let \(\(cutoff \(- \(current-time-ms\) interval\)\)\)) show newline
+(            \(while \(and \(not \(deque-empty? events\)\)) show newline
+(                        \(< \(deque-front events\) cutoff\)\)) show newline
+(              \(deque-pop-front! events\)\)\)) show newline
+(          ;; Check if under limit) show newline
+(          \(if \(< \(deque-length events\) size\)) show newline
+(              \(begin) show newline
+(                \(deque-push-back! events \(current-time-ms\)\)) show newline
+(                #t\)) show newline
+(              #f\)\)\)\)) show newline
+() show newline
+() show newline
+(Leaky Bucket) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define \(make-leaky-bucket capacity leak-rate\)) show newline
+(      "Leaky bucket for smoothing bursts") show newline
+(      \(let \(\(level 0\)) show newline
+(            \(last-leak \(current-time-ms\)\)\)) show newline
+(        \(lambda \(amount\)) show newline
+(          ;; Leak based on elapsed time) show newline
+(          \(let \(\(now \(current-time-ms\)\)) show newline
+(                 \(elapsed \(- now last-leak\)\)) show newline
+(                 \(leaked \( leak-rate \(/ elapsed 1000\)\)\)\)) show newline
+(            \(set! level \(max 0 \(- level leaked\)\)\)) show newline
+(            \(set! last-leak now\)) show newline
+(            ;; Try to add to bucket) show newline
+(            \(if \(<= \(+ level amount\) capacity\)) show newline
+(                \(begin) show newline
+(                  \(set! level \(+ level amount\)\)) show newline
+(                  #t\)) show newline
+(                #f\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUOTA SYSTEM) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Quota Types) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define quota-types) show newline
+(      '\(\(storage . \(\(unit . bytes\)) show newline
+(                    \(period . #f\)          ; No reset) show newline
+(                    \(default . 10737418240\)\)\) ; 10GB) show newline
+(        \(bandwidth . \(\(unit . bytes\)) show newline
+(                      \(period . monthly\)) show newline
+(                      \(default . 107374182400\)\)\) ; 100GB/month) show newline
+(        \(requests . \(\(unit . count\)) show newline
+(                     \(period . daily\)) show newline
+(                     \(default . 100000\)\)\)    ; 100k/day) show newline
+(        \(objects . \(\(unit . count\)) show newline
+(                    \(period . #f\)) show newline
+(                    \(default . 1000000\)\)\)\)\)  ; 1M objects) show newline
+() show newline
+() show newline
+(Quota Tracking) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define principal-quotas \(make-hash-table\)\)) show newline
+(    \(define \(get-quota principal quota-type\)) show newline
+(      "Get principal's quota for type") show newline
+(      \(let \(\(quotas \(hash-table-ref principal-quotas principal '\(\)\)\)\)) show newline
+(        \(or \(assoc-ref quotas quota-type\)) show newline
+(            \(assoc-ref quota-types quota-type 'default\)\)\)\)) show newline
+(    \(define \(get-usage principal quota-type\)) show newline
+(      "Get principal's current usage") show newline
+(      \(let \(\(period \(quota-period quota-type\)\)\)) show newline
+(        \(soup-aggregate) show newline
+(          where: \(and \(type: 'usage-record\)) show newline
+(                      \(principal: principal\)) show newline
+(                      \(quota-type: quota-type\)) show newline
+(                      \(if period) show newline
+(                          \(timestamp: \(> \(period-start period\)\)\)) show newline
+(                          #t\)\)) show newline
+(          aggregate: \(sum 'amount\)\)\)\)) show newline
+(    \(define \(check-quota principal quota-type amount\)) show newline
+(      "Check if operation would exceed quota") show newline
+(      \(let \(\(quota \(get-quota principal quota-type\)\)) show newline
+(            \(usage \(get-usage principal quota-type\)\)\)) show newline
+(        \(<= \(+ usage amount\) quota\)\)\)) show newline
+() show newline
+() show newline
+(Quota Enforcement) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(enforce-quota principal quota-type amount\)) show newline
+(      "Enforce quota, raise error if exceeded") show newline
+(      \(unless \(check-quota principal quota-type amount\)) show newline
+(        \(let \(\(quota \(get-quota principal quota-type\)\)) show newline
+(              \(usage \(get-usage principal quota-type\)\)\)) show newline
+(          \(audit-append action: 'quota-exceeded) show newline
+(                        principal: principal) show newline
+(                        quota-type: quota-type) show newline
+(                        quota: quota) show newline
+(                        usage: usage) show newline
+(                        requested: amount\)) show newline
+(          \(error 'quota-exceeded) show newline
+(                 \(\(type . ,quota-type\)) show newline
+(                   \(quota . ,quota\)) show newline
+(                   \(usage . ,usage\)) show newline
+(                   \(requested . ,amount\)\)\)\)\)\)) show newline
+(    \(define \(record-usage principal quota-type amount\)) show newline
+(      "Record quota usage") show newline
+(      \(soup-put) show newline
+(        \(\(type . usage-record\)) show newline
+(          \(principal . ,principal\)) show newline
+(          \(quota-type . ,quota-type\)) show newline
+(          \(amount . ,amount\)) show newline
+(          \(timestamp . ,\(current-time\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PRINCIPAL-BASED LIMITS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Limit Tiers) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define limit-tiers) show newline
+(      '\(\(anonymous . \(\(requests-per-second . 10\)) show newline
+(                      \(storage-bytes . 0\)) show newline
+(                      \(bandwidth-bytes . 1073741824\)\)\)) show newline
+(        \(authenticated . \(\(requests-per-second . 100\)) show newline
+(                          \(storage-bytes . 10737418240\)) show newline
+(                          \(bandwidth-bytes . 107374182400\)\)\)) show newline
+(        \(premium . \(\(requests-per-second . 1000\)) show newline
+(                    \(storage-bytes . 1099511627776\)) show newline
+(                    \(bandwidth-bytes . 10995116277760\)\)\)) show newline
+(        \(admin . \(\(requests-per-second . #f\)  ; Unlimited) show newline
+(                  \(storage-bytes . #f\)) show newline
+(                  \(bandwidth-bytes . #f\)\)\)\)\)) show newline
+(    \(define \(principal-tier principal\)) show newline
+(      "Determine principal's limit tier") show newline
+(      \(cond) show newline
+(        \(\(admin-principal? principal\) 'admin\)) show newline
+(        \(\(premium-principal? principal\) 'premium\)) show newline
+(        \(\(authenticated? principal\) 'authenticated\)) show newline
+(        \(else 'anonymous\)\)\)) show newline
+() show newline
+() show newline
+(Per-Principal Limiters) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    \(define principal-limiters \(make-hash-table\)\)) show newline
+(    \(define \(get-limiter principal\)) show newline
+(      "Get or create rate limiter for principal") show newline
+(      \(or \(hash-table-ref principal-limiters principal #f\)) show newline
+(          \(let \(\(tier \(principal-tier principal\)\)) show newline
+(                 \(rps \(assoc-ref \(assoc-ref limit-tiers tier\)) show newline
+(                                'requests-per-second\)\)\)) show newline
+(            \(if rps) show newline
+(                \(let \(\(limiter \(make-token-bucket \( rps 2\) rps\)\)\)) show newline
+(                  \(hash-table-set! principal-limiters principal limiter\)) show newline
+(                  limiter\)) show newline
+(                \(lambda \(_\) #t\)\)\)\)\)  ; Unlimited) show newline
+(    \(define \(rate-limit-principal principal\)) show newline
+(      "Apply rate limit to principal") show newline
+(      \(let \(\(limiter \(get-limiter principal\)\)\)) show newline
+(        \(unless \(limiter 1\)) show newline
+(          \(audit-append action: 'rate-limited principal: principal\)) show newline
+(          \(error 'rate-limited\)\)\)\)) show newline
+() show newline
+() show newline
+(Capability-Based Limits) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Capabilities can include rate limits) show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-admin\)) show newline
+(      \(subject api-client\)) show newline
+(      \(capability) show newline
+(        \(action read\)) show newline
+(        \(object vault-content\)) show newline
+(        \(rate-limit) show newline
+(          \(requests-per-second 50\)) show newline
+(          \(burst 100\)\)\)) show newline
+(      \(validity \(not-after "2027-01-01"\)\)\)) show newline
+(    \(define \(capability-rate-limit cap\)) show newline
+(      "Extract rate limit from capability") show newline
+(      \(assoc-ref cap 'rate-limit\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(RESOURCE-SPECIFIC LIMITS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Storage Limits) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(enforce-storage-limit principal size\)) show newline
+(      "Enforce storage quota before write") show newline
+(      \(let* \(\(quota \(get-quota principal 'storage\)\)) show newline
+(             \(used \(principal-storage-used principal\)\)\)) show newline
+(        \(when \(and quota \(> \(+ used size\) quota\)\)) show newline
+(          \(error 'storage-quota-exceeded) show newline
+(                 `\(\(quota . ,quota\)) show newline
+(                   \(used . ,used\)) show newline
+(                   \(requested . ,size\)\)\)\)\)\)) show newline
+(    \(define \(principal-storage-used principal\)) show newline
+(      "Calculate principal's storage usage") show newline
+(      \(soup-aggregate) show newline
+(        where: \(owner: principal\)) show newline
+(        aggregate: \(sum 'size\)\)\)) show newline
+() show newline
+() show newline
+(Bandwidth Limits) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(define \(enforce-bandwidth-limit principal bytes direction\)) show newline
+(      "Enforce bandwidth quota") show newline
+(      \(let* \(\(quota \(get-quota principal 'bandwidth\)\)) show newline
+(             \(used \(principal-bandwidth-used principal\)\)\)) show newline
+(        \(when \(and quota \(> \(+ used bytes\) quota\)\)) show newline
+(          \(error 'bandwidth-quota-exceeded) show newline
+(                 `\(\(quota . ,quota\)) show newline
+(                   \(used . ,used\)) show newline
+(                   \(requested . ,bytes\)) show newline
+(                   \(direction . ,direction\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Connection Limits) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define max-connections-per-principal 100\)) show newline
+(    \(define principal-connections \(make-hash-table\)\)) show newline
+(    \(define \(enforce-connection-limit principal\)) show newline
+(      "Limit concurrent connections") show newline
+(      \(let \(\(count \(hash-table-ref principal-connections principal 0\)\)\)) show newline
+(        \(when \(>= count max-connections-per-principal\)) show newline
+(          \(error 'connection-limit-exceeded) show newline
+(                 `\(\(limit . ,max-connections-per-principal\)) show newline
+(                   \(current . ,count\)\)\)\)\)\)) show newline
+(    \(define \(track-connection principal direction\)) show newline
+(      \(let \(\(count \(hash-table-ref principal-connections principal 0\)\)\)) show newline
+(        \(hash-table-set! principal-connections principal) show newline
+(          \(case direction) show newline
+(            \(\(open\) \(+ count 1\)\)) show newline
+(            \(\(close\) \(max 0 \(- count 1\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(BACKPRESSURE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Request Queuing) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define request-queue \(make-bounded-queue 1000\)\)) show newline
+(    \(define \(queue-request request\)) show newline
+(      "Queue request with backpressure") show newline
+(      \(if \(queue-full? request-queue\)) show newline
+(          \(begin) show newline
+(            \(audit-append action: 'request-rejected reason: 'queue-full\)) show newline
+(            \(error 'service-unavailable\)\)) show newline
+(          \(queue-push! request-queue request\)\)\)) show newline
+() show newline
+() show newline
+(Load Shedding) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(should-shed-load?\)) show newline
+(      "Determine if load shedding needed") show newline
+(      \(or \(> \(cpu-usage\) 0.9\)) show newline
+(          \(> \(memory-usage\) 0.9\)) show newline
+(          \(> \(queue-length request-queue\) 800\)\)\)) show newline
+(    \(define \(shed-load request\)) show newline
+(      "Selectively reject requests under load") show newline
+(      \(cond) show newline
+(        ;; Always allow admin requests) show newline
+(        \(\(admin-principal? \(request-principal request\)\)) show newline
+(         \(process-request request\)\)) show newline
+(        ;; Shed low-priority requests) show newline
+(        \(\(and \(should-shed-load?\)) show newline
+(              \(low-priority-request? request\)\)) show newline
+(         \(audit-append action: 'load-shed request: \(request-id request\)\)) show newline
+(         \(error 'service-unavailable\)\)) show newline
+(        \(else) show newline
+(         \(process-request request\)\)\)\)) show newline
+() show newline
+() show newline
+(Retry-After) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define \(rate-limit-response retry-after\)) show newline
+(      "Generate rate limit response") show newline
+(      `\(\(status . 429\)) show newline
+(        \(headers . \(\(Retry-After . ,retry-after\)) show newline
+(                    \(X-RateLimit-Limit . ,\(current-limit\)\)) show newline
+(                    \(X-RateLimit-Remaining . ,\(remaining-tokens\)\)) show newline
+(                    \(X-RateLimit-Reset . ,\(reset-time\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MONITORING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Limit Metrics) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(record-limit-metrics\)) show newline
+(      "Record rate limiting metrics") show newline
+(      \(metric-set! 'ratelimit.requests.allowed allowed-count\)) show newline
+(      \(metric-set! 'ratelimit.requests.denied denied-count\)) show newline
+(      \(metric-set! 'ratelimit.requests.queued \(queue-length request-queue\)\)) show newline
+(      \(metric-set! 'quota.storage.used total-storage-used\)) show newline
+(      \(metric-set! 'quota.storage.available total-storage-available\)\)) show newline
+() show newline
+() show newline
+(Limit Alerts) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define limit-alerts) show newline
+(      '\(\(high-rejection-rate) show newline
+(         \(condition \(> \(/ denied-count \(+ allowed-count denied-count\)\) 0.1\)\)) show newline
+(         \(severity warning\)) show newline
+(         \(message "High rate limit rejection rate"\)\)) show newline
+(        \(quota-near-limit) show newline
+(         \(condition \(> \(/ used quota\) 0.9\)\)) show newline
+(         \(severity warning\)) show newline
+(         \(message "Principal approaching quota limit"\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONFIGURATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Dynamic Limits) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; Limits can be adjusted at runtime) show newline
+(    \(define \(set-limit principal limit-type value\)) show newline
+(      "Set custom limit for principal") show newline
+(      \(soup-put) show newline
+(        `\(\(type . principal-limit\)) show newline
+(          \(principal . ,principal\)) show newline
+(          \(limit-type . ,limit-type\)) show newline
+(          \(value . ,value\)) show newline
+(          \(set-by . ,\(current-principal\)\)) show newline
+(          \(set-at . ,\(current-time\)\)\)) show newline
+(        type: 'configuration\)\)) show newline
+(    \(define \(get-effective-limit principal limit-type\)) show newline
+(      "Get principal's effective limit") show newline
+(      \(or \(soup-query-one type: 'principal-limit) show newline
+(                          principal: principal) show newline
+(                          limit-type: limit-type\)) show newline
+(          \(tier-limit \(principal-tier principal\) limit-type\)\)\)) show newline
+() show newline
+() show newline
+(Limit Inheritance) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Groups can have limits that members inherit) show newline
+(    \(define \(group-limit group limit-type\)) show newline
+(      \(soup-query-one type: 'group-limit) show newline
+(                      group: group) show newline
+(                      limit-type: limit-type\)\)) show newline
+(    \(define \(effective-limit principal limit-type\)) show newline
+(      "Resolve limit with inheritance") show newline
+(      \(or \(get-effective-limit principal limit-type\)) show newline
+(          \(let \(\(groups \(principal-groups principal\)\)\)) show newline
+(            \(find \(lambda \(g\) \(group-limit g limit-type\)\) groups\)\)) show newline
+(          \(default-limit limit-type\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Limit Bypass Prevention) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Prevent limit bypass via identity rotation) show newline
+(    \(define \(track-ip-limits ip\)) show newline
+(      "Track limits by IP in addition to principal") show newline
+(      \(let \(\(limiter \(get-ip-limiter ip\)\)\)) show newline
+(        \(unless \(limiter 1\)) show newline
+(          \(error 'ip-rate-limited\)\)\)\)) show newline
+(    ;; Combine principal and IP limits) show newline
+(    \(define \(combined-rate-limit principal ip\)) show newline
+(      \(and \(rate-limit-principal principal\)) show newline
+(           \(track-ip-limits ip\)\)\)) show newline
+() show newline
+() show newline
+(Audit Trail) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define \(audit-limit-event event-type principal details\)) show newline
+(      \(audit-append) show newline
+(        action: event-type) show newline
+(        principal: principal) show newline
+(        details: details) show newline
+(        timestamp: \(current-time\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [Token Bucket Algorithm]\(https://en.wikipedia.org/wiki/Tokenbucket\)) show newline
+(2. [Leaky Bucket Algorithm]\(https://en.wikipedia.org/wiki/Leakybucket\)) show newline
+(3. [Memo-021: Capability) show newline
+(Delegation]\(memo-021-capability-delegation.html\) 4. [Memo-031:) show newline
+(Monitoring]\(memo-031-monitoring.html\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

@@ -43,10 +43,11 @@
 <tr><th>Era </th><th>System </th><th>Contribution </th></tr>
 <tr><td>1984 </td><td>VAXcluster </td><td>"Behave as one" - N nodes, one security domain </td></tr>
 <tr><td>1985 </td><td>VMS C2 </td><td>Audit trails, access control, TCSEC security primitives </td></tr>
+<tr><td>1990 </td><td>DigiCash </td><td>Blind signatures, unlinkable credentials (Chaum) </td></tr>
 <tr><td>1993 </td><td>VMS 6.0 </td><td>Cluster-wide intrusion detection, TLV object store </td></tr>
 <tr><td>1994 </td><td>SDSI </td><td>Self-certifying keys, local names (Rivest, IETF 29) </td></tr>
-<tr><td>1999 </td><td>SPKI </td><td>Authorization certificates, capability delegation </td></tr>
-<tr><td>2026 </td><td>Cyberspace </td><td>Synthesis: SPKI + audit + IPv6 mesh + no central authority </td></tr>
+<tr><td>1999 </td><td>SPKI </td><td>Authorization certificates, capability delegation (Ellison, RFC 2693) </td></tr>
+<tr><td>2026 </td><td>Cyberspace </td><td>Synthesis: SPKI + Chaum + audit + IPv6 mesh + no central authority </td></tr>
 </table>
 <p>DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.</p>
 </section>
@@ -61,7 +62,8 @@
 <tr><td>key </td><td>Memo-022 </td><td>Keypair with ceremony provenance </td></tr>
 <tr><td>attestation </td><td>Memo-041 </td><td>Signed claim about identity or state </td></tr>
 <tr><td>Authorization </td></tr>
-<tr><td>certificate </td><td>Memo-004 </td><td>SPKI capability grant </td></tr>
+<tr><td>certificate </td><td>Memo-004 </td><td>SPKI capability grant (registered) </td></tr>
+<tr><td>bearer-capability </td><td>Memo-045 </td><td>Blind-signed anonymous capability </td></tr>
 <tr><td>tag </td><td>Memo-004 </td><td>Authorization scope (read, write, etc.) </td></tr>
 <tr><td>signature </td><td>Memo-004 </td><td>Ed25519 attestation </td></tr>
 <tr><td>share </td><td>Memo-007 </td><td>Shamir secret fragment </td></tr>
@@ -1453,6 +1455,101 @@ Any no?  Access denied.
 </div>
 <p>Delegation can only move DOWN the lattice. This is attenuation. You cannot delegate admin if you hold read-only. You cannot grant write if you hold read.</p>
 <p>The math is sound. We just speak it in capabilities.</p>
+</section>
+<section>
+<h2>Unlinkability</h2>
+<p>Chaum's insight (1983): you can prove authorization without revealing identity. Blind signatures create credentials that are verifiable but unlinkable - the issuer cannot connect the credential to the presentation.</p>
+<p>This creates architectural tension with audit trails. Cyberspace values both accountability and privacy. The resolution: capabilities come in two forms.</p>
+<h3>Registered vs Bearer Capabilities</h3>
+<table>
+<tr><th>Property </th><th>Registered (SPKI) </th><th>Bearer (Blinded) </th></tr>
+<tr><td>Subject field </td><td>Principal identified </td><td>Anonymous holder </td></tr>
+<tr><td>Audit trail </td><td>Who did what </td><td>What was done </td></tr>
+<tr><td>Revocation </td><td>By subject </td><td>By capability hash </td></tr>
+<tr><td>Delegation </td><td>To named principals </td><td>Not delegable </td></tr>
+<tr><td>Use case </td><td>Accountability </td><td>Privacy </td></tr>
+</table>
+<p>Registered capabilities are checks - they name the bearer. Bearer capabilities are cash - whoever holds them can spend them.</p>
+<h3>Blind Signature Protocol</h3>
+<p>Alice wants to exercise a capability without revealing she's Alice:</p>
+<pre>
+1. Alice proves to Issuer she holds capability C
+2. Alice generates random blinding factor r
+3. Alice computes blinded = blind(token, r)
+4. Issuer signs: sig = sign(blinded)
+5. Alice unblinds: bearer_sig = unblind(sig, r)
+6. Alice presents (token, bearer_sig) anonymously
+7. Verifier confirms Issuer's signature without learning Alice's identity
+</pre>
+<p>The Issuer knows Alice was authorized (step 1) but cannot link the bearer credential (step 6) to Alice. Unlinkability is mathematical, not policy.</p>
+<h3>Cyberspace Integration</h3>
+<pre class="language-scheme">
+;; Request blinded capability (proves eligibility, gets blind-signed token)
+(define (capability-blind issuer tag)
+  "Get bearer capability for tag, unlinkable to principal"
+  (let* ((token (random-bytes 32))
+         (r (blind-factor-generate))
+         (blinded (blind token r)))
+    ;; Prove we hold registered capability for this tag
+    ;; Issuer signs blinded token
+    (let ((blind-sig (issuer-sign-blinded issuer blinded tag)))
+      ;; Unblind locally
+      (make-bearer-capability
+        token: token
+        signature: (unblind blind-sig r)
+        tag: tag
+        issuer: issuer))))
+
+;; Exercise bearer capability
+(define (capability-exercise-bearer cap object)
+  "Exercise capability without revealing identity"
+  (let ((token (bearer-capability-token cap))
+        (sig (bearer-capability-signature cap))
+        (tag (bearer-capability-tag cap))
+        (issuer (bearer-capability-issuer cap)))
+    ;; Verify issuer signed this token for this tag
+    (unless (blind-signature-verify issuer token sig tag)
+      (error 'invalid-bearer-capability))
+    ;; Audit records capability exercise, not principal
+    (audit-append action: 'bearer-exercise
+                  capability: (sha512 token)
+                  tag: tag
+                  actor: 'anonymous)
+    ;; Perform operation
+    (perform-operation tag object)))
+</pre>
+<p>The audit trail records that a valid bearer capability was exercised, but not who exercised it. The capability hash enables revocation without identification.</p>
+<h3>Use Cases</h3>
+<table>
+<tr><th>Operation </th><th>Why Unlinkability </th></tr>
+<tr><td>Quorum voting </td><td>Prove eligibility without linking vote to voter </td></tr>
+<tr><td>Whistleblower submission </td><td>Submit evidence without identification </td></tr>
+<tr><td>Anonymous reads </td><td>Access sensitive content without tracking </td></tr>
+<tr><td>Credential presentation </td><td>Prove role without revealing principal </td></tr>
+<tr><td>Rate-limited tokens </td><td>Prevent abuse without profiling users </td></tr>
+</table>
+<p>Non-use-cases (accountability required):</p>
+<ul>
+<li>Writes - usually need to know who modified</li>
+<li>Delegation - must name the delegate</li>
+<li>Administrative actions - audit trail essential</li>
+</ul>
+<h3>The Tradeoff</h3>
+<p>Bearer capabilities sacrifice traceability for privacy. Once issued, the issuer cannot:</p>
+<ul>
+<li>Determine who exercised the capability</li>
+<li>Link multiple exercises to the same principal</li>
+<li>Revoke based on principal (only by capability hash)</li>
+</ul>
+<p>This is the point. Chaum solved the double-spending problem for digital cash without a public ledger - the bank couldn't track who spent what. Bitcoin retreated from this by making all transactions public. Cyberspace preserves the choice: registered capabilities when you need accountability, bearer capabilities when you need privacy.</p>
+<p>The axioms still hold:</p>
+<pre>
+A1. No Ambient Authority - still need a capability
+A2. Capabilities Are Unforgeable - blind signatures are Ed25519
+A3. Capabilities Only Attenuate - bearer caps cannot delegate
+A4. Objects Are Immutable - unchanged
+</pre>
+<p>Unlinkability is orthogonal to authorization. You still need permission; you just don't have to identify yourself to use it.</p>
 </section>
 <section>
 <h2>Secure Erasure</h2>
@@ -3188,11 +3285,13 @@ $ ./docs/notes/extract-assertions.sh
 </section>
 <section>
 <h2>References</h2>
-<p>1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. &amp; Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. &amp; LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model</p>
+<p>1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. &amp; Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. &amp; LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model 8. Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982 9. Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985</p>
 </section>
 <section>
 <h2>Changelog</h2>
 <ul>
+<li>2026-01-16</li>
+<li>Add Unlinkability section: blind signatures, bearer capabilities, Chaum integration</li>
 <li>2026-01-08</li>
 <li>Initial draft</li>
 </ul>

@@ -1,0 +1,606 @@
+%!PS-Adobe-3.0
+%%Title: memo-0028-vault-migration
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0028: Vault Migration) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies vault migration for the Library of Cyberspace: how) show newline
+(to move vaults between hosts, storage backends, and administrative) show newline
+(domains while preserving content integrity, capability chains, and audit) show newline
+(continuity. Migration is essential for long-term preservation.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Vaults must outlive their infrastructure:) show newline
+() show newline
+(  * Hardware failure) show newline
+(  * Disks die, servers decommission) show newline
+(  * Provider changes) show newline
+(  * Cloud vendors come and go) show newline
+(  * Jurisdiction) show newline
+(  * Legal requirements may force relocation) show newline
+(  * Performance) show newline
+(  * Move closer to users) show newline
+(  * Cost) show newline
+(  * Cheaper storage becomes available) show newline
+() show newline
+(Migration must be:) show newline
+() show newline
+(  * Complete) show newline
+(  * All objects, metadata, capabilities) show newline
+(  * Verifiable) show newline
+(  * Cryptographic proof of integrity) show newline
+(  * Resumable) show newline
+(  * Handle interruptions gracefully) show newline
+(  * Auditable) show newline
+(  * Full trail of what moved where) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MIGRATION TYPES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Full Migration) show newline
+(--------------) show newline
+() show newline
+(Move entire vault to new location:) show newline
+() show newline
+() show newline
+(    \(define \(full-migration source-vault target-host\)) show newline
+(      "Migrate entire vault to new host") show newline
+(      \(let \(\(migration-id \(generate-migration-id\)\)\)) show newline
+(        \(audit-append action: `\(migration-start ,migration-id\)) show newline
+(                      type: 'full) show newline
+(                      source: source-vault) show newline
+(                      target: target-host\)) show newline
+(        ;; Phase 1: Snapshot) show newline
+(        \(let \(\(snapshot \(vault-snapshot source-vault\)\)\)) show newline
+(          ;; Phase 2: Transfer) show newline
+(          \(transfer-snapshot snapshot target-host\)) show newline
+(          ;; Phase 3: Verify) show newline
+(          \(verify-transfer snapshot target-host\)) show newline
+(          ;; Phase 4: Cutover) show newline
+(          \(cutover source-vault target-host migration-id\)\)\)\)) show newline
+() show newline
+() show newline
+(Partial Migration) show newline
+(-----------------) show newline
+() show newline
+(Move subset of objects:) show newline
+() show newline
+() show newline
+(    \(define \(partial-migration source-vault target-host predicate\)) show newline
+(      "Migrate objects matching predicate") show newline
+(      \(let \(\(objects \(soup-query source-vault predicate\)\)\)) show newline
+(        \(for-each \(lambda \(obj\)) show newline
+(                    \(migrate-object obj target-host\)\)) show newline
+(                  objects\)\)\)) show newline
+() show newline
+() show newline
+(Live Migration) show newline
+(--------------) show newline
+() show newline
+(Migrate while vault remains active:) show newline
+() show newline
+() show newline
+(    \(define \(live-migration source-vault target-host\)) show newline
+(      "Migrate without downtime") show newline
+(      ;; Phase 1: Initial sync) show newline
+(      \(let \(\(checkpoint \(initial-sync source-vault target-host\)\)\)) show newline
+(        ;; Phase 2: Catch up changes) show newline
+(        \(let loop \(\(last-checkpoint checkpoint\)\)) show newline
+(          \(let \(\(changes \(changes-since source-vault last-checkpoint\)\)\)) show newline
+(            \(if \(< \(length changes\) catchup-threshold\)) show newline
+(                ;; Phase 3: Final cutover \(brief pause\)) show newline
+(                \(atomic-cutover source-vault target-host changes\)) show newline
+(                \(loop \(sync-changes changes target-host\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(OBJECT TRANSFER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Export Format) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Sealed archive format \(Memo-018\)) show newline
+(    \(define \(export-object hash\)) show newline
+(      `\(vault-object) show newline
+(        \(hash ,hash\)) show newline
+(        \(content ,\(cas-get hash\)\)) show newline
+(        \(soup-entry ,\(soup-get hash\)\)) show newline
+(        \(references ,\(object-references hash\)\)) show newline
+(        \(signatures ,\(object-signatures hash\)\)\)\)) show newline
+(    \(define \(export-batch hashes\)) show newline
+(      \(let \(\(objects \(map export-object hashes\)\)\)) show newline
+(        \(seal-archive objects) show newline
+(          compression: 'zstd) show newline
+(          encryption: target-vault-key\)\)\)) show newline
+() show newline
+() show newline
+(Transfer Protocol) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(transfer-object obj source target\)) show newline
+(      "Transfer single object with verification") show newline
+(      \(let* \(\(hash \(object-hash obj\)\)) show newline
+(             \(data \(export-object hash\)\)\)) show newline
+(        ;; Send to target) show newline
+(        \(vault-send target data\)) show newline
+(        ;; Get acknowledgment with hash) show newline
+(        \(let \(\(ack \(vault-receive target\)\)\)) show newline
+(          \(unless \(equal? \(ack-hash ack\) hash\)) show newline
+(            \(error "Transfer verification failed" hash\)\)) show newline
+(          \(audit-append action: `\(object-transferred ,hash\)) show newline
+(                        source: source) show newline
+(                        target: target\)\)\)\)) show newline
+() show newline
+() show newline
+(Streaming Transfer) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(stream-transfer source target\)) show newline
+(      "Stream objects for efficient bulk transfer") show newline
+(      \(let \(\(stream \(open-transfer-stream source target\)\)\)) show newline
+(        \(for-each \(lambda \(hash\)) show newline
+(                    \(let \(\(obj \(export-object hash\)\)\)) show newline
+(                      \(stream-write stream obj\)) show newline
+(                      \(when \(stream-buffer-full? stream\)) show newline
+(                        \(stream-flush stream\)\)\)\)) show newline
+(                  \(vault-all-hashes source\)\)) show newline
+(        \(stream-close stream\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(METADATA MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Soup Entries) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define \(migrate-soup-entry hash source target\)) show newline
+(      "Migrate soup metadata for object") show newline
+(      \(let \(\(entry \(soup-get source hash\)\)\)) show newline
+(        \(when entry) show newline
+(          \(soup-put target hash entry\)) show newline
+(          ;; Verify) show newline
+(          \(unless \(equal? \(soup-get target hash\) entry\)) show newline
+(            \(error "Soup entry migration failed" hash\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Index Migration) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(migrate-indexes source target\)) show newline
+(      "Rebuild indexes on target") show newline
+(      ;; Option 1: Export and import index data) show newline
+(      \(let \(\(index-data \(export-indexes source\)\)\)) show newline
+(        \(import-indexes target index-data\)\)) show newline
+(      ;; Option 2: Rebuild from soup \(slower but guaranteed correct\)) show newline
+(      \(rebuild-indexes target\)\)) show newline
+() show newline
+() show newline
+(Audit Trail) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define \(migrate-audit source target\)) show newline
+(      "Migrate audit trail \(critical for provenance\)") show newline
+(      \(let \(\(audit-entries \(audit-export source\)\)\)) show newline
+(        ;; Audit entries are append-only, transfer in order) show newline
+(        \(for-each \(lambda \(entry\)) show newline
+(                    \(audit-import target entry\)\)) show newline
+(                  audit-entries\)) show newline
+(        ;; Add migration event to both) show newline
+(        \(let \(\(migration-entry) show newline
+(               `\(migration-audit) show newline
+(                 \(source ,source\)) show newline
+(                 \(target ,target\)) show newline
+(                 \(entries ,\(length audit-entries\)\)) show newline
+(                 \(timestamp ,\(current-time\)\)\)\)\)) show newline
+(          \(audit-append source migration-entry\)) show newline
+(          \(audit-append target migration-entry\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CAPABILITY MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Certificate Transfer) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(migrate-capabilities source target\)) show newline
+(      "Migrate SPKI certificates") show newline
+(      \(let \(\(certs \(soup-query source type: 'certificate\)\)\)) show newline
+(        \(for-each \(lambda \(cert\)) show newline
+(                    ;; Certificates are content-addressed, transfer directly) show newline
+(                    \(let \(\(hash \(cert-hash cert\)\)\)) show newline
+(                      \(migrate-object hash source target\)\)\)) show newline
+(                  certs\)\)\)) show newline
+() show newline
+() show newline
+(Key Migration) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Private keys require special handling) show newline
+(    \(define \(migrate-vault-keys source target ceremony-witnesses\)) show newline
+(      "Migrate vault keys via key ceremony") show newline
+(      ;; Never transfer private keys directly!) show newline
+(      ;; Use threshold re-sharing or key ceremony) show newline
+(      \(let* \(\(old-shares \(gather-key-shares source\)\)) show newline
+(             \(new-key \(generate-new-key target\)\)) show newline
+(             \(transition-cert \(create-key-transition-cert) show newline
+(                               old-key: \(vault-public-key source\)) show newline
+(                               new-key: new-key) show newline
+(                               witnesses: ceremony-witnesses\)\)\)) show newline
+(        ;; Sign transition with old key) show newline
+(        \(sign-transition old-shares transition-cert\)) show newline
+(        ;; Record in both vaults) show newline
+(        \(audit-append source action: \(key-transition ,transition-cert\)\)) show newline
+(        \(audit-append target action: \(key-transition ,transition-cert\)\)\)\)) show newline
+() show newline
+() show newline
+(Delegation Chain Continuity) show newline
+(---------------------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-delegation-chains target\)) show newline
+(      "Verify all delegation chains remain valid after migration") show newline
+(      \(let \(\(certs \(soup-query target type: 'certificate\)\)\)) show newline
+(        \(for-each \(lambda \(cert\)) show newline
+(                    \(let \(\(chain \(build-chain cert\)\)\)) show newline
+(                      \(unless \(valid-chain? chain\)) show newline
+(                        \(warn "Broken delegation chain" cert\)\)\)\)) show newline
+(                  certs\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VERIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Content Verification) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-migration source target\)) show newline
+(      "Verify all content transferred correctly") show newline
+(      \(let \(\(source-hashes \(vault-all-hashes source\)\)) show newline
+(            \(target-hashes \(vault-all-hashes target\)\)\)) show newline
+(        ;; Check completeness) show newline
+(        \(let \(\(missing \(set-difference source-hashes target-hashes\)\)\)) show newline
+(          \(unless \(null? missing\)) show newline
+(            \(error "Missing objects after migration" missing\)\)\)) show newline
+(        ;; Check integrity \(sample verification for large vaults\)) show newline
+(        \(let \(\(sample \(random-sample source-hashes 1000\)\)\)) show newline
+(          \(for-each \(lambda \(hash\)) show newline
+(                      \(unless \(equal? \(cas-get source hash\)) show newline
+(                                      \(cas-get target hash\)\)) show newline
+(                        \(error "Content mismatch" hash\)\)\)) show newline
+(                    sample\)\)) show newline
+(        ;; Check soup metadata) show newline
+(        \(for-each \(lambda \(hash\)) show newline
+(                    \(unless \(equal? \(soup-get source hash\)) show newline
+(                                    \(soup-get target hash\)\)) show newline
+(                      \(error "Soup mismatch" hash\)\)\)) show newline
+(                  \(random-sample source-hashes 1000\)\)\)\)) show newline
+() show newline
+() show newline
+(Merkle Verification) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(merkle-verify-migration source target\)) show newline
+(      "Verify migration via Merkle root comparison") show newline
+(      \(let \(\(source-root \(vault-merkle-root source\)\)) show newline
+(            \(target-root \(vault-merkle-root target\)\)\)) show newline
+(        \(unless \(equal? source-root target-root\)) show newline
+(          ;; Find divergence) show newline
+(          \(let \(\(divergence \(find-merkle-divergence source target\)\)\)) show newline
+(            \(error "Merkle verification failed" divergence\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Audit Verification) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-audit-continuity source target\)) show newline
+(      "Verify audit trail continuity") show newline
+(      \(let \(\(source-audit \(audit-export source\)\)) show newline
+(            \(target-audit \(audit-export target\)\)\)) show newline
+(        ;; Target should have all source entries plus migration events) show newline
+(        \(unless \(subsequence? source-audit target-audit\)) show newline
+(          \(error "Audit trail discontinuity"\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CUTOVER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Atomic Cutover) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(atomic-cutover source target migration-id\)) show newline
+(      "Atomically switch from source to target") show newline
+(      ;; Phase 1: Quiesce source) show newline
+(      \(vault-readonly! source\)) show newline
+(      ;; Phase 2: Final sync) show newline
+(      \(let \(\(final-changes \(changes-since source \(last-sync-point\)\)\)\)) show newline
+(        \(sync-changes final-changes target\)\)) show newline
+(      ;; Phase 3: Verify) show newline
+(      \(verify-migration source target\)) show newline
+(      ;; Phase 4: Update DNS/routing) show newline
+(      \(update-vault-routing source target\)) show newline
+(      ;; Phase 5: Activate target) show newline
+(      \(vault-activate! target\)) show newline
+(      ;; Phase 6: Record completion) show newline
+(      \(audit-append target action: `\(migration-complete ,migration-id\)\)\)) show newline
+() show newline
+() show newline
+(Rollback) show newline
+(--------) show newline
+() show newline
+() show newline
+(    \(define \(migration-rollback migration-id\)) show newline
+(      "Rollback failed migration") show newline
+(      \(let \(\(migration \(get-migration migration-id\)\)\)) show newline
+(        \(case \(migration-phase migration\)) show newline
+(          \(\(transfer\)) show newline
+(           ;; Just abandon target) show newline
+(           \(vault-delete! \(migration-target migration\)\)\)) show newline
+(          \(\(cutover\)) show newline
+(           ;; Restore routing to source) show newline
+(           \(update-vault-routing \(migration-target migration\)) show newline
+(                                 \(migration-source migration\)\)) show newline
+(           \(vault-readonly! \(migration-target migration\)\)) show newline
+(           \(vault-activate! \(migration-source migration\)\)\)) show newline
+(          \(\(complete\)) show newline
+(           \(error "Cannot rollback completed migration"\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INCREMENTAL MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Checkpoint System) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(migration-checkpoint migration-id progress\)) show newline
+(      "Save migration progress for resumption") show newline
+(      \(let \(\(checkpoint) show newline
+(             `\(checkpoint) show newline
+(               \(migration-id ,migration-id\)) show newline
+(               \(timestamp ,\(current-time\)\)) show newline
+(               \(transferred ,\(progress-transferred progress\)\)) show newline
+(               \(remaining ,\(progress-remaining progress\)\)) show newline
+(               \(last-hash ,\(progress-last-hash progress\)\)\)\)\)) show newline
+(        \(cas-put \(serialize checkpoint\)\)\)\)) show newline
+(    \(define \(resume-migration migration-id\)) show newline
+(      "Resume interrupted migration") show newline
+(      \(let \(\(checkpoint \(latest-checkpoint migration-id\)\)\)) show newline
+(        \(if checkpoint) show newline
+(            \(continue-from-checkpoint checkpoint\)) show newline
+(            \(error "No checkpoint found" migration-id\)\)\)\)) show newline
+() show newline
+() show newline
+(Change Tracking) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; Track changes during migration) show newline
+(    \(define \(changes-since vault timestamp\)) show newline
+(      "Get all changes since timestamp") show newline
+(      \(soup-query vault) show newline
+(                  modified: \(> timestamp\)) show newline
+(                  order-by: '\(\(modified asc\)\)\)\)) show newline
+(    \(define \(sync-changes changes target\)) show newline
+(      "Apply changes to target") show newline
+(      \(for-each \(lambda \(change\)) show newline
+(                  \(case \(change-type change\)) show newline
+(                    \(\(create modify\)) show newline
+(                     \(migrate-object \(change-hash change\) target\)\)) show newline
+(                    \(\(delete\)) show newline
+(                     \(cas-delete target \(change-hash change\)\)\)\)\)) show newline
+(                changes\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(STORAGE BACKEND MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Backend Abstraction) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Migrate between storage backends) show newline
+(    \(define \(backend-migration vault old-backend new-backend\)) show newline
+(      "Migrate vault to different storage backend") show newline
+(      \(for-each \(lambda \(hash\)) show newline
+(                  \(let \(\(data \(backend-get old-backend hash\)\)\)) show newline
+(                    \(backend-put new-backend hash data\)) show newline
+(                    \(verify-backend-transfer hash old-backend new-backend\)\)\)) show newline
+(                \(backend-all-hashes old-backend\)\)\)) show newline
+(    ;; Example: S3 to local filesystem) show newline
+(    \(define \(s3-to-local vault bucket path\)) show newline
+(      \(backend-migration vault) show newline
+(                         \(make-s3-backend bucket\)) show newline
+(                         \(make-fs-backend path\)\)\)) show newline
+() show newline
+() show newline
+(Format Conversion) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Migrate between storage formats) show newline
+(    \(define \(format-migration vault old-format new-format\)) show newline
+(      "Convert storage format during migration") show newline
+(      \(for-each \(lambda \(hash\)) show newline
+(                  \(let* \(\(old-data \(read-format old-format hash\)\)) show newline
+(                         \(new-data \(convert-format old-data new-format\)\)\)) show newline
+(                    \(write-format new-format hash new-data\)\)\)) show newline
+(                \(vault-all-hashes vault\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(FEDERATION MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Vault Federation Changes) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(define \(federation-migrate vault old-federation new-federation\)) show newline
+(      "Migrate vault between federations") show newline
+(      ;; Leave old federation) show newline
+(      \(federation-leave old-federation vault\)) show newline
+(      ;; Update vault metadata) show newline
+(      \(vault-set-federation! vault new-federation\)) show newline
+(      ;; Join new federation) show newline
+(      \(federation-join new-federation vault\)) show newline
+(      ;; Announce to peers) show newline
+(      \(federation-announce new-federation vault\)\)) show newline
+() show newline
+() show newline
+(Cross-Federation Transfer) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    \(define \(cross-federation-transfer hash source-fed target-fed\)) show newline
+(      "Transfer object between federations") show newline
+(      \(let* \(\(source-vault \(federation-locate source-fed hash\)\)) show newline
+(             \(target-vault \(federation-select target-fed\)\)) show newline
+(             \(obj \(vault-get source-vault hash\)\)\)) show newline
+(        \(vault-put target-vault obj\)) show newline
+(        \(federation-announce target-fed hash target-vault\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Migration Authorization) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Migration requires appropriate capability) show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-admin\)) show newline
+(      \(subject migration-operator\)) show newline
+(      \(capability) show newline
+(        \(action migrate\)) show newline
+(        \(object vault-id\)\)) show newline
+(      \(validity \(not-after "2026-02-01"\)\)\)) show newline
+(    \(define \(authorized-migration? operator source target\)) show newline
+(      \(and \(has-capability? operator 'migrate source\)) show newline
+(           \(has-capability? operator 'write target\)\)\)) show newline
+() show newline
+() show newline
+(Encryption in Transit) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define \(secure-transfer source target\)) show newline
+(      "Transfer with encryption") show newline
+(      \(let \(\(session-key \(establish-session-key source target\)\)\)) show newline
+(        \(for-each \(lambda \(hash\)) show newline
+(                    \(let* \(\(data \(cas-get source hash\)\)) show newline
+(                           \(encrypted \(encrypt session-key data\)\)\)) show newline
+(                      \(send-encrypted target encrypted\)\)\)) show newline
+(                  \(vault-all-hashes source\)\)\)\)) show newline
+() show newline
+() show newline
+(Migration Audit) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; All migrations are fully audited) show newline
+(    \(define \(audited-migration source target\)) show newline
+(      \(let \(\(migration-id \(generate-migration-id\)\)\)) show newline
+(        \(audit-append action: 'migration-authorized) show newline
+(                      migration-id: migration-id) show newline
+(                      operator: \(current-principal\)) show newline
+(                      source: source) show newline
+(                      target: target\)) show newline
+(        ;; ... perform migration ...) show newline
+(        \(audit-append action: 'migration-complete) show newline
+(                      migration-id: migration-id) show newline
+(                      objects: \(count-migrated\)) show newline
+(                      verification: \(verification-result\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [Live Migration of Virtual) show newline
+(Machines]\(https://dl.acm.org/doi/10.1145/1095810.1095816\) - Clark et al.) show newline
+(2. [Memo-018: Sealed Archive Format]\(memo-018-sealed-archive.html\) 3.) show newline
+([Memo-022: Key Ceremony Protocol]\(memo-022-key-ceremony.html\) 4.) show newline
+([Memo-024: Network Protocol]\(memo-024-network-protocol.html\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

@@ -38,13 +38,14 @@ Design Lineage
 --------------
 
 
-  Era    System       Contribution                                                 
-  1984   VAXcluster   "Behave as one" - N nodes, one security domain               
-  1985   VMS C2       Audit trails, access control, TCSEC security primitives      
-  1993   VMS 6.0      Cluster-wide intrusion detection, TLV object store           
-  1994   SDSI         Self-certifying keys, local names (Rivest, IETF 29)          
-  1999   SPKI         Authorization certificates, capability delegation            
-  2026   Cyberspace   Synthesis: SPKI + audit + IPv6 mesh + no central authority   
+  Era    System       Contribution                                                            
+  1984   VAXcluster   "Behave as one" - N nodes, one security domain                          
+  1985   VMS C2       Audit trails, access control, TCSEC security primitives                 
+  1990   DigiCash     Blind signatures, unlinkable credentials (Chaum)                        
+  1993   VMS 6.0      Cluster-wide intrusion detection, TLV object store                      
+  1994   SDSI         Self-certifying keys, local names (Rivest, IETF 29)                     
+  1999   SPKI         Authorization certificates, capability delegation (Ellison, RFC 2693)   
+  2026   Cyberspace   Synthesis: SPKI + Chaum + audit + IPv6 mesh + no central authority      
 
 DECnet Phase IV had 24-bit addressing—fatal for internet scale.
 Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same
@@ -60,39 +61,40 @@ Every first-class object in cyberspace. Names as defined.
 Table 0: Security Object Registry
 
 
-  Object          Defining RFC   Description                                    
-  Identity        
-  principal       Memo-004       Cryptographic identity (ed25519 key or hash)   
-  key             Memo-022       Keypair with ceremony provenance               
-  attestation     Memo-041       Signed claim about identity or state           
-  Authorization   
-  certificate     Memo-004       SPKI capability grant                          
-  tag             Memo-004       Authorization scope (read, write, etc.)        
-  signature       Memo-004       Ed25519 attestation                            
-  share           Memo-007       Shamir secret fragment                         
-  quorum          Memo-036       Voting threshold specification                 
-  Storage         
-  vault           Memo-006       Sovereign storage realm                        
-  object          Memo-020       Content-addressed immutable data               
-  archive         Memo-018       Sealed, encrypted content package              
-  schema          Memo-033       Structure definition                           
-  Boundaries      
-  realm           Memo-040       Trust and sovereignty boundary                 
-  wormhole        Memo-041       FUSE mount portal to filesystem                
-  federation      Memo-010       Peer network of realms                         
-  node            Memo-037       Network participant with role                  
-  Execution       
-  agent           Memo-023       Sandboxed daemon                               
-  topic           Memo-035       Pub/sub channel                                
-  tunnel          Memo-035       Agent communication path                       
-  lock            Memo-035       Distributed mutex                              
-  Observability   
-  audit-entry     Memo-003       Immutable log record                           
-  lamport-clock   Memo-012       Causal ordering timestamp                      
-  query           Memo-025       Search expression                              
-  Documentation   
-  memo            Memo-043       Scoped documentation unit                      
-  soup            Memo-040       The auditable collection of all things         
+  Object              Defining RFC   Description                                    
+  Identity            
+  principal           Memo-004       Cryptographic identity (ed25519 key or hash)   
+  key                 Memo-022       Keypair with ceremony provenance               
+  attestation         Memo-041       Signed claim about identity or state           
+  Authorization       
+  certificate         Memo-004       SPKI capability grant (registered)             
+  bearer-capability   Memo-045       Blind-signed anonymous capability              
+  tag                 Memo-004       Authorization scope (read, write, etc.)        
+  signature           Memo-004       Ed25519 attestation                            
+  share               Memo-007       Shamir secret fragment                         
+  quorum              Memo-036       Voting threshold specification                 
+  Storage             
+  vault               Memo-006       Sovereign storage realm                        
+  object              Memo-020       Content-addressed immutable data               
+  archive             Memo-018       Sealed, encrypted content package              
+  schema              Memo-033       Structure definition                           
+  Boundaries          
+  realm               Memo-040       Trust and sovereignty boundary                 
+  wormhole            Memo-041       FUSE mount portal to filesystem                
+  federation          Memo-010       Peer network of realms                         
+  node                Memo-037       Network participant with role                  
+  Execution           
+  agent               Memo-023       Sandboxed daemon                               
+  topic               Memo-035       Pub/sub channel                                
+  tunnel              Memo-035       Agent communication path                       
+  lock                Memo-035       Distributed mutex                              
+  Observability       
+  audit-entry         Memo-003       Immutable log record                           
+  lamport-clock       Memo-012       Causal ordering timestamp                      
+  query               Memo-025       Search expression                              
+  Documentation       
+  memo                Memo-043       Scoped documentation unit                      
+  soup                Memo-040       The auditable collection of all things         
 
 
 Object Properties
@@ -446,6 +448,142 @@ cannot delegate admin if you hold read-only. You cannot grant write if
 you hold read.
 
 The math is sound. We just speak it in capabilities.
+
+
+------------------------------------------------------------------------
+UNLINKABILITY
+------------------------------------------------------------------------
+
+Chaum's insight (1983): you can prove authorization without revealing
+identity. Blind signatures create credentials that are verifiable but
+unlinkable - the issuer cannot connect the credential to the
+presentation.
+
+This creates architectural tension with audit trails. Cyberspace values
+both accountability and privacy. The resolution: capabilities come in
+two forms.
+
+
+Registered vs Bearer Capabilities
+---------------------------------
+
+
+  Property        Registered (SPKI)      Bearer (Blinded)     
+  Subject field   Principal identified   Anonymous holder     
+  Audit trail     Who did what           What was done        
+  Revocation      By subject             By capability hash   
+  Delegation      To named principals    Not delegable        
+  Use case        Accountability         Privacy              
+
+Registered capabilities are checks - they name the bearer. Bearer
+capabilities are cash - whoever holds them can spend them.
+
+
+Blind Signature Protocol
+------------------------
+
+Alice wants to exercise a capability without revealing she's Alice:
+
+
+    1. Alice proves to Issuer she holds capability C
+    2. Alice generates random blinding factor r
+    3. Alice computes blinded = blind(token, r)
+    4. Issuer signs: sig = sign(blinded)
+    5. Alice unblinds: bearer_sig = unblind(sig, r)
+    6. Alice presents (token, bearer_sig) anonymously
+    7. Verifier confirms Issuer's signature without learning Alice's identity
+
+The Issuer knows Alice was authorized (step 1) but cannot link the
+bearer credential (step 6) to Alice. Unlinkability is mathematical, not
+policy.
+
+
+Cyberspace Integration
+----------------------
+
+
+    ;; Request blinded capability (proves eligibility, gets blind-signed token)
+    (define (capability-blind issuer tag)
+      "Get bearer capability for tag, unlinkable to principal"
+      (let* ((token (random-bytes 32))
+             (r (blind-factor-generate))
+             (blinded (blind token r)))
+        ;; Prove we hold registered capability for this tag
+        ;; Issuer signs blinded token
+        (let ((blind-sig (issuer-sign-blinded issuer blinded tag)))
+          ;; Unblind locally
+          (make-bearer-capability
+            token: token
+            signature: (unblind blind-sig r)
+            tag: tag
+            issuer: issuer))))
+    ;; Exercise bearer capability
+    (define (capability-exercise-bearer cap object)
+      "Exercise capability without revealing identity"
+      (let ((token (bearer-capability-token cap))
+            (sig (bearer-capability-signature cap))
+            (tag (bearer-capability-tag cap))
+            (issuer (bearer-capability-issuer cap)))
+        ;; Verify issuer signed this token for this tag
+        (unless (blind-signature-verify issuer token sig tag)
+          (error 'invalid-bearer-capability))
+        ;; Audit records capability exercise, not principal
+        (audit-append action: 'bearer-exercise
+                      capability: (sha512 token)
+                      tag: tag
+                      actor: 'anonymous)
+        ;; Perform operation
+        (perform-operation tag object)))
+
+The audit trail records that a valid bearer capability was exercised,
+but not who exercised it. The capability hash enables revocation without
+identification.
+
+
+Use Cases
+---------
+
+
+  Operation                  Why Unlinkability                                 
+  Quorum voting              Prove eligibility without linking vote to voter   
+  Whistleblower submission   Submit evidence without identification            
+  Anonymous reads            Access sensitive content without tracking         
+  Credential presentation    Prove role without revealing principal            
+  Rate-limited tokens        Prevent abuse without profiling users             
+
+Non-use-cases (accountability required):
+
+  * Writes - usually need to know who modified
+  * Delegation - must name the delegate
+  * Administrative actions - audit trail essential
+
+
+The Tradeoff
+------------
+
+Bearer capabilities sacrifice traceability for privacy. Once issued, the
+issuer cannot:
+
+  * Determine who exercised the capability
+  * Link multiple exercises to the same principal
+  * Revoke based on principal (only by capability hash)
+
+This is the point. Chaum solved the double-spending problem for digital
+cash without a public ledger - the bank couldn't track who spent what.
+Bitcoin retreated from this by making all transactions public.
+Cyberspace preserves the choice: registered capabilities when you need
+accountability, bearer capabilities when you need privacy.
+
+The axioms still hold:
+
+
+    A1. No Ambient Authority - still need a capability
+    A2. Capabilities Are Unforgeable - blind signatures are Ed25519
+    A3. Capabilities Only Attenuate - bearer caps cannot delegate
+    A4. Objects Are Immutable - unchanged
+
+Unlinkability is orthogonal to authorization. You still need permission;
+you just don't have to identify yourself to use it.
 
 
 ------------------------------------------------------------------------
@@ -1012,13 +1150,18 @@ B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange
 Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula,
 L.J., Secure Computer Systems: Mathematical Foundations, 1973 -
 confidentiality model 7. Biba, K.J., Integrity Considerations for Secure
-Computer Systems, 1977 - integrity model
+Computer Systems, 1977 - integrity model 8. Chaum, D., Blind Signatures
+for Untraceable Payments, Crypto 1982 9. Chaum, D., Security Without
+Identification: Transaction Systems to Make Big Brother Obsolete, CACM
+1985
 
 
 ------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
 
+  * 2026-01-16
+  * Add Unlinkability section: blind signatures, bearer capabilities, Chaum integration
   * 2026-01-08
   * Initial draft
 

@@ -1,0 +1,684 @@
+%!PS-Adobe-3.0
+%%Title: memo-0042-cryptographic-entropy
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0042: Cryptographic Entropy Sources) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(All cryptographic operations in Cyberspace require high-quality entropy.) show newline
+(This Memo specifies the canonical entropy sources for each platform,) show newline
+(ensuring consistent, auditable, and secure randomness across the entire) show newline
+(system.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(The Fundamental Requirement) show newline
+(---------------------------) show newline
+() show newline
+(All cryptography requires true quantum randomness. The math doesn't work) show newline
+(otherwise.) show newline
+() show newline
+(Cryptographic proofs assume a source of bits that are: 1. Statistically) show newline
+(uniform - Each bit equally likely 0 or 1 2. Independent - No) show newline
+(correlations between bits 3. Unpredictable in principle - Not just hard) show newline
+(to predict, but impossible) show newline
+() show newline
+(Only quantum mechanical processes satisfy condition 3. Classical chaotic) show newline
+(systems \(lava lamps, thermal noise, ring oscillators\) are deterministic) show newline
+(- an adversary with sufficient knowledge of initial conditions could, in) show newline
+(theory, predict their output. Quantum processes have no "initial) show newline
+(conditions" to know - the randomness is fundamental to physics itself.) show newline
+() show newline
+(Why this matters: - Security proofs assume perfect randomness - Key) show newline
+(security = min\(algorithmbits, entropybits\) - A 256-bit key from a 32-bit) show newline
+(PRNG seed provides only 32 bits of security - Nation-state adversaries) show newline
+(may have capabilities to model classical entropy sources) show newline
+() show newline
+() show newline
+(Cryptographic Operations Requiring Entropy) show newline
+(------------------------------------------) show newline
+() show newline
+(  * Key generation \(Ed25519, X25519\)) show newline
+(  * Nonce generation \(XSalsa20-Poly1305\)) show newline
+(  * Salt generation \(Argon2id\)) show newline
+(  * Shamir secret sharing) show newline
+(  * Challenge-response protocols) show newline
+(  * Zero-knowledge proofs) show newline
+() show newline
+(Weak or predictable entropy destroys security completely. A realm's) show newline
+(sovereignty depends on unpredictable secrets.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Canonical Source: libsodium) show newline
+(---------------------------) show newline
+() show newline
+(All Cyberspace implementations MUST use libsodium's randombytes_buf\(\) as) show newline
+(the primary entropy source:) show newline
+() show newline
+() show newline
+(    randombytes_buf\(buffer, size\)) show newline
+() show newline
+(libsodium automatically selects the best available source: - Linux:) show newline
+(getrandom\(2\) syscall, falls back to /dev/urandom - macOS/iOS:) show newline
+(arc4randombuf\(\) - Windows: RtlGenRandom\(\) - OpenBSD: arc4randombuf\(\)) show newline
+(\(ChaCha20-based\)) show newline
+() show newline
+() show newline
+(Why libsodium?) show newline
+(--------------) show newline
+() show newline
+(1. Cross-platform consistency - Same API everywhere 2. Automatic) show newline
+(best-source selection - No platform-specific code 3. Initialization) show newline
+(safety - Blocks until entropy available 4. Fork safety - Handles process) show newline
+(forking correctly 5. Audited implementation - Widely reviewed) show newline
+(cryptographic library) show newline
+() show newline
+() show newline
+(Platform Requirements) show newline
+(---------------------) show newline
+() show newline
+(#### Scheme \(CHICKEN\)) show newline
+() show newline
+() show newline
+(    ;; crypto-ffi.scm provides:) show newline
+(    \(define \(random-bytes n\)) show newline
+(      "Generate n cryptographically secure random bytes") show newline
+(      \(let \(\(buf \(make-blob n\)\)\)) show newline
+(        \(\(foreign-lambda void "randombytes_buf" scheme-pointer unsigned-integer\)) show newline
+(         buf n\)) show newline
+(        buf\)\)) show newline
+() show newline
+(All Scheme code MUST use random-bytes from crypto-ffi. NEVER use: -) show newline
+(\(chicken random\) - Uses PRNG, not cryptographically secure - /dev/random) show newline
+(directly - Platform-specific, may block - Custom PRNGs - Unaudited,) show newline
+(likely insecure) show newline
+() show newline
+(#### OCaml) show newline
+() show newline
+(Status: Open Issue) show newline
+() show newline
+(OCaml implementations should use one of: - mirage-crypto-rng with) show newline
+(Nocrypto.Rng.generate - Direct FFI to libsodium via ctypes) show newline
+() show newline
+(Decision pending based on: - Multicore OCaml compatibility -) show newline
+(Domain-local PRNG state handling - Build system integration \(dune vs) show newline
+(opam\)) show newline
+() show newline
+() show newline
+(Entropy Initialization) show newline
+(----------------------) show newline
+() show newline
+(Before ANY cryptographic operation, ensure libsodium is initialized:) show newline
+() show newline
+() show newline
+(    \(define \(sodium-init\)) show newline
+(      \(let \(\(result \(\(foreign-lambda int "sodiuminit"\)\)\)\)) show newline
+(        \(when \(= result -1\)) show newline
+(          \(error "sodiuminit failed - entropy source unavailable"\)\)\)\)) show newline
+() show newline
+(sodium_init\(\) is idempotent and thread-safe. Call it early in program) show newline
+(startup.) show newline
+() show newline
+() show newline
+(Key Generation) show newline
+(--------------) show newline
+() show newline
+(All key generation MUST use libsodium's key generation functions, which) show newline
+(internally use randombytes_buf\(\):) show newline
+() show newline
+() show newline
+(  Operation             Function                  ) show newline
+(  Ed25519 signing key   cryptosignkeypair\(\)       ) show newline
+(  X25519 key exchange   cryptoboxkeypair\(\)        ) show newline
+(  Symmetric key         cryptosecretboxkeygen\(\)   ) show newline
+(  Generic random        randombytes_buf\(\)         ) show newline
+() show newline
+() show newline
+(Nonce Generation) show newline
+(----------------) show newline
+() show newline
+(Nonces MUST be generated fresh for each encryption:) show newline
+() show newline
+() show newline
+(    \(define \(generate-nonce\)) show newline
+(      \(random-bytes \(secretbox-noncebytes\)\)\)  ;; 24 bytes) show newline
+() show newline
+(For XSalsa20-Poly1305 with 24-byte nonces, random nonces are safe: -) show newline
+(2^192 possible nonces - Birthday collision after ~2^96 messages -) show newline
+(Practical limit: ~2^64 messages per key \(still astronomical\)) show newline
+() show newline
+() show newline
+(Salt Generation) show newline
+(---------------) show newline
+() show newline
+(For Argon2id key derivation:) show newline
+() show newline
+() show newline
+(    \(define \(generate-salt\)) show newline
+(      \(random-bytes 16\)\)  ;; cryptopwhashSALTBYTES) show newline
+() show newline
+(Salts prevent rainbow table attacks. Each salt MUST be unique per) show newline
+(derived key.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DEEP DIVE: ENTROPY SOURCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Randomness is the foundation of all cryptography. This section explores) show newline
+(the physics and engineering of true randomness.) show newline
+() show newline
+() show newline
+(The Entropy Hierarchy) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                    Entropy Quality Pyramid                   |) show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                                                              |) show newline
+(    |                    +---------------+                         |) show newline
+(    |           ★★★     |  Quantum RNG  |  < TRUE RANDOMNESS      |) show newline
+(    |                    +---------------+    \(required for        |) show newline
+(    |                         ^                cryptographic       |) show newline
+(    |                         |                security\)           |) show newline
+(    |                    -----+-----                               |) show newline
+(    |                    SECURITY BOUNDARY                         |) show newline
+(    |                    ---------------                           |) show newline
+(    |                         |                                    |) show newline
+(    |                         v                                    |) show newline
+(    |                  +-------------------+                       |) show newline
+(    |                  |  Hardware TRNG    |  < Best effort       |) show newline
+(    |                  +-------------------+    \(should feed       |) show newline
+(    |                +-----------------------+   quantum source\)   |) show newline
+(    |                |  Environmental/Analog |                     |) show newline
+(    |                +-----------------------+                     |) show newline
+(    |              +---------------------------+                   |) show newline
+(    |              |  Public Beacons \(NIST\)    |  < Verifiable     |) show newline
+(    |              +---------------------------+                   |) show newline
+(    |            +-------------------------------+                 |) show newline
+(    |            |  OS Entropy Pool              |  < Mixed        |) show newline
+(    |            +-------------------------------+                 |) show newline
+(    |          +-----------------------------------+               |) show newline
+(    |          |  CSPRNG \(seeded from above\)       |  < Expansion  |) show newline
+(    |          +-----------------------------------+               |) show newline
+(    |                                                              |) show newline
+(    +-------------------------------------------------------------+) show newline
+(       ★★★ = Cryptographic operations MUST ultimately trace to quantum sources) show newline
+() show newline
+(Critical distinction: Everything below the security boundary is) show newline
+(computationally secure \(hard to predict\), not information-theoretically) show newline
+(secure \(impossible to predict\). For operations like key generation that) show newline
+(must withstand future advances in computation and modeling, only quantum) show newline
+(sources provide provable security.) show newline
+() show newline
+() show newline
+(Practical Access to Quantum Randomness) show newline
+(--------------------------------------) show newline
+() show newline
+(The ideal: Every cryptographic operation sources entropy from a local) show newline
+(quantum RNG.) show newline
+() show newline
+(Current reality: Most systems rely on: 1. Hardware RNG \(thermal noise,) show newline
+(ring oscillators\) - classical, but unpredictable at human scales 2. OS) show newline
+(mixing of multiple sources - defense in depth 3. NIST beacon -) show newline
+(quantum-sourced, publicly verifiable, but network-dependent) show newline
+() show newline
+(Path forward for Cyberspace: - Phase 1 \(Now\): libsodium with OS entropy) show newline
+(\(relies on hardware quality\) - Phase 2: Optional quantum RNG hardware) show newline
+(support \(USB devices, PCIe cards\) - Phase 3: Attestation of entropy) show newline
+(source in realm metadata - Phase 4: Quantum RNG as standard) show newline
+(infrastructure \(as quantum internet develops\)) show newline
+() show newline
+(Minimum acceptable: Modern Intel/AMD RDSEED instruction, which samples) show newline
+(thermal noise at the silicon level. While not provably quantum, it has) show newline
+(no known exploits and is mixed with other sources.) show newline
+() show newline
+(Goal: True quantum randomness as the foundation. The math requires it;) show newline
+(the engineering will catch up.) show newline
+() show newline
+() show newline
+(Cyberspace as Entropy Provider) show newline
+(------------------------------) show newline
+() show newline
+(We will provide all the randomness that our users need - on demand, for) show newline
+(whatever their cryptographic desires.) show newline
+() show newline
+(Cyberspace realms can serve as entropy sources for their users:) show newline
+() show newline
+() show newline
+(    ;; Request entropy from the realm) show newline
+(    \(realm-entropy-request) show newline
+(      \(bytes 32\)) show newline
+(      \(purpose "key-generation"\)) show newline
+(      \(attestation-required #t\)\)) show newline
+(    ;; Response includes attestation of entropy source) show newline
+(    \(realm-entropy-response) show newline
+(      \(value #${...32 bytes...}\)) show newline
+(      \(source "quantum-rng"\)) show newline
+(      \(attestation \(signed-by realm-principal\)) show newline
+(                   \(hardware "ID-Quantique-QUANTIS"\)) show newline
+(                   \(timestamp 1736344800\)\)\)) show newline
+() show newline
+(Entropy services: 1. Local generation - Realm uses its best available) show newline
+(source 2. Federated entropy - Request quantum entropy from realms with) show newline
+(quantum hardware 3. Beacon aggregation - Mix NIST + drand + realm) show newline
+(sources 4. Attestation chain - Prove the entropy source for audit) show newline
+() show newline
+(Long-term vision: A network of realms with quantum RNG hardware) show newline
+(providing verifiable, quantum-sourced entropy to all participants. The) show newline
+(soup carries randomness as naturally as it carries data.) show newline
+() show newline
+() show newline
+(True Random Number Generators \(TRNG\)) show newline
+(------------------------------------) show newline
+() show newline
+(True randomness comes from physical processes that are fundamentally) show newline
+(unpredictable:) show newline
+() show newline
+(#### Quantum Sources \(Required for Provable Security\)) show newline
+() show newline
+(The only sources that satisfy cryptographic assumptions. Quantum) show newline
+(mechanics guarantees unpredictability:) show newline
+() show newline
+(  * Photon beam splitters) show newline
+(  * Single photon hits 50/50 beam splitter, detection is truly random) show newline
+(  * Vacuum fluctuations) show newline
+(  * Measuring quantum vacuum state) show newline
+(  * Quantum tunneling) show newline
+(  * Electron tunneling through barriers) show newline
+(  * Nuclear decay) show newline
+(  * Timing of radioactive decay events) show newline
+() show newline
+(Commercial quantum RNGs: ID Quantique \(QUANTIS\), Quintessence Labs,) show newline
+(Crypta Labs) show newline
+() show newline
+(#### Silicon-Based TRNG) show newline
+() show newline
+(Modern CPUs include hardware random number generators:) show newline
+() show newline
+() show newline
+(  CPU      Instruction     Mechanism                     ) show newline
+(  Intel    RDRAND/RDSEED   Thermal noise + AES-CBC-MAC   ) show newline
+(  AMD      RDRAND/RDSEED   Ring oscillator jitter        ) show newline
+(  ARM      TRNG            Metastable flip-flops         ) show newline
+(  RISC-V   Zkr extension   Implementation-defined        ) show newline
+() show newline
+(Security note: Intel's RDRAND has faced scrutiny. Mix with other) show newline
+(sources.) show newline
+() show newline
+() show newline
+(Environmental Entropy: Lavarand) show newline
+(-------------------------------) show newline
+() show newline
+(The most famous entropy source in computing.) show newline
+() show newline
+(Silicon Graphics \(SGI\) invented Lavarand in 1996. Cloudflare operates) show newline
+(the modern successor.) show newline
+() show newline
+(#### How It Works) show newline
+() show newline
+() show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                     LAVARAND SYSTEM                          |) show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                                                              |) show newline
+(    |   +---------+    +---------+    +---------------------+     |) show newline
+(    |   |  Lava   |    | Camera  |    |  Image > Hash       |     |) show newline
+(    |   |  Lamp   |--->|  Feed   |--->|  SHA-256 per frame  |     |) show newline
+(    |   |  Wall   |    |         |    |                     |     |) show newline
+(    |   +---------+    +---------+    +----------+----------+     |) show newline
+(    |                                            |                 |) show newline
+(    |                                            v                 |) show newline
+(    |                                  +---------------------+     |) show newline
+(    |                                  |  Entropy Pool       |     |) show newline
+(    |                                  |  \(mix with CSPRNG\)  |     |) show newline
+(    |                                  +---------------------+     |) show newline
+(    |                                                              |) show newline
+(    +-------------------------------------------------------------+) show newline
+() show newline
+(#### Why Lava Lamps?) show newline
+() show newline
+(1. Chaotic fluid dynamics - Wax movement is unpredictable 2. Thermal) show newline
+(convection - Heat creates complex flow patterns 3. High bandwidth - Each) show newline
+(video frame yields fresh entropy 4. Tamper-evident - Physical) show newline
+(installation is visible 5. Independent source - Not correlated with CPU) show newline
+(state) show newline
+() show newline
+(Cloudflare's wall of 100 lava lamps generates entropy for ~10% of) show newline
+(internet HTTPS traffic.) show newline
+() show newline
+(#### Other Environmental Sources) show newline
+() show newline
+() show newline
+(  Source              Mechanism                Bandwidth             ) show newline
+(  Lava lamps          Fluid dynamics           ~100 Kbit/s           ) show newline
+(  Radioactive decay   Nuclear physics          ~1-10 Kbit/s          ) show newline
+(  Atmospheric noise   RF antenna               ~1 Mbit/s             ) show newline
+(  Thermal camera      Johnson-Nyquist noise    ~10 Kbit/s            ) show newline
+(  Double pendulum     Chaotic motion           ~100 bit/s            ) show newline
+(  Keyboard timing     Human unpredictability   ~1-10 bit/keystroke   ) show newline
+() show newline
+() show newline
+(Public Randomness Beacons) show newline
+(-------------------------) show newline
+() show newline
+(Beacons provide verifiable public randomness - useful for: - Lottery) show newline
+(systems - Audit sampling - Distributed protocols - Zero-knowledge proofs) show newline
+() show newline
+(#### NIST Randomness Beacon) show newline
+() show newline
+(The National Institute of Standards and Technology operates a public) show newline
+(randomness beacon since 2013.) show newline
+() show newline
+() show newline
+(    https://beacon.nist.gov/beacon/2.0/pulse/last) show newline
+() show newline
+(Architecture:) show newline
+() show newline
+() show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                   NIST BEACON 2.0                            |) show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                                                              |) show newline
+(    |  Sources:           Processing:         Output:              |) show newline
+(    |  +---------+       +-----------+      +--------------+      |) show newline
+(    |  | Quantum |--+    |           |      | Pulse Record |      |) show newline
+(    |  |   RNG   |  |    |  SHA-512  |      +--------------+      |) show newline
+(    |  +---------+  |    |  mixing   |      | timestamp    |      |) show newline
+(    |  +---------+  +--->|     +     |----->| localRandom  |      |) show newline
+(    |  |Photonic |  |    |  signing  |      | outputValue  |      |) show newline
+(    |  |  Noise  |--+    |           |      | signatureVal |      |) show newline
+(    |  +---------+       +-----------+      +--------------+      |) show newline
+(    |                                                              |) show newline
+(    |  Pulse interval: 60 seconds                                  |) show newline
+(    |  Hash chain: Each pulse includes hash of previous            |) show newline
+(    |  Signature: RSA-2048 \(Beacon 2.0\)                           |) show newline
+(    |                                                              |) show newline
+(    +-------------------------------------------------------------+) show newline
+() show newline
+(Pulse Record Contents: - uri - Unique pulse identifier - version -) show newline
+(Beacon protocol version - timeStamp - Unix timestamp - localRandomValue) show newline
+(- 512 bits from quantum sources - outputValue - SHA-512 hash \(the public) show newline
+(random value\) - statusCode - Health indicator - signatureValue - Digital) show newline
+(signature) show newline
+() show newline
+(Properties: - Unpredictable - Cannot be known before publication -) show newline
+(Verifiable - Anyone can verify the signature chain - Non-manipulable -) show newline
+(NIST cannot control output - Archived - Full history publicly available) show newline
+() show newline
+(Use in Cyberspace:) show newline
+() show newline
+() show newline
+(    ;; For ceremonies, audits, public verifiability) show newline
+(    \(define \(fetch-nist-beacon\)) show newline
+(      \(let* \(\(response \(http-get "https://beacon.nist.gov/beacon/2.0/pulse/last"\)\)) show newline
+(             \(pulse \(json-parse response\)\)) show newline
+(             \(output \(assoc-ref pulse "outputValue"\)\)\)) show newline
+(        \(hex->blob output\)\)\)) show newline
+() show newline
+(#### Other Public Beacons) show newline
+() show newline
+() show newline
+(  Beacon             Operator              Source                  Interval     ) show newline
+(  NIST Beacon        US NIST               Quantum + photonic      60 seconds   ) show newline
+(  Chile UChile       University of Chile   Seismic + radio         60 seconds   ) show newline
+(  Cloudflare drand   League of Entropy     Distributed threshold   30 seconds   ) show newline
+(  IRISA              French research       Multiple physical       60 seconds   ) show newline
+() show newline
+(#### League of Entropy \(drand\)) show newline
+() show newline
+(Distributed randomness beacon - no single party controls the output:) show newline
+() show newline
+() show newline
+(    +-------------------------------------------------------------+) show newline
+(    |              DRAND DISTRIBUTED BEACON                        |) show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                                                              |) show newline
+(    |   Cloudflare --+                                            |) show newline
+(    |                |                                             |) show newline
+(    |   EPFL --------+--- Threshold ---> Public Random           |) show newline
+(    |                |    BLS Sig          \(t-of-n nodes          |) show newline
+(    |   Protocol ----+    \(t-of-n\)          must participate\)     |) show newline
+(    |   Labs         |                                             |) show newline
+(    |                |                                             |) show newline
+(    |   Kudelski ----+                                            |) show newline
+(    |                                                              |) show newline
+(    |   Endpoint: https://api.drand.sh/public/latest              |) show newline
+(    |   Chain: 8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce |) show newline
+(    |                                                              |) show newline
+(    +-------------------------------------------------------------+) show newline
+() show newline
+() show newline
+(Entropy Mixing) show newline
+(--------------) show newline
+() show newline
+(Real systems mix multiple sources for defense in depth:) show newline
+() show newline
+() show newline
+(    ;; Conceptual entropy mixer) show newline
+(    \(define \(mix-entropy-sources\)) show newline
+(      \(let \(\(hw \(hardware-random-bytes 32\)\)      ;; RDRAND) show newline
+(            \(os \(os-entropy-pool-bytes 32\)\)       ;; /dev/urandom) show newline
+(            \(env \(environmental-entropy 32\)\)      ;; If available) show newline
+(            \(beacon \(cached-nist-beacon\)\)\)        ;; Public verifiability) show newline
+(        ;; Mix with HKDF or similar) show newline
+(        \(hkdf-sha512) show newline
+(          \(blob-append hw os env beacon\)) show newline
+(          "cyberspace-entropy-v1") show newline
+(          64\)\)\)) show newline
+() show newline
+() show newline
+(Historical Entropy Failures) show newline
+(---------------------------) show newline
+() show newline
+(Learning from disasters:) show newline
+() show newline
+() show newline
+(  Incident               Year        Cause                            Impact                    ) show newline
+(  Netscape SSL           1995        PID + timestamp = predictable    All SSL broken            ) show newline
+(  Debian OpenSSL         2006-2008   Valgrind "fix" removed entropy   32,767 possible keys      ) show newline
+(  Android SecureRandom   2013        PRNG state reuse                 Bitcoin wallets drained   ) show newline
+(  DualECDRBG             2013        NSA backdoor in constants        Unknown surveillance      ) show newline
+(  Taiwan smart cards     2013        Shared PRNG state                Factored RSA keys         ) show newline
+() show newline
+(Lesson: Defense in depth. Mix multiple independent sources.) show newline
+() show newline
+() show newline
+(Entropy Requirements by Operation) show newline
+(---------------------------------) show newline
+() show newline
+() show newline
+(  Operation         Entropy Needed   Notes                             ) show newline
+(  Ed25519 keypair   32 bytes         Full key security                 ) show newline
+(  X25519 keypair    32 bytes         Full key security                 ) show newline
+(  XSalsa20 nonce    24 bytes         Random OK \(large space\)           ) show newline
+(  AES-GCM nonce     12 bytes         Counter preferred \(small space\)   ) show newline
+(  Argon2id salt     16 bytes         Unique per derivation             ) show newline
+(  Session ID        16-32 bytes      Unpredictable                     ) show newline
+(  ECDSA k-value     32 bytes         CRITICAL - must not repeat        ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Entropy Exhaustion) show newline
+(------------------) show newline
+() show newline
+(libsodium's randombytes_buf\(\) never blocks on modern systems: - Uses) show newline
+(ChaCha20 CSPRNG seeded from OS entropy - OS entropy pools are) show newline
+(continuously replenished - Hardware RNG \(RDRAND/RDSEED\) available on) show newline
+(modern CPUs) show newline
+() show newline
+() show newline
+(VM/Container Considerations) show newline
+(---------------------------) show newline
+() show newline
+(Virtual machines may have limited entropy at boot: - Use virtio-rng to) show newline
+(pass host entropy to guests - Ensure haveged or rng-tools if) show newline
+(entropy-limited - libsodium will block until sufficient entropy) show newline
+(available) show newline
+() show newline
+() show newline
+(Fork Safety) show newline
+(-----------) show newline
+() show newline
+(libsodium handles fork correctly: - Automatic re-seeding after fork\(\) -) show newline
+(No duplicate random sequences in child processes) show newline
+() show newline
+() show newline
+(Deterministic Testing) show newline
+(---------------------) show newline
+() show newline
+(For reproducible tests ONLY \(never production\):) show newline
+() show newline
+() show newline
+(    \(define \(set-test-seed seed\)) show newline
+(      "WARNING: Deterministic mode - testing only") show newline
+(      \(\(foreign-lambda void "randombytes_stir"\)\)\)) show newline
+() show newline
+(Production code MUST use true entropy.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Current Status) show newline
+(--------------) show newline
+() show newline
+() show newline
+(  Component              Entropy Source      Status        ) show newline
+(  crypto-ffi.scm         randombytes_buf\(\)   Implemented   ) show newline
+(  vault.scm \(keystore\)   random-bytes        Implemented   ) show newline
+(  OCaml core             TBD                 Open Issue    ) show newline
+() show newline
+() show newline
+(Audit Trail) show newline
+(-----------) show newline
+() show newline
+(All key generation events should be logged \(not the keys themselves\):) show newline
+() show newline
+() show newline
+(    \(seal-commit #f) show newline
+(      `\(entropy-event) show newline
+(        \(type "key-generation"\)) show newline
+(        \(algorithm "ed25519"\)) show newline
+(        \(timestamp ,\(current-seconds\)\)) show newline
+(        \(entropy-source "libsodium"\)\)\)) show newline
+() show newline
+() show newline
+(Hardware Entropy) show newline
+(----------------) show newline
+() show newline
+(When available, hardware entropy sources enhance security:) show newline
+() show newline
+() show newline
+(  Platform        Hardware RNG                          ) show newline
+(  Intel/AMD       RDRAND, RDSEED instructions           ) show newline
+(  ARM             TRNG \(True Random Number Generator\)   ) show newline
+(  Apple Silicon   Secure Enclave entropy                ) show newline
+() show newline
+(libsodium automatically uses hardware entropy when available.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MIGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Phase 1: Audit \(Current\)) show newline
+(------------------------) show newline
+() show newline
+(  * Identify all randomness usage in codebase) show newline
+(  * Replace non-libsodium sources) show newline
+() show newline
+() show newline
+(Phase 2: Standardize) show newline
+(--------------------) show newline
+() show newline
+(  * All Scheme uses random-bytes from crypto-ffi) show newline
+(  * Document OCaml approach) show newline
+() show newline
+() show newline
+(Phase 3: Verify) show newline
+(---------------) show newline
+() show newline
+(  * Entropy quality testing) show newline
+(  * Audit logging for key generation) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * libsodium documentation: https://doc.libsodium.org/) show newline
+(  * NIST SP 800-90A: Recommendations for Random Number Generation) show newline
+(  * RFC 4086: Randomness Requirements for Security) show newline
+(  * ChaCha20: https://cr.yp.to/chacha.html) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(APPENDIX: ENTROPY QUALITY TESTING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(For paranoid verification:) show newline
+() show newline
+() show newline
+(    # Generate random data) show newline
+(    csi -e "\(import crypto-ffi\) \(display \(random-bytes 1000000\)\)" > random.bin) show newline
+(    # Run NIST statistical tests) show newline
+(    ent random.bin) show newline
+(    dieharder -a -f random.bin) show newline
+() show newline
+(Expected results: - Entropy: ~7.9999 bits per byte - Chi-square: p-value) show newline
+(0.01-0.99 - All dieharder tests: PASSED) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

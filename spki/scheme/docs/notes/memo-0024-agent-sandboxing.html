@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Memo 0024: Demonic Agents</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0024: Demonic Agents</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This Memo specifies demonic agents for the Library of Cyberspace: how autonomous agents—daemons in the BSD tradition—are spawned, constrained, monitored, and terminated. Agents are helpful spirits that operate with capability-based authority in isolated sandboxes, enabling safe delegation of tasks while maintaining security boundaries. The vault daemons watch over all.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<h3>The BSD Daemon Tradition</h3>
+<p>In Unix mythology, a daemon is a helpful spirit—a background process that tends to the system without being asked. The term comes from Maxwell's demon, the thought experiment about a creature that sorts molecules. BSD gave this concept a face: Beastie, the cheerful daemon with a pitchfork, watching over the system.</p>
+<p>The Library embraces this tradition. Our agents are daemons—helpful spirits that carry authority, travel between vaults, and do work while their principals sleep.</p>
+<h3>The General Magic Vision</h3>
+<p>Telescript, from 1994:</p>
+<blockquote>
+<p>"Programs that travel from machine to machine, carrying your authority, doing things while you sleep."</p>
+</blockquote>
+<p>That vision failed because:</p>
+<ul>
+<li>No security model</li>
+<li>Agents ran with ambient authority</li>
+<li>No isolation</li>
+<li>One agent could corrupt another</li>
+<li>No accountability</li>
+<li>No audit of agent actions</li>
+<li>No revocation</li>
+<li>Once launched, agents were uncontrollable</li>
+</ul>
+<h3>The Demonic Solution</h3>
+<p>The Library realizes this vision with proper daemonology:</p>
+<ul>
+<li>Capability-based authority</li>
+<li>Daemons have only granted permissions</li>
+<li>Sandbox isolation</li>
+<li>Process, filesystem, network boundaries</li>
+<li>Full audit trail</li>
+<li>The Audit Daemon witnesses every action</li>
+<li>Remote termination</li>
+<li>Daemons can be banished at any time</li>
+</ul>
+<p>Daemons don't rule—they serve. They don't watch over—they watch with.</p>
+</section>
+<section>
+<h2>Daemon Model</h2>
+<h3>What is a Daemon?</h3>
+<p>A daemon is a helpful spirit—an autonomous agent that serves its principal:</p>
+<pre class="language-scheme">
+(agent
+  (id "agent-2026-001")
+  (spawned-by user-principal)
+  (purpose "Monitor RSS feeds and archive new papers")
+  (capabilities
+    (read (url "https://arxiv.org/rss/"))
+    (write (path "/vault/papers/"))
+    (network (hosts ("arxiv.org" "doi.org"))))
+  (constraints
+    (max-runtime ( 24 3600))  ; 24 hours
+    (max-memory ( 512 1024 1024))  ; 512MB
+    (max-storage ( 1 1024 1024 1024)))  ; 1GB
+  (sandbox posix-sandbox)
+  (status running))
+</pre>
+<h3>Agent Lifecycle</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 528.0 537.6" width="528.0" height="537.6" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+<line x1="43.2" y1="9.6" x2="48.0" y2="9.6"/>
+<line x1="43.2" y1="9.6" x2="43.2" y2="19.2"/>
+<line x1="48.0" y1="9.6" x2="57.6" y2="9.6"/>
+<line x1="57.6" y1="9.6" x2="67.2" y2="9.6"/>
+<line x1="67.2" y1="9.6" x2="76.8" y2="9.6"/>
+<line x1="76.8" y1="9.6" x2="86.4" y2="9.6"/>
+<line x1="86.4" y1="9.6" x2="96.0" y2="9.6"/>
+<line x1="96.0" y1="9.6" x2="105.6" y2="9.6"/>
+<line x1="105.6" y1="9.6" x2="115.2" y2="9.6"/>
+<line x1="115.2" y1="9.6" x2="124.8" y2="9.6"/>
+<line x1="124.8" y1="9.6" x2="134.4" y2="9.6"/>
+<line x1="134.4" y1="9.6" x2="139.2" y2="9.6"/>
+<line x1="139.2" y1="9.6" x2="139.2" y2="19.2"/>
+<line x1="43.2" y1="19.2" x2="43.2" y2="38.4"/>
+<line x1="139.2" y1="19.2" x2="139.2" y2="38.4"/>
+<line x1="43.2" y1="48.0" x2="48.0" y2="48.0"/>
+<line x1="43.2" y1="38.4" x2="43.2" y2="48.0"/>
+<line x1="48.0" y1="48.0" x2="57.6" y2="48.0"/>
+<line x1="57.6" y1="48.0" x2="67.2" y2="48.0"/>
+<line x1="67.2" y1="48.0" x2="76.8" y2="48.0"/>
+<line x1="76.8" y1="48.0" x2="86.4" y2="48.0"/>
+<line x1="86.4" y1="48.0" x2="96.0" y2="48.0"/>
+<line x1="91.2" y1="48.0" x2="91.2" y2="57.6"/>
+<line x1="96.0" y1="48.0" x2="105.6" y2="48.0"/>
+<line x1="105.6" y1="48.0" x2="115.2" y2="48.0"/>
+<line x1="115.2" y1="48.0" x2="124.8" y2="48.0"/>
+<line x1="124.8" y1="48.0" x2="134.4" y2="48.0"/>
+<line x1="134.4" y1="48.0" x2="139.2" y2="48.0"/>
+<line x1="139.2" y1="38.4" x2="139.2" y2="48.0"/>
+<line x1="91.2" y1="57.6" x2="91.2" y2="76.8"/>
+<line x1="43.2" y1="105.6" x2="48.0" y2="105.6"/>
+<line x1="43.2" y1="105.6" x2="43.2" y2="115.2"/>
+<line x1="48.0" y1="105.6" x2="57.6" y2="105.6"/>
+<line x1="57.6" y1="105.6" x2="67.2" y2="105.6"/>
+<line x1="67.2" y1="105.6" x2="76.8" y2="105.6"/>
+<line x1="76.8" y1="105.6" x2="86.4" y2="105.6"/>
+<line x1="86.4" y1="105.6" x2="96.0" y2="105.6"/>
+<line x1="96.0" y1="105.6" x2="105.6" y2="105.6"/>
+<line x1="105.6" y1="105.6" x2="115.2" y2="105.6"/>
+<line x1="115.2" y1="105.6" x2="124.8" y2="105.6"/>
+<line x1="124.8" y1="105.6" x2="134.4" y2="105.6"/>
+<line x1="134.4" y1="105.6" x2="139.2" y2="105.6"/>
+<line x1="139.2" y1="105.6" x2="139.2" y2="115.2"/>
+<line x1="43.2" y1="115.2" x2="43.2" y2="134.4"/>
+<line x1="139.2" y1="115.2" x2="139.2" y2="134.4"/>
+<line x1="43.2" y1="144.0" x2="48.0" y2="144.0"/>
+<line x1="43.2" y1="134.4" x2="43.2" y2="144.0"/>
+<line x1="48.0" y1="144.0" x2="57.6" y2="144.0"/>
+<line x1="57.6" y1="144.0" x2="67.2" y2="144.0"/>
+<line x1="67.2" y1="144.0" x2="76.8" y2="144.0"/>
+<line x1="76.8" y1="144.0" x2="86.4" y2="144.0"/>
+<line x1="86.4" y1="144.0" x2="96.0" y2="144.0"/>
+<line x1="91.2" y1="144.0" x2="91.2" y2="153.6"/>
+<line x1="96.0" y1="144.0" x2="105.6" y2="144.0"/>
+<line x1="105.6" y1="144.0" x2="115.2" y2="144.0"/>
+<line x1="115.2" y1="144.0" x2="124.8" y2="144.0"/>
+<line x1="124.8" y1="144.0" x2="134.4" y2="144.0"/>
+<line x1="134.4" y1="144.0" x2="139.2" y2="144.0"/>
+<line x1="139.2" y1="134.4" x2="139.2" y2="144.0"/>
+<line x1="91.2" y1="153.6" x2="91.2" y2="172.8"/>
+<line x1="43.2" y1="201.6" x2="48.0" y2="201.6"/>
+<line x1="43.2" y1="201.6" x2="43.2" y2="211.2"/>
+<line x1="48.0" y1="201.6" x2="57.6" y2="201.6"/>
+<line x1="57.6" y1="201.6" x2="67.2" y2="201.6"/>
+<line x1="67.2" y1="201.6" x2="76.8" y2="201.6"/>
+<line x1="76.8" y1="201.6" x2="86.4" y2="201.6"/>
+<line x1="86.4" y1="201.6" x2="96.0" y2="201.6"/>
+<line x1="96.0" y1="201.6" x2="105.6" y2="201.6"/>
+<line x1="105.6" y1="201.6" x2="115.2" y2="201.6"/>
+<line x1="115.2" y1="201.6" x2="124.8" y2="201.6"/>
+<line x1="124.8" y1="201.6" x2="134.4" y2="201.6"/>
+<line x1="134.4" y1="201.6" x2="139.2" y2="201.6"/>
+<line x1="139.2" y1="201.6" x2="139.2" y2="211.2"/>
+<line x1="43.2" y1="211.2" x2="43.2" y2="230.4"/>
+<line x1="139.2" y1="211.2" x2="139.2" y2="230.4"/>
+<line x1="43.2" y1="240.0" x2="48.0" y2="240.0"/>
+<line x1="43.2" y1="230.4" x2="43.2" y2="240.0"/>
+<line x1="48.0" y1="240.0" x2="57.6" y2="240.0"/>
+<line x1="57.6" y1="240.0" x2="67.2" y2="240.0"/>
+<line x1="67.2" y1="240.0" x2="76.8" y2="240.0"/>
+<line x1="76.8" y1="240.0" x2="86.4" y2="240.0"/>
+<line x1="86.4" y1="240.0" x2="96.0" y2="240.0"/>
+<line x1="91.2" y1="240.0" x2="91.2" y2="249.6"/>
+<line x1="96.0" y1="240.0" x2="105.6" y2="240.0"/>
+<line x1="105.6" y1="240.0" x2="115.2" y2="240.0"/>
+<line x1="115.2" y1="240.0" x2="124.8" y2="240.0"/>
+<line x1="124.8" y1="240.0" x2="134.4" y2="240.0"/>
+<line x1="134.4" y1="240.0" x2="139.2" y2="240.0"/>
+<line x1="139.2" y1="230.4" x2="139.2" y2="240.0"/>
+<line x1="91.2" y1="249.6" x2="91.2" y2="268.8"/>
+<line x1="43.2" y1="297.6" x2="48.0" y2="297.6"/>
+<line x1="43.2" y1="297.6" x2="43.2" y2="307.2"/>
+<line x1="48.0" y1="297.6" x2="57.6" y2="297.6"/>
+<line x1="57.6" y1="297.6" x2="67.2" y2="297.6"/>
+<line x1="67.2" y1="297.6" x2="76.8" y2="297.6"/>
+<line x1="76.8" y1="297.6" x2="86.4" y2="297.6"/>
+<line x1="86.4" y1="297.6" x2="96.0" y2="297.6"/>
+<line x1="96.0" y1="297.6" x2="105.6" y2="297.6"/>
+<line x1="105.6" y1="297.6" x2="115.2" y2="297.6"/>
+<line x1="115.2" y1="297.6" x2="124.8" y2="297.6"/>
+<line x1="124.8" y1="297.6" x2="134.4" y2="297.6"/>
+<line x1="134.4" y1="297.6" x2="139.2" y2="297.6"/>
+<line x1="139.2" y1="297.6" x2="139.2" y2="307.2"/>
+<line x1="43.2" y1="307.2" x2="43.2" y2="326.4"/>
+<line x1="139.2" y1="307.2" x2="139.2" y2="326.4"/>
+<line x1="43.2" y1="336.0" x2="48.0" y2="336.0"/>
+<line x1="43.2" y1="326.4" x2="43.2" y2="336.0"/>
+<line x1="48.0" y1="336.0" x2="57.6" y2="336.0"/>
+<line x1="57.6" y1="336.0" x2="67.2" y2="336.0"/>
+<line x1="67.2" y1="336.0" x2="76.8" y2="336.0"/>
+<line x1="76.8" y1="336.0" x2="86.4" y2="336.0"/>
+<line x1="86.4" y1="336.0" x2="96.0" y2="336.0"/>
+<line x1="91.2" y1="336.0" x2="91.2" y2="345.6"/>
+<line x1="96.0" y1="336.0" x2="105.6" y2="336.0"/>
+<line x1="105.6" y1="336.0" x2="115.2" y2="336.0"/>
+<line x1="115.2" y1="336.0" x2="124.8" y2="336.0"/>
+<line x1="124.8" y1="336.0" x2="134.4" y2="336.0"/>
+<line x1="134.4" y1="336.0" x2="139.2" y2="336.0"/>
+<line x1="139.2" y1="326.4" x2="139.2" y2="336.0"/>
+<line x1="91.2" y1="345.6" x2="91.2" y2="364.8"/>
+<line x1="43.2" y1="393.6" x2="48.0" y2="393.6"/>
+<line x1="43.2" y1="393.6" x2="43.2" y2="403.2"/>
+<line x1="48.0" y1="393.6" x2="57.6" y2="393.6"/>
+<line x1="57.6" y1="393.6" x2="67.2" y2="393.6"/>
+<line x1="67.2" y1="393.6" x2="76.8" y2="393.6"/>
+<line x1="76.8" y1="393.6" x2="86.4" y2="393.6"/>
+<line x1="86.4" y1="393.6" x2="96.0" y2="393.6"/>
+<line x1="96.0" y1="393.6" x2="105.6" y2="393.6"/>
+<line x1="105.6" y1="393.6" x2="115.2" y2="393.6"/>
+<line x1="115.2" y1="393.6" x2="124.8" y2="393.6"/>
+<line x1="124.8" y1="393.6" x2="134.4" y2="393.6"/>
+<line x1="134.4" y1="393.6" x2="139.2" y2="393.6"/>
+<line x1="139.2" y1="393.6" x2="139.2" y2="403.2"/>
+<line x1="43.2" y1="403.2" x2="43.2" y2="422.4"/>
+<line x1="139.2" y1="403.2" x2="139.2" y2="422.4"/>
+<line x1="43.2" y1="432.0" x2="48.0" y2="432.0"/>
+<line x1="43.2" y1="422.4" x2="43.2" y2="432.0"/>
+<line x1="48.0" y1="432.0" x2="57.6" y2="432.0"/>
+<line x1="57.6" y1="432.0" x2="67.2" y2="432.0"/>
+<line x1="67.2" y1="432.0" x2="76.8" y2="432.0"/>
+<line x1="76.8" y1="432.0" x2="86.4" y2="432.0"/>
+<line x1="86.4" y1="432.0" x2="96.0" y2="432.0"/>
+<line x1="91.2" y1="432.0" x2="91.2" y2="441.6"/>
+<line x1="96.0" y1="432.0" x2="105.6" y2="432.0"/>
+<line x1="105.6" y1="432.0" x2="115.2" y2="432.0"/>
+<line x1="115.2" y1="432.0" x2="124.8" y2="432.0"/>
+<line x1="124.8" y1="432.0" x2="134.4" y2="432.0"/>
+<line x1="134.4" y1="432.0" x2="139.2" y2="432.0"/>
+<line x1="139.2" y1="422.4" x2="139.2" y2="432.0"/>
+<line x1="91.2" y1="441.6" x2="91.2" y2="460.8"/>
+<line x1="43.2" y1="489.6" x2="48.0" y2="489.6"/>
+<line x1="43.2" y1="489.6" x2="43.2" y2="499.2"/>
+<line x1="48.0" y1="489.6" x2="57.6" y2="489.6"/>
+<line x1="57.6" y1="489.6" x2="67.2" y2="489.6"/>
+<line x1="67.2" y1="489.6" x2="76.8" y2="489.6"/>
+<line x1="76.8" y1="489.6" x2="86.4" y2="489.6"/>
+<line x1="86.4" y1="489.6" x2="96.0" y2="489.6"/>
+<line x1="96.0" y1="489.6" x2="105.6" y2="489.6"/>
+<line x1="105.6" y1="489.6" x2="115.2" y2="489.6"/>
+<line x1="115.2" y1="489.6" x2="124.8" y2="489.6"/>
+<line x1="124.8" y1="489.6" x2="134.4" y2="489.6"/>
+<line x1="134.4" y1="489.6" x2="139.2" y2="489.6"/>
+<line x1="139.2" y1="489.6" x2="139.2" y2="499.2"/>
+<line x1="43.2" y1="499.2" x2="43.2" y2="518.4"/>
+<line x1="139.2" y1="499.2" x2="139.2" y2="518.4"/>
+<line x1="43.2" y1="528.0" x2="48.0" y2="528.0"/>
+<line x1="43.2" y1="518.4" x2="43.2" y2="528.0"/>
+<line x1="48.0" y1="528.0" x2="57.6" y2="528.0"/>
+<line x1="57.6" y1="528.0" x2="67.2" y2="528.0"/>
+<line x1="67.2" y1="528.0" x2="76.8" y2="528.0"/>
+<line x1="76.8" y1="528.0" x2="86.4" y2="528.0"/>
+<line x1="86.4" y1="528.0" x2="96.0" y2="528.0"/>
+<line x1="96.0" y1="528.0" x2="105.6" y2="528.0"/>
+<line x1="105.6" y1="528.0" x2="115.2" y2="528.0"/>
+<line x1="115.2" y1="528.0" x2="124.8" y2="528.0"/>
+<line x1="124.8" y1="528.0" x2="134.4" y2="528.0"/>
+<line x1="134.4" y1="528.0" x2="139.2" y2="528.0"/>
+<line x1="139.2" y1="518.4" x2="139.2" y2="528.0"/>
+<text x="62.4" y="28.8" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="72.0" y="28.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="81.6" y="28.8" text-anchor="middle" dominant-baseline="central">F</text>
+<text x="91.2" y="28.8" text-anchor="middle" dominant-baseline="central">I</text>
+<text x="100.8" y="28.8" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="110.4" y="28.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="120.0" y="28.8" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="158.4" y="28.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="168.0" y="28.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="177.6" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="28.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="196.8" y="28.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="225.6" y="28.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="235.2" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="28.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="254.4" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="264.0" y="28.8" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="273.6" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="283.2" y="28.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="292.8" y="28.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="302.4" y="28.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="312.0" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="321.6" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="331.2" y="28.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="350.4" y="28.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="360.0" y="28.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="369.6" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="379.2" y="28.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="388.8" y="28.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="398.4" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="408.0" y="28.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="110.4" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="120.0" y="67.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="129.6" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="139.2" y="67.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="148.8" y="67.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="91.2" y="86.4" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="62.4" y="124.8" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="72.0" y="124.8" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="81.6" y="124.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="91.2" y="124.8" text-anchor="middle" dominant-baseline="central">W</text>
+<text x="100.8" y="124.8" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="110.4" y="124.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="120.0" y="124.8" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="158.4" y="124.8" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="168.0" y="124.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="177.6" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="187.2" y="124.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="196.8" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="206.4" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="216.0" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="235.2" y="124.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="244.8" y="124.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="254.4" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="264.0" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="273.6" y="124.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="283.2" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="292.8" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="302.4" y="124.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="321.6" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="331.2" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="340.8" y="124.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="350.4" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="360.0" y="124.8" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="369.6" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="379.2" y="124.8" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="398.4" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="408.0" y="124.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="417.6" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="427.2" y="124.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="436.8" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="446.4" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="456.0" y="124.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="465.6" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="475.2" y="124.8" text-anchor="middle" dominant-baseline="central">z</text>
+<text x="484.8" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="494.4" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="110.4" y="163.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="163.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="129.6" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="139.2" y="163.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="148.8" y="163.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="158.4" y="163.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="168.0" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="177.6" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="182.4" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="62.4" y="220.8" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="72.0" y="220.8" text-anchor="middle" dominant-baseline="central">U</text>
+<text x="81.6" y="220.8" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="91.2" y="220.8" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="100.8" y="220.8" text-anchor="middle" dominant-baseline="central">I</text>
+<text x="110.4" y="220.8" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="120.0" y="220.8" text-anchor="middle" dominant-baseline="central">G</text>
+<text x="158.4" y="220.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="168.0" y="220.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="177.6" y="220.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="220.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="196.8" y="220.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="220.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="220.8" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="235.2" y="220.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="220.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="254.4" y="220.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="264.0" y="220.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="273.6" y="220.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="283.2" y="220.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="292.8" y="220.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="312.0" y="220.8" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="321.6" y="220.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="331.2" y="220.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="340.8" y="220.8" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="360.0" y="220.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="369.6" y="220.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="379.2" y="220.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="388.8" y="220.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="398.4" y="220.8" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="408.0" y="220.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="417.6" y="220.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="427.2" y="220.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="436.8" y="220.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="446.4" y="220.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="456.0" y="220.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="465.6" y="220.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="259.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="120.0" y="259.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="129.6" y="259.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="139.2" y="259.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="148.8" y="259.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="158.4" y="259.2" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="168.0" y="259.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="177.6" y="259.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="259.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="196.8" y="259.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="206.4" y="259.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="216.0" y="259.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="259.2" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="235.2" y="259.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="244.8" y="259.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="254.4" y="259.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="264.0" y="259.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="273.6" y="259.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="283.2" y="259.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="292.8" y="259.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="302.4" y="259.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="312.0" y="259.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="278.4" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="62.4" y="316.8" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="72.0" y="316.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="81.6" y="316.8" text-anchor="middle" dominant-baseline="central">U</text>
+<text x="91.2" y="316.8" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="100.8" y="316.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="110.4" y="316.8" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="158.4" y="316.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="168.0" y="316.8" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="177.6" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="316.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="196.8" y="316.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="206.4" y="316.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="316.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="225.6" y="316.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="235.2" y="316.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="254.4" y="316.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="316.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="273.6" y="316.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="283.2" y="316.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="292.8" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="302.4" y="316.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="312.0" y="316.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="321.6" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="331.2" y="316.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="340.8" y="316.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="360.0" y="316.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="369.6" y="316.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="379.2" y="316.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="388.8" y="316.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="398.4" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="417.6" y="316.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="427.2" y="316.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="436.8" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="446.4" y="316.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="456.0" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="465.6" y="316.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="475.2" y="316.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="484.8" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="494.4" y="316.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="110.4" y="355.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="120.0" y="355.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="129.6" y="355.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="139.2" y="355.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="148.8" y="355.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="158.4" y="355.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="168.0" y="355.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="177.6" y="355.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="187.2" y="355.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="196.8" y="355.2" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="206.4" y="355.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="355.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="225.6" y="355.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="235.2" y="355.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="355.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="254.4" y="355.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="264.0" y="355.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="273.6" y="355.2" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="283.2" y="355.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="292.8" y="355.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="302.4" y="355.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="312.0" y="355.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="321.6" y="355.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="91.2" y="374.4" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="62.4" y="412.8" text-anchor="middle" dominant-baseline="central">F</text>
+<text x="72.0" y="412.8" text-anchor="middle" dominant-baseline="central">I</text>
+<text x="81.6" y="412.8" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="91.2" y="412.8" text-anchor="middle" dominant-baseline="central">I</text>
+<text x="100.8" y="412.8" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="110.4" y="412.8" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="120.0" y="412.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="129.6" y="412.8" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="158.4" y="412.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="168.0" y="412.8" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="177.6" y="412.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="412.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="196.8" y="412.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="206.4" y="412.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="412.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="225.6" y="412.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="235.2" y="412.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="254.4" y="412.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="264.0" y="412.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="273.6" y="412.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="283.2" y="412.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="292.8" y="412.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="302.4" y="412.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="312.0" y="412.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="321.6" y="412.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="331.2" y="412.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="350.4" y="412.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="360.0" y="412.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="369.6" y="412.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="379.2" y="412.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="388.8" y="412.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="398.4" y="412.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="408.0" y="412.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="427.2" y="412.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="436.8" y="412.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="446.4" y="412.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="456.0" y="412.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="465.6" y="412.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="475.2" y="412.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="484.8" y="412.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="110.4" y="451.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="120.0" y="451.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="129.6" y="451.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="451.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="148.8" y="451.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="158.4" y="451.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="168.0" y="451.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="91.2" y="470.4" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="62.4" y="508.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="72.0" y="508.8" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="81.6" y="508.8" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="91.2" y="508.8" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="100.8" y="508.8" text-anchor="middle" dominant-baseline="central">I</text>
+<text x="110.4" y="508.8" text-anchor="middle" dominant-baseline="central">V</text>
+<text x="120.0" y="508.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="129.6" y="508.8" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="158.4" y="508.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="168.0" y="508.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="177.6" y="508.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="187.2" y="508.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="196.8" y="508.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="508.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="225.6" y="508.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="235.2" y="508.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="254.4" y="508.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="264.0" y="508.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="273.6" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="508.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="292.8" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="302.4" y="508.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="312.0" y="508.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="321.6" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="331.2" y="508.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="340.8" y="508.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="360.0" y="508.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="369.6" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="379.2" y="508.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="388.8" y="508.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="398.4" y="508.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="408.0" y="508.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="417.6" y="508.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="427.2" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="436.8" y="508.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="456.0" y="508.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="465.6" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="475.2" y="508.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="484.8" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="494.4" y="508.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="504.0" y="508.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="513.6" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="523.2" y="508.8" text-anchor="middle" dominant-baseline="central">d</text>
+</svg>
+</div>
+</section>
+<section>
+<h2>Spawning Agents</h2>
+<h3>Spawn Request</h3>
+<pre class="language-scheme">
+(define (spawn-agent spec)
+  "Spawn new agent from specification"
+  (let* ((agent-id (generate-agent-id))
+         (spawner (current-principal))
+
+         ;; Validate spawner has required capabilities
+         (_ (verify-spawn-authority spawner (spec-capabilities spec)))
+
+         ;; Create sandbox
+         (sandbox (create-sandbox (spec-sandbox-type spec)
+                                  (spec-constraints spec)))
+
+         ;; Create agent record
+         (agent (make-agent
+                 id: agent-id
+                 spawned-by: spawner
+                 spec: spec
+                 sandbox: sandbox
+                 status: 'spawned)))
+
+    ;; Audit spawn
+    (audit-append
+      action: `(agent-spawn ,agent-id)
+      motivation: (spec-purpose spec))
+
+    ;; Initialize agent process
+    (sandbox-exec sandbox (spec-code spec))
+
+    ;; Return agent handle
+    agent))
+</pre>
+<h3>Capability Verification</h3>
+<pre class="language-scheme">
+(define (verify-spawn-authority spawner requested-caps)
+  "Verify spawner can grant requested capabilities"
+  (for-each
+    (lambda (cap)
+      (unless (authorized? spawner 'delegate cap)
+        (error "Cannot delegate capability" cap)))
+    requested-caps))
+</pre>
+<h3>Agent Code Loading</h3>
+<pre class="language-scheme">
+(define (load-agent-code spec)
+  "Load and verify agent code"
+  (let* ((code-hash (spec-code-hash spec))
+         (code (cas-get code-hash)))
+
+    ;; Verify code hash
+    (unless (equal? code-hash (sha256 code))
+      (error "Code integrity failure"))
+
+    ;; Verify code signature (if required)
+    (when (spec-require-signed? spec)
+      (unless (verify-code-signature code (spec-signer spec))
+        (error "Code signature invalid")))
+
+    code))
+</pre>
+</section>
+<section>
+<h2>Sandbox Types</h2>
+<h3>POSIX Sandbox</h3>
+<p>Process isolation using OS primitives:</p>
+<pre class="language-scheme">
+(define (create-posix-sandbox constraints)
+  "Create POSIX-based sandbox"
+  (sandbox
+    (type posix)
+
+    ;; Process isolation
+    (process
+      (uid (allocate-sandbox-uid))
+      (gid (allocate-sandbox-gid))
+      (chroot (create-sandbox-root))
+      (rlimits
+        (cpu ,(constraints-max-cpu constraints))
+        (memory ,(constraints-max-memory constraints))
+        (files ,(constraints-max-files constraints))
+        (processes 1)))  ; No forking
+
+    ;; Filesystem isolation
+    (filesystem
+      (root ,(sandbox-root))
+      (mounts
+        (("/lib" read-only)
+         ("/usr/lib" read-only)
+         ,(sandbox-work-dir) read-write)))
+
+    ;; Network isolation
+    (network
+      (allowed-hosts ,(constraints-network-hosts constraints))
+      (allowed-ports ,(constraints-network-ports constraints)))))
+</pre>
+<h3>Scheme Sandbox</h3>
+<p>Language-level isolation for Scheme agents:</p>
+<pre class="language-scheme">
+(define (create-scheme-sandbox constraints)
+  "Create Scheme-level sandbox"
+  (sandbox
+    (type scheme)
+
+    ;; Safe environment - no dangerous primitives
+    (environment
+      (import (scheme base)
+              (scheme write)
+              (library sandbox-io)
+              (library sandbox-net))
+      (exclude system exit eval load
+               file-delete directory-delete
+               process-fork process-exec))
+
+    ;; Resource limits via fuel
+    (fuel
+      (computation ,(constraints-max-steps constraints))
+      (allocation ,(constraints-max-memory constraints)))
+
+    ;; Capability-restricted I/O
+    (io-capabilities ,(constraints-io constraints))))
+</pre>
+<h3>Container Sandbox</h3>
+<p>OCI container isolation:</p>
+<pre class="language-scheme">
+(define (create-container-sandbox constraints image)
+  "Create container-based sandbox"
+  (sandbox
+    (type container)
+
+    ;; Container configuration
+    (container
+      (image ,image)
+      (readonly-rootfs #t)
+      (no-new-privileges #t)
+      (cap-drop ALL)
+      (cap-add ,(minimal-caps constraints)))
+
+    ;; Resource limits
+    (resources
+      (memory ,(constraints-max-memory constraints))
+      (cpu-shares ,(constraints-cpu-shares constraints))
+      (pids-limit 10))
+
+    ;; Network policy
+    (network
+      (mode bridge)
+      (egress-policy ,(network-policy constraints)))))
+</pre>
+<h3>WASM Sandbox</h3>
+<p>WebAssembly isolation:</p>
+<pre class="language-scheme">
+(define (create-wasm-sandbox constraints)
+  "Create WebAssembly sandbox"
+  (sandbox
+    (type wasm)
+
+    ;; WASM runtime configuration
+    (runtime
+      (memory-limit ,(constraints-max-memory constraints))
+      (table-limit 10000)
+      (fuel ,(constraints-max-steps constraints)))
+
+    ;; WASI capabilities
+    (wasi
+      (preopens ,(wasi-preopens constraints))
+      (env ,(wasi-env constraints))
+      (args ,(wasi-args constraints)))
+
+    ;; Host function imports (minimal)
+    (imports
+      (log "library:log")
+      (cas-get "library:casget")
+      (cas-put "library:casput"))))
+</pre>
+</section>
+<section>
+<h2>Capability Enforcement</h2>
+<h3>Capability Proxy</h3>
+<p>All agent I/O goes through capability-checking proxies:</p>
+<pre class="language-scheme">
+(define (make-capability-proxy agent capabilities)
+  "Create proxy that enforces capability checks"
+
+  (lambda (operation . args)
+    (let ((required-cap (operation-&gt;capability operation args)))
+
+      ;; Check capability
+      (unless (capability-granted? capabilities required-cap)
+        (audit-violation agent operation required-cap)
+        (error "Capability denied" operation))
+
+      ;; Audit allowed operation
+      (audit-agent-action agent operation args)
+
+      ;; Execute operation
+      (apply (operation-&gt;handler operation) args))))
+
+(define (operation-&gt;capability op args)
+  "Map operation to required capability"
+  (case op
+    ((read-file)
+     (read (path ,(car args))))
+    ((write-file)
+     (write (path ,(car args))))
+    ((http-get)
+     (network (url ,(car args))))
+    ((cas-get)
+     (read (hash ,(car args))))
+    (else
+     (error "Unknown operation" op))))
+</pre>
+<h3>Attenuation on Delegation</h3>
+<pre class="language-scheme">
+(define (agent-spawn-child parent-agent child-spec)
+  "Agent spawning child agent with attenuated capabilities"
+  (let* ((parent-caps (agent-capabilities parent-agent))
+         (requested-caps (spec-capabilities child-spec))
+
+         ;; Child can only have subset of parent's capabilities
+         (child-caps (capability-intersect parent-caps requested-caps)))
+
+    (unless (equal? child-caps requested-caps)
+      (warn "Child capabilities attenuated"))
+
+    (spawn-agent (spec-with-capabilities child-spec child-caps))))
+</pre>
+</section>
+<section>
+<h2>Agent Communication</h2>
+<h3>Message Passing</h3>
+<p>Agents communicate via typed, capability-checked messages:</p>
+<pre class="language-scheme">
+(define (agent-send from-agent to-agent message)
+  "Send message between agents"
+
+  ;; Verify sender has send capability to receiver
+  (unless (capability-granted? (agent-capabilities from-agent)
+                               (send (agent ,(agent-id to-agent))))
+    (error "Cannot send to agent"))
+
+  ;; Verify message type allowed
+  (unless (message-type-allowed? from-agent to-agent (message-type message))
+    (error "Message type not allowed"))
+
+  ;; Queue message
+  (mailbox-enqueue (agent-mailbox to-agent)
+                   (signed-message from-agent message))
+
+  ;; Audit
+  (audit-append
+    action: (agent-message ,(agent-id from-agent) ,(agent-id to-agent))
+    motivation: (message-type message)))
+
+(define (agent-receive agent #!key timeout)
+  "Receive message from mailbox"
+  (let ((msg (mailbox-dequeue (agent-mailbox agent) timeout: timeout)))
+    (when msg
+      ;; Verify signature
+      (verify-message-signature msg)
+      msg)))
+</pre>
+<h3>Shared State</h3>
+<p>Agents can share state through CAS:</p>
+<pre class="language-scheme">
+(define (agent-share agent hash recipients)
+  "Share CAS object with other agents"
+
+  ;; Verify agent can read the object
+  (unless (capability-granted? (agent-capabilities agent)
+                               (read (hash ,hash)))
+    (error "Cannot read object to share"))
+
+  ;; Grant read capability to recipients
+  (for-each
+    (lambda (recipient)
+      (grant-capability agent recipient (read (hash ,hash))))
+    recipients)
+
+  ;; Audit sharing
+  (audit-append
+    action: `(agent-share ,hash ,recipients)))
+</pre>
+</section>
+<section>
+<h2>Monitoring and Control</h2>
+<h3>Agent Status</h3>
+<pre class="language-scheme">
+(define (agent-status agent)
+  "Get current agent status"
+  `(agent-status
+    (id ,(agent-id agent))
+    (status ,(agent-state agent))
+    (uptime ,(- (current-time) (agent-start-time agent)))
+    (resources
+      (memory ,(sandbox-memory-usage (agent-sandbox agent)))
+      (cpu ,(sandbox-cpu-usage (agent-sandbox agent)))
+      (storage ,(sandbox-storage-usage (agent-sandbox agent))))
+    (actions ,(agent-action-count agent))
+    (messages-sent ,(agent-messages-sent agent))
+    (messages-received ,(agent-messages-received agent))))
+</pre>
+<h3>Agent Control</h3>
+<pre class="language-scheme">
+(define (agent-pause agent #!key reason)
+  "Pause agent execution"
+  (unless (authorized? (current-principal) 'control agent)
+    (error "Not authorized to control agent"))
+  (sandbox-pause (agent-sandbox agent))
+  (set-agent-state! agent 'paused)
+  (audit-append action: (agent-pause ,(agent-id agent)) motivation: reason))
+
+(define (agent-resume agent)
+  "Resume paused agent"
+  (unless (authorized? (current-principal) 'control agent)
+    (error "Not authorized to control agent"))
+  (sandbox-resume (agent-sandbox agent))
+  (set-agent-state! agent 'running)
+  (audit-append action: (agent-resume ,(agent-id agent))))
+
+(define (agent-terminate agent #!key reason)
+  "Terminate agent immediately"
+  (unless (authorized? (current-principal) 'control agent)
+    (error "Not authorized to control agent"))
+  (sandbox-kill (agent-sandbox agent))
+  (set-agent-state! agent 'terminated)
+  (audit-append
+    action: `(agent-terminate ,(agent-id agent))
+    motivation: reason
+    priority: 'high)
+  (cleanup-agent agent))
+</pre>
+<h3>Watchdog Daemon</h3>
+<p>The watchdog daemon tends the flock of agents—a daemon watching daemons:</p>
+<pre class="language-scheme">
+(define (agent-watchdog)
+  "Monitor all agents, enforce constraints"
+  (for-each
+    (lambda (agent)
+      (when (eq? (agent-state agent) 'running)
+        ;; Check resource limits
+        (when (&gt; (sandbox-memory-usage (agent-sandbox agent))
+                 (agent-max-memory agent))
+          (agent-terminate agent reason: "Memory limit exceeded"))
+
+        ;; Check runtime limit
+        (when (&gt; (agent-uptime agent) (agent-max-runtime agent))
+          (agent-terminate agent reason: "Runtime limit exceeded"))
+
+        ;; Check heartbeat
+        (when (&gt; (- (current-time) (agent-last-heartbeat agent))
+                 agent-heartbeat-timeout)
+          (agent-terminate agent reason: "Heartbeat timeout"))))
+    (all-agents)))
+</pre>
+</section>
+<section>
+<h2>Soup Integration</h2>
+<h3>Agents in the Soup</h3>
+<pre class="language-scheme">
+(soup-object
+  (name "agent/2026-001")
+  (type agent)
+  (size "145KB")
+  (status running)
+  (spawned-by "ddp@eludom.net")
+  (purpose "Archive arxiv papers")
+  (runtime "4h 23m")
+  (resources (memory "234MB") (storage "890MB"))
+  (capabilities (read "arxiv.org/*") (write "/vault/papers/")))
+</pre>
+<h3>Querying Agents</h3>
+<pre class="language-scheme">
+;; All running agents
+(soup-query type: 'agent status: 'running)
+
+;; Agents spawned by user
+(soup-query type: 'agent spawned-by: user-principal)
+
+;; Agents with network access
+(soup-query type: 'agent has-capability: 'network)
+
+;; Resource hogs
+(soup-query type: 'agent min-memory: (* 256 1024 1024))
+</pre>
+<h3>Agent Introspection</h3>
+<pre class="language-scheme">
+;; Agent can query itself
+(define (agent-self-inspect)
+  `(self
+    (id ,(current-agent-id))
+    (capabilities ,(current-capabilities))
+    (resources-remaining
+      (memory ,(- max-memory (current-memory)))
+      (runtime ,(- max-runtime (current-uptime)))
+      (fuel ,(remaining-fuel)))))
+</pre>
+</section>
+<section>
+<h2>Agent Patterns</h2>
+<h3>Pattern 1: Periodic Task Agent</h3>
+<pre class="language-scheme">
+(spawn-agent
+  (code '(lambda ()
+           (let loop ()
+             (perform-task)
+             (sleep 3600)  ; hourly
+             (loop))))
+  (capabilities
+    (read "/vault/feeds/")
+    (write "/vault/archive/")
+    (network ("rss.example.com")))
+  (constraints
+    (max-runtime ( 30 24 3600))  ; 30 days
+    (max-memory ( 128 1024 1024))))
+</pre>
+<h3>Pattern 2: One-Shot Processing Agent</h3>
+<pre class="language-scheme">
+(spawn-agent
+  (code '(lambda ()
+           (let ((input (cas-get input-hash)))
+             (let ((result (process input)))
+               (cas-put result)))))
+  (capabilities
+    (read (hash input-hash))
+    (write "/vault/results/"))
+  (constraints
+    (max-runtime 3600)
+    (max-memory (* 1024 1024 1024))))
+</pre>
+<h3>Pattern 3: Reactive Agent</h3>
+<pre class="language-scheme">
+(spawn-agent
+  (code '(lambda ()
+           (let loop ()
+             (let ((msg (agent-receive timeout: 60000)))
+               (when msg
+                 (handle-message msg))
+               (loop)))))
+  (capabilities
+    (receive (from supervisor-agent))
+    (send (to worker-agents))
+    (read "/vault/tasks/")
+    (write "/vault/results/"))
+  (constraints
+    (max-runtime #f)  ; runs until terminated
+    (max-memory (* 256 1024 1024))))
+</pre>
+<h3>Pattern 4: Mobile Agent</h3>
+<pre class="language-scheme">
+;; Agent that migrates between vaults
+(spawn-agent
+  (code '(lambda ()
+           (let ((data (gather-local-data)))
+             (migrate-to remote-vault data)
+             (process-remote data)
+             (migrate-home results))))
+  (capabilities
+    (read "/vault/local/")
+    (migrate (vaults (vault-a vault-b vault-c))))
+  (constraints
+    (max-migrations 10)
+    (max-runtime (* 24 3600))))
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Escape Prevention</h3>
+<pre class="language-scheme">
+;; Sandbox escape mitigations
+(define sandbox-security
+  '((seccomp "restrict system calls")
+    (namespaces "process/network/mount isolation")
+    (capabilities "drop all Linux capabilities")
+    (no-setuid "prevent privilege escalation")
+    (read-only-root "immutable rootfs")
+    (no-raw-sockets "prevent network attacks")))
+</pre>
+<h3>Resource Exhaustion</h3>
+<pre class="language-scheme">
+;; Prevent denial of service
+(define resource-limits
+  '((memory "hard limit, OOM killer")
+    (cpu "cgroups CPU quota")
+    (disk "quota or sparse files")
+    (network "bandwidth limiting")
+    (processes "prevent fork bombs")
+    (file-descriptors "prevent fd exhaustion")))
+</pre>
+<h3>Information Leakage</h3>
+<pre class="language-scheme">
+;; Prevent covert channels
+(define isolation-measures
+  '((timing "fuel-based execution, no precise timers")
+    (filesystem "no access outside sandbox")
+    (network "egress filtering")
+    (ipc "message passing only, no shared memory")
+    (environment "sanitized env vars")))
+</pre>
+<h3>Malicious Agents</h3>
+<pre class="language-scheme">
+(define (detect-malicious-behavior agent)
+  "Heuristics for detecting malicious agents"
+  (or
+    ;; Excessive resource usage
+    (&gt; (agent-resource-velocity agent) threshold)
+    ;; Unusual network patterns
+    (suspicious-network-activity? agent)
+    ;; Repeated capability violations
+    (&gt; (agent-violation-count agent) max-violations)
+    ;; Anomalous message patterns
+    (anomalous-messaging? agent)))
+</pre>
+</section>
+<section>
+<h2>Implementation Notes</h2>
+<h3>Dependencies</h3>
+<table>
+<tr><th>Component </th><th>Implementation </th></tr>
+<tr><td>Process sandbox </td><td>pledge/unveil (OpenBSD), seccomp (Linux) </td></tr>
+<tr><td>Container sandbox </td><td>runc, crun </td></tr>
+<tr><td>WASM sandbox </td><td>wasmtime, wasmer </td></tr>
+<tr><td>Scheme sandbox </td><td>custom safe environment </td></tr>
+</table>
+<h3>Performance</h3>
+<ul>
+<li>Sandbox creation: ~100ms (container), ~10ms (process), ~1ms (WASM)</li>
+<li>Message passing: ~10μs (local), ~1ms (cross-sandbox)</li>
+<li>Capability check: ~100ns (cached), ~10μs (chain validation)</li>
+</ul>
+</section>
+<section>
+<h2>References</h2>
+<p>1. [Telescript Technology: Mobile Agents](https://www.cs.cmu.edu/~pattis/15-1XX/common/handouts/telescript.html) 2. [Capsicum: Practical Capabilities for UNIX](https://www.cl.cam.ac.uk/research/security/capsicum/) 3. [WebAssembly System Interface (WASI)](https://wasi.dev/) 4. [Memo-021: Capability Delegation](memo-021-capability-delegation.html) 5. [Memo-003: Cryptographic Audit Trail](memo-003-audit-trail.html) 6. [E Programming Language](http://erights.org/) - Object capabilities</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-07</li>
+<li>Initial draft</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

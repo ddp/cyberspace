@@ -1,0 +1,421 @@
+%!PS-Adobe-3.0
+%%Title: memo-0038-node-roles
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0038: Realm Roles and Capabilities) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo defines functional roles for nodes in a Library of Cyberspace) show newline
+(confederation based on compute, storage, network, and security) show newline
+(capabilities. Roles determine what operations a node can perform and how) show newline
+(it participates in the distributed system.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TERMINOLOGY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Realm: A node's place in cyberspace. A realm encompasses: - The node's) show newline
+(vault \(local content-addressed object store\) - The node's principal) show newline
+(\(Ed25519 identity\) - The node's capabilities \(hardware, network,) show newline
+(security\) - The node's objects \(what it stores and serves\)) show newline
+() show newline
+(A realm is local-first and sovereign. The node controls what to share,) show newline
+(who to trust, what to replicate. When nodes federate, their realms) show newline
+(overlap - objects flow between them according to trust relationships.) show newline
+() show newline
+(The hardware manifest stored at .vault/node-hardware declares what kind) show newline
+(of place this realm occupies in cyberspace.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Memo-010 \(Federation Protocol\) defines trust relationships between peers) show newline
+(\(publisher, subscriber, peer\). However, it does not address functional) show newline
+(capabilities - what operations each node can actually perform based on) show newline
+(its hardware and network constraints.) show newline
+() show newline
+(A Raspberry Pi on a solar-powered satellite uplink has different) show newline
+(capabilities than a rack-mounted server in a datacenter. The system) show newline
+(should:) show newline
+() show newline
+(1. Self-assess - Nodes should know their own capabilities 2. Declare -) show newline
+(Nodes should advertise their role to peers 3. Adapt - Operations should) show newline
+(degrade gracefully based on available roles 4. Persist - Role) show newline
+(assignments should survive restarts) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(NODE ROLES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Role Hierarchy) show newline
+(--------------) show newline
+() show newline
+() show newline
+(                        +-------------+) show newline
+(                        | COORDINATOR |  Byzantine consensus, threshold signing) show newline
+(                        |   \(rare\)    |  Always-on, high compute) show newline
+(                        +------+------+) show newline
+(                               |) show newline
+(                  +------------+------------+) show newline
+(                  v            v            v) show newline
+(           +-----------+ +-----------+ +-----------+) show newline
+(           |   FULL    | |  WITNESS  | | ARCHIVER  |) show newline
+(           |   NODE    | |           | |           |) show newline
+(           +-----+-----+ +-----------+ +-----------+) show newline
+(                 |) show newline
+(                 v) show newline
+(           +-----------+) show newline
+(           |   EDGE    |  Read-only, mobile, intermittent) show newline
+(           +-----------+) show newline
+() show newline
+() show newline
+(Role Definitions) show newline
+(----------------) show newline
+() show newline
+() show newline
+(  Role          Compute   Storage   Network        Operations                                             ) show newline
+(  coordinator   High      Medium    Always-on      Byzantine consensus, threshold signing, key ceremony   ) show newline
+(  full          Medium    High      Reliable       All vault operations, replication origin               ) show newline
+(  witness       Low       High      Intermittent   Passive storage, hash verification, audit              ) show newline
+(  archiver      Low       Maximum   Batch          Cold storage, offline preservation                     ) show newline
+(  edge          Minimal   Minimal   Sporadic       Read-only sync, mobile access                          ) show newline
+() show newline
+() show newline
+(Capability Requirements) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(node-role-capabilities) show newline
+(      \(coordinator) show newline
+(        \(compute    \(min-cores 4\) \(min-ram-gb 8\)\)) show newline
+(        \(storage    \(min-gb 100\) \(type ssd\)\)) show newline
+(        \(network    \(uptime 0.99\) \(latency-ms 50\)\)) show newline
+(        \(security   \(hsm optional\) \(secure-enclave optional\)\)\)) show newline
+(      \(full) show newline
+(        \(compute    \(min-cores 2\) \(min-ram-gb 4\)\)) show newline
+(        \(storage    \(min-gb 500\) \(type any\)\)) show newline
+(        \(network    \(uptime 0.95\) \(latency-ms 200\)\)) show newline
+(        \(security   \(signing-key required\)\)\)) show newline
+(      \(witness) show newline
+(        \(compute    \(min-cores 1\) \(min-ram-gb 1\)\)) show newline
+(        \(storage    \(min-gb 100\) \(type any\)\)) show newline
+(        \(network    \(uptime 0.50\) \(latency-ms 1000\)\)) show newline
+(        \(security   \(verify-key required\)\)\)) show newline
+(      \(archiver) show newline
+(        \(compute    \(min-cores 1\) \(min-ram-gb 512mb\)\)) show newline
+(        \(storage    \(min-gb 1000\) \(type cold\)\)) show newline
+(        \(network    \(uptime 0.10\) \(batch-ok #t\)\)) show newline
+(        \(security   \(verify-key required\) \(offline-ok #t\)\)\)) show newline
+(      \(edge) show newline
+(        \(compute    \(min-cores 1\) \(min-ram-gb 256mb\)\)) show newline
+(        \(storage    \(min-gb 1\) \(type any\)\)) show newline
+(        \(network    \(uptime 0.01\) \(latency-ms 5000\)\)) show newline
+(        \(security   \(read-only #t\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ROLE DETECTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Automatic Probing) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(node-probe-capabilities\)) show newline
+(      "Probe local system capabilities") show newline
+(      `\(\(compute) show newline
+(         \(cores ,\(get-cpu-cores\)\)) show newline
+(         \(ram-gb ,\(get-ram-gb\)\)) show newline
+(         \(load-avg ,\(get-load-average\)\)\)) show newline
+(        \(storage) show newline
+(         \(available-gb ,\(get-available-storage\)\)) show newline
+(         \(type ,\(detect-storage-type\)\)\)) show newline
+(        \(network) show newline
+(         \(latency-ms ,\(probe-network-latency\)\)) show newline
+(         \(bandwidth-mbps ,\(estimate-bandwidth\)\)) show newline
+(         \(type ,\(detect-network-type\)\)\)  ; ethernet, wifi, cellular, satellite) show newline
+(        \(security) show newline
+(         \(signing-key ,\(has-signing-key?\)\)) show newline
+(         \(verify-key ,\(has-verify-key?\)\)) show newline
+(         \(hsm ,\(has-hsm?\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Role Assignment) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(define \(node-assign-role capabilities\)) show newline
+(      "Assign role based on probed capabilities") show newline
+(      \(let \(\(compute \(assq 'compute capabilities\)\)) show newline
+(            \(storage \(assq 'storage capabilities\)\)) show newline
+(            \(network \(assq 'network capabilities\)\)\)) show newline
+(        \(cond) show newline
+(         ;; Coordinator: high everything) show newline
+(         \(\(and \(>= \(get-cores compute\) 4\)) show newline
+(               \(>= \(get-ram compute\) 8\)) show newline
+(               \(<= \(get-latency network\) 50\)\)) show newline
+(          'coordinator\)) show newline
+(         ;; Full node: medium compute, high storage) show newline
+(         \(\(and \(>= \(get-cores compute\) 2\)) show newline
+(               \(>= \(get-storage storage\) 500\)\)) show newline
+(          'full\)) show newline
+(         ;; Archiver: low compute, massive storage, batch network) show newline
+(         \(\(and \(>= \(get-storage storage\) 1000\)) show newline
+(               \(eq? \(get-network-type network\) 'batch\)\)) show newline
+(          'archiver\)) show newline
+(         ;; Witness: low compute, decent storage) show newline
+(         \(\(>= \(get-storage storage\) 100\)) show newline
+(          'witness\)) show newline
+(         ;; Edge: everything else) show newline
+(         \(else 'edge\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ROLE DECLARATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Local Configuration) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; ~/.cyberspace/node-role) show newline
+(    \(node-config) show newline
+(      \(role witness\)                    ; Declared role) show newline
+(      \(auto-detect #f\)                  ; Don't override with probed) show newline
+(      \(capabilities                     ; Known constraints) show newline
+(        \(network \(type satellite\)) show newline
+(                 \(latency-ms 600\)) show newline
+(                 \(bandwidth-mbps 100\)\)\)\)) show newline
+() show newline
+() show newline
+(Role Announcement) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(node-announce-role\)) show newline
+(      "Announce role to federation peers") show newline
+(      \(let \(\(role \(node-current-role\)\)) show newline
+(            \(caps \(node-probe-capabilities\)\)) show newline
+(            \(key \(vault-config 'signing-key\)\)\)) show newline
+(        \(when key) show newline
+(          \(let \(\(announcement) show newline
+(                 `\(node-role-announcement) show newline
+(                   \(principal ,\(get-vault-principal key\)\)) show newline
+(                   \(role ,role\)) show newline
+(                   \(capabilities ,caps\)) show newline
+(                   \(timestamp ,\(current-seconds\)\)\)\)\)) show newline
+(            ;; Sign and broadcast) show newline
+(            \(federation-broadcast) show newline
+(             \(sign-announcement announcement key\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ROLE-BASED OPERATION CONSTRAINTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Operation Matrix) show newline
+(----------------) show newline
+() show newline
+() show newline
+(  Operation          coordinator   full   witness   archiver   edge   ) show newline
+(  seal-commit        ) show newline
+(  seal-release       ) show newline
+(  seal-archive       ) show newline
+(  seal-restore       ) show newline
+(  seal-publish       ) show newline
+(  seal-subscribe     ) show newline
+(  seal-synchronize   ) show newline
+(  seal-verify        ) show newline
+(  threshold-sign     ) show newline
+(  byzantine-vote     ) show newline
+(  key-ceremony       ) show newline
+(  audit-append       ) show newline
+(  audit-verify       ) show newline
+() show newline
+() show newline
+(Graceful Degradation) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(node-can-perform? operation\)) show newline
+(      "Check if current role permits operation") show newline
+(      \(let \(\(role \(node-current-role\)\)) show newline
+(            \(required \(operation-required-role operation\)\)\)) show newline
+(        \(role-permits? role required\)\)\)) show newline
+(    \(define \(role-permits? actual required\)) show newline
+(      "Check role hierarchy") show newline
+(      \(let \(\(hierarchy '\(coordinator full witness archiver edge\)\)\)) show newline
+(        \(<= \(list-index hierarchy actual\)) show newline
+(            \(list-index hierarchy required\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(STARLINK CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Per Memo-016, the system is optimized for satellite links:) show newline
+() show newline
+() show newline
+(    \(node-config) show newline
+(      \(role witness\)) show newline
+(      \(network) show newline
+(        \(type satellite\)) show newline
+(        \(provider starlink\)) show newline
+(        \(characteristics) show newline
+(          \(latency-ms 20-40\)           ; Low-earth orbit) show newline
+(          \(bandwidth-mbps 100-200\)     ; Bursty) show newline
+(          \(jitter high\)                ; Variable) show newline
+(          \(uptime 0.95\)                ; Weather dependent) show newline
+(          \(data-cap none\)\)\)\)           ; Unlimited for now) show newline
+(    ;; Satellite-optimized behavior) show newline
+(    \(define satellite-mode) show newline
+(      '\(\(batch-sync #t\)                ; Aggregate operations) show newline
+(        \(lazy-pull #t\)                 ; Don't fetch eagerly) show newline
+(        \(compress-always #t\)           ; Minimize transfer) show newline
+(        \(retry-aggressive #t\)          ; Handle drops) show newline
+(        \(heartbeat-interval 300\)\)\)     ; 5 min, not seconds) show newline
+() show newline
+() show newline
+(Role Implications for Satellite Nodes) show newline
+(-------------------------------------) show newline
+() show newline
+(- coordinator: Generally NOT suitable for satellite \(latency too) show newline
+(variable for consensus\) - full: Marginal \(can work with lazy clustering\)) show newline
+(- witness: IDEAL \(passive, tolerates latency\) - archiver: IDEAL \(batch) show newline
+(operations\) - edge: IDEAL \(intermittent by design\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(REPL Commands) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Probe and display capabilities) show newline
+(    \(node-probe\)) show newline
+(    ;; Show current role) show newline
+(    \(node-role\)) show newline
+(    ;; Set role explicitly) show newline
+(    \(node-role 'witness\)) show newline
+(    ;; Check if operation permitted) show newline
+(    \(node-can? 'threshold-sign\)) show newline
+(    ;; Announce role to peers) show newline
+(    \(node-announce\)) show newline
+() show newline
+() show newline
+(Persistence) show newline
+(-----------) show newline
+() show newline
+(Role configuration stored in the realm:) show newline
+() show newline
+() show newline
+(    ~/.cyberspace/node-role      ; User override \(global\)) show newline
+(    .vault/node-role             ; Realm-specific role) show newline
+(    .vault/node-hardware         ; Hardware manifest \(auto-refreshed\)) show newline
+() show newline
+(The hardware manifest is automatically updated on REPL startup,) show newline
+(declaring the realm's capabilities to federated peers.) show newline
+() show newline
+() show newline
+(Audit Trail) show newline
+(-----------) show newline
+() show newline
+(Role changes are auditable events:) show newline
+() show newline
+() show newline
+(    \(audit-entry) show newline
+(      \(type node-role-change\)) show newline
+(      \(timestamp 1736280000\)) show newline
+(      \(from edge\)) show newline
+(      \(to witness\)) show newline
+(      \(reason "Storage expanded"\)) show newline
+(      \(actor #${principal}\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Role Spoofing) show newline
+(-------------) show newline
+() show newline
+(A node could claim a higher role than its capabilities warrant.) show newline
+(Mitigations:) show newline
+() show newline
+(1. Capability proofs: Require benchmark results 2. Peer validation:) show newline
+(Other nodes can challenge claims 3. Reputation: Track role fulfillment) show newline
+(history 4. Threshold trust: Multiple witnesses needed) show newline
+() show newline
+() show newline
+(Role Downgrade Attacks) show newline
+(----------------------) show newline
+() show newline
+(An attacker could force nodes to operate at lower roles:) show newline
+() show newline
+(1. Signed role declarations: Can't forge 2. Local override: Node) show newline
+(controls own role 3. Audit trail: Role changes are logged) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Memo-010: Federation Protocol 2. Memo-011: Byzantine Consensus 3.) show newline
+(Memo-016: Lazy Clustering 4. Memo-017: Security Considerations) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

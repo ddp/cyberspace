@@ -1,0 +1,388 @@
+Memo 0038: Realm Roles and Capabilities
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+ABSTRACT
+------------------------------------------------------------------------
+
+This Memo defines functional roles for nodes in a Library of Cyberspace
+confederation based on compute, storage, network, and security
+capabilities. Roles determine what operations a node can perform and how
+it participates in the distributed system.
+
+
+------------------------------------------------------------------------
+TERMINOLOGY
+------------------------------------------------------------------------
+
+Realm: A node's place in cyberspace. A realm encompasses: - The node's
+vault (local content-addressed object store) - The node's principal
+(Ed25519 identity) - The node's capabilities (hardware, network,
+security) - The node's objects (what it stores and serves)
+
+A realm is local-first and sovereign. The node controls what to share,
+who to trust, what to replicate. When nodes federate, their realms
+overlap - objects flow between them according to trust relationships.
+
+The hardware manifest stored at .vault/node-hardware declares what kind
+of place this realm occupies in cyberspace.
+
+
+------------------------------------------------------------------------
+MOTIVATION
+------------------------------------------------------------------------
+
+Memo-010 (Federation Protocol) defines trust relationships between peers
+(publisher, subscriber, peer). However, it does not address functional
+capabilities - what operations each node can actually perform based on
+its hardware and network constraints.
+
+A Raspberry Pi on a solar-powered satellite uplink has different
+capabilities than a rack-mounted server in a datacenter. The system
+should:
+
+1. Self-assess - Nodes should know their own capabilities 2. Declare -
+Nodes should advertise their role to peers 3. Adapt - Operations should
+degrade gracefully based on available roles 4. Persist - Role
+assignments should survive restarts
+
+
+------------------------------------------------------------------------
+NODE ROLES
+------------------------------------------------------------------------
+
+
+Role Hierarchy
+--------------
+
+
+                        +-------------+
+                        | COORDINATOR |  Byzantine consensus, threshold signing
+                        |   (rare)    |  Always-on, high compute
+                        +------+------+
+                               |
+                  +------------+------------+
+                  v            v            v
+           +-----------+ +-----------+ +-----------+
+           |   FULL    | |  WITNESS  | | ARCHIVER  |
+           |   NODE    | |           | |           |
+           +-----+-----+ +-----------+ +-----------+
+                 |
+                 v
+           +-----------+
+           |   EDGE    |  Read-only, mobile, intermittent
+           +-----------+
+
+
+Role Definitions
+----------------
+
+
+  Role          Compute   Storage   Network        Operations                                             
+  coordinator   High      Medium    Always-on      Byzantine consensus, threshold signing, key ceremony   
+  full          Medium    High      Reliable       All vault operations, replication origin               
+  witness       Low       High      Intermittent   Passive storage, hash verification, audit              
+  archiver      Low       Maximum   Batch          Cold storage, offline preservation                     
+  edge          Minimal   Minimal   Sporadic       Read-only sync, mobile access                          
+
+
+Capability Requirements
+-----------------------
+
+
+    (node-role-capabilities
+      (coordinator
+        (compute    (min-cores 4) (min-ram-gb 8))
+        (storage    (min-gb 100) (type ssd))
+        (network    (uptime 0.99) (latency-ms 50))
+        (security   (hsm optional) (secure-enclave optional)))
+      (full
+        (compute    (min-cores 2) (min-ram-gb 4))
+        (storage    (min-gb 500) (type any))
+        (network    (uptime 0.95) (latency-ms 200))
+        (security   (signing-key required)))
+      (witness
+        (compute    (min-cores 1) (min-ram-gb 1))
+        (storage    (min-gb 100) (type any))
+        (network    (uptime 0.50) (latency-ms 1000))
+        (security   (verify-key required)))
+      (archiver
+        (compute    (min-cores 1) (min-ram-gb 512mb))
+        (storage    (min-gb 1000) (type cold))
+        (network    (uptime 0.10) (batch-ok #t))
+        (security   (verify-key required) (offline-ok #t)))
+      (edge
+        (compute    (min-cores 1) (min-ram-gb 256mb))
+        (storage    (min-gb 1) (type any))
+        (network    (uptime 0.01) (latency-ms 5000))
+        (security   (read-only #t))))
+
+
+------------------------------------------------------------------------
+ROLE DETECTION
+------------------------------------------------------------------------
+
+
+Automatic Probing
+-----------------
+
+
+    (define (node-probe-capabilities)
+      "Probe local system capabilities"
+      `((compute
+         (cores ,(get-cpu-cores))
+         (ram-gb ,(get-ram-gb))
+         (load-avg ,(get-load-average)))
+        (storage
+         (available-gb ,(get-available-storage))
+         (type ,(detect-storage-type)))
+        (network
+         (latency-ms ,(probe-network-latency))
+         (bandwidth-mbps ,(estimate-bandwidth))
+         (type ,(detect-network-type)))  ; ethernet, wifi, cellular, satellite
+        (security
+         (signing-key ,(has-signing-key?))
+         (verify-key ,(has-verify-key?))
+         (hsm ,(has-hsm?)))))
+
+
+Role Assignment
+---------------
+
+
+    (define (node-assign-role capabilities)
+      "Assign role based on probed capabilities"
+      (let ((compute (assq 'compute capabilities))
+            (storage (assq 'storage capabilities))
+            (network (assq 'network capabilities)))
+        (cond
+         ;; Coordinator: high everything
+         ((and (>= (get-cores compute) 4)
+               (>= (get-ram compute) 8)
+               (<= (get-latency network) 50))
+          'coordinator)
+         ;; Full node: medium compute, high storage
+         ((and (>= (get-cores compute) 2)
+               (>= (get-storage storage) 500))
+          'full)
+         ;; Archiver: low compute, massive storage, batch network
+         ((and (>= (get-storage storage) 1000)
+               (eq? (get-network-type network) 'batch))
+          'archiver)
+         ;; Witness: low compute, decent storage
+         ((>= (get-storage storage) 100)
+          'witness)
+         ;; Edge: everything else
+         (else 'edge))))
+
+
+------------------------------------------------------------------------
+ROLE DECLARATION
+------------------------------------------------------------------------
+
+
+Local Configuration
+-------------------
+
+
+    ;; ~/.cyberspace/node-role
+    (node-config
+      (role witness)                    ; Declared role
+      (auto-detect #f)                  ; Don't override with probed
+      (capabilities                     ; Known constraints
+        (network (type satellite)
+                 (latency-ms 600)
+                 (bandwidth-mbps 100))))
+
+
+Role Announcement
+-----------------
+
+
+    (define (node-announce-role)
+      "Announce role to federation peers"
+      (let ((role (node-current-role))
+            (caps (node-probe-capabilities))
+            (key (vault-config 'signing-key)))
+        (when key
+          (let ((announcement
+                 `(node-role-announcement
+                   (principal ,(get-vault-principal key))
+                   (role ,role)
+                   (capabilities ,caps)
+                   (timestamp ,(current-seconds)))))
+            ;; Sign and broadcast
+            (federation-broadcast
+             (sign-announcement announcement key))))))
+
+
+------------------------------------------------------------------------
+ROLE-BASED OPERATION CONSTRAINTS
+------------------------------------------------------------------------
+
+
+Operation Matrix
+----------------
+
+
+  Operation          coordinator   full   witness   archiver   edge   
+  seal-commit        
+  seal-release       
+  seal-archive       
+  seal-restore       
+  seal-publish       
+  seal-subscribe     
+  seal-synchronize   
+  seal-verify        
+  threshold-sign     
+  byzantine-vote     
+  key-ceremony       
+  audit-append       
+  audit-verify       
+
+
+Graceful Degradation
+--------------------
+
+
+    (define (node-can-perform? operation)
+      "Check if current role permits operation"
+      (let ((role (node-current-role))
+            (required (operation-required-role operation)))
+        (role-permits? role required)))
+    (define (role-permits? actual required)
+      "Check role hierarchy"
+      (let ((hierarchy '(coordinator full witness archiver edge)))
+        (<= (list-index hierarchy actual)
+            (list-index hierarchy required))))
+
+
+------------------------------------------------------------------------
+STARLINK CONSIDERATIONS
+------------------------------------------------------------------------
+
+Per Memo-016, the system is optimized for satellite links:
+
+
+    (node-config
+      (role witness)
+      (network
+        (type satellite)
+        (provider starlink)
+        (characteristics
+          (latency-ms 20-40)           ; Low-earth orbit
+          (bandwidth-mbps 100-200)     ; Bursty
+          (jitter high)                ; Variable
+          (uptime 0.95)                ; Weather dependent
+          (data-cap none))))           ; Unlimited for now
+    ;; Satellite-optimized behavior
+    (define satellite-mode
+      '((batch-sync #t)                ; Aggregate operations
+        (lazy-pull #t)                 ; Don't fetch eagerly
+        (compress-always #t)           ; Minimize transfer
+        (retry-aggressive #t)          ; Handle drops
+        (heartbeat-interval 300)))     ; 5 min, not seconds
+
+
+Role Implications for Satellite Nodes
+-------------------------------------
+
+- coordinator: Generally NOT suitable for satellite (latency too
+variable for consensus) - full: Marginal (can work with lazy clustering)
+- witness: IDEAL (passive, tolerates latency) - archiver: IDEAL (batch
+operations) - edge: IDEAL (intermittent by design)
+
+
+------------------------------------------------------------------------
+IMPLEMENTATION
+------------------------------------------------------------------------
+
+
+REPL Commands
+-------------
+
+
+    ;; Probe and display capabilities
+    (node-probe)
+    ;; Show current role
+    (node-role)
+    ;; Set role explicitly
+    (node-role 'witness)
+    ;; Check if operation permitted
+    (node-can? 'threshold-sign)
+    ;; Announce role to peers
+    (node-announce)
+
+
+Persistence
+-----------
+
+Role configuration stored in the realm:
+
+
+    ~/.cyberspace/node-role      ; User override (global)
+    .vault/node-role             ; Realm-specific role
+    .vault/node-hardware         ; Hardware manifest (auto-refreshed)
+
+The hardware manifest is automatically updated on REPL startup,
+declaring the realm's capabilities to federated peers.
+
+
+Audit Trail
+-----------
+
+Role changes are auditable events:
+
+
+    (audit-entry
+      (type node-role-change)
+      (timestamp 1736280000)
+      (from edge)
+      (to witness)
+      (reason "Storage expanded")
+      (actor #${principal}))
+
+
+------------------------------------------------------------------------
+SECURITY CONSIDERATIONS
+------------------------------------------------------------------------
+
+
+Role Spoofing
+-------------
+
+A node could claim a higher role than its capabilities warrant.
+Mitigations:
+
+1. Capability proofs: Require benchmark results 2. Peer validation:
+Other nodes can challenge claims 3. Reputation: Track role fulfillment
+history 4. Threshold trust: Multiple witnesses needed
+
+
+Role Downgrade Attacks
+----------------------
+
+An attacker could force nodes to operate at lower roles:
+
+1. Signed role declarations: Can't forge 2. Local override: Node
+controls own role 3. Audit trail: Role changes are logged
+
+
+------------------------------------------------------------------------
+REFERENCES
+------------------------------------------------------------------------
+
+1. Memo-010: Federation Protocol 2. Memo-011: Byzantine Consensus 3.
+Memo-016: Lazy Clustering 4. Memo-017: Security Considerations
+
+
+------------------------------------------------------------------------
+CHANGELOG
+------------------------------------------------------------------------
+
+  * 2026-01-07
+  * Initial draft
+
+------------------------------------------------------------------------

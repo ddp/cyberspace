@@ -1,0 +1,562 @@
+%!PS-Adobe-3.0
+%%Title: memo-0030-compression
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0030: Compression and Deduplication) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies compression and deduplication for the Library of) show newline
+(Cyberspace: how vaults reduce storage requirements while maintaining) show newline
+(content-addressability, integrity verification, and efficient retrieval.) show newline
+(Compression is transparent to the content-addressing layer.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Storage efficiency matters for preservation:) show newline
+() show newline
+(  * Cost) show newline
+(  * Less storage means more preservation per dollar) show newline
+(  * Bandwidth) show newline
+(  * Compressed transfers are faster) show newline
+(  * Redundancy) show newline
+(  * More copies fit in same space) show newline
+(  * Longevity) show newline
+(  * Smaller archives survive longer) show newline
+() show newline
+(But compression must not compromise:) show newline
+() show newline
+(  * Integrity) show newline
+(  * Hashes must remain valid) show newline
+(  * Addressability) show newline
+(  * Content addressing still works) show newline
+(  * Deduplication) show newline
+(  * Identical content stored once) show newline
+(  * Accessibility) show newline
+(  * Data remains retrievable) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COMPRESSION MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Layered Architecture) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    +-------------------------------------+) show newline
+(    |         Application Layer           |) show newline
+(    |     \(sees uncompressed data\)        |) show newline
+(    +-------------------------------------+) show newline
+(    |        Content-Addressing           |) show newline
+(    |    \(hash of uncompressed data\)      |) show newline
+(    +-------------------------------------+) show newline
+(    |        Compression Layer            |) show newline
+(    |      \(transparent compression\)      |) show newline
+(    +-------------------------------------+) show newline
+(    |         Storage Layer               |) show newline
+(    |     \(stores compressed data\)        |) show newline
+(    +-------------------------------------+) show newline
+() show newline
+() show newline
+(Compression Metadata) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(compress-object data algorithm\)) show newline
+(      \(let* \(\(compressed \(compress algorithm data\)\)) show newline
+(             \(ratio \(/ \(bytevector-length compressed\)) show newline
+(                       \(bytevector-length data\)\)\)\)) show newline
+(        `\(compressed-object) show newline
+(          \(algorithm ,algorithm\)) show newline
+(          \(original-size ,\(bytevector-length data\)\)) show newline
+(          \(compressed-size ,\(bytevector-length compressed\)\)) show newline
+(          \(ratio ,ratio\)) show newline
+(          \(data ,compressed\)\)\)\)) show newline
+(    ;; Stored in soup) show newline
+(    \(soup-object) show newline
+(      \(hash "sha256:original-content-hash..."\)) show newline
+(      \(compression) show newline
+(        \(algorithm zstd\)) show newline
+(        \(level 3\)) show newline
+(        \(original-size 1048576\)) show newline
+(        \(compressed-size 524288\)) show newline
+(        \(ratio 0.5\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COMPRESSION ALGORITHMS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Supported Algorithms) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define compression-algorithms) show newline
+(      `\(\(zstd . \(\(extension . "zst"\)) show newline
+(                 \(levels . \(1 3 9 19\)\)) show newline
+(                 \(default-level . 3\)) show newline
+(                 \(dictionary . #t\)\)\)) show newline
+(        \(lz4 . \(\(extension . "lz4"\)) show newline
+(                \(levels . \(1 9\)\)) show newline
+(                \(default-level . 1\)) show newline
+(                \(dictionary . #f\)\)\)) show newline
+(        \(gzip . \(\(extension . "gz"\)) show newline
+(                 \(levels . \(1 6 9\)\)) show newline
+(                 \(default-level . 6\)) show newline
+(                 \(dictionary . #f\)\)\)) show newline
+(        \(none . \(\(extension . #f\)) show newline
+(                 \(levels . \(\)\)) show newline
+(                 \(default-level . #f\)) show newline
+(                 \(dictionary . #f\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Algorithm Selection) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(select-compression-algorithm content-type size\)) show newline
+(      "Select best algorithm for content") show newline
+(      \(cond) show newline
+(        ;; Already compressed formats) show newline
+(        \(\(member content-type '\("image/jpeg" "image/png" "video/mp4") show newline
+(                               "application/zip" "application/gzip"\)\)) show newline
+(         'none\)) show newline
+(        ;; Small objects - overhead not worth it) show newline
+(        \(\(< size 1024\)) show newline
+(         'none\)) show newline
+(        ;; Text and code - zstd with dictionary) show newline
+(        \(\(member content-type '\("text/plain" "text/html" "application/json") show newline
+(                               "application/javascript" "text/x-scheme"\)\)) show newline
+(         'zstd\)) show newline
+(        ;; Binary data - lz4 for speed) show newline
+(        \(\(string-prefix? "application/" content-type\)) show newline
+(         'lz4\)) show newline
+(        ;; Default) show newline
+(        \(else 'zstd\)\)\)) show newline
+() show newline
+() show newline
+(Zstd Dictionaries) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Train dictionary on sample data) show newline
+(    \(define \(train-dictionary samples dict-size\)) show newline
+(      "Train zstd dictionary from sample data") show newline
+(      \(zstd-train-dictionary samples dict-size\)\)) show newline
+(    ;; Content-type specific dictionaries) show newline
+(    \(define dictionaries) show newline
+(      `\(\(scheme . ,\(load-dictionary "scheme.dict"\)\)) show newline
+(        \(json . ,\(load-dictionary "json.dict"\)\)) show newline
+(        \(markdown . ,\(load-dictionary "markdown.dict"\)\)\)\)) show newline
+(    \(define \(compress-with-dictionary data content-type\)) show newline
+(      \(let \(\(dict \(assoc-ref dictionaries content-type\)\)\)) show newline
+(        \(if dict) show newline
+(            \(zstd-compress-with-dict data dict\)) show newline
+(            \(zstd-compress data\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COMPRESSION OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Transparent Compression) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(define \(cas-put-compressed data\)) show newline
+(      "Store data with transparent compression") show newline
+(      \(let \(\(hash \(content-hash data\)\)  ; Hash uncompressed) show newline
+(             \(algorithm \(select-compression-algorithm) show newline
+(                         \(detect-content-type data\)) show newline
+(                         \(bytevector-length data\)\)\)) show newline
+(             \(stored \(if \(eq? algorithm 'none\)) show newline
+(                         data) show newline
+(                         \(compress algorithm data\)\)\)\)) show newline
+(        ;; Store compressed, index by uncompressed hash) show newline
+(        \(storage-put hash stored\)) show newline
+(        ;; Record compression metadata) show newline
+(        \(soup-put hash) show newline
+(          compression: `\(\(algorithm . ,algorithm\)) show newline
+(                         \(original-size . ,\(bytevector-length data\)\)) show newline
+(                         \(compressed-size . ,\(bytevector-length stored\)\)\)\)) show newline
+(        hash\)\)) show newline
+(    \(define \(cas-get-decompressed hash\)) show newline
+(      "Retrieve and decompress data") show newline
+(      \(let \(\(stored \(storage-get hash\)\)) show newline
+(             \(meta \(soup-get hash\)\)) show newline
+(             \(algorithm \(assoc-ref \(assoc-ref meta 'compression\) 'algorithm\)\)\)) show newline
+(        \(if \(or \(not algorithm\) \(eq? algorithm 'none\)\)) show newline
+(            stored) show newline
+(            \(decompress algorithm stored\)\)\)\)) show newline
+() show newline
+() show newline
+(Batch Compression) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(compress-batch objects\)) show newline
+(      "Compress multiple objects efficiently") show newline
+(      ;; Group by content type for dictionary efficiency) show newline
+(      \(let \(\(groups \(group-by detect-content-type objects\)\)\)) show newline
+(        \(append-map) show newline
+(          \(lambda \(group\)) show newline
+(            \(let \(\(content-type \(car group\)\)) show newline
+(                  \(items \(cdr group\)\)\)) show newline
+(              \(map \(lambda \(obj\)) show newline
+(                     \(compress-with-dictionary obj content-type\)\)) show newline
+(                   items\)\)\)) show newline
+(          groups\)\)\)) show newline
+() show newline
+() show newline
+(Recompression) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(recompress-object hash new-algorithm new-level\)) show newline
+(      "Recompress object with different settings") show newline
+(      \(let* \(\(data \(cas-get-decompressed hash\)\)) show newline
+(             \(new-compressed \(compress new-algorithm data new-level\)\)\)) show newline
+(        \(storage-put hash new-compressed\)) show newline
+(        \(soup-update hash) show newline
+(          compression: `\(\(algorithm . ,new-algorithm\)) show newline
+(                         \(level . ,new-level\)) show newline
+(                         \(original-size . ,\(bytevector-length data\)\)) show newline
+(                         \(compressed-size . ,\(bytevector-length new-compressed\)\)\)\)) show newline
+(        \(audit-append action: 'recompressed) show newline
+(                      hash: hash) show newline
+(                      algorithm: new-algorithm\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DEDUPLICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Content-Based Deduplication) show newline
+(---------------------------) show newline
+() show newline
+() show newline
+(    ;; Content addressing provides automatic deduplication) show newline
+(    \(define \(store-deduplicated data\)) show newline
+(      \(let \(\(hash \(content-hash data\)\)\)) show newline
+(        \(if \(cas-exists? hash\)) show newline
+(            \(begin) show newline
+(              ;; Increment reference count) show newline
+(              \(soup-update hash ref-count: \(+ 1 \(soup-ref-count hash\)\)\)) show newline
+(              \(audit-append action: 'deduplicated hash: hash\)) show newline
+(              hash\)) show newline
+(            \(cas-put data\)\)\)\)) show newline
+() show newline
+() show newline
+(Block-Level Deduplication) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    ;; Split large objects into blocks) show newline
+(    \(define block-size 65536\)  ; 64KB) show newline
+(    \(define \(chunk-object data\)) show newline
+(      "Split object into content-defined chunks") show newline
+(      \(let \(\(chunks '\(\)\)) show newline
+(            \(pos 0\)\)) show newline
+(        \(while \(< pos \(bytevector-length data\)\)) show newline
+(          \(let \(\(boundary \(find-chunk-boundary data pos\)\)\)) show newline
+(            \(set! chunks \(cons \(subbytevector data pos boundary\) chunks\)\)) show newline
+(            \(set! pos boundary\)\)\)) show newline
+(        \(reverse chunks\)\)\)) show newline
+(    ;; Content-defined chunking \(Rabin fingerprint\)) show newline
+(    \(define \(find-chunk-boundary data start\)) show newline
+(      "Find chunk boundary using rolling hash") show newline
+(      \(let \(\(min-size 4096\)) show newline
+(            \(max-size 131072\)) show newline
+(            \(mask #x1FFF\)\)  ; Average 8KB chunks) show newline
+(        \(let loop \(\(pos \(+ start min-size\)\)\)) show newline
+(          \(cond) show newline
+(            \(\(>= pos \(min \(+ start max-size\) \(bytevector-length data\)\)\)) show newline
+(             pos\)) show newline
+(            \(\(= \(bitwise-and \(rabin-hash data pos\) mask\) 0\)) show newline
+(             pos\)) show newline
+(            \(else \(loop \(+ pos 1\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Chunk Storage) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(store-chunked data\)) show newline
+(      "Store large object as deduplicated chunks") show newline
+(      \(let \(\(chunks \(chunk-object data\)\)) show newline
+(             \(chunk-hashes \(map \(lambda \(chunk\)) show newline
+(                                  \(store-deduplicated chunk\)\)) show newline
+(                                chunks\)\)\)) show newline
+(        ;; Store manifest) show newline
+(        \(let \(\(manifest `\(chunked-object) show newline
+(                          \(chunks ,chunk-hashes\)) show newline
+(                          \(total-size ,\(bytevector-length data\)\)) show newline
+(                          \(chunk-count ,\(length chunks\)\)\)\)\)) show newline
+(          \(cas-put \(serialize manifest\)\)\)\)\)) show newline
+(    \(define \(retrieve-chunked manifest-hash\)) show newline
+(      "Reassemble chunked object") show newline
+(      \(let \(\(manifest \(deserialize \(cas-get manifest-hash\)\)\)) show newline
+(             \(chunks \(map cas-get \(assoc-ref manifest 'chunks\)\)\)\)) show newline
+(        \(bytevector-concatenate chunks\)\)\)) show newline
+() show newline
+() show newline
+(Deduplication Statistics) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(define \(deduplication-stats\)) show newline
+(      "Calculate deduplication effectiveness") show newline
+(      \(let* \(\(objects \(soup-query type: 'any\)\)) show newline
+(             \(logical-size \(sum \(map soup-original-size objects\)\)\)) show newline
+(             \(physical-size \(sum \(map soup-compressed-size) show newline
+(                                      \(delete-duplicates objects hash=?\)\)\)\)\)) show newline
+(        `\(\(logical-size . ,logical-size\)) show newline
+(          \(physical-size . ,physical-size\)) show newline
+(          \(dedup-ratio . ,\(/ logical-size physical-size\)\)) show newline
+(          \(space-saved . ,\(- logical-size physical-size\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DELTA COMPRESSION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Version Deltas) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(store-delta base-hash new-data\)) show newline
+(      "Store object as delta from base") show newline
+(      \(let \(\(base-data \(cas-get base-hash\)\)) show newline
+(             \(delta \(compute-delta base-data new-data\)\)) show newline
+(             \(new-hash \(content-hash new-data\)\)\)) show newline
+(        \(if \(< \(bytevector-length delta\)) show newline
+(               \( 0.5 \(bytevector-length new-data\)\)\)) show newline
+(            ;; Delta is worthwhile) show newline
+(            \(begin) show newline
+(              \(storage-put new-hash delta\)) show newline
+(              \(soup-put new-hash) show newline
+(                delta: `\(\(base . ,base-hash\)) show newline
+(                         \(type . xdelta\)\)\)) show newline
+(              new-hash\)) show newline
+(            ;; Store full object) show newline
+(            \(cas-put new-data\)\)\)\)) show newline
+(    \(define \(retrieve-delta hash\)) show newline
+(      "Reconstruct object from delta") show newline
+(      \(let \(\(meta \(soup-get hash\)\)\)) show newline
+(        \(if \(assoc-ref meta 'delta\)) show newline
+(            \(let* \(\(base-hash \(assoc-ref \(assoc-ref meta 'delta\) 'base\)\)) show newline
+(                   \(base-data \(cas-get base-hash\)\)) show newline
+(                   \(delta \(storage-get hash\)\)\)) show newline
+(              \(apply-delta base-data delta\)\)) show newline
+(            \(storage-get hash\)\)\)\)) show newline
+() show newline
+() show newline
+(Delta Chains) show newline
+(------------) show newline
+() show newline
+() show newline
+(    ;; Limit delta chain depth) show newline
+(    \(define max-delta-depth 10) show newline
+(    \(define \(delta-chain-depth hash\)) show newline
+(      "Calculate depth of delta chain") show newline
+(      \(let \(\(meta \(soup-get hash\)\)\)) show newline
+(        \(if \(assoc-ref meta 'delta\)) show newline
+(            \(+ 1 \(delta-chain-depth \(assoc-ref \(assoc-ref meta 'delta\) 'base\)\)\)) show newline
+(            0\)\)\)) show newline
+(    \(define \(should-store-delta? base-hash\)) show newline
+(      "Check if delta storage is appropriate") show newline
+(      \(< \(delta-chain-depth base-hash\) max-delta-depth\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ARCHIVE COMPRESSION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Sealed Archive Format) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    ;; Memo-018 integration) show newline
+(    \(define \(create-compressed-archive objects\)) show newline
+(      "Create compressed sealed archive") show newline
+(      \(let* \(\(serialized \(serialize-objects objects\)\)) show newline
+(             \(compressed \(zstd-compress serialized 19\)\)  ; Max compression) show newline
+(             \(encrypted \(age-encrypt compressed recipients\)\)\)) show newline
+(        \(cas-put encrypted\)\)\)) show newline
+() show newline
+() show newline
+(Streaming Compression) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define \(stream-compress input-port output-port algorithm\)) show newline
+(      "Stream compression for large files") show newline
+(      \(let \(\(ctx \(compression-context-create algorithm\)\)\)) show newline
+(        \(let loop \(\)) show newline
+(          \(let \(\(chunk \(read-bytevector chunk-size input-port\)\)\)) show newline
+(            \(unless \(eof-object? chunk\)) show newline
+(              \(write-bytevector \(compress-chunk ctx chunk\) output-port\)) show newline
+(              \(loop\)\)\)\)) show newline
+(        \(write-bytevector \(compress-finish ctx\) output-port\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PERFORMANCE OPTIMIZATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Compression Cache) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define compression-cache \(make-lru-cache 1000\)\)) show newline
+(    \(define \(cached-decompress hash\)) show newline
+(      "Cache decompressed data for frequent access") show newline
+(      \(or \(lru-get compression-cache hash\)) show newline
+(          \(let \(\(data \(cas-get-decompressed hash\)\)\)) show newline
+(            \(lru-put! compression-cache hash data\)) show newline
+(            data\)\)\)) show newline
+() show newline
+() show newline
+(Parallel Compression) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(parallel-compress objects num-threads\)) show newline
+(      "Compress multiple objects in parallel") show newline
+(      \(let \(\(work-queue \(make-channel\)\)) show newline
+(            \(results \(make-channel\)\)\)) show newline
+(        ;; Start workers) show newline
+(        \(do \(\(i 0 \(+ i 1\)\)\)) show newline
+(            \(\(= i num-threads\)\)) show newline
+(          \(thread-start!) show newline
+(            \(make-thread) show newline
+(              \(lambda \(\)) show newline
+(                \(let loop \(\)) show newline
+(                  \(let \(\(obj \(channel-get! work-queue\)\)\)) show newline
+(                    \(when obj) show newline
+(                      \(channel-put! results \(compress-object obj\)\)) show newline
+(                      \(loop\)\)\)\)\)\)\)\)) show newline
+(        ;; Queue work) show newline
+(        \(for-each \(lambda \(obj\) \(channel-put! work-queue obj\)\) objects\)) show newline
+(        ;; Collect results) show newline
+(        \(map \(lambda \(_\) \(channel-get! results\)\) objects\)\)\)) show newline
+() show newline
+() show newline
+(Adaptive Compression) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define \(adaptive-compress data\)) show newline
+(      "Select compression based on content analysis") show newline
+(      \(let* \(\(sample \(subbytevector data 0 \(min 4096 \(bytevector-length data\)\)\)\)) show newline
+(             \(entropy \(calculate-entropy sample\)\)\)) show newline
+(        \(cond) show newline
+(          ;; High entropy - already compressed or encrypted) show newline
+(          \(\(> entropy 7.9\) 'none\)) show newline
+(          ;; Low entropy - highly compressible) show newline
+(          \(\(< entropy 4.0\) \(values 'zstd 19\)\)) show newline
+(          ;; Medium entropy - balanced) show newline
+(          \(else \(values 'zstd 3\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Verification) show newline
+(------------) show newline
+() show newline
+() show newline
+(    \(define \(verify-compressed-object hash\)) show newline
+(      "Verify compressed object integrity") show newline
+(      \(let* \(\(stored \(storage-get hash\)\)) show newline
+(             \(meta \(soup-get hash\)\)) show newline
+(             \(decompressed \(decompress \(assoc-ref meta 'algorithm\) stored\)\)) show newline
+(             \(computed-hash \(content-hash decompressed\)\)\)) show newline
+(        \(equal? hash computed-hash\)\)\)) show newline
+() show newline
+() show newline
+(Corruption Recovery) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(define \(recover-compressed hash\)) show newline
+(      "Attempt to recover corrupted compressed object") show newline
+(      ;; Try partial decompression) show newline
+(      \(let \(\(partial \(decompress-partial hash\)\)\)) show newline
+(        \(when partial) show newline
+(          \(audit-append action: 'partial-recovery hash: hash\)) show newline
+(          partial\)\)) show newline
+(      ;; Fetch from replica) show newline
+(      \(let \(\(replica-data \(fetch-from-replica hash\)\)\)) show newline
+(        \(when replica-data) show newline
+(          \(storage-put hash replica-data\)) show newline
+(          replica-data\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. [Zstandard]\(https://github.com/facebook/zstd\) - Facebook's) show newline
+(compression algorithm 2. [Content-Defined) show newline
+(Chunking]\(https://restic.net/blog/2015-09-12/restic-foundation1-cdc/\) -) show newline
+(Restic blog 3. [Memo-018: Sealed Archive) show newline
+(Format]\(memo-018-sealed-archive.html\) 4. [Memo-020: Content-Addressed) show newline
+(Storage]\(memo-020-content-addressed-storage.html\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

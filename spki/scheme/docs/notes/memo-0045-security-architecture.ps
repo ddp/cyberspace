@@ -66,13 +66,14 @@ margin topmargin moveto
 (--------------) show newline
 () show newline
 () show newline
-(  Era    System       Contribution                                                 ) show newline
-(  1984   VAXcluster   "Behave as one" - N nodes, one security domain               ) show newline
-(  1985   VMS C2       Audit trails, access control, TCSEC security primitives      ) show newline
-(  1993   VMS 6.0      Cluster-wide intrusion detection, TLV object store           ) show newline
-(  1994   SDSI         Self-certifying keys, local names \(Rivest, IETF 29\)          ) show newline
-(  1999   SPKI         Authorization certificates, capability delegation            ) show newline
-(  2026   Cyberspace   Synthesis: SPKI + audit + IPv6 mesh + no central authority   ) show newline
+(  Era    System       Contribution                                                            ) show newline
+(  1984   VAXcluster   "Behave as one" - N nodes, one security domain                          ) show newline
+(  1985   VMS C2       Audit trails, access control, TCSEC security primitives                 ) show newline
+(  1990   DigiCash     Blind signatures, unlinkable credentials \(Chaum\)                        ) show newline
+(  1993   VMS 6.0      Cluster-wide intrusion detection, TLV object store                      ) show newline
+(  1994   SDSI         Self-certifying keys, local names \(Rivest, IETF 29\)                     ) show newline
+(  1999   SPKI         Authorization certificates, capability delegation \(Ellison, RFC 2693\)   ) show newline
+(  2026   Cyberspace   Synthesis: SPKI + Chaum + audit + IPv6 mesh + no central authority      ) show newline
 () show newline
 (DECnet Phase IV had 24-bit addressing—fatal for internet scale.) show newline
 (Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same) show newline
@@ -88,39 +89,40 @@ margin topmargin moveto
 (Table 0: Security Object Registry) show newline
 () show newline
 () show newline
-(  Object          Defining RFC   Description                                    ) show newline
-(  Identity        ) show newline
-(  principal       Memo-004       Cryptographic identity \(ed25519 key or hash\)   ) show newline
-(  key             Memo-022       Keypair with ceremony provenance               ) show newline
-(  attestation     Memo-041       Signed claim about identity or state           ) show newline
-(  Authorization   ) show newline
-(  certificate     Memo-004       SPKI capability grant                          ) show newline
-(  tag             Memo-004       Authorization scope \(read, write, etc.\)        ) show newline
-(  signature       Memo-004       Ed25519 attestation                            ) show newline
-(  share           Memo-007       Shamir secret fragment                         ) show newline
-(  quorum          Memo-036       Voting threshold specification                 ) show newline
-(  Storage         ) show newline
-(  vault           Memo-006       Sovereign storage realm                        ) show newline
-(  object          Memo-020       Content-addressed immutable data               ) show newline
-(  archive         Memo-018       Sealed, encrypted content package              ) show newline
-(  schema          Memo-033       Structure definition                           ) show newline
-(  Boundaries      ) show newline
-(  realm           Memo-040       Trust and sovereignty boundary                 ) show newline
-(  wormhole        Memo-041       FUSE mount portal to filesystem                ) show newline
-(  federation      Memo-010       Peer network of realms                         ) show newline
-(  node            Memo-037       Network participant with role                  ) show newline
-(  Execution       ) show newline
-(  agent           Memo-023       Sandboxed daemon                               ) show newline
-(  topic           Memo-035       Pub/sub channel                                ) show newline
-(  tunnel          Memo-035       Agent communication path                       ) show newline
-(  lock            Memo-035       Distributed mutex                              ) show newline
-(  Observability   ) show newline
-(  audit-entry     Memo-003       Immutable log record                           ) show newline
-(  lamport-clock   Memo-012       Causal ordering timestamp                      ) show newline
-(  query           Memo-025       Search expression                              ) show newline
-(  Documentation   ) show newline
-(  memo            Memo-043       Scoped documentation unit                      ) show newline
-(  soup            Memo-040       The auditable collection of all things         ) show newline
+(  Object              Defining RFC   Description                                    ) show newline
+(  Identity            ) show newline
+(  principal           Memo-004       Cryptographic identity \(ed25519 key or hash\)   ) show newline
+(  key                 Memo-022       Keypair with ceremony provenance               ) show newline
+(  attestation         Memo-041       Signed claim about identity or state           ) show newline
+(  Authorization       ) show newline
+(  certificate         Memo-004       SPKI capability grant \(registered\)             ) show newline
+(  bearer-capability   Memo-045       Blind-signed anonymous capability              ) show newline
+(  tag                 Memo-004       Authorization scope \(read, write, etc.\)        ) show newline
+(  signature           Memo-004       Ed25519 attestation                            ) show newline
+(  share               Memo-007       Shamir secret fragment                         ) show newline
+(  quorum              Memo-036       Voting threshold specification                 ) show newline
+(  Storage             ) show newline
+(  vault               Memo-006       Sovereign storage realm                        ) show newline
+(  object              Memo-020       Content-addressed immutable data               ) show newline
+(  archive             Memo-018       Sealed, encrypted content package              ) show newline
+(  schema              Memo-033       Structure definition                           ) show newline
+(  Boundaries          ) show newline
+(  realm               Memo-040       Trust and sovereignty boundary                 ) show newline
+(  wormhole            Memo-041       FUSE mount portal to filesystem                ) show newline
+(  federation          Memo-010       Peer network of realms                         ) show newline
+(  node                Memo-037       Network participant with role                  ) show newline
+(  Execution           ) show newline
+(  agent               Memo-023       Sandboxed daemon                               ) show newline
+(  topic               Memo-035       Pub/sub channel                                ) show newline
+(  tunnel              Memo-035       Agent communication path                       ) show newline
+(  lock                Memo-035       Distributed mutex                              ) show newline
+(  Observability       ) show newline
+(  audit-entry         Memo-003       Immutable log record                           ) show newline
+(  lamport-clock       Memo-012       Causal ordering timestamp                      ) show newline
+(  query               Memo-025       Search expression                              ) show newline
+(  Documentation       ) show newline
+(  memo                Memo-043       Scoped documentation unit                      ) show newline
+(  soup                Memo-040       The auditable collection of all things         ) show newline
 () show newline
 () show newline
 (Object Properties) show newline
@@ -474,6 +476,142 @@ margin topmargin moveto
 (you hold read.) show newline
 () show newline
 (The math is sound. We just speak it in capabilities.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(UNLINKABILITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Chaum's insight \(1983\): you can prove authorization without revealing) show newline
+(identity. Blind signatures create credentials that are verifiable but) show newline
+(unlinkable - the issuer cannot connect the credential to the) show newline
+(presentation.) show newline
+() show newline
+(This creates architectural tension with audit trails. Cyberspace values) show newline
+(both accountability and privacy. The resolution: capabilities come in) show newline
+(two forms.) show newline
+() show newline
+() show newline
+(Registered vs Bearer Capabilities) show newline
+(---------------------------------) show newline
+() show newline
+() show newline
+(  Property        Registered \(SPKI\)      Bearer \(Blinded\)     ) show newline
+(  Subject field   Principal identified   Anonymous holder     ) show newline
+(  Audit trail     Who did what           What was done        ) show newline
+(  Revocation      By subject             By capability hash   ) show newline
+(  Delegation      To named principals    Not delegable        ) show newline
+(  Use case        Accountability         Privacy              ) show newline
+() show newline
+(Registered capabilities are checks - they name the bearer. Bearer) show newline
+(capabilities are cash - whoever holds them can spend them.) show newline
+() show newline
+() show newline
+(Blind Signature Protocol) show newline
+(------------------------) show newline
+() show newline
+(Alice wants to exercise a capability without revealing she's Alice:) show newline
+() show newline
+() show newline
+(    1. Alice proves to Issuer she holds capability C) show newline
+(    2. Alice generates random blinding factor r) show newline
+(    3. Alice computes blinded = blind\(token, r\)) show newline
+(    4. Issuer signs: sig = sign\(blinded\)) show newline
+(    5. Alice unblinds: bearer_sig = unblind\(sig, r\)) show newline
+(    6. Alice presents \(token, bearer_sig\) anonymously) show newline
+(    7. Verifier confirms Issuer's signature without learning Alice's identity) show newline
+() show newline
+(The Issuer knows Alice was authorized \(step 1\) but cannot link the) show newline
+(bearer credential \(step 6\) to Alice. Unlinkability is mathematical, not) show newline
+(policy.) show newline
+() show newline
+() show newline
+(Cyberspace Integration) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    ;; Request blinded capability \(proves eligibility, gets blind-signed token\)) show newline
+(    \(define \(capability-blind issuer tag\)) show newline
+(      "Get bearer capability for tag, unlinkable to principal") show newline
+(      \(let* \(\(token \(random-bytes 32\)\)) show newline
+(             \(r \(blind-factor-generate\)\)) show newline
+(             \(blinded \(blind token r\)\)\)) show newline
+(        ;; Prove we hold registered capability for this tag) show newline
+(        ;; Issuer signs blinded token) show newline
+(        \(let \(\(blind-sig \(issuer-sign-blinded issuer blinded tag\)\)\)) show newline
+(          ;; Unblind locally) show newline
+(          \(make-bearer-capability) show newline
+(            token: token) show newline
+(            signature: \(unblind blind-sig r\)) show newline
+(            tag: tag) show newline
+(            issuer: issuer\)\)\)\)) show newline
+(    ;; Exercise bearer capability) show newline
+(    \(define \(capability-exercise-bearer cap object\)) show newline
+(      "Exercise capability without revealing identity") show newline
+(      \(let \(\(token \(bearer-capability-token cap\)\)) show newline
+(            \(sig \(bearer-capability-signature cap\)\)) show newline
+(            \(tag \(bearer-capability-tag cap\)\)) show newline
+(            \(issuer \(bearer-capability-issuer cap\)\)\)) show newline
+(        ;; Verify issuer signed this token for this tag) show newline
+(        \(unless \(blind-signature-verify issuer token sig tag\)) show newline
+(          \(error 'invalid-bearer-capability\)\)) show newline
+(        ;; Audit records capability exercise, not principal) show newline
+(        \(audit-append action: 'bearer-exercise) show newline
+(                      capability: \(sha512 token\)) show newline
+(                      tag: tag) show newline
+(                      actor: 'anonymous\)) show newline
+(        ;; Perform operation) show newline
+(        \(perform-operation tag object\)\)\)) show newline
+() show newline
+(The audit trail records that a valid bearer capability was exercised,) show newline
+(but not who exercised it. The capability hash enables revocation without) show newline
+(identification.) show newline
+() show newline
+() show newline
+(Use Cases) show newline
+(---------) show newline
+() show newline
+() show newline
+(  Operation                  Why Unlinkability                                 ) show newline
+(  Quorum voting              Prove eligibility without linking vote to voter   ) show newline
+(  Whistleblower submission   Submit evidence without identification            ) show newline
+(  Anonymous reads            Access sensitive content without tracking         ) show newline
+(  Credential presentation    Prove role without revealing principal            ) show newline
+(  Rate-limited tokens        Prevent abuse without profiling users             ) show newline
+() show newline
+(Non-use-cases \(accountability required\):) show newline
+() show newline
+(  * Writes - usually need to know who modified) show newline
+(  * Delegation - must name the delegate) show newline
+(  * Administrative actions - audit trail essential) show newline
+() show newline
+() show newline
+(The Tradeoff) show newline
+(------------) show newline
+() show newline
+(Bearer capabilities sacrifice traceability for privacy. Once issued, the) show newline
+(issuer cannot:) show newline
+() show newline
+(  * Determine who exercised the capability) show newline
+(  * Link multiple exercises to the same principal) show newline
+(  * Revoke based on principal \(only by capability hash\)) show newline
+() show newline
+(This is the point. Chaum solved the double-spending problem for digital) show newline
+(cash without a public ledger - the bank couldn't track who spent what.) show newline
+(Bitcoin retreated from this by making all transactions public.) show newline
+(Cyberspace preserves the choice: registered capabilities when you need) show newline
+(accountability, bearer capabilities when you need privacy.) show newline
+() show newline
+(The axioms still hold:) show newline
+() show newline
+() show newline
+(    A1. No Ambient Authority - still need a capability) show newline
+(    A2. Capabilities Are Unforgeable - blind signatures are Ed25519) show newline
+(    A3. Capabilities Only Attenuate - bearer caps cannot delegate) show newline
+(    A4. Objects Are Immutable - unchanged) show newline
+() show newline
+(Unlinkability is orthogonal to authorization. You still need permission;) show newline
+(you just don't have to identify yourself to use it.) show newline
 () show newline
 () show newline
 (------------------------------------------------------------------------) show newline
@@ -1040,13 +1178,18 @@ margin topmargin moveto
 (Book\), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula,) show newline
 (L.J., Secure Computer Systems: Mathematical Foundations, 1973 -) show newline
 (confidentiality model 7. Biba, K.J., Integrity Considerations for Secure) show newline
-(Computer Systems, 1977 - integrity model) show newline
+(Computer Systems, 1977 - integrity model 8. Chaum, D., Blind Signatures) show newline
+(for Untraceable Payments, Crypto 1982 9. Chaum, D., Security Without) show newline
+(Identification: Transaction Systems to Make Big Brother Obsolete, CACM) show newline
+(1985) show newline
 () show newline
 () show newline
 (------------------------------------------------------------------------) show newline
 (CHANGELOG) show newline
 (------------------------------------------------------------------------) show newline
 () show newline
+(  * 2026-01-16) show newline
+(  * Add Unlinkability section: blind signatures, bearer capabilities, Chaum integration) show newline
 (  * 2026-01-08) show newline
 (  * Initial draft) show newline
 () show newline

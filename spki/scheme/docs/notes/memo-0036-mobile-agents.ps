@@ -1,0 +1,558 @@
+%!PS-Adobe-3.0
+%%Title: memo-0036-mobile-agents
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0036: Mobile Agents and Pub/Sub) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies the mobile agent architecture for the Library of) show newline
+(Cyberspace: Telescript-inspired agents that migrate between realms,) show newline
+(carry SPKI credentials, communicate via pub/sub channels, and operate) show newline
+(under realm coordinator supervision. Agents are first-class citizens) show newline
+(with cryptographic identity.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Distributed computation requires mobile code:) show newline
+() show newline
+(  * Latency) show newline
+(  * Move computation to data, not data to computation) show newline
+(  * Autonomy) show newline
+(  * Agents act on behalf of principals when disconnected) show newline
+(  * Coordination) show newline
+(  * Pub/sub enables loose coupling across realms) show newline
+(  * Accountability) show newline
+(  * Every agent action is auditable) show newline
+() show newline
+(General Magic's Telescript \(1994\) pioneered these ideas. We preserve the) show newline
+(good parts while integrating with SPKI capabilities and) show newline
+(content-addressed storage.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(AGENT MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(What is an Agent?) show newline
+(-----------------) show newline
+() show newline
+(An agent is:) show newline
+() show newline
+(1. Mobile code - Scheme closures that can serialize and migrate 2.) show newline
+(Credentialed - Carries SPKI certificates granting capabilities 3.) show newline
+(Accountable - Every action recorded in audit trail 4. Supervised - Realm) show newline
+(coordinator can inspect, suspend, terminate) show newline
+() show newline
+() show newline
+(    \(define-record-type <agent>) show newline
+(      \(make-agent id principal code state credentials realm\)) show newline
+(      agent?) show newline
+(      \(id agent-id\)                    ; Content hash of initial code+state) show newline
+(      \(principal agent-principal\)      ; SPKI key that spawned this agent) show newline
+(      \(code agent-code\)                ; Scheme closure \(serializable\)) show newline
+(      \(state agent-state\)              ; Mutable state \(content-addressed\)) show newline
+(      \(credentials agent-credentials\)  ; SPKI certificate chain) show newline
+(      \(realm agent-realm\)\)             ; Current realm location) show newline
+() show newline
+() show newline
+(Agent Lifecycle) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    entangle > running > [teleport] > running > ... > decohere) show newline
+(                 v                       v) show newline
+(              suspend               superpose) show newline
+(                 v                       v) show newline
+(              resume                  collapse) show newline
+() show newline
+() show newline
+(Telescript Parallels) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(  Telescript   Cyberspace          Description                       ) show newline
+(  go           teleport            Move agent to another realm       ) show newline
+(  meet         entangle            Two agents become correlated      ) show newline
+(  send         tunnel              Message passes through barriers   ) show newline
+(  permits      SPKI certificates   Capability credentials            ) show newline
+(  places       Realms              Execution environments            ) show newline
+(  telename     Content hash        Globally unique identity          ) show newline
+() show newline
+() show newline
+(Quantum Vocabulary) show newline
+(------------------) show newline
+() show newline
+(The fabric of cyberspace uses quantum metaphors:) show newline
+() show newline
+() show newline
+(  Operation         Name        Metaphor                             ) show newline
+(  send message      tunnel      Quantum tunneling through barriers   ) show newline
+(  receive message   observe     Collapse the wave function           ) show newline
+(  spawn agent       entangle    Create correlated pair               ) show newline
+(  migrate agent     teleport    Quantum teleportation                ) show newline
+(  terminate         decohere    Loss of quantum coherence            ) show newline
+(  checkpoint        superpose   Exist in multiple states             ) show newline
+(  link processes    correlate   Spooky action at a distance          ) show newline
+() show newline
+("A wilderness of mirrors" - James Angleton) show newline
+() show newline
+(Agents live in a cryptographic wilderness where: - They cannot see) show newline
+(plaintext \(HE encryption\) - They cannot trust other agents) show newline
+(\(capability-restricted\) - Every interaction is mediated by certificates) show newline
+(- Identity is what you can prove, not who you claim) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(AGENT OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(entangle \(spawn\)) show newline
+(----------------) show newline
+() show newline
+(Create a new agent in the current realm:) show newline
+() show newline
+() show newline
+(    \(entangle) show newline
+(      code: \(lambda \(self msg\) ...\)) show newline
+(      state: initial-state) show newline
+(      credentials: cert-chain) show newline
+(      #!key name timeout\)) show newline
+(    ;; Returns agent-id \(content hash\)) show newline
+() show newline
+(The spawning principal's key signs the agent, establishing provenance.) show newline
+(The new agent is entangled with its creator - correlated through shared) show newline
+(lineage.) show newline
+() show newline
+() show newline
+(teleport \(migrate\)) show newline
+(------------------) show newline
+() show newline
+(Move agent to another realm:) show newline
+() show newline
+() show newline
+(    \(teleport agent-id target-realm) show newline
+(      #!key superpose\)  ; checkpoint before teleport) show newline
+() show newline
+(Process: 1. Serialize agent code + state 2. Create migration certificate) show newline
+(\(signed by current realm\) 3. Transmit to target realm 4. Target) show newline
+(validates credentials against its policy 5. Resume execution) show newline
+() show newline
+(Migration Certificate:) show newline
+() show newline
+() show newline
+(    \(spki-cert) show newline
+(      \(issuer source-realm-key\)) show newline
+(      \(subject agent-id\)) show newline
+(      \(capability \(action execute\) \(object target-realm\)\)) show newline
+(      \(validity \(not-after migration-timeout\)\)\)) show newline
+() show newline
+() show newline
+(decohere \(terminate\)) show newline
+(--------------------) show newline
+() show newline
+(End agent execution:) show newline
+() show newline
+() show newline
+(    \(decohere agent-id) show newline
+(      #!key reason superpose-final\)) show newline
+() show newline
+(Decoherence can be: - Self-initiated - Agent calls \(decohere\) -) show newline
+(Coordinator-initiated - Kill signal from realm coordinator - Timeout -) show newline
+(Exceeded allocated time - Revocation - Credentials revoked mid-execution) show newline
+() show newline
+() show newline
+(superpose / collapse \(checkpoint / restore\)) show newline
+(-------------------------------------------) show newline
+() show newline
+(Save and restore agent state:) show newline
+() show newline
+() show newline
+(    \(superpose agent-id\)) show newline
+(    ;; Returns content hash of serialized state) show newline
+(    ;; Agent exists in multiple potential states) show newline
+(    \(collapse checkpoint-hash realm\)) show newline
+(    ;; Resurrects agent from superposition) show newline
+(    ;; Wave function collapses to specific state) show newline
+() show newline
+(Checkpoints are content-addressed, enabling: - Fault recovery - Time) show newline
+(travel debugging - Forking \(spawn from checkpoint\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUANTUM MESSAGING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Topics \(Observation Points\)) show newline
+(---------------------------) show newline
+() show newline
+(Topics are hierarchical, content-addressed channels where agents) show newline
+(observe:) show newline
+() show newline
+() show newline
+(    \(define-record-type <topic>) show newline
+(      \(make-topic name realm observers\)) show newline
+(      topic?) show newline
+(      \(name topic-name\)           ; Hierarchical name "realm/category/subject") show newline
+(      \(realm topic-realm\)         ; Owning realm) show newline
+(      \(observers topic-observers\)\); Set of observing agent-ids) show newline
+() show newline
+() show newline
+(observe \(subscribe\)) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(observe topic-pattern handler) show newline
+(      #!key filter replay-from\)) show newline
+(    ;; topic-pattern: "realm/events/*" \(glob supported\)) show newline
+(    ;; handler: \(lambda \(topic message\) ...\)) show newline
+(    ;; filter: Predicate for message selection) show newline
+(    ;; replay-from: Sequence number for replay) show newline
+() show newline
+(When you observe, you collapse potential messages into actual received) show newline
+(values.) show newline
+() show newline
+() show newline
+(tunnel \(publish/send\)) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(tunnel topic message) show newline
+(      #!key ttl priority\)) show newline
+(    ;; message: Any serializable Scheme value) show newline
+(    ;; ttl: Time-to-live in seconds) show newline
+(    ;; priority: 'normal | 'high | 'critical) show newline
+() show newline
+(Messages tunnel through the fabric of cyberspace, passing barriers that) show newline
+(would block classical communication.) show newline
+() show newline
+() show newline
+(Message Structure) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(quantum-message) show newline
+(      \(id "sha256:msg-hash..."\)) show newline
+(      \(topic "realm/agents/status"\)) show newline
+(      \(source agent-id\)) show newline
+(      \(timestamp 1767700000\)) show newline
+(      \(sequence 42\)) show newline
+(      \(payload \(status running\) \(progress 0.73\)\)) show newline
+(      \(signature #${ed25519-sig}\)\)) show newline
+() show newline
+(All messages are signed by the source agent.) show newline
+() show newline
+() show newline
+(Delivery Guarantees) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(  Mode            Guarantee                   ) show newline
+(  at-most-once    Fire and forget \(default\)   ) show newline
+(  at-least-once   Retry until ack             ) show newline
+(  exactly-once    Deduplication + ack         ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REALM COORDINATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(What is a Realm?) show newline
+(----------------) show newline
+() show newline
+(A realm is an execution domain with:) show newline
+() show newline
+(  * Coordinator) show newline
+(  * Supervises agents, enforces policy \(quiescent until message\)) show newline
+(  * Policy) show newline
+(  * What agents can do \(SPKI-based\)) show newline
+(  * Resources) show newline
+(  * CPU, memory, network quotas) show newline
+(  * Pub/sub broker) show newline
+(  * Message routing) show newline
+() show newline
+() show newline
+(    \(define-record-type <realm>) show newline
+(      \(make-realm id coordinator policy agents topics\)) show newline
+(      realm?) show newline
+(      \(id realm-id\)) show newline
+(      \(coordinator realm-coordinator\)  ; Coordinator agent-id) show newline
+(      \(policy realm-policy\)            ; SPKI authorization policy) show newline
+(      \(agents realm-agents\)            ; Hash table of active agents) show newline
+(      \(topics realm-topics\)\)           ; Hash table of topics) show newline
+() show newline
+() show newline
+(Quiescent Coordinator) show newline
+(---------------------) show newline
+() show newline
+(Coordinators are event-driven, not polling. Zero CPU when idle:) show newline
+() show newline
+() show newline
+(    \(define \(coordinator-loop realm\)) show newline
+(      \(let loop \(\)) show newline
+(        ;; Block until message arrives \(no busy-wait\)) show newline
+(        \(let \(\(msg \(observe! \(realm-inbox realm\)\)\)\)) show newline
+(          \(case \(message-type msg\)) show newline
+(            \(\(heartbeat\) \(handle-heartbeat realm msg\)\)) show newline
+(            \(\(entangle\)  \(handle-spawn realm msg\)\)) show newline
+(            \(\(teleport\)  \(handle-migrate realm msg\)\)) show newline
+(            \(\(decohere\)  \(handle-terminate realm msg\)\)) show newline
+(            \(\(lock-req\)  \(handle-lock-request realm msg\)\)) show newline
+(            \(\(signal\)    \(handle-signal realm msg\)\)\)) show newline
+(          \(loop\)\)\)\)) show newline
+() show newline
+() show newline
+(Agent Heartbeat) show newline
+(---------------) show newline
+() show newline
+(Agents must heartbeat to their coordinator:) show newline
+() show newline
+() show newline
+(    \(agent-heartbeat) show newline
+(      \(agent-id "sha256:..."\)) show newline
+(      \(realm "sha256:realm..."\)) show newline
+(      \(timestamp 1767700000\)) show newline
+(      \(status running\)) show newline
+(      \(resources) show newline
+(        \(cpu-ms 1234\)) show newline
+(        \(memory-kb 5678\)) show newline
+(        \(messages-sent 42\)\)\)) show newline
+() show newline
+(Missing heartbeats trigger investigation:) show newline
+() show newline
+() show newline
+(    0s    - heartbeat expected) show newline
+(    30s   - grace period) show newline
+(    60s   - coordinator pings agent) show newline
+(    90s   - agent marked unhealthy) show newline
+(    120s  - agent decohered \(or superposed\)) show newline
+() show newline
+() show newline
+(Remote Termination \(Kill Signal\)) show newline
+(--------------------------------) show newline
+() show newline
+(Coordinators can terminate agents remotely:) show newline
+() show newline
+() show newline
+(    \(coordinator-kill agent-id) show newline
+(      #!key reason grace-period\)) show newline
+() show newline
+(Kill Signal:) show newline
+() show newline
+() show newline
+(    \(kill-signal) show newline
+(      \(target agent-id\)) show newline
+(      \(issuer coordinator-key\)) show newline
+(      \(reason \(policy-violation "exceeded-cpu-quota"\)\)) show newline
+(      \(grace-period 5\)  ; seconds to superpose) show newline
+(      \(signature #${ed25519-sig}\)\)) show newline
+() show newline
+(Agents MUST honor kill signals. Failure to terminate results in: 1.) show newline
+(Resource revocation \(network, storage access removed\) 2. Forced) show newline
+(decoherence by runtime 3. Blacklisting of spawning principal) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DISTRIBUTED LOCKING \(SCS-STYLE\)) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Lock Manager) show newline
+(------------) show newline
+() show newline
+(Each realm has a lock manager for coordination:) show newline
+() show newline
+() show newline
+(    \(define-record-type <lock-manager>) show newline
+(      \(make-lock-manager realm locks waiters\)) show newline
+(      lock-manager?) show newline
+(      \(realm lm-realm\)) show newline
+(      \(locks lm-locks\)      ; Hash table: resource > holder) show newline
+(      \(waiters lm-waiters\)\) ; Hash table: resource > queue) show newline
+() show newline
+() show newline
+(Lock Operations) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \(lock-acquire resource) show newline
+(      #!key timeout mode\)) show newline
+(    ;; mode: 'exclusive | 'shared) show newline
+(    \(lock-release resource\)) show newline
+(    \(lock-upgrade resource\)  ; shared > exclusive) show newline
+(    \(lock-downgrade resource\)  ; exclusive > shared) show newline
+() show newline
+() show newline
+(Distributed Locks \(Cross-Realm\)) show newline
+(-------------------------------) show newline
+() show newline
+(For resources spanning realms:) show newline
+() show newline
+() show newline
+(    \(distributed-lock resource realms) show newline
+(      #!key timeout coordinator\)) show newline
+() show newline
+(Uses two-phase locking: 1. Prepare - All realms vote to grant lock 2.) show newline
+(Commit - Lock granted if all vote yes 3. Abort - Any no vote aborts) show newline
+() show newline
+() show newline
+(Deadlock Detection) show newline
+(------------------) show newline
+() show newline
+(Lock manager maintains wait-for graph:) show newline
+() show newline
+() show newline
+(    \(define \(detect-deadlock lock-manager\)) show newline
+(      "Find cycles in wait-for graph") show newline
+(      \(let \(\(graph \(build-wait-for-graph lock-manager\)\)\)) show newline
+(        \(find-cycles graph\)\)\)) show newline
+() show newline
+(Resolution: Youngest agent in cycle is aborted.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(TCSEC B2 Channel Security) show newline
+(-------------------------) show newline
+() show newline
+(Agent channels must resist covert channel analysis:) show newline
+() show newline
+() show newline
+(  Channel Type   Leak Vector                 Mitigation                  ) show newline
+(  Storage        Message size, topic names   Pad to fixed sizes          ) show newline
+(  Timing         Response latency            Add jitter, batch windows   ) show newline
+(  Signaling      Pub/sub presence            Dummy traffic               ) show newline
+() show newline
+() show newline
+(Credential Validation) show newline
+(---------------------) show newline
+() show newline
+(On every operation: 1. Verify agent's SPKI certificate chain 2. Check) show newline
+(capability grants requested action 3. Validate certificates not revoked) show newline
+(4. Enforce monotonic attenuation) show newline
+() show newline
+() show newline
+(Migration Security) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(validate-migration agent target-realm\)) show newline
+(      \(and \(valid-credentials? \(agent-credentials agent\)\)) show newline
+(           \(realm-admits? target-realm agent\)) show newline
+(           \(not-revoked? \(agent-credentials agent\)\)) show newline
+(           \(within-quota? target-realm agent\)\)\)) show newline
+() show newline
+() show newline
+(Audit Trail) show newline
+(-----------) show newline
+() show newline
+(All agent actions recorded:) show newline
+() show newline
+() show newline
+(    \(audit-append) show newline
+(      actor: \(agent-principal agent\)) show newline
+(      action: `\(teleport ,agent-id ,target-realm\)) show newline
+(      motivation: "data locality optimization"\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(HOMOMORPHIC ENCRYPTION INTEGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(When to Use HE) show newline
+(--------------) show newline
+() show newline
+(Use homomorphic encryption for narrow, well-defined operations:) show newline
+() show newline
+() show newline
+(  Use Case              HE Appropriate?                         ) show newline
+(  Vote tallying         Yes - sum encrypted votes               ) show newline
+(  Aggregate metrics     Yes - sum/average encrypted values      ) show newline
+(  Private analytics     Yes - fixed statistical operations      ) show newline
+(  General computation   No - too slow                           ) show newline
+(  Dynamic branching     No - can't branch on encrypted values   ) show newline
+() show newline
+() show newline
+(Encrypted Agent State) show newline
+(---------------------) show newline
+() show newline
+(Agents can carry encrypted state they cannot read:) show newline
+() show newline
+() show newline
+(    \(entangle) show newline
+(      code: aggregation-circuit  ; Pre-compiled HE circuit) show newline
+(      state: \(encrypted-state) show newline
+(               \(ciphertext #${...}\)) show newline
+(               \(scheme 'bfv\)) show newline
+(               \(operations '\(add multiply\)\)\)) show newline
+(      credentials: cert-chain\)) show newline
+() show newline
+(The agent computes on encrypted data, returns encrypted result. Only the) show newline
+(principal with the decryption key can read the result.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Telescript Language Reference - General Magic \(preserved\) 2. Mobile) show newline
+(Agents - Lange & Oshima \(preserved\) 3. Distributed Lock Manager -) show newline
+(VAX/VMS SCS \(preserved\) 4. Concurrency Oriented Programming in Termite) show newline
+(Scheme - Germain \(preserved\) 5. Memo-003: Cryptographic Audit Trail 6.) show newline
+(Memo-004: SPKI Authorization 7. Memo-010: Federation Protocol 8.) show newline
+(Memo-021: Capability Delegation 9. Memo-023: Agent Sandboxing) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-07) show newline
+(  * Initial draft with quantum vocabulary) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

@@ -1,0 +1,216 @@
+Memo 0048: Access Control and Audit Co-Design
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+ABSTRACT
+------------------------------------------------------------------------
+
+This Memo establishes the principle that access control and auditing
+must be designed together, not separately. Every access control decision
+point produces three outputs: a decision, an effect, and a record. Audit
+policy is per-realm, with lean defaults.
+
+
+------------------------------------------------------------------------
+MOTIVATION
+------------------------------------------------------------------------
+
+Security systems often treat auditing as an afterthought—bolted on
+after access control is designed. This leads to:
+
+  * Incomplete coverage: Some decisions are never logged
+  * Inconsistent records: Different formats at different points
+  * Performance surprises: Auditing added late without cost analysis
+  * Policy gaps: No framework for what to log when
+
+The solution: co-design access control and auditing from the start.
+
+
+------------------------------------------------------------------------
+DESIGN PRINCIPLE
+------------------------------------------------------------------------
+
+Access control and auditing are co-designed, not bolted on.
+
+Every access control point has three outputs:
+
+
+    +-------------------------------------+
+    |         Access Control Point        |
+    +-------------------------------------+
+    | Input:  principal, action, context  |
+    +-------------------------------------+
+    | Output: decision (grant | refuse)   |
+    |         effect   (what happens)     |
+    |         record   (audit entry)      |
+    |                  v                  |
+    |         policy > lean: print        |
+    |                  paranoid: append   |
+    +-------------------------------------+
+
+
+The Three Outputs
+-----------------
+
+1. Decision: Grant or refuse the requested action 2. Effect: The
+consequence of the decision (action performed, or refusal message) 3.
+Record: An audit entry capturing what happened
+
+
+Auditable vs. Audited
+---------------------
+
+  * Auditable: The mechanism exists to log the event
+  * Audited: The event is actively being logged
+
+All access control decisions are auditable. Whether they are audited
+depends on realm policy.
+
+
+------------------------------------------------------------------------
+PER-REALM AUDIT POLICY
+------------------------------------------------------------------------
+
+Each realm configures its own audit policy. The default is lean.
+
+
+Policy Levels
+-------------
+
+
+  Level      Description                                
+  lean       Minimal auditing, low overhead (default)   
+  standard   Security-relevant events audited           
+  paranoid   All access decisions audited               
+
+
+Event Categories
+----------------
+
+
+  Event                 Lean    Standard   Paranoid   
+  Successful joins      audit   audit      audit      
+  Join refusals         print   audit      audit      
+  Delegations           audit   audit      audit      
+  Revocations           audit   audit      audit      
+  Capability grants     audit   audit      audit      
+  Capability refusals   print   audit      audit      
+  Object reads          —     —        audit      
+  Object writes         print   audit      audit      
+
+
+Configuration
+-------------
+
+
+    (realm-audit-policy 'lean)      ; default
+    (realm-audit-policy 'standard)
+    (realm-audit-policy 'paranoid)
+    ;; Or fine-grained:
+    (realm-audit-policy
+      '((joins . audit)
+        (refusals . print)
+        (delegations . audit)
+        (reads . none)))
+
+
+------------------------------------------------------------------------
+IMPLEMENTATION PATTERN
+------------------------------------------------------------------------
+
+When implementing an access control point:
+
+
+    (define (access-control-point principal action context)
+      "Template for access control with co-designed auditing"
+      ;; 1. Make the decision
+      (let ((decision (evaluate-policy principal action context)))
+        ;; 2. Record based on policy
+        (case (realm-audit-policy)
+          ((paranoid)
+           (audit-append
+             actor: principal
+             action: `(,action ,@context)
+             motivation: (if (eq? decision 'grant)
+                             "Access granted"
+                             "Access refused")))
+          ((standard)
+           (when (or (eq? decision 'grant)
+                     (security-relevant? action))
+             (audit-append ...)))
+          ((lean)
+           (when (eq? decision 'refuse)
+             (print (format "~a Refused: ~a" action (refuse-reason))))))
+        ;; 3. Effect
+        (if (eq? decision 'grant)
+            (perform-action action context)
+            (refuse-with-reason action context))))
+
+
+------------------------------------------------------------------------
+VOCABULARY
+------------------------------------------------------------------------
+
+Consistent terminology for access control outcomes:
+
+
+  Outcome             Verb         Usage                                                   
+  Execution fails     Evaporated   "Execution Evaporated: Signature verification failed"   
+  Join denied         Refused      "Join Refused: No valid attestation"                    
+  Capability denied   Refused      "Capability Refused: Insufficient authority"            
+  Operation blocked   Refused      "Operation Refused: Policy violation"                   
+
+Avoid: terminated, aborted, ended, failed (where possible).
+
+
+------------------------------------------------------------------------
+SECURITY CONSIDERATIONS
+------------------------------------------------------------------------
+
+
+Refusal Patterns
+----------------
+
+A pattern of refusals may indicate: - Misconfiguration (legitimate users
+being blocked) - Attack probing (malicious principals testing
+boundaries) - Policy too restrictive (needs adjustment)
+
+Standard and paranoid policies audit refusals to enable pattern
+detection.
+
+
+Audit Cost
+----------
+
+Each audit entry is: - Cryptographically signed (Ed25519) - Hash-chained
+to previous entry - Persisted to storage
+
+Lean policy minimizes this overhead for high-throughput realms.
+
+
+Audit Integrity
+---------------
+
+Audit entries themselves are tamper-evident. An attacker cannot: -
+Delete entries (breaks hash chain) - Modify entries (invalidates
+signature) - Reorder entries (violates sequence numbers)
+
+
+------------------------------------------------------------------------
+REFERENCES
+------------------------------------------------------------------------
+
+  * Memo-003: Cryptographic Audit Trail
+  * Memo-004: SPKI Authorization
+  * Memo-046: Security Architecture
+
+
+------------------------------------------------------------------------
+CHANGELOG
+------------------------------------------------------------------------
+
+- 2026-01-10: Initial draft
+
+------------------------------------------------------------------------
