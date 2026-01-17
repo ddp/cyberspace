@@ -162,9 +162,26 @@
 
       (else '()))))  ; Unknown box char - skip
 
+(define (utf8-length str)
+  "Count Unicode characters in UTF-8 string."
+  (length (utf8-chars str)))
+
+(define (normalize-box-lines lines)
+  "Pad all lines to same width for consistent right-edge alignment."
+  (let* ((char-counts (map utf8-length lines))
+         (max-len (apply max 1 char-counts)))
+    (map (lambda (line count)
+           (let ((pad (- max-len count)))
+             (if (> pad 0)
+                 (string-append line (make-string pad #\space))
+                 line)))
+         lines char-counts)))
+
 (define (text->svg-diagram text)
   "Convert multi-line text with box-drawing to SVG string."
-  (let* ((lines (string-split text "\n" #t))
+  (let* ((raw-lines (string-split text "\n" #t))
+         ;; Normalize line widths for right-edge alignment
+         (lines (normalize-box-lines raw-lines))
          ;; Parse each line into Unicode chars (codepoint . char-string)
          (parsed-lines (map utf8-chars lines))
          (nrows (length lines))
