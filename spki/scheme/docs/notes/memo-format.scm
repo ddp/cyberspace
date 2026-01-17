@@ -180,16 +180,17 @@
     (map (lambda (line count)
            (let ((pad (- max-len count)))
              (cond
-               ((= pad 0) line)  ; Already correct width
-               ((string-ends-with-box-edge? line)
+               ((<= pad 0) line)  ; Already correct width or longer
+               ((and (string-ends-with-box-edge? line) (> count 1))
                 ;; Insert padding before the final box character
                 (let* ((chars (utf8-chars line))
-                       (last-char (cdr (last-pair chars)))  ; Get the string for last char
-                       (prefix-chars (reverse (cdr (reverse chars))))  ; All but last
-                       (prefix (apply string-append (map cdr prefix-chars))))
+                       (n (length chars))
+                       (last-char (cdr (list-ref chars (- n 1))))
+                       (prefix-strs (map cdr (take chars (- n 1))))
+                       (prefix (apply string-append prefix-strs)))
                   (string-append prefix (make-string pad #\space) last-char)))
                (else
-                ;; No box edge - just pad at end
+                ;; No box edge or single char - just pad at end
                 (string-append line (make-string pad #\space))))))
          lines char-counts)))
 
