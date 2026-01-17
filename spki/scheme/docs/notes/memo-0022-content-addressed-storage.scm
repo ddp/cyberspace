@@ -48,7 +48,7 @@
       (p "Sharding: First two hex characters of hash form directory name (256 buckets)."))
     (subsection
       "Object Types"
-      (code scheme ";; Blob - raw data\n(cas-blob\n  (hash \"sha256:...\")\n  (size 1024)\n  (data #${...}))\n\n;; Tree - directory structure\n(cas-tree\n  (hash \"sha256:...\")\n  (entries\n    ((\"README.md\" blob \"sha256:abc...\")\n     (\"src\" tree \"sha256:def...\")\n     (\"lib\" tree \"sha256:ghi...\"))))\n\n;; Commit - snapshot with metadata\n(cas-commit\n  (hash \"sha256:...\")\n  (tree \"sha256:...\")\n  (parent \"sha256:...\" | #f)\n  (author \"ddp@eludom.net\")\n  (timestamp 1767700000)\n  (message \"Initial commit\"))"))
+      (code scheme ";; Blob - raw data\n(cas-blob\n  (hash \"sha256:...\")\n  (size 1024)\n  (data #${...}))\n\n;; Tree - directory structure\n(cas-tree\n  (hash \"sha256:...\")\n  (entries\n    ((\"README.md\" blob \"sha256:abc...\")\n     (\"src\" tree \"sha256:def...\")\n     (\"lib\" tree \"sha256:ghi...\"))))\n\n;; Commit - snapshot with metadata\n(cas-commit\n  (hash \"sha256:...\")\n  (tree \"sha256:...\")\n  (parent \"sha256:...\" | #f)\n  (author \"ddp@electric-loft.org\")\n  (timestamp 1767700000)\n  (message \"Initial commit\"))"))
     (subsection
       "Merkle Trees"
       (p "Directories are trees of hashes. The root hash commits to all content:")
@@ -99,7 +99,7 @@
     (subsection
       "Rich Metadata"
       (p "Every object carries crypto metadata - the ciphers, hashes, and keys involved:")
-      (code scheme ";; Archive object\n(soup-object\n  (name \"1.0.0\")\n  (type archive)\n  (size \"1.2MB\")\n  (crypto (zstd sha256 \"fe378a78...\")))\n\n;; Key object\n(soup-object\n  (name \"vault-signing\")\n  (type key)\n  (size \"64B\")\n  (crypto (ed25519/256 public sign\n           \"sha256:a1b2c3d4...\"    ; fingerprint\n           \"id:ddp@eludom.net\"     ; identity\n           \"2026-01-07\")))         ; creation date\n\n;; Release object\n(soup-object\n  (name \"0.1.0\")\n  (type release)\n  (size \"313B\")\n  (crypto (ed25519 sha512 \"abc123...\")))"))
+      (code scheme ";; Archive object\n(soup-object\n  (name \"1.0.0\")\n  (type archive)\n  (size \"1.2MB\")\n  (crypto (zstd sha256 \"fe378a78...\")))\n\n;; Key object\n(soup-object\n  (name \"vault-signing\")\n  (type key)\n  (size \"64B\")\n  (crypto (ed25519/256 public sign\n           \"sha256:a1b2c3d4...\"    ; fingerprint\n           \"id:ddp@electric-loft.org\"     ; identity\n           \"2026-01-07\")))         ; creation date\n\n;; Release object\n(soup-object\n  (name \"0.1.0\")\n  (type release)\n  (size \"313B\")\n  (crypto (ed25519 sha512 \"abc123...\")))"))
     (subsection
       "Querying the Soup"
       (code scheme ";; Find all signed objects\n(soup-query type: 'release)\n\n;; Find objects using specific algorithm\n(soup-query crypto: 'ed25519)\n\n;; Find objects by size range\n(soup-query min-size: 1000 max-size: 100000)\n\n;; Find objects by content hash prefix\n(soup-query hash-prefix: \"fe378\")"))
@@ -162,7 +162,7 @@
     (subsection
       "Provenance"
       (p "Every object knows its origin:")
-      (code scheme "(soup-object\n  (name \"memo-020.ps\")\n  (type blob)\n  (size \"89KB\")\n  (crypto (sha256 \"abc123...\"))\n  (provenance\n    (created-by \"ddp@eludom.net\")\n    (created-at 1767700000)\n    (derived-from \"sha256:fff888...\")\n    (tool \"dvips\")))")
+      (code scheme "(soup-object\n  (name \"memo-020.ps\")\n  (type blob)\n  (size \"89KB\")\n  (crypto (sha256 \"abc123...\"))\n  (provenance\n    (created-by \"ddp@electric-loft.org\")\n    (created-at 1767700000)\n    (derived-from \"sha256:fff888...\")\n    (tool \"dvips\")))")
       (p "Provenance chains are themselves content-addressed:")
       (code scheme ";; Trace full history\n(define (provenance-chain hash)\n  (let ((obj (soup-get hash)))\n    (if (soup-object-derived-from obj)\n        (cons obj (provenance-chain (soup-object-derived-from obj)))\n        (list obj))))"))
     (subsection

@@ -6,7 +6,7 @@
   (title "Lazy Discovery")
   (status "Draft")
   (date "January 2026")
-  (author "Derrell Piper" "ddp@eludom.net")
+  (author "Derrell Piper" "ddp@electric-loft.org")
 
   (section
     "Abstract"

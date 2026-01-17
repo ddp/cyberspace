@@ -3,7 +3,7 @@
   (title "AI Assistants")
   (status "Draft")
   (date "2026-01-13")
-  (author "Derrell Piper" "ddp@eludom.net")
+  (author "Derrell Piper" "ddp@electric-loft.org")
 
   (abstract
     (p "This Memo specifies how realms establish relationships with AI assistants. Unlike Memo-038 which addresses inference infrastructure, this document concerns the social and architectural patterns by which realms attract, bind, and collaborate with artificial intelligences.")
