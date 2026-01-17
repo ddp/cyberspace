@@ -181,14 +181,14 @@
                         │
            ┌────────────┴────────────┐
            │                         │
-      ┌────▼────┐              ┌─────▼─────┐
-      │ Terminal │              │  Friendly  │
-      │   (cs)   │              │    Door    │
-      └────┬────┘              └─────┬─────┘
+      ┌────▼────┐              ┌────▼────┐
+      │ Terminal │              │ Friendly │
+      │   (cs)   │              │   Door   │
+      └────┬────┘              └────┬────┘
            │                         │
-      Operators                   Novices
-      Hackers                     Family
-      Admins                      Everyone")
+       Operators                  Novices
+        Hackers                   Family
+        Admins                   Everyone")
       (p "The terminal offers full power and complexity for those who want it. The friendly door offers drag-and-drop simplicity - same operations, different presentation.")
       (p "Both doors lead to the same vault. Both use the same Scheme underneath."))
 
