@@ -196,9 +196,9 @@
 
 (define (text->svg-diagram text)
   "Convert multi-line text with box-drawing to SVG string."
-  (let* ((raw-lines (string-split text "\n" #t))
-         ;; Normalize line widths for right-edge alignment
-         (lines (normalize-box-lines raw-lines))
+  (let* ((lines (string-split text "\n" #t))
+         ;; NOTE: normalize-box-lines disabled - breaks multi-column diagrams
+         ;; Fix source diagrams to have consistent line widths instead
          ;; Parse each line into Unicode chars (codepoint . char-string)
          (parsed-lines (map utf8-chars lines))
          (nrows (length lines))
