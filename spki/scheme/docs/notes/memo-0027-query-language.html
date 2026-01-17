@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Memo 0027: Soup Query Language</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0027: Soup Query Language</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This Memo specifies the query language for the Library of Cyberspace soup: how principals search, filter, and retrieve objects from the content-addressed store using the rich metadata layer. Queries are themselves content-addressed and auditable.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>The soup contains infinite metadata. Finding needles requires a query language that is:</p>
+<ul>
+<li>Expressive</li>
+<li>Complex predicates, joins across objects</li>
+<li>Efficient</li>
+<li>Indexes, bloom filters, query planning</li>
+<li>Secure</li>
+<li>Queries respect capability boundaries</li>
+<li>Auditable</li>
+<li>Query patterns reveal access patterns</li>
+</ul>
+<p>Newton's soup had cursor-based queries. We extend this with content-addressed semantics.</p>
+</section>
+<section>
+<h2>Query Model</h2>
+<h3>Basic Queries</h3>
+<pre class="language-scheme">
+;; Find by type
+(soup-query type: 'document)
+
+;; Find by attribute
+(soup-query author: "alice@example.com")
+
+;; Find by multiple attributes (AND)
+(soup-query type: 'document
+            author: "alice@example.com"
+            created-after: "2026-01-01")
+
+;; Find by content hash
+(soup-query hash: "sha256:7f83b1657ff1fc...")
+</pre>
+<h3>Query Results</h3>
+<pre class="language-scheme">
+;; Results are lazy cursors
+(define results (soup-query type: 'document))
+
+;; Iterate
+(soup-cursor-next results)    ; =&gt; soup-object or #f
+(soup-cursor-peek results)    ; =&gt; next without advancing
+(soup-cursor-reset results)   ; =&gt; back to beginning
+
+;; Collect (careful with large result sets)
+(soup-cursor-&gt;list results)   ; =&gt; list of soup-objects
+(soup-cursor-count results)   ; =&gt; total count
+</pre>
+<h3>Predicates</h3>
+<pre class="language-scheme">
+;; Comparison operators
+(soup-query size: (&gt; 1000000))           ; larger than 1MB
+(soup-query created: (&lt; "2025-01-01"))   ; before 2025
+(soup-query name: (like "rfc-*"))        ; glob pattern
+(soup-query tags: (contains "urgent"))   ; list membership
+
+;; Logical operators
+(soup-query (and (type: 'document)
+                 (or (author: "alice")
+                     (author: "bob"))))
+
+;; Negation
+(soup-query (not (type: 'tombstone)))
+
+;; Existence
+(soup-query (exists 'encryption-key))    ; has attribute
+(soup-query (missing 'expires))          ; lacks attribute
+</pre>
+</section>
+<section>
+<h2>Advanced Queries</h2>
+<h3>Range Queries</h3>
+<pre class="language-scheme">
+;; Numeric ranges
+(soup-query size: (between 1000 10000))
+
+;; Date ranges
+(soup-query created: (between "2026-01-01" "2026-12-31"))
+
+;; Lexicographic ranges
+(soup-query name: (between "memo-010" "memo-020"))
+</pre>
+<h3>Full-Text Search</h3>
+<pre class="language-scheme">
+;; Search indexed content
+(soup-query (text-search "capability delegation"))
+
+;; With highlighting
+(soup-query (text-search "SPKI certificate")
+            highlight: #t)
+
+;; Phrase search
+(soup-query (text-search "\"monotonic attenuation\""))
+
+;; Fuzzy search
+(soup-query (text-search "delgation~"))  ; typo-tolerant
+</pre>
+<h3>Reference Traversal</h3>
+<pre class="language-scheme">
+;; Objects referencing this hash
+(soup-query references: "sha256:target...")
+
+;; Objects referenced by this hash
+(soup-query referenced-by: "sha256:source...")
+
+;; Transitive closure (careful - can be huge)
+(soup-query (transitive-references "sha256:root...")
+            max-depth: 3)
+</pre>
+<h3>Temporal Queries</h3>
+<pre class="language-scheme">
+;; Objects as they existed at a point in time
+(soup-query type: 'document
+            as-of: "2026-01-01T00:00:00Z")
+
+;; Objects modified in time window
+(soup-query modified: (between "2026-01-01" "2026-01-07"))
+
+;; Version history
+(soup-query (versions-of "sha256:current..."))
+</pre>
+</section>
+<section>
+<h2>Query Composition</h2>
+<h3>Subqueries</h3>
+<pre class="language-scheme">
+;; Objects authored by members of a group
+(soup-query author: (soup-query type: 'principal
+                                member-of: "engineering"))
+
+;; Documents referencing any RFC
+(soup-query type: 'document
+            references: (soup-query name: (like "rfc-*")))
+</pre>
+<h3>Aggregation</h3>
+<pre class="language-scheme">
+;; Count by type
+(soup-aggregate
+  group-by: 'type
+  aggregate: (count))
+
+;; Total size by author
+(soup-aggregate
+  group-by: 'author
+  aggregate: (sum 'size))
+
+;; Average document size
+(soup-aggregate
+  where: (type: 'document)
+  aggregate: (avg 'size))
+
+;; Distinct values
+(soup-aggregate
+  aggregate: (distinct 'content-type))
+</pre>
+<h3>Ordering and Pagination</h3>
+<pre class="language-scheme">
+;; Sort by creation date, newest first
+(soup-query type: 'document
+            order-by: '((created desc)))
+
+;; Multi-column sort
+(soup-query type: 'document
+            order-by: '((author asc) (created desc)))
+
+;; Pagination
+(soup-query type: 'document
+            order-by: '((created desc))
+            limit: 20
+            offset: 40)
+
+;; Cursor-based pagination (more efficient)
+(soup-query type: 'document
+            order-by: '((created desc))
+            after: "sha256:last-seen...")
+</pre>
+</section>
+<section>
+<h2>Capability-Aware Queries</h2>
+<h3>Query Filtering</h3>
+<p>Queries automatically filter results based on the querying principal's capabilities:</p>
+<pre class="language-scheme">
+(define (soup-query-with-caps query principal)
+  "Execute query filtered by principal's capabilities"
+  (let* ((raw-results (execute-query query))
+         (caps (principal-capabilities principal)))
+    (filter (lambda (obj)
+              (can-read? principal obj caps))
+            raw-results)))
+</pre>
+<h3>Capability Queries</h3>
+<pre class="language-scheme">
+;; What can I access?
+(soup-query (accessible-by (current-principal)))
+
+;; Who can access this?
+(soup-query type: 'certificate
+            grants-access-to: "sha256:target...")
+
+;; Find my capabilities
+(soup-query type: 'certificate
+            subject: (current-principal))
+</pre>
+<h3>Query Authorization</h3>
+<pre class="language-scheme">
+;; Some queries require explicit capability
+(soup-query type: 'audit-log)  ; requires audit-read capability
+
+;; Query capability certificate
+(spki-cert
+  (issuer vault-admin)
+  (subject auditor-key)
+  (capability
+    (action query)
+    (object (type 'audit-log)))
+  (validity (not-after "2027-01-01")))
+</pre>
+</section>
+<section>
+<h2>Indexes</h2>
+<h3>Index Types</h3>
+<pre class="language-scheme">
+;; B-tree index (ordered, range queries)
+(define-index 'created-idx
+  type: 'btree
+  on: 'created)
+
+;; Hash index (equality only, faster)
+(define-index 'hash-idx
+  type: 'hash
+  on: 'content-hash)
+
+;; Full-text index (search)
+(define-index 'content-idx
+  type: 'fulltext
+  on: 'content
+  language: 'english)
+
+;; Composite index
+(define-index 'author-date-idx
+  type: 'btree
+  on: '(author created))
+
+;; Bloom filter index (membership testing)
+(define-index 'tags-bloom
+  type: 'bloom
+  on: 'tags
+  false-positive-rate: 0.01)
+</pre>
+<h3>Cost-Based Index Selection</h3>
+<p>Query planning uses Selinger-style cost estimation to select optimal execution plans. The optimizer considers:</p>
+<ul>
+<li>Cardinality estimation: How many rows will each predicate return?</li>
+<li>Index selectivity: How discriminating is each index?</li>
+<li>I/O cost: Sequential scan vs. random access</li>
+<li>Join ordering: Which order minimizes intermediate result sizes?</li>
+</ul>
+<pre class="language-scheme">
+;; Cardinality estimation using histograms
+(define (estimate-cardinality predicate index-stats)
+  "Estimate result size for predicate"
+  (let ((histogram (index-histogram index-stats)))
+    (case (predicate-type predicate)
+      ((equality)
+       ;; Use histogram bucket counts
+       (histogram-point-estimate histogram (predicate-value predicate)))
+      ((range)
+       ;; Sum histogram buckets in range
+       (histogram-range-estimate histogram
+                                  (predicate-low predicate)
+                                  (predicate-high predicate)))
+      ((like)
+       ;; Estimate based on prefix selectivity
+       ( (total-rows index-stats)
+          (prefix-selectivity (predicate-pattern predicate))))
+      (else
+       ;; Conservative estimate: 10% of total
+       ( 0.1 (total-rows index-stats))))))
+
+;; Cost model for execution plans
+(define (plan-cost plan index-stats)
+  "Estimate total cost in I/O operations"
+  (let ((cardinality (estimate-cardinality (plan-predicate plan) index-stats)))
+    (case (plan-access-method plan)
+      ((full-scan)
+       ;; Sequential I/O: count all pages
+       (total-pages index-stats))
+      ((index-scan)
+       ;; Random I/O: estimated rows + index traversal
+       (+ (log2 (total-rows index-stats))  ; B-tree depth
+          cardinality))                     ; Heap fetches
+      ((index-only)
+       ;; No heap access needed
+       (log2 (total-rows index-stats)))
+      ((bloom-filter)
+       ;; O(k) hash operations, negligible I/O
+       ( 0.001 cardinality)))))
+
+;; Dynamic programming for join ordering
+(define (optimize-join-order predicates indexes)
+  "Find optimal join order using Selinger algorithm"
+  (let ((memo (make-hash-table)))
+    (define (best-plan preds)
+      (cond
+        ((null? preds) (empty-plan))
+        ((hash-table-exists? memo preds)
+         (hash-table-ref memo preds))
+        (else
+         (let ((candidates
+                 (map (lambda (p)
+                        (let ((rest (delete p preds)))
+                          (join-plans (single-predicate-plan p)
+                                      (best-plan rest))))
+                      preds))
+                (best (minimum-by plan-cost candidates)))
+           (hash-table-set! memo preds best)
+           best))))
+    (best-plan predicates)))
+
+;; Select best index for query
+(define (plan-query query indexes)
+  "Generate optimal query plan using cost-based optimization"
+  (let ((predicates (query-predicates query))
+         (stats (map index-statistics indexes))
+         ;; Generate candidate plans
+         (candidates
+          (append
+           ;; Try each applicable index
+           (filter-map (lambda (idx stat)
+                        (and (index-covers? idx predicates)
+                             (make-plan 'index-scan idx
+                                        (plan-cost-for idx predicates stat))))
+                      indexes stats)
+           ;; Always consider full scan
+           (list (make-plan 'full-scan #f (full-scan-cost predicates stats)))))
+         ;; Select minimum cost plan
+         (best (minimum-by plan-cost candidates)))
+    (when (&gt; (plan-cost best) query-cost-warning-threshold*)
+      (log-warning "Expensive query plan" query (plan-cost best)))
+    best))
+</pre>
+<h3>Histogram Maintenance</h3>
+<pre class="language-scheme">
+;; Equi-depth histograms for cardinality estimation
+(define (build-histogram values num-buckets)
+  "Build equi-depth histogram for cardinality estimation"
+  (let ((sorted (sort values &lt;))
+         (bucket-size (ceiling (/ (length sorted) num-buckets)))
+         (boundaries (map (lambda (i)
+                           (list-ref sorted ( i bucket-size)))
+                         (iota num-buckets))))
+    (make-histogram boundaries (/ (length sorted) num-buckets))))
+
+;; Update histogram incrementally
+(define (histogram-update! hist value)
+  "Incrementally update histogram with new value"
+  (let ((bucket (find-bucket hist value)))
+    (bucket-increment! bucket)))
+
+;; Statistics refresh
+(define (refresh-index-statistics idx)
+  "Rebuild index statistics (run periodically)"
+  (let* ((samples (index-sample idx 10000))  ; Sample 10K rows
+         (histogram (build-histogram samples 100)))
+    (set-index-statistics! idx
+      (make-stats
+        (total-rows (index-count idx))
+        (distinct-values (length (delete-duplicates samples)))
+        (histogram histogram)
+        (last-analyzed (current-time))))))
+</pre>
+<h3>Index Maintenance</h3>
+<pre class="language-scheme">
+;; Indexes are updated on soup-put
+(define (soup-put-indexed obj)
+  (let ((hash (soup-put obj)))
+    (for-each (lambda (idx)
+                (index-insert! idx obj hash))
+              (applicable-indexes obj))
+    hash))
+
+;; Periodic index optimization
+(define (optimize-indexes)
+  (for-each index-compact! (all-indexes)))
+</pre>
+</section>
+<section>
+<h2>Query Execution</h2>
+<h3>Query Planning</h3>
+<pre class="language-scheme">
+(define (execute-query query)
+  "Plan and execute query"
+  (let ((plan (plan-query query))
+         (cost (estimate-cost plan)))
+    (when (&gt; cost query-cost-limit*)
+      (error "Query too expensive" cost))
+    (execute-plan plan)))
+
+(define (plan-query query)
+  "Generate query execution plan"
+  `(query-plan
+    (predicates ,(query-predicates query))
+    (index ,(select-index query))
+    (filter ,(remaining-predicates query))
+    (order ,(query-order query))
+    (limit ,(query-limit query))))
+</pre>
+<h3>Execution Strategies</h3>
+<pre class="language-scheme">
+;; Index scan
+(define (index-scan index predicate)
+  (index-range-query index
+                     (predicate-lower-bound predicate)
+                     (predicate-upper-bound predicate)))
+
+;; Full scan (last resort)
+(define (full-scan predicate)
+  (filter predicate (all-soup-objects)))
+
+;; Index intersection
+(define (index-intersect idx1 idx2 pred1 pred2)
+  (set-intersection
+    (index-scan idx1 pred1)
+    (index-scan idx2 pred2)))
+</pre>
+<h3>Query Caching</h3>
+<p>The soup is archival - objects rarely change, making aggressive caching safe.</p>
+<pre class="language-scheme">
+;; Multi-tier cache: L1 hot results, L2 warm, L3 persistent
+(define l1-cache (make-lru-cache 100))    ; In-memory, microseconds
+(define l2-cache (make-lru-cache 10000))  ; Warm, milliseconds
+(define l3-cache 'persistent-index)        ; On-disk, query index
+
+(define (cached-query query principal)
+  "Multi-tier cached query with capability awareness"
+  (let ((key (query-cache-key query principal)))
+    (or (lru-get l1-cache key)
+        (lru-get l2-cache key)
+        (persistent-cache-get l3-cache key)
+        (let ((result (execute-query query)))
+          ;; Promote to appropriate cache tier based on cost
+          (let ((cost (query-cost query)))
+            (cond
+              ((&gt; cost 1000) (persistent-cache-put! l3-cache key result))
+              ((&gt; cost 100) (lru-put! l2-cache key result))
+              (else (lru-put! l1-cache key result))))
+          result))))
+</pre>
+<p>#### Dependency-Based Invalidation</p>
+<p>Track which predicates affect which cached queries using Bloom filters:</p>
+<pre class="language-scheme">
+;; Bloom filter tracking which attributes affect cached queries
+(define query-dependencies (make-counting-bloom-filter 100000 0.001))
+
+(define (cache-with-deps query result)
+  "Cache query and track its dependencies"
+  (let ((key (query-&gt;hash query))
+        (deps (query-attribute-deps query)))
+    (lru-put! query-cache key result)
+    ;; Track dependencies
+    (for-each (lambda (attr)
+                (bloom-add! query-dependencies (cons attr key)))
+              deps)))
+
+(define (invalidate-on-change obj)
+  "Invalidate only queries that MIGHT be affected (conservative)"
+  (let ((attrs (soup-object-attributes obj)))
+    (for-each (lambda (attr)
+                ;; Check if any cached query depends on this attribute
+                (when (bloom-might-contain? query-dependencies attr)
+                  (invalidate-queries-for-attribute attr)))
+              attrs)))
+</pre>
+<p>#### Archival Cache Semantics</p>
+<p>For the soup's archival nature, implement copy-on-write cache entries:</p>
+<pre class="language-scheme">
+;; Immutable cache entries - archival objects never change
+(define (archival-cache-get cache hash)
+  "Archival objects can be cached permanently"
+  (let ((entry (hash-table-ref cache hash #f)))
+    (if entry
+        (if (archival-generation? (soup-get hash))
+            entry  ; Archival: never expires
+            (if (cache-entry-fresh? entry)
+                (cache-entry-value entry)
+                #f))  ; Non-archival: check freshness
+        #f)))
+
+;; Generation-aware caching
+(define (cache-ttl-for-generation gen)
+  (case gen
+    ((archival) +inf.0)       ; Never expires
+    ((stable) 86400)          ; 1 day
+    ((maturing) 3600)         ; 1 hour
+    ((young) 60)              ; 1 minute
+    ((ephemeral) 0)))         ; No caching
+</pre>
+</section>
+<section>
+<h2>Distributed Queries</h2>
+<h3>Federated Query</h3>
+<pre class="language-scheme">
+;; Query across multiple vaults
+(soup-query type: 'document
+            federation: '(vault-a vault-b vault-c))
+
+;; Query with locality preference
+(soup-query type: 'document
+            prefer-local: #t)
+</pre>
+<h3>Query Routing</h3>
+<pre class="language-scheme">
+(define (route-query query vaults)
+  "Route query to appropriate vaults"
+  (let ((partitions (query-partitions query)))
+    (map (lambda (vault)
+           (list vault (subquery-for-vault query vault)))
+         (filter (lambda (v)
+                   (vault-has-partition? v partitions))
+                 vaults))))
+</pre>
+<h3>Result Merging</h3>
+<pre class="language-scheme">
+(define (merge-results results order)
+  "Merge sorted results from multiple vaults"
+  (let ((streams (map result-&gt;stream results)))
+    (merge-sorted-streams streams (order-&gt;comparator order))))
+</pre>
+</section>
+<section>
+<h2>Query Audit</h2>
+<h3>Audit Trail</h3>
+<pre class="language-scheme">
+;; All queries are logged
+(define (audited-query query principal)
+  (let ((start (current-time))
+        (result (soup-query-with-caps query principal)))
+    (audit-append
+      action: 'query
+      principal: principal
+      query: (query-&gt;sexp query)
+      result-count: (soup-cursor-count result)
+      duration: (- (current-time) start))
+    result))
+</pre>
+<h3>Query Analysis</h3>
+<pre class="language-scheme">
+;; Analyze query patterns
+(soup-query type: 'audit-entry
+            action: 'query
+            principal: "alice")
+
+;; Find expensive queries
+(soup-query type: 'audit-entry
+            action: 'query
+            duration: (&gt; 1000))  ; &gt; 1 second
+
+;; Access pattern analysis
+(soup-aggregate
+  where: (and (type: 'audit-entry) (action: 'query))
+  group-by: 'principal
+  aggregate: (count))
+</pre>
+</section>
+<section>
+<h2>Query Language Grammar</h2>
+<pre>
+query       ::= (soup-query clause)
+clause      ::= attribute-clause | predicate-clause | option-clause
+attribute   ::= symbol ':' value
+predicate   ::= '(' op value ')'
+op          ::= '&gt;' | '&lt;' | '&gt;=' | '&lt;=' | '=' | '!='
+              | 'like' | 'between' | 'contains'
+              | 'and' | 'or' | 'not'
+              | 'exists' | 'missing'
+              | 'text-search' | 'references' | 'referenced-by'
+option      ::= 'order-by' | 'limit' | 'offset' | 'after'
+              | 'as-of' | 'highlight' | 'federation'
+value       ::= string | number | boolean | hash | query
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Query Injection</h3>
+<pre class="language-scheme">
+;; Never interpolate user input into queries
+;; BAD:
+(soup-query name: (string-append "rfc-" user-input))
+
+;; GOOD:
+(soup-query name: (like (sanitize-pattern user-input)))
+
+(define (sanitize-pattern s)
+  (string-map (lambda (c)
+                (if (member c '(#\* #\? #\[ #\]))
+                    #\\
+                    c))
+              s))
+</pre>
+<h3>Query Cost Limits</h3>
+<pre class="language-scheme">
+;; Prevent denial of service via expensive queries
+(define query-cost-limit 10000)
+(define query-timeout 30)  ; seconds
+
+(define (safe-query query)
+  (with-timeout query-timeout
+    (let ((cost (estimate-cost query)))
+      (when (&gt; cost query-cost-limit)
+        (error "Query exceeds cost limit"))
+      (execute-query query))))
+</pre>
+<h3>Information Leakage</h3>
+<pre class="language-scheme">
+;; Query existence can leak information
+;; Even "not found" reveals something
+
+;; Use constant-time responses for sensitive queries
+(define (private-query query)
+  (let ((result (soup-query query)))
+    (if (authorized? (current-principal) result)
+        result
+        (constant-time-not-found))))
+</pre>
+</section>
+<section>
+<h2>Implementation Notes</h2>
+<h3>Performance</h3>
+<ul>
+<li>Index selection is critical for large soups</li>
+<li>Bloom filters for fast negative lookups</li>
+<li>Query result streaming to avoid memory exhaustion</li>
+<li>Connection pooling for federated queries</li>
+</ul>
+<h3>Compatibility</h3>
+<ul>
+<li>Query language inspired by Newton's soup cursors</li>
+<li>SQL-like semantics where applicable</li>
+<li>S-expression syntax for Scheme integration</li>
+</ul>
+</section>
+<section>
+<h2>References</h2>
+<p>1. Newton Programmer's Guide - Soup and cursor APIs 2. SQLite Query Planner - Query optimization 3. Selinger et al., "Access Path Selection in a Relational Database Management System" (1979) - Cost-based optimization 4. Memo-020: Content-Addressed Storage 5. Memo-021: Capability Delegation 6. Memo-026: Garbage Collection (generation-aware caching)</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-09</li>
+<li>Cost-based query optimization: Selinger algorithm, cardinality estimation, histograms, multi-tier caching with generation-aware TTL - 2026-01-07</li>
+<li>Initial draft</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

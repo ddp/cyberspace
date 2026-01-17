@@ -1,0 +1,782 @@
+%!PS-Adobe-3.0
+%%Title: memo-0027-query-language
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0027: Soup Query Language) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies the query language for the Library of Cyberspace) show newline
+(soup: how principals search, filter, and retrieve objects from the) show newline
+(content-addressed store using the rich metadata layer. Queries are) show newline
+(themselves content-addressed and auditable.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The soup contains infinite metadata. Finding needles requires a query) show newline
+(language that is:) show newline
+() show newline
+(  * Expressive) show newline
+(  * Complex predicates, joins across objects) show newline
+(  * Efficient) show newline
+(  * Indexes, bloom filters, query planning) show newline
+(  * Secure) show newline
+(  * Queries respect capability boundaries) show newline
+(  * Auditable) show newline
+(  * Query patterns reveal access patterns) show newline
+() show newline
+(Newton's soup had cursor-based queries. We extend this with) show newline
+(content-addressed semantics.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUERY MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Basic Queries) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Find by type) show newline
+(    \(soup-query type: 'document\)) show newline
+(    ;; Find by attribute) show newline
+(    \(soup-query author: "alice@example.com"\)) show newline
+(    ;; Find by multiple attributes \(AND\)) show newline
+(    \(soup-query type: 'document) show newline
+(                author: "alice@example.com") show newline
+(                created-after: "2026-01-01"\)) show newline
+(    ;; Find by content hash) show newline
+(    \(soup-query hash: "sha256:7f83b1657ff1fc..."\)) show newline
+() show newline
+() show newline
+(Query Results) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Results are lazy cursors) show newline
+(    \(define results \(soup-query type: 'document\)\)) show newline
+(    ;; Iterate) show newline
+(    \(soup-cursor-next results\)    ; => soup-object or #f) show newline
+(    \(soup-cursor-peek results\)    ; => next without advancing) show newline
+(    \(soup-cursor-reset results\)   ; => back to beginning) show newline
+(    ;; Collect \(careful with large result sets\)) show newline
+(    \(soup-cursor->list results\)   ; => list of soup-objects) show newline
+(    \(soup-cursor-count results\)   ; => total count) show newline
+() show newline
+() show newline
+(Predicates) show newline
+(----------) show newline
+() show newline
+() show newline
+(    ;; Comparison operators) show newline
+(    \(soup-query size: \(> 1000000\)\)           ; larger than 1MB) show newline
+(    \(soup-query created: \(< "2025-01-01"\)\)   ; before 2025) show newline
+(    \(soup-query name: \(like "rfc-*"\)\)        ; glob pattern) show newline
+(    \(soup-query tags: \(contains "urgent"\)\)   ; list membership) show newline
+(    ;; Logical operators) show newline
+(    \(soup-query \(and \(type: 'document\)) show newline
+(                     \(or \(author: "alice"\)) show newline
+(                         \(author: "bob"\)\)\)\)) show newline
+(    ;; Negation) show newline
+(    \(soup-query \(not \(type: 'tombstone\)\)\)) show newline
+(    ;; Existence) show newline
+(    \(soup-query \(exists 'encryption-key\)\)    ; has attribute) show newline
+(    \(soup-query \(missing 'expires\)\)          ; lacks attribute) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ADVANCED QUERIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Range Queries) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Numeric ranges) show newline
+(    \(soup-query size: \(between 1000 10000\)\)) show newline
+(    ;; Date ranges) show newline
+(    \(soup-query created: \(between "2026-01-01" "2026-12-31"\)\)) show newline
+(    ;; Lexicographic ranges) show newline
+(    \(soup-query name: \(between "memo-010" "memo-020"\)\)) show newline
+() show newline
+() show newline
+(Full-Text Search) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    ;; Search indexed content) show newline
+(    \(soup-query \(text-search "capability delegation"\)\)) show newline
+(    ;; With highlighting) show newline
+(    \(soup-query \(text-search "SPKI certificate"\)) show newline
+(                highlight: #t\)) show newline
+(    ;; Phrase search) show newline
+(    \(soup-query \(text-search "\\"monotonic attenuation\\""\)\)) show newline
+(    ;; Fuzzy search) show newline
+(    \(soup-query \(text-search "delgation~"\)\)  ; typo-tolerant) show newline
+() show newline
+() show newline
+(Reference Traversal) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Objects referencing this hash) show newline
+(    \(soup-query references: "sha256:target..."\)) show newline
+(    ;; Objects referenced by this hash) show newline
+(    \(soup-query referenced-by: "sha256:source..."\)) show newline
+(    ;; Transitive closure \(careful - can be huge\)) show newline
+(    \(soup-query \(transitive-references "sha256:root..."\)) show newline
+(                max-depth: 3\)) show newline
+() show newline
+() show newline
+(Temporal Queries) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    ;; Objects as they existed at a point in time) show newline
+(    \(soup-query type: 'document) show newline
+(                as-of: "2026-01-01T00:00:00Z"\)) show newline
+(    ;; Objects modified in time window) show newline
+(    \(soup-query modified: \(between "2026-01-01" "2026-01-07"\)\)) show newline
+(    ;; Version history) show newline
+(    \(soup-query \(versions-of "sha256:current..."\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUERY COMPOSITION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Subqueries) show newline
+(----------) show newline
+() show newline
+() show newline
+(    ;; Objects authored by members of a group) show newline
+(    \(soup-query author: \(soup-query type: 'principal) show newline
+(                                    member-of: "engineering"\)\)) show newline
+(    ;; Documents referencing any RFC) show newline
+(    \(soup-query type: 'document) show newline
+(                references: \(soup-query name: \(like "rfc-*"\)\)\)) show newline
+() show newline
+() show newline
+(Aggregation) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    ;; Count by type) show newline
+(    \(soup-aggregate) show newline
+(      group-by: 'type) show newline
+(      aggregate: \(count\)\)) show newline
+(    ;; Total size by author) show newline
+(    \(soup-aggregate) show newline
+(      group-by: 'author) show newline
+(      aggregate: \(sum 'size\)\)) show newline
+(    ;; Average document size) show newline
+(    \(soup-aggregate) show newline
+(      where: \(type: 'document\)) show newline
+(      aggregate: \(avg 'size\)\)) show newline
+(    ;; Distinct values) show newline
+(    \(soup-aggregate) show newline
+(      aggregate: \(distinct 'content-type\)\)) show newline
+() show newline
+() show newline
+(Ordering and Pagination) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; Sort by creation date, newest first) show newline
+(    \(soup-query type: 'document) show newline
+(                order-by: '\(\(created desc\)\)\)) show newline
+(    ;; Multi-column sort) show newline
+(    \(soup-query type: 'document) show newline
+(                order-by: '\(\(author asc\) \(created desc\)\)\)) show newline
+(    ;; Pagination) show newline
+(    \(soup-query type: 'document) show newline
+(                order-by: '\(\(created desc\)\)) show newline
+(                limit: 20) show newline
+(                offset: 40\)) show newline
+(    ;; Cursor-based pagination \(more efficient\)) show newline
+(    \(soup-query type: 'document) show newline
+(                order-by: '\(\(created desc\)\)) show newline
+(                after: "sha256:last-seen..."\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CAPABILITY-AWARE QUERIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Query Filtering) show newline
+(---------------) show newline
+() show newline
+(Queries automatically filter results based on the querying principal's) show newline
+(capabilities:) show newline
+() show newline
+() show newline
+(    \(define \(soup-query-with-caps query principal\)) show newline
+(      "Execute query filtered by principal's capabilities") show newline
+(      \(let* \(\(raw-results \(execute-query query\)\)) show newline
+(             \(caps \(principal-capabilities principal\)\)\)) show newline
+(        \(filter \(lambda \(obj\)) show newline
+(                  \(can-read? principal obj caps\)\)) show newline
+(                raw-results\)\)\)) show newline
+() show newline
+() show newline
+(Capability Queries) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; What can I access?) show newline
+(    \(soup-query \(accessible-by \(current-principal\)\)\)) show newline
+(    ;; Who can access this?) show newline
+(    \(soup-query type: 'certificate) show newline
+(                grants-access-to: "sha256:target..."\)) show newline
+(    ;; Find my capabilities) show newline
+(    \(soup-query type: 'certificate) show newline
+(                subject: \(current-principal\)\)) show newline
+() show newline
+() show newline
+(Query Authorization) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Some queries require explicit capability) show newline
+(    \(soup-query type: 'audit-log\)  ; requires audit-read capability) show newline
+(    ;; Query capability certificate) show newline
+(    \(spki-cert) show newline
+(      \(issuer vault-admin\)) show newline
+(      \(subject auditor-key\)) show newline
+(      \(capability) show newline
+(        \(action query\)) show newline
+(        \(object \(type 'audit-log\)\)\)) show newline
+(      \(validity \(not-after "2027-01-01"\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INDEXES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Index Types) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    ;; B-tree index \(ordered, range queries\)) show newline
+(    \(define-index 'created-idx) show newline
+(      type: 'btree) show newline
+(      on: 'created\)) show newline
+(    ;; Hash index \(equality only, faster\)) show newline
+(    \(define-index 'hash-idx) show newline
+(      type: 'hash) show newline
+(      on: 'content-hash\)) show newline
+(    ;; Full-text index \(search\)) show newline
+(    \(define-index 'content-idx) show newline
+(      type: 'fulltext) show newline
+(      on: 'content) show newline
+(      language: 'english\)) show newline
+(    ;; Composite index) show newline
+(    \(define-index 'author-date-idx) show newline
+(      type: 'btree) show newline
+(      on: '\(author created\)\)) show newline
+(    ;; Bloom filter index \(membership testing\)) show newline
+(    \(define-index 'tags-bloom) show newline
+(      type: 'bloom) show newline
+(      on: 'tags) show newline
+(      false-positive-rate: 0.01\)) show newline
+() show newline
+() show newline
+(Cost-Based Index Selection) show newline
+(--------------------------) show newline
+() show newline
+(Query planning uses Selinger-style cost estimation to select optimal) show newline
+(execution plans. The optimizer considers:) show newline
+() show newline
+(  * Cardinality estimation: How many rows will each predicate return?) show newline
+(  * Index selectivity: How discriminating is each index?) show newline
+(  * I/O cost: Sequential scan vs. random access) show newline
+(  * Join ordering: Which order minimizes intermediate result sizes?) show newline
+() show newline
+() show newline
+(    ;; Cardinality estimation using histograms) show newline
+(    \(define \(estimate-cardinality predicate index-stats\)) show newline
+(      "Estimate result size for predicate") show newline
+(      \(let \(\(histogram \(index-histogram index-stats\)\)\)) show newline
+(        \(case \(predicate-type predicate\)) show newline
+(          \(\(equality\)) show newline
+(           ;; Use histogram bucket counts) show newline
+(           \(histogram-point-estimate histogram \(predicate-value predicate\)\)\)) show newline
+(          \(\(range\)) show newline
+(           ;; Sum histogram buckets in range) show newline
+(           \(histogram-range-estimate histogram) show newline
+(                                      \(predicate-low predicate\)) show newline
+(                                      \(predicate-high predicate\)\)\)) show newline
+(          \(\(like\)) show newline
+(           ;; Estimate based on prefix selectivity) show newline
+(           \( \(total-rows index-stats\)) show newline
+(              \(prefix-selectivity \(predicate-pattern predicate\)\)\)\)) show newline
+(          \(else) show newline
+(           ;; Conservative estimate: 10% of total) show newline
+(           \( 0.1 \(total-rows index-stats\)\)\)\)\)\)) show newline
+(    ;; Cost model for execution plans) show newline
+(    \(define \(plan-cost plan index-stats\)) show newline
+(      "Estimate total cost in I/O operations") show newline
+(      \(let \(\(cardinality \(estimate-cardinality \(plan-predicate plan\) index-stats\)\)\)) show newline
+(        \(case \(plan-access-method plan\)) show newline
+(          \(\(full-scan\)) show newline
+(           ;; Sequential I/O: count all pages) show newline
+(           \(total-pages index-stats\)\)) show newline
+(          \(\(index-scan\)) show newline
+(           ;; Random I/O: estimated rows + index traversal) show newline
+(           \(+ \(log2 \(total-rows index-stats\)\)  ; B-tree depth) show newline
+(              cardinality\)\)                     ; Heap fetches) show newline
+(          \(\(index-only\)) show newline
+(           ;; No heap access needed) show newline
+(           \(log2 \(total-rows index-stats\)\)\)) show newline
+(          \(\(bloom-filter\)) show newline
+(           ;; O\(k\) hash operations, negligible I/O) show newline
+(           \( 0.001 cardinality\)\)\)\)\)) show newline
+(    ;; Dynamic programming for join ordering) show newline
+(    \(define \(optimize-join-order predicates indexes\)) show newline
+(      "Find optimal join order using Selinger algorithm") show newline
+(      \(let \(\(memo \(make-hash-table\)\)\)) show newline
+(        \(define \(best-plan preds\)) show newline
+(          \(cond) show newline
+(            \(\(null? preds\) \(empty-plan\)\)) show newline
+(            \(\(hash-table-exists? memo preds\)) show newline
+(             \(hash-table-ref memo preds\)\)) show newline
+(            \(else) show newline
+(             \(let \(\(candidates) show newline
+(                     \(map \(lambda \(p\)) show newline
+(                            \(let \(\(rest \(delete p preds\)\)\)) show newline
+(                              \(join-plans \(single-predicate-plan p\)) show newline
+(                                          \(best-plan rest\)\)\)\)) show newline
+(                          preds\)\)) show newline
+(                    \(best \(minimum-by plan-cost candidates\)\)\)) show newline
+(               \(hash-table-set! memo preds best\)) show newline
+(               best\)\)\)\)) show newline
+(        \(best-plan predicates\)\)\)) show newline
+(    ;; Select best index for query) show newline
+(    \(define \(plan-query query indexes\)) show newline
+(      "Generate optimal query plan using cost-based optimization") show newline
+(      \(let \(\(predicates \(query-predicates query\)\)) show newline
+(             \(stats \(map index-statistics indexes\)\)) show newline
+(             ;; Generate candidate plans) show newline
+(             \(candidates) show newline
+(              \(append) show newline
+(               ;; Try each applicable index) show newline
+(               \(filter-map \(lambda \(idx stat\)) show newline
+(                            \(and \(index-covers? idx predicates\)) show newline
+(                                 \(make-plan 'index-scan idx) show newline
+(                                            \(plan-cost-for idx predicates stat\)\)\)\)) show newline
+(                          indexes stats\)) show newline
+(               ;; Always consider full scan) show newline
+(               \(list \(make-plan 'full-scan #f \(full-scan-cost predicates stats\)\)\)\)\)) show newline
+(             ;; Select minimum cost plan) show newline
+(             \(best \(minimum-by plan-cost candidates\)\)\)) show newline
+(        \(when \(> \(plan-cost best\) query-cost-warning-threshold*\)) show newline
+(          \(log-warning "Expensive query plan" query \(plan-cost best\)\)\)) show newline
+(        best\)\)) show newline
+() show newline
+() show newline
+(Histogram Maintenance) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    ;; Equi-depth histograms for cardinality estimation) show newline
+(    \(define \(build-histogram values num-buckets\)) show newline
+(      "Build equi-depth histogram for cardinality estimation") show newline
+(      \(let \(\(sorted \(sort values <\)\)) show newline
+(             \(bucket-size \(ceiling \(/ \(length sorted\) num-buckets\)\)\)) show newline
+(             \(boundaries \(map \(lambda \(i\)) show newline
+(                               \(list-ref sorted \( i bucket-size\)\)\)) show newline
+(                             \(iota num-buckets\)\)\)\)) show newline
+(        \(make-histogram boundaries \(/ \(length sorted\) num-buckets\)\)\)\)) show newline
+(    ;; Update histogram incrementally) show newline
+(    \(define \(histogram-update! hist value\)) show newline
+(      "Incrementally update histogram with new value") show newline
+(      \(let \(\(bucket \(find-bucket hist value\)\)\)) show newline
+(        \(bucket-increment! bucket\)\)\)) show newline
+(    ;; Statistics refresh) show newline
+(    \(define \(refresh-index-statistics idx\)) show newline
+(      "Rebuild index statistics \(run periodically\)") show newline
+(      \(let* \(\(samples \(index-sample idx 10000\)\)  ; Sample 10K rows) show newline
+(             \(histogram \(build-histogram samples 100\)\)\)) show newline
+(        \(set-index-statistics! idx) show newline
+(          \(make-stats) show newline
+(            \(total-rows \(index-count idx\)\)) show newline
+(            \(distinct-values \(length \(delete-duplicates samples\)\)\)) show newline
+(            \(histogram histogram\)) show newline
+(            \(last-analyzed \(current-time\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Index Maintenance) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Indexes are updated on soup-put) show newline
+(    \(define \(soup-put-indexed obj\)) show newline
+(      \(let \(\(hash \(soup-put obj\)\)\)) show newline
+(        \(for-each \(lambda \(idx\)) show newline
+(                    \(index-insert! idx obj hash\)\)) show newline
+(                  \(applicable-indexes obj\)\)) show newline
+(        hash\)\)) show newline
+(    ;; Periodic index optimization) show newline
+(    \(define \(optimize-indexes\)) show newline
+(      \(for-each index-compact! \(all-indexes\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUERY EXECUTION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Query Planning) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(execute-query query\)) show newline
+(      "Plan and execute query") show newline
+(      \(let \(\(plan \(plan-query query\)\)) show newline
+(             \(cost \(estimate-cost plan\)\)\)) show newline
+(        \(when \(> cost query-cost-limit*\)) show newline
+(          \(error "Query too expensive" cost\)\)) show newline
+(        \(execute-plan plan\)\)\)) show newline
+(    \(define \(plan-query query\)) show newline
+(      "Generate query execution plan") show newline
+(      `\(query-plan) show newline
+(        \(predicates ,\(query-predicates query\)\)) show newline
+(        \(index ,\(select-index query\)\)) show newline
+(        \(filter ,\(remaining-predicates query\)\)) show newline
+(        \(order ,\(query-order query\)\)) show newline
+(        \(limit ,\(query-limit query\)\)\)\)) show newline
+() show newline
+() show newline
+(Execution Strategies) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    ;; Index scan) show newline
+(    \(define \(index-scan index predicate\)) show newline
+(      \(index-range-query index) show newline
+(                         \(predicate-lower-bound predicate\)) show newline
+(                         \(predicate-upper-bound predicate\)\)\)) show newline
+(    ;; Full scan \(last resort\)) show newline
+(    \(define \(full-scan predicate\)) show newline
+(      \(filter predicate \(all-soup-objects\)\)\)) show newline
+(    ;; Index intersection) show newline
+(    \(define \(index-intersect idx1 idx2 pred1 pred2\)) show newline
+(      \(set-intersection) show newline
+(        \(index-scan idx1 pred1\)) show newline
+(        \(index-scan idx2 pred2\)\)\)) show newline
+() show newline
+() show newline
+(Query Caching) show newline
+(-------------) show newline
+() show newline
+(The soup is archival - objects rarely change, making aggressive caching) show newline
+(safe.) show newline
+() show newline
+() show newline
+(    ;; Multi-tier cache: L1 hot results, L2 warm, L3 persistent) show newline
+(    \(define l1-cache \(make-lru-cache 100\)\)    ; In-memory, microseconds) show newline
+(    \(define l2-cache \(make-lru-cache 10000\)\)  ; Warm, milliseconds) show newline
+(    \(define l3-cache 'persistent-index\)        ; On-disk, query index) show newline
+(    \(define \(cached-query query principal\)) show newline
+(      "Multi-tier cached query with capability awareness") show newline
+(      \(let \(\(key \(query-cache-key query principal\)\)\)) show newline
+(        \(or \(lru-get l1-cache key\)) show newline
+(            \(lru-get l2-cache key\)) show newline
+(            \(persistent-cache-get l3-cache key\)) show newline
+(            \(let \(\(result \(execute-query query\)\)\)) show newline
+(              ;; Promote to appropriate cache tier based on cost) show newline
+(              \(let \(\(cost \(query-cost query\)\)\)) show newline
+(                \(cond) show newline
+(                  \(\(> cost 1000\) \(persistent-cache-put! l3-cache key result\)\)) show newline
+(                  \(\(> cost 100\) \(lru-put! l2-cache key result\)\)) show newline
+(                  \(else \(lru-put! l1-cache key result\)\)\)\)) show newline
+(              result\)\)\)\)) show newline
+() show newline
+(#### Dependency-Based Invalidation) show newline
+() show newline
+(Track which predicates affect which cached queries using Bloom filters:) show newline
+() show newline
+() show newline
+(    ;; Bloom filter tracking which attributes affect cached queries) show newline
+(    \(define query-dependencies \(make-counting-bloom-filter 100000 0.001\)\)) show newline
+(    \(define \(cache-with-deps query result\)) show newline
+(      "Cache query and track its dependencies") show newline
+(      \(let \(\(key \(query->hash query\)\)) show newline
+(            \(deps \(query-attribute-deps query\)\)\)) show newline
+(        \(lru-put! query-cache key result\)) show newline
+(        ;; Track dependencies) show newline
+(        \(for-each \(lambda \(attr\)) show newline
+(                    \(bloom-add! query-dependencies \(cons attr key\)\)\)) show newline
+(                  deps\)\)\)) show newline
+(    \(define \(invalidate-on-change obj\)) show newline
+(      "Invalidate only queries that MIGHT be affected \(conservative\)") show newline
+(      \(let \(\(attrs \(soup-object-attributes obj\)\)\)) show newline
+(        \(for-each \(lambda \(attr\)) show newline
+(                    ;; Check if any cached query depends on this attribute) show newline
+(                    \(when \(bloom-might-contain? query-dependencies attr\)) show newline
+(                      \(invalidate-queries-for-attribute attr\)\)\)) show newline
+(                  attrs\)\)\)) show newline
+() show newline
+(#### Archival Cache Semantics) show newline
+() show newline
+(For the soup's archival nature, implement copy-on-write cache entries:) show newline
+() show newline
+() show newline
+(    ;; Immutable cache entries - archival objects never change) show newline
+(    \(define \(archival-cache-get cache hash\)) show newline
+(      "Archival objects can be cached permanently") show newline
+(      \(let \(\(entry \(hash-table-ref cache hash #f\)\)\)) show newline
+(        \(if entry) show newline
+(            \(if \(archival-generation? \(soup-get hash\)\)) show newline
+(                entry  ; Archival: never expires) show newline
+(                \(if \(cache-entry-fresh? entry\)) show newline
+(                    \(cache-entry-value entry\)) show newline
+(                    #f\)\)  ; Non-archival: check freshness) show newline
+(            #f\)\)\)) show newline
+(    ;; Generation-aware caching) show newline
+(    \(define \(cache-ttl-for-generation gen\)) show newline
+(      \(case gen) show newline
+(        \(\(archival\) +inf.0\)       ; Never expires) show newline
+(        \(\(stable\) 86400\)          ; 1 day) show newline
+(        \(\(maturing\) 3600\)         ; 1 hour) show newline
+(        \(\(young\) 60\)              ; 1 minute) show newline
+(        \(\(ephemeral\) 0\)\)\)         ; No caching) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DISTRIBUTED QUERIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Federated Query) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; Query across multiple vaults) show newline
+(    \(soup-query type: 'document) show newline
+(                federation: '\(vault-a vault-b vault-c\)\)) show newline
+(    ;; Query with locality preference) show newline
+(    \(soup-query type: 'document) show newline
+(                prefer-local: #t\)) show newline
+() show newline
+() show newline
+(Query Routing) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define \(route-query query vaults\)) show newline
+(      "Route query to appropriate vaults") show newline
+(      \(let \(\(partitions \(query-partitions query\)\)\)) show newline
+(        \(map \(lambda \(vault\)) show newline
+(               \(list vault \(subquery-for-vault query vault\)\)\)) show newline
+(             \(filter \(lambda \(v\)) show newline
+(                       \(vault-has-partition? v partitions\)\)) show newline
+(                     vaults\)\)\)\)) show newline
+() show newline
+() show newline
+(Result Merging) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define \(merge-results results order\)) show newline
+(      "Merge sorted results from multiple vaults") show newline
+(      \(let \(\(streams \(map result->stream results\)\)\)) show newline
+(        \(merge-sorted-streams streams \(order->comparator order\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUERY AUDIT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Audit Trail) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    ;; All queries are logged) show newline
+(    \(define \(audited-query query principal\)) show newline
+(      \(let \(\(start \(current-time\)\)) show newline
+(            \(result \(soup-query-with-caps query principal\)\)\)) show newline
+(        \(audit-append) show newline
+(          action: 'query) show newline
+(          principal: principal) show newline
+(          query: \(query->sexp query\)) show newline
+(          result-count: \(soup-cursor-count result\)) show newline
+(          duration: \(- \(current-time\) start\)\)) show newline
+(        result\)\)) show newline
+() show newline
+() show newline
+(Query Analysis) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; Analyze query patterns) show newline
+(    \(soup-query type: 'audit-entry) show newline
+(                action: 'query) show newline
+(                principal: "alice"\)) show newline
+(    ;; Find expensive queries) show newline
+(    \(soup-query type: 'audit-entry) show newline
+(                action: 'query) show newline
+(                duration: \(> 1000\)\)  ; > 1 second) show newline
+(    ;; Access pattern analysis) show newline
+(    \(soup-aggregate) show newline
+(      where: \(and \(type: 'audit-entry\) \(action: 'query\)\)) show newline
+(      group-by: 'principal) show newline
+(      aggregate: \(count\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(QUERY LANGUAGE GRAMMAR) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    query       ::= \(soup-query clause\)) show newline
+(    clause      ::= attribute-clause | predicate-clause | option-clause) show newline
+(    attribute   ::= symbol ':' value) show newline
+(    predicate   ::= '\(' op value '\)') show newline
+(    op          ::= '>' | '<' | '>=' | '<=' | '=' | '!=') show newline
+(                  | 'like' | 'between' | 'contains') show newline
+(                  | 'and' | 'or' | 'not') show newline
+(                  | 'exists' | 'missing') show newline
+(                  | 'text-search' | 'references' | 'referenced-by') show newline
+(    option      ::= 'order-by' | 'limit' | 'offset' | 'after') show newline
+(                  | 'as-of' | 'highlight' | 'federation') show newline
+(    value       ::= string | number | boolean | hash | query) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Query Injection) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; Never interpolate user input into queries) show newline
+(    ;; BAD:) show newline
+(    \(soup-query name: \(string-append "rfc-" user-input\)\)) show newline
+(    ;; GOOD:) show newline
+(    \(soup-query name: \(like \(sanitize-pattern user-input\)\)\)) show newline
+(    \(define \(sanitize-pattern s\)) show newline
+(      \(string-map \(lambda \(c\)) show newline
+(                    \(if \(member c '\(#\\* #\\? #\\[ #\\]\)\)) show newline
+(                        #\\\\) show newline
+(                        c\)\)) show newline
+(                  s\)\)) show newline
+() show newline
+() show newline
+(Query Cost Limits) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Prevent denial of service via expensive queries) show newline
+(    \(define query-cost-limit 10000\)) show newline
+(    \(define query-timeout 30\)  ; seconds) show newline
+(    \(define \(safe-query query\)) show newline
+(      \(with-timeout query-timeout) show newline
+(        \(let \(\(cost \(estimate-cost query\)\)\)) show newline
+(          \(when \(> cost query-cost-limit\)) show newline
+(            \(error "Query exceeds cost limit"\)\)) show newline
+(          \(execute-query query\)\)\)\)) show newline
+() show newline
+() show newline
+(Information Leakage) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    ;; Query existence can leak information) show newline
+(    ;; Even "not found" reveals something) show newline
+(    ;; Use constant-time responses for sensitive queries) show newline
+(    \(define \(private-query query\)) show newline
+(      \(let \(\(result \(soup-query query\)\)\)) show newline
+(        \(if \(authorized? \(current-principal\) result\)) show newline
+(            result) show newline
+(            \(constant-time-not-found\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Performance) show newline
+(-----------) show newline
+() show newline
+(  * Index selection is critical for large soups) show newline
+(  * Bloom filters for fast negative lookups) show newline
+(  * Query result streaming to avoid memory exhaustion) show newline
+(  * Connection pooling for federated queries) show newline
+() show newline
+() show newline
+(Compatibility) show newline
+(-------------) show newline
+() show newline
+(  * Query language inspired by Newton's soup cursors) show newline
+(  * SQL-like semantics where applicable) show newline
+(  * S-expression syntax for Scheme integration) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Newton Programmer's Guide - Soup and cursor APIs 2. SQLite Query) show newline
+(Planner - Query optimization 3. Selinger et al., "Access Path Selection) show newline
+(in a Relational Database Management System" \(1979\) - Cost-based) show newline
+(optimization 4. Memo-020: Content-Addressed Storage 5. Memo-021:) show newline
+(Capability Delegation 6. Memo-026: Garbage Collection \(generation-aware) show newline
+(caching\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-09) show newline
+(  * Cost-based query optimization: Selinger algorithm, cardinality estimation, histograms, multi-tier caching with generation-aware TTL - 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

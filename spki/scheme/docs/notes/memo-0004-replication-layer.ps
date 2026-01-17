@@ -1,0 +1,400 @@
+%!PS-Adobe-3.0
+%%Title: memo-0004-replication-layer
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0004: Replication Layer for Library of Cyberspace) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies a replication layer for the Library of Cyberspace) show newline
+(preservation architecture, enabling cryptographically sealed releases to) show newline
+(be published, subscribed to, and synchronized across distributed) show newline
+(locations while maintaining tamper-evident audit trails.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Heritage: "Behave as One") show newline
+(-------------------------) show newline
+() show newline
+(The VAXcluster principle \(1984\): N nodes must behave as one. Not) show newline
+(eventually consistent. Not loosely coupled. Identical. One security) show newline
+(domain, one namespace, one view of the world.) show newline
+() show newline
+(DECnet Phase IV's 24-bit addressing was fatal for internet scale.) show newline
+(Cyberspace applies the same principle to IPv6's 128-bit address space.) show newline
+(Federated nodes, behaving as one.) show newline
+() show newline
+() show newline
+(Requirements) show newline
+(------------) show newline
+() show newline
+(The Library of Cyberspace requires a distribution mechanism that:) show newline
+() show newline
+(1. Preserves cryptographic authenticity - Signatures travel with) show newline
+(artifacts 2. Enables offline verification - No centralized authority) show newline
+(required 3. Records provenance - All publication events are audited 4.) show newline
+(Supports multiple transports - Git, HTTP, filesystem 5. Maintains loose) show newline
+(coupling - Works for confederations of friends) show newline
+() show newline
+(Traditional package managers and distribution systems assume centralized) show newline
+(registries and online verification. This replication layer is designed) show newline
+(for decentralized, long-term preservation where trust is established) show newline
+(through SPKI certificates and cryptographic seals.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DESIGN PRINCIPLES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Sealed Releases - Only cryptographically signed releases can be) show newline
+(published 2. Transport Agnostic - Same API works for git, HTTP,) show newline
+(filesystem 3. Audit Everything - All replication events are recorded in) show newline
+(tamper-evident log 4. Verify Before Trust - Subscribers must verify) show newline
+(cryptographic seals 5. Explicit Authorization - SPKI certificates) show newline
+(determine who can publish) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Three Core Operations) show newline
+(---------------------) show newline
+() show newline
+(#### 1. seal-publish) show newline
+() show newline
+(Publish a sealed release to a remote location.) show newline
+() show newline
+() show newline
+(    \(seal-publish version) show newline
+(                  remote: target) show newline
+(                  archive-format: format) show newline
+(                  message: notes\)) show newline
+() show newline
+(Parameters: - version - Semantic version string \(e.g., "1.0.0"\) - remote) show newline
+(- Publication target \(git remote, URL, or directory path\) -) show newline
+(archive-format - 'tarball, 'bundle, or 'cryptographic \(default\) -) show newline
+(message - Release notes \(optional\)) show newline
+() show newline
+(Behavior: 1. Verify release exists \(creates if needed via seal-release\)) show newline
+(2. Create cryptographic archive with: - Tarball of repository at version) show newline
+(tag - SHA-512 hash of tarball - Ed25519 signature of hash - Manifest) show newline
+(with version, hash, signature 3. Publish to remote based on type: - Git) show newline
+(remote: Push tag, optionally upload archive - HTTP URL: POST archive to) show newline
+(endpoint - Filesystem: Copy archive to directory 4. Record publication) show newline
+(in audit trail with: - Actor \(public key from signing key\) - Action) show newline
+(\(seal-publish version remote\) - Motivation \(release notes\) -) show newline
+(Cryptographic seal \(signature\)) show newline
+() show newline
+(Audit Entry Format:) show newline
+() show newline
+() show newline
+(    \(audit-entry) show newline
+(      \(id "sha512:..."\)) show newline
+(      \(timestamp "Mon Jan 5 23:38:20 2026"\)) show newline
+(      \(sequence 1\)) show newline
+(      \(actor) show newline
+(        \(principal #${public-key-blob}\)) show newline
+(        \(authorization-chain\)\)) show newline
+(      \(action) show newline
+(        \(verb seal-publish\)) show newline
+(        \(object "1.0.0"\)) show newline
+(        \(parameters "/path/to/remote"\)\)) show newline
+(      \(context) show newline
+(        \(motivation "Published to filesystem"\)) show newline
+(        \(language "en"\)\)) show newline
+(      \(environment) show newline
+(        \(platform "unknown"\)) show newline
+(        \(timestamp 1767685100\)\)) show newline
+(      \(seal) show newline
+(        \(algorithm "ed25519-sha512"\)) show newline
+(        \(content-hash "..."\)) show newline
+(        \(signature "..."\)\)\)) show newline
+() show newline
+(#### 2. seal-subscribe) show newline
+() show newline
+(Subscribe to sealed releases from a remote source.) show newline
+() show newline
+() show newline
+(    \(seal-subscribe remote) show newline
+(                    target: local-path) show newline
+(                    verify-key: public-key\)) show newline
+() show newline
+(Parameters: - remote - Source location \(git remote, URL, or directory\) -) show newline
+(target - Local path for downloaded archives \(optional\) - verify-key -) show newline
+(Public key for signature verification \(optional\)) show newline
+() show newline
+(Behavior: 1. Discover available releases from remote: - Git remote: List) show newline
+(tags - HTTP URL: GET /releases endpoint - Filesystem: List .archive) show newline
+(files 2. Download cryptographic archives 3. Verify each archive: - Check) show newline
+(manifest structure - Verify SHA-512 hash of tarball - Verify Ed25519) show newline
+(signature \(if verify-key provided\) 4. Extract verified archives to) show newline
+(target directory 5. Record subscription in audit trail: - Count of) show newline
+(releases downloaded - Source location - Verification status) show newline
+() show newline
+(Security Consideration: Without verify-key, subscription downloads) show newline
+(archives but cannot verify authenticity. SPKI certificate chains should) show newline
+(be used to establish trust.) show newline
+() show newline
+(#### 3. seal-synchronize) show newline
+() show newline
+(Bidirectional synchronization of sealed releases.) show newline
+() show newline
+() show newline
+(    \(seal-synchronize remote) show newline
+(                      direction: 'both) show newline
+(                      verify-key: public-key\)) show newline
+() show newline
+(Parameters: - remote - Sync target \(git remote, URL, or directory\) -) show newline
+(direction - 'both \(default\), 'push-only, or 'pull-only - verify-key -) show newline
+(Public key for signature verification \(optional\)) show newline
+() show newline
+(Behavior: 1. Discover local and remote releases 2. Compare versions to) show newline
+(determine: - Releases to push \(local but not remote\) - Releases to pull) show newline
+(\(remote but not local\) 3. Execute publication for new local releases 4.) show newline
+(Execute subscription for new remote releases 5. Record synchronization) show newline
+(in audit trail: - Count pushed and pulled - Remote location - Direction) show newline
+() show newline
+(Use Case: Periodic sync between trusted peers in a confederation.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ARCHIVE FORMAT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Cryptographic Archive Structure) show newline
+(-------------------------------) show newline
+() show newline
+() show newline
+(    vault-1.0.0.archive          # Manifest file) show newline
+(    vault-1.0.0.archive.tar.gz   # Actual tarball) show newline
+() show newline
+(Manifest S-expression:) show newline
+() show newline
+() show newline
+(    \(sealed-archive) show newline
+(      \(version "1.0.0"\)) show newline
+(      \(format cryptographic\)) show newline
+(      \(tarball "vault-1.0.0.archive.tar.gz"\)) show newline
+(      \(hash "sha512:..."\)) show newline
+(      \(signature "ed25519:..."\)) show newline
+(      \(timestamp 1767685100\)) show newline
+(      \(sealer #${public-key-blob}\)\)) show newline
+() show newline
+(Verification Steps: 1. Read manifest 2. Hash tarball with SHA-512 3.) show newline
+(Verify hash matches manifest 4. Verify Ed25519 signature on hash 5.) show newline
+(Check SPKI authorization \(optional\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TRANSPORT IMPLEMENTATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Git Remote) show newline
+(----------) show newline
+() show newline
+(  * Uses git push to share tags) show newline
+(  * Optionally uploads archives as release assets \(GitHub, GitLab\)) show newline
+(  * Fetch uses git fetch + git tag -l) show newline
+() show newline
+() show newline
+(HTTP Endpoint) show newline
+(-------------) show newline
+() show newline
+(  * POST to /releases/<version> for publication) show newline
+(  * GET /releases for discovery) show newline
+(  * Content-Type: application/x-sealed-archive) show newline
+() show newline
+() show newline
+(Filesystem) show newline
+(----------) show newline
+() show newline
+(  * Copy archives to shared directory) show newline
+(  * Directory structure: <remote>/<archive-name>) show newline
+(  * No network required, works with NFS, USB drives, etc.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(AUDIT INTEGRATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Every replication operation creates an audit entry with:) show newline
+() show newline
+(1. Content-addressed ID - SHA-512 hash of entry 2. Chained structure -) show newline
+(References parent entry 3. SPKI principal - Public key of actor 4. Dual) show newline
+(context - Human motivation + machine environment 5. Cryptographic seal -) show newline
+(Ed25519 signature) show newline
+() show newline
+(This provides: - Non-repudiation - Cannot deny publication - Tamper) show newline
+(evidence - Changes are detectable - Causality - Chain shows temporal) show newline
+(order - Accountability - Know who published what when) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Threat Model) show newline
+(------------) show newline
+() show newline
+(Trusted: - Local filesystem and vault - SPKI private keys -) show newline
+(Cryptographic primitives \(libsodium\)) show newline
+() show newline
+(Untrusted: - Remote repositories - Network transport - Downloaded) show newline
+(archives - Remote publishers \(until SPKI verified\)) show newline
+() show newline
+() show newline
+(Attack Scenarios) show newline
+(----------------) show newline
+() show newline
+(1. Malicious Archive Substitution - Attacker replaces archive on remote) show newline
+(- Mitigation: Signature verification fails) show newline
+() show newline
+(2. Version Rollback Attack - Attacker removes newer releases -) show newline
+(Mitigation: Audit trail shows previous versions) show newline
+() show newline
+(3. Unauthorized Publication - Attacker publishes fake release -) show newline
+(Mitigation: SPKI authorization chain required) show newline
+() show newline
+(4. Transport Tampering - Network attacker modifies download -) show newline
+(Mitigation: Hash and signature verification) show newline
+() show newline
+() show newline
+(Best Practices) show newline
+(--------------) show newline
+() show newline
+(1. Always verify signatures - Use verify-key parameter 2. Check SPKI) show newline
+(certificates - Verify authorization chain 3. Maintain audit trail -) show newline
+(Detect suspicious patterns 4. Use HTTPS for HTTP transport - Prevent) show newline
+(network attacks 5. Backup signing keys - Use Shamir secret sharing) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Helper Functions) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    \(tag-exists? tag-name\)        ; Check if git tag exists) show newline
+(    \(git-remote? str\)             ; Detect git remote format) show newline
+(    \(http-url? str\)               ; Detect HTTP/HTTPS URL) show newline
+(    \(publish-filesystem remote version archive\)  ; Copy to directory) show newline
+(    \(publish-http url version archive\)           ; POST to endpoint) show newline
+() show newline
+() show newline
+(Dependencies) show newline
+(------------) show newline
+() show newline
+(  * Git) show newline
+(  * For version control and tag management - libsodium) show newline
+(  * Ed25519 signatures, SHA-512 hashing) show newline
+(  * Chicken Scheme modules:   - \(chicken process\)) show newline
+(  * Run git commands   - \(chicken file\)) show newline
+(  * Filesystem operations   - \(chicken irregex\)) show newline
+(  * URL/remote detection) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COMPATIBILITY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This specification is compatible with:) show newline
+() show newline
+(  * Git tags) show newline
+(  * Standard git operations) show newline
+(  * Git bundles) show newline
+(  * Portable repository format) show newline
+(  * Tarball archives) show newline
+(  * Universal archive format) show newline
+(  * S-expressions) show newline
+(  * LISP/Scheme readable format) show newline
+(  * SPKI/SDSI) show newline
+(  * Authorization certificates) show newline
+() show newline
+(Future extensions may add: - IPFS transport - Content-addressed) show newline
+(distribution - Tor hidden services - Anonymous publication - Encrypted) show newline
+(archives - Confidential distribution - Multi-signature releases -) show newline
+(Threshold authorization) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TEST COVERAGE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(See test-replication.scm:) show newline
+() show newline
+() show newline
+(    ;; Test seal-publish to filesystem) show newline
+(    \(seal-publish "1.0.0") show newline
+(                  remote: "/tmp/cyberspace-publish-test") show newline
+(                  message: "Published to filesystem"\)) show newline
+(    ;; Verify archive exists) show newline
+(    \(file-exists? "/tmp/cyberspace-publish-test/vault-1.0.0.archive"\)) show newline
+(    ;; Verify audit entry created) show newline
+(    \(audit-read sequence: 1\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. SPKI/SDSI - RFC 2693, RFC 2692 2. Content-Addressed Storage - Git) show newline
+(internals, IPFS 3. Semantic Versioning - semver.org 4. Ed25519 -) show newline
+(Bernstein et al. 5. Audit Trails - Memo-002 \(Cryptographic Audit Trail\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-05) show newline
+(  * Initial implementation and specification   - seal-publish with git/HTTP/filesystem support   - seal-subscribe with signature verification   - seal-synchronize with bidirectional sync  ) show newline
+(  * Full audit trail integration  ) show newline
+(  * Cryptographic archive format) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

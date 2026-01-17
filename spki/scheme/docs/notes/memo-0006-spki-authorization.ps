@@ -1,0 +1,493 @@
+%!PS-Adobe-3.0
+%%Title: memo-0006-spki-authorization
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0006: Public Key Authorization) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies the SPKI/SDSI certificate system for Cyberspace,) show newline
+(providing authorization without identity. Principals are identified by) show newline
+(cryptographic keys, not names. Authorization flows through verifiable) show newline
+(delegation chains.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Heritage: SDSI at IETF 29) show newline
+(-------------------------) show newline
+() show newline
+(Ron Rivest presented SDSI \(A Simple Distributed Security Infrastructure\)) show newline
+(at IETF 29 in Seattle \(March 28 - April 1, 1994\). The idea was elegant:) show newline
+(self-certifying keys and local names. No global namespace. No) show newline
+(certificate authorities. Just cryptographic principals naming what they) show newline
+(choose to name.) show newline
+() show newline
+(SDSI later merged with SPKI to form SPKI/SDSI, standardized in RFC 2692) show newline
+(and RFC 2693 \(1999\).) show newline
+() show newline
+(Some in the PKI industry understood SPKI was technically superior. But) show newline
+(they saw a monopoly to be mined—certificate authorities as toll booths) show newline
+(on the internet. SPKI threatened that model. It was too decentralized to) show newline
+(profit from.) show newline
+() show newline
+(HP quietly adopted SPKI for their E-speak middleware and printer) show newline
+(authorization. Printers. The technology worked. The politics didn't) show newline
+(favor it.) show newline
+() show newline
+(Cyberspace picks up where SPKI left off.) show newline
+() show newline
+() show newline
+(The X.509 Problem) show newline
+(-----------------) show newline
+() show newline
+(X.509 certificates bind names to keys. This requires: - Certificate) show newline
+(authorities \(trust hierarchies\) - Global name registries \(DNS\) -) show newline
+(Identity verification \(bureaucracy\)) show newline
+() show newline
+(SPKI inverts this model:) show newline
+() show newline
+() show newline
+(    "Keys are principals. Authorization is local. Delegation is explicit.") show newline
+() show newline
+(Benefits: - No CA required - Trust flows from keys you choose - No) show newline
+(global names - Local namespaces, local meanings - No identity - Grant) show newline
+(permissions to keys, not people - Auditable - S-expression format is) show newline
+(human-readable) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Principals) show newline
+(----------) show newline
+() show newline
+(A principal is an authorization endpoint. Two types:) show newline
+() show newline
+(#### Key Principal) show newline
+() show newline
+(Direct identification by public key:) show newline
+() show newline
+() show newline
+(    \(define-record-type <key-principal>) show newline
+(      \(make-key-principal public-key\)) show newline
+(      key-principal?) show newline
+(      \(public-key principal-public-key\)\)) show newline
+() show newline
+(S-expression: bare bytes) show newline
+() show newline
+() show newline
+(    #${32-byte-ed25519-public-key}) show newline
+() show newline
+(#### Key Hash Principal) show newline
+() show newline
+(Identification by hash of public key:) show newline
+() show newline
+() show newline
+(    \(define-record-type <keyhash-principal>) show newline
+(      \(make-keyhash-principal hash-alg hash\)) show newline
+(      keyhash-principal?) show newline
+(      \(hash-alg principal-hash-alg\)) show newline
+(      \(hash principal-hash\)\)) show newline
+() show newline
+(S-expression:) show newline
+() show newline
+() show newline
+(    \(hash sha512 #${64-byte-hash}\)) show newline
+() show newline
+() show newline
+(Authorization Tags) show newline
+(------------------) show newline
+() show newline
+(Tags define what permissions are granted:) show newline
+() show newline
+() show newline
+(    \(define-record-type <tag>) show newline
+(      \(make-tag sexp\)) show newline
+(      tag?) show newline
+(      \(sexp tag-sexp\)\)) show newline
+() show newline
+(Example tags:) show newline
+() show newline
+() show newline
+(    ;; Read access to library) show newline
+(    \(read \(path /library/lamport-papers\)\)) show newline
+(    ;; Agent spawning limit) show newline
+(    \(spawn-agent \(max-count 5\)\)) show newline
+(    ;; HTTP API access) show newline
+(    \(http-api \(method POST\) \(path /deploy/\)\)) show newline
+(    ;; All permissions \(wildcard\)) show newline
+(    \(\)) show newline
+() show newline
+() show newline
+(Validity Period) show newline
+(---------------) show newline
+() show newline
+(Optional time constraints:) show newline
+() show newline
+() show newline
+(    \(define-record-type <validity>) show newline
+(      \(make-validity not-before not-after\)) show newline
+(      validity?) show newline
+(      \(not-before validity-not-before\)   ; ISO 8601 string) show newline
+(      \(not-after validity-not-after\)\)    ; ISO 8601 string) show newline
+() show newline
+() show newline
+(Certificate Structure) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <cert>) show newline
+(      \(make-cert issuer subject tag validity propagate\)) show newline
+(      cert?) show newline
+(      \(issuer cert-issuer\)         ; Principal granting permission) show newline
+(      \(subject cert-subject\)       ; Principal receiving permission) show newline
+(      \(tag cert-tag\)               ; What is being granted) show newline
+(      \(validity cert-validity\)     ; When valid \(optional\)) show newline
+(      \(propagate cert-propagate\)\)  ; Can subject re-delegate?) show newline
+() show newline
+(S-expression format:) show newline
+() show newline
+() show newline
+(    \(cert) show newline
+(      \(issuer #${alice-public-key}\)) show newline
+(      \(subject #${bob-public-key}\)) show newline
+(      \(tag \(read \(path /library/*\)\)\)) show newline
+(      \(valid) show newline
+(        \(not-before "2026-01-01"\)) show newline
+(        \(not-after "2026-12-31"\)\)) show newline
+(      \(propagate\)\)) show newline
+() show newline
+() show newline
+(Signed Certificate) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <signed-cert>) show newline
+(      \(make-signed-cert cert signature\)) show newline
+(      signed-cert?) show newline
+(      \(cert signed-cert-cert\)) show newline
+(      \(signature signed-cert-signature\)\)) show newline
+(    \(define-record-type <signature>) show newline
+(      \(make-signature hash-alg cert-hash sig-bytes\)) show newline
+(      signature?) show newline
+(      \(hash-alg signature-hash-alg\)) show newline
+(      \(cert-hash signature-cert-hash\)) show newline
+(      \(sig-bytes signature-sig-bytes\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Creating Certificates) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    \(define cert) show newline
+(      \(create-cert) show newline
+(        \(make-key-principal alice-public\)) show newline
+(        \(make-key-principal bob-public\)) show newline
+(        \(make-tag '\(read \(path /library/*\)\)\)) show newline
+(        validity: \(make-validity "2026-01-01" "2026-12-31"\)) show newline
+(        propagate: #t\)\)) show newline
+() show newline
+() show newline
+(Signing Certificates) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(define signed-cert) show newline
+(      \(sign-cert cert alice-private\)\)) show newline
+() show newline
+(Process: 1. Convert certificate to canonical S-expression 2. Hash with) show newline
+(SHA-512 3. Sign hash with Ed25519 4. Create signature record 5. Combine) show newline
+(into signed certificate) show newline
+() show newline
+() show newline
+(Verifying Certificates) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    \(verify-signed-cert signed-cert alice-public\)) show newline
+() show newline
+(Verification: 1. Recompute canonical S-expression 2. Hash with SHA-512) show newline
+(3. Compare with stored hash 4. Verify Ed25519 signature) show newline
+() show newline
+() show newline
+(Verifying Delegation Chains) show newline
+(---------------------------) show newline
+() show newline
+() show newline
+(    \(verify-chain root-key cert-list target-tag\)) show newline
+() show newline
+(Chain verification ensures: 1. Each certificate is validly signed 2.) show newline
+(Issuer of cert[n+1] matches subject of cert[n] 3. Tags are properly) show newline
+(delegated \(each implies the next\) 4. Propagation is allowed \(except) show newline
+(final cert\) 5. Final tag implies target tag) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CLI TOOLS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(spki-keygen) show newline
+(-----------) show newline
+() show newline
+(Generate Ed25519 keypair:) show newline
+() show newline
+() show newline
+(    $ ./spki-keygen alice) show newline
+(    Generated keypair:) show newline
+(      Public:  alice.public) show newline
+(      Private: alice.private) show newline
+() show newline
+() show newline
+(spki-cert) show newline
+(---------) show newline
+() show newline
+(Create and sign certificate:) show newline
+() show newline
+() show newline
+(    $ ./spki-cert \\) show newline
+(        --issuer alice.private \\) show newline
+(        --subject bob.public \\) show newline
+(        --tag '\(read \(path /library/*\)\)' \\) show newline
+(        --propagate \\) show newline
+(        --not-after "2026-12-31" \\) show newline
+(        --output alice-to-bob.cert) show newline
+() show newline
+() show newline
+(spki-verify) show newline
+(-----------) show newline
+() show newline
+(Verify certificate signature:) show newline
+() show newline
+() show newline
+(    $ ./spki-verify alice.public alice-to-bob.cert) show newline
+(    ✓ Certificate signature valid) show newline
+() show newline
+() show newline
+(spki-show) show newline
+(---------) show newline
+() show newline
+(Display certificate in human-readable form:) show newline
+() show newline
+() show newline
+(    $ ./spki-show alice-to-bob.cert) show newline
+(    Certificate:) show newline
+(      Issuer:  ed25519:cbc9b260da65f6a7...) show newline
+(      Subject: ed25519:a5f8c9e3d2b1f0e4...) show newline
+(      Tag:     \(read \(path /library/*\)\)) show newline
+(      Valid:   until 2026-12-31) show newline
+(      Propagate: yes) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TAG SEMANTICS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Tag Implication) show newline
+(---------------) show newline
+() show newline
+(Tag A implies Tag B if A grants at least all permissions of B.) show newline
+() show newline
+() show newline
+(    \(define \(tag-implies tag1 tag2\)) show newline
+(      \(cond) show newline
+(        \(\(all-perms? tag1\) #t\)    ; \(\) implies everything) show newline
+(        \(\(all-perms? tag2\) #f\)    ; Only \(\) implies \(*\)) show newline
+(        \(else \(equal? tag1 tag2\)\)\)\) ; Simple equality \(extensible\)) show newline
+() show newline
+() show newline
+(Standard Tag Vocabulary) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(  Tag                              Meaning                         ) show newline
+(  \(*\)                              All permissions                 ) show newline
+(  \(read \(path P\)\)                  Read access to path P           ) show newline
+(  \(write \(path P\)\)                 Write access to path P          ) show newline
+(  \(spawn-agent \(max-count N\)\)      Spawn up to N agents            ) show newline
+(  \(http-api \(method M\) \(path P\)\)   HTTP API access                 ) show newline
+(  \(seal-release\)                   Permission to create releases   ) show newline
+(  \(seal-publish \(remote R\)\)        Permission to publish to R      ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DELEGATION CHAINS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Example: Three-Level Delegation) show newline
+(-------------------------------) show newline
+() show newline
+() show newline
+(    Alice \(root\) > Bob \(admin\) > Carol \(operator\)) show newline
+() show newline
+(Certificates:) show newline
+() show newline
+() show newline
+(    ;; Alice grants admin to Bob) show newline
+(    \(cert) show newline
+(      \(issuer #${alice-key}\)) show newline
+(      \(subject #${bob-key}\)) show newline
+(      \(tag \(*\)\)) show newline
+(      \(propagate\)\)) show newline
+(    ;; Bob grants operator to Carol) show newline
+(    \(cert) show newline
+(      \(issuer #${bob-key}\)) show newline
+(      \(subject #${carol-key}\)) show newline
+(      \(tag \(seal-publish \(remote origin\)\)\)\)) show newline
+() show newline
+(Verification:) show newline
+() show newline
+() show newline
+(    \(verify-chain alice-public) show newline
+(                  \(list alice-to-bob bob-to-carol\)) show newline
+(                  \(make-tag '\(seal-publish \(remote origin\)\)\)\)) show newline
+(    ;; => #t if Carol can publish) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Threat Model) show newline
+(------------) show newline
+() show newline
+(Trusted: - Local key storage - Ed25519/SHA-512 \(libsodium\) - Certificate) show newline
+(chain construction) show newline
+() show newline
+(Untrusted: - Certificate sources - Network transport - Certificate) show newline
+(claims \(until verified\)) show newline
+() show newline
+() show newline
+(Attack Mitigations) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Attack                    Mitigation                 ) show newline
+(  Certificate forgery       Ed25519 signatures         ) show newline
+(  Unauthorized delegation   Propagate flag             ) show newline
+(  Expired permissions       Validity period checks     ) show newline
+(  Over-delegation           Tag implication checking   ) show newline
+() show newline
+() show newline
+(Key Management) show newline
+(--------------) show newline
+() show newline
+(  * Generation: Use secure random \(libsodium\)) show newline
+(  * Storage: Private keys in protected files) show newline
+(  * Backup: Shamir secret sharing \(see Memo-0007\)) show newline
+(  * Rotation: Issue new certs, revoke old) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRATION POINTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Vault Authorization) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(vault-init signing-key: alice-private\)) show newline
+(    \(seal-release "1.0.0"\)  ; Requires seal-release tag) show newline
+() show newline
+() show newline
+(Audit Trail Attribution) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(audit-append) show newline
+(      actor: bob-public) show newline
+(      action: '\(seal-commit "abc123"\)) show newline
+(      authorization-chain: \(list alice-to-bob-cert\)\)) show newline
+() show newline
+() show newline
+(Replication Access Control) show newline
+(--------------------------) show newline
+() show newline
+() show newline
+(    \(seal-publish "1.0.0") show newline
+(      remote: "origin") show newline
+(      authorization: bob-to-carol-cert\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPKI VS X.509) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(  Aspect        X.509            SPKI                   ) show newline
+(  Identity      Names \(DN\)       Keys                   ) show newline
+(  Trust         CA hierarchy     Local choice           ) show newline
+(  Namespaces    Global \(DNS\)     Local                  ) show newline
+(  Revocation    CRL/OCSP         Validity periods       ) show newline
+(  Format        ASN.1/DER        S-expressions          ) show newline
+(  Readability   Requires tools   Human-readable         ) show newline
+(  Delegation    Implicit \(CA\)    Explicit \(propagate\)   ) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Ellison, C., et al. \(1999\). SPKI Certificate Theory. RFC 2693. 2.) show newline
+(Ellison, C., et al. \(1999\). SPKI Requirements. RFC 2692. 3. Rivest, R.,) show newline
+(& Lampson, B. \(1996\). SDSI - A Simple Distributed Security) show newline
+(Infrastructure. 4. Lampson, B. \(1971\). Protection.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

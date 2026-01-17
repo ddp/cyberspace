@@ -1,0 +1,447 @@
+%!PS-Adobe-3.0
+%%Title: memo-0016-coq-extraction
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0016: Coq Extraction for TCB) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies the use of Coq proof assistant for verified) show newline
+(implementation of the Trusted Computing Base, with extraction to OCaml) show newline
+(for production use. Prove once, trust forever.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The Prime Directive \(Memo-0001\):) show newline
+() show newline
+() show newline
+(    "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.") show newline
+() show newline
+(But even OCaml can have bugs. The TCB handles: - Ed25519 signatures -) show newline
+(SHA-512 hashing - Signature chain verification) show newline
+() show newline
+(A single bug breaks everything.) show newline
+() show newline
+(Coq provides:) show newline
+() show newline
+(1. Machine-checked proofs: Theorems verified by computer 2. Extraction:) show newline
+(Generate OCaml from proofs 3. Correctness by construction:) show newline
+(Implementation matches specification 4. Eternal validity: Proofs don't) show newline
+(expire) show newline
+() show newline
+(From the Coq motto:) show newline
+() show newline
+() show newline
+(    "The proof is in the code.") show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Trusted Computing Base) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    +-------------------------------------------------------------+) show newline
+(    |                    CYBERSPACE TCB                           |) show newline
+(    |                                                             |) show newline
+(    |   +-------------+  +-------------+  +-------------+        |) show newline
+(    |   |   Ed25519   |  |   SHA-512   |  |   Verify    |        |) show newline
+(    |   |   Proven    |  |   Proven    |  |   Proven    |        |) show newline
+(    |   +------+------+  +------+------+  +------+------+        |) show newline
+(    |          |                |                |                |) show newline
+(    |          +----------------+----------------+                |) show newline
+(    |                           |                                 |) show newline
+(    |                    Coq Extraction                           |) show newline
+(    |                           |                                 |) show newline
+(    |                    +------v------+                          |) show newline
+(    |                    |    OCaml    |                          |) show newline
+(    |                    |   ~1000 LOC |                          |) show newline
+(    |                    +-------------+                          |) show newline
+(    |                                                             |) show newline
+(    |   Proven in Coq. Extracted to OCaml. Called from Scheme.   |) show newline
+(    |                                                             |) show newline
+(    +-------------------------------------------------------------+) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(COQ SPECIFICATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Types) show newline
+(-----) show newline
+() show newline
+() show newline
+(    \( Byte arrays \)) show newline
+(    Definition bytes := list byte.) show newline
+(    \( Keys \)) show newline
+(    Record ed25519publickey := {) show newline
+(      pkbytes : bytes;) show newline
+(      pklength : length pkbytes = 32) show newline
+(    }.) show newline
+(    Record ed25519privatekey := {) show newline
+(      skbytes : bytes;) show newline
+(      sklength : length skbytes = 64) show newline
+(    }.) show newline
+(    \( Signatures \)) show newline
+(    Record ed25519signature := {) show newline
+(      sigbytes : bytes;) show newline
+(      siglength : length sigbytes = 64) show newline
+(    }.) show newline
+(    \( Hashes \)) show newline
+(    Record sha512hash := {) show newline
+(      hashbytes : bytes;) show newline
+(      hashlength : length hashbytes = 64) show newline
+(    }.) show newline
+() show newline
+() show newline
+(Signature Specification) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \( Abstract signature scheme \)) show newline
+(    Module Type ED25519SPEC.) show newline
+(      Parameter sign : ed25519privatekey -> bytes -> ed25519signature.) show newline
+(      Parameter verify : ed25519publickey -> bytes -> ed25519signature -> bool.) show newline
+(      \( Correctness: valid signatures verify \)) show newline
+(      Axiom signverifycorrect :) show newline
+(        forall sk pk msg,) show newline
+(          pk = derivepublic sk ->) show newline
+(          verify pk msg \(sign sk msg\) = true.) show newline
+(      \( Security: cannot forge without private key \)) show newline
+(      Axiom unforgeability :) show newline
+(        forall pk msg sig,) show newline
+(          verify pk msg sig = true ->) show newline
+(          exists sk, pk = derivepublic sk /\\ sig = sign sk msg.) show newline
+(    End ED25519SPEC.) show newline
+() show newline
+() show newline
+(Hash Specification) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    Module Type SHA512SPEC.) show newline
+(      Parameter hash : bytes -> sha512hash.) show newline
+(      \( Determinism \)) show newline
+(      Axiom hashdeterministic :) show newline
+(        forall x, hash x = hash x.) show newline
+(      \( Collision resistance \(assumed\) \)) show newline
+(      Axiom collisionresistant :) show newline
+(        forall x y, hash x = hash y -> x = y. \( Idealized \)) show newline
+(    End SHA512_SPEC.) show newline
+() show newline
+() show newline
+(Chain Verification) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \( Certificate chain verification \)) show newline
+(    Fixpoint verifychain) show newline
+(      \(root : ed25519publickey\)) show newline
+(      \(certs : list signedcert\)) show newline
+(      \(targettag : tag\) : bool :=) show newline
+(      match certs with) show newline
+(      | nil => false) show newline
+(      | cert :: rest =>) show newline
+(          let issuerkey := certissuer cert in) show newline
+(          let subjectkey := certsubject cert in) show newline
+(          let certtag := certtag cert in) show newline
+(          \( Check issuer matches current key \)) show newline
+(          andb \(keyeq root issuerkey\)) show newline
+(          \( Check signature valid \)) show newline
+(          \(andb \(verify issuerkey \(certcontent cert\) \(certsignature cert\)\)) show newline
+(          \( Check tag grants permission \)) show newline
+(          \(andb \(tagimplies certtag targettag\)) show newline
+(          \( Continue chain \)) show newline
+(          \(match rest with) show newline
+(           | nil => true) show newline
+(           |  => verifychain subjectkey rest targettag) show newline
+(           end\)\)\)) show newline
+(      end.) show newline
+(    \( Theorem: Valid chain implies authorization \)) show newline
+(    Theorem chainauthorization :) show newline
+(      forall root certs tag,) show newline
+(        verify_chain root certs tag = true ->) show newline
+(        authorized root tag.) show newline
+(    Proof.) show newline
+(      \( Proof by induction on chain length \)) show newline
+(      ...) show newline
+(    Qed.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EXTRACTION TO OCAML) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Extraction Directives) show newline
+(---------------------) show newline
+() show newline
+() show newline
+(    Require Import ExtrOcamlBasic.) show newline
+(    Require Import ExtrOcamlString.) show newline
+(    \( Extract to OCaml types \)) show newline
+(    Extract Inductive bool => "bool" ["true" "false"].) show newline
+(    Extract Inductive list => "list" ["[]" "\(::\)"].) show newline
+(    \( Link to libsodium \)) show newline
+(    Extract Constant ed25519sign => "Sodium.Ed25519.sign".) show newline
+(    Extract Constant ed25519verify => "Sodium.Ed25519.verify".) show newline
+(    Extract Constant sha512hash => "Sodium.SHA512.hash".) show newline
+(    \( Generate OCaml \)) show newline
+(    Extraction "tcb.ml" verifychain sign verify hash.) show newline
+() show newline
+() show newline
+(Generated OCaml) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    \( tcb.ml - Extracted from Coq \)) show newline
+(    let rec verifychain root certs targettag =) show newline
+(      match certs with) show newline
+(      | [] -> false) show newline
+(      | cert :: rest ->) show newline
+(          let issuerkey = certissuer cert in) show newline
+(          let subjectkey = certsubject cert in) show newline
+(          keyeq root issuerkey &&) show newline
+(          Sodium.Ed25519.verify issuerkey \(certcontent cert\) \(certsignature cert\) &&) show newline
+(          tagimplies \(certtag cert\) targettag &&) show newline
+(          \(match rest with) show newline
+(           | [] -> true) show newline
+(           |  -> verifychain subjectkey rest targettag\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRATION WITH SCHEME) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(FFI Layer) show newline
+(---------) show newline
+() show newline
+() show newline
+(    \( tcbffi.ml - FFI bindings for Chicken Scheme \)) show newline
+(    let \(\) = Callback.register "tcbverifychain" verifychain) show newline
+(    let \(\) = Callback.register "tcbsign" sign) show newline
+(    let \(\) = Callback.register "tcbverify" verify) show newline
+(    let \(\) = Callback.register "tcb_hash" hash) show newline
+() show newline
+() show newline
+(Scheme Bindings) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; crypto-ffi.scm) show newline
+(    \(module crypto-ffi) show newline
+(      \(ed25519-sign ed25519-verify sha512-hash verify-chain\)) show newline
+(      \(import \(chicken foreign\)\)) show newline
+(      ;; Call into verified OCaml) show newline
+(      \(define ed25519-sign) show newline
+(        \(foreign-lambda blob \(\(blob key\) \(blob msg\)\)) show newline
+(          "return tcbsign\(key, msg\);"\)\)) show newline
+(      \(define verify-chain) show newline
+(        \(foreign-lambda bool \(\(blob root\) \(pointer certs\) \(pointer tag\)\)) show newline
+(          "return tcbverify_chain\(root, certs, tag\);"\)\)) show newline
+(      ...\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PROOF OBLIGATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(What We Prove) show newline
+(-------------) show newline
+() show newline
+(1. Signature correctness: Valid signatures verify 2. Chain soundness:) show newline
+(Valid chain implies authorization 3. Hash properties: Determinism,) show newline
+(length preservation 4. Type safety: No buffer overflows, no null) show newline
+(pointers) show newline
+() show newline
+() show newline
+(What We Assume) show newline
+(--------------) show newline
+() show newline
+(1. Cryptographic hardness: Ed25519 unforgeability 2. libsodium) show newline
+(correctness: Implementation matches spec 3. OCaml runtime: Extraction) show newline
+(target is correct 4. Hardware: CPU executes instructions correctly) show newline
+() show newline
+() show newline
+(Trust Chain) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    Mathematical proof \(Coq\)) show newline
+(        v) show newline
+(    Extraction \(verified by Coq\)) show newline
+(        v) show newline
+(    OCaml code \(typed, memory-safe\)) show newline
+(        v) show newline
+(    libsodium \(audited, widely deployed\)) show newline
+(        v) show newline
+(    CPU instructions \(trust hardware\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DEVELOPMENT WORKFLOW) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(1. Specify in Coq) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \( Define types and operations \)) show newline
+(    \( State properties and theorems \)) show newline
+() show newline
+() show newline
+(2. Prove Correctness) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \( Prove theorems \)) show newline
+(    \( Coq checks proofs mechanically \)) show newline
+() show newline
+() show newline
+(3. Extract to OCaml) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    $ coqc -R . Cyberspace tcb.v) show newline
+(    $ coqc -R . Cyberspace extract.v) show newline
+(    $ ls *.ml) show newline
+(    tcb.ml tcb_types.ml) show newline
+() show newline
+() show newline
+(4. Compile and Link) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    $ ocamlfind ocamlopt -package sodium -linkpkg \\) show newline
+(        tcb.ml tcb_ffi.ml -o tcb.cmxa) show newline
+() show newline
+() show newline
+(5. Call from Scheme) show newline
+(-------------------) show newline
+() show newline
+() show newline
+(    \(import crypto-ffi\)) show newline
+(    \(ed25519-sign key message\)  ; Calls verified code) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EXISTING VERIFIED LIBRARIES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Fiat-Crypto) show newline
+(-----------) show newline
+() show newline
+(  * Verified elliptic curve implementations) show newline
+(  * Used by BoringSSL, Chrome) show newline
+(  * Extraction to C, Java, Go) show newline
+() show newline
+() show newline
+(HACL*) show newline
+(-----) show newline
+() show newline
+(  * Verified cryptographic library) show newline
+(  * Written in F* \(similar to Coq\)) show newline
+(  * Used by Firefox, Wireguard) show newline
+() show newline
+() show newline
+(Potential Use) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    Require Import Fiat.Crypto.Ed25519.) show newline
+(    \( Use pre-verified Ed25519 implementation \)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Verified Components) show newline
+(-------------------) show newline
+() show newline
+(  * Signature operations) show newline
+(  * Hash operations) show newline
+(  * Chain verification logic) show newline
+() show newline
+() show newline
+(Unverified \(Trusted\)) show newline
+(--------------------) show newline
+() show newline
+(  * FFI layer \(small, auditable\) - libsodium bindings) show newline
+(  * Scheme runtime) show newline
+() show newline
+() show newline
+(Audit Surface) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    Total TCB:     ~1000 lines OCaml) show newline
+(    Verified:      ~800 lines \(extracted from ~2000 lines Coq\)) show newline
+(    Trusted:       ~200 lines \(FFI, bindings\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2.) show newline
+(Erbsen, A., et al. \(2019\). Simple High-Level Code for Cryptographic) show newline
+(Arithmetic. 3. Protzenko, J., et al. \(2017\). Verified Low-Level) show newline
+(Programming Embedded in F*. 4. Chlipala, A. \(2013\). Certified) show newline
+(Programming with Dependent Types. 5. Memo-0001: Cyberspace Architecture) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

@@ -1,0 +1,1044 @@
+%!PS-Adobe-3.0
+%%Title: memo-0028-garbage-collection
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0028: Garbage Collection) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This Memo specifies garbage collection for the Library of Cyberspace:) show newline
+(how vaults identify and reclaim storage from unreferenced objects while) show newline
+(preserving pinned content, respecting tombstones, and maintaining audit) show newline
+(trails. Content-addressed storage requires careful GC to avoid data) show newline
+(loss.) show newline
+() show newline
+(The Library of Cyberspace is an archival system. The default is) show newline
+(preservation, not collection. Objects evaporate only with explicit) show newline
+(consent.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PHILOSOPHY: THE SOUP PRESERVES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The soup is not a runtime heap. It is a library.) show newline
+() show newline
+(In runtime garbage collection, the goal is to reclaim memory quickly.) show newline
+(Young objects die young. Old objects survive. Collect aggressively.) show newline
+() show newline
+(In archival garbage collection, the opposite holds:) show newline
+() show newline
+(  * Old objects are precious) show newline
+(  * They have survived, been referenced, replicated) show newline
+(  * Young objects are suspect) show newline
+(  * They may be transient, failed, or temporary) show newline
+(  * Deletion is violence) show newline
+(  * Once collected, an object is gone from this vault forever) show newline
+(  * Preservation is the default) show newline
+(  * When in doubt, keep it) show newline
+() show newline
+(The Library of Alexandria burned once. We will not let it burn again.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Content-addressed storage accumulates objects forever unless actively) show newline
+(pruned:) show newline
+() show newline
+(  * Orphaned objects) show newline
+(  * No longer referenced by any root) show newline
+(  * Superseded versions) show newline
+(  * Old versions after updates) show newline
+(  * Failed uploads) show newline
+(  * Partial or abandoned writes) show newline
+(  * Temporary objects) show newline
+(  * Intermediate computation results) show newline
+() show newline
+(But deletion is dangerous:) show newline
+() show newline
+(  * Hash as capability) show newline
+(  * Someone may hold the hash) show newline
+(  * Lazy replication) show newline
+(  * Remote vaults may need it later) show newline
+(  * Audit requirements) show newline
+(  * May need historical data) show newline
+(  * Resurrection) show newline
+(  * Deleted objects may be re-added) show newline
+() show newline
+(GC must be conservative, consensual, and auditable.) show newline
+() show newline
+(The default is: never collect. Collection requires explicit action.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(OBJECT LIFECYCLE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(States) show newline
+(------) show newline
+() show newline
+() show newline
+(                        +---------+) show newline
+(              write     |         |) show newline
+(            --------->  |  LIVE   |) show newline
+(                        |         |) show newline
+(                        +----+----+) show newline
+(                             |) show newline
+(                  +----------+----------+) show newline
+(                  |          |          |) show newline
+(                  v          v          v) show newline
+(             +--------+ +--------+ +--------+) show newline
+(             |PINNED  | |TOMBSTONE| |ORPHANED|) show newline
+(             +--------+ +--------+ +---+----+) show newline
+(                                       |) show newline
+(                                       | GC) show newline
+(                                       v) show newline
+(                                  +--------+) show newline
+(                                  |COLLECTED|) show newline
+(                                  +--------+) show newline
+() show newline
+() show newline
+(State Transitions) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define \(object-state hash\)) show newline
+(      \(cond) show newline
+(        \(\(pinned? hash\) 'pinned\)) show newline
+(        \(\(tombstoned? hash\) 'tombstone\)) show newline
+(        \(\(referenced? hash\) 'live\)) show newline
+(        \(else 'orphaned\)\)\)) show newline
+(    \(define \(can-collect? hash\)) show newline
+(      \(and \(eq? \(object-state hash\) 'orphaned\)) show newline
+(           \(not \(in-grace-period? hash\)\)) show newline
+(           \(not \(pending-replication? hash\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCE COUNTING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Direct References) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Track incoming references) show newline
+(    \(define ref-counts \(make-hash-table\)\)) show newline
+(    \(define \(add-reference from-hash to-hash\)) show newline
+(      \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) show newline
+(        \(hash-table-set! ref-counts to-hash \(+ count 1\)\)) show newline
+(        \(audit-append action: \(add-ref ,from-hash ,to-hash\)\)\)\)) show newline
+(    \(define \(remove-reference from-hash to-hash\)) show newline
+(      \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) show newline
+(        \(hash-table-set! ref-counts to-hash \(max 0 \(- count 1\)\)\)) show newline
+(        \(audit-append action: \(remove-ref ,from-hash ,to-hash\)\)\)\)) show newline
+(    \(define \(reference-count hash\)) show newline
+(      \(hash-table-ref ref-counts hash 0\)\)) show newline
+() show newline
+() show newline
+(Root References) show newline
+(---------------) show newline
+() show newline
+() show newline
+(    ;; GC roots - objects that are always reachable) show newline
+(    \(define gc-roots \(make-hash-set\)\)) show newline
+(    \(define \(add-gc-root hash reason\)) show newline
+(      \(hash-set-add! gc-roots hash\)) show newline
+(      \(audit-append action: \(add-root ,hash ,reason\)\)\)) show newline
+(    \(define \(remove-gc-root hash\)) show newline
+(      \(hash-set-remove! gc-roots hash\)) show newline
+(      \(audit-append action: \(remove-root ,hash\)\)\)) show newline
+(    \(define \(gc-root? hash\)) show newline
+(      \(hash-set-member? gc-roots hash\)\)) show newline
+() show newline
+() show newline
+(Implicit Roots) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; Some objects are implicitly rooted) show newline
+(    \(define \(implicit-root? hash\)) show newline
+(      \(or \(pinned? hash\)) show newline
+(          \(soup-object-type? hash 'certificate\)  ; Certs are roots) show newline
+(          \(soup-object-type? hash 'audit-entry\)  ; Audit is sacred) show newline
+(          \(recent-write? hash\)\)\)                 ; Grace period) show newline
+() show newline
+() show newline
+(Cycle Detection) show newline
+(---------------) show newline
+() show newline
+(Reference counting alone cannot detect cycles \(A>B>C>A\). The soup uses) show newline
+(mark-and-sweep as the authoritative reachability test, with reference) show newline
+(counts as a fast path for common cases.) show newline
+() show newline
+() show newline
+(    ;; Reference counting is advisory, not authoritative) show newline
+(    \(define \(fast-unreachable? hash\)) show newline
+(      "Quick check - zero refs MIGHT mean unreachable") show newline
+(      \(and \(zero? \(reference-count hash\)\)) show newline
+(           \(not \(gc-root? hash\)\)) show newline
+(           \(not \(implicit-root? hash\)\)\)\)) show newline
+(    ;; Mark-and-sweep is authoritative) show newline
+(    \(define \(truly-unreachable? hash marked-set\)) show newline
+(      "Authoritative check - not in marked set means unreachable") show newline
+(      \(not \(hash-set-member? marked-set hash\)\)\)) show newline
+(    ;; Cycle detection via mark-and-sweep) show newline
+(    \(define \(detect-cycles\)) show newline
+(      "Find reference cycles \(objects that reference each other but are unreachable\)") show newline
+(      \(let* \(\(marked \(mark-reachable\)\)) show newline
+(             \(all-hashes \(all-object-hashes\)\)) show newline
+(             \(unmarked \(filter \(lambda \(h\) \(not \(hash-set-member? marked h\)\)\) all-hashes\)\)) show newline
+(             \(with-refs \(filter \(lambda \(h\) \(> \(reference-count h\) 0\)\) unmarked\)\)\)) show newline
+(        ;; These have refs but are unreachable - they're in cycles) show newline
+(        with-refs\)\)) show newline
+() show newline
+(In archival mode, cycles are preserved \(they may be intentional - e.g.,) show newline
+(bidirectional links\). Only explicit evaporation removes them.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MARK AND SWEEP) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Tricolor Abstraction) show newline
+(--------------------) show newline
+() show newline
+(The naive recursive mark algorithm risks stack overflow on deep object) show newline
+(graphs. The tricolor abstraction provides:) show newline
+() show newline
+(1. White: Unvisited, potentially garbage 2. Gray: Visited but references) show newline
+(not yet scanned 3. Black: Visited and all references scanned) show newline
+() show newline
+() show newline
+(    ;; Tricolor sets - explicit worklist avoids stack overflow) show newline
+(    \(define white-set \(make-hash-set\)\)  ; Candidates for collection) show newline
+(    \(define gray-set \(make-hash-set\)\)   ; Work queue) show newline
+(    \(define black-set \(make-hash-set\)\)  ; Proven reachable) show newline
+(    \(define \(tricolor-init\)) show newline
+(      "Initialize: all objects are white") show newline
+(      \(hash-set-clear! white-set\)) show newline
+(      \(hash-set-clear! gray-set\)) show newline
+(      \(hash-set-clear! black-set\)) show newline
+(      \(for-each \(lambda \(h\) \(hash-set-add! white-set h\)\)) show newline
+(                \(all-object-hashes\)\)\)) show newline
+(    \(define \(shade-gray! hash\)) show newline
+(      "Move object from white to gray \(discovered\)") show newline
+(      \(when \(hash-set-member? white-set hash\)) show newline
+(        \(hash-set-remove! white-set hash\)) show newline
+(        \(hash-set-add! gray-set hash\)\)\)) show newline
+(    \(define \(shade-black! hash\)) show newline
+(      "Move object from gray to black \(fully scanned\)") show newline
+(      \(hash-set-remove! gray-set hash\)) show newline
+(      \(hash-set-add! black-set hash\)\)) show newline
+() show newline
+() show newline
+(Mark Phase \(Worklist Algorithm\)) show newline
+(-------------------------------) show newline
+() show newline
+() show newline
+(    \(define \(mark-reachable\)) show newline
+(      "Mark all objects reachable from roots using worklist") show newline
+(      \(tricolor-init\)) show newline
+(      ;; Shade roots gray) show newline
+(      \(for-each shade-gray! \(hash-set->list gc-roots\)\)) show newline
+(      \(for-each \(lambda \(hash\)) show newline
+(                  \(when \(implicit-root? hash\)) show newline
+(                    \(shade-gray! hash\)\)\)) show newline
+(                \(all-object-hashes\)\)) show newline
+(      ;; Process gray objects until none remain) show newline
+(      \(let loop \(\)) show newline
+(        \(unless \(hash-set-empty? gray-set\)) show newline
+(          \(let \(\(current \(hash-set-pop! gray-set\)\)\)) show newline
+(            ;; Shade all white references gray) show newline
+(            \(for-each shade-gray! \(object-references current\)\)) show newline
+(            ;; Current is now fully scanned) show newline
+(            \(shade-black! current\)) show newline
+(            \(loop\)\)\)\)) show newline
+(      black-set\)  ; Return reachable set) show newline
+() show newline
+() show newline
+(Incremental Tricolor Marking) show newline
+(----------------------------) show newline
+() show newline
+(For large soups, mark in batches to avoid long pauses:) show newline
+() show newline
+() show newline
+(    \(define mark-batch-size 1000\)  ; Objects per batch) show newline
+(    \(define \(mark-incremental\)) show newline
+(      "Mark in batches, yielding between batches") show newline
+(      \(let \(\(batch 0\)\)) show newline
+(        \(let loop \(\)) show newline
+(          \(unless \(or \(hash-set-empty? gray-set\)) show newline
+(                      \(>= batch mark-batch-size\)\)) show newline
+(            \(let \(\(current \(hash-set-pop! gray-set\)\)\)) show newline
+(              \(for-each shade-gray! \(object-references current\)\)) show newline
+(              \(shade-black! current\)) show newline
+(              \(set! batch \(+ batch 1\)\)) show newline
+(              \(loop\)\)\)\)) show newline
+(        ;; Return whether more work remains) show newline
+(        \(not \(hash-set-empty? gray-set\)\)\)\)) show newline
+(    ;; Usage: call repeatedly until returns #f) show newline
+(    \(define \(incremental-gc-step\)) show newline
+(      \(if \(mark-incremental\)) show newline
+(          'more-work) show newline
+(          \(begin) show newline
+(            \(sweep-white\)) show newline
+(            'complete\)\)\)) show newline
+() show newline
+() show newline
+(Concurrent Write Barrier) show newline
+(------------------------) show newline
+() show newline
+(For concurrent GC, mutations must maintain the tricolor invariant: a) show newline
+(black object cannot point to a white object.) show newline
+() show newline
+() show newline
+(    ;; Write barrier for concurrent GC) show newline
+(    \(define \(cas-put-concurrent data\)) show newline
+(      "Store with write barrier for concurrent GC") show newline
+(      \(let \(\(hash \(cas-put data\)\)\)) show newline
+(        ;; If GC is running and we create new references) show newline
+(        \(when gc-running?) show newline
+(          ;; Shade new object gray \(conservative\)) show newline
+(          \(shade-gray! hash\)) show newline
+(          ;; Re-shade any black object referencing new object) show newline
+(          \(for-each \(lambda \(referencer\)) show newline
+(                      \(when \(hash-set-member? black-set referencer\)) show newline
+(                        ;; Demote to gray - needs re-scanning) show newline
+(                        \(hash-set-remove! black-set referencer\)) show newline
+(                        \(hash-set-add! gray-set referencer\)\)\)) show newline
+(                    \(incoming-references hash\)\)\)) show newline
+(        hash\)\)) show newline
+(    ;; Snapshot-at-the-beginning \(SATB\) barrier) show newline
+(    \(define \(reference-update! from-hash old-ref new-ref\)) show newline
+(      "SATB write barrier: preserve old reference for marking") show newline
+(      \(when \(and gc-running? old-ref\)) show newline
+(        ;; Keep old reference alive through this GC cycle) show newline
+(        \(shade-gray! old-ref\)\)) show newline
+(      \(update-reference! from-hash new-ref\)\)) show newline
+() show newline
+() show newline
+(Original Mark \(Preserved for Reference\)) show newline
+(---------------------------------------) show newline
+() show newline
+() show newline
+(    ;; Simple recursive version \(for small object graphs only\)) show newline
+(    \(define \(mark-reachable/simple\)) show newline
+(      "Mark all objects reachable from roots \(recursive, can stack overflow\)") show newline
+(      \(let \(\(marked \(make-hash-set\)\)\)) show newline
+(        \(define \(mark hash\)) show newline
+(          \(unless \(hash-set-member? marked hash\)) show newline
+(            \(hash-set-add! marked hash\)) show newline
+(            \(for-each mark \(object-references hash\)\)\)\)) show newline
+(        ;; Mark from explicit roots) show newline
+(        \(for-each mark \(hash-set->list gc-roots\)\)) show newline
+(        ;; Mark from implicit roots) show newline
+(        \(for-each \(lambda \(hash\)) show newline
+(                    \(when \(implicit-root? hash\)) show newline
+(                      \(mark hash\)\)\)) show newline
+(                  \(all-object-hashes\)\)) show newline
+(        marked\)\)) show newline
+() show newline
+() show newline
+(Sweep Phase) show newline
+(-----------) show newline
+() show newline
+() show newline
+(    \(define \(sweep marked\)) show newline
+(      "Collect unmarked objects") show newline
+(      \(let \(\(collected '\(\)\)\)) show newline
+(        \(for-each) show newline
+(          \(lambda \(hash\)) show newline
+(            \(unless \(hash-set-member? marked hash\)) show newline
+(              \(when \(can-collect? hash\)) show newline
+(                \(set! collected \(cons hash collected\)\)) show newline
+(                \(collect-object! hash\)\)\)\)) show newline
+(          \(all-object-hashes\)\)) show newline
+(        collected\)\)) show newline
+(    \(define \(collect-object! hash\)) show newline
+(      "Remove object from storage") show newline
+(      \(let \(\(obj \(cas-get hash\)\)\)) show newline
+(        \(audit-append) show newline
+(          action: 'gc-collect) show newline
+(          hash: hash) show newline
+(          size: \(object-size obj\)) show newline
+(          age: \(object-age obj\)\)) show newline
+(        \(cas-delete! hash\)\)\)) show newline
+() show newline
+() show newline
+(Full GC) show newline
+(-------) show newline
+() show newline
+() show newline
+(    \(define \(gc-full\)) show newline
+(      "Perform full garbage collection") show newline
+(      \(let \(\(start \(current-time\)\)\)) show newline
+(        \(audit-append action: 'gc-start type: 'full\)) show newline
+(        \(let* \(\(marked \(mark-reachable\)\)) show newline
+(               \(collected \(sweep marked\)\)\)) show newline
+(          \(audit-append) show newline
+(            action: 'gc-complete) show newline
+(            type: 'full) show newline
+(            duration: \(- \(current-time\) start\)) show newline
+(            marked: \(hash-set-size marked\)) show newline
+(            collected: \(length collected\)) show newline
+(            bytes-freed: \(sum \(map object-size collected\)\)\)) show newline
+(          collected\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INCREMENTAL GC) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Archival Generational Collection) show newline
+(--------------------------------) show newline
+() show newline
+(Traditional generational GC collects young objects first \(they die) show newline
+(young\). Archival GC inverts this: old objects are precious.) show newline
+() show newline
+() show newline
+(    ;; Archival generations - age increases protection) show newline
+(    \(define generations) show newline
+(      '\(\(ephemeral . 3600\)     ; < 1 hour: temporary, collect freely) show newline
+(        \(young . 86400\)        ; < 1 day: probably transient) show newline
+(        \(maturing . 604800\)    ; < 1 week: gaining stability) show newline
+(        \(stable . 2592000\)     ; < 30 days: likely permanent) show newline
+(        \(archival . #f\)\)\)      ; >= 30 days: NEVER collect automatically) show newline
+(    \(define \(object-generation hash\)) show newline
+(      \(let \(\(age \(object-age hash\)\)\)) show newline
+(        \(cond) show newline
+(          \(\(< age 3600\) 'ephemeral\)) show newline
+(          \(\(< age 86400\) 'young\)) show newline
+(          \(\(< age 604800\) 'maturing\)) show newline
+(          \(\(< age 2592000\) 'stable\)) show newline
+(          \(else 'archival\)\)\)\)) show newline
+(    ;; Collection eligibility by generation) show newline
+(    \(define \(generation-collectible? gen\)) show newline
+(      \(case gen) show newline
+(        \(\(ephemeral\) #t\)       ; Freely collectible) show newline
+(        \(\(young\) #t\)           ; Collectible with grace period) show newline
+(        \(\(maturing\) 'warning\)  ; Requires explicit approval) show newline
+(        \(\(stable\) 'quorum\)     ; Requires federation quorum) show newline
+(        \(\(archival\) #f\)\)\)      ; NEVER collect automatically) show newline
+(    \(define \(gc-generation gen\)) show newline
+(      "Collect only specified generation \(archival only via evaporation\)") show newline
+(      \(when \(eq? gen 'archival\)) show newline
+(        \(error "Archival objects require evaporation certificate"\)\)) show newline
+(      \(let \(\(candidates \(filter \(lambda \(h\)) show newline
+(                                  \(eq? \(object-generation h\) gen\)\)) show newline
+(                                \(all-object-hashes\)\)\)\)) show newline
+(        \(gc-candidates candidates\)\)\)) show newline
+() show newline
+() show newline
+(Write Barrier) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; Track modified objects for incremental GC) show newline
+(    \(define modified-set \(make-hash-set\)\)) show newline
+(    \(define \(cas-put-with-barrier data\)) show newline
+(      \(let \(\(hash \(cas-put data\)\)\)) show newline
+(        \(hash-set-add! modified-set hash\)) show newline
+(        hash\)\)) show newline
+(    \(define \(gc-incremental\)) show newline
+(      "Collect recently modified objects if orphaned") show newline
+(      \(let \(\(candidates \(hash-set->list modified-set\)\)\)) show newline
+(        \(hash-set-clear! modified-set\)) show newline
+(        \(gc-candidates candidates\)\)\)) show newline
+() show newline
+() show newline
+(Concurrent GC) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    ;; GC runs concurrently with mutations) show newline
+(    \(define gc-lock \(make-mutex\)\)) show newline
+(    \(define gc-running? #f\)) show newline
+(    \(define \(gc-concurrent\)) show newline
+(      "Run GC without stopping the world") show newline
+(      \(when \(mutex-try-lock! gc-lock\)) show newline
+(        \(set! gc-running? #t\)) show newline
+(        \(let \(\(snapshot \(snapshot-roots\)\)\)) show newline
+(          ;; Mark phase uses snapshot) show newline
+(          \(let \(\(marked \(mark-from-snapshot snapshot\)\)\)) show newline
+(            ;; Sweep only clearly dead objects) show newline
+(            \(sweep-conservative marked\)\)\)) show newline
+(        \(set! gc-running? #f\)) show newline
+(        \(mutex-unlock! gc-lock\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(PINNING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Pin Management) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    \(define pins \(make-hash-table\)\)) show newline
+(    \(define \(pin! hash reason #!key duration\)) show newline
+(      "Protect object from GC") show newline
+(      \(hash-table-set! pins hash) show newline
+(        \(\(reason . ,reason\)) show newline
+(          \(pinned-at . ,\(current-time\)\)) show newline
+(          \(expires . ,\(and duration \(+ \(current-time\) duration\)\)\)) show newline
+(          \(pinned-by . ,\(current-principal\)\)\)\)) show newline
+(      \(audit-append action: \(pin ,hash ,reason\)\)\)) show newline
+(    \(define \(unpin! hash\)) show newline
+(      "Allow object to be collected") show newline
+(      \(hash-table-delete! pins hash\)) show newline
+(      \(audit-append action: `\(unpin ,hash\)\)\)) show newline
+(    \(define \(pinned? hash\)) show newline
+(      \(let \(\(pin \(hash-table-ref pins hash #f\)\)\)) show newline
+(        \(and pin) show newline
+(             \(or \(not \(assoc-ref pin 'expires\)\)) show newline
+(                 \(> \(assoc-ref pin 'expires\) \(current-time\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Transitive Pinning) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    \(define \(pin-tree! root-hash reason\)) show newline
+(      "Pin object and all objects it references") show newline
+(      \(let \(\(visited \(make-hash-set\)\)\)) show newline
+(        \(define \(pin-recursive hash\)) show newline
+(          \(unless \(hash-set-member? visited hash\)) show newline
+(            \(hash-set-add! visited hash\)) show newline
+(            \(pin! hash reason\)) show newline
+(            \(for-each pin-recursive \(object-references hash\)\)\)\)) show newline
+(        \(pin-recursive root-hash\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TOMBSTONES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Tombstone Handling) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; Tombstones are never collected) show newline
+(    \(define \(tombstoned? hash\)) show newline
+(      \(let \(\(obj \(soup-get hash\)\)\)) show newline
+(        \(and obj \(eq? \(soup-object-type obj\) 'tombstone\)\)\)\)) show newline
+(    ;; Tombstones prevent resurrection) show newline
+(    \(define \(cas-put-checked data\)) show newline
+(      \(let \(\(hash \(content-hash data\)\)\)) show newline
+(        \(when \(tombstoned? hash\)) show newline
+(          \(error "Cannot resurrect tombstoned object" hash\)\)) show newline
+(        \(cas-put data\)\)\)) show newline
+() show newline
+() show newline
+(Tombstone Expiry) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    ;; Optional: tombstones can expire) show newline
+(    \(define \(tombstone-expired? hash\)) show newline
+(      \(let \(\(tomb \(soup-get hash\)\)\)) show newline
+(        \(and tomb) show newline
+(             \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) show newline
+(             \(< \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) show newline
+(                \(current-time\)\)\)\)\)) show newline
+(    \(define \(gc-expired-tombstones\)) show newline
+(      "Remove expired tombstones") show newline
+(      \(for-each) show newline
+(        \(lambda \(hash\)) show newline
+(          \(when \(and \(tombstoned? hash\) \(tombstone-expired? hash\)\)) show newline
+(            \(collect-object! hash\)\)\)) show newline
+(        \(all-object-hashes\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(GRACE PERIODS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Write Grace Period) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; Recently written objects are protected) show newline
+(    \(define write-grace-period 86400\)  ; 24 hours) show newline
+(    \(define \(recent-write? hash\)) show newline
+(      \(let \(\(obj \(soup-get hash\)\)\)) show newline
+(        \(and obj) show newline
+(             \(< \(- \(current-time\) \(soup-object-created obj\)\)) show newline
+(                write-grace-period\)\)\)\)) show newline
+() show newline
+() show newline
+(Replication Grace Period) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    ;; Objects pending replication are protected) show newline
+(    \(define pending-replication \(make-hash-set\)\)) show newline
+(    \(define \(mark-pending-replication hash vaults\)) show newline
+(      \(hash-set-add! pending-replication hash\)) show newline
+(      \(audit-append action: `\(pending-replication ,hash ,vaults\)\)\)) show newline
+(    \(define \(clear-pending-replication hash\)) show newline
+(      \(hash-set-remove! pending-replication hash\)\)) show newline
+(    \(define \(pending-replication? hash\)) show newline
+(      \(hash-set-member? pending-replication hash\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EVAPORATION \(ARCHIVAL COLLECTION\)) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Objects don't get "garbage collected" in an archive. They evaporate -) show newline
+(and only with explicit, signed, multi-party consent.) show newline
+() show newline
+() show newline
+(Evaporation Certificate) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    ;; An evaporation certificate authorizes deletion) show newline
+(    \(define-record-type evaporation-certificate) show newline
+(      \(make-evaporation-cert hash reason signers timestamp\)) show newline
+(      evaporation-cert?) show newline
+(      \(hash evap-hash\)           ; Object to evaporate) show newline
+(      \(reason evap-reason\)       ; Why \(legal, storage, corruption, etc.\)) show newline
+(      \(signers evap-signers\)     ; List of \(principal . signature\)) show newline
+(      \(timestamp evap-timestamp\)\)) show newline
+(    ;; Reasons for evaporation \(enumerated, auditable\)) show newline
+(    \(define evaporation-reasons) show newline
+(      '\(legal-requirement        ; Court order, DMCA, etc.) show newline
+(        storage-emergency        ; Vault at capacity) show newline
+(        data-corruption          ; Object verified corrupt) show newline
+(        owner-request            ; Content owner requests removal) show newline
+(        federation-consensus\)\)   ; Quorum agrees to remove) show newline
+(    \(define \(create-evaporation-cert hash reason\)) show newline
+(      "Create unsigned evaporation certificate") show newline
+(      \(make-evaporation-cert) show newline
+(        hash) show newline
+(        reason) show newline
+(        '\(\)  ; No signatures yet) show newline
+(        \(current-time\)\)\)) show newline
+(    \(define \(sign-evaporation-cert cert private-key\)) show newline
+(      "Add signature to evaporation certificate") show newline
+(      \(let* \(\(principal \(key->principal private-key\)\)) show newline
+(             \(sig \(sign-data \(evap-hash cert\) private-key\)\)\)) show newline
+(        \(make-evaporation-cert) show newline
+(          \(evap-hash cert\)) show newline
+(          \(evap-reason cert\)) show newline
+(          \(cons \(cons principal sig\) \(evap-signers cert\)\)) show newline
+(          \(evap-timestamp cert\)\)\)\)) show newline
+() show newline
+() show newline
+(Quorum Requirement) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; Evaporation requires M-of-N signatures from federation) show newline
+(    \(define evaporation-quorum) show newline
+(      '\(\(ephemeral . 1\)     ; Single vault can evaporate) show newline
+(        \(young . 1\)         ; Single vault can evaporate) show newline
+(        \(maturing . 2\)      ; Two vaults must agree) show newline
+(        \(stable . 3\)        ; Three vaults must agree) show newline
+(        \(archival . #f\)\)\)   ; Requires special process \(see below\)) show newline
+(    \(define \(evaporation-quorum-met? cert generation\)) show newline
+(      \(let \(\(required \(assoc-ref evaporation-quorum generation\)\)\)) show newline
+(        \(cond) show newline
+(          \(\(not required\) #f\)  ; Archival: never automatic) show newline
+(          \(else \(>= \(length \(evap-signers cert\)\) required\)\)\)\)\)) show newline
+(    \(define \(evaporate! hash cert\)) show newline
+(      "Evaporate object with valid certificate") show newline
+(      \(let \(\(gen \(object-generation hash\)\)\)) show newline
+(        \(unless \(evaporation-quorum-met? cert gen\)) show newline
+(          \(error "Evaporation quorum not met") show newline
+(                 `\(generation ,gen required ,\(assoc-ref evaporation-quorum gen\)\)\)\)) show newline
+(        ;; Archival objects require special handling) show newline
+(        \(when \(eq? gen 'archival\)) show newline
+(          \(unless \(archival-evaporation-authorized? cert\)) show newline
+(            \(error "Archival evaporation requires governance approval"\)\)\)) show newline
+(        ;; Log everything before deletion) show newline
+(        \(audit-append) show newline
+(          action: 'evaporate) show newline
+(          hash: hash) show newline
+(          generation: gen) show newline
+(          certificate: cert) show newline
+(          reason: \(evap-reason cert\)) show newline
+(          signers: \(map car \(evap-signers cert\)\)\)) show newline
+(        ;; Finally, delete) show newline
+(        \(cas-delete! hash\)\)\)) show newline
+() show newline
+() show newline
+(Archival Object Evaporation) show newline
+(---------------------------) show newline
+() show newline
+(Archival objects \(>30 days\) receive maximum protection. They can only) show newline
+(evaporate via:) show newline
+() show newline
+(1. Legal requirement - With proof of legal order 2. Data corruption -) show newline
+(With cryptographic proof of corruption 3. Governance vote - Per Memo-036) show newline
+(quorum protocol) show newline
+() show newline
+() show newline
+(    \(define \(archival-evaporation-authorized? cert\)) show newline
+(      "Check if archival evaporation is properly authorized") show newline
+(      \(case \(evap-reason cert\)) show newline
+(        \(\(legal-requirement\)) show newline
+(         ;; Must include legal order reference) show newline
+(         \(and \(evap-legal-order cert\)) show newline
+(              \(verify-legal-order \(evap-legal-order cert\)\)\)\)) show newline
+(        \(\(data-corruption\)) show newline
+(         ;; Must include corruption proof) show newline
+(         \(and \(evap-corruption-proof cert\)) show newline
+(              \(verify-corruption \(evap-hash cert\) \(evap-corruption-proof cert\)\)\)\)) show newline
+(        \(\(federation-consensus\)) show newline
+(         ;; Must have governance quorum \(Memo-036\)) show newline
+(         \(governance-quorum-met? cert\)\)) show newline
+(        \(else #f\)\)\)  ; No other reasons valid for archival) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DISTRIBUTED GC) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Coordinated Collection) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    ;; Multi-vault GC requires coordination) show newline
+(    \(define \(distributed-gc vaults\)) show newline
+(      "Coordinate GC across vault federation") show newline
+(      ;; Phase 1: Gather root sets) show newline
+(      \(let \(\(root-sets \(map vault-roots vaults\)\)\)) show newline
+(        ;; Phase 2: Compute global reachability) show newline
+(        \(let \(\(global-marked \(union-all root-sets\)\)\)) show newline
+(          ;; Phase 3: Propose evaporation \(no unilateral deletion\)) show newline
+(          \(for-each \(lambda \(vault\)) show newline
+(                      \(vault-propose-evaporation vault global-marked\)\)) show newline
+(                    vaults\)\)\)\)) show newline
+() show newline
+() show newline
+(Remote Reference Tracking) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    ;; Track references from remote vaults) show newline
+(    \(define remote-refs \(make-hash-table\)\)) show newline
+(    \(define \(add-remote-reference vault-id hash\)) show newline
+(      \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) show newline
+(        \(hash-table-set! remote-refs hash \(cons vault-id refs\)\)\)\)) show newline
+(    \(define \(remove-remote-reference vault-id hash\)) show newline
+(      \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) show newline
+(        \(hash-table-set! remote-refs hash \(delete vault-id refs\)\)\)\)) show newline
+(    \(define \(has-remote-references? hash\)) show newline
+(      \(not \(null? \(hash-table-ref remote-refs hash '\(\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Lease-Based Collection) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    ;; Remote vaults lease objects) show newline
+(    \(define leases \(make-hash-table\)\)) show newline
+(    \(define \(grant-lease hash vault-id duration\)) show newline
+(      \(let \(\(expires \(+ \(current-time\) duration\)\)\)) show newline
+(        \(hash-table-set! leases hash) show newline
+(          \(cons \(cons vault-id expires\)) show newline
+(                \(hash-table-ref leases hash '\(\)\)\)\)\)\)) show newline
+(    \(define \(lease-active? hash\)) show newline
+(      \(let \(\(hash-leases \(hash-table-ref leases hash '\(\)\)\)\)) show newline
+(        \(any \(lambda \(lease\)) show newline
+(               \(> \(cdr lease\) \(current-time\)\)\)) show newline
+(             hash-leases\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(GC SCHEDULING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Archival Defaults) show newline
+(-----------------) show newline
+() show newline
+(The soup defaults to never collect. GC only runs when explicitly enabled) show newline
+(and only considers ephemeral/young generations automatically.) show newline
+() show newline
+() show newline
+(    ;; Archival GC mode) show newline
+(    \(define gc-mode 'archival\)  ; 'archival, 'conservative, or 'aggressive) show newline
+(    \(define \(gc-enabled?\)) show newline
+(      "Check if automatic GC is enabled") show newline
+(      \(not \(eq? gc-mode 'archival\)\)\)) show newline
+() show newline
+() show newline
+(Triggers) show newline
+(--------) show newline
+() show newline
+() show newline
+(    ;; GC triggered only under pressure, and only for young generations) show newline
+(    \(define \(should-gc?\)) show newline
+(      \(and \(gc-enabled?\)) show newline
+(           \(or \(> \(storage-usage-percent\) 95\)    ; Emergency only) show newline
+(               \(> \(ephemeral-orphan-count\) 1000\)\)\)\) ; Too many ephemeral orphans) show newline
+(    \(define \(gc-schedule\)) show newline
+(      "Run appropriate GC based on conditions and mode") show newline
+(      \(case gc-mode) show newline
+(        \(\(archival\)) show newline
+(         ;; Never automatic - only explicit evaporation) show newline
+(         \(audit-append action: 'gc-skipped reason: 'archival-mode\)\)) show newline
+(        \(\(conservative\)) show newline
+(         ;; Only ephemeral objects) show newline
+(         \(cond) show newline
+(           \(\(> \(storage-usage-percent\) 99\)) show newline
+(            \(gc-generation 'ephemeral\)) show newline
+(            \(gc-generation 'young\)\)  ; Emergency: young too) show newline
+(           \(\(> \(storage-usage-percent\) 95\)) show newline
+(            \(gc-generation 'ephemeral\)\)) show newline
+(           \(else) show newline
+(            \(audit-append action: 'gc-skipped reason: 'no-pressure\)\)\)\)) show newline
+(        \(\(aggressive\)) show newline
+(         ;; Traditional GC \(NOT RECOMMENDED for archives\)) show newline
+(         \(cond) show newline
+(           \(\(> \(storage-usage-percent\) 95\)) show newline
+(            \(gc-full\)\)) show newline
+(           \(\(> \(storage-usage-percent\) 80\)) show newline
+(            \(gc-generation 'young\)\)) show newline
+(           \(else) show newline
+(            \(gc-incremental\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Background GC) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define gc-thread #f\)) show newline
+(    \(define \(start-gc-daemon interval\)) show newline
+(      "Start background GC daemon \(archival mode: monitoring only\)") show newline
+(      \(set! gc-thread) show newline
+(        \(thread-start!) show newline
+(          \(make-thread) show newline
+(            \(lambda \(\)) show newline
+(              \(let loop \(\)) show newline
+(                \(thread-sleep! interval\)) show newline
+(                ;; Always report status) show newline
+(                \(audit-append) show newline
+(                  action: 'gc-status) show newline
+(                  mode: gc-mode) show newline
+(                  storage-percent: \(storage-usage-percent\)) show newline
+(                  ephemeral-orphans: \(ephemeral-orphan-count\)) show newline
+(                  should-gc: \(should-gc?\)\)) show newline
+(                ;; Only act if enabled) show newline
+(                \(when \(should-gc?\)) show newline
+(                  \(gc-schedule\)\)) show newline
+(                \(loop\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SAFETY MECHANISMS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Dry Run) show newline
+(-------) show newline
+() show newline
+() show newline
+(    \(define \(gc-dry-run\)) show newline
+(      "Report what would be collected without collecting") show newline
+(      \(let* \(\(marked \(mark-reachable\)\)) show newline
+(             \(would-collect \(filter \(lambda \(h\)) show newline
+(                                      \(not \(hash-set-member? marked h\)\)\)) show newline
+(                                    \(all-object-hashes\)\)\)\)) show newline
+(        `\(\(would-collect . ,\(length would-collect\)\)) show newline
+(          \(bytes . ,\(sum \(map object-size would-collect\)\)\)) show newline
+(          \(samples . ,\(take would-collect 10\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Collection Log) show newline
+(--------------) show newline
+() show newline
+() show newline
+(    ;; Every collection is logged with recovery info) show newline
+(    \(define \(collect-with-log! hash\)) show newline
+(      \(let \(\(obj \(cas-get hash\)\)\)) show newline
+(        ;; Log enough to reconstruct if needed) show newline
+(        \(audit-append) show newline
+(          action: 'gc-collect) show newline
+(          hash: hash) show newline
+(          size: \(object-size obj\)) show newline
+(          type: \(soup-object-type obj\)) show newline
+(          references: \(object-references hash\)) show newline
+(          metadata: \(soup-object-metadata obj\)\)) show newline
+(        \(cas-delete! hash\)\)\)) show newline
+() show newline
+() show newline
+(Recovery) show newline
+(--------) show newline
+() show newline
+() show newline
+(    ;; Recover recently collected object from audit log) show newline
+(    \(define \(gc-recover hash\)) show newline
+(      "Attempt to recover collected object") show newline
+(      \(let \(\(entry \(find \(lambda \(e\)) show newline
+(                           \(and \(eq? \(audit-action e\) 'gc-collect\)) show newline
+(                                \(equal? \(audit-hash e\) hash\)\)\)) show newline
+(                         \(recent-audit-entries\)\)\)\)) show newline
+(        \(if entry) show newline
+(            \(error "Object collected, metadata preserved in audit") show newline
+(                   \(audit-metadata entry\)\)) show newline
+(            \(error "Object not found in recent collections"\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(METRICS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(GC Statistics) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(define gc-stats) show newline
+(      \(\(collections . 0\)) show newline
+(        \(bytes-freed . 0\)) show newline
+(        \(objects-freed . 0\)) show newline
+(        \(total-time . 0\)) show newline
+(        \(last-gc . #f\)\)\)) show newline
+(    \(define \(update-gc-stats collected duration\)) show newline
+(      \(set! gc-stats) show newline
+(        \(\(collections . ,\(+ 1 \(assoc-ref gc-stats 'collections\)\)\)) show newline
+(          \(bytes-freed . ,\(+ \(sum \(map object-size collected\)\)) show newline
+(                             \(assoc-ref gc-stats 'bytes-freed\)\)\)) show newline
+(          \(objects-freed . ,\(+ \(length collected\)) show newline
+(                               \(assoc-ref gc-stats 'objects-freed\)\)\)) show newline
+(          \(total-time . ,\(+ duration \(assoc-ref gc-stats 'total-time\)\)\)) show newline
+(          \(last-gc . ,\(current-time\)\)\)\)\)) show newline
+() show newline
+() show newline
+(Monitoring) show newline
+(----------) show newline
+() show newline
+() show newline
+(    ;; Expose GC metrics) show newline
+(    \(define \(gc-metrics\)) show newline
+(      `\(\(storage-used . ,\(storage-used\)\)) show newline
+(        \(storage-total . ,\(storage-total\)\)) show newline
+(        \(object-count . ,\(object-count\)\)) show newline
+(        \(orphan-estimate . ,\(orphan-estimate\)\)) show newline
+(        \(pinned-count . ,\(hash-table-size pins\)\)) show newline
+(        \(gc-stats . ,gc-stats\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(GC as Side Channel) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    ;; GC timing can leak information about object references) show newline
+(    ;; Use constant-time operations where possible) show newline
+(    \(define \(constant-time-mark hash\)) show newline
+(      \(let \(\(refs \(object-references hash\)\)\)) show newline
+(        ;; Always process same number of refs) show newline
+(        \(for-each mark \(pad-list refs max-refs\)\)\)\)) show newline
+() show newline
+() show newline
+(Denial of Service) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    ;; Prevent GC starvation attacks) show newline
+(    \(define max-pins-per-principal 10000\)) show newline
+(    \(define \(pin-with-limit! hash reason\)) show newline
+(      \(let \(\(count \(principal-pin-count \(current-principal\)\)\)\)) show newline
+(        \(when \(> count max-pins-per-principal\)) show newline
+(          \(error "Pin limit exceeded"\)\)) show newline
+(        \(pin! hash reason\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INVARIANTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    G1. Preservation default) show newline
+(        default-mode = archival > no-automatic-collection) show newline
+(    G2. Age increases protection) show newline
+(        age\(obj\) > age\(obj'\) > protection\(obj\) ≥ protection\(obj'\)) show newline
+(    G3. Evaporation requires consent) show newline
+(        evaporate\(hash\) requires signed-certificate\(hash\)) show newline
+(    G4. Quorum scales with age) show newline
+(        generation = archival > quorum = governance-level) show newline
+(    G5. Archival objects are sacred) show newline
+(        age > 30-days > no-automatic-evaporation) show newline
+(    G6. Audit trail preserved) show newline
+(        evaporate\(hash\) > audit-append\(hash, certificate, reason, signers\)) show newline
+(    G7. Mark-and-sweep authoritative) show newline
+(        truly-unreachable\(hash\) ↔ ¬member\(hash, mark-reachable\(\)\)) show newline
+(    G8. Cycles preserved) show newline
+(        cycle\(A, B, C\) ∧ archival-mode > preserve\(A, B, C\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. The Garbage Collection Handbook - Jones, Hosking, Moss 2. On-the-Fly) show newline
+(Garbage Collection - Dijkstra et al. 3. Memo-020: Content-Addressed) show newline
+(Storage 4. Memo-003: Cryptographic Audit Trail 5. Memo-036: Quorum) show newline
+(Protocol with Homomorphic Voting 6. Memo-008: Threshold Signature) show newline
+(Governance) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-09) show newline
+(  * Tricolor marking with worklist \(eliminates stack overflow\), incremental marking, SATB write barriers, concurrent GC support - 2026-01-09) show newline
+(  * Archival GC improvements: evaporation certificates, quorum requirements, reversed generational policy, cycle detection, preservation-first defaults - 2026-01-07) show newline
+(  * Initial draft) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF
