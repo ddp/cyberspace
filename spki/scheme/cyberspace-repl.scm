@@ -5420,7 +5420,7 @@ Cyberspace REPL - Available Commands
          ;; Novice: bare commands
          (begin
            (print "  library           - Enter the Library")
-           (print "  search topic      - Search everything")
+           (print "  search 'topic     - Search everything")
            (print "  status            - Node status")
            (print "  inspect OBJ       - Inspect anything")
            (print "")
