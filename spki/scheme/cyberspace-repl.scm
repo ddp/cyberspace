@@ -6748,8 +6748,18 @@ Cyberspace REPL - Available Commands
          (let* ((trimmed (string-trim-both line))
                 (words (string-split trimmed))
                 (cmd (if (null? words) "" (car words))))
-           ;; Handle describe/inspect specially (they take symbols, not evaluated args)
+           ;; Handle special commands directly
            (cond
+             ;; schemers - switch to schemer mode
+             ((string=? cmd "schemers")
+              (schemer)
+              (loop))
+
+             ;; novice - switch to novice mode
+             ((string=? cmd "novice")
+              (novice)
+              (loop))
+
              ;; describe <thing>
              ((and (>= (length words) 2) (string=? cmd "describe"))
               (set! *command-count* (+ 1 *command-count*))
@@ -6830,22 +6840,8 @@ Cyberspace REPL - Available Commands
                    (realm-signature))))
   (print ""))
 
-;; Inject bindings into the interaction environment
-;; (compiled code's namespace is separate from eval's environment)
-;; Store procedures in global table accessible from both namespaces
-(define *repl-bindings* (make-hash-table))
-(hash-table-set! *repl-bindings* 'inspect cyberspace-inspect)
-(hash-table-set! *repl-bindings* 'i cyberspace-inspect)
-(hash-table-set! *repl-bindings* 'describe cyberspace-describe)
-(hash-table-set! *repl-bindings* 'novice novice)
-(hash-table-set! *repl-bindings* 'schemer schemer)
-
-;; Define wrappers in the interaction environment that dispatch to the table
-(eval '(define (inspect obj) ((hash-table-ref *repl-bindings* 'inspect) obj)))
-(eval '(define (i obj) ((hash-table-ref *repl-bindings* 'i) obj)))
-(eval '(define (describe obj) ((hash-table-ref *repl-bindings* 'describe) obj)))
-(eval '(define (novice) ((hash-table-ref *repl-bindings* 'novice))))
-(eval '(define (schemer) ((hash-table-ref *repl-bindings* 'schemer))))
+;; Note: describe, inspect, schemers, novice are handled directly in command-repl
+;; No eval bindings needed - the command loop intercepts these before eval
 
 ;; Start custom REPL
 (command-repl)
