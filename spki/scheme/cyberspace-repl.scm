@@ -605,42 +605,17 @@
                   ;; Level 7 (ui depends on enroll)
                   ("ui"))))
 
-    (define (rebuild-level-parallel! modules-in-level)
-      "Rebuild all modules in level in parallel, return count rebuilt.
-       Each child writes to a temp file; parent prints sequentially for clean boxes."
-      (let* ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level))
-             ;; Create temp file paths for each module (use timestamp for uniqueness)
-             (ts (number->string (current-seconds)))
-             (temp-files (map (lambda (m)
-                                (string-append "/tmp/forge-" m "-" ts ".out"))
-                              to-build))
-             ;; Fork children, each redirecting stdout to its temp file
-             (pids (map (lambda (module temp-file)
-                          (process-fork
-                           (lambda ()
-                             (with-output-to-file temp-file
-                               (lambda ()
-                                 (rebuild-module! module arch stamp)))
-                             (exit 0))))
-                        to-build temp-files)))
-        ;; Wait for all children to complete
-        (for-each (lambda (pid) (process-wait pid)) pids)
-        ;; Print each child's output sequentially (clean, non-interleaved boxes)
-        (for-each (lambda (temp-file)
-                    (when (file-exists? temp-file)
-                      (with-input-from-file temp-file
-                        (lambda ()
-                          (let loop ()
-                            (let ((line (read-line)))
-                              (unless (eof-object? line)
-                                (print line)
-                                (loop))))))
-                      (delete-file temp-file)))
-                  temp-files)
+    (define (rebuild-level! modules-in-level)
+      "Rebuild modules in level sequentially, return count rebuilt.
+       Sequential build avoids Chicken import library race conditions."
+      (let ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level)))
+        (for-each (lambda (module)
+                    (rebuild-module! module arch stamp))
+                  to-build)
         (length to-build)))
 
     (let ((total-rebuilt (fold (lambda (level count)
-                                 (+ count (rebuild-level-parallel! level)))
+                                 (+ count (rebuild-level! level)))
                                0
                                levels)))
       ;; Show forge summary when modules were rebuilt
