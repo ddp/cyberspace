@@ -40,21 +40,128 @@
         (chicken tcp))
 
 ;;; ============================================================
-;;; Clean - remove compiled artifacts for fresh rebuild
+;;; Command Line Interface
 ;;; ============================================================
-;;; cs clean      - clean and exit
-;;; cs clean gate - clean and rebuild
-;;; cs clean.     - clean and continue (Wirth doit)
+;;; cs                      - start REPL (default)
+;;; cs --sync               - sync vault with remote, then REPL
+;;; cs --clean              - remove artifacts, exit
+;;; cs --rebuild            - force rebuild all
+;;; cs --clean --rebuild    - clean slate rebuild
+;;; cs --boot=<level>       - verbosity (shadow|whisper|portal|chronicle|oracle)
+;;; cs --eval='<expr>'      - evaluate and exit
+;;; cs --version            - version info
+;;; cs --help               - usage
 
-(when (or (member "clean" (command-line-arguments))
-          (member "clean." (command-line-arguments)))
+(define *cli-options* '())  ; parsed options alist
+
+(define (parse-cli-option arg)
+  "Parse a --option or --option=value argument. Returns (option . value) or #f."
+  (cond
+    ((not (string-prefix? "--" arg)) #f)
+    ((string-index arg #\=)
+     => (lambda (idx)
+          (cons (substring arg 2 idx)
+                (substring arg (+ idx 1)))))
+    (else (cons (substring arg 2) #t))))
+
+(define (parse-cli-args args)
+  "Parse command line arguments into options alist."
+  (filter-map parse-cli-option args))
+
+(define (cli-option name)
+  "Get CLI option value, or #f if not present."
+  (let ((opt (assoc name *cli-options*)))
+    (and opt (cdr opt))))
+
+(define (cli-option? name)
+  "Check if CLI option is present."
+  (and (cli-option name) #t))
+
+;; Parse arguments immediately
+(set! *cli-options* (parse-cli-args (command-line-arguments)))
+
+;;; --help
+(when (cli-option? "help")
+  (print "Cyberspace Scheme - Distributed Systems Shell")
+  (print "")
+  (print "Usage: cs [options]")
+  (print "")
+  (print "Options:")
+  (print "  --sync               Sync vault with remote, then start REPL")
+  (print "  --clean              Remove compiled artifacts (.so, .import.scm, .forge/*.meta)")
+  (print "  --rebuild            Force rebuild all modules")
+  (print "  --boot=<level>       Boot verbosity: shadow|whisper|portal|chronicle|oracle")
+  (print "  --eval='<expr>'      Evaluate expression and exit")
+  (print "  --version            Show version information")
+  (print "  --help               Show this help")
+  (print "")
+  (print "Examples:")
+  (print "  cs                   Start REPL (default)")
+  (print "  cs --clean --rebuild Clean slate rebuild")
+  (print "  cs --boot=portal     Start with banner and help")
+  (print "  cs --eval='(+ 1 2)'  Evaluate and exit")
+  (exit 0))
+
+;;; --version
+(when (cli-option? "version")
+  (print "Cyberspace Scheme v0.59")
+  (print "  Built with CHICKEN Scheme")
+  (print "  Ed25519 signatures via libsodium")
+  (exit 0))
+
+;;; --sync (robust git sync - no errors, just works)
+(when (cli-option? "sync")
+  (define (git-sync)
+    "Sync with remote. Returns #t on success, #f on conflict needing human attention."
+    (print "Syncing with remote...")
+    ;; Stash local changes (including untracked .meta files)
+    (system "git stash -q --include-untracked 2>/dev/null")
+    ;; Pull with rebase
+    (let ((pull-result (system "git pull --rebase -q 2>/dev/null")))
+      (cond
+        ((zero? pull-result)
+         ;; Pull succeeded, try to push any local commits
+         (system "git push -q 2>/dev/null")
+         ;; Restore stash, preferring remote for .meta conflicts
+         (system "git stash pop -q 2>/dev/null")
+         (system "git checkout --theirs .forge/*.meta 2>/dev/null")
+         (system "git checkout -- .forge/ 2>/dev/null")
+         (print "  [ok] Synced")
+         #t)
+        (else
+         ;; Rebase failed - check if it's just .meta conflicts
+         (let ((conflict-check (with-input-from-pipe
+                                "git diff --name-only --diff-filter=U 2>/dev/null"
+                                read-lines)))
+           (if (and (pair? conflict-check)
+                    (every (lambda (f) (string-suffix? ".meta" f)) conflict-check))
+               ;; Only .meta conflicts - auto-resolve by preferring remote
+               (begin
+                 (system "git checkout --theirs .forge/*.meta 2>/dev/null")
+                 (system "git add .forge/*.meta 2>/dev/null")
+                 (system "git rebase --continue 2>/dev/null")
+                 (system "git push -q 2>/dev/null")
+                 (system "git stash pop -q 2>/dev/null")
+                 (print "  [ok] Synced (auto-resolved metadata)")
+                 #t)
+               ;; Real conflict - abort and warn
+               (begin
+                 (system "git rebase --abort 2>/dev/null")
+                 (system "git stash pop -q 2>/dev/null")
+                 (print "  [!!] Sync conflict - source files need manual merge")
+                 #f)))))))
+  (unless (git-sync)
+    (exit 1)))
+
+;;; --clean
+(when (cli-option? "clean")
   (print "Cleaning compiled artifacts...")
   (for-each (lambda (f) (print "  rm " f) (delete-file f))
             (glob "*.so" "*.import.scm" ".forge/*.meta"))
-  (unless (or (member "gate" (command-line-arguments))
-              (member "clean." (command-line-arguments)))
-    (print "Done. Rebuild with: cs gate")
+  (unless (cli-option? "rebuild")
+    (print "Done.")
     (exit 0)))
+
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
 (import os)
 
@@ -83,12 +190,12 @@
 ;;; ============================================================
 ;;; 0 shadow    - just prompt (default)
 ;;; 1 whisper   - version + Ready
-;;; 2 portal/gate - banner + help + Ready
+;;; 2 portal    - banner + help + Ready
 ;;; 3 chronicle - add module timings
 ;;; 4 oracle    - full revelation (forge details)
 
 (define *boot-levels*
-  '((shadow . 0) (whisper . 1) (portal . 2) (gate . 2) (chronicle . 3) (oracle . 4)))
+  '((shadow . 0) (whisper . 1) (portal . 2) (chronicle . 3) (oracle . 4)))
 
 (define (parse-boot-level str)
   "Parse boot level from string (name or number)."
@@ -97,20 +204,13 @@
     ((assq (string->symbol (string-downcase str)) *boot-levels*) => cdr)
     (else #f)))
 
-(define (find-boot-arg args)
-  "Find boot level in command line args. Returns level or #f."
-  (cond
-    ((null? args) #f)
-    ((parse-boot-level (car args)) => identity)
-    (else (find-boot-arg (cdr args)))))
-
 (define *boot-verbosity*
-  (let ((arg (find-boot-arg (command-line-arguments)))
+  (let ((cli-boot (cli-option "boot"))
         (env (get-environment-variable "CYBERSPACE_BOOT")))
     (cond
-      (arg arg)                          ; CLI argument wins
-      (env (or (parse-boot-level env) 0)) ; then env var
-      (else 0))))                         ; default: shadow
+      ((and cli-boot (string? cli-boot)) (or (parse-boot-level cli-boot) 0))
+      (env (or (parse-boot-level env) 0))
+      (else 0))))
 
 (define (boot-level! level)
   "Set boot verbosity level (0-4 or symbol)."
@@ -231,17 +331,21 @@
       (file-modification-time path)
       0))
 
+;; --rebuild flag forces all modules to rebuild
+(define *force-rebuild* (cli-option? "rebuild"))
+
 (define (needs-rebuild? module arch)
-  "Check if module needs rebuilding: missing, arch mismatch, or source newer"
-  (let* ((src (string-append module ".scm"))
-         (so  (string-append module ".so"))
-         (import-scm (string-append module ".import.scm"))
-         (stored-arch (read-arch-stamp module)))
-    (or (not (file-exists? so))
-        (not (file-exists? import-scm))
-        (not stored-arch)
-        (not (string=? stored-arch arch))
-        (> (file-mtime src) (file-mtime so)))))
+  "Check if module needs rebuilding: missing, arch mismatch, source newer, or --rebuild flag"
+  (or *force-rebuild*
+      (let* ((src (string-append module ".scm"))
+             (so  (string-append module ".so"))
+             (import-scm (string-append module ".import.scm"))
+             (stored-arch (read-arch-stamp module)))
+        (or (not (file-exists? so))
+            (not (file-exists? import-scm))
+            (not stored-arch)
+            (not (string=? stored-arch arch))
+            (> (file-mtime src) (file-mtime so))))))
 
 ;;; ============================================================
 ;;; SICP Metrics - Structure analysis for forged modules
@@ -6599,6 +6703,19 @@ Cyberspace REPL - Available Commands
                        (format "~as" elapsed-sec))
                    (realm-signature))))
   (print ""))
+
+;; --eval: evaluate expression and exit
+(when (cli-option "eval")
+  (let ((expr (cli-option "eval")))
+    (handle-exceptions exn
+      (begin
+        (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+        (exit 1))
+      (let ((result (eval (with-input-from-string expr read))))
+        (unless (eq? result (void))
+          (write result)
+          (newline))
+        (exit 0)))))
 
 ;; Start custom REPL
 (command-repl)
