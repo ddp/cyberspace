@@ -85,6 +85,9 @@
 
 ;; Convert box character codepoint to SVG path segments
 ;; Returns list of (type x1 y1 x2 y2) where type is 'line or 'text
+;; Overlap for continuous lines (avoids anti-aliasing gaps)
+(define overlap 1)
+
 (define (codepoint->svg cp cx cy)
   "Convert a codepoint at grid position to SVG elements.
    cx, cy are center coordinates of the cell."
@@ -96,47 +99,48 @@
        `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)))
 
       ;; Vertical lines: │ (2502), ║ (2551)
+      ;; Extended by overlap to connect with adjacent cells
       ((or (= cp #x2502) (= cp #x2551))
-       `((line ,cx ,(- cy hh) ,cx ,(+ cy hh))))
+       `((line ,cx ,(- cy hh overlap) ,cx ,(+ cy hh overlap))))
 
       ;; Top-left corners: ┌ (250C), ╭ (256D), ╔ (2554)
       ((or (= cp #x250C) (= cp #x256D) (= cp #x2554))
        `((line ,cx ,cy ,(+ cx hw) ,cy)
-         (line ,cx ,cy ,cx ,(+ cy hh))))
+         (line ,cx ,cy ,cx ,(+ cy hh overlap))))
 
       ;; Top-right corners: ┐ (2510), ╮ (256E), ╗ (2557)
       ((or (= cp #x2510) (= cp #x256E) (= cp #x2557))
        `((line ,(- cx hw) ,cy ,cx ,cy)
-         (line ,cx ,cy ,cx ,(+ cy hh))))
+         (line ,cx ,cy ,cx ,(+ cy hh overlap))))
 
       ;; Bottom-left corners: └ (2514), ╰ (2570), ╚ (255A)
       ((or (= cp #x2514) (= cp #x2570) (= cp #x255A))
        `((line ,cx ,cy ,(+ cx hw) ,cy)
-         (line ,cx ,(- cy hh) ,cx ,cy)))
+         (line ,cx ,(- cy hh overlap) ,cx ,cy)))
 
       ;; Bottom-right corners: ┘ (2518), ╯ (256F), ╝ (255D)
       ((or (= cp #x2518) (= cp #x256F) (= cp #x255D))
        `((line ,(- cx hw) ,cy ,cx ,cy)
-         (line ,cx ,(- cy hh) ,cx ,cy)))
+         (line ,cx ,(- cy hh overlap) ,cx ,cy)))
 
       ;; T-junctions
       ((= cp #x251C)  ; ├
-       `((line ,cx ,(- cy hh) ,cx ,(+ cy hh))
+       `((line ,cx ,(- cy hh overlap) ,cx ,(+ cy hh overlap))
          (line ,cx ,cy ,(+ cx hw) ,cy)))
       ((= cp #x2524)  ; ┤
-       `((line ,cx ,(- cy hh) ,cx ,(+ cy hh))
+       `((line ,cx ,(- cy hh overlap) ,cx ,(+ cy hh overlap))
          (line ,(- cx hw) ,cy ,cx ,cy)))
       ((= cp #x252C)  ; ┬
        `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)
-         (line ,cx ,cy ,cx ,(+ cy hh))))
+         (line ,cx ,cy ,cx ,(+ cy hh overlap))))
       ((= cp #x2534)  ; ┴
        `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)
-         (line ,cx ,(- cy hh) ,cx ,cy)))
+         (line ,cx ,(- cy hh overlap) ,cx ,cy)))
 
       ;; Cross: ┼ (253C)
       ((= cp #x253C)
        `((line ,(- cx hw) ,cy ,(+ cx hw) ,cy)
-         (line ,cx ,(- cy hh) ,cx ,(+ cy hh))))
+         (line ,cx ,(- cy hh overlap) ,cx ,(+ cy hh overlap))))
 
       ;; Arrows - render as SVG text
       ((or (= cp #x2192) (= cp #x25BA) (= cp #x25B6))  ; → ► ▶
@@ -208,7 +212,9 @@
   "Convert text with box-drawing characters to SVG.
    Box characters become geometric primitives (lines/rects).
    Text characters are positioned at exact pixel coordinates."
-  (let* ((lines (string-split text "\n"))
+  (let* ((raw-lines (string-split text "\n"))
+         ;; Normalize line widths so right box edges align properly
+         (lines (normalize-box-lines raw-lines))
          (nrows (length lines))
          (ncols (apply max 1 (map utf8-length lines)))
          (width (* ncols cell-width))
