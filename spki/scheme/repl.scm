@@ -5988,7 +5988,7 @@ Cyberspace REPL - Available Commands
         (for-each
          (lambda (obj)
            (printf "  ~a/~a~%" (car obj) (cadr obj)))
-         (take (if (> (length vault-results) 10) 10 (length vault-results)) vault-results))
+         (take vault-results (min 10 (length vault-results))))
         (when (> (length vault-results) 10)
           (printf "  ... (~a more)~%" (- (length vault-results) 10)))
         (print "")))
@@ -6053,6 +6053,18 @@ Cyberspace REPL - Available Commands
     (print "")
     (void)))
 
+;; Pager support - pipe output through $PAGER (default: less)
+(define (with-pager thunk)
+  "Run thunk with output piped to pager for interactive viewing."
+  (let ((pager (or (get-environment-variable "PAGER") "less")))
+    (let ((port (open-output-pipe pager)))
+      (handle-exceptions exn
+        (begin
+          (close-output-pipe port)
+          (void))
+        (with-output-to-port port thunk)
+        (close-output-pipe port)))))
+
 ;; KWIC - Key Word In Context search for memos
 (define (kwic keyword)
   "Search memo content with keyword-in-context display.
@@ -6070,8 +6082,8 @@ Cyberspace REPL - Available Commands
     (for-each
      (lambda (file)
        (let* ((basename (pathname-strip-directory file))
-              (memo-num (let ((m (string-match "memo-([0-9]+)" basename)))
-                          (if m (cadr m) "???"))))
+              (memo-num (let ((m (irregex-search "memo-([0-9]+)" basename)))
+                          (if m (irregex-match-substring m 1) "???"))))
          (with-input-from-file file
            (lambda ()
              (let loop ((line-num 0))
@@ -6091,21 +6103,20 @@ Cyberspace REPL - Available Commands
                    (loop (+ line-num 1)))))))))
      memo-files)
 
-    (print "")
     (if (null? results)
-        (printf "No matches for '~a' in memos~%" kw)
-        (begin
-          (printf "KWIC: ~a (~a matches)~%~%" kw (length results))
-          (for-each
-           (lambda (r)
-             (printf "  Memo-~a:~a  ~a~%"
-                     (string-pad-left (car r) 3 #\0)
-                     (cadr r)
-                     (caddr r)))
-           (reverse (take (min 20 (length results)) (reverse results))))
-          (when (> (length results) 20)
-            (printf "~%  ... (~a more matches)~%" (- (length results) 20)))))
-    (print "")
+        (printf "~%No matches for '~a' in memos~%~%" kw)
+        ;; Use pager for results
+        (with-pager
+         (lambda ()
+           (printf "KWIC: ~a (~a matches)~%~%" kw (length results))
+           (for-each
+            (lambda (r)
+              (printf "  Memo-~a:~a  ~a~%"
+                      (string-pad-left (first r) 3 #\0)
+                      (second r)
+                      (third r)))
+            (reverse results))
+           (print ""))))
     (void)))
 
 ;; Open Memo in viewer
