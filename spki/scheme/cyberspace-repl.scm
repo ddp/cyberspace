@@ -90,6 +90,7 @@
   (print "  --sync               Sync vault with remote, then start REPL")
   (print "  --clean              Remove compiled artifacts (.so, .import.scm, .forge/*.meta)")
   (print "  --rebuild            Force rebuild all modules")
+  (print "  --quiet              Suppress verbose output (e.g., rm during --clean)")
   (print "  --boot=<level>       Boot verbosity: shadow|whisper|portal|chronicle|oracle")
   (print "  --eval='<expr>'      Evaluate expression and exit")
   (print "  --version            Show version information")
@@ -154,13 +155,18 @@
   (unless (git-sync)
     (exit 1)))
 
+;;; --quiet flag
+(define *quiet* (cli-option? "quiet"))
+
 ;;; --clean
 (when (cli-option? "clean")
-  (print "Cleaning compiled artifacts...")
-  (for-each (lambda (f) (print "  rm " f) (delete-file f))
+  (unless *quiet* (print "Cleaning compiled artifacts..."))
+  (for-each (lambda (f)
+              (unless *quiet* (print "  rm " f))
+              (delete-file f))
             (glob "*.so" "*.import.scm" ".forge/*.meta"))
   (unless (cli-option? "rebuild")
-    (print "Done.")
+    (unless *quiet* (print "Done."))
     (exit 0)))
 
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
@@ -683,61 +689,40 @@
 
 (define (bootstrap-modules!)
   "Ensure all required modules are built for current platform.
-   Parallel builds by dependency level for speed.
+   Sequential builds to avoid Chicken import library race conditions.
    Pristine builds: -w enables all warnings, expect zero output."
   (let ((stamp (platform-stamp))
         (arch (current-arch))
-        ;; Build order: strict topological sort by dependency level
-        ;; Modules within each level can build in parallel
-        (levels '(;; Level 0 (no cyberspace deps - truly parallel)
+        ;; Build order: strict topological sort by dependency
+        ;; Sequential within levels to ensure import libraries are available
+        (levels '(;; Level 0 (no cyberspace deps)
                   ("os" "crypto-ffi" "sexp" "capability" "inspector")
                   ;; Level 1 (single deps from L0)
                   ("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
-                  ;; Level 2 (deps on L0+L1)
-                  ("cert" "enroll")
-                  ;; Level 3 (deps on L2)
-                  ("gossip" "security")
-                  ;; Level 4 (deps on L3)
-                  ("vault" "auto-enroll")
-                  ;; Level 5 (ui depends on auto-enroll)
+                  ;; Level 2 (cert needs sexp)
+                  ("cert")
+                  ;; Level 3 (security needs cert)
+                  ("security")
+                  ;; Level 4 (vault needs cert, audit, os)
+                  ("vault")
+                  ;; Level 5 (enroll, gossip need vault)
+                  ("enroll" "gossip")
+                  ;; Level 6 (auto-enroll needs enroll)
+                  ("auto-enroll")
+                  ;; Level 7 (ui needs enroll)
                   ("ui"))))
 
-    (define (rebuild-level-parallel! modules-in-level)
-      "Rebuild all modules in level in parallel, return count rebuilt.
-       Each child writes to a temp file; parent prints sequentially for clean boxes."
-      (let* ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level))
-             ;; Create temp file paths for each module (use timestamp for uniqueness)
-             (ts (number->string (current-seconds)))
-             (temp-files (map (lambda (m)
-                                (string-append "/tmp/forge-" m "-" ts ".out"))
-                              to-build))
-             ;; Fork children, each redirecting stdout to its temp file
-             (pids (map (lambda (module temp-file)
-                          (process-fork
-                           (lambda ()
-                             (with-output-to-file temp-file
-                               (lambda ()
-                                 (rebuild-module! module arch stamp)))
-                             (exit 0))))
-                        to-build temp-files)))
-        ;; Wait for all children to complete
-        (for-each (lambda (pid) (process-wait pid)) pids)
-        ;; Print each child's output sequentially (clean, non-interleaved boxes)
-        (for-each (lambda (temp-file)
-                    (when (file-exists? temp-file)
-                      (with-input-from-file temp-file
-                        (lambda ()
-                          (let loop ()
-                            (let ((line (read-line)))
-                              (unless (eof-object? line)
-                                (print line)
-                                (loop))))))
-                      (delete-file temp-file)))
-                  temp-files)
+    (define (rebuild-level! modules-in-level)
+      "Rebuild modules in level sequentially, return count rebuilt.
+       Sequential builds avoid Chicken import library race conditions."
+      (let ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level)))
+        (for-each (lambda (module)
+                    (rebuild-module! module arch stamp))
+                  to-build)
         (length to-build)))
 
     (let ((total-rebuilt (fold (lambda (level count)
-                                 (+ count (rebuild-level-parallel! level)))
+                                 (+ count (rebuild-level! level)))
                                0
                                levels)))
       ;; Show forge summary when modules were rebuilt
