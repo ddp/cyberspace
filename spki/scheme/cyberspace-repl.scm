@@ -200,7 +200,7 @@
 ;;; 4 oracle    - full revelation (forge details)
 
 (define *boot-levels*
-  '((shadow . 0) (whisper . 1) (portal . 2) (chronicle . 3) (oracle . 4)))
+  '((shadow . 0) (whisper . 1) (portal . 2) (gate . 2) (chronicle . 3) (oracle . 4)))
 
 (define (parse-boot-level str)
   "Parse boot level from string (name or number)."
