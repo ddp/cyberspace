@@ -158,13 +158,14 @@
 ;;; --verbose flag
 (define *verbose* (cli-option? "verbose"))
 
-;;; --clean
+;;; --clean (implies rebuild if --boot is specified or REPL would start)
 (when (cli-option? "clean")
   (for-each (lambda (f)
               (when *verbose* (print "  rm " f))
               (delete-file f))
             (glob "*.so" "*.import.scm" ".forge/*.meta"))
-  (unless (cli-option? "rebuild")
+  ;; Exit only if --clean alone (no --rebuild, no --boot)
+  (unless (or (cli-option? "rebuild") (cli-option "boot"))
     (exit 0)))
 
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
