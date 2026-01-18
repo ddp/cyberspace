@@ -203,7 +203,14 @@
 
     (subsection
       "8.5 The Test"
-      (p "If a novice can create a vault in 30 seconds, add a photo in 5 seconds, invite family in 1 minute, and understand what they have - we've succeeded.")))
+      (p "If a novice can create a vault in 30 seconds, add a photo in 5 seconds, invite family in 1 minute, and understand what they have - we've succeeded."))
+
+    (subsection
+      "8.6 The Koan"
+      (p "There is no point scaling to 2^128 if you assume everyone is a Schemer.")
+      (p "The cryptographic address space, the capability chains, the Merkle proofs — all of that is implementation. The user doesn't sign certificates, they approve a peer. They don't query the vault, they inspect soup.")
+      (p "If the system requires understanding SPKI to use safely, the system failed. The security properties must emerge from natural actions, not careful ones.")
+      (p "The complexity serves the simplicity, not the other way around.")))
 
   (section
     "9. Cryptographic Selections"
@@ -291,6 +298,7 @@
 
   (section
     "Changelog"
+    (p "- 2026-01-18 — Added The Koan (section 8.6): complexity serves simplicity")
     (p "- 2026-01-17 — Added Cryptographic Selections section (section 9)")
     (p "- 2026-01-17 — Corrected heritage: SDSI/Rivest, SPKI/Ellison, IETF merger (section 1.1)")
     (p "- 2026-01-17 — Added Novice Interface section (section 8)")

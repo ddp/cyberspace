@@ -39,12 +39,6 @@
    terminal-height
    clear
 
-   ;; Box drawing
-   make-box
-   box-header
-   box-footer
-   box-line
-
    ;; Browser opening
    open-in-browser
    render-html
@@ -175,45 +169,8 @@
     (flush-output)
     (void))
 
-  ;;; ============================================================
-  ;;; Box Drawing (ASCII for portability)
-  ;;; ============================================================
-  ;;; Memo-054 style boxes
-
-  (define (make-box title width)
-    "Create a box drawing closure"
-    (let* ((title-padded (if (string-null? title) "" (string-append " " title " ")))
-           (title-len (string-length title-padded))
-           (content-width (- width 2))  ; account for | borders
-           (left-pad (quotient (- width title-len 2) 2))
-           (right-pad (- width title-len 2 left-pad)))
-      (lambda (cmd . args)
-        (case cmd
-          ((header)
-           (string-append "+" (make-string left-pad #\-)
-                          title-padded
-                          (make-string right-pad #\-) "+\n"))
-          ((footer)
-           (string-append "+" (make-string (- width 2) #\-) "+\n"))
-          ((line)
-           (let* ((content (if (null? args) "" (car args)))
-                  (pad (- content-width (string-length content))))
-             (string-append "| " content
-                            (make-string (max 0 pad) #\space) "|\n")))
-          ((blank)
-           (string-append "|" (make-string (- width 2) #\space) "|\n"))))))
-
-  (define (box-header title width)
-    "Draw box header"
-    ((make-box title width) 'header))
-
-  (define (box-footer width)
-    "Draw box footer"
-    ((make-box "" width) 'footer))
-
-  (define (box-line content width)
-    "Draw box content line"
-    ((make-box "" width) 'line content))
+  ;; Box drawing removed - use os#make-box for terminal (Unicode),
+  ;; memo-format for HTML (SVG geometry)
 
   ;;; ============================================================
   ;;; Sparklines

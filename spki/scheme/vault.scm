@@ -911,7 +911,7 @@
   (define (box-line-pair label value width)
     (let* ((formatted (sprintf "~a:~a~a"
                                label
-                               (make-string (max 1 (- 20 (string-length label))) #\space)
+                               (make-string (max 1 (- 20 (string-display-width label))) #\space)
                                value)))
       (vault-box-line formatted width)))
 
@@ -1922,18 +1922,26 @@ Object Types:
   (define (soup-stat name)
     "Detailed status of a soup object (like stat(1))"
     (let* ((all-objects (soup-collect-objects))
-           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
+           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects))
+           (w 58))  ; box width
+      ;; Local helpers using vault-box-line for proper Unicode handling
+      (define (line content) (print (vault-box-line content w)))
+      (define (field label value)
+        (line (sprintf "~a~a~a"
+                       label
+                       (make-string (max 1 (- 12 (string-display-width label))) #\space)
+                       value)))
       (if (not obj)
           (print "Object not found: " name)
           (let ((type (car obj))
                 (size (caddr obj))
                 (info (cadddr obj)))
             (print "")
-            (print "╭────────────────────────────────────────────────────────╮")
-            (printf "│ ~a~a│~%" name (make-string (- 55 (string-length name)) #\space))
-            (print "├────────────────────────────────────────────────────────┤")
-            (printf "│ Type:       ~a~a│~%" type (make-string (- 43 (string-length (symbol->string type))) #\space))
-            (printf "│ Size:       ~a~a│~%" (format-size size) (make-string (- 43 (string-length (format-size size))) #\space))
+            (print (vault-box-top w))
+            (line name)
+            (print (vault-box-divider w))
+            (field "Type:" (symbol->string type))
+            (field "Size:" (format-size size))
 
             ;; Type-specific details
             (case type
@@ -1943,58 +1951,53 @@ Object Types:
                       (has-sig (file-exists? sig-file))
                       (archive-file (find-archive-for-release name))
                       (has-archive (and archive-file (file-exists? archive-file))))
-                 (printf "│ Git Tag:    ~a~a│~%" (if tag-commit "yes" "no") (make-string 40 #\space))
+                 (field "Git Tag:" (if tag-commit "yes" "no"))
                  (when tag-commit
-                   (printf "│ Commit:     ~a..~a│~%" (substring tag-commit 0 12) (make-string 31 #\space)))
-                 (printf "│ Signed:     ~a~a│~%" (if has-sig "yes" "no") (make-string 40 #\space))
+                   (field "Commit:" (string-append (substring tag-commit 0 12) "..")))
+                 (field "Signed:" (if has-sig "yes" "no"))
                  (when has-sig
-                   (printf "│ Sig File:   ~a~a│~%" sig-file (make-string (- 43 (string-length sig-file)) #\space)))
-                 (printf "│ Archived:   ~a~a│~%" (if has-archive "yes" "no") (make-string 40 #\space))
+                   (field "Sig File:" sig-file))
+                 (field "Archived:" (if has-archive "yes" "no"))
                  (when has-archive
                    (let ((arch-stat (file-stat archive-file)))
-                     (printf "│ Archive:    ~a (~a)~a│~%"
-                             archive-file
-                             (format-size (vector-ref arch-stat 5))
-                             (make-string (- 30 (string-length archive-file)) #\space))))))
+                     (field "Archive:" (sprintf "~a (~a)" archive-file
+                                                (format-size (vector-ref arch-stat 5))))))))
 
               ((archives)
                (let* ((path name)
                       (hash (soup-hash-file path)))
-                 (printf "│ Path:       ~a~a│~%" path (make-string (- 43 (string-length path)) #\space))
-                 (printf "│ SHA-512:    ~a..~a│~%" (substring hash 0 24) (make-string 15 #\space))
+                 (field "Path:" path)
+                 (field "SHA-512:" (string-append (substring hash 0 24) ".."))
                  (let ((manifest (get-archive-manifest path)))
                    (when manifest
                      (let ((fmt (assq 'format manifest))
                            (ts (assq 'timestamp manifest)))
                        (when fmt
-                         (printf "│ Format:     ~a~a│~%" (cadr fmt) (make-string (- 43 (string-length (symbol->string (cadr fmt)))) #\space)))
+                         (field "Format:" (symbol->string (cadr fmt))))
                        (when ts
-                         (printf "│ Created:    ~a~a│~%" (format-timestamp (cadr ts)) (make-string 33 #\space))))))))
+                         (field "Created:" (format-timestamp (cadr ts)))))))))
 
               ((keys)
                (let* ((hash (soup-hash-file name))
                       (fp (substring hash 0 16)))
-                 (printf "│ Fingerprint: sha512:~a..~a│~%" fp (make-string 19 #\space))
-                 (printf "│ Algorithm:  ~a~a│~%"
-                         (cond ((string-suffix? ".pub" name) "Ed25519 public")
-                               ((string-suffix? ".key" name) "Ed25519 private")
-                               ((string-suffix? ".age" name) "X25519 age")
-                               (else "unknown"))
-                         (make-string 29 #\space))))
+                 (field "Fingerprint:" (string-append "sha512:" fp ".."))
+                 (field "Algorithm:" (cond ((string-suffix? ".pub" name) "Ed25519 public")
+                                           ((string-suffix? ".key" name) "Ed25519 private")
+                                           ((string-suffix? ".age" name) "X25519 age")
+                                           (else "unknown")))))
 
               ((audit)
                (let ((entry (get-audit-entry name)))
                  (when entry
                    (let ((id (assq 'id entry))
-                         (actor (assq 'actor entry))
                          (action (assq 'action entry))
                          (ts (assq 'timestamp entry)))
                      (when id
-                       (printf "│ ID:         ~a~a│~%" (cadr id) (make-string (- 43 (string-length (cadr id))) #\space)))
+                       (field "ID:" (cadr id)))
                      (when action
-                       (printf "│ Action:     ~a~a│~%" (cadr action) (make-string (- 43 (string-length (sprintf "~a" (cadr action)))) #\space)))
+                       (field "Action:" (sprintf "~a" (cadr action))))
                      (when ts
-                       (printf "│ Timestamp:  ~a~a│~%" (format-timestamp (cadr ts)) (make-string 33 #\space)))))))
+                       (field "Timestamp:" (format-timestamp (cadr ts))))))))
 
               ((identity)
                (let* ((node-data (get-node-identity))
@@ -2002,17 +2005,17 @@ Object Types:
                       (role (and node-data (assq 'role node-data)))
                       (hw (and node-data (assq 'hardware node-data))))
                  (when name-f
-                   (printf "│ Node:       ~a~a│~%" (cadr name-f) (make-string (- 43 (string-length (cadr name-f))) #\space)))
+                   (field "Node:" (cadr name-f)))
                  (when role
-                   (printf "│ Role:       ~a~a│~%" (cadr role) (make-string (- 43 (string-length (symbol->string (cadr role)))) #\space)))
+                   (field "Role:" (symbol->string (cadr role))))
                  (when hw
                    (let ((hw-list (if (pair? (cdr hw)) (cadr hw) '())))
                      (when (and (list? hw-list) (assq 'cpu hw-list))
-                       (printf "│ CPU:        ~a~a│~%" (cadr (assq 'cpu hw-list)) (make-string (- 43 (string-length (cadr (assq 'cpu hw-list)))) #\space)))
+                       (field "CPU:" (cadr (assq 'cpu hw-list))))
                      (when (and (list? hw-list) (assq 'memory-gb hw-list))
-                       (printf "│ Memory:     ~aGB~a│~%" (cadr (assq 'memory-gb hw-list)) (make-string 38 #\space)))))))) ;; close identity case
+                       (field "Memory:" (sprintf "~aGB" (cadr (assq 'memory-gb hw-list))))))))))
 
-            (print "╰────────────────────────────────────────────────────────╯")
+            (print (vault-box-bottom w))
             (print "")))))
 
   (define (soup-hash-file path)
@@ -2146,7 +2149,15 @@ Object Types:
     "Disk usage summary (like du(1))"
     (let ((all-objects (soup-collect-objects))
           (by-type (make-hash-table))
-          (total 0))
+          (total 0)
+          (w 42))  ; box width
+      (define (line content) (print (vault-box-line content w)))
+      (define (row size label)
+        (let ((size-str (format-size size)))
+          (line (sprintf "~a~a~a"
+                         size-str
+                         (make-string (max 1 (- 10 (string-display-width size-str))) #\space)
+                         label))))
 
       ;; Sum by type
       (for-each
@@ -2159,25 +2170,20 @@ Object Types:
        all-objects)
 
       (print "")
-      (print "╭────────────────────────────────────────╮")
-      (print "│ Soup Disk Usage                        │")
-      (print "├────────────────────────────────────────┤")
+      (print (vault-box-top w))
+      (line "Soup Disk Usage")
+      (print (vault-box-divider w))
 
       (for-each
        (lambda (type)
          (let ((size (hash-table-ref/default by-type type 0)))
            (when (> size 0)
-             (printf "│ ~a~a~a │~%"
-                     (format-size size)
-                     (make-string (- 10 (string-length (format-size size))) #\space)
-                     (sprintf "~a" type)))))
+             (row size (symbol->string type)))))
        '(archives releases keys audit metadata identity))
 
-      (print "├────────────────────────────────────────┤")
-      (printf "│ ~a~aTOTAL                    │~%"
-              (format-size total)
-              (make-string (- 10 (string-length (format-size total))) #\space))
-      (print "╰────────────────────────────────────────╯")
+      (print (vault-box-divider w))
+      (row total "TOTAL")
+      (print (vault-box-bottom w))
       (print "")))
 
   (define (soup-find . criteria)
@@ -2393,19 +2399,16 @@ Object Types:
                          (else name))))
 
             ;; Show entry banner
-            (print "")
-            (print "╭───────────────────────────────────────────────────────────╮")
-            (printf "│ Inspector: ~a~a│~%"
-                    name (make-string (max 0 (- 47 (string-length name))) #\space))
-            (printf "│ Type: ~a   Size: ~a~a│~%"
-                    type
-                    (format-size size)
-                    (make-string (max 0 (- 37 (string-length (symbol->string type))
-                                         (string-length (format-size size)))) #\space))
-            (print "├───────────────────────────────────────────────────────────┤")
-            (print "│ Commands: 'help 'stat 'view 'hash 'verify 'export 'history│")
-            (print "╰───────────────────────────────────────────────────────────╯")
-            (print "")
+            (let ((w 61))
+              (define (line content) (print (vault-box-line content w)))
+              (print "")
+              (print (vault-box-top w))
+              (line (sprintf "Inspector: ~a" name))
+              (line (sprintf "Type: ~a   Size: ~a" type (format-size size)))
+              (print (vault-box-divider w))
+              (line "Commands: 'help 'stat 'view 'hash 'verify 'export 'history")
+              (print (vault-box-bottom w))
+              (print ""))
 
             ;; Return inspector closure
             (lambda (cmd . args)

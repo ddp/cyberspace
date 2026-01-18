@@ -39,6 +39,23 @@
         srfi-69   ; hash tables
         (chicken tcp))
 
+;;; ============================================================
+;;; Clean - remove compiled artifacts for fresh rebuild
+;;; ============================================================
+;;; cs clean      - clean and exit
+;;; cs clean gate - clean and rebuild
+;;; cs clean.     - clean and continue (Wirth doit)
+
+(when (or (member "clean" (command-line-arguments))
+          (member "clean." (command-line-arguments)))
+  (print "Cleaning compiled artifacts...")
+  (for-each (lambda (f) (print "  rm " f) (delete-file f))
+            (glob "*.so" "*.import.scm"))
+  (unless (or (member "gate" (command-line-arguments))
+              (member "clean." (command-line-arguments)))
+    (print "Done. Rebuild with: cs gate")
+    (exit 0)))
+
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
 (import os)
 
@@ -5078,7 +5095,8 @@ Cyberspace REPL - Available Commands
     (du        . soup-du)
     (releases  . soup-releases)
     (find      . soup-find)
-    (inspect   . soup-inspect)
+    (inspect   . inspect)   ; uses cyberspace-inspect via eval binding
+    (describe  . describe)  ; uses cyberspace-describe via eval binding
     (peers     . nodes)
     (listen    . node-listen)
     (connect   . node-connect)
@@ -5143,29 +5161,215 @@ Cyberspace REPL - Available Commands
   (set! *inspector-enabled* #f)
   (print "Inspector disabled. Errors show stack trace."))
 
+;;; ============================================================
+;;; Dylan-Style Inspectors (Novice Mode)
+;;; ============================================================
+;;;
+;;; Interactive object browsers inspired by Dylan, Symbolics, CCL.
+;;; Each inspector shows a numbered list you can drill into.
+;;;
+;;; Heritage: Dylan Object Inspector, LispWorks Inspector,
+;;;           Symbolics Genera Inspector, CCL Inspector
+
+(define (make-dylan-inspector name items-thunk #!key
+                               (item-name (lambda (item) (sprintf "~a" item)))
+                               (item-desc (lambda (item) ""))
+                               (drill (lambda (item) (inspector#inspect item))))
+  "Create a Dylan-style inspector for a collection.
+   Returns a closure accepting subcommands:
+     <n>        - drill into item n
+     'help      - show commands
+     'list      - show items again
+     'search P  - find items matching pattern"
+  (let ((items (items-thunk)))
+    ;; Display banner
+    (print "")
+    (print (os#box-top (os#make-box 50)))
+    (print (os#box-line (os#make-box 50) (sprintf "inspect ~a" name)))
+    (print (os#box-line (os#make-box 50)
+                        (sprintf "~a items" (if (list? items) (length items) "?"))))
+    (print (os#box-bottom (os#make-box 50)))
+
+    ;; Show numbered items (first 20)
+    (when (and (list? items) (not (null? items)))
+      (print "")
+      (let ((limit (min 20 (length items))))
+        (do ((i 0 (+ i 1))
+             (rest items (cdr rest)))
+            ((or (>= i limit) (null? rest)))
+          (let* ((item (car rest))
+                 (nm (item-name item))
+                 (desc (item-desc item)))
+            (printf "  [~a] ~a~a~%"
+                    i nm
+                    (if (string=? desc "") "" (sprintf "  ~a" desc)))))
+        (when (> (length items) limit)
+          (printf "  ... (~a more)~%" (- (length items) limit)))))
+
+    (print "")
+    (print "  <n> drill   ? help   . done")
+    (print "")
+
+    ;; Return inspector closure
+    (lambda cmd-args
+      (let ((cmd (if (null? cmd-args) 'list (car cmd-args)))
+            (args (if (null? cmd-args) '() (cdr cmd-args))))
+        (cond
+          ;; Numeric - drill into item
+          ((and (integer? cmd) (>= cmd 0) (< cmd (length items)))
+           (let ((item (list-ref items cmd)))
+             (drill item)))
+
+          ;; Help
+          ((memq cmd '(help ? h))
+           (print "")
+           (print "Inspector commands:")
+           (print "  <n>           - drill into item n")
+           (print "  'list         - show items again")
+           (print "  'search \"pat\" - find matching items")
+           (print "  'count        - count items")
+           (print "  'first        - drill into first item")
+           (print "  'last         - drill into last item")
+           (print "  . or 'done    - exit inspector")
+           (print ""))
+
+          ;; List items again
+          ((eq? cmd 'list)
+           (make-dylan-inspector name items-thunk
+                                 item-name: item-name
+                                 item-desc: item-desc
+                                 drill: drill))
+
+          ;; Search
+          ((eq? cmd 'search)
+           (let* ((pattern (if (null? args) "*" (car args)))
+                  (matching (filter (lambda (item)
+                                      (string-contains (item-name item)
+                                                       (if (string? pattern)
+                                                           pattern
+                                                           (sprintf "~a" pattern))))
+                                    items)))
+             (if (null? matching)
+                 (print "No matches.")
+                 (make-dylan-inspector (sprintf "~a (filtered)" name)
+                                       (lambda () matching)
+                                       item-name: item-name
+                                       item-desc: item-desc
+                                       drill: drill))))
+
+          ;; Count
+          ((eq? cmd 'count)
+           (printf "~a items~%" (length items)))
+
+          ;; First/last shortcuts
+          ((eq? cmd 'first)
+           (if (null? items)
+               (print "No items.")
+               (drill (car items))))
+          ((eq? cmd 'last)
+           (if (null? items)
+               (print "No items.")
+               (drill (last items))))
+
+          ;; Done
+          ((memq cmd '(done exit quit . q))
+           (print "Done.")
+           (void))
+
+          (else
+           (printf "Unknown command: ~a~%" cmd)))))))
+
+;; Dylan-style inspectors for soup objects
+(define (dylan-soup-inspector)
+  "Dylan-style inspector for soup"
+  (make-dylan-inspector
+   "soup"
+   (lambda () (soup-collect-objects))
+   item-name: (lambda (obj) (cadr obj))  ; name
+   item-desc: (lambda (obj) (sprintf "~a" (car obj)))  ; type
+   drill: (lambda (obj) (soup-inspect (cadr obj)))))
+
+(define (dylan-keys-inspector)
+  "Dylan-style inspector for keys"
+  (make-dylan-inspector
+   "keys"
+   (lambda () (filter (lambda (o) (eq? (car o) 'keys)) (soup-collect-objects)))
+   item-name: (lambda (obj) (cadr obj))
+   item-desc: (lambda (obj)
+                (cond ((string-suffix? ".pub" (cadr obj)) "public")
+                      ((string-suffix? ".key" (cadr obj)) "private")
+                      ((string-suffix? ".age" (cadr obj)) "age")
+                      (else "")))
+   drill: (lambda (obj) (soup-inspect (cadr obj)))))
+
+(define (dylan-releases-inspector)
+  "Dylan-style inspector for releases"
+  (make-dylan-inspector
+   "releases"
+   (lambda () (filter (lambda (o) (eq? (car o) 'releases)) (soup-collect-objects)))
+   item-name: (lambda (obj) (cadr obj))
+   item-desc: (lambda (obj) (format-size (caddr obj)))
+   drill: (lambda (obj) (soup-inspect (cadr obj)))))
+
+(define (dylan-audit-inspector)
+  "Dylan-style inspector for audit entries"
+  (make-dylan-inspector
+   "audit"
+   (lambda () (filter (lambda (o) (eq? (car o) 'audit)) (soup-collect-objects)))
+   item-name: (lambda (obj) (cadr obj))
+   item-desc: (lambda (obj) "")
+   drill: (lambda (obj) (soup-inspect (cadr obj)))))
+
 ;; Domain-aware inspect - handles high-level Cyberspace objects
-;; before falling back to generic inspector
+;; In novice mode, uses Dylan-style inspectors; in schemer mode, raw output
 (define (cyberspace-inspect obj)
-  "Inspect any object with domain awareness"
+  "Inspect any object - soup objects get special treatment"
   (cond
-    ;; Symbols that name domain concepts - call function and show result
-    ((eq? obj 'soup) (soup))
+    ;; Symbols that name soup concepts
+    ;; Novice mode: Dylan-style inspectors
+    ;; Schemer mode: direct function calls
+    ((eq? obj 'soup)
+     (if (eq? *user-mode* 'novice)
+         (dylan-soup-inspector)
+         (soup)))
     ((eq? obj 'vault) (status))
-    ((eq? obj 'keys) (soup 'keys))
-    ((eq? obj 'releases) (soup 'releases))
-    ((eq? obj 'audits) (soup 'audit))
+    ((eq? obj 'keys)
+     (if (eq? *user-mode* 'novice)
+         (dylan-keys-inspector)
+         (soup 'keys)))
+    ((eq? obj 'releases)
+     (if (eq? *user-mode* 'novice)
+         (dylan-releases-inspector)
+         (soup 'releases)))
+    ((eq? obj 'audits)
+     (if (eq? *user-mode* 'novice)
+         (dylan-audit-inspector)
+         (soup 'audit)))
     ((eq? obj 'certs) (soup 'certs))
     ((eq? obj 'forge) (soup 'forge))
     ((eq? obj 'realm) (realm-info))
 
-    ;; Procedure that matches known domain functions - call and inspect result
-    ((and (procedure? obj)
-          (or (eq? obj soup)
-              (eq? obj keys)
-              (eq? obj releases)))
-     (let ((result (obj)))
-       (inspector#describe result)
-       result))
+    ;; Procedure that matches known soup functions
+    ;; In novice mode: Dylan-style inspector
+    ;; In schemer mode: call and describe result
+    ((eq? obj soup)
+     (if (eq? *user-mode* 'novice)
+         (dylan-soup-inspector)
+         (let ((result (soup)))
+           (inspector#describe result)
+           result)))
+    ((eq? obj keys)
+     (if (eq? *user-mode* 'novice)
+         (dylan-keys-inspector)
+         (let ((result (keys)))
+           (inspector#describe result)
+           result)))
+    ((eq? obj releases)
+     (if (eq? *user-mode* 'novice)
+         (dylan-releases-inspector)
+         (let ((result (releases)))
+           (inspector#describe result)
+           result)))
 
     ;; String that looks like a version or object name - use soup-inspect
     ((and (string? obj)
@@ -5177,6 +5381,63 @@ Cyberspace REPL - Available Commands
     ;; Everything else - generic inspector
     (else
      (inspector#inspect obj))))
+
+;; Describe explains what things ARE - for novices in the wilderness
+(define *descriptions*
+  '((soup
+     "The soup is everything in your vault: releases, archives, keys, audit entries."
+     "It's called soup because objects float in it - no hierarchy, just content."
+     "Try: inspect soup")
+    (vault
+     "The vault is your local Cyberspace node."
+     "It holds your keys, your content, your audit trail."
+     "Everything is signed and yours.")
+    (keys
+     "Your identity in Cyberspace."
+     "The public key (.pub) you share. The private key (.key) you keep secret."
+     "With your key, you can prove you're you.")
+    (releases
+     "Signed versions of your work."
+     "Each release is a commitment: 'this is version 2.0.0, I vouch for it.'"
+     "Others can verify it came from you.")
+    (audits
+     "The audit trail records what happened."
+     "Every commit, every signature, every key operation."
+     "Append-only: history cannot be rewritten.")
+    (certs
+     "Certificates grant permissions."
+     "They say who can do what, signed by who granted it."
+     "Trust flows through delegation chains.")
+    (forge
+     "Generates pronounceable passwords."
+     "40+ languages, from English to Sindarin."
+     "Try: forge 5")
+    (realm
+     "Your realm is your federation of nodes."
+     "Nodes discover each other, sync vaults, share authority."
+     "One realm, many devices, same identity.")
+    (scheme
+     "Everything here is Scheme underneath."
+     "The : prompt accepts commands. Parentheses unlock the language."
+     "Try: (+ 1 2) or (soup 'keys)")))
+
+(define (cyberspace-describe obj)
+  "Describe what something IS, conceptually"
+  (let* ((key (cond
+                ((symbol? obj) obj)
+                ((eq? obj soup) 'soup)
+                ((eq? obj keys) 'keys)
+                ((eq? obj releases) 'releases)
+                (else #f)))
+         (entry (and key (assq key *descriptions*))))
+    (if entry
+        (begin
+          (print "")
+          (for-each (lambda (line) (print "  " line)) (cdr entry))
+          (print "")
+          (void))
+        ;; Fall back to inspector#describe for non-domain objects
+        (inspector#describe obj))))
 
 ;;; ============================================================
 ;;; Help System
@@ -6547,11 +6808,20 @@ Cyberspace REPL - Available Commands
 
 ;; Inject bindings into the interaction environment
 ;; (compiled code's namespace is separate from eval's environment)
-(eval `(define inspect ,cyberspace-inspect))
-(eval `(define i ,cyberspace-inspect))  ; short alias
-(eval `(define describe ,inspector#describe))
-(eval `(define novice ,novice))
-(eval `(define schemer ,schemer))
+;; Store procedures in global table accessible from both namespaces
+(define *repl-bindings* (make-hash-table))
+(hash-table-set! *repl-bindings* 'inspect cyberspace-inspect)
+(hash-table-set! *repl-bindings* 'i cyberspace-inspect)
+(hash-table-set! *repl-bindings* 'describe cyberspace-describe)
+(hash-table-set! *repl-bindings* 'novice novice)
+(hash-table-set! *repl-bindings* 'schemer schemer)
+
+;; Define wrappers in the interaction environment that dispatch to the table
+(eval '(define (inspect obj) ((hash-table-ref *repl-bindings* 'inspect) obj)))
+(eval '(define (i obj) ((hash-table-ref *repl-bindings* 'i) obj)))
+(eval '(define (describe obj) ((hash-table-ref *repl-bindings* 'describe) obj)))
+(eval '(define (novice) ((hash-table-ref *repl-bindings* 'novice))))
+(eval '(define (schemer) ((hash-table-ref *repl-bindings* 'schemer))))
 
 ;; Start custom REPL
 (command-repl)
