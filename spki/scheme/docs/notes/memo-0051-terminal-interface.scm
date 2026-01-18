@@ -45,9 +45,16 @@
       (p "By the time they find it, they're ready. Self-selecting."))
 
     (subsection
-      "2.5 Schemer Mode"
-      (p "Schemers enable full access with (enable-inspector!) and see debug> prompts, exception traces, and the REPL as a Scheme environment rather than a command shell.")
-      (p "The (schemer!) function is shorthand that enables the inspector, changes error display, and unlocks all procedures. Not advertised. Found by those who look.")))
+      "2.5 Mode Switching"
+      (p "The system auto-detects mode from usage. Type parentheses, become a schemer:")
+      (code ": (+ 1 2 3)\nDetected Scheme usage - switching to schemer mode.\nType (novice) to switch back.\n6")
+      (p "Explicit switching:")
+      (table
+        (header "Command " "Effect ")
+        (row "schemers " "Switch to schemer mode ")
+        (row "novice " "Switch to novice mode ")
+        (row "(novice) " "Also works with parens "))
+      (p "Schemer mode shows the λ prompt, enables (enable-inspector!) for debug> prompts, and treats the REPL as a full Scheme environment. Self-selecting: use parentheses and you become a schemer.")))
 
   (section
     "3. Box Drawing"
