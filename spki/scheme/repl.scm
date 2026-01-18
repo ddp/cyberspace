@@ -730,7 +730,7 @@
         ;; Build order: strict topological sort by dependency
         ;; Sequential within levels to ensure import libraries are available
         (levels '(;; Level 0 (no cyberspace deps)
-                  ("os" "crypto-ffi" "sexp" "capability" "inspector")
+                  ("os" "crypto-ffi" "sexp" "capability" "inspector" "board" "display")
                   ;; Level 1 (single deps from L0)
                   ("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
                   ;; Level 2 (cert needs sexp)
