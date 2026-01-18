@@ -587,19 +587,22 @@
         (arch (current-arch))
         ;; Build order: strict topological sort by dependency level
         ;; Modules within each level can build in parallel
+        ;; NOTE: Sequential levels for dependent modules to avoid import race conditions
         (levels '(;; Level 0 (no cyberspace deps - truly parallel)
                   ("os" "crypto-ffi" "sexp" "capability" "inspector")
                   ;; Level 1 (single deps from L0)
                   ("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
                   ;; Level 2 (cert deps: crypto-ffi, sexp)
                   ("cert")
-                  ;; Level 3 (security imports cert; vault imports cert, audit, os)
-                  ("security" "vault")
-                  ;; Level 4 (enroll, gossip both import from vault)
+                  ;; Level 3 (security imports cert) - alone to ensure cert.import.scm ready
+                  ("security")
+                  ;; Level 4 (vault imports cert, audit, os)
+                  ("vault")
+                  ;; Level 5 (enroll, gossip both import from vault)
                   ("enroll" "gossip")
-                  ;; Level 5 (auto-enroll depends on enroll)
+                  ;; Level 6 (auto-enroll depends on enroll)
                   ("auto-enroll")
-                  ;; Level 6 (ui depends on enroll)
+                  ;; Level 7 (ui depends on enroll)
                   ("ui"))))
 
     (define (rebuild-level-parallel! modules-in-level)
