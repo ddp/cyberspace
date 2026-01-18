@@ -6334,6 +6334,12 @@ Cyberspace REPL - Available Commands
 ;; History file for persistence
 (define *history-file* (string-append (or (get-environment-variable "HOME") ".") "/.cyberspace_history"))
 
+;; Strip ANSI escape sequences from input (for terminals without rlwrap)
+;; Handles arrow keys, function keys, etc. that send ESC [ ... sequences
+(define (strip-ansi str)
+  "Remove ANSI escape sequences from string"
+  (irregex-replace/all "\x1b\\[[0-9;]*[A-Za-z]" str ""))
+
 ;; Read line with prompt
 (define (repl-read-line prompt)
   "Read line with polling - yields to background threads"
@@ -6342,7 +6348,10 @@ Cyberspace REPL - Available Commands
   ;; Poll for input, yielding to background threads periodically
   (let loop ()
     (if (char-ready?)
-        (read-line)
+        (let ((line (read-line)))
+          (if (string? line)
+              (strip-ansi line)
+              line))
         (begin
           (thread-sleep! 0.1)  ; yield to listener thread
           (loop)))))
