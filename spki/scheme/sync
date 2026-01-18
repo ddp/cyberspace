@@ -1,0 +1,27 @@
+#!/bin/bash
+# sync - Pull latest cyberspace and rebuild REPL
+#
+# Usage: ./sync [--no-build]
+#
+# Pulls from origin, rebuilds the REPL by default.
+# Use --no-build to just pull without rebuilding.
+
+set -e
+
+SCHEME_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCHEME_DIR/../.." && pwd)"
+
+cd "$REPO_DIR"
+
+echo "=== Pulling from origin ==="
+git pull
+
+if [[ "$1" != "--no-build" ]]; then
+    cd "$SCHEME_DIR"
+    echo ""
+    echo "=== Rebuilding REPL ==="
+    ./build.scm repl
+fi
+
+echo ""
+echo "Done."
