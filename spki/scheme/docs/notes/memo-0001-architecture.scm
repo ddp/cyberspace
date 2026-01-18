@@ -65,6 +65,7 @@
       (p "The soup is the workspace. Commit it or lose it. Modules compile on demand. Objects simmer in memory until you seal them to the vault—or they evaporate when you quit.")))
   (section
     "3. Core Components"
+    (blockquote "The unavoidable price of reliability is simplicity. — C.A.R. Hoare")
     (subsection
       "3.1 The Vault"
       (p "The vault is the disk.")
@@ -112,6 +113,7 @@
       (code "📖 > papers by Lamport\n📚 Found 15 documents\n📖 > about SPKI\n📖 > from 1979")))
   (section
     "4. Architecture"
+    (blockquote "Complexity is the enemy of security. — Bruce Schneier")
     (subsection
       "4.1 Layer Diagram"
       (code "┌──────────────────────────────────────────────────────────────────┐\n│                        CYBERSPACE                                │\n├──────────────────────────────────────────────────────────────────┤\n│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │\n│  │   Vault    │  │   Audit    │  │   SPKI     │  │  Library   │ │\n│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘ │\n│        └───────────────┴───────┬───────┴───────────────┘        │\n│                    ┌───────────▼───────────┐                    │\n│                    │    Chicken Scheme     │                    │\n│                    │    (Policy Layer)     │                    │\n│                    └───────────┬───────────┘                    │\n│                    ┌───────────▼───────────┐                    │\n│                    │    OCaml TCB          │                    │\n│                    │    (Crypto Only)      │                    │\n│                    └───────────┬───────────┘                    │\n│                    ┌───────────▼───────────┐                    │\n│                    │    libsodium          │                    │\n│                    └───────────────────────┘                    │\n└──────────────────────────────────────────────────────────────────┘"))
@@ -121,6 +123,7 @@
       (p "SPKI/SDSI gives you: - Local namespaces: \"bob\" means what you say it means - Authorization without identity: Grant permissions to keys, not people - Delegation chains: Alice → Bob → Carol, each step verified")))
   (section
     "5. Research Foundations"
+    (blockquote "If I have seen further it is by standing on the shoulders of Giants. — Isaac Newton")
     (p "Every feature traces to a foundational paper:")
     (table
       (header "Feature " "Paper " "Author " "Year ")
@@ -134,10 +137,12 @@
     (p "421 papers in the library. Not just referenced—studied, implemented, running."))
   (section
     "6. Implementation Status"
+    (blockquote "We reject kings, presidents and voting. We believe in rough consensus and running code. — Dave Clark, IETF")
     (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory")
     (p "Each traces to original research. Each runs. Each is tested."))
   (section
     "7. Security Considerations"
+    (blockquote "You can't trust code that you did not totally create yourself. — Ken Thompson, Reflections on Trusting Trust")
     (subsection
       "7.1 TCB Minimization"
       (p "The attack surface is limited to ~1000 lines of OCaml calling libsodium. This code is:")
@@ -162,9 +167,11 @@
       (p "Auditability ensures that security failures can be diagnosed and that the system's behavior can be verified by inspection rather than faith.")))
   (section
     "8. Getting Started"
+    (blockquote "The best way to predict the future is to invent it. — Alan Kay")
     (code bash "git clone git@github.com:ddp/cyberspace.git\ncd cyberspace/spki/scheme\n./spki-keygen alice\n./seal init --key alice.private\n./seal commit -m \"Hello, Cyberspace\""))
   (section
     "9. Future Work"
+    (blockquote "A journey of a thousand miles begins with a single step. — Lao Tzu")
     (list
       (item "ChaCha20-Poly1305 AEAD")
       (item "Authenticated encryption")
