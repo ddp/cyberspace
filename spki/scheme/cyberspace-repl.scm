@@ -579,7 +579,7 @@
       result))
   (define (display-width str)
     "Calculate display width accounting for multi-byte Unicode chars.
-     · λ are 2 bytes but 1 display char. ✓✗⚠ are 3 bytes but 1 display char."
+     · λ are 2 bytes but 1 display char. ✓✗⚠≥≤ are 3 bytes but 1 display char."
     (let* ((len (string-length str))
            ;; Count all occurrences of multi-byte chars
            (middot-count (count-substr str "·"))  ; U+00B7, 2 bytes
@@ -587,9 +587,11 @@
            (check-count (count-substr str "✓"))   ; 3 bytes
            (cross-count (count-substr str "✗"))   ; 3 bytes
            (warn-count (count-substr str "⚠"))    ; 3 bytes
-           ;; Adjust: ·λ=1 extra byte, ✓✗⚠=2 extra bytes each
+           (gte-count (count-substr str "≥"))     ; 3 bytes
+           (lte-count (count-substr str "≤"))     ; 3 bytes
+           ;; Adjust: ·λ=1 extra byte, ✓✗⚠≥≤=2 extra bytes each
            (adjustment (+ middot-count lambda-count
-                         (* 2 (+ check-count cross-count warn-count)))))
+                         (* 2 (+ check-count cross-count warn-count gte-count lte-count)))))
       (- len adjustment)))
   (define w 90)  ; wide enough for compiler warnings
   (define (box-line content)
