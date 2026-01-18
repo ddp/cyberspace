@@ -448,8 +448,8 @@ didFinishNavigation:(WKNavigation *)navigation {
     NSString *resourcePath = bundle.resourcePath;
 
     // Look for compiled server first, then script
-    NSString *serverBinary = [resourcePath stringByAppendingPathComponent:@"cyberspace-server"];
-    NSString *serverScript = [resourcePath stringByAppendingPathComponent:@"cyberspace-server.scm"];
+    NSString *serverBinary = [resourcePath stringByAppendingPathComponent:@"server"];
+    NSString *serverScript = [resourcePath stringByAppendingPathComponent:@"server.scm"];
     NSString *schemeDir = @"/Users/ddp/cyberspace/spki/scheme";
 
     NSString *executable = nil;
@@ -465,7 +465,7 @@ didFinishNavigation:(WKNavigation *)navigation {
         arguments = @[@"-s", serverScript, [NSString stringWithFormat:@"%d", self.backendPort]];
     } else {
         // Development mode
-        NSString *devScript = [schemeDir stringByAppendingPathComponent:@"cyberspace-server.scm"];
+        NSString *devScript = [schemeDir stringByAppendingPathComponent:@"server.scm"];
         if ([[NSFileManager defaultManager] fileExistsAtPath:devScript]) {
             executable = @"/opt/homebrew/bin/csi";
             arguments = @[@"-s", devScript, [NSString stringWithFormat:@"%d", self.backendPort]];

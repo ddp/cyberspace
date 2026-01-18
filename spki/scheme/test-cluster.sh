@@ -13,7 +13,7 @@ echo "Starting node: $NODE_NAME on port $NODE_PORT"
 
 if [ -n "$CONNECT_HOST" ]; then
   echo "Will connect to: $CONNECT_HOST:$CONNECT_PORT"
-  ./cyberspace-repl <<EOF
+  ./repl <<EOF
 (node-listen $NODE_PORT "$NODE_NAME")
 (node-connect "$CONNECT_HOST" $CONNECT_PORT)
 (nodes)
@@ -21,7 +21,7 @@ if [ -n "$CONNECT_HOST" ]; then
 EOF
 else
   echo "Waiting for connections..."
-  ./cyberspace-repl <<EOF
+  ./repl <<EOF
 (node-listen $NODE_PORT "$NODE_NAME")
 (node-accept)
 (nodes)

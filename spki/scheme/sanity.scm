@@ -153,7 +153,7 @@
   (print "\n=== REPL Boot Test ===")
 
   ;; Test 1: REPL can reach prompt without error (shadow mode, immediate exit)
-  (let* ((cmd "echo '(exit 0)' | ./cyberspace-repl shadow 2>&1")
+  (let* ((cmd "echo '(exit 0)' | ./repl shadow 2>&1")
          (output (with-input-from-pipe cmd read-string)))
     (if (string-contains output "Error:")
         (error! "REPL boot failed - check for unbound symbols")
@@ -167,7 +167,7 @@
         (ok! "os: hostname available")))
 
   ;; Test 3: No deprecated API warnings in compile
-  (let* ((cmd "csc -check-syntax cyberspace-repl.scm 2>&1 | grep -c 'deprecated' || echo 0")
+  (let* ((cmd "csc -check-syntax repl.scm 2>&1 | grep -c 'deprecated' || echo 0")
          (result (with-input-from-pipe cmd read-line)))
     (if (equal? result "0")
         (ok! "No deprecated API usage")

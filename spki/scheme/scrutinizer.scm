@@ -149,9 +149,9 @@
       ;; Inspector is for schemers
       ("inspector.scm" . (scheme-exposure))
       ;; REPL is Scheme interface - exposure is intentional
-      ("cyberspace-repl.scm" . (scheme-exposure))
+      ("repl.scm" . (scheme-exposure))
       ;; Server has internal technical code
-      ("cyberspace-server.scm" . (scheme-exposure))))
+      ("server.scm" . (scheme-exposure))))
 
   ;; ============================================================
   ;; State

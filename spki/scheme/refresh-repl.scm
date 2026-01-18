@@ -1,16 +1,12 @@
 #!/usr/bin/env csi -s
-;;; refresh-repl.scm - Rebuild Cyberspace.app
+;;; refresh-repl.scm - Rebuild repl binary
 
 (import scheme
         (chicken base)
-        (chicken process)
-        (chicken format)
-        (chicken pathname)
-        (chicken process-context))
+        (chicken process))
 
-(print "=== Rebuilding Cyberspace.app ===\n")
+(print "=== Rebuilding repl ===\n")
 
-(let ((app-dir (make-pathname (current-directory) "app")))
-  (system (sprintf "cd ~a && ./build.sh" app-dir)))
+(system "csc -O2 -d1 repl.scm -o repl")
 
 (print "\nDone.")

@@ -297,7 +297,7 @@ csc -shared -J -strict-types crypto-ffi.scm \\
       (p "Machine code is gibberish outside the local realm. Could be ARM64, could be x86_64, could be a JPEG of a cat. The weave cannot inspect it, cannot verify it, cannot reason about it. Only the s-expression source has universal meaning - it parses the same on lambda as on fluffy as on whatever Linux box joins the realm next.")
       (p "Consequently, compiled artifacts are excluded from version control and replication:")
       (code "# .gitignore
-spki/scheme/cyberspace-repl
+spki/scheme/repl
 spki/scheme/*.so
 spki/scheme/*.o
 spki/scheme/*.import.scm
@@ -323,7 +323,7 @@ spki/scheme/.*.arch")
     (subsection
       "5.1 Build Mode Flag"
       (p "The *beta-build* flag controls strict type checking:")
-      (code scheme ";; In cyberspace-repl.scm
+      (code scheme ";; In repl.scm
 (define *beta-build* #t)  ; Enable for development
 (define *beta-build* #f)  ; Disable for release"))
     (subsection

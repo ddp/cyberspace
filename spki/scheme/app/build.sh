@@ -43,15 +43,15 @@ if [ ! -f "$RESOURCES/Cyberspace.icns" ]; then
 fi
 
 # Copy and compile Scheme server
-if [ -f "$SCRIPT_DIR/../cyberspace-server.scm" ]; then
+if [ -f "$SCRIPT_DIR/../server.scm" ]; then
     echo "  Copying server script..."
-    cp "$SCRIPT_DIR/../cyberspace-server.scm" "$RESOURCES/"
+    cp "$SCRIPT_DIR/../server.scm" "$RESOURCES/"
 
     # Try to compile if csc is available
     if command -v csc &> /dev/null; then
-        echo "  Compiling cyberspace-server..."
+        echo "  Compiling server..."
         cd "$SCRIPT_DIR/.."
-        csc -O2 -o "$RESOURCES/cyberspace-server" cyberspace-server.scm 2>/dev/null || {
+        csc -O2 -o "$RESOURCES/server" server.scm 2>/dev/null || {
             echo "  Note: Server compilation skipped (will use interpreted)"
         }
         cd "$SCRIPT_DIR"

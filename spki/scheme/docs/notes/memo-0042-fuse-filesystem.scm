@@ -157,7 +157,7 @@
       (code scheme "(define (vault-mount point)\n  \"Mount vault at filesystem path\"\n  (fuse-main point\n    `((getattr . ,fuse-getattr)\n      (readdir . ,fuse-readdir)\n      (open . ,fuse-open)\n      (read . ,fuse-read)\n      (write . ,fuse-write)\n      (create . ,fuse-create)\n      (unlink . ,fuse-unlink)\n      (mkdir . ,fuse-mkdir)\n      (rmdir . ,fuse-rmdir)\n      (rename . ,fuse-rename)\n      (setxattr . ,fuse-setxattr)\n      (getxattr . ,fuse-getxattr)\n      (listxattr . ,fuse-listxattr))))\n\n(define (vault-unmount point)\n  \"Unmount vault filesystem\"\n  (fuse-unmount point))"))
     (subsection
       "Command Line"
-      (code bash "# Mount\ncyberspace mount ~/Cyberspace\n\n# Unmount\ncyberspace unmount ~/Cyberspace\n\n# Or via REPL\n$ ./cyberspace-repl\n> (vault-mount \"~/Cyberspace\")\nMounted vault at /Users/ddp/Cyberspace")))
+      (code bash "# Mount\ncyberspace mount ~/Cyberspace\n\n# Unmount\ncyberspace unmount ~/Cyberspace\n\n# Or via REPL\n$ ./repl\n> (vault-mount \"~/Cyberspace\")\nMounted vault at /Users/ddp/Cyberspace")))
   (section
     "macOS Integration"
     (subsection

@@ -4,7 +4,7 @@
 ;;; Usage:
 ;;;   ./build.scm           # build all
 ;;;   ./build.scm library   # just library modules
-;;;   ./build.scm repl      # just cyberspace-repl
+;;;   ./build.scm repl      # just repl
 ;;;   ./build.scm app       # just Cyberspace.app
 
 (import scheme
@@ -74,16 +74,16 @@
       (print "  (all modules current)"))))
 
 (define (build-repl)
-  (print "\n=== Building cyberspace-repl ===")
-  (if (newer? "cyberspace-repl.scm" "cyberspace-repl")
-      (run "csc -O2 -d1 cyberspace-repl.scm -o cyberspace-repl")
+  (print "\n=== Building repl ===")
+  (if (newer? "repl.scm" "repl")
+      (run "csc -O2 -d1 repl.scm -o repl")
       (print "  (current)")))
 
 (define (build-app)
   (print "\n=== Building Cyberspace.app ===")
   (let* ((app-dir (make-pathname (current-directory) "app"))
-         (server-src "cyberspace-server.scm")
-         (server-dst (make-pathname app-dir "Cyberspace.app/Contents/Resources/cyberspace-server"))
+         (server-src "server.scm")
+         (server-dst (make-pathname app-dir "Cyberspace.app/Contents/Resources/server"))
          (main-src (make-pathname app-dir "main.m"))
          (main-dst (make-pathname app-dir "Cyberspace.app/Contents/MacOS/Cyberspace")))
     (if (or (newer? server-src server-dst)

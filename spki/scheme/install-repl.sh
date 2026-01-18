@@ -13,13 +13,13 @@ BINARY="cyberspace-bin"
 cd "$SCHEME_DIR"
 
 echo "=== Compiling Cyberspace REPL ==="
-echo "Source: cyberspace-repl.scm"
+echo "Source: repl.scm"
 echo ""
 
 # Compile with optimizations
 # -O2: Good optimization level
 # -d1: Include debugging info for meaningful backtraces
-time csc -O2 -d1 cyberspace-repl.scm -o "$BINARY"
+time csc -O2 -d1 repl.scm -o "$BINARY"
 
 echo ""
 echo "Compiled: $BINARY ($(du -h "$BINARY" | cut -f1))"
@@ -44,4 +44,4 @@ echo "  export PATH=\"\$HOME/bin:\$PATH\""
 echo ""
 echo "Usage:"
 echo "  cyberspace              # compiled (fast startup)"
-echo "  ./cyberspace-repl       # interpreted (for development)"
+echo "  ./repl       # interpreted (for development)"

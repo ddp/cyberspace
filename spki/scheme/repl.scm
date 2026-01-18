@@ -1,7 +1,7 @@
 #!/usr/bin/env csi -q -w
-;;; cyberspace-repl - Cyberspace Scheme
+;;; repl - Cyberspace Scheme
 ;;;
-;;; Usage: ./cyberspace-repl
+;;; Usage: ./repl
 ;;;
 ;;; Preloads all Cyberspace modules for interactive exploration:
 ;;;   - vault: seal-commit, seal-release, seal-archive, etc.
@@ -5512,7 +5512,7 @@ Cyberspace REPL - Available Commands
           (print "[thinga!: BLOCKED - sanity check failed]")
           #f)
         ;; Gate passed - proceed with publish
-        (let ((result (system "git add -A && git commit -m 'thinga' && git push && ./cyberspace-repl regen && rsync -avz --exclude '.git' --exclude '*.so' --exclude '*.o' --exclude '*.c' . www.yoyodyne.com:cyberspace/spki/scheme/")))
+        (let ((result (system "git add -A && git commit -m 'thinga' && git push && ./repl regen && rsync -avz --exclude '.git' --exclude '*.so' --exclude '*.o' --exclude '*.c' . www.yoyodyne.com:cyberspace/spki/scheme/")))
           (if (zero? result)
               (begin
                 (print "[thinga!: complete]")
@@ -6229,8 +6229,8 @@ Cyberspace REPL - Available Commands
 (define (reload!)
   "Hot reload REPL definitions without restart.
    Note: Module state preserved, only top-level defs refreshed."
-  (print "Reloading cyberspace-repl.scm...")
-  (load "cyberspace-repl.scm")
+  (print "Reloading repl.scm...")
+  (load "repl.scm")
   (print "Reloaded. New definitions active."))
 
 ;;; ============================================================

@@ -1,4 +1,4 @@
-;;; cyberspace-server.scm - HTTP/WebSocket server for Cyberspace.app
+;;; server.scm - HTTP/WebSocket server for Cyberspace.app
 ;;;
 ;;; Serves the web UI and provides WebSocket bridge to Scheme REPL.
 ;;; Lightweight embedded server for the native macOS application.
@@ -275,10 +275,10 @@
 (define (start-pty-repl)
   "Start REPL with PTY via script(1) for VT100."
   (let* ((cwd (current-directory))
-         (repl (cond ((file-exists? (make-pathname cwd "cyberspace-repl"))
-                      (list (make-pathname cwd "cyberspace-repl")))
+         (repl (cond ((file-exists? (make-pathname cwd "repl"))
+                      (list (make-pathname cwd "repl")))
                      (else (list "/opt/homebrew/bin/csi" "-q" "-w"
-                                 (make-pathname cwd "cyberspace-repl.scm"))))))
+                                 (make-pathname cwd "repl.scm"))))))
     (receive (stdout stdin pid) (process "/usr/bin/script" (cons* "-q" "/dev/null" repl))
       (set! *pty-pid* pid)
       (set! *pty-master* (cons stdout stdin))
