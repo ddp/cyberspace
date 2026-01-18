@@ -39,6 +39,22 @@
         srfi-69   ; hash tables
         (chicken tcp))
 
+;;; ============================================================
+;;; Clean - remove compiled artifacts for fresh rebuild
+;;; ============================================================
+;;; cs clean      - clean and exit
+;;; cs clean gate - clean and rebuild
+;;; cs clean.     - clean and continue (Wirth doit)
+
+(when (or (member "clean" (command-line-arguments))
+          (member "clean." (command-line-arguments)))
+  (print "Cleaning compiled artifacts...")
+  (for-each (lambda (f) (print "  rm " f) (delete-file f))
+            (glob "*.so" "*.import.scm" ".forge/*.meta"))
+  (unless (or (member "gate" (command-line-arguments))
+              (member "clean." (command-line-arguments)))
+    (print "Done. Rebuild with: cs gate")
+    (exit 0)))
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
 (import os)
 
