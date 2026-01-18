@@ -20,7 +20,7 @@
   '(;; Layer 0: No internal dependencies
     "sexp" "crypto-ffi" "fips" "wordlist"
     "display" "inspector" "catalog" "bloom" "os"
-    "smelter" "scrutinizer" "board"
+    "smelter" "scrutinizer" "forum"
     ;; Layer 1: Single deps
     "cert"          ; needs sexp
     "script"        ; needs cert

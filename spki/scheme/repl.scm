@@ -811,7 +811,7 @@
 (import ui)
 (import inspector)
 (import portal)
-(import board)
+(import forum)
 (import display)
 
 ;; Initialize libsodium
@@ -5462,6 +5462,7 @@ Cyberspace REPL - Available Commands
          (begin
            (print "  library           - Enter the Library")
            (print "  search 'topic     - Search everything")
+           (print "  kwic 'word        - Keyword-in-context search")
            (print "  status            - Node status")
            (print "  inspect OBJ       - Inspect anything")
            (print "")
@@ -5472,6 +5473,7 @@ Cyberspace REPL - Available Commands
          (begin
            (print "  (library)         - Enter the Library")
            (print "  (search 'topic)   - Search everything")
+           (print "  (kwic 'word)      - Keyword-in-context search")
            (print "  (status)          - Node status")
            (print "  (inspect OBJ)     - Inspect anything")
            (print "")

@@ -1,14 +1,14 @@
-;;; board.scm - Realm bulletin board (VAX Notes style)
+;;; forum.scm - Realm forum (VAX Notes style)
 ;;;
-;;; One board per realm. Topics and replies. Sequential numbering.
+;;; One forum per realm. Topics and replies. Sequential numbering.
 ;;; No likes. No avatars. Just text and cryptographic identity.
 ;;;
-;;; Heritage: PLATO Notes -> VAX Notes -> Cyberspace
+;;; Heritage: PLATO Notes -> BBS -> VAX Notes -> Usenet -> Cyberspace
 ;;;
 
-(module board
-  (;; Board navigation
-   board
+(module forum
+  (;; Forum navigation
+   forum
    topics
    read-topic
    note  ; alias for read-topic
@@ -19,7 +19,7 @@
 
    ;; State
    *current-topic*
-   *board-path*)
+   *forum-path*)
 
   (import scheme
           (chicken base)
@@ -37,29 +37,29 @@
           srfi-69)
 
   ;;; ============================================================
-  ;;; Board State
+  ;;; Forum State
   ;;; ============================================================
 
-  (define *board-path* ".vault/board")
+  (define *forum-path* ".vault/forum")
   (define *current-topic* #f)
 
   ;;; ============================================================
   ;;; Storage
   ;;; ============================================================
 
-  (define (ensure-board!)
-    "Create board directory if needed."
-    (unless (directory-exists? *board-path*)
-      (create-directory *board-path* #t)))
+  (define (ensure-forum!)
+    "Create forum directory if needed."
+    (unless (directory-exists? *forum-path*)
+      (create-directory *forum-path* #t)))
 
   (define (topic-path n)
     "Path to topic N."
-    (string-append *board-path* "/" (number->string n) ".sexp"))
+    (string-append *forum-path* "/" (number->string n) ".sexp"))
 
   (define (next-topic-number)
     "Get next available topic number."
-    (ensure-board!)
-    (let* ((files (directory *board-path*))
+    (ensure-forum!)
+    (let* ((files (directory *forum-path*))
            (nums (filter-map
                   (lambda (f)
                     (and (string-suffix? ".sexp" f)
@@ -76,7 +76,7 @@
 
   (define (save-topic! n topic)
     "Save topic N to disk."
-    (ensure-board!)
+    (ensure-forum!)
     (with-output-to-file (topic-path n)
       (lambda () (write topic) (newline))))
 
@@ -142,11 +142,11 @@
   ;;; Commands
   ;;; ============================================================
 
-  (define (board)
-    "Enter the board. Show recent topics."
-    (ensure-board!)
+  (define (forum)
+    "Enter the forum. Show recent topics."
+    (ensure-forum!)
     (print "")
-    (print "═══ Realm Board ═══")
+    (print "═══ Realm Forum ═══")
     (print "")
     (topics 10)
     (print "")
@@ -155,8 +155,8 @@
 
   (define (topics #!optional (limit 20))
     "List recent topics."
-    (ensure-board!)
-    (let* ((files (directory *board-path*))
+    (ensure-forum!)
+    (let* ((files (directory *forum-path*))
            (nums (sort
                   (filter-map
                    (lambda (f)
@@ -268,4 +268,4 @@
             (string-intersperse (reverse lines) "\n")
             (loop (cons line lines))))))
 
-) ;; end module board
+) ;; end module forum

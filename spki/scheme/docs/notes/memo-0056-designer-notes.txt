@@ -1,0 +1,117 @@
+Memo 0056: Designer Notes
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+ABSTRACT
+------------------------------------------------------------------------
+
+Working notes from collaborative design sessions. Documents decisions,
+rationale, and evolution of the Cyberspace interface.
+
+
+------------------------------------------------------------------------
+1. CLI VOCABULARY (2026-01-18)
+------------------------------------------------------------------------
+
+Clean break from ad-hoc bare-word arguments to Linux-style
+--option=value:
+
+
+  Option            Purpose                                                     
+  --sync            Robust git sync (no errors, auto-resolve .meta conflicts)   
+  --clean           Remove .so, .import.scm, .forge/*.meta                      
+  --rebuild         Force rebuild all modules                                   
+  --verbose         Show verbose output (silent by default)                     
+  --boot=<level>    shadow|whisper|portal|gate|chronicle|oracle                 
+  --eval='<expr>'   Evaluate and exit                                           
+  --version         Version info                                                
+  --help            Usage                                                       
+
+Design principle: operators don't debug git. The --sync command handles
+stash, pull, rebase, conflict resolution, and push. Metadata conflicts
+(.forge/*.meta) auto-resolve by preferring remote.
+
+Combined usage: cs --clean --rebuild for clean slate rebuild.
+
+
+------------------------------------------------------------------------
+2. SEARCH COMMANDS (2026-01-18)
+------------------------------------------------------------------------
+
+Two search paradigms following tradition:
+
+
+2.1 apropos (Scheme tradition)
+------------------------------
+
+Search bound symbols containing pattern:
+
+
+    (apropos 'vault)
+    => vault-stat, vault-commit, vault-keys, ...
+
+
+2.2 kwic (Library tradition)
+----------------------------
+
+Key Word In Context - concordance-style search of memo content:
+
+
+    (kwic 'soup)
+    => Memo-001:42  ... forge -> eggs -> soup -> vault ...
+       Memo-027:1   Soup Query Language
+
+The library is the HyperSpec for Cyberspace. KWIC enables discovery
+across 58 memos.
+
+
+------------------------------------------------------------------------
+3. BOX DRAWING ALIGNMENT
+------------------------------------------------------------------------
+
+Forge boxes use fixed-width display with Unicode box characters. Display
+width calculation must account for multi-byte UTF-8 characters that
+render as single cells:
+
+
+  Char                  Bytes   Display   
+  · λ                 2       1         
+  ✓ ✗ ⚠ ≥ ≤   3       1         
+
+Off-by-one alignment errors traced to missing ≥ and ≤ in width
+calculation.
+
+
+------------------------------------------------------------------------
+4. BUILD SYSTEM
+------------------------------------------------------------------------
+
+Sequential builds required due to Chicken import library race
+conditions. Parallel builds caused sporadic 'cannot import' errors even
+with correct dependency ordering.
+
+Build order is strict topological sort:
+
+
+    L0: os, crypto-ffi, sexp, capability, inspector
+    L1: mdns, fips, audit, wordlist, bloom, catalog, keyring, portal
+    L2: cert
+    L3: security
+    L4: vault
+    L5: enroll, gossip
+    L6: auto-enroll
+    L7: ui
+
+Clean removes .forge/*.meta with .so files - stale metadata causes git
+conflicts.
+
+
+------------------------------------------------------------------------
+CHANGELOG
+------------------------------------------------------------------------
+
+2026-01-18 - Initial notes from CLI/search session
+
+------------------------------------------------------------------------
