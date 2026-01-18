@@ -1105,7 +1105,7 @@ cyberspace mount ~/Cyberspace
 cyberspace unmount ~/Cyberspace
 
 # Or via REPL
-$ ./cyberspace-repl
+$ ./repl
 &gt; (vault-mount "~/Cyberspace")
 Mounted vault at /Users/ddp/Cyberspace
 </pre>
@@ -1135,6 +1135,49 @@ brew install macfuse
 <h3>Finder Integration</h3>
 <p>The mount appears as a regular volume in Finder. Optional .VolumeIcon.icns for custom icon.</p>
 <p>Spotlight indexing can be enabled by implementing getxattr for com.apple.FinderInfo and related Spotlight attributes.</p>
+</section>
+<section>
+<h2>Information Flow Model</h2>
+<p>Wormholes bridge two security domains—the macOS filesystem and the vault. This section makes the information flow semantics explicit.[^s1]</p>
+<p>[^s1]: Security: Classic mandatory access control (Bell-LaPadula, Biba) uses security labels and lattice-based flow rules. We choose a simpler model: capability attenuation at the boundary, no lattice, no mandatory labels.</p>
+<h3>Vault-Authoritative</h3>
+<p>The vault is the source of truth. The filesystem mount is a capability-constrained view of vault contents, not a peer. Writes are ingested into the vault's content-addressed store; reads retrieve content by hash. The filesystem namespace is a manifest overlay. Unmounted, the projection vanishes; the vault remains.</p>
+<h3>Bidirectional by Default</h3>
+<p>Unless capabilities restrict it, data flows both ways through the wormhole. A read-only capability creates a one-way flow (vault→filesystem); a write-only capability creates the reverse (filesystem→vault, the dropbox pattern). The default read+write permits bidirectional flow.</p>
+<h3>No Implicit Labels</h3>
+<p>Unlike VMS security classifications, vault objects carry no mandatory security labels. Flow control is purely through capability attenuation at the wormhole boundary.[^s2]</p>
+<p>[^s2]: Security: Mandatory labels require a trusted labeling authority and policy engine. We avoid this complexity. The tradeoff: no automatic "top secret can't flow to unclassified" enforcement. If an application requires labeled objects with mandatory flow rules, it must implement them at a layer above the wormhole.</p>
+<p>The deeper rationale is human factors: labels are cognitively hostile. SELinux is technically sound but practically disabled on most systems because administrators cannot reason about label propagation correctly. Capabilities are intuitive—"I have this, I can use it, I can delegate a subset"—requiring no classification decisions and producing no "why can't I access my own file" mysteries.[^s2a]</p>
+<p>[^s2a]: Security: Experience with deployed MAC systems (SEVMS, SELinux, Windows MIC) shows that label complexity defeats usability. SEVMS was a layered product on VMS providing B1-level security classifications—powerful but rarely deployed outside government contracts. Users misconfigure labels, administrators disable enforcement, and the security model exists only on paper. Capability attenuation succeeds because it matches human intuition about possession and delegation.</p>
+<h3>Audit as Flow Record</h3>
+<p>Every crossing (read or write) is logged. The audit trail IS the flow history. Post-hoc analysis can reconstruct what data moved through which wormholes, when, and under what authority.</p>
+<p>This is the key assurance property: you cannot prove that information didn't flow (covert channels exist in any real system), but you can prove what DID flow and reconstruct the path post-hoc. The audit trail provides accountability rather than prevention—a pragmatic tradeoff that scales to real-world use.[^s3]</p>
+<p>[^s3]: Security: Mandatory access control aims to prevent unauthorized flows. We aim to detect and attribute them. Prevention requires trusting the entire stack; detection requires only trusting the audit log. For most threat models, accountable flow is sufficient.</p>
+<p>Audit is orthogonal to authorization. The capability check determines what is permitted; audit records what occurred. The audit trail is never consulted to decide whether to allow an operation—only to reconstruct flow history after the fact.</p>
+<h3>Capability as Flow Constraint</h3>
+<p>Table 4: Capability and Information Flow</p>
+<table>
+<tr><th>Capabilities </th><th>Flow Direction </th><th>Pattern </th></tr>
+<tr><td>read without write </td><td>vault→filesystem only </td><td>Browse, export </td></tr>
+<tr><td>write without read </td><td>filesystem→vault only </td><td>Dropbox, ingest </td></tr>
+<tr><td>read+write </td><td>bidirectional </td><td>Full sync </td></tr>
+<tr><td>neither </td><td>no data flow </td><td>Metadata-only mount </td></tr>
+</table>
+<h3>Reference Monitor</h3>
+<p>The wormhole acts as a reference monitor at the domain boundary. Every operation crosses the monitor, which validates capability, enforces rate limits (Memo-032), and records the audit trail (Memo-003). The monitor is complete (all crossings pass through it) and verifiable (audit enables post-hoc analysis).</p>
+<pre class="language-scheme">
+(define (wormhole-flow-guard wormhole operation object)
+  "Reference monitor for wormhole operations"
+  (let ((caps (wormhole-capabilities wormhole)))
+    (unless (memq operation caps)
+      (wormhole-audit 'denied operation object)
+      (error 'capability-denied operation))
+    (unless (rate-limit-ok? wormhole)
+      (wormhole-audit 'rate-limited operation object)
+      (error 'rate-limited))
+    (wormhole-audit 'permitted operation object)
+    `(permitted ,operation ,object)))
+</pre>
 </section>
 <section>
 <h2>Security Considerations</h2>

@@ -531,6 +531,21 @@
                   (loop (cdr files) (cons name monsters)))
                 (loop (cdr files) monsters)))))))
 
+;; Collect compiler warnings during forge (displayed at end, not inline)
+(define *forge-warnings* '())
+
+(define (forge-warnings)
+  "Display collected compiler warnings from last forge run"
+  (if (null? *forge-warnings*)
+      (print "No warnings from last forge.")
+      (begin
+        (print "")
+        (printf "Compiler warnings (~a):~%" (length *forge-warnings*))
+        (for-each (lambda (w)
+                    (printf "  ~a: ~a~%" (car w) (cdr w)))
+                  *forge-warnings*)
+        (print ""))))
+
 (define (rebuild-module! module arch stamp)
   "Rebuild a module for current platform.
    Robust: checks exit code, verifies .so was updated, shows details.
@@ -597,8 +612,15 @@
   (define w 90)  ; wide enough for compiler warnings
   (define (box-line content)
     (let* ((clen (display-width content))
-           (pad (- w clen 2)))
-      (print "│ " content (make-string (max 0 pad) #\space) " │")))
+           (pad (- w clen 2)))  ; original formula: w - clen - 2
+      (if (< pad 0)
+          ;; Line too long - truncate with ellipsis to fit box
+          (let* ((max-len (- w 3))  ; room for "│ " and "… │"
+                 (truncated (if (> (string-length content) max-len)
+                               (substring content 0 max-len)
+                               content)))
+            (print "│ " truncated "… │"))
+          (print "│ " content (make-string pad #\space) " │"))))
   (let* ((paths (libsodium-paths arch))
          (inc-path (car paths))
          (lib-path (cadr paths))
@@ -643,10 +665,19 @@
              (exit-line (find (lambda (l) (string-prefix? "__EXIT__" l)) all-output))
              (exit-code (if exit-line (string->number (substring exit-line 8)) 1))
              (output (remove (lambda (l) (string-prefix? "__EXIT__" l)) all-output)))
-        (for-each (lambda (line)
-                    (when (> (string-length line) 0)
-                      (box-line line)))
-                  output)
+        ;; Separate warnings from errors - collect warnings, show errors
+        (let ((warnings (filter (lambda (l) (string-prefix? "Warning:" l)) output))
+              (non-warnings (remove (lambda (l) (string-prefix? "Warning:" l)) output)))
+          ;; Collect warnings for summary at end
+          (for-each (lambda (w)
+                      (set! *forge-warnings*
+                            (cons (cons module w) *forge-warnings*)))
+                    warnings)
+          ;; Show non-warning output (errors, etc.) in box
+          (for-each (lambda (line)
+                      (when (> (string-length line) 0)
+                        (box-line line)))
+                    non-warnings))
         (let* ((elapsed (- (current-process-milliseconds) start-time))
                (so-exists (file-exists? so-file))
                (so-mtime-after (file-mtime so-file))
@@ -692,6 +723,8 @@
   "Ensure all required modules are built for current platform.
    Sequential builds to avoid Chicken import library race conditions.
    Pristine builds: -w enables all warnings, expect zero output."
+  ;; Clear warnings from previous forge run
+  (set! *forge-warnings* '())
   (let ((stamp (platform-stamp))
         (arch (current-arch))
         ;; Build order: strict topological sort by dependency
@@ -743,7 +776,14 @@
                   (car totals) (cdr totals)
                   (if (> (cdr totals) 0)
                       (quotient (car totals) (cdr totals))
-                      0))))
+                      0))
+          ;; Show warning count if any
+          (when (not (null? *forge-warnings*))
+            (let ((count (length *forge-warnings*))
+                  (modules (length (delete-duplicates (map car *forge-warnings*)))))
+              (printf "  ⚠ ~a warning~a across ~a module~a (forge-warnings)~%"
+                      count (if (= count 1) "" "s")
+                      modules (if (= modules 1) "" "s"))))))
       (when (and (= total-rebuilt 0) (>= *boot-verbosity* 1))
         (print "All tomes current for " stamp)))))
 
@@ -4148,7 +4188,7 @@ Cyberspace REPL - Available Commands
                                             '()))))
          (node-id (read-node-identity)))
     ;; Vault contents line
-    (print "  " obj-count " objects, " release-count " releases, " key-count " keys")
+    (print "  " (plural obj-count "object") ", " (plural release-count "release") ", " (plural key-count "key"))
     (when (> audit-entries 0)
       (print "  " (plural audit-entries "audit entry")))
     (when keystore-exists
@@ -4330,13 +4370,13 @@ Cyberspace REPL - Available Commands
       ;; Build comma-separated vault summary
       (let ((parts '()))
         (when (> vault-audits 0)
-          (set! parts (cons (string-append (number->string vault-audits) " audits") parts)))
+          (set! parts (cons (plural vault-audits "audit") parts)))
         (when (> vault-keys 0)
-          (set! parts (cons (string-append (number->string vault-keys) " keys") parts)))
+          (set! parts (cons (plural vault-keys "key") parts)))
         (when (> vault-releases 0)
-          (set! parts (cons (string-append (number->string vault-releases) " releases") parts)))
+          (set! parts (cons (plural vault-releases "release") parts)))
         (when (> vault-objects 0)
-          (set! parts (cons (string-append (number->string vault-objects) " objects") parts)))
+          (set! parts (cons (plural vault-objects "object") parts)))
         (let ((summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
           (print "  vault: " vault-exists summary))))
     ;; Realm name and principal

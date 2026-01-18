@@ -520,7 +520,7 @@ margin topmargin moveto
 (    # Unmount) show newline
 (    cyberspace unmount ~/Cyberspace) show newline
 (    # Or via REPL) show newline
-(    $ ./cyberspace-repl) show newline
+(    $ ./repl) show newline
 (    > \(vault-mount "~/Cyberspace"\)) show newline
 (    Mounted vault at /Users/ddp/Cyberspace) show newline
 () show newline
@@ -568,6 +568,129 @@ margin topmargin moveto
 () show newline
 (Spotlight indexing can be enabled by implementing getxattr for) show newline
 (com.apple.FinderInfo and related Spotlight attributes.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INFORMATION FLOW MODEL) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Wormholes bridge two security domains—the macOS filesystem and the) show newline
+(vault. This section makes the information flow semantics explicit.[^s1]) show newline
+() show newline
+([^s1]: Security: Classic mandatory access control \(Bell-LaPadula, Biba\)) show newline
+(uses security labels and lattice-based flow rules. We choose a simpler) show newline
+(model: capability attenuation at the boundary, no lattice, no mandatory) show newline
+(labels.) show newline
+() show newline
+() show newline
+(Vault-Authoritative) show newline
+(-------------------) show newline
+() show newline
+(The vault is the source of truth. The filesystem mount is a) show newline
+(capability-constrained view of vault contents, not a peer. Writes are) show newline
+(ingested into the vault's content-addressed store; reads retrieve) show newline
+(content by hash. The filesystem namespace is a manifest overlay.) show newline
+(Unmounted, the projection vanishes; the vault remains.) show newline
+() show newline
+() show newline
+(Bidirectional by Default) show newline
+(------------------------) show newline
+() show newline
+(Unless capabilities restrict it, data flows both ways through the) show newline
+(wormhole. A read-only capability creates a one-way flow) show newline
+(\(vault>filesystem\); a write-only capability creates the reverse) show newline
+(\(filesystem>vault, the dropbox pattern\). The default read+write permits) show newline
+(bidirectional flow.) show newline
+() show newline
+() show newline
+(No Implicit Labels) show newline
+(------------------) show newline
+() show newline
+(Unlike VMS security classifications, vault objects carry no mandatory) show newline
+(security labels. Flow control is purely through capability attenuation) show newline
+(at the wormhole boundary.[^s2]) show newline
+() show newline
+([^s2]: Security: Mandatory labels require a trusted labeling authority) show newline
+(and policy engine. We avoid this complexity. The tradeoff: no automatic) show newline
+("top secret can't flow to unclassified" enforcement. If an application) show newline
+(requires labeled objects with mandatory flow rules, it must implement) show newline
+(them at a layer above the wormhole.) show newline
+() show newline
+(The deeper rationale is human factors: labels are cognitively hostile.) show newline
+(SELinux is technically sound but practically disabled on most systems) show newline
+(because administrators cannot reason about label propagation correctly.) show newline
+(Capabilities are intuitive—"I have this, I can use it, I can delegate) show newline
+(a subset"—requiring no classification decisions and producing no "why) show newline
+(can't I access my own file" mysteries.[^s2a]) show newline
+() show newline
+([^s2a]: Security: Experience with deployed MAC systems \(SEVMS, SELinux,) show newline
+(Windows MIC\) shows that label complexity defeats usability. SEVMS was a) show newline
+(layered product on VMS providing B1-level security) show newline
+(classifications—powerful but rarely deployed outside government) show newline
+(contracts. Users misconfigure labels, administrators disable) show newline
+(enforcement, and the security model exists only on paper. Capability) show newline
+(attenuation succeeds because it matches human intuition about possession) show newline
+(and delegation.) show newline
+() show newline
+() show newline
+(Audit as Flow Record) show newline
+(--------------------) show newline
+() show newline
+(Every crossing \(read or write\) is logged. The audit trail IS the flow) show newline
+(history. Post-hoc analysis can reconstruct what data moved through which) show newline
+(wormholes, when, and under what authority.) show newline
+() show newline
+(This is the key assurance property: you cannot prove that information) show newline
+(didn't flow \(covert channels exist in any real system\), but you can) show newline
+(prove what DID flow and reconstruct the path post-hoc. The audit trail) show newline
+(provides accountability rather than prevention—a pragmatic tradeoff) show newline
+(that scales to real-world use.[^s3]) show newline
+() show newline
+([^s3]: Security: Mandatory access control aims to prevent unauthorized) show newline
+(flows. We aim to detect and attribute them. Prevention requires trusting) show newline
+(the entire stack; detection requires only trusting the audit log. For) show newline
+(most threat models, accountable flow is sufficient.) show newline
+() show newline
+(Audit is orthogonal to authorization. The capability check determines) show newline
+(what is permitted; audit records what occurred. The audit trail is never) show newline
+(consulted to decide whether to allow an operation—only to reconstruct) show newline
+(flow history after the fact.) show newline
+() show newline
+() show newline
+(Capability as Flow Constraint) show newline
+(-----------------------------) show newline
+() show newline
+(Table 4: Capability and Information Flow) show newline
+() show newline
+() show newline
+(  Capabilities         Flow Direction            Pattern               ) show newline
+(  read without write   vault>filesystem only     Browse, export        ) show newline
+(  write without read   filesystem>vault only     Dropbox, ingest       ) show newline
+(  read+write           bidirectional             Full sync             ) show newline
+(  neither              no data flow              Metadata-only mount   ) show newline
+() show newline
+() show newline
+(Reference Monitor) show newline
+(-----------------) show newline
+() show newline
+(The wormhole acts as a reference monitor at the domain boundary. Every) show newline
+(operation crosses the monitor, which validates capability, enforces rate) show newline
+(limits \(Memo-032\), and records the audit trail \(Memo-003\). The monitor) show newline
+(is complete \(all crossings pass through it\) and verifiable \(audit) show newline
+(enables post-hoc analysis\).) show newline
+() show newline
+() show newline
+(    \(define \(wormhole-flow-guard wormhole operation object\)) show newline
+(      "Reference monitor for wormhole operations") show newline
+(      \(let \(\(caps \(wormhole-capabilities wormhole\)\)\)) show newline
+(        \(unless \(memq operation caps\)) show newline
+(          \(wormhole-audit 'denied operation object\)) show newline
+(          \(error 'capability-denied operation\)\)) show newline
+(        \(unless \(rate-limit-ok? wormhole\)) show newline
+(          \(wormhole-audit 'rate-limited operation object\)) show newline
+(          \(error 'rate-limited\)\)) show newline
+(        \(wormhole-audit 'permitted operation object\)) show newline
+(        `\(permitted ,operation ,object\)\)\)) show newline
 () show newline
 () show newline
 (------------------------------------------------------------------------) show newline
