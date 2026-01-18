@@ -5976,6 +5976,95 @@ Cyberspace REPL - Available Commands
 
     (void)))
 
+;; Apropos - search bound symbols (Scheme tradition)
+(define (apropos pattern)
+  "Search for symbols containing pattern.
+   (apropos 'vault)   - find vault-related procedures
+   (apropos 'search)  - find search functions"
+  (let* ((pat (if (symbol? pattern) (symbol->string pattern) pattern))
+         (pat-lower (string-downcase pat))
+         ;; Get symbols from help topics
+         (help-syms (apply append
+                           (map (lambda (topic)
+                                  (map (lambda (entry)
+                                         (let ((cmd (car entry)))
+                                           (if (string-prefix? "(" cmd)
+                                               (let ((end (string-index cmd #\space)))
+                                                 (if end
+                                                     (substring cmd 1 end)
+                                                     (substring cmd 1 (- (string-length cmd) 1))))
+                                               cmd)))
+                                       (cddr topic)))
+                                *help-topics*)))
+         ;; Filter matching symbols
+         (matches (filter (lambda (s)
+                           (string-contains-ci s pat-lower))
+                         help-syms)))
+    (print "")
+    (if (null? matches)
+        (printf "No symbols matching '~a'~%" pat)
+        (begin
+          (printf "Symbols matching '~a':~%" pat)
+          (for-each (lambda (s) (printf "  ~a~%" s))
+                    (sort matches string<?))))
+    (print "")
+    (void)))
+
+;; KWIC - Key Word In Context search for memos
+(define (kwic keyword)
+  "Search memo content with keyword-in-context display.
+   (kwic 'soup)    - find 'soup' in all memos with context
+   (kwic 'vault)   - concordance-style results"
+  (let* ((kw (if (symbol? keyword) (symbol->string keyword) keyword))
+         (kw-lower (string-downcase kw))
+         (memo-dir (make-pathname (or (get-environment-variable "CYBERSPACE_HOME")
+                                      (current-directory))
+                                  "docs/notes"))
+         (memo-files (glob (make-pathname memo-dir "memo-*.scm")))
+         (context-width 30)  ; chars on each side
+         (results '()))
+    ;; Search each memo file
+    (for-each
+     (lambda (file)
+       (let* ((basename (pathname-strip-directory file))
+              (memo-num (let ((m (string-match "memo-([0-9]+)" basename)))
+                          (if m (cadr m) "???"))))
+         (with-input-from-file file
+           (lambda ()
+             (let loop ((line-num 0))
+               (let ((line (read-line)))
+                 (unless (eof-object? line)
+                   (when (string-contains-ci line kw-lower)
+                     (let* ((pos (string-contains-ci line kw-lower))
+                            (start (max 0 (- pos context-width)))
+                            (end (min (string-length line) (+ pos (string-length kw) context-width)))
+                            (context (substring line start end))
+                            (prefix (if (> start 0) "..." ""))
+                            (suffix (if (< end (string-length line)) "..." "")))
+                       (set! results
+                             (cons (list memo-num line-num
+                                        (string-append prefix context suffix))
+                                   results))))
+                   (loop (+ line-num 1)))))))))
+     memo-files)
+
+    (print "")
+    (if (null? results)
+        (printf "No matches for '~a' in memos~%" kw)
+        (begin
+          (printf "KWIC: ~a (~a matches)~%~%" kw (length results))
+          (for-each
+           (lambda (r)
+             (printf "  Memo-~a:~a  ~a~%"
+                     (string-pad-left (car r) 3 #\0)
+                     (cadr r)
+                     (caddr r)))
+           (reverse (take (min 20 (length results)) (reverse results))))
+          (when (> (length results) 20)
+            (printf "~%  ... (~a more matches)~%" (- (length results) 20)))))
+    (print "")
+    (void)))
+
 ;; Open Memo in viewer
 (define (memo num #!optional format)
   "Open Memo in viewer. (memo 54) or (memo 54 'html) or (memo 54 'ps)"
