@@ -164,14 +164,14 @@ if [[ -o interactive ]]; then
     alias cr='claude --resume'
     alias clone='stash && clone-fluffy --with-dotfiles'
     alias csi='rlwrap csi'
-    # Cyberspace REPL - use rlwrap if available for line editing
+    # Cyberspace REPL - functions to pass through arguments
+    unalias cs cyberspace 2>/dev/null
     if (( $+commands[rlwrap] )); then
-        alias cyberspace='cd ~/cyberspace/spki/scheme && rlwrap ./cyberspace-repl'
-        alias cs='cd ~/cyberspace/spki/scheme && rlwrap ./cyberspace-repl'
+        function cs { (cd ~/cyberspace/spki/scheme && rlwrap ./cyberspace-repl "$@") }
     else
-        alias cyberspace='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
-        alias cs='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
+        function cs { (cd ~/cyberspace/spki/scheme && ./cyberspace-repl "$@") }
     fi
+    function cyberspace { cs "$@" }
     alias epoch='date +%s'
     alias fen='~/bin/forge-word'
     alias gonorns='ssh we@192.168.0.161'
