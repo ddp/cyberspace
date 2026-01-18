@@ -6746,27 +6746,51 @@ Cyberspace REPL - Available Commands
         (else
          (repl-history-add line)
          (let* ((trimmed (string-trim-both line))
-                (is-scheme? (and (> (string-length trimmed) 0)
-                                 (char=? (string-ref trimmed 0) #\()))
-                (expr (parse-command-line line)))
-           ;; Track usage for mode detection
-           (if is-scheme?
-               (set! *paren-count* (+ 1 *paren-count*))
-               (set! *command-count* (+ 1 *command-count*)))
-           (check-mode-shift!)
+                (words (string-split trimmed))
+                (cmd (if (null? words) "" (car words))))
+           ;; Handle describe/inspect specially (they take symbols, not evaluated args)
+           (cond
+             ;; describe <thing>
+             ((and (>= (length words) 2) (string=? cmd "describe"))
+              (set! *command-count* (+ 1 *command-count*))
+              (check-mode-shift!)
+              (handle-exceptions exn
+                (rich-exception-display exn)
+                (cyberspace-describe (string->symbol (cadr words))))
+              (loop))
 
-           (when expr
-             (handle-exceptions exn
-               (if *inspector-enabled*
-                   (begin
-                     (inspector-repl exn)
-                     (loop))
-                   (rich-exception-display exn))
-               (let ((result (eval expr)))
-                 (unless (eq? result (void))
-                   (push-result! result)
-                   (pp result))))))
-         (loop))))))
+             ;; inspect <thing>
+             ((and (>= (length words) 2) (string=? cmd "inspect"))
+              (set! *command-count* (+ 1 *command-count*))
+              (check-mode-shift!)
+              (handle-exceptions exn
+                (rich-exception-display exn)
+                (cyberspace-inspect (string->symbol (cadr words))))
+              (loop))
+
+             ;; Normal processing
+             (else
+              (let* ((is-scheme? (and (> (string-length trimmed) 0)
+                                      (char=? (string-ref trimmed 0) #\()))
+                     (expr (parse-command-line line)))
+                ;; Track usage for mode detection
+                (if is-scheme?
+                    (set! *paren-count* (+ 1 *paren-count*))
+                    (set! *command-count* (+ 1 *command-count*)))
+                (check-mode-shift!)
+
+                (when expr
+                  (handle-exceptions exn
+                    (if *inspector-enabled*
+                        (begin
+                          (inspector-repl exn)
+                          (loop))
+                        (rich-exception-display exn))
+                    (let ((result (eval expr)))
+                      (unless (eq? result (void))
+                        (push-result! result)
+                        (pp result))))))
+              (loop)))))))))
 
 (module-end! "repl")
 

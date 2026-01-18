@@ -12,7 +12,45 @@
     (p "The Cyberspace REPL is for hackers, admins, and operators—people who think in terms of data structures. This interface is deliberately different from the friendly GUI interface (Memo-051).")
     (code "               CYBERSPACE\n                    │\n       ┌────────────┴────────────┐\n       │                         │\n  ┌────▼─────┐              ┌────▼─────┐\n  │ Terminal │              │ Friendly │\n  │   (cs)   │ ← this memo  │   Door   │\n  └──────────┘              └──────────┘"))
   (section
-    "2. Box Drawing"
+    "2. Novice Mode"
+    (p "The terminal defaults to novice mode: English-like commands, guided exploration, hidden complexity. Scheme is underneath but not visible until discovered.")
+
+    (subsection
+      "2.1 Two Modes"
+      (table
+        (header "Mode " "Prompt " "Commands ")
+        (row "novice " ": " "inspect soup, describe vault, help ")
+        (row "schemer " ": " "(soup 'keys), (vault-stat), expressions "))
+      (p "Novice mode is the default. The prompt is the same. The difference is what commands are available and how results are presented."))
+
+    (subsection
+      "2.2 Dylan-Style Inspectors"
+      (p "Inspectors in novice mode follow Dylan/Symbolics tradition: numbered lists with drill-down commands.")
+      (code ": inspect soup\n\n╔═══════════════════════════════════════════════════╗\n║                  Vault Contents                   ║\n╠═══════════════════════════════════════════════════╣\n║ 1. keys (2)                                       ║\n║ 2. releases (3)                                   ║\n║ 3. archives (12)                                  ║\n╚═══════════════════════════════════════════════════╝\n\nEnter number to inspect, or: help list search done")
+      (p "The heritage: Symbolics genera-style browsers, Apple Dylan's inspector, Clozure CL's GUI. Same principle: show a numbered list, let the user drill in by number."))
+
+    (subsection
+      "2.3 Describe vs Inspect"
+      (p "Two commands for understanding:")
+      (table
+        (header "Command " "Purpose ")
+        (row "describe <thing> " "What IS this thing? Conceptual explanation. ")
+        (row "inspect <thing> " "What's IN this thing? Contents and structure. "))
+      (p "Example: describe soup explains the concept; inspect soup shows what's in the vault."))
+
+    (subsection
+      "2.4 The Hidden Door"
+      (p "describe scheme is the hidden door to Scheme. Not advertised, found by curious novices who try describe on everything.")
+      (code ": describe scheme\n\nEverything here is Scheme underneath.\nThe : prompt accepts commands. Parentheses unlock the language.\nTry: (+ 1 2) or (soup 'keys)")
+      (p "By the time they find it, they're ready. Self-selecting."))
+
+    (subsection
+      "2.5 Schemer Mode"
+      (p "Schemers enable full access with (enable-inspector!) and see debug> prompts, exception traces, and the REPL as a Scheme environment rather than a command shell.")
+      (p "The (schemer!) function is shorthand that enables the inspector, changes error display, and unlocks all procedures. Not advertised. Found by those who look.")))
+
+  (section
+    "3. Box Drawing"
     (subsection
       "2.1 Unicode Box Characters"
       (p "Boxes use ASCII characters for web compatibility, Unicode in terminals:")
