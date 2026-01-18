@@ -90,7 +90,7 @@
   (print "  --sync               Sync vault with remote, then start REPL")
   (print "  --clean              Remove compiled artifacts (.so, .import.scm, .forge/*.meta)")
   (print "  --rebuild            Force rebuild all modules")
-  (print "  --quiet              Suppress verbose output (e.g., rm during --clean)")
+  (print "  --verbose            Show verbose output (e.g., rm during --clean)")
   (print "  --boot=<level>       Boot verbosity: shadow|whisper|portal|chronicle|oracle")
   (print "  --eval='<expr>'      Evaluate expression and exit")
   (print "  --version            Show version information")
@@ -155,18 +155,16 @@
   (unless (git-sync)
     (exit 1)))
 
-;;; --quiet flag
-(define *quiet* (cli-option? "quiet"))
+;;; --verbose flag
+(define *verbose* (cli-option? "verbose"))
 
 ;;; --clean
 (when (cli-option? "clean")
-  (unless *quiet* (print "Cleaning compiled artifacts..."))
   (for-each (lambda (f)
-              (unless *quiet* (print "  rm " f))
+              (when *verbose* (print "  rm " f))
               (delete-file f))
             (glob "*.so" "*.import.scm" ".forge/*.meta"))
   (unless (cli-option? "rebuild")
-    (unless *quiet* (print "Done."))
     (exit 0)))
 
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
