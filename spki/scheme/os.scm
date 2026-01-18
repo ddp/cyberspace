@@ -443,18 +443,37 @@
         str
         (string-append (substring str 0 (- max-len (string-length ellipsis))) ellipsis)))
 
+  (define (count-substr str sub)
+    "Count occurrences of sub in str"
+    (let ((sub-len (string-length sub)))
+      (let loop ((pos 0) (count 0))
+        (let ((found (string-contains str sub pos)))
+          (if found
+              (loop (+ found sub-len) (+ count 1))
+              count)))))
+
   (define (string-display-width str)
     "Calculate display width of string, accounting for multi-byte Unicode.
-     Common symbols like ✓ ✗ are 3 bytes but display as 1 character."
-    (let ((len (string-length str)))
-      ;; Subtract 2 for each known multi-byte single-width char
-      (- len
-         (if (string-contains str "✓") 2 0)
-         (if (string-contains str "✗") 2 0)
-         (if (string-contains str "→") 2 0)
-         (if (string-contains str "←") 2 0)
-         (if (string-contains str "↑") 2 0)
-         (if (string-contains str "↓") 2 0))))
+     · λ are 2 bytes but 1 display char. ✓✗⚠≥≤→←↑↓ are 3 bytes but 1 display char."
+    (let* ((len (string-length str))
+           ;; 2-byte chars (adjust by 1 each)
+           (middot-count (count-substr str "·"))
+           (lambda-count (count-substr str "λ"))
+           ;; 3-byte chars (adjust by 2 each)
+           (check-count (count-substr str "✓"))
+           (cross-count (count-substr str "✗"))
+           (warn-count (count-substr str "⚠"))
+           (gte-count (count-substr str "≥"))
+           (lte-count (count-substr str "≤"))
+           (rarrow-count (count-substr str "→"))
+           (larrow-count (count-substr str "←"))
+           (uarrow-count (count-substr str "↑"))
+           (darrow-count (count-substr str "↓"))
+           (adjustment (+ middot-count lambda-count
+                         (* 2 (+ check-count cross-count warn-count
+                                 gte-count lte-count
+                                 rarrow-count larrow-count uarrow-count darrow-count)))))
+      (- len adjustment)))
 
   ;; Box builder - alist with width and style
   (define (make-box width #!optional (style *box-square*))
