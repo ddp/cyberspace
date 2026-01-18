@@ -39,23 +39,6 @@
         srfi-69   ; hash tables
         (chicken tcp))
 
-;;; ============================================================
-;;; Clean - remove compiled artifacts for fresh rebuild
-;;; ============================================================
-;;; cs clean      - clean and exit
-;;; cs clean gate - clean and rebuild
-;;; cs clean.     - clean and continue (Wirth doit)
-
-(when (or (member "clean" (command-line-arguments))
-          (member "clean." (command-line-arguments)))
-  (print "Cleaning compiled artifacts...")
-  (for-each (lambda (f) (print "  rm " f) (delete-file f))
-            (glob "*.so" "*.import.scm"))
-  (unless (or (member "gate" (command-line-arguments))
-              (member "clean." (command-line-arguments)))
-    (print "Done. Rebuild with: cs gate")
-    (exit 0)))
-
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
 (import os)
 
@@ -471,7 +454,7 @@
       result))
   (define (display-width str)
     "Calculate display width accounting for multi-byte Unicode chars.
-     · λ are 2 bytes but 1 display char. ✓✗⚠≥≤ are 3 bytes but 1 display char."
+     · λ are 2 bytes but 1 display char. ✓✗⚠ are 3 bytes but 1 display char."
     (let* ((len (string-length str))
            ;; Count all occurrences of multi-byte chars
            (middot-count (count-substr str "·"))  ; U+00B7, 2 bytes
@@ -479,11 +462,9 @@
            (check-count (count-substr str "✓"))   ; 3 bytes
            (cross-count (count-substr str "✗"))   ; 3 bytes
            (warn-count (count-substr str "⚠"))    ; 3 bytes
-           (gte-count (count-substr str "≥"))     ; 3 bytes
-           (lte-count (count-substr str "≤"))     ; 3 bytes
-           ;; Adjust: ·λ=1 extra byte, ✓✗⚠≥≤=2 extra bytes each
+           ;; Adjust: ·λ=1 extra byte, ✓✗⚠=2 extra bytes each
            (adjustment (+ middot-count lambda-count
-                         (* 2 (+ check-count cross-count warn-count gte-count lte-count)))))
+                         (* 2 (+ check-count cross-count warn-count)))))
       (- len adjustment)))
   (define w 90)  ; wide enough for compiler warnings
   (define (box-line content)
@@ -587,35 +568,55 @@
         (arch (current-arch))
         ;; Build order: strict topological sort by dependency level
         ;; Modules within each level can build in parallel
-        ;; NOTE: Sequential levels for dependent modules to avoid import race conditions
         (levels '(;; Level 0 (no cyberspace deps - truly parallel)
                   ("os" "crypto-ffi" "sexp" "capability" "inspector")
                   ;; Level 1 (single deps from L0)
                   ("mdns" "fips" "audit" "wordlist" "bloom" "catalog" "keyring" "portal")
-                  ;; Level 2 (cert deps: crypto-ffi, sexp)
-                  ("cert")
-                  ;; Level 3 (security imports cert) - alone to ensure cert.import.scm ready
-                  ("security")
-                  ;; Level 4 (vault imports cert, audit, os)
-                  ("vault")
-                  ;; Level 5 (enroll, gossip both import from vault)
-                  ("enroll" "gossip")
-                  ;; Level 6 (auto-enroll depends on enroll)
-                  ("auto-enroll")
-                  ;; Level 7 (ui depends on enroll)
+                  ;; Level 2 (deps on L0+L1)
+                  ("cert" "enroll")
+                  ;; Level 3 (deps on L2)
+                  ("gossip" "security")
+                  ;; Level 4 (deps on L3)
+                  ("vault" "auto-enroll")
+                  ;; Level 5 (ui depends on auto-enroll)
                   ("ui"))))
 
-    (define (rebuild-level! modules-in-level)
-      "Rebuild modules in level sequentially, return count rebuilt.
-       Sequential build avoids Chicken import library race conditions."
-      (let ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level)))
-        (for-each (lambda (module)
-                    (rebuild-module! module arch stamp))
-                  to-build)
+    (define (rebuild-level-parallel! modules-in-level)
+      "Rebuild all modules in level in parallel, return count rebuilt.
+       Each child writes to a temp file; parent prints sequentially for clean boxes."
+      (let* ((to-build (filter (lambda (m) (needs-rebuild? m stamp)) modules-in-level))
+             ;; Create temp file paths for each module (use timestamp for uniqueness)
+             (ts (number->string (current-seconds)))
+             (temp-files (map (lambda (m)
+                                (string-append "/tmp/forge-" m "-" ts ".out"))
+                              to-build))
+             ;; Fork children, each redirecting stdout to its temp file
+             (pids (map (lambda (module temp-file)
+                          (process-fork
+                           (lambda ()
+                             (with-output-to-file temp-file
+                               (lambda ()
+                                 (rebuild-module! module arch stamp)))
+                             (exit 0))))
+                        to-build temp-files)))
+        ;; Wait for all children to complete
+        (for-each (lambda (pid) (process-wait pid)) pids)
+        ;; Print each child's output sequentially (clean, non-interleaved boxes)
+        (for-each (lambda (temp-file)
+                    (when (file-exists? temp-file)
+                      (with-input-from-file temp-file
+                        (lambda ()
+                          (let loop ()
+                            (let ((line (read-line)))
+                              (unless (eof-object? line)
+                                (print line)
+                                (loop))))))
+                      (delete-file temp-file)))
+                  temp-files)
         (length to-build)))
 
     (let ((total-rebuilt (fold (lambda (level count)
-                                 (+ count (rebuild-level! level)))
+                                 (+ count (rebuild-level-parallel! level)))
                                0
                                levels)))
       ;; Show forge summary when modules were rebuilt
@@ -5077,8 +5078,7 @@ Cyberspace REPL - Available Commands
     (du        . soup-du)
     (releases  . soup-releases)
     (find      . soup-find)
-    (inspect   . inspect)   ; uses cyberspace-inspect via eval binding
-    (describe  . describe)  ; uses cyberspace-describe via eval binding
+    (inspect   . soup-inspect)
     (peers     . nodes)
     (listen    . node-listen)
     (connect   . node-connect)
@@ -5143,215 +5143,29 @@ Cyberspace REPL - Available Commands
   (set! *inspector-enabled* #f)
   (print "Inspector disabled. Errors show stack trace."))
 
-;;; ============================================================
-;;; Dylan-Style Inspectors (Novice Mode)
-;;; ============================================================
-;;;
-;;; Interactive object browsers inspired by Dylan, Symbolics, CCL.
-;;; Each inspector shows a numbered list you can drill into.
-;;;
-;;; Heritage: Dylan Object Inspector, LispWorks Inspector,
-;;;           Symbolics Genera Inspector, CCL Inspector
-
-(define (make-dylan-inspector name items-thunk #!key
-                               (item-name (lambda (item) (sprintf "~a" item)))
-                               (item-desc (lambda (item) ""))
-                               (drill (lambda (item) (inspector#inspect item))))
-  "Create a Dylan-style inspector for a collection.
-   Returns a closure accepting subcommands:
-     <n>        - drill into item n
-     'help      - show commands
-     'list      - show items again
-     'search P  - find items matching pattern"
-  (let ((items (items-thunk)))
-    ;; Display banner
-    (print "")
-    (print (os#box-top (os#make-box 50)))
-    (print (os#box-line (os#make-box 50) (sprintf "inspect ~a" name)))
-    (print (os#box-line (os#make-box 50)
-                        (sprintf "~a items" (if (list? items) (length items) "?"))))
-    (print (os#box-bottom (os#make-box 50)))
-
-    ;; Show numbered items (first 20)
-    (when (and (list? items) (not (null? items)))
-      (print "")
-      (let ((limit (min 20 (length items))))
-        (do ((i 0 (+ i 1))
-             (rest items (cdr rest)))
-            ((or (>= i limit) (null? rest)))
-          (let* ((item (car rest))
-                 (nm (item-name item))
-                 (desc (item-desc item)))
-            (printf "  [~a] ~a~a~%"
-                    i nm
-                    (if (string=? desc "") "" (sprintf "  ~a" desc)))))
-        (when (> (length items) limit)
-          (printf "  ... (~a more)~%" (- (length items) limit)))))
-
-    (print "")
-    (print "  <n> drill   ? help   . done")
-    (print "")
-
-    ;; Return inspector closure
-    (lambda cmd-args
-      (let ((cmd (if (null? cmd-args) 'list (car cmd-args)))
-            (args (if (null? cmd-args) '() (cdr cmd-args))))
-        (cond
-          ;; Numeric - drill into item
-          ((and (integer? cmd) (>= cmd 0) (< cmd (length items)))
-           (let ((item (list-ref items cmd)))
-             (drill item)))
-
-          ;; Help
-          ((memq cmd '(help ? h))
-           (print "")
-           (print "Inspector commands:")
-           (print "  <n>           - drill into item n")
-           (print "  'list         - show items again")
-           (print "  'search \"pat\" - find matching items")
-           (print "  'count        - count items")
-           (print "  'first        - drill into first item")
-           (print "  'last         - drill into last item")
-           (print "  . or 'done    - exit inspector")
-           (print ""))
-
-          ;; List items again
-          ((eq? cmd 'list)
-           (make-dylan-inspector name items-thunk
-                                 item-name: item-name
-                                 item-desc: item-desc
-                                 drill: drill))
-
-          ;; Search
-          ((eq? cmd 'search)
-           (let* ((pattern (if (null? args) "*" (car args)))
-                  (matching (filter (lambda (item)
-                                      (string-contains (item-name item)
-                                                       (if (string? pattern)
-                                                           pattern
-                                                           (sprintf "~a" pattern))))
-                                    items)))
-             (if (null? matching)
-                 (print "No matches.")
-                 (make-dylan-inspector (sprintf "~a (filtered)" name)
-                                       (lambda () matching)
-                                       item-name: item-name
-                                       item-desc: item-desc
-                                       drill: drill))))
-
-          ;; Count
-          ((eq? cmd 'count)
-           (printf "~a items~%" (length items)))
-
-          ;; First/last shortcuts
-          ((eq? cmd 'first)
-           (if (null? items)
-               (print "No items.")
-               (drill (car items))))
-          ((eq? cmd 'last)
-           (if (null? items)
-               (print "No items.")
-               (drill (last items))))
-
-          ;; Done
-          ((memq cmd '(done exit quit . q))
-           (print "Done.")
-           (void))
-
-          (else
-           (printf "Unknown command: ~a~%" cmd)))))))
-
-;; Dylan-style inspectors for soup objects
-(define (dylan-soup-inspector)
-  "Dylan-style inspector for soup"
-  (make-dylan-inspector
-   "soup"
-   (lambda () (soup-collect-objects))
-   item-name: (lambda (obj) (cadr obj))  ; name
-   item-desc: (lambda (obj) (sprintf "~a" (car obj)))  ; type
-   drill: (lambda (obj) (soup-inspect (cadr obj)))))
-
-(define (dylan-keys-inspector)
-  "Dylan-style inspector for keys"
-  (make-dylan-inspector
-   "keys"
-   (lambda () (filter (lambda (o) (eq? (car o) 'keys)) (soup-collect-objects)))
-   item-name: (lambda (obj) (cadr obj))
-   item-desc: (lambda (obj)
-                (cond ((string-suffix? ".pub" (cadr obj)) "public")
-                      ((string-suffix? ".key" (cadr obj)) "private")
-                      ((string-suffix? ".age" (cadr obj)) "age")
-                      (else "")))
-   drill: (lambda (obj) (soup-inspect (cadr obj)))))
-
-(define (dylan-releases-inspector)
-  "Dylan-style inspector for releases"
-  (make-dylan-inspector
-   "releases"
-   (lambda () (filter (lambda (o) (eq? (car o) 'releases)) (soup-collect-objects)))
-   item-name: (lambda (obj) (cadr obj))
-   item-desc: (lambda (obj) (format-size (caddr obj)))
-   drill: (lambda (obj) (soup-inspect (cadr obj)))))
-
-(define (dylan-audit-inspector)
-  "Dylan-style inspector for audit entries"
-  (make-dylan-inspector
-   "audit"
-   (lambda () (filter (lambda (o) (eq? (car o) 'audit)) (soup-collect-objects)))
-   item-name: (lambda (obj) (cadr obj))
-   item-desc: (lambda (obj) "")
-   drill: (lambda (obj) (soup-inspect (cadr obj)))))
-
 ;; Domain-aware inspect - handles high-level Cyberspace objects
-;; In novice mode, uses Dylan-style inspectors; in schemer mode, raw output
+;; before falling back to generic inspector
 (define (cyberspace-inspect obj)
-  "Inspect any object - soup objects get special treatment"
+  "Inspect any object with domain awareness"
   (cond
-    ;; Symbols that name soup concepts
-    ;; Novice mode: Dylan-style inspectors
-    ;; Schemer mode: direct function calls
-    ((eq? obj 'soup)
-     (if (eq? *user-mode* 'novice)
-         (dylan-soup-inspector)
-         (soup)))
+    ;; Symbols that name domain concepts - call function and show result
+    ((eq? obj 'soup) (soup))
     ((eq? obj 'vault) (status))
-    ((eq? obj 'keys)
-     (if (eq? *user-mode* 'novice)
-         (dylan-keys-inspector)
-         (soup 'keys)))
-    ((eq? obj 'releases)
-     (if (eq? *user-mode* 'novice)
-         (dylan-releases-inspector)
-         (soup 'releases)))
-    ((eq? obj 'audits)
-     (if (eq? *user-mode* 'novice)
-         (dylan-audit-inspector)
-         (soup 'audit)))
+    ((eq? obj 'keys) (soup 'keys))
+    ((eq? obj 'releases) (soup 'releases))
+    ((eq? obj 'audits) (soup 'audit))
     ((eq? obj 'certs) (soup 'certs))
     ((eq? obj 'forge) (soup 'forge))
     ((eq? obj 'realm) (realm-info))
 
-    ;; Procedure that matches known soup functions
-    ;; In novice mode: Dylan-style inspector
-    ;; In schemer mode: call and describe result
-    ((eq? obj soup)
-     (if (eq? *user-mode* 'novice)
-         (dylan-soup-inspector)
-         (let ((result (soup)))
-           (inspector#describe result)
-           result)))
-    ((eq? obj keys)
-     (if (eq? *user-mode* 'novice)
-         (dylan-keys-inspector)
-         (let ((result (keys)))
-           (inspector#describe result)
-           result)))
-    ((eq? obj releases)
-     (if (eq? *user-mode* 'novice)
-         (dylan-releases-inspector)
-         (let ((result (releases)))
-           (inspector#describe result)
-           result)))
+    ;; Procedure that matches known domain functions - call and inspect result
+    ((and (procedure? obj)
+          (or (eq? obj soup)
+              (eq? obj keys)
+              (eq? obj releases)))
+     (let ((result (obj)))
+       (inspector#describe result)
+       result))
 
     ;; String that looks like a version or object name - use soup-inspect
     ((and (string? obj)
@@ -5363,63 +5177,6 @@ Cyberspace REPL - Available Commands
     ;; Everything else - generic inspector
     (else
      (inspector#inspect obj))))
-
-;; Describe explains what things ARE - for novices in the wilderness
-(define *descriptions*
-  '((soup
-     "The soup is everything in your vault: releases, archives, keys, audit entries."
-     "It's called soup because objects float in it - no hierarchy, just content."
-     "Try: inspect soup")
-    (vault
-     "The vault is your local Cyberspace node."
-     "It holds your keys, your content, your audit trail."
-     "Everything is signed and yours.")
-    (keys
-     "Your identity in Cyberspace."
-     "The public key (.pub) you share. The private key (.key) you keep secret."
-     "With your key, you can prove you're you.")
-    (releases
-     "Signed versions of your work."
-     "Each release is a commitment: 'this is version 2.0.0, I vouch for it.'"
-     "Others can verify it came from you.")
-    (audits
-     "The audit trail records what happened."
-     "Every commit, every signature, every key operation."
-     "Append-only: history cannot be rewritten.")
-    (certs
-     "Certificates grant permissions."
-     "They say who can do what, signed by who granted it."
-     "Trust flows through delegation chains.")
-    (forge
-     "Generates pronounceable passwords."
-     "40+ languages, from English to Sindarin."
-     "Try: forge 5")
-    (realm
-     "Your realm is your federation of nodes."
-     "Nodes discover each other, sync vaults, share authority."
-     "One realm, many devices, same identity.")
-    (scheme
-     "Everything here is Scheme underneath."
-     "The : prompt accepts commands. Parentheses unlock the language."
-     "Try: (+ 1 2) or (soup 'keys)")))
-
-(define (cyberspace-describe obj)
-  "Describe what something IS, conceptually"
-  (let* ((key (cond
-                ((symbol? obj) obj)
-                ((eq? obj soup) 'soup)
-                ((eq? obj keys) 'keys)
-                ((eq? obj releases) 'releases)
-                (else #f)))
-         (entry (and key (assq key *descriptions*))))
-    (if entry
-        (begin
-          (print "")
-          (for-each (lambda (line) (print "  " line)) (cdr entry))
-          (print "")
-          (void))
-        ;; Fall back to inspector#describe for non-domain objects
-        (inspector#describe obj))))
 
 ;;; ============================================================
 ;;; Help System
@@ -5549,18 +5306,31 @@ Cyberspace REPL - Available Commands
              (print "Try (help 'topics) to see available topics.")
              (print "")))))
 
-    ;; (help) - essentials only
+    ;; (help) - essentials only, mode-aware
     (else
      (print "Cyberspace Scheme")
      (print "")
-     (print "  (library)         - Enter the Library")
-     (print "  (search 'topic)   - Search everything")
-     (print "  (status)          - Node status")
-     (print "  (inspect OBJ)     - Inspect anything")
-     (print "")
-     (printf "  (help 'topics)    - All help topics (~a commands)~%"
-             (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
-     (print "  (.) status  (?) help  (bye) exit")
+     (if (eq? *user-mode* 'novice)
+         ;; Novice: bare commands
+         (begin
+           (print "  library           - Enter the Library")
+           (print "  search topic      - Search everything")
+           (print "  status            - Node status")
+           (print "  inspect OBJ       - Inspect anything")
+           (print "")
+           (printf "  help topics       - All help topics (~a commands)~%"
+                   (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
+           (print "  .  ?  bye         - status, help, exit"))
+         ;; Schemer: full Scheme syntax
+         (begin
+           (print "  (library)         - Enter the Library")
+           (print "  (search 'topic)   - Search everything")
+           (print "  (status)          - Node status")
+           (print "  (inspect OBJ)     - Inspect anything")
+           (print "")
+           (printf "  (help 'topics)    - All help topics (~a commands)~%"
+                   (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
+           (print "  (.) status  (?) help  (bye) exit")))
      (print "")))
   (void))
 
@@ -6728,61 +6498,44 @@ Cyberspace REPL - Available Commands
         (else
          (repl-history-add line)
          (let* ((trimmed (string-trim-both line))
-                (words (string-split trimmed))
-                (cmd (if (null? words) "" (car words))))
-           ;; Handle special commands directly
-           (cond
-             ;; schemers - switch to schemer mode
-             ((string=? cmd "schemers")
-              (schemer)
-              (loop))
+                (is-scheme? (and (> (string-length trimmed) 0)
+                                 (char=? (string-ref trimmed 0) #\()))
+                (expr (parse-command-line line)))
+           ;; Track usage for mode detection
+           (if is-scheme?
+               (set! *paren-count* (+ 1 *paren-count*))
+               (set! *command-count* (+ 1 *command-count*)))
+           (check-mode-shift!)
 
-             ;; novice - switch to novice mode
-             ((string=? cmd "novice")
-              (novice)
-              (loop))
-
-             ;; describe <thing>
-             ((and (>= (length words) 2) (string=? cmd "describe"))
-              (set! *command-count* (+ 1 *command-count*))
-              (check-mode-shift!)
-              (handle-exceptions exn
-                (rich-exception-display exn)
-                (cyberspace-describe (string->symbol (cadr words))))
-              (loop))
-
-             ;; inspect <thing>
-             ((and (>= (length words) 2) (string=? cmd "inspect"))
-              (set! *command-count* (+ 1 *command-count*))
-              (check-mode-shift!)
-              (handle-exceptions exn
-                (rich-exception-display exn)
-                (cyberspace-inspect (string->symbol (cadr words))))
-              (loop))
-
-             ;; Normal processing
-             (else
-              (let* ((is-scheme? (and (> (string-length trimmed) 0)
-                                      (char=? (string-ref trimmed 0) #\()))
-                     (expr (parse-command-line line)))
-                ;; Track usage for mode detection
-                (if is-scheme?
-                    (set! *paren-count* (+ 1 *paren-count*))
-                    (set! *command-count* (+ 1 *command-count*)))
-                (check-mode-shift!)
-
-                (when expr
-                  (handle-exceptions exn
-                    (if *inspector-enabled*
-                        (begin
-                          (inspector-repl exn)
-                          (loop))
-                        (rich-exception-display exn))
-                    (let ((result (eval expr)))
-                      (unless (eq? result (void))
-                        (push-result! result)
-                        (pp result))))))
-              (loop)))))))))
+           (when expr
+             (handle-exceptions exn
+               (if *inspector-enabled*
+                   (begin
+                     (inspector-repl exn)
+                     (loop))
+                   (rich-exception-display exn))
+               ;; Handle special commands that can't be injected into eval's environment
+               (let ((result
+                      (cond
+                        ;; inspect and i - domain-aware inspection
+                        ((and (pair? expr) (memq (car expr) '(inspect i)))
+                         (if (null? (cdr expr))
+                             (begin (print "Usage: (inspect OBJ)") (void))
+                             (cyberspace-inspect (eval (cadr expr)))))
+                        ;; describe - generic object description
+                        ((and (pair? expr) (eq? (car expr) 'describe))
+                         (if (null? (cdr expr))
+                             (begin (print "Usage: (describe OBJ)") (void))
+                             (inspector#describe (eval (cadr expr)))))
+                        ;; novice/schemer mode toggles
+                        ((equal? expr '(novice)) (novice))
+                        ((equal? expr '(schemer)) (schemer))
+                        ;; Everything else - normal eval
+                        (else (eval expr)))))
+                 (unless (eq? result (void))
+                   (push-result! result)
+                   (pp result))))))
+         (loop))))))
 
 (module-end! "repl")
 
@@ -6821,9 +6574,6 @@ Cyberspace REPL - Available Commands
                        (format "~as" elapsed-sec))
                    (realm-signature))))
   (print ""))
-
-;; Note: describe, inspect, schemers, novice are handled directly in command-repl
-;; No eval bindings needed - the command loop intercepts these before eval
 
 ;; Start custom REPL
 (command-repl)
