@@ -110,46 +110,47 @@
   (exit 0))
 
 ;;; --sync (robust git sync - no errors, just works)
+(define (git-sync)
+  "Sync with remote. Returns #t on success, #f on conflict needing human attention."
+  (print "Syncing with remote...")
+  ;; Stash local changes (including untracked .meta files)
+  (system "git stash -q --include-untracked 2>/dev/null")
+  ;; Pull with rebase
+  (let ((pull-result (system "git pull --rebase -q 2>/dev/null")))
+    (cond
+      ((zero? pull-result)
+       ;; Pull succeeded, try to push any local commits
+       (system "git push -q 2>/dev/null")
+       ;; Restore stash, preferring remote for .meta conflicts
+       (system "git stash pop -q 2>/dev/null")
+       (system "git checkout --theirs .forge/*.meta 2>/dev/null")
+       (system "git checkout -- .forge/ 2>/dev/null")
+       (print "  [ok] Synced")
+       #t)
+      (else
+       ;; Rebase failed - check if it's just .meta conflicts
+       (let ((conflict-check (with-input-from-pipe
+                              "git diff --name-only --diff-filter=U 2>/dev/null"
+                              read-lines)))
+         (if (and (pair? conflict-check)
+                  (every (lambda (f) (string-suffix? ".meta" f)) conflict-check))
+             ;; Only .meta conflicts - auto-resolve by preferring remote
+             (begin
+               (system "git checkout --theirs .forge/*.meta 2>/dev/null")
+               (system "git add .forge/*.meta 2>/dev/null")
+               (system "git rebase --continue 2>/dev/null")
+               (system "git push -q 2>/dev/null")
+               (system "git stash pop -q 2>/dev/null")
+               (print "  [ok] Synced (auto-resolved metadata)")
+               #t)
+             ;; Real conflict - abort and warn
+             (begin
+               (system "git rebase --abort 2>/dev/null")
+               (system "git stash pop -q 2>/dev/null")
+               (print "  [!!] Sync conflict - source files need manual merge")
+               #f)))))))
+
 (when (cli-option? "sync")
-  (define (git-sync)
-    "Sync with remote. Returns #t on success, #f on conflict needing human attention."
-    (print "Syncing with remote...")
-    ;; Stash local changes (including untracked .meta files)
-    (system "git stash -q --include-untracked 2>/dev/null")
-    ;; Pull with rebase
-    (let ((pull-result (system "git pull --rebase -q 2>/dev/null")))
-      (cond
-        ((zero? pull-result)
-         ;; Pull succeeded, try to push any local commits
-         (system "git push -q 2>/dev/null")
-         ;; Restore stash, preferring remote for .meta conflicts
-         (system "git stash pop -q 2>/dev/null")
-         (system "git checkout --theirs .forge/*.meta 2>/dev/null")
-         (system "git checkout -- .forge/ 2>/dev/null")
-         (print "  [ok] Synced")
-         #t)
-        (else
-         ;; Rebase failed - check if it's just .meta conflicts
-         (let ((conflict-check (with-input-from-pipe
-                                "git diff --name-only --diff-filter=U 2>/dev/null"
-                                read-lines)))
-           (if (and (pair? conflict-check)
-                    (every (lambda (f) (string-suffix? ".meta" f)) conflict-check))
-               ;; Only .meta conflicts - auto-resolve by preferring remote
-               (begin
-                 (system "git checkout --theirs .forge/*.meta 2>/dev/null")
-                 (system "git add .forge/*.meta 2>/dev/null")
-                 (system "git rebase --continue 2>/dev/null")
-                 (system "git push -q 2>/dev/null")
-                 (system "git stash pop -q 2>/dev/null")
-                 (print "  [ok] Synced (auto-resolved metadata)")
-                 #t)
-               ;; Real conflict - abort and warn
-               (begin
-                 (system "git rebase --abort 2>/dev/null")
-                 (system "git stash pop -q 2>/dev/null")
-                 (print "  [!!] Sync conflict - source files need manual merge")
-                 #f)))))))
   (unless (git-sync)
     (exit 1)))
 
