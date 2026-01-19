@@ -166,6 +166,7 @@
             (glob "*.so" "*.import.scm" ".forge/*.meta"))
   ;; Exit only if --clean alone (no --rebuild, no --boot)
   (unless (or (cli-option? "rebuild") (cli-option "boot"))
+    (flush-output)
     (exit 0)))
 
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
