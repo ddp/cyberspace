@@ -800,7 +800,31 @@
                       count (if (= count 1) "" "s")
                       modules (if (= modules 1) "" "s"))))))
       (when (and (= total-rebuilt 0) (>= *boot-verbosity* 1))
-        (print "All tomes current for " stamp)))))
+        (print "All tomes current for " stamp))
+      ;; Show metrics at chronicle level (3+) even if nothing rebuilt
+      (when (and (= total-rebuilt 0) (>= *boot-verbosity* 3))
+        (let ((totals (fold (lambda (mod acc)
+                              (let ((meta (read-forge-metadata mod)))
+                                (if meta
+                                    (let* ((metrics (cdr (assq 'metrics meta)))
+                                           (loc (cdr (assq 'loc metrics)))
+                                           (lambdas (cdr (assq 'lambdas metrics))))
+                                      (cons (+ (car acc) loc)
+                                            (+ (cdr acc) lambdas)))
+                                    acc)))
+                            '(0 . 0)
+                            (apply append levels))))
+          (printf "  Σ ~a LOC · ~a λ · ~a LOC/λ~%"
+                  (car totals) (cdr totals)
+                  (if (> (cdr totals) 0)
+                      (quotient (car totals) (cdr totals))
+                      0))
+          (when (not (null? *forge-warnings*))
+            (let ((count (length *forge-warnings*))
+                  (modules (length (delete-duplicates (map car *forge-warnings*)))))
+              (printf "  ⚠ ~a warning~a across ~a module~a (forge-warnings)~%"
+                      count (if (= count 1) "" "s")
+                      modules (if (= modules 1) "" "s")))))))))
 
 ;; Run bootstrap before loading modules
 (bootstrap-modules!)
