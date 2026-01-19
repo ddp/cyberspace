@@ -6676,52 +6676,48 @@ See: Memo-0000 Declaration of Cyberspace
   (flush-output)
   (stty-raw)
   (let loop ((chars '()))
-    (if (char-ready?)
-        (let ((c (read-char)))
-          (cond
-            ;; EOF
-            ((eof-object? c)
-             (stty-cooked)
-             c)
-            ;; Immediate commands - only when first char
-            ((and (null? chars) (char=? c #\.))
-             (display ".\n")
-             (stty-cooked)
-             ".")
-            ((and (null? chars) (char=? c #\?))
-             (display "?\n")
-             (stty-cooked)
-             "?")
-            ;; Enter - return accumulated line
-            ((or (char=? c #\newline) (char=? c #\return))
-             (newline)
-             (stty-cooked)
-             (strip-ansi (list->string (reverse chars))))
-            ;; Backspace/DEL
-            ((or (char=? c #\backspace) (char=? c #\delete) (= (char->integer c) 127))
-             (if (null? chars)
-                 (loop chars)
-                 (begin
-                   (display "\b \b")  ; erase char
-                   (flush-output)
-                   (loop (cdr chars)))))
-            ;; Ctrl-C
-            ((= (char->integer c) 3)
-             (stty-cooked)
-             (newline)
-             (signal-condition! (make-property-condition 'user-interrupt)))
-            ;; Ctrl-D on empty line = EOF
-            ((and (null? chars) (= (char->integer c) 4))
-             (stty-cooked)
-             (eof-object))
-            ;; Regular char - echo and accumulate
-            (else
-             (display c)
-             (flush-output)
-             (loop (cons c chars)))))
-        (begin
-          (thread-sleep! 0.05)  ; yield to background threads
-          (loop chars)))))
+    (let ((c (read-char)))  ; blocks in raw mode - no polling needed
+      (cond
+        ;; EOF
+        ((eof-object? c)
+         (stty-cooked)
+         c)
+        ;; Immediate commands - only when first char
+        ((and (null? chars) (char=? c #\.))
+         (display ".\n")
+         (stty-cooked)
+         ".")
+        ((and (null? chars) (char=? c #\?))
+         (display "?\n")
+         (stty-cooked)
+         "?")
+        ;; Enter - return accumulated line
+        ((or (char=? c #\newline) (char=? c #\return))
+         (newline)
+         (stty-cooked)
+         (strip-ansi (list->string (reverse chars))))
+        ;; Backspace/DEL
+        ((or (char=? c #\backspace) (char=? c #\delete) (= (char->integer c) 127))
+         (if (null? chars)
+             (loop chars)
+             (begin
+               (display "\b \b")  ; erase char
+               (flush-output)
+               (loop (cdr chars)))))
+        ;; Ctrl-C
+        ((= (char->integer c) 3)
+         (stty-cooked)
+         (newline)
+         (signal-condition! (make-property-condition 'user-interrupt)))
+        ;; Ctrl-D on empty line = EOF
+        ((and (null? chars) (= (char->integer c) 4))
+         (stty-cooked)
+         (eof-object))
+        ;; Regular char - echo and accumulate
+        (else
+         (display c)
+         (flush-output)
+         (loop (cons c chars)))))))
 
 ;; History stubs - no-op without linenoise
 (define (repl-history-add line) #f)
