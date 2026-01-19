@@ -1,6 +1,3 @@
-;; Auto-converted from Markdown
-;; Review and edit as needed
-
 (memo
   (number 4)
   (title "Replication Layer for Library of Cyberspace")
@@ -9,10 +6,12 @@
     (p "This Memo specifies a replication layer for the Library of Cyberspace preservation architecture, enabling cryptographically sealed releases to be published, subscribed to, and synchronized across distributed locations while maintaining tamper-evident audit trails."))
   (section
     "Motivation"
+    (blockquote "The network is the computer. — John Gage, Sun Microsystems")
     (subsection
       "Heritage: \"Behave as One\""
       (p "The VAXcluster principle (1984): N nodes must behave as one. Not eventually consistent. Not loosely coupled. Identical. One security domain, one namespace, one view of the world.")
-      (p "DECnet Phase IV's 24-bit addressing was fatal for internet scale. Cyberspace applies the same principle to IPv6's 128-bit address space. Federated nodes, behaving as one."))
+      (p "DECnet Phase IV's 24-bit addressing was fatal for internet scale. Cyberspace applies the same principle to IPv6's 128-bit address space. Federated nodes, behaving as one.")
+      (p "But unlike VAXcluster's tight coupling over CI bus, Cyberspace replication works over any transport: git pushes, HTTP posts, USB drives carried across air gaps. The cryptography travels with the data."))
     (subsection
       "Requirements"
       (p "The Library of Cyberspace requires a distribution mechanism that:")
@@ -36,11 +35,16 @@
   (section
     "Specification"
     (subsection
-      "Three Core Operations"
-      (p "#### 1. seal-publish")
-      (p "Publish a sealed release to a remote location.")
+      "seal-publish"
+      (p "Publish a sealed release to a remote location. The fundamental operation: take what's been cryptographically sealed locally and make it available elsewhere.")
       (code scheme "(seal-publish version\n              remote: target\n              archive-format: format\n              message: notes)")
-      (p "Parameters: - version - Semantic version string (e.g., \"1.0.0\") - remote - Publication target (git remote, URL, or directory path) - archive-format - 'tarball, 'bundle, or 'cryptographic (default) - message - Release notes (optional)")
+      (p "Parameters:")
+      (table
+        (header "Parameter " "Description ")
+        (row "version " "Semantic version string (e.g., \"1.0.0\") ")
+        (row "remote " "Publication target: git remote, URL, or directory path ")
+        (row "archive-format " "'tarball, 'bundle, or 'cryptographic (default) ")
+        (row "message " "Release notes (optional) "))
       (p "Behavior:")
       (list
         (item "Verify release exists (creates if needed via seal-release)")
@@ -49,10 +53,16 @@
         (item "Record publication in audit trail with: actor (public key from signing key), action (seal-publish version remote), motivation (release notes), cryptographic seal (signature)"))
       (p "Audit Entry Format:")
       (code scheme "(audit-entry\n  (id \"sha512:...\")\n  (timestamp \"Mon Jan 5 23:38:20 2026\")\n  (sequence 1)\n  (actor\n    (principal #${public-key-blob})\n    (authorization-chain))\n  (action\n    (verb seal-publish)\n    (object \"1.0.0\")\n    (parameters \"/path/to/remote\"))\n  (context\n    (motivation \"Published to filesystem\")\n    (language \"en\"))\n  (environment\n    (platform \"unknown\")\n    (timestamp 1767685100))\n  (seal\n    (algorithm \"ed25519-sha512\")\n    (content-hash \"...\")\n    (signature \"...\")))")
-      (p "#### 2. seal-subscribe")
-      (p "Subscribe to sealed releases from a remote source.")
+    (subsection
+      "seal-subscribe"
+      (p "Subscribe to sealed releases from a remote source. Pull what others have published, verify it cryptographically, trust nothing until proven.")
       (code scheme "(seal-subscribe remote\n                target: local-path\n                verify-key: public-key)")
-      (p "Parameters: - remote - Source location (git remote, URL, or directory) - target - Local path for downloaded archives (optional) - verify-key - Public key for signature verification (optional)")
+      (p "Parameters:")
+      (table
+        (header "Parameter " "Description ")
+        (row "remote " "Source location: git remote, URL, or directory ")
+        (row "target " "Local path for downloaded archives (optional) ")
+        (row "verify-key " "Public key for signature verification (optional) "))
       (p "Behavior:")
       (list
         (item "Discover available releases from remote: Git remote (list tags), HTTP URL (GET /releases endpoint), Filesystem (list .archive files)")
@@ -60,11 +70,17 @@
         (item "Verify each archive: check manifest structure, verify SHA-512 hash of tarball, verify Ed25519 signature (if verify-key provided)")
         (item "Extract verified archives to target directory")
         (item "Record subscription in audit trail: count of releases downloaded, source location, verification status"))
-      (p "Security Consideration: Without verify-key, subscription downloads archives but cannot verify authenticity. SPKI certificate chains should be used to establish trust.")
-      (p "#### 3. seal-synchronize")
-      (p "Bidirectional synchronization of sealed releases.")
+      (p "Security Consideration: Without verify-key, subscription downloads archives but cannot verify authenticity. SPKI certificate chains should be used to establish trust."))
+    (subsection
+      "seal-synchronize"
+      (p "Bidirectional synchronization of sealed releases. For peers who trust each other: what you have that I don't, what I have that you don't, reconcile.")
       (code scheme "(seal-synchronize remote\n                  direction: 'both\n                  verify-key: public-key)")
-      (p "Parameters: - remote - Sync target (git remote, URL, or directory) - direction - 'both (default), 'push-only, or 'pull-only - verify-key - Public key for signature verification (optional)")
+      (p "Parameters:")
+      (table
+        (header "Parameter " "Description ")
+        (row "remote " "Sync target: git remote, URL, or directory ")
+        (row "direction " "'both (default), 'push-only, or 'pull-only ")
+        (row "verify-key " "Public key for signature verification (optional) "))
       (p "Behavior:")
       (list
         (item "Discover local and remote releases")
@@ -109,20 +125,36 @@
         (item "No network required, works with NFS, USB drives, etc."))))
   (section
     "Audit Integration"
-    (p "Every replication operation creates an audit entry with:")
+    (p "Every replication operation creates an audit entry. No silent operations. No unattributed changes. See Memo-005 for the full audit trail specification.")
+    (p "Each entry contains:")
     (list
-      (item "Content-addressed ID - SHA-512 hash of entry")
-      (item "Chained structure - References parent entry")
-      (item "SPKI principal - Public key of actor")
-      (item "Dual context - Human motivation + machine environment")
-      (item "Cryptographic seal - Ed25519 signature"))
-    (p "This provides: - Non-repudiation - Cannot deny publication - Tamper evidence - Changes are detectable - Causality - Chain shows temporal order - Accountability - Know who published what when"))
+      (item "Content-addressed ID: SHA-512 hash of entry")
+      (item "Chained structure: References parent entry")
+      (item "SPKI principal: Public key of actor")
+      (item "Dual context: Human motivation + machine environment")
+      (item "Cryptographic seal: Ed25519 signature"))
+    (p "This provides:")
+    (list
+      (item "Non-repudiation: Cannot deny publication")
+      (item "Tamper evidence: Changes are detectable")
+      (item "Causality: Chain shows temporal order")
+      (item "Accountability: Know who published what, when, and why")))
   (section
     "Security Considerations"
     (subsection
       "Threat Model"
-      (p "Trusted: - Local filesystem and vault - SPKI private keys - Cryptographic primitives (libsodium)")
-      (p "Untrusted: - Remote repositories - Network transport - Downloaded archives - Remote publishers (until SPKI verified)"))
+      (p "Trusted:")
+      (list
+        (item "Local filesystem and vault")
+        (item "SPKI private keys (your responsibility)")
+        (item "Cryptographic primitives (libsodium, audited)"))
+      (p "Untrusted:")
+      (list
+        (item "Remote repositories (anyone can host anything)")
+        (item "Network transport (assume hostile)")
+        (item "Downloaded archives (verify before use)")
+        (item "Remote publishers (until SPKI chain verified)"))
+      (p "The key insight: trust the math, not the infrastructure. A verified signature is proof regardless of how it arrived."))
     (subsection
       "Attack Scenarios"
       (list
@@ -148,28 +180,27 @@
     (subsection
       "Dependencies"
       (list
-        (item "Git")
-        (item "For version control and tag management - libsodium")
-        (item "Ed25519 signatures, SHA-512 hashing")
-        (item "Chicken Scheme modules:   - (chicken process)")
-        (item "Run git commands   - (chicken file)")
-        (item "Filesystem operations   - (chicken irregex)")
-        (item "URL/remote detection"))))
+        (item "Git: Version control and tag management")
+        (item "libsodium: Ed25519 signatures, SHA-512 hashing")
+        (item "(chicken process): Run git commands")
+        (item "(chicken file): Filesystem operations")
+        (item "(chicken irregex): URL/remote detection"))))
   (section
     "Compatibility"
-    (p "This specification is compatible with:")
+    (p "This specification builds on existing standards rather than inventing new ones:")
+    (table
+      (header "Technology " "Role ")
+      (row "Git tags " "Standard version control operations ")
+      (row "Git bundles " "Portable repository format ")
+      (row "Tarball archives " "Universal archive format ")
+      (row "S-expressions " "LISP/Scheme readable manifests ")
+      (row "SDSI/SPKI " "Authorization certificates "))
+    (p "Future extensions may add:")
     (list
-      (item "Git tags")
-      (item "Standard git operations")
-      (item "Git bundles")
-      (item "Portable repository format")
-      (item "Tarball archives")
-      (item "Universal archive format")
-      (item "S-expressions")
-      (item "LISP/Scheme readable format")
-      (item "SDSI/SPKI")
-      (item "Authorization certificates"))
-    (p "Future extensions may add: - IPFS transport - Content-addressed distribution - Tor hidden services - Anonymous publication - Encrypted archives - Confidential distribution - Multi-signature releases - Threshold authorization"))
+      (item "IPFS transport: Content-addressed distribution")
+      (item "Tor hidden services: Anonymous publication")
+      (item "Encrypted archives: Confidential distribution")
+      (item "Multi-signature releases: Threshold authorization")))
   (section
     "Test Coverage"
     (p "See test-replication.scm:")
@@ -177,16 +208,14 @@
   (section
     "References"
     (list
-      (item "SDSI/SPKI - RFC 2693, RFC 2692")
-      (item "Content-Addressed Storage - Git internals, IPFS")
-      (item "Semantic Versioning - semver.org")
-      (item "Ed25519 - Bernstein et al.")
-      (item "Audit Trails - Memo-002 (Cryptographic Audit Trail)")))
+      (item "SDSI/SPKI: RFC 2693, RFC 2692")
+      (item "Content-Addressed Storage: Git internals, IPFS")
+      (item "Semantic Versioning: semver.org")
+      (item "Ed25519: Bernstein et al., 2006")
+      (item "Audit Trails: Memo-005 (Cryptographic Audit Trail)")))
   (section
     "Changelog"
-    (list
-      (item "2026-01-05")
-      (item "Initial implementation and specification   - seal-publish with git/HTTP/filesystem support   - seal-subscribe with signature verification   - seal-synchronize with bidirectional sync  ")
-      (item "Full audit trail integration  ")
-      (item "Cryptographic archive format"))))
+    (p "2026-01-19 - Expanded narrative, fixed formatting")
+    (p "2026-01-05 - Initial specification: seal-publish, seal-subscribe, seal-synchronize with full audit trail integration")))
 
+)

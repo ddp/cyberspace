@@ -35,9 +35,13 @@
 </section>
 <section>
 <h2>Motivation</h2>
+<blockquote>
+<p>The network is the computer. — John Gage, Sun Microsystems</p>
+</blockquote>
 <h3>Heritage: "Behave as One"</h3>
 <p>The VAXcluster principle (1984): N nodes must behave as one. Not eventually consistent. Not loosely coupled. Identical. One security domain, one namespace, one view of the world.</p>
 <p>DECnet Phase IV's 24-bit addressing was fatal for internet scale. Cyberspace applies the same principle to IPv6's 128-bit address space. Federated nodes, behaving as one.</p>
+<p>But unlike VAXcluster's tight coupling over CI bus, Cyberspace replication works over any transport: git pushes, HTTP posts, USB drives carried across air gaps. The cryptography travels with the data.</p>
 <h3>Requirements</h3>
 <p>The Library of Cyberspace requires a distribution mechanism that:</p>
 <ul>
@@ -63,16 +67,22 @@
 </section>
 <section>
 <h2>Specification</h2>
-<h3>Three Core Operations</h3>
-<p>#### 1. seal-publish</p>
-<p>Publish a sealed release to a remote location.</p>
+<h3>seal-publish</h3>
+<p>Publish a sealed release to a remote location. The fundamental operation: take what's been cryptographically sealed locally and make it available elsewhere.</p>
 <pre class="language-scheme">
 (seal-publish version
               remote: target
               archive-format: format
               message: notes)
 </pre>
-<p>Parameters: - version - Semantic version string (e.g., "1.0.0") - remote - Publication target (git remote, URL, or directory path) - archive-format - 'tarball, 'bundle, or 'cryptographic (default) - message - Release notes (optional)</p>
+<p>Parameters:</p>
+<table>
+<tr><th>Parameter </th><th>Description </th></tr>
+<tr><td>version </td><td>Semantic version string (e.g., "1.0.0") </td></tr>
+<tr><td>remote </td><td>Publication target: git remote, URL, or directory path </td></tr>
+<tr><td>archive-format </td><td>'tarball, 'bundle, or 'cryptographic (default) </td></tr>
+<tr><td>message </td><td>Release notes (optional) </td></tr>
+</table>
 <p>Behavior:</p>
 <ul>
 <li>Verify release exists (creates if needed via seal-release)</li>
@@ -104,14 +114,20 @@
     (content-hash "...")
     (signature "...")))
 </pre>
-<p>#### 2. seal-subscribe</p>
-<p>Subscribe to sealed releases from a remote source.</p>
+<h3>seal-subscribe</h3>
+<p>Subscribe to sealed releases from a remote source. Pull what others have published, verify it cryptographically, trust nothing until proven.</p>
 <pre class="language-scheme">
 (seal-subscribe remote
                 target: local-path
                 verify-key: public-key)
 </pre>
-<p>Parameters: - remote - Source location (git remote, URL, or directory) - target - Local path for downloaded archives (optional) - verify-key - Public key for signature verification (optional)</p>
+<p>Parameters:</p>
+<table>
+<tr><th>Parameter </th><th>Description </th></tr>
+<tr><td>remote </td><td>Source location: git remote, URL, or directory </td></tr>
+<tr><td>target </td><td>Local path for downloaded archives (optional) </td></tr>
+<tr><td>verify-key </td><td>Public key for signature verification (optional) </td></tr>
+</table>
 <p>Behavior:</p>
 <ul>
 <li>Discover available releases from remote: Git remote (list tags), HTTP URL (GET /releases endpoint), Filesystem (list .archive files)</li>
@@ -121,14 +137,20 @@
 <li>Record subscription in audit trail: count of releases downloaded, source location, verification status</li>
 </ul>
 <p>Security Consideration: Without verify-key, subscription downloads archives but cannot verify authenticity. SPKI certificate chains should be used to establish trust.</p>
-<p>#### 3. seal-synchronize</p>
-<p>Bidirectional synchronization of sealed releases.</p>
+<h3>seal-synchronize</h3>
+<p>Bidirectional synchronization of sealed releases. For peers who trust each other: what you have that I don't, what I have that you don't, reconcile.</p>
 <pre class="language-scheme">
 (seal-synchronize remote
                   direction: 'both
                   verify-key: public-key)
 </pre>
-<p>Parameters: - remote - Sync target (git remote, URL, or directory) - direction - 'both (default), 'push-only, or 'pull-only - verify-key - Public key for signature verification (optional)</p>
+<p>Parameters:</p>
+<table>
+<tr><th>Parameter </th><th>Description </th></tr>
+<tr><td>remote </td><td>Sync target: git remote, URL, or directory </td></tr>
+<tr><td>direction </td><td>'both (default), 'push-only, or 'pull-only </td></tr>
+<tr><td>verify-key </td><td>Public key for signature verification (optional) </td></tr>
+</table>
 <p>Behavior:</p>
 <ul>
 <li>Discover local and remote releases</li>
@@ -138,8 +160,6 @@
 <li>Record synchronization in audit trail: count pushed and pulled, remote location, direction</li>
 </ul>
 <p>Use Case: Periodic sync between trusted peers in a confederation.</p>
-</section>
-<section>
 <h2>Archive Format</h2>
 <h3>Cryptographic Archive Structure</h3>
 <pre>
@@ -165,8 +185,6 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 <li>Verify Ed25519 signature on hash</li>
 <li>Check SPKI authorization (optional)</li>
 </ul>
-</section>
-<section>
 <h2>Transport Implementations</h2>
 <h3>Git Remote</h3>
 <ul>
@@ -186,24 +204,39 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 <li>Directory structure: &lt;remote&gt;/&lt;archive-name&gt;</li>
 <li>No network required, works with NFS, USB drives, etc.</li>
 </ul>
-</section>
-<section>
 <h2>Audit Integration</h2>
-<p>Every replication operation creates an audit entry with:</p>
+<p>Every replication operation creates an audit entry. No silent operations. No unattributed changes. See Memo-005 for the full audit trail specification.</p>
+<p>Each entry contains:</p>
 <ul>
-<li>Content-addressed ID - SHA-512 hash of entry</li>
-<li>Chained structure - References parent entry</li>
-<li>SPKI principal - Public key of actor</li>
-<li>Dual context - Human motivation + machine environment</li>
-<li>Cryptographic seal - Ed25519 signature</li>
+<li>Content-addressed ID: SHA-512 hash of entry</li>
+<li>Chained structure: References parent entry</li>
+<li>SPKI principal: Public key of actor</li>
+<li>Dual context: Human motivation + machine environment</li>
+<li>Cryptographic seal: Ed25519 signature</li>
 </ul>
-<p>This provides: - Non-repudiation - Cannot deny publication - Tamper evidence - Changes are detectable - Causality - Chain shows temporal order - Accountability - Know who published what when</p>
-</section>
-<section>
+<p>This provides:</p>
+<ul>
+<li>Non-repudiation: Cannot deny publication</li>
+<li>Tamper evidence: Changes are detectable</li>
+<li>Causality: Chain shows temporal order</li>
+<li>Accountability: Know who published what, when, and why</li>
+</ul>
 <h2>Security Considerations</h2>
 <h3>Threat Model</h3>
-<p>Trusted: - Local filesystem and vault - SPKI private keys - Cryptographic primitives (libsodium)</p>
-<p>Untrusted: - Remote repositories - Network transport - Downloaded archives - Remote publishers (until SPKI verified)</p>
+<p>Trusted:</p>
+<ul>
+<li>Local filesystem and vault</li>
+<li>SPKI private keys (your responsibility)</li>
+<li>Cryptographic primitives (libsodium, audited)</li>
+</ul>
+<p>Untrusted:</p>
+<ul>
+<li>Remote repositories (anyone can host anything)</li>
+<li>Network transport (assume hostile)</li>
+<li>Downloaded archives (verify before use)</li>
+<li>Remote publishers (until SPKI chain verified)</li>
+</ul>
+<p>The key insight: trust the math, not the infrastructure. A verified signature is proof regardless of how it arrived.</p>
 <h3>Attack Scenarios</h3>
 <ul>
 <li>Malicious Archive Substitution - Attacker replaces archive on remote - Mitigation: Signature verification fails</li>
@@ -221,8 +254,6 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 <li>Backup signing keys - Use Shamir secret sharing</li>
 </ul>
 <p>Defense in depth: cryptographic verification is primary, but transport security and operational practices add additional layers.</p>
-</section>
-<section>
 <h2>Implementation Notes</h2>
 <h3>Helper Functions</h3>
 <pre class="language-scheme">
@@ -234,33 +265,29 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 </pre>
 <h3>Dependencies</h3>
 <ul>
-<li>Git</li>
-<li>For version control and tag management - libsodium</li>
-<li>Ed25519 signatures, SHA-512 hashing</li>
-<li>Chicken Scheme modules:   - (chicken process)</li>
-<li>Run git commands   - (chicken file)</li>
-<li>Filesystem operations   - (chicken irregex)</li>
-<li>URL/remote detection</li>
+<li>Git: Version control and tag management</li>
+<li>libsodium: Ed25519 signatures, SHA-512 hashing</li>
+<li>(chicken process): Run git commands</li>
+<li>(chicken file): Filesystem operations</li>
+<li>(chicken irregex): URL/remote detection</li>
 </ul>
-</section>
-<section>
 <h2>Compatibility</h2>
-<p>This specification is compatible with:</p>
+<p>This specification builds on existing standards rather than inventing new ones:</p>
+<table>
+<tr><th>Technology </th><th>Role </th></tr>
+<tr><td>Git tags </td><td>Standard version control operations </td></tr>
+<tr><td>Git bundles </td><td>Portable repository format </td></tr>
+<tr><td>Tarball archives </td><td>Universal archive format </td></tr>
+<tr><td>S-expressions </td><td>LISP/Scheme readable manifests </td></tr>
+<tr><td>SDSI/SPKI </td><td>Authorization certificates </td></tr>
+</table>
+<p>Future extensions may add:</p>
 <ul>
-<li>Git tags</li>
-<li>Standard git operations</li>
-<li>Git bundles</li>
-<li>Portable repository format</li>
-<li>Tarball archives</li>
-<li>Universal archive format</li>
-<li>S-expressions</li>
-<li>LISP/Scheme readable format</li>
-<li>SDSI/SPKI</li>
-<li>Authorization certificates</li>
+<li>IPFS transport: Content-addressed distribution</li>
+<li>Tor hidden services: Anonymous publication</li>
+<li>Encrypted archives: Confidential distribution</li>
+<li>Multi-signature releases: Threshold authorization</li>
 </ul>
-<p>Future extensions may add: - IPFS transport - Content-addressed distribution - Tor hidden services - Anonymous publication - Encrypted archives - Confidential distribution - Multi-signature releases - Threshold authorization</p>
-</section>
-<section>
 <h2>Test Coverage</h2>
 <p>See test-replication.scm:</p>
 <pre class="language-scheme">
@@ -275,25 +302,17 @@ vault-1.0.0.archive.tar.gz   # Actual tarball
 ;; Verify audit entry created
 (audit-read sequence: 1)
 </pre>
-</section>
-<section>
 <h2>References</h2>
 <ul>
-<li>SDSI/SPKI - RFC 2693, RFC 2692</li>
-<li>Content-Addressed Storage - Git internals, IPFS</li>
-<li>Semantic Versioning - semver.org</li>
-<li>Ed25519 - Bernstein et al.</li>
-<li>Audit Trails - Memo-002 (Cryptographic Audit Trail)</li>
+<li>SDSI/SPKI: RFC 2693, RFC 2692</li>
+<li>Content-Addressed Storage: Git internals, IPFS</li>
+<li>Semantic Versioning: semver.org</li>
+<li>Ed25519: Bernstein et al., 2006</li>
+<li>Audit Trails: Memo-005 (Cryptographic Audit Trail)</li>
 </ul>
-</section>
-<section>
 <h2>Changelog</h2>
-<ul>
-<li>2026-01-05</li>
-<li>Initial implementation and specification   - seal-publish with git/HTTP/filesystem support   - seal-subscribe with signature verification   - seal-synchronize with bidirectional sync  </li>
-<li>Full audit trail integration  </li>
-<li>Cryptographic archive format</li>
-</ul>
+<p>2026-01-19 - Expanded narrative, fixed formatting</p>
+<p>2026-01-05 - Initial specification: seal-publish, seal-subscribe, seal-synchronize with full audit trail integration</p>
 </section>
 <script>
 function toggleTheme() {

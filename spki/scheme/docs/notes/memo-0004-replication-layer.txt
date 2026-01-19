@@ -18,6 +18,9 @@ MOTIVATION
 ------------------------------------------------------------------------
 
 
+    "The network is the computer. — John Gage, Sun Microsystems"
+
+
 Heritage: "Behave as One"
 -------------------------
 
@@ -28,6 +31,10 @@ domain, one namespace, one view of the world.
 DECnet Phase IV's 24-bit addressing was fatal for internet scale.
 Cyberspace applies the same principle to IPv6's 128-bit address space.
 Federated nodes, behaving as one.
+
+But unlike VAXcluster's tight coupling over CI bus, Cyberspace
+replication works over any transport: git pushes, HTTP posts, USB drives
+carried across air gaps. The cryptography travels with the data.
 
 
 Requirements
@@ -72,12 +79,12 @@ SPECIFICATION
 ------------------------------------------------------------------------
 
 
-Three Core Operations
----------------------
+seal-publish
+------------
 
-#### 1. seal-publish
-
-Publish a sealed release to a remote location.
+Publish a sealed release to a remote location. The fundamental
+operation: take what's been cryptographically sealed locally and make it
+available elsewhere.
 
 
     (seal-publish version
@@ -85,10 +92,14 @@ Publish a sealed release to a remote location.
                   archive-format: format
                   message: notes)
 
-Parameters: - version - Semantic version string (e.g., "1.0.0") - remote
-- Publication target (git remote, URL, or directory path) -
-archive-format - 'tarball, 'bundle, or 'cryptographic (default) -
-message - Release notes (optional)
+Parameters:
+
+
+  Parameter        Description                                              
+  version          Semantic version string (e.g., "1.0.0")                  
+  remote           Publication target: git remote, URL, or directory path   
+  archive-format   'tarball, 'bundle, or 'cryptographic (default)           
+  message          Release notes (optional)                                 
 
 Behavior:
 
@@ -122,18 +133,25 @@ Audit Entry Format:
         (content-hash "...")
         (signature "...")))
 
-#### 2. seal-subscribe
 
-Subscribe to sealed releases from a remote source.
+seal-subscribe
+--------------
+
+Subscribe to sealed releases from a remote source. Pull what others have
+published, verify it cryptographically, trust nothing until proven.
 
 
     (seal-subscribe remote
                     target: local-path
                     verify-key: public-key)
 
-Parameters: - remote - Source location (git remote, URL, or directory) -
-target - Local path for downloaded archives (optional) - verify-key -
-Public key for signature verification (optional)
+Parameters:
+
+
+  Parameter    Description                                        
+  remote       Source location: git remote, URL, or directory     
+  target       Local path for downloaded archives (optional)      
+  verify-key   Public key for signature verification (optional)   
 
 Behavior:
 
@@ -147,18 +165,26 @@ Security Consideration: Without verify-key, subscription downloads
 archives but cannot verify authenticity. SPKI certificate chains should
 be used to establish trust.
 
-#### 3. seal-synchronize
 
-Bidirectional synchronization of sealed releases.
+seal-synchronize
+----------------
+
+Bidirectional synchronization of sealed releases. For peers who trust
+each other: what you have that I don't, what I have that you don't,
+reconcile.
 
 
     (seal-synchronize remote
                       direction: 'both
                       verify-key: public-key)
 
-Parameters: - remote - Sync target (git remote, URL, or directory) -
-direction - 'both (default), 'push-only, or 'pull-only - verify-key -
-Public key for signature verification (optional)
+Parameters:
+
+
+  Parameter    Description                                        
+  remote       Sync target: git remote, URL, or directory         
+  direction    'both (default), 'push-only, or 'pull-only         
+  verify-key   Public key for signature verification (optional)   
 
 Behavior:
 
@@ -237,17 +263,24 @@ Filesystem
 AUDIT INTEGRATION
 ------------------------------------------------------------------------
 
-Every replication operation creates an audit entry with:
+Every replication operation creates an audit entry. No silent
+operations. No unattributed changes. See Memo-005 for the full audit
+trail specification.
 
-  * Content-addressed ID - SHA-512 hash of entry
-  * Chained structure - References parent entry
-  * SPKI principal - Public key of actor
-  * Dual context - Human motivation + machine environment
-  * Cryptographic seal - Ed25519 signature
+Each entry contains:
 
-This provides: - Non-repudiation - Cannot deny publication - Tamper
-evidence - Changes are detectable - Causality - Chain shows temporal
-order - Accountability - Know who published what when
+  * Content-addressed ID: SHA-512 hash of entry
+  * Chained structure: References parent entry
+  * SPKI principal: Public key of actor
+  * Dual context: Human motivation + machine environment
+  * Cryptographic seal: Ed25519 signature
+
+This provides:
+
+  * Non-repudiation: Cannot deny publication
+  * Tamper evidence: Changes are detectable
+  * Causality: Chain shows temporal order
+  * Accountability: Know who published what, when, and why
 
 
 ------------------------------------------------------------------------
@@ -258,11 +291,21 @@ SECURITY CONSIDERATIONS
 Threat Model
 ------------
 
-Trusted: - Local filesystem and vault - SPKI private keys -
-Cryptographic primitives (libsodium)
+Trusted:
 
-Untrusted: - Remote repositories - Network transport - Downloaded
-archives - Remote publishers (until SPKI verified)
+  * Local filesystem and vault
+  * SPKI private keys (your responsibility)
+  * Cryptographic primitives (libsodium, audited)
+
+Untrusted:
+
+  * Remote repositories (anyone can host anything)
+  * Network transport (assume hostile)
+  * Downloaded archives (verify before use)
+  * Remote publishers (until SPKI chain verified)
+
+The key insight: trust the math, not the infrastructure. A verified
+signature is proof regardless of how it arrived.
 
 
 Attack Scenarios
@@ -309,36 +352,34 @@ Helper Functions
 Dependencies
 ------------
 
-  * Git
-  * For version control and tag management - libsodium
-  * Ed25519 signatures, SHA-512 hashing
-  * Chicken Scheme modules:   - (chicken process)
-  * Run git commands   - (chicken file)
-  * Filesystem operations   - (chicken irregex)
-  * URL/remote detection
+  * Git: Version control and tag management
+  * libsodium: Ed25519 signatures, SHA-512 hashing
+  * (chicken process): Run git commands
+  * (chicken file): Filesystem operations
+  * (chicken irregex): URL/remote detection
 
 
 ------------------------------------------------------------------------
 COMPATIBILITY
 ------------------------------------------------------------------------
 
-This specification is compatible with:
+This specification builds on existing standards rather than inventing
+new ones:
 
-  * Git tags
-  * Standard git operations
-  * Git bundles
-  * Portable repository format
-  * Tarball archives
-  * Universal archive format
-  * S-expressions
-  * LISP/Scheme readable format
-  * SDSI/SPKI
-  * Authorization certificates
 
-Future extensions may add: - IPFS transport - Content-addressed
-distribution - Tor hidden services - Anonymous publication - Encrypted
-archives - Confidential distribution - Multi-signature releases -
-Threshold authorization
+  Technology         Role                                  
+  Git tags           Standard version control operations   
+  Git bundles        Portable repository format            
+  Tarball archives   Universal archive format              
+  S-expressions      LISP/Scheme readable manifests        
+  SDSI/SPKI          Authorization certificates            
+
+Future extensions may add:
+
+  * IPFS transport: Content-addressed distribution
+  * Tor hidden services: Anonymous publication
+  * Encrypted archives: Confidential distribution
+  * Multi-signature releases: Threshold authorization
 
 
 ------------------------------------------------------------------------
@@ -362,20 +403,20 @@ See test-replication.scm:
 REFERENCES
 ------------------------------------------------------------------------
 
-  * SDSI/SPKI - RFC 2693, RFC 2692
-  * Content-Addressed Storage - Git internals, IPFS
-  * Semantic Versioning - semver.org
-  * Ed25519 - Bernstein et al.
-  * Audit Trails - Memo-002 (Cryptographic Audit Trail)
+  * SDSI/SPKI: RFC 2693, RFC 2692
+  * Content-Addressed Storage: Git internals, IPFS
+  * Semantic Versioning: semver.org
+  * Ed25519: Bernstein et al., 2006
+  * Audit Trails: Memo-005 (Cryptographic Audit Trail)
 
 
 ------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
 
-  * 2026-01-05
-  * Initial implementation and specification   - seal-publish with git/HTTP/filesystem support   - seal-subscribe with signature verification   - seal-synchronize with bidirectional sync  
-  * Full audit trail integration  
-  * Cryptographic archive format
+2026-01-19 - Expanded narrative, fixed formatting
+
+2026-01-05 - Initial specification: seal-publish, seal-subscribe,
+seal-synchronize with full audit trail integration
 
 ------------------------------------------------------------------------
