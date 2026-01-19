@@ -5469,13 +5469,13 @@ Cyberspace REPL - Available Commands
      (print "Cyberspace Scheme")
      (print "")
      (if (eq? *user-mode* 'novice)
-         ;; Novice: bare commands
+         ;; Novice: plain English, no acronyms
          (begin
-           (print "  library           - Enter the Library")
-           (print "  search 'topic     - Search everything")
-           (print "  kwic 'word        - Keyword-in-context search")
-           (print "  status            - Node status")
-           (print "  inspect OBJ       - Inspect anything")
+           (print "  library           - Browse the Library of memos")
+           (print "  search 'topic     - Search for anything")
+           (print "  kwic 'word        - See word in context across memos")
+           (print "  status            - Show what's happening")
+           (print "  inspect thing     - Look inside any object")
            (print "")
            (printf "  help topics       - All help topics (~a commands)~%"
                    (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
@@ -5523,6 +5523,28 @@ Cyberspace REPL - Available Commands
     result))
 (define security security-summary)
 (define announce announce-presence)
+
+;; Easter egg for schemers: the Ten Commandments
+(define (commandments)
+  "The Ten Commandments of Cyberspace"
+  (print "
+The Ten Commandments of Cyberspace
+
+  0  Declaration               Thou shalt have no central authority
+  1  Conventions               Thou shalt document in S-expressions
+  2  Architecture              Thou shalt know thy vision
+  3  Public Key Authorization  Thou shalt let keys be principals
+  4  Shamir Sharing            Thou shalt have no single point of failure
+  5  Audit Trail               Thou shalt witness all actions
+  6  Vault Architecture        Thou shalt address content by truth
+  7  Replication Layer         Thou shalt federate thy distribution
+  8  Threshold Governance      Thou shalt seek consensus over dictators
+  9  Designer Notes            Thou shalt know why it was ordained
+
+These ten form the core of the Library. All other memos build upon them.
+See: Memo-0000 Declaration of Cyberspace
+")
+  (void))
 
 ;; Display modes and browser opening
 (define (open #!optional content)
