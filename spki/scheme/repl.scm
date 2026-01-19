@@ -48,7 +48,7 @@
 ;;; cs --clean              - remove artifacts, exit
 ;;; cs --rebuild            - force rebuild all
 ;;; cs --clean --rebuild    - clean slate rebuild
-;;; cs --boot=<level>       - verbosity (shadow|whisper|portal|chronicle|oracle)
+;;; cs --boot=<level>       - verbosity (shadow|whisper|portal|oracle)
 ;;; cs --eval='<expr>'      - evaluate and exit
 ;;; cs --version            - version info
 ;;; cs --help               - usage
@@ -92,7 +92,7 @@
   (print "  --clean              Remove compiled artifacts (.so, .import.scm, .forge/*.meta)")
   (print "  --rebuild            Force rebuild all modules")
   (print "  --verbose            Show verbose output (e.g., rm during --clean)")
-  (print "  --boot=<level>       Boot verbosity: shadow|whisper|portal|chronicle|oracle")
+  (print "  --boot=<level>       Boot verbosity: shadow|whisper|portal|oracle")
   (print "  --eval='<expr>'      Evaluate expression and exit")
   (print "  --version            Show version information")
   (print "  --help               Show this help")
@@ -200,11 +200,10 @@
 ;;; 0 shadow    - just prompt (default)
 ;;; 1 whisper   - version + Ready
 ;;; 2 portal    - banner + help + Ready
-;;; 3 chronicle - add module timings
-;;; 4 oracle    - full revelation (forge details)
+;;; 3 oracle    - portal + module timings + diagnostics
 
 (define *boot-levels*
-  '((shadow . 0) (whisper . 1) (portal . 2) (gate . 2) (chronicle . 3) (oracle . 4)))
+  '((shadow . 0) (whisper . 1) (portal . 2) (gate . 2) (oracle . 3)))
 
 (define (parse-boot-level str)
   "Parse boot level from string (name or number)."
@@ -218,10 +217,8 @@
   (print "Boot levels (--boot=<level>):")
   (print "  0  shadow     - silent, just prompt")
   (print "  1  whisper    - banner only")
-  (print "  2  portal     - banner + help + Ready")
-  (print "  2  gate       - alias for portal")
-  (print "  3  chronicle  - portal + module timing")
-  (print "  4  oracle     - chronicle + diagnostics")
+  (print "  2  portal     - banner + help + Ready (gate = alias)")
+  (print "  3  oracle     - portal + diagnostics")
   (exit 0))
 
 (define *boot-verbosity*
@@ -6962,10 +6959,9 @@ See: Memo-0000 Declaration of Cyberspace
 ;; 0 shadow    - just prompt
 ;; 1 whisper   - version + Ready
 ;; 2 portal    - banner + help + Ready
-;; 3 chronicle - banner + timings + help + Ready
-;; 4 oracle    - full (forge shown during build)
+;; 3 oracle - full diagnostics
 
-(when (>= *boot-verbosity* 3)  ; chronicle+
+(when (>= *boot-verbosity* 3)  ; oracle
   (report-module-times))
 
 (when (>= *boot-verbosity* 2)  ; portal+
