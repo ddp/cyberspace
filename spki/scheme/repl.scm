@@ -212,10 +212,23 @@
     ((assq (string->symbol (string-downcase str)) *boot-levels*) => cdr)
     (else #f)))
 
+(define (show-boot-levels)
+  "Display available boot levels and exit."
+  (print "Boot levels (--boot=<level>):")
+  (print "  0  shadow     - silent, just prompt")
+  (print "  1  whisper    - banner only")
+  (print "  2  portal     - banner + help + Ready")
+  (print "  2  gate       - alias for portal")
+  (print "  3  chronicle  - portal + module timing")
+  (print "  4  oracle     - chronicle + diagnostics")
+  (exit 0))
+
 (define *boot-verbosity*
   (let ((cli-boot (cli-option "boot"))
         (env (get-environment-variable "CYBERSPACE_BOOT")))
     (cond
+      ((and cli-boot (member cli-boot '("help" "list" "?")))
+       (show-boot-levels))
       ((and cli-boot (string? cli-boot)) (or (parse-boot-level cli-boot) 0))
       (env (or (parse-boot-level env) 0))
       (else 0))))
@@ -5243,6 +5256,10 @@ Cyberspace REPL - Available Commands
     (publish!  . thinga!)
     (thanga!   . thinga!)
     (help      . help)
+    (library   . library)
+    (search    . search)
+    (kwic      . kwic)
+    (memo      . memo)
     (quit      . exit)
     (exit      . exit)))
 
@@ -6622,21 +6639,63 @@ See: Memo-0000 Declaration of Cyberspace
   "Remove ANSI escape sequences from string"
   (irregex-replace/all "\x1b\\[[0-9;]*[A-Za-z]" str ""))
 
-;; Read line with prompt
+;; Terminal raw mode for immediate single-char commands
+(define (stty-raw) (system "stty -icanon min 1 time 0 -echo 2>/dev/null"))
+(define (stty-cooked) (system "stty icanon echo 2>/dev/null"))
+
+;; Read line with immediate '.' and '?' handling
 (define (repl-read-line prompt)
-  "Read line with polling - yields to background threads"
+  "Read line with immediate single-char shortcuts"
   (display prompt)
   (flush-output)
-  ;; Poll for input, yielding to background threads periodically
-  (let loop ()
+  (stty-raw)
+  (let loop ((chars '()))
     (if (char-ready?)
-        (let ((line (read-line)))
-          (if (string? line)
-              (strip-ansi line)
-              line))
+        (let ((c (read-char)))
+          (cond
+            ;; EOF
+            ((eof-object? c)
+             (stty-cooked)
+             c)
+            ;; Immediate commands - only when first char
+            ((and (null? chars) (char=? c #\.))
+             (display ".\n")
+             (stty-cooked)
+             ".")
+            ((and (null? chars) (char=? c #\?))
+             (display "?\n")
+             (stty-cooked)
+             "?")
+            ;; Enter - return accumulated line
+            ((or (char=? c #\newline) (char=? c #\return))
+             (newline)
+             (stty-cooked)
+             (strip-ansi (list->string (reverse chars))))
+            ;; Backspace/DEL
+            ((or (char=? c #\backspace) (char=? c #\delete) (= (char->integer c) 127))
+             (if (null? chars)
+                 (loop chars)
+                 (begin
+                   (display "\b \b")  ; erase char
+                   (flush-output)
+                   (loop (cdr chars)))))
+            ;; Ctrl-C
+            ((= (char->integer c) 3)
+             (stty-cooked)
+             (newline)
+             (signal-condition! (make-property-condition 'user-interrupt)))
+            ;; Ctrl-D on empty line = EOF
+            ((and (null? chars) (= (char->integer c) 4))
+             (stty-cooked)
+             (eof-object))
+            ;; Regular char - echo and accumulate
+            (else
+             (display c)
+             (flush-output)
+             (loop (cons c chars)))))
         (begin
-          (thread-sleep! 0.1)  ; yield to listener thread
-          (loop)))))
+          (thread-sleep! 0.05)  ; yield to background threads
+          (loop chars)))))
 
 ;; History stubs - no-op without linenoise
 (define (repl-history-add line) #f)
@@ -6665,7 +6724,7 @@ See: Memo-0000 Declaration of Cyberspace
          (cond
            ((eq? *user-mode* 'schemer)
             (help 'topics))
-           ((= *help-call-count* 1)
+           ((odd? *help-call-count*)
             (help))
            (else
             (help 'topics)))
@@ -6838,7 +6897,7 @@ See: Memo-0000 Declaration of Cyberspace
                         ((equal? expr '(novice)) (novice))
                         ((equal? expr '(schemer)) (schemer))
                         ;; Novice mode guard - catch unrecognized commands
-                        ((and *novice-mode*
+                        ((and (eq? *user-mode* 'novice)
                               (pair? expr)
                               (symbol? (car expr))
                               (not (novice-command? (car expr))))

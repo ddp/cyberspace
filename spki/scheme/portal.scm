@@ -199,9 +199,6 @@
         (list
           ;; Always show uptime
           (format-duration uptime)
-          ;; Weave score (crypto ops/ms at boot)
-          (and (> boot-weave 0)
-               (string-append (number->string (inexact->exact (round boot-weave))) " ops/ms"))
           ;; Vault I/O
           (format-stat 'unlocks "unlock" "s")
           (format-stat 'reads "read" "s")
@@ -346,12 +343,16 @@
     (when history-save-proc (history-save-proc))
     (when (> verbosity 0)  ; shadow mode: silent exit
       (let* ((date-str (format-freeze-timestamp))
+             (boot-weave (session-stat 'boot-weave))
+             (weave-str (if (> boot-weave 0)
+                            (sprintf " (weaving at ~a SHA-512/ms)" (inexact->exact (round boot-weave)))
+                            ""))
              (all-parts (append (session-summary) (vault-summary))))
         (print "")
         (if (null? all-parts)
-            (printf "Cyberspace frozen at ~a on ~a.~n" date-str (hostname))
-            (printf "Cyberspace frozen at ~a on ~a.~n  Session: ~a~n"
-                    date-str (hostname) (string-intersperse all-parts " · ")))
+            (printf "Cyberspace frozen at ~a on ~a~a.~n" date-str (hostname) weave-str)
+            (printf "Cyberspace frozen at ~a on ~a~a.~n  Session: ~a~n"
+                    date-str (hostname) weave-str (string-intersperse all-parts " · ")))
         (print "")))
     (flush-output)
     (drain-input)

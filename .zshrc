@@ -156,7 +156,7 @@ if [[ -o interactive ]]; then
 
     alias aliases='alias | sort'
     alias avatar='cd ~/cyberspace && claude -c'
-    alias cb='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
+    alias cb='cd ~/cyberspace/spki/scheme && ./repl'
     alias cc='claude --continue'
     alias chibi='rlwrap chibi-scheme'
     alias chez='rlwrap chez'
@@ -166,11 +166,7 @@ if [[ -o interactive ]]; then
     alias csi='rlwrap csi'
     # Cyberspace REPL - functions to pass through arguments
     unalias cs cyberspace 2>/dev/null
-    if (( $+commands[rlwrap] )); then
-        function cs { (cd ~/cyberspace/spki/scheme && rlwrap ./cyberspace-repl "$@") }
-    else
-        function cs { (cd ~/cyberspace/spki/scheme && ./cyberspace-repl "$@") }
-    fi
+    function cs { (cd ~/cyberspace/spki/scheme && ./repl "$@") }
     function cyberspace { cs "$@" }
     alias epoch='date +%s'
     alias fen='~/bin/forge-word'

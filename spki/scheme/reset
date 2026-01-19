@@ -1,0 +1,26 @@
+#!/bin/bash
+# reset - Nuke all build artifacts and rebuild from scratch
+#
+# Usage: ./reset
+
+cd "$(dirname "$0")"
+
+echo "This will nuke all .so, .import.scm, repl, and .forge/*.meta"
+read -p "Proceed? [y/n] " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 0
+fi
+
+echo "=== Nuking build artifacts ==="
+rm -f *.so *.import.scm repl server 2>/dev/null
+rm -f .forge/*.meta 2>/dev/null
+echo "  [done]"
+
+echo ""
+echo "=== Rebuilding ==="
+./build.scm all
+
+echo ""
+echo "Ready."
