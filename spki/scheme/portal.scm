@@ -287,8 +287,8 @@
     (let ((obj-count (count-vault-items "objects"))
           (key-count (count-vault-items "keys")))
       (filter identity
-        (list (and (> obj-count 0) (sprintf "~a objects" obj-count))
-              (and (> key-count 0) (sprintf "~a keys" key-count))))))
+        (list (and (> obj-count 0) (sprintf "~a ~a" obj-count (if (= obj-count 1) "object" "objects")))
+              (and (> key-count 0) (sprintf "~a ~a" key-count (if (= key-count 1) "key" "keys")))))))
 
   (: drain-input (-> undefined))
   (define (drain-input)
