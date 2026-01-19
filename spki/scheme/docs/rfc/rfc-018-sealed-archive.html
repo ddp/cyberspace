@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>RFC-018: Sealed Archive Format</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="rfc.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>RFC-018: Sealed Archive Format</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies the Zstd+Age archive format for the Library of Cyberspace: a modern archive format combining Zstd compression with Age encryption, replacing gzip for cryptographic archives.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>The legacy cryptographic archive format uses gzip compression without encryption:</p>
+<table>
+<tr><th>Aspect </th><th>gzip (legacy) </th><th>zstd + age </th></tr>
+<tr><td>Compression speed </td><td>Slow </td><td>Fast (parallel) </td></tr>
+<tr><td>Compression ratio </td><td>Good </td><td>Better </td></tr>
+<tr><td>Encryption </td><td>None </td><td>Built-in (age) </td></tr>
+<tr><td>Key compatibility </td><td>N/A </td><td>X25519/Ed25519 (SPKI aligned) </td></tr>
+<tr><td>Streaming </td><td>Yes </td><td>Yes </td></tr>
+</table>
+<p>Why change?</p>
+<p>1. Encryption at rest - Archives contain potentially sensitive data 2. Faster compression - Zstd is 3-5x faster than gzip 3. Better ratios - Zstd typically achieves 10-20% better compression 4. Key alignment - Age uses X25519/Ed25519, same curve family as SPKI 5. Parallel support - zstd -T0 uses all cores</p>
+</section>
+<section>
+<h2>Specification</h2>
+<h3>Archive Creation Pipeline</h3>
+<pre>
+git archive | tar --zstd | age -r &lt;recipients&gt; &gt; archive.tar.zst.age
+</pre>
+<p>Or equivalently:</p>
+<pre>
+tar --zstd -cf - &lt;files&gt; | age -r &lt;recipient1&gt; -r &lt;recipient2&gt; &gt; archive.tar.zst.age
+</pre>
+<h3>Archive Restoration Pipeline</h3>
+<pre>
+age -d -i &lt;identity&gt; &lt; archive.tar.zst.age | zstd -d | tar -xf -
+</pre>
+<h3>Manifest Format</h3>
+<pre class="language-scheme">
+(sealed-archive
+  (version "1.0.0")
+  (format zstd-age)
+  (archive "vault-1.0.0.archive.tar.zst.age")
+  (compression zstd)
+  (encryption age)
+  (recipients ("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"))
+  (hash "sha512:...")
+  (signature "ed25519:..."))
+</pre>
+<h3>File Extensions</h3>
+<table>
+<tr><th>Extension </th><th>Contents </th></tr>
+<tr><td>.archive </td><td>S-expression manifest </td></tr>
+<tr><td>.tar.zst.age </td><td>Encrypted, compressed tarball </td></tr>
+</table>
+<h3>Configuration</h3>
+<pre class="language-scheme">
+;; Set age recipients for encryption
+(vault-config 'age-recipients
+  '("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
+    "age1..."))
+
+;; Set age identity for decryption
+(vault-config 'age-identity "~/.config/age/identity.txt")
+
+;; Set default archive format
+(vault-config 'archive-format 'zstd-age)
+</pre>
+</section>
+<section>
+<h2>Performance Characteristics</h2>
+<h3>Compression</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 412.8 249.6" width="412.8" height="249.6" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">Z</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="9.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="81.6" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="91.2" y="9.6" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="100.8" y="9.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="129.6" y="9.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="139.2" y="9.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="148.8" y="9.6" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="158.4" y="9.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="168.0" y="9.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="24.0" y="28.8" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="33.6" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="28.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="52.8" y="28.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="28.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="91.2" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="100.8" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="110.4" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="28.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="129.6" y="28.8" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="28.8" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="28.8" text-anchor="middle" dominant-baseline="central">4</text>
+<text x="187.2" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="196.8" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="216.0" y="28.8" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="225.6" y="28.8" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="235.2" y="28.8" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="244.8" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="48.0" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="33.6" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="52.8" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="62.4" y="48.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="72.0" y="48.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="81.6" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="91.2" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="100.8" y="48.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="48.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="120.0" y="48.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="129.6" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="139.2" y="48.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="148.8" y="48.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="48.0" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="48.0" text-anchor="middle" dominant-baseline="central">8</text>
+<text x="187.2" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="196.8" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="216.0" y="48.0" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="225.6" y="48.0" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="235.2" y="48.0" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="244.8" y="48.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="67.2" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="33.6" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="43.2" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="52.8" y="67.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="62.4" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="72.0" y="67.2" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="67.2" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="67.2" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="187.2" y="67.2" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="196.8" y="67.2" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="216.0" y="67.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="225.6" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="235.2" y="67.2" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="244.8" y="67.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="254.4" y="67.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="264.0" y="67.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="273.6" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="283.2" y="67.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="302.4" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="312.0" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="321.6" y="67.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="331.2" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="340.8" y="67.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="350.4" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="369.6" y="67.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="379.2" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="388.8" y="67.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="398.4" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="408.0" y="67.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="4.8" y="105.6" text-anchor="middle" dominant-baseline="central">Z</text>
+<text x="14.4" y="105.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="105.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="33.6" y="105.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="52.8" y="105.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="105.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="105.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="91.2" y="105.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="100.8" y="105.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="110.4" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="120.0" y="105.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="139.2" y="105.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="148.8" y="105.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="158.4" y="105.6" text-anchor="middle" dominant-baseline="central">T</text>
+<text x="168.0" y="105.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="177.6" y="105.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="187.2" y="105.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="24.0" y="124.8" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="33.6" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="124.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="52.8" y="124.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="124.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="91.2" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="100.8" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="110.4" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="124.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="129.6" y="124.8" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="124.8" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="124.8" text-anchor="middle" dominant-baseline="central">4</text>
+<text x="187.2" y="124.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="196.8" y="124.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="216.0" y="124.8" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="225.6" y="124.8" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="235.2" y="124.8" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="244.8" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="124.8" text-anchor="middle" dominant-baseline="central">×</text>
+<text x="283.2" y="124.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="292.8" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="302.4" y="124.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="312.0" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="321.6" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="144.0" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="33.6" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="52.8" y="144.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="62.4" y="144.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="72.0" y="144.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="81.6" y="144.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="91.2" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="100.8" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="120.0" y="144.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="129.6" y="144.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="139.2" y="144.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="148.8" y="144.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="144.0" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="144.0" text-anchor="middle" dominant-baseline="central">8</text>
+<text x="187.2" y="144.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="196.8" y="144.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="216.0" y="144.0" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="225.6" y="144.0" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="235.2" y="144.0" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="244.8" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="144.0" text-anchor="middle" dominant-baseline="central">×</text>
+<text x="283.2" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="292.8" y="144.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="302.4" y="144.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="312.0" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="321.6" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="182.4" text-anchor="middle" dominant-baseline="central">G</text>
+<text x="14.4" y="182.4" text-anchor="middle" dominant-baseline="central">z</text>
+<text x="24.0" y="182.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="33.6" y="182.4" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="52.8" y="182.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="62.4" y="182.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="72.0" y="182.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="81.6" y="182.4" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="91.2" y="182.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="100.8" y="182.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="110.4" y="182.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="120.0" y="182.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="129.6" y="182.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="139.2" y="182.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="148.8" y="182.4" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="24.0" y="201.6" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="33.6" y="201.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="201.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="52.8" y="201.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="201.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="201.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="91.2" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="100.8" y="201.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="110.4" y="201.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="201.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="129.6" y="201.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="201.6" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="201.6" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="187.2" y="201.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="206.4" y="201.6" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="216.0" y="201.6" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="225.6" y="201.6" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="235.2" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="220.8" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="33.6" y="220.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="220.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="52.8" y="220.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="62.4" y="220.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="72.0" y="220.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="81.6" y="220.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="91.2" y="220.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="100.8" y="220.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="220.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="120.0" y="220.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="129.6" y="220.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="139.2" y="220.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="148.8" y="220.8" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="220.8" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="220.8" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="187.2" y="220.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="196.8" y="220.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="216.0" y="220.8" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="225.6" y="220.8" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="235.2" y="220.8" text-anchor="middle" dominant-baseline="central">/</text>
+<text x="244.8" y="220.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="240.0" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="33.6" y="240.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="43.2" y="240.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="52.8" y="240.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="62.4" y="240.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="72.0" y="240.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="168.0" y="240.0" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="177.6" y="240.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="187.2" y="240.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="196.8" y="240.0" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="206.4" y="240.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="216.0" y="240.0" text-anchor="middle" dominant-baseline="central">1</text>
+</svg>
+</div>
+<h3>Encryption</h3>
+<pre>
+Age X25519:
+  Encrypt:  ~1 GB/s (ChaCha20-Poly1305)
+  Decrypt:  ~1 GB/s
+  Key size: 32 bytes (public), 32 bytes (private)
+
+Age overhead:
+  Header:   ~200 bytes per recipient
+  MAC:      16 bytes
+</pre>
+<h3>Signature</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 201.6 76.8" width="201.6" height="76.8" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">9</text>
+<text x="72.0" y="9.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="24.0" y="28.8" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="33.6" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="43.2" y="28.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="52.8" y="28.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="28.8" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="120.0" y="28.8" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="129.6" y="28.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="139.2" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="158.4" y="28.8" text-anchor="middle" dominant-baseline="central">μ</text>
+<text x="168.0" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="48.0" text-anchor="middle" dominant-baseline="central">V</text>
+<text x="33.6" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="52.8" y="48.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="62.4" y="48.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="72.0" y="48.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="81.6" y="48.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="120.0" y="48.0" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="129.6" y="48.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="139.2" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="158.4" y="48.0" text-anchor="middle" dominant-baseline="central">μ</text>
+<text x="168.0" y="48.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="67.2" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="33.6" y="67.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="43.2" y="67.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="52.8" y="67.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="81.6" y="67.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="91.2" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="110.4" y="67.2" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="129.6" y="67.2" text-anchor="middle" dominant-baseline="central">6</text>
+<text x="139.2" y="67.2" text-anchor="middle" dominant-baseline="central">4</text>
+<text x="158.4" y="67.2" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="168.0" y="67.2" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="177.6" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="187.2" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="196.8" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+</svg>
+</div>
+<h3>Total Pipeline</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 288.0 268.8" width="288.0" height="268.8" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="9.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="91.2" y="9.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="100.8" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="120.0" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="129.6" y="9.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="24.0" y="28.8" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="33.6" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="28.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="52.8" y="28.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="28.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="91.2" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="28.8" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="120.0" y="28.8" text-anchor="middle" dominant-baseline="central">z</text>
+<text x="129.6" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="139.2" y="28.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="148.8" y="28.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="168.0" y="28.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="177.6" y="28.8" text-anchor="middle" dominant-baseline="central">T</text>
+<text x="187.2" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="196.8" y="28.8" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="206.4" y="28.8" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="28.8" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="28.8" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="244.8" y="28.8" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="264.0" y="28.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="273.6" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="48.0" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="33.6" y="48.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="52.8" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="62.4" y="48.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="72.0" y="48.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="81.6" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="100.8" y="48.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="110.4" y="48.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="48.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="129.6" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="48.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="148.8" y="48.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="48.0" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="48.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="244.8" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="264.0" y="48.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="273.6" y="48.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="67.2" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="33.6" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="43.2" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="52.8" y="67.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="72.0" y="67.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="81.6" y="67.2" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="91.2" y="67.2" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="100.8" y="67.2" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="110.4" y="67.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="120.0" y="67.2" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="129.6" y="67.2" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="139.2" y="67.2" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="148.8" y="67.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="158.4" y="67.2" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="67.2" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="67.2" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="254.4" y="67.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="264.0" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="86.4" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="33.6" y="86.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="43.2" y="86.4" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="52.8" y="86.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="72.0" y="86.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="81.6" y="86.4" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="91.2" y="86.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="100.8" y="86.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="110.4" y="86.4" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="120.0" y="86.4" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="129.6" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="139.2" y="86.4" text-anchor="middle" dominant-baseline="central">9</text>
+<text x="148.8" y="86.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="158.4" y="86.4" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="86.4" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="244.8" y="86.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="264.0" y="86.4" text-anchor="middle" dominant-baseline="central">μ</text>
+<text x="273.6" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="105.6" text-anchor="middle" dominant-baseline="central">T</text>
+<text x="33.6" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="105.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="52.8" y="105.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="62.4" y="105.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="105.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="105.6" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="105.6" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="244.8" y="105.6" text-anchor="middle" dominant-baseline="central">6</text>
+<text x="264.0" y="105.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="273.6" y="105.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="144.0" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="14.4" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="33.6" y="144.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="43.2" y="144.0" text-anchor="middle" dominant-baseline="central">z</text>
+<text x="52.8" y="144.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="62.4" y="144.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="81.6" y="144.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="91.2" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="100.8" y="144.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="110.4" y="144.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="129.6" y="144.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="139.2" y="144.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="24.0" y="163.2" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="33.6" y="163.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="163.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="52.8" y="163.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="163.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="163.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="91.2" y="163.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="163.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="120.0" y="163.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="129.6" y="163.2" text-anchor="middle" dominant-baseline="central">z</text>
+<text x="139.2" y="163.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="148.8" y="163.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="158.4" y="163.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="168.0" y="163.2" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="163.2" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="163.2" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="244.8" y="163.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="254.4" y="163.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="273.6" y="163.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="283.2" y="163.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="182.4" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="33.6" y="182.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="43.2" y="182.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="52.8" y="182.4" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="72.0" y="182.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="81.6" y="182.4" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="91.2" y="182.4" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="100.8" y="182.4" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="110.4" y="182.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="120.0" y="182.4" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="129.6" y="182.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="139.2" y="182.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="148.8" y="182.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="158.4" y="182.4" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="182.4" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="182.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="254.4" y="182.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="264.0" y="182.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="201.6" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="33.6" y="201.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="43.2" y="201.6" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="52.8" y="201.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="72.0" y="201.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="81.6" y="201.6" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="91.2" y="201.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="100.8" y="201.6" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="110.4" y="201.6" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="120.0" y="201.6" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="129.6" y="201.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="139.2" y="201.6" text-anchor="middle" dominant-baseline="central">9</text>
+<text x="148.8" y="201.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="158.4" y="201.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="201.6" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="201.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="244.8" y="201.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="264.0" y="201.6" text-anchor="middle" dominant-baseline="central">μ</text>
+<text x="273.6" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="220.8" text-anchor="middle" dominant-baseline="central">T</text>
+<text x="33.6" y="220.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="220.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="52.8" y="220.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="62.4" y="220.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="220.8" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="225.6" y="220.8" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="235.2" y="220.8" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="244.8" y="220.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="254.4" y="220.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="273.6" y="220.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="283.2" y="220.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="259.2" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="14.4" y="259.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="24.0" y="259.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="33.6" y="259.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="259.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="52.8" y="259.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="62.4" y="259.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="72.0" y="259.2" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="91.2" y="259.2" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="100.8" y="259.2" text-anchor="middle" dominant-baseline="central">8</text>
+<text x="110.4" y="259.2" text-anchor="middle" dominant-baseline="central">x</text>
+</svg>
+</div>
+</section>
+<section>
+<h2>Security Model</h2>
+<h3>Encryption Layer (Age)</h3>
+<ul>
+<li>Algorithm: X25519 + ChaCha20-Poly1305</li>
+<li>Recipients: Multiple allowed (each can decrypt)</li>
+<li>Forward secrecy: Ephemeral key per archive</li>
+<li>Authenticity: Poly1305 MAC</li>
+</ul>
+<h3>Signature Layer (SPKI)</h3>
+<ul>
+<li>Algorithm: Ed25519</li>
+<li>Scope: Signs encrypted archive hash</li>
+<li>Non-repudiation: Signer cannot deny creating archive</li>
+</ul>
+<h3>Verification Order</h3>
+<p>1. Verify signature - Before decryption (fail fast on tampering) 2. Verify hash - Encrypted archive integrity 3. Decrypt - Only after signature verified 4. Extract - Only after successful decryption</p>
+<h3>Threat Mitigations</h3>
+<table>
+<tr><th>Threat </th><th>Mitigation </th></tr>
+<tr><td>Eavesdropping </td><td>Age encryption (X25519 + ChaCha20) </td></tr>
+<tr><td>Tampering </td><td>SHA-512 hash + Ed25519 signature </td></tr>
+<tr><td>Replay attacks </td><td>Version + timestamp in manifest </td></tr>
+<tr><td>Key compromise </td><td>Multiple recipients, key rotation </td></tr>
+<tr><td>Chosen ciphertext </td><td>Poly1305 authentication </td></tr>
+</table>
+</section>
+<section>
+<h2>Compatibility</h2>
+<h3>Age Identity Types</h3>
+<pre>
+# Native age key
+age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+
+# SSH key (age supports ssh-ed25519 and ssh-rsa)
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...
+
+# GitHub key (via age-plugin-github or ssh)
+github:username
+</pre>
+<h3>Platform Support</h3>
+<table>
+<tr><th>Platform </th><th>zstd </th><th>age </th></tr>
+<tr><td>macOS </td><td>Homebrew </td><td>Homebrew </td></tr>
+<tr><td>Linux </td><td>apt/yum </td><td>apt/yum or binary </td></tr>
+<tr><td>FreeBSD </td><td>pkg </td><td>pkg </td></tr>
+<tr><td>Windows </td><td>winget </td><td>winget or binary </td></tr>
+</table>
+<h3>Fallback</h3>
+<p>If zstd or age unavailable, fall back to cryptographic format:</p>
+<pre class="language-scheme">
+(if (and (command-exists? "zstd") (command-exists? "age"))
+    (seal-archive version format: 'zstd-age)
+    (seal-archive version format: 'cryptographic))
+</pre>
+</section>
+<section>
+<h2>Implementation</h2>
+<h3>seal-archive-zstd-age</h3>
+<pre class="language-scheme">
+(define (seal-archive-zstd-age version output)
+  "Create zstd-compressed, age-encrypted archive with SPKI signature"
+
+  (let ((recipients (vault-config 'age-recipients))
+        (signing-key (vault-config 'signing-key))
+        (encrypted-file (sprintf "~a.tar.zst.age" output)))
+
+    ;; Require recipients
+    (unless (pair? recipients)
+      (error "No age recipients configured"))
+
+    ;; Build recipient args: -r key1 -r key2 ...
+    (let ((recipient-args
+           (string-join (map (lambda (r) (sprintf "-r ~a" r)) recipients) " ")))
+
+      ;; Create archive: git archive | zstd | age
+      (let ((temp-tar (sprintf "/tmp/vault-~a.tar" version)))
+        (run-command "git" "archive" "--prefix=vault/"
+                     (sprintf "--output=~a" temp-tar) version)
+        (system (sprintf "zstd -T0 -c ~a | age ~a &gt; ~a"
+                        temp-tar recipient-args encrypted-file))
+        (delete-file temp-tar))
+
+      ;; Sign the encrypted archive
+      (when signing-key
+        (let* ((archive-bytes (read-file-bytes encrypted-file))
+               (archive-hash (sha512-hash archive-bytes))
+               (signature (ed25519-sign signing-key archive-hash)))
+
+          ;; Write manifest
+          (with-output-to-file output
+            (lambda ()
+              (write `(sealed-archive
+                       (version ,version)
+                       (format zstd-age)
+                       (archive ,encrypted-file)
+                       (compression zstd)
+                       (encryption age)
+                       (recipients ,recipients)
+                       (hash ,(blob-&gt;hex archive-hash))
+                       (signature ,(blob-&gt;hex signature)))))))))))
+</pre>
+<h3>seal-restore-zstd-age</h3>
+<pre class="language-scheme">
+(define (seal-restore-zstd-age manifest verify-key target-dir identity)
+  "Restore zstd+age encrypted archive"
+
+  (let ((version (cadr (assq 'version (cdr manifest))))
+        (archive-file (cadr (assq 'archive (cdr manifest))))
+        (hash-hex (cadr (assq 'hash (cdr manifest))))
+        (sig-hex (cadr (assq 'signature (cdr manifest))))
+        (id-file (or identity (vault-config 'age-identity))))
+
+    ;; Require identity
+    (unless id-file
+      (error "No age identity configured"))
+
+    ;; Verify signature first (before decryption)
+    (when verify-key
+      (let* ((archive-bytes (read-file-bytes archive-file))
+             (archive-hash (sha512-hash archive-bytes))
+             (expected-hash (hex-&gt;blob hash-hex))
+             (signature (hex-&gt;blob sig-hex))
+             (pubkey (read-key-from-file verify-key)))
+
+        (unless (equal? archive-hash expected-hash)
+          (error "Archive hash mismatch"))
+
+        (unless (ed25519-verify pubkey archive-hash signature)
+          (error "Signature verification failed"))))
+
+    ;; Decrypt and extract: age -d | zstd -d | tar -x
+    (system (sprintf "age -d -i ~a &lt; ~a | zstd -d | tar -xf - -C ~a"
+                    id-file archive-file target-dir))))
+</pre>
+</section>
+<section>
+<h2>Usage Examples</h2>
+<h3>Create Encrypted Archive</h3>
+<pre class="language-scheme">
+;; Configure recipients
+(vault-config 'age-recipients
+  '("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"))
+
+;; Create archive
+(seal-archive "1.0.0" format: 'zstd-age)
+;; =&gt; vault-1.0.0.archive
+;; =&gt; vault-1.0.0.archive.tar.zst.age
+</pre>
+<h3>Restore Encrypted Archive</h3>
+<pre class="language-scheme">
+;; Configure identity
+(vault-config 'age-identity "~/.config/age/identity.txt")
+
+;; Restore with verification
+(seal-restore "vault-1.0.0.archive"
+              verify-key: "publisher.public"
+              target: "./restored")
+</pre>
+<h3>Command Line Equivalents</h3>
+<pre class="language-bash">
+# Create
+git archive --prefix=vault/ 1.0.0 | \
+  zstd -T0 | \
+  age -r age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p \
+  &gt; vault-1.0.0.tar.zst.age
+
+# Restore
+age -d -i ~/.config/age/identity.txt &lt; vault-1.0.0.tar.zst.age | \
+  zstd -d | \
+  tar -xf -
+</pre>
+</section>
+<section>
+<h2>Migration</h2>
+<h3>From Cryptographic to Zstd-Age</h3>
+<pre class="language-scheme">
+;; Re-archive existing releases with new format
+(for-each
+  (lambda (version)
+    (seal-archive version format: 'zstd-age))
+  (get-local-releases))
+</pre>
+<h3>Backward Compatibility</h3>
+<p>Both formats can coexist. The manifest format field determines restoration method: - (format cryptographic) → seal-restore-cryptographic - (format zstd-age) → seal-restore-zstd-age</p>
+</section>
+<section>
+<h2>References</h2>
+<p>1. [Zstd](https://github.com/facebook/zstd) - Facebook's compression algorithm 2. [Age](https://age-encryption.org/) - Modern encryption tool 3. [RFC-006](rfc-006-vault-architecture.html) - Vault System Architecture 4. [RFC-004](rfc-004-spki-authorization.html) - SPKI Authorization</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-06</li>
+<li>Initial specification</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

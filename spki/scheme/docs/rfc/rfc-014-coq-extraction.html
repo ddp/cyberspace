@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>RFC-014: Coq Extraction for TCB</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="rfc.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>RFC-014: Coq Extraction for TCB</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies the use of Coq proof assistant for verified implementation of the Trusted Computing Base, with extraction to OCaml for production use. Prove once, trust forever.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>The Prime Directive (RFC-002):</p>
+<blockquote>
+<p>If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.</p>
+</blockquote>
+<p>But even OCaml can have bugs. The TCB handles: - Ed25519 signatures - SHA-512 hashing - Signature chain verification</p>
+<p>A single bug breaks everything.</p>
+<p>Coq provides:</p>
+<p>1. Machine-checked proofs: Theorems verified by computer 2. Extraction: Generate OCaml from proofs 3. Correctness by construction: Implementation matches specification 4. Eternal validity: Proofs don't expire</p>
+<p>From the Coq motto:</p>
+<blockquote>
+<p>The proof is in the code.</p>
+</blockquote>
+</section>
+<section>
+<h2>Specification</h2>
+<h3>Trusted Computing Base</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 604.8 384.0" width="604.8" height="384.0" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+<line x1="4.8" y1="9.6" x2="9.6" y2="9.6"/>
+<line x1="4.8" y1="9.6" x2="4.8" y2="19.2"/>
+<line x1="9.6" y1="9.6" x2="19.2" y2="9.6"/>
+<line x1="19.2" y1="9.6" x2="28.8" y2="9.6"/>
+<line x1="28.8" y1="9.6" x2="38.4" y2="9.6"/>
+<line x1="38.4" y1="9.6" x2="48.0" y2="9.6"/>
+<line x1="48.0" y1="9.6" x2="57.6" y2="9.6"/>
+<line x1="57.6" y1="9.6" x2="67.2" y2="9.6"/>
+<line x1="67.2" y1="9.6" x2="76.8" y2="9.6"/>
+<line x1="76.8" y1="9.6" x2="86.4" y2="9.6"/>
+<line x1="86.4" y1="9.6" x2="96.0" y2="9.6"/>
+<line x1="96.0" y1="9.6" x2="105.6" y2="9.6"/>
+<line x1="105.6" y1="9.6" x2="115.2" y2="9.6"/>
+<line x1="115.2" y1="9.6" x2="124.8" y2="9.6"/>
+<line x1="124.8" y1="9.6" x2="134.4" y2="9.6"/>
+<line x1="134.4" y1="9.6" x2="144.0" y2="9.6"/>
+<line x1="144.0" y1="9.6" x2="153.6" y2="9.6"/>
+<line x1="153.6" y1="9.6" x2="163.2" y2="9.6"/>
+<line x1="163.2" y1="9.6" x2="172.8" y2="9.6"/>
+<line x1="172.8" y1="9.6" x2="182.4" y2="9.6"/>
+<line x1="182.4" y1="9.6" x2="192.0" y2="9.6"/>
+<line x1="192.0" y1="9.6" x2="201.6" y2="9.6"/>
+<line x1="201.6" y1="9.6" x2="211.2" y2="9.6"/>
+<line x1="211.2" y1="9.6" x2="220.8" y2="9.6"/>
+<line x1="220.8" y1="9.6" x2="230.4" y2="9.6"/>
+<line x1="230.4" y1="9.6" x2="240.0" y2="9.6"/>
+<line x1="240.0" y1="9.6" x2="249.6" y2="9.6"/>
+<line x1="249.6" y1="9.6" x2="259.2" y2="9.6"/>
+<line x1="259.2" y1="9.6" x2="268.8" y2="9.6"/>
+<line x1="268.8" y1="9.6" x2="278.4" y2="9.6"/>
+<line x1="278.4" y1="9.6" x2="288.0" y2="9.6"/>
+<line x1="288.0" y1="9.6" x2="297.6" y2="9.6"/>
+<line x1="297.6" y1="9.6" x2="307.2" y2="9.6"/>
+<line x1="307.2" y1="9.6" x2="316.8" y2="9.6"/>
+<line x1="316.8" y1="9.6" x2="326.4" y2="9.6"/>
+<line x1="326.4" y1="9.6" x2="336.0" y2="9.6"/>
+<line x1="336.0" y1="9.6" x2="345.6" y2="9.6"/>
+<line x1="345.6" y1="9.6" x2="355.2" y2="9.6"/>
+<line x1="355.2" y1="9.6" x2="364.8" y2="9.6"/>
+<line x1="364.8" y1="9.6" x2="374.4" y2="9.6"/>
+<line x1="374.4" y1="9.6" x2="384.0" y2="9.6"/>
+<line x1="384.0" y1="9.6" x2="393.6" y2="9.6"/>
+<line x1="393.6" y1="9.6" x2="403.2" y2="9.6"/>
+<line x1="403.2" y1="9.6" x2="412.8" y2="9.6"/>
+<line x1="412.8" y1="9.6" x2="422.4" y2="9.6"/>
+<line x1="422.4" y1="9.6" x2="432.0" y2="9.6"/>
+<line x1="432.0" y1="9.6" x2="441.6" y2="9.6"/>
+<line x1="441.6" y1="9.6" x2="451.2" y2="9.6"/>
+<line x1="451.2" y1="9.6" x2="460.8" y2="9.6"/>
+<line x1="460.8" y1="9.6" x2="470.4" y2="9.6"/>
+<line x1="470.4" y1="9.6" x2="480.0" y2="9.6"/>
+<line x1="480.0" y1="9.6" x2="489.6" y2="9.6"/>
+<line x1="489.6" y1="9.6" x2="499.2" y2="9.6"/>
+<line x1="499.2" y1="9.6" x2="508.8" y2="9.6"/>
+<line x1="508.8" y1="9.6" x2="518.4" y2="9.6"/>
+<line x1="518.4" y1="9.6" x2="528.0" y2="9.6"/>
+<line x1="528.0" y1="9.6" x2="537.6" y2="9.6"/>
+<line x1="537.6" y1="9.6" x2="547.2" y2="9.6"/>
+<line x1="547.2" y1="9.6" x2="556.8" y2="9.6"/>
+<line x1="556.8" y1="9.6" x2="566.4" y2="9.6"/>
+<line x1="566.4" y1="9.6" x2="576.0" y2="9.6"/>
+<line x1="576.0" y1="9.6" x2="585.6" y2="9.6"/>
+<line x1="585.6" y1="9.6" x2="595.2" y2="9.6"/>
+<line x1="595.2" y1="9.6" x2="600.0" y2="9.6"/>
+<line x1="600.0" y1="9.6" x2="600.0" y2="19.2"/>
+<line x1="4.8" y1="19.2" x2="4.8" y2="38.4"/>
+<line x1="600.0" y1="19.2" x2="600.0" y2="38.4"/>
+<line x1="4.8" y1="38.4" x2="4.8" y2="57.6"/>
+<line x1="600.0" y1="38.4" x2="600.0" y2="57.6"/>
+<line x1="4.8" y1="57.6" x2="4.8" y2="76.8"/>
+<line x1="43.2" y1="67.2" x2="48.0" y2="67.2"/>
+<line x1="43.2" y1="67.2" x2="43.2" y2="76.8"/>
+<line x1="48.0" y1="67.2" x2="57.6" y2="67.2"/>
+<line x1="57.6" y1="67.2" x2="67.2" y2="67.2"/>
+<line x1="67.2" y1="67.2" x2="76.8" y2="67.2"/>
+<line x1="76.8" y1="67.2" x2="86.4" y2="67.2"/>
+<line x1="86.4" y1="67.2" x2="96.0" y2="67.2"/>
+<line x1="96.0" y1="67.2" x2="105.6" y2="67.2"/>
+<line x1="105.6" y1="67.2" x2="115.2" y2="67.2"/>
+<line x1="115.2" y1="67.2" x2="124.8" y2="67.2"/>
+<line x1="124.8" y1="67.2" x2="134.4" y2="67.2"/>
+<line x1="134.4" y1="67.2" x2="144.0" y2="67.2"/>
+<line x1="144.0" y1="67.2" x2="153.6" y2="67.2"/>
+<line x1="153.6" y1="67.2" x2="163.2" y2="67.2"/>
+<line x1="163.2" y1="67.2" x2="172.8" y2="67.2"/>
+<line x1="172.8" y1="67.2" x2="177.6" y2="67.2"/>
+<line x1="177.6" y1="67.2" x2="177.6" y2="76.8"/>
+<line x1="206.4" y1="67.2" x2="211.2" y2="67.2"/>
+<line x1="206.4" y1="67.2" x2="206.4" y2="76.8"/>
+<line x1="211.2" y1="67.2" x2="220.8" y2="67.2"/>
+<line x1="220.8" y1="67.2" x2="230.4" y2="67.2"/>
+<line x1="230.4" y1="67.2" x2="240.0" y2="67.2"/>
+<line x1="240.0" y1="67.2" x2="249.6" y2="67.2"/>
+<line x1="249.6" y1="67.2" x2="259.2" y2="67.2"/>
+<line x1="259.2" y1="67.2" x2="268.8" y2="67.2"/>
+<line x1="268.8" y1="67.2" x2="278.4" y2="67.2"/>
+<line x1="278.4" y1="67.2" x2="288.0" y2="67.2"/>
+<line x1="288.0" y1="67.2" x2="297.6" y2="67.2"/>
+<line x1="297.6" y1="67.2" x2="307.2" y2="67.2"/>
+<line x1="307.2" y1="67.2" x2="316.8" y2="67.2"/>
+<line x1="316.8" y1="67.2" x2="326.4" y2="67.2"/>
+<line x1="326.4" y1="67.2" x2="336.0" y2="67.2"/>
+<line x1="336.0" y1="67.2" x2="340.8" y2="67.2"/>
+<line x1="340.8" y1="67.2" x2="340.8" y2="76.8"/>
+<line x1="369.6" y1="67.2" x2="374.4" y2="67.2"/>
+<line x1="369.6" y1="67.2" x2="369.6" y2="76.8"/>
+<line x1="374.4" y1="67.2" x2="384.0" y2="67.2"/>
+<line x1="384.0" y1="67.2" x2="393.6" y2="67.2"/>
+<line x1="393.6" y1="67.2" x2="403.2" y2="67.2"/>
+<line x1="403.2" y1="67.2" x2="412.8" y2="67.2"/>
+<line x1="412.8" y1="67.2" x2="422.4" y2="67.2"/>
+<line x1="422.4" y1="67.2" x2="432.0" y2="67.2"/>
+<line x1="432.0" y1="67.2" x2="441.6" y2="67.2"/>
+<line x1="441.6" y1="67.2" x2="451.2" y2="67.2"/>
+<line x1="451.2" y1="67.2" x2="460.8" y2="67.2"/>
+<line x1="460.8" y1="67.2" x2="470.4" y2="67.2"/>
+<line x1="470.4" y1="67.2" x2="480.0" y2="67.2"/>
+<line x1="480.0" y1="67.2" x2="489.6" y2="67.2"/>
+<line x1="489.6" y1="67.2" x2="499.2" y2="67.2"/>
+<line x1="499.2" y1="67.2" x2="504.0" y2="67.2"/>
+<line x1="504.0" y1="67.2" x2="504.0" y2="76.8"/>
+<line x1="590.4" y1="57.6" x2="590.4" y2="76.8"/>
+<line x1="4.8" y1="76.8" x2="4.8" y2="96.0"/>
+<line x1="43.2" y1="76.8" x2="43.2" y2="96.0"/>
+<line x1="177.6" y1="76.8" x2="177.6" y2="96.0"/>
+<line x1="206.4" y1="76.8" x2="206.4" y2="96.0"/>
+<line x1="340.8" y1="76.8" x2="340.8" y2="96.0"/>
+<line x1="369.6" y1="76.8" x2="369.6" y2="96.0"/>
+<line x1="504.0" y1="76.8" x2="504.0" y2="96.0"/>
+<line x1="590.4" y1="76.8" x2="590.4" y2="96.0"/>
+<line x1="4.8" y1="96.0" x2="4.8" y2="115.2"/>
+<line x1="43.2" y1="96.0" x2="43.2" y2="115.2"/>
+<line x1="177.6" y1="96.0" x2="177.6" y2="115.2"/>
+<line x1="206.4" y1="96.0" x2="206.4" y2="115.2"/>
+<line x1="340.8" y1="96.0" x2="340.8" y2="115.2"/>
+<line x1="369.6" y1="96.0" x2="369.6" y2="115.2"/>
+<line x1="504.0" y1="96.0" x2="504.0" y2="115.2"/>
+<line x1="590.4" y1="96.0" x2="590.4" y2="115.2"/>
+<line x1="4.8" y1="115.2" x2="4.8" y2="134.4"/>
+<line x1="43.2" y1="124.8" x2="48.0" y2="124.8"/>
+<line x1="43.2" y1="115.2" x2="43.2" y2="124.8"/>
+<line x1="48.0" y1="124.8" x2="57.6" y2="124.8"/>
+<line x1="57.6" y1="124.8" x2="67.2" y2="124.8"/>
+<line x1="67.2" y1="124.8" x2="76.8" y2="124.8"/>
+<line x1="76.8" y1="124.8" x2="86.4" y2="124.8"/>
+<line x1="86.4" y1="124.8" x2="96.0" y2="124.8"/>
+<line x1="96.0" y1="124.8" x2="105.6" y2="124.8"/>
+<line x1="105.6" y1="124.8" x2="115.2" y2="124.8"/>
+<line x1="110.4" y1="124.8" x2="110.4" y2="134.4"/>
+<line x1="115.2" y1="124.8" x2="124.8" y2="124.8"/>
+<line x1="124.8" y1="124.8" x2="134.4" y2="124.8"/>
+<line x1="134.4" y1="124.8" x2="144.0" y2="124.8"/>
+<line x1="144.0" y1="124.8" x2="153.6" y2="124.8"/>
+<line x1="153.6" y1="124.8" x2="163.2" y2="124.8"/>
+<line x1="163.2" y1="124.8" x2="172.8" y2="124.8"/>
+<line x1="172.8" y1="124.8" x2="177.6" y2="124.8"/>
+<line x1="177.6" y1="115.2" x2="177.6" y2="124.8"/>
+<line x1="206.4" y1="124.8" x2="211.2" y2="124.8"/>
+<line x1="206.4" y1="115.2" x2="206.4" y2="124.8"/>
+<line x1="211.2" y1="124.8" x2="220.8" y2="124.8"/>
+<line x1="220.8" y1="124.8" x2="230.4" y2="124.8"/>
+<line x1="230.4" y1="124.8" x2="240.0" y2="124.8"/>
+<line x1="240.0" y1="124.8" x2="249.6" y2="124.8"/>
+<line x1="249.6" y1="124.8" x2="259.2" y2="124.8"/>
+<line x1="259.2" y1="124.8" x2="268.8" y2="124.8"/>
+<line x1="268.8" y1="124.8" x2="278.4" y2="124.8"/>
+<line x1="273.6" y1="124.8" x2="273.6" y2="134.4"/>
+<line x1="278.4" y1="124.8" x2="288.0" y2="124.8"/>
+<line x1="288.0" y1="124.8" x2="297.6" y2="124.8"/>
+<line x1="297.6" y1="124.8" x2="307.2" y2="124.8"/>
+<line x1="307.2" y1="124.8" x2="316.8" y2="124.8"/>
+<line x1="316.8" y1="124.8" x2="326.4" y2="124.8"/>
+<line x1="326.4" y1="124.8" x2="336.0" y2="124.8"/>
+<line x1="336.0" y1="124.8" x2="340.8" y2="124.8"/>
+<line x1="340.8" y1="115.2" x2="340.8" y2="124.8"/>
+<line x1="369.6" y1="124.8" x2="374.4" y2="124.8"/>
+<line x1="369.6" y1="115.2" x2="369.6" y2="124.8"/>
+<line x1="374.4" y1="124.8" x2="384.0" y2="124.8"/>
+<line x1="384.0" y1="124.8" x2="393.6" y2="124.8"/>
+<line x1="393.6" y1="124.8" x2="403.2" y2="124.8"/>
+<line x1="403.2" y1="124.8" x2="412.8" y2="124.8"/>
+<line x1="412.8" y1="124.8" x2="422.4" y2="124.8"/>
+<line x1="422.4" y1="124.8" x2="432.0" y2="124.8"/>
+<line x1="432.0" y1="124.8" x2="441.6" y2="124.8"/>
+<line x1="436.8" y1="124.8" x2="436.8" y2="134.4"/>
+<line x1="441.6" y1="124.8" x2="451.2" y2="124.8"/>
+<line x1="451.2" y1="124.8" x2="460.8" y2="124.8"/>
+<line x1="460.8" y1="124.8" x2="470.4" y2="124.8"/>
+<line x1="470.4" y1="124.8" x2="480.0" y2="124.8"/>
+<line x1="480.0" y1="124.8" x2="489.6" y2="124.8"/>
+<line x1="489.6" y1="124.8" x2="499.2" y2="124.8"/>
+<line x1="499.2" y1="124.8" x2="504.0" y2="124.8"/>
+<line x1="504.0" y1="115.2" x2="504.0" y2="124.8"/>
+<line x1="590.4" y1="115.2" x2="590.4" y2="134.4"/>
+<line x1="4.8" y1="134.4" x2="4.8" y2="153.6"/>
+<line x1="110.4" y1="134.4" x2="110.4" y2="153.6"/>
+<line x1="273.6" y1="134.4" x2="273.6" y2="153.6"/>
+<line x1="436.8" y1="134.4" x2="436.8" y2="153.6"/>
+<line x1="600.0" y1="134.4" x2="600.0" y2="153.6"/>
+<line x1="4.8" y1="153.6" x2="4.8" y2="172.8"/>
+<line x1="110.4" y1="163.2" x2="115.2" y2="163.2"/>
+<line x1="110.4" y1="153.6" x2="110.4" y2="163.2"/>
+<line x1="115.2" y1="163.2" x2="124.8" y2="163.2"/>
+<line x1="124.8" y1="163.2" x2="134.4" y2="163.2"/>
+<line x1="134.4" y1="163.2" x2="144.0" y2="163.2"/>
+<line x1="144.0" y1="163.2" x2="153.6" y2="163.2"/>
+<line x1="153.6" y1="163.2" x2="163.2" y2="163.2"/>
+<line x1="163.2" y1="163.2" x2="172.8" y2="163.2"/>
+<line x1="172.8" y1="163.2" x2="182.4" y2="163.2"/>
+<line x1="182.4" y1="163.2" x2="192.0" y2="163.2"/>
+<line x1="192.0" y1="163.2" x2="201.6" y2="163.2"/>
+<line x1="201.6" y1="163.2" x2="211.2" y2="163.2"/>
+<line x1="211.2" y1="163.2" x2="220.8" y2="163.2"/>
+<line x1="220.8" y1="163.2" x2="230.4" y2="163.2"/>
+<line x1="230.4" y1="163.2" x2="240.0" y2="163.2"/>
+<line x1="240.0" y1="163.2" x2="249.6" y2="163.2"/>
+<line x1="249.6" y1="163.2" x2="259.2" y2="163.2"/>
+<line x1="259.2" y1="163.2" x2="268.8" y2="163.2"/>
+<line x1="268.8" y1="163.2" x2="278.4" y2="163.2"/>
+<line x1="273.6" y1="153.6" x2="273.6" y2="172.8"/>
+<line x1="278.4" y1="163.2" x2="288.0" y2="163.2"/>
+<line x1="288.0" y1="163.2" x2="297.6" y2="163.2"/>
+<line x1="297.6" y1="163.2" x2="307.2" y2="163.2"/>
+<line x1="307.2" y1="163.2" x2="316.8" y2="163.2"/>
+<line x1="316.8" y1="163.2" x2="326.4" y2="163.2"/>
+<line x1="326.4" y1="163.2" x2="336.0" y2="163.2"/>
+<line x1="336.0" y1="163.2" x2="345.6" y2="163.2"/>
+<line x1="345.6" y1="163.2" x2="355.2" y2="163.2"/>
+<line x1="355.2" y1="163.2" x2="364.8" y2="163.2"/>
+<line x1="364.8" y1="163.2" x2="374.4" y2="163.2"/>
+<line x1="374.4" y1="163.2" x2="384.0" y2="163.2"/>
+<line x1="384.0" y1="163.2" x2="393.6" y2="163.2"/>
+<line x1="393.6" y1="163.2" x2="403.2" y2="163.2"/>
+<line x1="403.2" y1="163.2" x2="412.8" y2="163.2"/>
+<line x1="412.8" y1="163.2" x2="422.4" y2="163.2"/>
+<line x1="422.4" y1="163.2" x2="432.0" y2="163.2"/>
+<line x1="432.0" y1="163.2" x2="436.8" y2="163.2"/>
+<line x1="436.8" y1="153.6" x2="436.8" y2="163.2"/>
+<line x1="600.0" y1="153.6" x2="600.0" y2="172.8"/>
+<line x1="4.8" y1="172.8" x2="4.8" y2="192.0"/>
+<line x1="273.6" y1="172.8" x2="273.6" y2="192.0"/>
+<line x1="600.0" y1="172.8" x2="600.0" y2="192.0"/>
+<line x1="4.8" y1="192.0" x2="4.8" y2="211.2"/>
+<line x1="600.0" y1="192.0" x2="600.0" y2="211.2"/>
+<line x1="4.8" y1="211.2" x2="4.8" y2="230.4"/>
+<line x1="273.6" y1="211.2" x2="273.6" y2="230.4"/>
+<line x1="600.0" y1="211.2" x2="600.0" y2="230.4"/>
+<line x1="4.8" y1="230.4" x2="4.8" y2="249.6"/>
+<line x1="206.4" y1="240.0" x2="211.2" y2="240.0"/>
+<line x1="206.4" y1="240.0" x2="206.4" y2="249.6"/>
+<line x1="211.2" y1="240.0" x2="220.8" y2="240.0"/>
+<line x1="220.8" y1="240.0" x2="230.4" y2="240.0"/>
+<line x1="230.4" y1="240.0" x2="240.0" y2="240.0"/>
+<line x1="240.0" y1="240.0" x2="249.6" y2="240.0"/>
+<line x1="249.6" y1="240.0" x2="259.2" y2="240.0"/>
+<line x1="259.2" y1="240.0" x2="268.8" y2="240.0"/>
+<line x1="278.4" y1="240.0" x2="288.0" y2="240.0"/>
+<line x1="288.0" y1="240.0" x2="297.6" y2="240.0"/>
+<line x1="297.6" y1="240.0" x2="307.2" y2="240.0"/>
+<line x1="307.2" y1="240.0" x2="316.8" y2="240.0"/>
+<line x1="316.8" y1="240.0" x2="326.4" y2="240.0"/>
+<line x1="326.4" y1="240.0" x2="336.0" y2="240.0"/>
+<line x1="336.0" y1="240.0" x2="340.8" y2="240.0"/>
+<line x1="340.8" y1="240.0" x2="340.8" y2="249.6"/>
+<line x1="600.0" y1="230.4" x2="600.0" y2="249.6"/>
+<line x1="4.8" y1="249.6" x2="4.8" y2="268.8"/>
+<line x1="206.4" y1="249.6" x2="206.4" y2="268.8"/>
+<line x1="340.8" y1="249.6" x2="340.8" y2="268.8"/>
+<line x1="600.0" y1="249.6" x2="600.0" y2="268.8"/>
+<line x1="4.8" y1="268.8" x2="4.8" y2="288.0"/>
+<line x1="206.4" y1="268.8" x2="206.4" y2="288.0"/>
+<line x1="340.8" y1="268.8" x2="340.8" y2="288.0"/>
+<line x1="600.0" y1="268.8" x2="600.0" y2="288.0"/>
+<line x1="4.8" y1="288.0" x2="4.8" y2="307.2"/>
+<line x1="206.4" y1="297.6" x2="211.2" y2="297.6"/>
+<line x1="206.4" y1="288.0" x2="206.4" y2="297.6"/>
+<line x1="211.2" y1="297.6" x2="220.8" y2="297.6"/>
+<line x1="220.8" y1="297.6" x2="230.4" y2="297.6"/>
+<line x1="230.4" y1="297.6" x2="240.0" y2="297.6"/>
+<line x1="240.0" y1="297.6" x2="249.6" y2="297.6"/>
+<line x1="249.6" y1="297.6" x2="259.2" y2="297.6"/>
+<line x1="259.2" y1="297.6" x2="268.8" y2="297.6"/>
+<line x1="268.8" y1="297.6" x2="278.4" y2="297.6"/>
+<line x1="278.4" y1="297.6" x2="288.0" y2="297.6"/>
+<line x1="288.0" y1="297.6" x2="297.6" y2="297.6"/>
+<line x1="297.6" y1="297.6" x2="307.2" y2="297.6"/>
+<line x1="307.2" y1="297.6" x2="316.8" y2="297.6"/>
+<line x1="316.8" y1="297.6" x2="326.4" y2="297.6"/>
+<line x1="326.4" y1="297.6" x2="336.0" y2="297.6"/>
+<line x1="336.0" y1="297.6" x2="340.8" y2="297.6"/>
+<line x1="340.8" y1="288.0" x2="340.8" y2="297.6"/>
+<line x1="600.0" y1="288.0" x2="600.0" y2="307.2"/>
+<line x1="4.8" y1="307.2" x2="4.8" y2="326.4"/>
+<line x1="600.0" y1="307.2" x2="600.0" y2="326.4"/>
+<line x1="4.8" y1="326.4" x2="4.8" y2="345.6"/>
+<line x1="590.4" y1="326.4" x2="590.4" y2="345.6"/>
+<line x1="4.8" y1="345.6" x2="4.8" y2="364.8"/>
+<line x1="600.0" y1="345.6" x2="600.0" y2="364.8"/>
+<line x1="4.8" y1="374.4" x2="9.6" y2="374.4"/>
+<line x1="4.8" y1="364.8" x2="4.8" y2="374.4"/>
+<line x1="9.6" y1="374.4" x2="19.2" y2="374.4"/>
+<line x1="19.2" y1="374.4" x2="28.8" y2="374.4"/>
+<line x1="28.8" y1="374.4" x2="38.4" y2="374.4"/>
+<line x1="38.4" y1="374.4" x2="48.0" y2="374.4"/>
+<line x1="48.0" y1="374.4" x2="57.6" y2="374.4"/>
+<line x1="57.6" y1="374.4" x2="67.2" y2="374.4"/>
+<line x1="67.2" y1="374.4" x2="76.8" y2="374.4"/>
+<line x1="76.8" y1="374.4" x2="86.4" y2="374.4"/>
+<line x1="86.4" y1="374.4" x2="96.0" y2="374.4"/>
+<line x1="96.0" y1="374.4" x2="105.6" y2="374.4"/>
+<line x1="105.6" y1="374.4" x2="115.2" y2="374.4"/>
+<line x1="115.2" y1="374.4" x2="124.8" y2="374.4"/>
+<line x1="124.8" y1="374.4" x2="134.4" y2="374.4"/>
+<line x1="134.4" y1="374.4" x2="144.0" y2="374.4"/>
+<line x1="144.0" y1="374.4" x2="153.6" y2="374.4"/>
+<line x1="153.6" y1="374.4" x2="163.2" y2="374.4"/>
+<line x1="163.2" y1="374.4" x2="172.8" y2="374.4"/>
+<line x1="172.8" y1="374.4" x2="182.4" y2="374.4"/>
+<line x1="182.4" y1="374.4" x2="192.0" y2="374.4"/>
+<line x1="192.0" y1="374.4" x2="201.6" y2="374.4"/>
+<line x1="201.6" y1="374.4" x2="211.2" y2="374.4"/>
+<line x1="211.2" y1="374.4" x2="220.8" y2="374.4"/>
+<line x1="220.8" y1="374.4" x2="230.4" y2="374.4"/>
+<line x1="230.4" y1="374.4" x2="240.0" y2="374.4"/>
+<line x1="240.0" y1="374.4" x2="249.6" y2="374.4"/>
+<line x1="249.6" y1="374.4" x2="259.2" y2="374.4"/>
+<line x1="259.2" y1="374.4" x2="268.8" y2="374.4"/>
+<line x1="268.8" y1="374.4" x2="278.4" y2="374.4"/>
+<line x1="278.4" y1="374.4" x2="288.0" y2="374.4"/>
+<line x1="288.0" y1="374.4" x2="297.6" y2="374.4"/>
+<line x1="297.6" y1="374.4" x2="307.2" y2="374.4"/>
+<line x1="307.2" y1="374.4" x2="316.8" y2="374.4"/>
+<line x1="316.8" y1="374.4" x2="326.4" y2="374.4"/>
+<line x1="326.4" y1="374.4" x2="336.0" y2="374.4"/>
+<line x1="336.0" y1="374.4" x2="345.6" y2="374.4"/>
+<line x1="345.6" y1="374.4" x2="355.2" y2="374.4"/>
+<line x1="355.2" y1="374.4" x2="364.8" y2="374.4"/>
+<line x1="364.8" y1="374.4" x2="374.4" y2="374.4"/>
+<line x1="374.4" y1="374.4" x2="384.0" y2="374.4"/>
+<line x1="384.0" y1="374.4" x2="393.6" y2="374.4"/>
+<line x1="393.6" y1="374.4" x2="403.2" y2="374.4"/>
+<line x1="403.2" y1="374.4" x2="412.8" y2="374.4"/>
+<line x1="412.8" y1="374.4" x2="422.4" y2="374.4"/>
+<line x1="422.4" y1="374.4" x2="432.0" y2="374.4"/>
+<line x1="432.0" y1="374.4" x2="441.6" y2="374.4"/>
+<line x1="441.6" y1="374.4" x2="451.2" y2="374.4"/>
+<line x1="451.2" y1="374.4" x2="460.8" y2="374.4"/>
+<line x1="460.8" y1="374.4" x2="470.4" y2="374.4"/>
+<line x1="470.4" y1="374.4" x2="480.0" y2="374.4"/>
+<line x1="480.0" y1="374.4" x2="489.6" y2="374.4"/>
+<line x1="489.6" y1="374.4" x2="499.2" y2="374.4"/>
+<line x1="499.2" y1="374.4" x2="508.8" y2="374.4"/>
+<line x1="508.8" y1="374.4" x2="518.4" y2="374.4"/>
+<line x1="518.4" y1="374.4" x2="528.0" y2="374.4"/>
+<line x1="528.0" y1="374.4" x2="537.6" y2="374.4"/>
+<line x1="537.6" y1="374.4" x2="547.2" y2="374.4"/>
+<line x1="547.2" y1="374.4" x2="556.8" y2="374.4"/>
+<line x1="556.8" y1="374.4" x2="566.4" y2="374.4"/>
+<line x1="566.4" y1="374.4" x2="576.0" y2="374.4"/>
+<line x1="576.0" y1="374.4" x2="585.6" y2="374.4"/>
+<line x1="585.6" y1="374.4" x2="595.2" y2="374.4"/>
+<line x1="595.2" y1="374.4" x2="600.0" y2="374.4"/>
+<line x1="600.0" y1="364.8" x2="600.0" y2="374.4"/>
+<text x="206.4" y="28.8" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="216.0" y="28.8" text-anchor="middle" dominant-baseline="central">Y</text>
+<text x="225.6" y="28.8" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="235.2" y="28.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="244.8" y="28.8" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="254.4" y="28.8" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="264.0" y="28.8" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="273.6" y="28.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="283.2" y="28.8" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="292.8" y="28.8" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="312.0" y="28.8" text-anchor="middle" dominant-baseline="central">T</text>
+<text x="321.6" y="28.8" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="331.2" y="28.8" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="81.6" y="86.4" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="91.2" y="86.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="100.8" y="86.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="110.4" y="86.4" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="120.0" y="86.4" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="129.6" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="139.2" y="86.4" text-anchor="middle" dominant-baseline="central">9</text>
+<text x="244.8" y="86.4" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="254.4" y="86.4" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="264.0" y="86.4" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="273.6" y="86.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="283.2" y="86.4" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="292.8" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="302.4" y="86.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="408.0" y="86.4" text-anchor="middle" dominant-baseline="central">V</text>
+<text x="417.6" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="427.2" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="436.8" y="86.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="446.4" y="86.4" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="456.0" y="86.4" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="81.6" y="105.6" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="91.2" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="110.4" y="105.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="120.0" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="129.6" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="244.8" y="105.6" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="254.4" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="264.0" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="273.6" y="105.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="283.2" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="292.8" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="408.0" y="105.6" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="417.6" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="427.2" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="436.8" y="105.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="446.4" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="456.0" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="206.4" y="201.6" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="216.0" y="201.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="225.6" y="201.6" text-anchor="middle" dominant-baseline="central">q</text>
+<text x="244.8" y="201.6" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="254.4" y="201.6" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="264.0" y="201.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="273.6" y="201.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="283.2" y="201.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="292.8" y="201.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="302.4" y="201.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="312.0" y="201.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="321.6" y="201.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="331.2" y="201.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="273.6" y="240.0" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="254.4" y="259.2" text-anchor="middle" dominant-baseline="central">O</text>
+<text x="264.0" y="259.2" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="273.6" y="259.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="283.2" y="259.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="292.8" y="259.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="244.8" y="278.4" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="254.4" y="278.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="264.0" y="278.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="273.6" y="278.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="283.2" y="278.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="302.4" y="278.4" text-anchor="middle" dominant-baseline="central">L</text>
+<text x="312.0" y="278.4" text-anchor="middle" dominant-baseline="central">O</text>
+<text x="321.6" y="278.4" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="43.2" y="336.0" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="52.8" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="62.4" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="72.0" y="336.0" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="81.6" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="336.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="110.4" y="336.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="120.0" y="336.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="139.2" y="336.0" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="148.8" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="336.0" text-anchor="middle" dominant-baseline="central">q</text>
+<text x="168.0" y="336.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="187.2" y="336.0" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="196.8" y="336.0" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="206.4" y="336.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="225.6" y="336.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="235.2" y="336.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="244.8" y="336.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="254.4" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="264.0" y="336.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="283.2" y="336.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="292.8" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="312.0" y="336.0" text-anchor="middle" dominant-baseline="central">O</text>
+<text x="321.6" y="336.0" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="331.2" y="336.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="340.8" y="336.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="350.4" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="360.0" y="336.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="379.2" y="336.0" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="388.8" y="336.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="398.4" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="408.0" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="417.6" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="427.2" y="336.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="446.4" y="336.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="456.0" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="465.6" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="475.2" y="336.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="494.4" y="336.0" text-anchor="middle" dominant-baseline="central">S</text>
+<text x="504.0" y="336.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="513.6" y="336.0" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="523.2" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="532.8" y="336.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="542.4" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="552.0" y="336.0" text-anchor="middle" dominant-baseline="central">.</text>
+</svg>
+</div>
+</section>
+<section>
+<h2>Coq Specifications</h2>
+<h3>Types</h3>
+<pre class="language-coq">
+( Byte arrays )
+Definition bytes := list byte.
+
+( Keys )
+Record ed25519publickey := {
+  pkbytes : bytes;
+  pklength : length pkbytes = 32
+}.
+
+Record ed25519privatekey := {
+  skbytes : bytes;
+  sklength : length skbytes = 64
+}.
+
+( Signatures )
+Record ed25519signature := {
+  sigbytes : bytes;
+  siglength : length sigbytes = 64
+}.
+
+( Hashes )
+Record sha512hash := {
+  hashbytes : bytes;
+  hashlength : length hashbytes = 64
+}.
+</pre>
+<h3>Signature Specification</h3>
+<pre class="language-coq">
+( Abstract signature scheme )
+Module Type ED25519SPEC.
+  Parameter sign : ed25519privatekey -&gt; bytes -&gt; ed25519signature.
+  Parameter verify : ed25519publickey -&gt; bytes -&gt; ed25519signature -&gt; bool.
+
+  ( Correctness: valid signatures verify )
+  Axiom signverifycorrect :
+    forall sk pk msg,
+      pk = derivepublic sk -&gt;
+      verify pk msg (sign sk msg) = true.
+
+  ( Security: cannot forge without private key )
+  Axiom unforgeability :
+    forall pk msg sig,
+      verify pk msg sig = true -&gt;
+      exists sk, pk = derivepublic sk /\ sig = sign sk msg.
+End ED25519SPEC.
+</pre>
+<h3>Hash Specification</h3>
+<pre class="language-coq">
+Module Type SHA512SPEC.
+  Parameter hash : bytes -&gt; sha512hash.
+
+  ( Determinism )
+  Axiom hashdeterministic :
+    forall x, hash x = hash x.
+
+  ( Collision resistance (assumed) )
+  Axiom collisionresistant :
+    forall x y, hash x = hash y -&gt; x = y. ( Idealized )
+End SHA512_SPEC.
+</pre>
+<h3>Chain Verification</h3>
+<pre class="language-coq">
+( Certificate chain verification )
+Fixpoint verifychain
+  (root : ed25519publickey)
+  (certs : list signedcert)
+  (targettag : tag) : bool :=
+  match certs with
+  | nil =&gt; false
+  | cert :: rest =&gt;
+      let issuerkey := certissuer cert in
+      let subjectkey := certsubject cert in
+      let certtag := certtag cert in
+      ( Check issuer matches current key )
+      andb (keyeq root issuerkey)
+      ( Check signature valid )
+      (andb (verify issuerkey (certcontent cert) (certsignature cert))
+      ( Check tag grants permission )
+      (andb (tagimplies certtag targettag)
+      ( Continue chain )
+      (match rest with
+       | nil =&gt; true
+       |  =&gt; verifychain subjectkey rest targettag
+       end)))
+  end.
+
+( Theorem: Valid chain implies authorization )
+Theorem chainauthorization :
+  forall root certs tag,
+    verify_chain root certs tag = true -&gt;
+    authorized root tag.
+Proof.
+  ( Proof by induction on chain length )
+  ...
+Qed.
+</pre>
+</section>
+<section>
+<h2>Extraction to OCaml</h2>
+<h3>Extraction Directives</h3>
+<pre class="language-coq">
+Require Import ExtrOcamlBasic.
+Require Import ExtrOcamlString.
+
+( Extract to OCaml types )
+Extract Inductive bool =&gt; "bool" ["true" "false"].
+Extract Inductive list =&gt; "list" ["[]" "(::)"].
+
+( Link to libsodium )
+Extract Constant ed25519sign =&gt; "Sodium.Ed25519.sign".
+Extract Constant ed25519verify =&gt; "Sodium.Ed25519.verify".
+Extract Constant sha512hash =&gt; "Sodium.SHA512.hash".
+
+( Generate OCaml )
+Extraction "tcb.ml" verifychain sign verify hash.
+</pre>
+<h3>Generated OCaml</h3>
+<pre class="language-ocaml">
+( tcb.ml - Extracted from Coq )
+
+let rec verifychain root certs targettag =
+  match certs with
+  | [] -&gt; false
+  | cert :: rest -&gt;
+      let issuerkey = certissuer cert in
+      let subjectkey = certsubject cert in
+      keyeq root issuerkey &amp;&amp;
+      Sodium.Ed25519.verify issuerkey (certcontent cert) (certsignature cert) &amp;&amp;
+      tagimplies (certtag cert) targettag &amp;&amp;
+      (match rest with
+       | [] -&gt; true
+       |  -&gt; verifychain subjectkey rest targettag)
+</pre>
+</section>
+<section>
+<h2>Integration with Scheme</h2>
+<h3>FFI Layer</h3>
+<pre class="language-ocaml">
+( tcbffi.ml - FFI bindings for Chicken Scheme )
+
+let () = Callback.register "tcbverifychain" verifychain
+let () = Callback.register "tcbsign" sign
+let () = Callback.register "tcbverify" verify
+let () = Callback.register "tcb_hash" hash
+</pre>
+<h3>Scheme Bindings</h3>
+<pre class="language-scheme">
+;; crypto-ffi.scm
+(module crypto-ffi
+  (ed25519-sign ed25519-verify sha512-hash verify-chain)
+
+  (import (chicken foreign))
+
+  ;; Call into verified OCaml
+  (define ed25519-sign
+    (foreign-lambda blob ((blob key) (blob msg))
+      "return tcbsign(key, msg);"))
+
+  (define verify-chain
+    (foreign-lambda bool ((blob root) (pointer certs) (pointer tag))
+      "return tcbverify_chain(root, certs, tag);"))
+
+  ...)
+</pre>
+</section>
+<section>
+<h2>Proof Obligations</h2>
+<h3>What We Prove</h3>
+<p>1. Signature correctness: Valid signatures verify 2. Chain soundness: Valid chain implies authorization 3. Hash properties: Determinism, length preservation 4. Type safety: No buffer overflows, no null pointers</p>
+<h3>What We Assume</h3>
+<p>1. Cryptographic hardness: Ed25519 unforgeability 2. libsodium correctness: Implementation matches spec 3. OCaml runtime: Extraction target is correct 4. Hardware: CPU executes instructions correctly</p>
+<h3>Trust Chain</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 345.6 172.8" width="345.6" height="172.8" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="81.6" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="91.2" y="9.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="100.8" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="129.6" y="9.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="139.2" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="168.0" y="9.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="187.2" y="9.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="196.8" y="9.6" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="206.4" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="216.0" y="9.6" text-anchor="middle" dominant-baseline="central">q</text>
+<text x="225.6" y="9.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="28.8" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="4.8" y="48.0" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="14.4" y="48.0" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="24.0" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="33.6" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="48.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="62.4" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="72.0" y="48.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="81.6" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="48.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="110.4" y="48.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="120.0" y="48.0" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="129.6" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="48.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="158.4" y="48.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="168.0" y="48.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="177.6" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="48.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="206.4" y="48.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="216.0" y="48.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="235.2" y="48.0" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="244.8" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="254.4" y="48.0" text-anchor="middle" dominant-baseline="central">q</text>
+<text x="264.0" y="48.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="67.2" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="4.8" y="86.4" text-anchor="middle" dominant-baseline="central">O</text>
+<text x="14.4" y="86.4" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="24.0" y="86.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="33.6" y="86.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="43.2" y="86.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="62.4" y="86.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="72.0" y="86.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="81.6" y="86.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="91.2" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="110.4" y="86.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="120.0" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="129.6" y="86.4" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="139.2" y="86.4" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="148.8" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="158.4" y="86.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="168.0" y="86.4" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="187.2" y="86.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="196.8" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="206.4" y="86.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="216.0" y="86.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="225.6" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="235.2" y="86.4" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="244.8" y="86.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="254.4" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="86.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="273.6" y="86.4" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="283.2" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="292.8" y="86.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="105.6" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="4.8" y="124.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="14.4" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="24.0" y="124.8" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="33.6" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="43.2" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="52.8" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="62.4" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="72.0" y="124.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="81.6" y="124.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="100.8" y="124.8" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="110.4" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="124.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="129.6" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="139.2" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="148.8" y="124.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="158.4" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="168.0" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="177.6" y="124.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="196.8" y="124.8" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="206.4" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="216.0" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="225.6" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="235.2" y="124.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="244.8" y="124.8" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="264.0" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="273.6" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="124.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="292.8" y="124.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="302.4" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="312.0" y="124.8" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="321.6" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="331.2" y="124.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="340.8" y="124.8" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="144.0" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="4.8" y="163.2" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="14.4" y="163.2" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="24.0" y="163.2" text-anchor="middle" dominant-baseline="central">U</text>
+<text x="43.2" y="163.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="52.8" y="163.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="163.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="72.0" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="81.6" y="163.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="91.2" y="163.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="100.8" y="163.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="110.4" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="120.0" y="163.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="129.6" y="163.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="139.2" y="163.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="148.8" y="163.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="168.0" y="163.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="177.6" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="187.2" y="163.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="196.8" y="163.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="206.4" y="163.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="216.0" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="235.2" y="163.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="244.8" y="163.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="254.4" y="163.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="264.0" y="163.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="273.6" y="163.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="283.2" y="163.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="292.8" y="163.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="302.4" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="312.0" y="163.2" text-anchor="middle" dominant-baseline="central">)</text>
+</svg>
+</div>
+</section>
+<section>
+<h2>Development Workflow</h2>
+<h3>1. Specify in Coq</h3>
+<pre class="language-coq">
+( Define types and operations )
+( State properties and theorems )
+</pre>
+<h3>2. Prove Correctness</h3>
+<pre class="language-coq">
+( Prove theorems )
+( Coq checks proofs mechanically )
+</pre>
+<h3>3. Extract to OCaml</h3>
+<pre class="language-bash">
+$ coqc -R . Cyberspace tcb.v
+$ coqc -R . Cyberspace extract.v
+$ ls *.ml
+tcb.ml tcb_types.ml
+</pre>
+<h3>4. Compile and Link</h3>
+<pre class="language-bash">
+$ ocamlfind ocamlopt -package sodium -linkpkg \
+    tcb.ml tcb_ffi.ml -o tcb.cmxa
+</pre>
+<h3>5. Call from Scheme</h3>
+<pre class="language-scheme">
+(import crypto-ffi)
+(ed25519-sign key message)  ; Calls verified code
+</pre>
+</section>
+<section>
+<h2>Existing Verified Libraries</h2>
+<h3>Fiat-Crypto</h3>
+<ul>
+<li>Verified elliptic curve implementations</li>
+<li>Used by BoringSSL, Chrome</li>
+<li>Extraction to C, Java, Go</li>
+</ul>
+<h3>HACL*</h3>
+<ul>
+<li>Verified cryptographic library</li>
+<li>Written in F* (similar to Coq)</li>
+<li>Used by Firefox, Wireguard</li>
+</ul>
+<h3>Potential Use</h3>
+<pre class="language-coq">
+Require Import Fiat.Crypto.Ed25519.
+( Use pre-verified Ed25519 implementation )
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Verified Components</h3>
+<ul>
+<li>Signature operations</li>
+<li>Hash operations</li>
+<li>Chain verification logic</li>
+</ul>
+<h3>Unverified (Trusted)</h3>
+<ul>
+<li>FFI layer (small, auditable) - libsodium bindings</li>
+<li>Scheme runtime</li>
+</ul>
+<h3>Audit Surface</h3>
+<pre>
+Total TCB:     ~1000 lines OCaml
+Verified:      ~800 lines (extracted from ~2000 lines Coq)
+Trusted:       ~200 lines (FFI, bindings)
+</pre>
+</section>
+<section>
+<h2>References</h2>
+<p>1. Coq Development Team. The Coq Proof Assistant Reference Manual. 2. Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic. 3. Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*. 4. Chlipala, A. (2013). Certified Programming with Dependent Types. 5. RFC-002: Cyberspace Architecture</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-06</li>
+<li>Initial specification</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

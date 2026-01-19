@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>RFC-015: Versioning and Rollback</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="rfc.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>RFC-015: Versioning and Rollback</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies user-visible versioning and rollback semantics for Cyberspace vaults, providing clear mental models for version management, safe rollback operations, and recovery from mistakes.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>Users need simple answers to simple questions:</p>
+<ul>
+<li>What version am I on?</li>
+<li>What versions exist?</li>
+<li>How do I go back?</li>
+<li>What if I make a mistake?</li>
+</ul>
+<p>Git provides mechanisms. Cyberspace provides semantics:</p>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 489.6 76.8" width="489.6" height="76.8" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="91.2" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="100.8" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="206.4" y="9.6" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="225.6" y="9.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="235.2" y="9.6" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="244.8" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="254.4" y="9.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="264.0" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="273.6" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="283.2" y="9.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="4.8" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="14.4" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="28.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="33.6" y="28.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="43.2" y="28.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="52.8" y="28.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="62.4" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="28.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="91.2" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="100.8" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="110.4" y="28.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="120.0" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="206.4" y="28.8" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="225.6" y="28.8" text-anchor="middle" dominant-baseline="central">[</text>
+<text x="235.2" y="28.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="244.8" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="254.4" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="264.0" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="273.6" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="283.2" y="28.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="302.4" y="28.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="312.0" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="321.6" y="28.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="331.2" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="340.8" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="350.4" y="28.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="369.6" y="28.8" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="379.2" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="388.8" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="398.4" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="408.0" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="417.6" y="28.8" text-anchor="middle" dominant-baseline="central">,</text>
+<text x="436.8" y="28.8" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="446.4" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="456.0" y="28.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="465.6" y="28.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="475.2" y="28.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="484.8" y="28.8" text-anchor="middle" dominant-baseline="central">]</text>
+<text x="4.8" y="48.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="14.4" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="48.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="33.6" y="48.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="52.8" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="62.4" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="72.0" y="48.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="81.6" y="48.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="91.2" y="48.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="100.8" y="48.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="110.4" y="48.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="120.0" y="48.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="139.2" y="48.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="148.8" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="158.4" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="168.0" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="177.6" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="206.4" y="48.0" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="225.6" y="48.0" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="235.2" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="244.8" y="48.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="254.4" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="264.0" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="283.2" y="48.0" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="292.8" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="302.4" y="48.0" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="321.6" y="48.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="331.2" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="350.4" y="48.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="360.0" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="369.6" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="379.2" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="388.8" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="398.4" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="4.8" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="14.4" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="33.6" y="67.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="43.2" y="67.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="52.8" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="62.4" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="67.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="81.6" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="67.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="100.8" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="110.4" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="206.4" y="67.2" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="225.6" y="67.2" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="235.2" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="254.4" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="264.0" y="67.2" text-anchor="middle" dominant-baseline="central">'</text>
+<text x="273.6" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="292.8" y="67.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="302.4" y="67.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="312.0" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="321.6" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="340.8" y="67.2" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="350.4" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="360.0" y="67.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="379.2" y="67.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="388.8" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="398.4" y="67.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="417.6" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="427.2" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="436.8" y="67.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="446.4" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="456.0" y="67.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="465.6" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="475.2" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="484.8" y="67.2" text-anchor="middle" dominant-baseline="central">.</text>
+</svg>
+</div>
+</section>
+<section>
+<h2>Specification</h2>
+<h3>Version Model</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 480.0 134.4" width="480.0" height="134.4" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+<line x1="96.0" y1="48.0" x2="105.6" y2="48.0"/>
+<line x1="105.6" y1="48.0" x2="115.2" y2="48.0"/>
+<line x1="192.0" y1="48.0" x2="201.6" y2="48.0"/>
+<line x1="201.6" y1="48.0" x2="211.2" y2="48.0"/>
+<line x1="288.0" y1="48.0" x2="297.6" y2="48.0"/>
+<line x1="297.6" y1="48.0" x2="307.2" y2="48.0"/>
+<line x1="62.4" y1="57.6" x2="62.4" y2="76.8"/>
+<line x1="254.4" y1="57.6" x2="254.4" y2="76.8"/>
+<line x1="62.4" y1="76.8" x2="62.4" y2="96.0"/>
+<line x1="254.4" y1="86.4" x2="259.2" y2="86.4"/>
+<line x1="254.4" y1="76.8" x2="254.4" y2="86.4"/>
+<line x1="259.2" y1="86.4" x2="268.8" y2="86.4"/>
+<line x1="268.8" y1="86.4" x2="278.4" y2="86.4"/>
+<line x1="62.4" y1="96.0" x2="62.4" y2="115.2"/>
+<line x1="62.4" y1="124.8" x2="67.2" y2="124.8"/>
+<line x1="62.4" y1="115.2" x2="62.4" y2="124.8"/>
+<line x1="67.2" y1="124.8" x2="76.8" y2="124.8"/>
+<line x1="76.8" y1="124.8" x2="86.4" y2="124.8"/>
+<text x="244.8" y="9.6" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="254.4" y="9.6" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="264.0" y="9.6" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="273.6" y="9.6" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="254.4" y="28.8" text-anchor="middle" dominant-baseline="central">↓</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="52.8" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="62.4" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="72.0" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="81.6" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="120.0" y="48.0" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="139.2" y="48.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="148.8" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="158.4" y="48.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="168.0" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="177.6" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="216.0" y="48.0" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="235.2" y="48.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="244.8" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="254.4" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="264.0" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="273.6" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="312.0" y="48.0" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="331.2" y="48.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="340.8" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="350.4" y="48.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="360.0" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="369.6" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="292.8" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="302.4" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="312.0" y="86.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="321.6" y="86.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="331.2" y="86.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="340.8" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="350.4" y="86.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="360.0" y="86.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="369.6" y="86.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="379.2" y="86.4" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="388.8" y="86.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="398.4" y="86.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="408.0" y="86.4" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="427.2" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="436.8" y="86.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="446.4" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="456.0" y="86.4" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="465.6" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="475.2" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="100.8" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="120.0" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="129.6" y="124.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="139.2" y="124.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="148.8" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="158.4" y="124.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="168.0" y="124.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="177.6" y="124.8" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="187.2" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="196.8" y="124.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="206.4" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="235.2" y="124.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="244.8" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="254.4" y="124.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="264.0" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="273.6" y="124.8" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="283.2" y="124.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="292.8" y="124.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="302.4" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+</svg>
+</div>
+<p>Versions are semantic (X.Y.Z), immutable, signed.</p>
+<p>HEAD is current working state.</p>
+<p>Rollback creates forward commit that restores past state.</p>
+<h3>Core Operations</h3>
+<p>#### seal-version</p>
+<p>Report current version.</p>
+<pre class="language-scheme">
+(seal-version)
+;; =&gt; "2.1.0" or "2.1.0+3" (3 commits past release)
+</pre>
+<p>Output format: - X.Y.Z - Exactly at release - X.Y.Z+N - N commits past release - X.Y.Z-dev - Development branch - unversioned - No releases yet</p>
+<p>#### seal-versions</p>
+<p>List all versions.</p>
+<pre class="language-scheme">
+(seal-versions)
+;; =&gt; ("1.0.0" "1.1.0" "2.0.0" "2.1.0")
+
+(seal-versions verbose: #t)
+;; =&gt;
+;; 1.0.0  2026-01-01  "Initial release"
+;; 1.1.0  2026-01-05  "Bug fixes"
+;; 2.0.0  2026-01-10  "New governance model"
+;; 2.1.0  2026-01-15  "Performance improvements"
+</pre>
+<p>#### seal-rollback</p>
+<p>Roll back to specific version.</p>
+<pre class="language-scheme">
+(seal-rollback "2.0.0")
+</pre>
+<p>Process: 1. Verify version exists 2. Check for uncommitted changes (abort or stash) 3. Create rollback commit with contents of target version 4. Record in audit trail 5. Optionally create rollback tag</p>
+<p>Rollback commit message:</p>
+<pre>
+Rollback to 2.0.0
+
+Restored vault state to version 2.0.0.
+Previous HEAD was 2.1.0+3.
+
+Reason: [user-provided or "Manual rollback"]
+</pre>
+<p>NOT a git reset. History preserved. Rollback is a forward operation.</p>
+<p>#### seal-diff</p>
+<p>Compare versions.</p>
+<pre class="language-scheme">
+(seal-diff "2.0.0" "2.1.0")
+;; Shows what changed between versions
+
+(seal-diff "2.0.0")
+;; Shows what changed since 2.0.0
+</pre>
+<p>#### seal-recover</p>
+<p>Recovery options for mistakes.</p>
+<pre class="language-scheme">
+(seal-recover)
+;; =&gt;
+;; Recovery options:
+;;   1. Uncommitted changes (stashed 5 minutes ago)
+;;   2. Last commit (seal-undo)
+;;   3. Version 2.1.0 (seal-rollback "2.1.0")
+;;   4. Archive vault-2.0.0.archive (seal-restore)
+</pre>
+</section>
+<section>
+<h2>Rollback Semantics</h2>
+<h3>Forward Rollback (Default)</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 556.8 172.8" width="556.8" height="172.8" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+<line x1="254.4" y1="96.0" x2="254.4" y2="115.2"/>
+<line x1="475.2" y1="96.0" x2="475.2" y2="115.2"/>
+<line x1="254.4" y1="124.8" x2="259.2" y2="124.8"/>
+<line x1="254.4" y1="115.2" x2="254.4" y2="124.8"/>
+<line x1="259.2" y1="124.8" x2="268.8" y2="124.8"/>
+<line x1="268.8" y1="124.8" x2="278.4" y2="124.8"/>
+<line x1="278.4" y1="124.8" x2="288.0" y2="124.8"/>
+<line x1="288.0" y1="124.8" x2="297.6" y2="124.8"/>
+<line x1="297.6" y1="124.8" x2="307.2" y2="124.8"/>
+<line x1="307.2" y1="124.8" x2="316.8" y2="124.8"/>
+<line x1="316.8" y1="124.8" x2="326.4" y2="124.8"/>
+<line x1="326.4" y1="124.8" x2="336.0" y2="124.8"/>
+<line x1="336.0" y1="124.8" x2="345.6" y2="124.8"/>
+<line x1="345.6" y1="124.8" x2="355.2" y2="124.8"/>
+<line x1="355.2" y1="124.8" x2="364.8" y2="124.8"/>
+<line x1="364.8" y1="124.8" x2="374.4" y2="124.8"/>
+<line x1="374.4" y1="124.8" x2="384.0" y2="124.8"/>
+<line x1="384.0" y1="124.8" x2="393.6" y2="124.8"/>
+<line x1="393.6" y1="124.8" x2="403.2" y2="124.8"/>
+<line x1="403.2" y1="124.8" x2="412.8" y2="124.8"/>
+<line x1="412.8" y1="124.8" x2="422.4" y2="124.8"/>
+<line x1="422.4" y1="124.8" x2="432.0" y2="124.8"/>
+<line x1="432.0" y1="124.8" x2="441.6" y2="124.8"/>
+<line x1="441.6" y1="124.8" x2="451.2" y2="124.8"/>
+<line x1="451.2" y1="124.8" x2="460.8" y2="124.8"/>
+<line x1="460.8" y1="124.8" x2="470.4" y2="124.8"/>
+<line x1="470.4" y1="124.8" x2="475.2" y2="124.8"/>
+<line x1="475.2" y1="115.2" x2="475.2" y2="124.8"/>
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="91.2" y="9.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="100.8" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="120.0" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="129.6" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="148.8" y="9.6" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="168.0" y="9.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="177.6" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="187.2" y="9.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="196.8" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="206.4" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="225.6" y="9.6" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="244.8" y="9.6" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="254.4" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="264.0" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="273.6" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="283.2" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="302.4" y="9.6" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="321.6" y="9.6" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="331.2" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="340.8" y="9.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="350.4" y="9.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="360.0" y="9.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="379.2" y="9.6" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="398.4" y="9.6" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="408.0" y="9.6" text-anchor="middle" dominant-baseline="central">E</text>
+<text x="417.6" y="9.6" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="427.2" y="9.6" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="254.4" y="28.8" text-anchor="middle" dominant-baseline="central">↑</text>
+<text x="206.4" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="216.0" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="225.6" y="48.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="235.2" y="48.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="244.8" y="48.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="254.4" y="48.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="264.0" y="48.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="273.6" y="48.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="292.8" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="302.4" y="48.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="312.0" y="48.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="321.6" y="48.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="331.2" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="340.8" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="4.8" y="86.4" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="14.4" y="86.4" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="24.0" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="33.6" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="52.8" y="86.4" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="91.2" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="100.8" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="110.4" y="86.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="120.0" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="129.6" y="86.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="148.8" y="86.4" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="168.0" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="177.6" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="187.2" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="196.8" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="206.4" y="86.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="225.6" y="86.4" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="244.8" y="86.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="254.4" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="264.0" y="86.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="273.6" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="283.2" y="86.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="302.4" y="86.4" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="321.6" y="86.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="331.2" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="340.8" y="86.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="350.4" y="86.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="360.0" y="86.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="379.2" y="86.4" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="398.4" y="86.4" text-anchor="middle" dominant-baseline="central">[</text>
+<text x="408.0" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="417.6" y="86.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="427.2" y="86.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="436.8" y="86.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="446.4" y="86.4" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="456.0" y="86.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="465.6" y="86.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="475.2" y="86.4" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="494.4" y="86.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="504.0" y="86.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="513.6" y="86.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="523.2" y="86.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="532.8" y="86.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="542.4" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="552.0" y="86.4" text-anchor="middle" dominant-baseline="central">]</text>
+<text x="292.8" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="302.4" y="144.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="312.0" y="144.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="321.6" y="144.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="331.2" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="340.8" y="144.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="350.4" y="144.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="360.0" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="379.2" y="144.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="388.8" y="144.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="398.4" y="144.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="408.0" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="417.6" y="144.0" text-anchor="middle" dominant-baseline="central">h</text>
+</svg>
+</div>
+<p>History preserved. Audit trail shows rollback.</p>
+<h3>Hard Rollback (Dangerous)</h3>
+<pre class="language-scheme">
+(seal-rollback "2.0.0" hard: #t)
+</pre>
+<p>Actually resets to version. Destroys history.</p>
+<p>Requires: - Explicit hard: #t flag - Confirmation prompt - Audit entry before destruction</p>
+<h3>Rollback with Stash</h3>
+<pre class="language-scheme">
+(seal-rollback "2.0.0" stash: #t)
+</pre>
+<p>Stashes uncommitted changes before rollback. Can recover with:</p>
+<pre class="language-scheme">
+(seal-stash-pop)
+</pre>
+</section>
+<section>
+<h2>Version Tags</h2>
+<h3>Automatic Tagging</h3>
+<pre class="language-scheme">
+(seal-release "2.1.0")
+;; Creates:
+;;   - Git tag: 2.1.0
+;;   - Signature: .vault/releases/2.1.0.sig
+;;   - Audit entry
+</pre>
+<h3>Rollback Tags</h3>
+<pre class="language-scheme">
+(seal-rollback "2.0.0" tag: "rollback-2026-01-15")
+;; Creates additional tag marking rollback point
+</pre>
+<h3>Tag Listing</h3>
+<pre class="language-scheme">
+(seal-tags)
+;; =&gt;
+;; 1.0.0              2026-01-01  release
+;; 1.1.0              2026-01-05  release
+;; 2.0.0              2026-01-10  release
+;; 2.1.0              2026-01-15  release
+;; rollback-2026-01-15 2026-01-15  rollback
+</pre>
+</section>
+<section>
+<h2>Recovery Scenarios</h2>
+<h3>Scenario 1: Bad Commit</h3>
+<pre class="language-scheme">
+;; Oops, committed broken code
+(seal-undo)                    ; Undo last commit
+;; or
+(seal-rollback "2.1.0")        ; Back to last release
+</pre>
+<h3>Scenario 2: Bad Release</h3>
+<pre class="language-scheme">
+;; Released 2.2.0 but it's broken
+(seal-rollback "2.1.0")        ; Back to good version
+(seal-release "2.2.1")         ; Patch release
+</pre>
+<h3>Scenario 3: Lost Changes</h3>
+<pre class="language-scheme">
+;; Accidentally discarded work
+(seal-recover)                 ; See options
+(seal-stash-pop)               ; If stashed
+;; or
+(seal-reflog)                  ; Find lost commits
+</pre>
+<h3>Scenario 4: Corrupted Vault</h3>
+<pre class="language-scheme">
+;; Something went very wrong
+(seal-restore "vault-2.0.0.archive" verify-key: "alice.pub")
+</pre>
+</section>
+<section>
+<h2>Audit Integration</h2>
+<p>Every version operation recorded:</p>
+<pre class="language-scheme">
+(audit-entry
+  (action
+    (verb seal-rollback)
+    (object "2.0.0")
+    (parameters
+      (from "2.1.0+3")
+      (method forward)
+      (reason "Production incident")))
+  (seal ...))
+</pre>
+<p>Audit trail answers: - Who rolled back? - When? - From what version? - Why? (if reason provided)</p>
+</section>
+<section>
+<h2>CLI Interface</h2>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 547.2 595.2" width="547.2" height="595.2" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="9.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="81.6" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="100.8" y="9.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="120.0" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="129.6" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="139.2" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="148.8" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="9.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="4.8" y="28.8" text-anchor="middle" dominant-baseline="central">$</text>
+<text x="24.0" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="33.6" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="28.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="28.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="28.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="81.6" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="28.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="120.0" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="129.6" y="28.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="4.8" y="48.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="14.4" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="24.0" y="48.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="33.6" y="48.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="52.8" y="48.0" text-anchor="middle" dominant-baseline="central">+</text>
+<text x="62.4" y="48.0" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="4.8" y="86.4" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="24.0" y="86.4" text-anchor="middle" dominant-baseline="central">L</text>
+<text x="33.6" y="86.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="43.2" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="52.8" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="72.0" y="86.4" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="81.6" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="86.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="120.0" y="86.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="129.6" y="86.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="139.2" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="105.6" text-anchor="middle" dominant-baseline="central">$</text>
+<text x="24.0" y="105.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="33.6" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="105.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="105.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="105.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="81.6" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="105.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="105.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="120.0" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="129.6" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="139.2" y="105.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="124.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="14.4" y="124.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="24.0" y="124.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="33.6" y="124.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="43.2" y="124.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="81.6" y="124.8" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="91.2" y="124.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="100.8" y="124.8" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="110.4" y="124.8" text-anchor="middle" dominant-baseline="central">6</text>
+<text x="120.0" y="124.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="129.6" y="124.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="139.2" y="124.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="148.8" y="124.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="158.4" y="124.8" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="168.0" y="124.8" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="206.4" y="124.8" text-anchor="middle" dominant-baseline="central">I</text>
+<text x="216.0" y="124.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="225.6" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="235.2" y="124.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="244.8" y="124.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="254.4" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="264.0" y="124.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="283.2" y="124.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="292.8" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="302.4" y="124.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="312.0" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="321.6" y="124.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="331.2" y="124.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="340.8" y="124.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="4.8" y="144.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="14.4" y="144.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="24.0" y="144.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="33.6" y="144.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="43.2" y="144.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="81.6" y="144.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="91.2" y="144.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="100.8" y="144.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="110.4" y="144.0" text-anchor="middle" dominant-baseline="central">6</text>
+<text x="120.0" y="144.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="129.6" y="144.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="139.2" y="144.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="148.8" y="144.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="158.4" y="144.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="168.0" y="144.0" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="206.4" y="144.0" text-anchor="middle" dominant-baseline="central">B</text>
+<text x="216.0" y="144.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="225.6" y="144.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="244.8" y="144.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="254.4" y="144.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="264.0" y="144.0" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="273.6" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="163.2" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="14.4" y="163.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="24.0" y="163.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="33.6" y="163.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="43.2" y="163.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="81.6" y="163.2" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="91.2" y="163.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="100.8" y="163.2" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="110.4" y="163.2" text-anchor="middle" dominant-baseline="central">6</text>
+<text x="120.0" y="163.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="129.6" y="163.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="139.2" y="163.2" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="148.8" y="163.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="158.4" y="163.2" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="168.0" y="163.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="206.4" y="163.2" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="216.0" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="163.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="244.8" y="163.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="254.4" y="163.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="264.0" y="163.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="273.6" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="163.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="292.8" y="163.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="302.4" y="163.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="312.0" y="163.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="321.6" y="163.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="331.2" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="350.4" y="163.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="360.0" y="163.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="369.6" y="163.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="379.2" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="388.8" y="163.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="4.8" y="182.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="14.4" y="182.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="24.0" y="182.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="33.6" y="182.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="43.2" y="182.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="81.6" y="182.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="91.2" y="182.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="100.8" y="182.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="110.4" y="182.4" text-anchor="middle" dominant-baseline="central">6</text>
+<text x="120.0" y="182.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="129.6" y="182.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="139.2" y="182.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="148.8" y="182.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="158.4" y="182.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="168.0" y="182.4" text-anchor="middle" dominant-baseline="central">5</text>
+<text x="206.4" y="182.4" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="216.0" y="182.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="182.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="235.2" y="182.4" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="244.8" y="182.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="254.4" y="182.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="264.0" y="182.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="273.6" y="182.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="283.2" y="182.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="292.8" y="182.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="302.4" y="182.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="321.6" y="182.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="331.2" y="182.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="340.8" y="182.4" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="350.4" y="182.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="360.0" y="182.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="369.6" y="182.4" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="379.2" y="182.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="388.8" y="182.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="398.4" y="182.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="408.0" y="182.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="417.6" y="182.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="427.2" y="182.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="220.8" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="24.0" y="220.8" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="33.6" y="220.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="220.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="52.8" y="220.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="62.4" y="220.8" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="72.0" y="220.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="81.6" y="220.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="91.2" y="220.8" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="4.8" y="240.0" text-anchor="middle" dominant-baseline="central">$</text>
+<text x="24.0" y="240.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="33.6" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="240.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="240.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="240.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="240.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="240.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="100.8" y="240.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="110.4" y="240.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="120.0" y="240.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="129.6" y="240.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="139.2" y="240.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="158.4" y="240.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="168.0" y="240.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="177.6" y="240.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="187.2" y="240.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="196.8" y="240.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="4.8" y="259.2" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="14.4" y="259.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="24.0" y="259.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="33.6" y="259.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="43.2" y="259.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="52.8" y="259.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="259.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="81.6" y="259.2" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="91.2" y="259.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="100.8" y="259.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="110.4" y="259.2" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="129.6" y="259.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="139.2" y="259.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="259.2" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="168.0" y="259.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="177.6" y="259.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="187.2" y="259.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="196.8" y="259.2" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="206.4" y="259.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="216.0" y="259.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="225.6" y="259.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="4.8" y="278.4" text-anchor="middle" dominant-baseline="central">✓</text>
+<text x="24.0" y="278.4" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="33.6" y="278.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="278.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="52.8" y="278.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="62.4" y="278.4" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="72.0" y="278.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="81.6" y="278.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="91.2" y="278.4" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="110.4" y="278.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="120.0" y="278.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="129.6" y="278.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="139.2" y="278.4" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="148.8" y="278.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="158.4" y="278.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="168.0" y="278.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="177.6" y="278.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="278.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="206.4" y="278.4" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="216.0" y="278.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="225.6" y="278.4" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="244.8" y="278.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="254.4" y="278.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="273.6" y="278.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="283.2" y="278.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="292.8" y="278.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="302.4" y="278.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="312.0" y="278.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="321.6" y="278.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="4.8" y="316.8" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="24.0" y="316.8" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="33.6" y="316.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="316.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="52.8" y="316.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="62.4" y="316.8" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="72.0" y="316.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="81.6" y="316.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="91.2" y="316.8" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="110.4" y="316.8" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="120.0" y="316.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="129.6" y="316.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="139.2" y="316.8" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="158.4" y="316.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="168.0" y="316.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="177.6" y="316.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="187.2" y="316.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="196.8" y="316.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="206.4" y="316.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="4.8" y="336.0" text-anchor="middle" dominant-baseline="central">$</text>
+<text x="24.0" y="336.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="33.6" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="336.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="100.8" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="110.4" y="336.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="120.0" y="336.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="129.6" y="336.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="139.2" y="336.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="158.4" y="336.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="168.0" y="336.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="177.6" y="336.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="187.2" y="336.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="196.8" y="336.0" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="216.0" y="336.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="225.6" y="336.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="235.2" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="244.8" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="254.4" y="336.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="264.0" y="336.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="273.6" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="283.2" y="336.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="302.4" y="336.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="312.0" y="336.0" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="321.6" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="331.2" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="340.8" y="336.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="350.4" y="336.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="360.0" y="336.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="369.6" y="336.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="379.2" y="336.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="388.8" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="398.4" y="336.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="417.6" y="336.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="427.2" y="336.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="436.8" y="336.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="446.4" y="336.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="456.0" y="336.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="465.6" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="475.2" y="336.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="484.8" y="336.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="504.0" y="336.0" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="513.6" y="336.0" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="523.2" y="336.0" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="532.8" y="336.0" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="542.4" y="336.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="4.8" y="374.4" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="24.0" y="374.4" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="33.6" y="374.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="374.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="52.8" y="374.4" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="374.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="374.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="374.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="100.8" y="374.4" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="110.4" y="374.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="120.0" y="374.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="129.6" y="374.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="139.2" y="374.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="148.8" y="374.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="374.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="168.0" y="374.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="393.6" text-anchor="middle" dominant-baseline="central">$</text>
+<text x="24.0" y="393.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="33.6" y="393.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="393.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="393.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="393.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="81.6" y="393.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="91.2" y="393.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="100.8" y="393.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="120.0" y="393.6" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="129.6" y="393.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="139.2" y="393.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="148.8" y="393.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="158.4" y="393.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="177.6" y="393.6" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="187.2" y="393.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="196.8" y="393.6" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="206.4" y="393.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="216.0" y="393.6" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="14.4" y="412.8" text-anchor="middle" dominant-baseline="central">M</text>
+<text x="33.6" y="412.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="43.2" y="412.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="52.8" y="412.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="412.8" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="72.0" y="412.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="81.6" y="412.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="91.2" y="412.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="100.8" y="412.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="412.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="120.0" y="412.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="14.4" y="432.0" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="33.6" y="432.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="43.2" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="52.8" y="432.0" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="62.4" y="432.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="72.0" y="432.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="81.6" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="432.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="100.8" y="432.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="110.4" y="432.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="120.0" y="432.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="129.6" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="432.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="148.8" y="432.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="158.4" y="432.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="168.0" y="432.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="14.4" y="451.2" text-anchor="middle" dominant-baseline="central">D</text>
+<text x="33.6" y="451.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="43.2" y="451.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="52.8" y="451.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="451.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="451.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="451.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="91.2" y="451.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="100.8" y="451.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="110.4" y="451.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="120.0" y="451.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="129.6" y="451.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="139.2" y="451.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="148.8" y="451.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="158.4" y="451.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="4.8" y="489.6" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="24.0" y="489.6" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="33.6" y="489.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="489.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="52.8" y="489.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="62.4" y="489.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="72.0" y="489.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="489.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="91.2" y="489.6" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="110.4" y="489.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="489.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="129.6" y="489.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="139.2" y="489.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="148.8" y="489.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="489.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="168.0" y="489.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="4.8" y="508.8" text-anchor="middle" dominant-baseline="central">$</text>
+<text x="24.0" y="508.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="33.6" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="43.2" y="508.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="508.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="72.0" y="508.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="508.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="100.8" y="508.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="110.4" y="508.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="120.0" y="508.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="129.6" y="508.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="4.8" y="528.0" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="14.4" y="528.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="528.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="33.6" y="528.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="43.2" y="528.0" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="52.8" y="528.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="62.4" y="528.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="528.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="91.2" y="528.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="100.8" y="528.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="110.4" y="528.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="120.0" y="528.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="129.6" y="528.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="139.2" y="528.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="148.8" y="528.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="158.4" y="528.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="24.0" y="547.2" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="33.6" y="547.2" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="52.8" y="547.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="62.4" y="547.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="547.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="81.6" y="547.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="100.8" y="547.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="110.4" y="547.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="120.0" y="547.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="129.6" y="547.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="235.2" y="547.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="254.4" y="547.2" text-anchor="middle" dominant-baseline="central">U</text>
+<text x="264.0" y="547.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="273.6" y="547.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="283.2" y="547.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="302.4" y="547.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="312.0" y="547.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="321.6" y="547.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="331.2" y="547.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="350.4" y="547.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="360.0" y="547.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="369.6" y="547.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="379.2" y="547.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="388.8" y="547.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="398.4" y="547.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="24.0" y="566.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="33.6" y="566.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="52.8" y="566.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="62.4" y="566.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="566.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="81.6" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="100.8" y="566.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="110.4" y="566.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="129.6" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="139.2" y="566.4" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="148.8" y="566.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="158.4" y="566.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="168.0" y="566.4" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="187.2" y="566.4" text-anchor="middle" dominant-baseline="central">2</text>
+<text x="196.8" y="566.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="206.4" y="566.4" text-anchor="middle" dominant-baseline="central">1</text>
+<text x="216.0" y="566.4" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="225.6" y="566.4" text-anchor="middle" dominant-baseline="central">0</text>
+<text x="244.8" y="566.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="264.0" y="566.4" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="273.6" y="566.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="566.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="292.8" y="566.4" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="302.4" y="566.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="312.0" y="566.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="331.2" y="566.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="340.8" y="566.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="360.0" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="369.6" y="566.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="379.2" y="566.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="388.8" y="566.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="408.0" y="566.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="417.6" y="566.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="427.2" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="436.8" y="566.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="446.4" y="566.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="456.0" y="566.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="465.6" y="566.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="585.6" text-anchor="middle" dominant-baseline="central">3</text>
+<text x="33.6" y="585.6" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="52.8" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="62.4" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="81.6" y="585.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="100.8" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="585.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="120.0" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="129.6" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="139.2" y="585.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="158.4" y="585.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="168.0" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="177.6" y="585.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="235.2" y="585.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="254.4" y="585.6" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="264.0" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="273.6" y="585.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="283.2" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="292.8" y="585.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="302.4" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="312.0" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="331.2" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="340.8" y="585.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="350.4" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="360.0" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="369.6" y="585.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="379.2" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="388.8" y="585.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="408.0" y="585.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="417.6" y="585.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="427.2" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="436.8" y="585.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="446.4" y="585.6" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="456.0" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="465.6" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+</svg>
+</div>
+</section>
+<section>
+<h2>Safety Mechanisms</h2>
+<h3>Uncommitted Changes</h3>
+<pre class="language-scheme">
+(seal-rollback "2.0.0")
+;; Error: Uncommitted changes detected.
+;; Use --stash to save changes, or --force to discard.
+</pre>
+<h3>Protected Versions</h3>
+<pre class="language-scheme">
+(vault-config 'protected-versions '("1.0.0" "2.0.0"))
+
+(seal-rollback "0.9.0")
+;; Warning: Rolling back past protected version 1.0.0
+;; This may break compatibility. Continue? [y/N]
+</pre>
+<h3>Rollback Limits</h3>
+<pre class="language-scheme">
+(vault-config 'max-rollback-distance 10)
+
+(seal-rollback "0.1.0")
+;; Error: Rollback distance (20 versions) exceeds limit (10).
+;; Use --force to override.
+</pre>
+</section>
+<section>
+<h2>Implementation</h2>
+<h3>seal-rollback Implementation</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 777.6 844.8" width="777.6" height="844.8" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="9.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="91.2" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="100.8" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="9.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="129.6" y="9.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="139.2" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="9.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="168.0" y="9.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="177.6" y="9.6" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="187.2" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="196.8" y="9.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="206.4" y="9.6" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="225.6" y="9.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="235.2" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="254.4" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="273.6" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="283.2" y="9.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="302.4" y="9.6" text-anchor="middle" dominant-baseline="central">#</text>
+<text x="312.0" y="9.6" text-anchor="middle" dominant-baseline="central">!</text>
+<text x="321.6" y="9.6" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="331.2" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="340.8" y="9.6" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="360.0" y="9.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="369.6" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="379.2" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="388.8" y="9.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="408.0" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="417.6" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="427.2" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="436.8" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="446.4" y="9.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="465.6" y="9.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="475.2" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="484.8" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="494.4" y="9.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="504.0" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="523.2" y="9.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="532.8" y="9.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="542.4" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="552.0" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="561.6" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="571.2" y="9.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="590.4" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="600.0" y="9.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="609.6" y="9.6" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="619.2" y="9.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="24.0" y="28.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="33.6" y="28.8" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="43.2" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="52.8" y="28.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="62.4" y="28.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="81.6" y="28.8" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="91.2" y="28.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="100.8" y="28.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="110.4" y="28.8" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="129.6" y="28.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="139.2" y="28.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="148.8" y="28.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="158.4" y="28.8" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="168.0" y="28.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="187.2" y="28.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="196.8" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="216.0" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="225.6" y="28.8" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="235.2" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="28.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="254.4" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="264.0" y="28.8" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="273.6" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="283.2" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="292.8" y="28.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="312.0" y="28.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="321.6" y="28.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="331.2" y="28.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="340.8" y="28.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="350.4" y="28.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="360.0" y="28.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="369.6" y="28.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="379.2" y="28.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="24.0" y="67.2" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="33.6" y="67.2" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="52.8" y="67.2" text-anchor="middle" dominant-baseline="central">V</text>
+<text x="62.4" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="67.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="81.6" y="67.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="91.2" y="67.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="100.8" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="110.4" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="120.0" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="67.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="148.8" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="158.4" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="168.0" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="177.6" y="67.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="187.2" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="196.8" y="67.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="216.0" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="67.2" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="235.2" y="67.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="244.8" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="254.4" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="264.0" y="67.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="86.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="33.6" y="86.4" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="43.2" y="86.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="52.8" y="86.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="62.4" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="81.6" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="100.8" y="86.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="110.4" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="120.0" y="86.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="129.6" y="86.4" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="139.2" y="86.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="148.8" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="158.4" y="86.4" text-anchor="middle" dominant-baseline="central">x</text>
+<text x="168.0" y="86.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="177.6" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="187.2" y="86.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="196.8" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="206.4" y="86.4" text-anchor="middle" dominant-baseline="central">?</text>
+<text x="225.6" y="86.4" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="235.2" y="86.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="86.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="254.4" y="86.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="86.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="273.6" y="86.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="283.2" y="86.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="292.8" y="86.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="105.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="52.8" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="62.4" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="110.4" y="105.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="120.0" y="105.6" text-anchor="middle" dominant-baseline="central">V</text>
+<text x="129.6" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="105.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="158.4" y="105.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="168.0" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="177.6" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="196.8" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="206.4" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="216.0" y="105.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="235.2" y="105.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="244.8" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="254.4" y="105.6" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="264.0" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="273.6" y="105.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="283.2" y="105.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="302.4" y="105.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="312.0" y="105.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="321.6" y="105.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="331.2" y="105.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="340.8" y="105.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="350.4" y="105.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="360.0" y="105.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="369.6" y="105.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="379.2" y="105.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="24.0" y="144.0" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="33.6" y="144.0" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="52.8" y="144.0" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="62.4" y="144.0" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="72.0" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="91.2" y="144.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="110.4" y="144.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="120.0" y="144.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="129.6" y="144.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="144.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="158.4" y="144.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="168.0" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="177.6" y="144.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="187.2" y="144.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="196.8" y="144.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="206.4" y="144.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="216.0" y="144.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="225.6" y="144.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="235.2" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="144.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="264.0" y="144.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="273.6" y="144.0" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="283.2" y="144.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="292.8" y="144.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="302.4" y="144.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="312.0" y="144.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="321.6" y="144.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="24.0" y="163.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="33.6" y="163.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="43.2" y="163.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="52.8" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="62.4" y="163.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="81.6" y="163.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="91.2" y="163.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="100.8" y="163.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="110.4" y="163.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="120.0" y="163.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="129.6" y="163.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="139.2" y="163.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="148.8" y="163.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="158.4" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="168.0" y="163.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="177.6" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="163.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="196.8" y="163.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="206.4" y="163.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="216.0" y="163.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="225.6" y="163.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="235.2" y="163.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="244.8" y="163.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="254.4" y="163.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="264.0" y="163.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="273.6" y="163.2" text-anchor="middle" dominant-baseline="central">?</text>
+<text x="283.2" y="163.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="182.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="52.8" y="182.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="62.4" y="182.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="72.0" y="182.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="81.6" y="182.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="62.4" y="201.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="72.0" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="81.6" y="201.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="91.2" y="201.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="100.8" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="110.4" y="201.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="129.6" y="201.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="139.2" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="148.8" y="201.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="158.4" y="201.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="168.0" y="201.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="177.6" y="201.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="187.2" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="196.8" y="201.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="206.4" y="201.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="216.0" y="201.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="225.6" y="201.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="235.2" y="201.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="244.8" y="201.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="62.4" y="220.8" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="72.0" y="220.8" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="81.6" y="220.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="220.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="220.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="110.4" y="220.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="129.6" y="220.8" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="139.2" y="220.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="148.8" y="220.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="220.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="168.0" y="220.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="177.6" y="220.8" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="187.2" y="220.8" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="62.4" y="240.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="72.0" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="240.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="91.2" y="240.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="100.8" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="120.0" y="240.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="129.6" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="240.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="240.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="158.4" y="240.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="168.0" y="240.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="187.2" y="240.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="196.8" y="240.0" text-anchor="middle" dominant-baseline="central">U</text>
+<text x="206.4" y="240.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="216.0" y="240.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="225.6" y="240.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="235.2" y="240.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="244.8" y="240.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="254.4" y="240.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="264.0" y="240.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="273.6" y="240.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="283.2" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="292.8" y="240.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="312.0" y="240.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="321.6" y="240.0" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="331.2" y="240.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="340.8" y="240.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="350.4" y="240.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="360.0" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="369.6" y="240.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="379.2" y="240.0" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="398.4" y="240.0" text-anchor="middle" dominant-baseline="central">U</text>
+<text x="408.0" y="240.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="417.6" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="436.8" y="240.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="446.4" y="240.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="456.0" y="240.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="465.6" y="240.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="475.2" y="240.0" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="484.8" y="240.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="504.0" y="240.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="513.6" y="240.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="532.8" y="240.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="542.4" y="240.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="552.0" y="240.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="561.6" y="240.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="571.2" y="240.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="580.8" y="240.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="590.4" y="240.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="600.0" y="240.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="609.6" y="240.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="619.2" y="240.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="628.8" y="240.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="24.0" y="278.4" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="33.6" y="278.4" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="52.8" y="278.4" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="62.4" y="278.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="278.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="81.6" y="278.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="278.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="278.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="120.0" y="278.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="129.6" y="278.4" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="139.2" y="278.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="278.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="158.4" y="278.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="168.0" y="278.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="177.6" y="278.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="196.8" y="278.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="206.4" y="278.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="216.0" y="278.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="225.6" y="278.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="235.2" y="278.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="24.0" y="297.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="33.6" y="297.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="43.2" y="297.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="52.8" y="297.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="72.0" y="297.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="81.6" y="297.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="91.2" y="297.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="100.8" y="297.6" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="110.4" y="297.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="120.0" y="297.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="129.6" y="297.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="297.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="148.8" y="297.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="168.0" y="297.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="177.6" y="297.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="187.2" y="297.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="196.8" y="297.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="206.4" y="297.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="216.0" y="297.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="225.6" y="297.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="235.2" y="297.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="297.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="254.4" y="297.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="297.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="273.6" y="297.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="283.2" y="297.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="292.8" y="297.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="302.4" y="297.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="312.0" y="297.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="336.0" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="52.8" y="336.0" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="72.0" y="336.0" text-anchor="middle" dominant-baseline="central">P</text>
+<text x="81.6" y="336.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="91.2" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="100.8" y="336.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="110.4" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="129.6" y="336.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="148.8" y="336.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="158.4" y="336.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="168.0" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="177.6" y="336.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="187.2" y="336.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="196.8" y="336.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="206.4" y="336.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="216.0" y="336.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="43.2" y="355.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="52.8" y="355.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="62.4" y="355.2" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="81.6" y="355.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="91.2" y="355.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="100.8" y="355.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="110.4" y="355.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="81.6" y="374.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="91.2" y="374.4" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="100.8" y="374.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="110.4" y="374.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="120.0" y="374.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="129.6" y="374.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="139.2" y="374.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="374.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="374.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="168.0" y="374.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="177.6" y="374.4" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="187.2" y="374.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="196.8" y="374.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="206.4" y="374.4" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="216.0" y="374.4" text-anchor="middle" dominant-baseline="central">!</text>
+<text x="235.2" y="374.4" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="244.8" y="374.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="254.4" y="374.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="264.0" y="374.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="273.6" y="374.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="283.2" y="374.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="292.8" y="374.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="302.4" y="374.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="81.6" y="393.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="91.2" y="393.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="100.8" y="393.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="110.4" y="393.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="120.0" y="393.6" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="129.6" y="393.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="139.2" y="393.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="393.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="158.4" y="393.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="168.0" y="393.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="177.6" y="393.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="187.2" y="393.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="196.8" y="393.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="206.4" y="393.6" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="216.0" y="393.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="225.6" y="393.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="235.2" y="393.6" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="244.8" y="393.6" text-anchor="middle" dominant-baseline="central">!</text>
+<text x="264.0" y="393.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="273.6" y="393.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="393.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="292.8" y="393.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="302.4" y="393.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="312.0" y="393.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="321.6" y="393.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="340.8" y="393.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="350.4" y="393.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="360.0" y="393.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="369.6" y="393.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="379.2" y="393.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="388.8" y="393.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="398.4" y="393.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="408.0" y="393.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="432.0" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="52.8" y="432.0" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="72.0" y="432.0" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="81.6" y="432.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="91.2" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="100.8" y="432.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="110.4" y="432.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="120.0" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="432.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="148.8" y="432.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="158.4" y="432.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="177.6" y="432.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="187.2" y="432.0" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="206.4" y="432.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="216.0" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="432.0" text-anchor="middle" dominant-baseline="central">q</text>
+<text x="235.2" y="432.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="244.8" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="254.4" y="432.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="264.0" y="432.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="273.6" y="432.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="432.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="43.2" y="451.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="52.8" y="451.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="62.4" y="451.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="72.0" y="451.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="451.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="100.8" y="451.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="110.4" y="451.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="451.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="62.4" y="470.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="72.0" y="470.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="470.4" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="91.2" y="470.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="100.8" y="470.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="110.4" y="470.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="120.0" y="470.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="129.6" y="470.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="139.2" y="470.4" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="148.8" y="470.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="158.4" y="470.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="168.0" y="470.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="187.2" y="470.4" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="196.8" y="470.4" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="206.4" y="470.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="216.0" y="470.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="225.6" y="470.4" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="244.8" y="470.4" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="254.4" y="470.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="264.0" y="470.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="273.6" y="470.4" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="283.2" y="470.4" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="302.4" y="470.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="312.0" y="470.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="321.6" y="470.4" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="331.2" y="470.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="340.8" y="470.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="508.8" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="52.8" y="508.8" text-anchor="middle" dominant-baseline="central">;</text>
+<text x="72.0" y="508.8" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="81.6" y="508.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="91.2" y="508.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="100.8" y="508.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="110.4" y="508.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="43.2" y="528.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="52.8" y="528.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="62.4" y="528.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="72.0" y="528.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="81.6" y="528.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="91.2" y="528.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="100.8" y="528.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="110.4" y="528.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="528.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="129.6" y="528.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="139.2" y="528.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="148.8" y="528.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="158.4" y="528.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="62.4" y="547.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="547.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="81.6" y="547.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="91.2" y="547.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="100.8" y="547.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="110.4" y="547.2" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="129.6" y="547.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="139.2" y="547.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="148.8" y="547.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="158.4" y="547.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="168.0" y="547.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="177.6" y="547.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="187.2" y="547.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="196.8" y="547.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="206.4" y="547.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="216.0" y="547.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="225.6" y="547.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="235.2" y="547.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="244.8" y="547.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="254.4" y="547.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="264.0" y="547.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="273.6" y="547.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="283.2" y="547.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="292.8" y="547.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="302.4" y="547.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="312.0" y="547.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="331.2" y="547.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="340.8" y="547.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="350.4" y="547.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="360.0" y="547.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="369.6" y="547.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="379.2" y="547.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="388.8" y="547.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="398.4" y="547.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="408.0" y="547.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="417.6" y="547.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="427.2" y="547.2" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="436.8" y="547.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="446.4" y="547.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="465.6" y="547.2" text-anchor="middle" dominant-baseline="central">'</text>
+<text x="475.2" y="547.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="484.8" y="547.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="494.4" y="547.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="504.0" y="547.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="513.6" y="547.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="523.2" y="547.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="532.8" y="547.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="542.4" y="547.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="552.0" y="547.2" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="561.6" y="547.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="571.2" y="547.2" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="580.8" y="547.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="590.4" y="547.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="62.4" y="566.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="566.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="81.6" y="566.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="91.2" y="566.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="100.8" y="566.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="110.4" y="566.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="120.0" y="566.4" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="139.2" y="566.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="148.8" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="158.4" y="566.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="168.0" y="566.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="177.6" y="566.4" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="196.8" y="566.4" text-anchor="middle" dominant-baseline="central">'</text>
+<text x="206.4" y="566.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="216.0" y="566.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="566.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="235.2" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="244.8" y="566.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="254.4" y="566.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="264.0" y="566.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="273.6" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="283.2" y="566.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="292.8" y="566.4" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="302.4" y="566.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="312.0" y="566.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="321.6" y="566.4" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="340.8" y="566.4" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="350.4" y="566.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="360.0" y="566.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="369.6" y="566.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="379.2" y="566.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="388.8" y="566.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="398.4" y="566.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="408.0" y="566.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="62.4" y="585.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="72.0" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="81.6" y="585.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="91.2" y="585.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="100.8" y="585.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="110.4" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="585.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="129.6" y="585.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="139.2" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="148.8" y="585.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="158.4" y="585.6" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="177.6" y="585.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="187.2" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="196.8" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="216.0" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="225.6" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="235.2" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="244.8" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="254.4" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="264.0" y="585.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="283.2" y="585.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="292.8" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="302.4" y="585.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="312.0" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="321.6" y="585.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="331.2" y="585.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="340.8" y="585.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="350.4" y="585.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="369.6" y="585.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="379.2" y="585.6" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="388.8" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="398.4" y="585.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="408.0" y="585.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="417.6" y="585.6" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="427.2" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="436.8" y="585.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="446.4" y="585.6" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="465.6" y="585.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="475.2" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="484.8" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="494.4" y="585.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="513.6" y="585.6" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="523.2" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="542.4" y="585.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="552.0" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="571.2" y="585.6" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="580.8" y="585.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="590.4" y="585.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="609.6" y="585.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="619.2" y="585.6" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="628.8" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="638.4" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="648.0" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="657.6" y="585.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="667.2" y="585.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="686.4" y="585.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="696.0" y="585.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="705.6" y="585.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="715.2" y="585.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="724.8" y="585.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="734.4" y="585.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="744.0" y="585.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="753.6" y="585.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="763.2" y="585.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="772.8" y="585.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="43.2" y="624.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="52.8" y="624.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="62.4" y="624.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="72.0" y="624.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="81.6" y="624.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="91.2" y="624.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="110.4" y="624.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="120.0" y="624.0" text-anchor="middle" dominant-baseline="central">✓</text>
+<text x="139.2" y="624.0" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="148.8" y="624.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="624.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="168.0" y="624.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="177.6" y="624.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="187.2" y="624.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="206.4" y="624.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="216.0" y="624.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="225.6" y="624.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="235.2" y="624.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="254.4" y="624.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="264.0" y="624.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="283.2" y="624.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="302.4" y="624.0" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="312.0" y="624.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="321.6" y="624.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="331.2" y="624.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="340.8" y="624.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="350.4" y="624.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="360.0" y="624.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="369.6" y="624.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="379.2" y="624.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="388.8" y="624.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="4.8" y="662.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="14.4" y="662.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="24.0" y="662.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="33.6" y="662.4" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="43.2" y="662.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="52.8" y="662.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="662.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="662.4" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="91.2" y="662.4" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="100.8" y="662.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="110.4" y="662.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="120.0" y="662.4" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="129.6" y="662.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="139.2" y="662.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="662.4" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="158.4" y="662.4" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="168.0" y="662.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="177.6" y="662.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="187.2" y="662.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="196.8" y="662.4" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="206.4" y="662.4" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="216.0" y="662.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="225.6" y="662.4" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="235.2" y="662.4" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="244.8" y="662.4" text-anchor="middle" dominant-baseline="central">!</text>
+<text x="264.0" y="662.4" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="273.6" y="662.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="283.2" y="662.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="292.8" y="662.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="302.4" y="662.4" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="312.0" y="662.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="321.6" y="662.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="340.8" y="662.4" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="350.4" y="662.4" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="360.0" y="662.4" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="369.6" y="662.4" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="379.2" y="662.4" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="388.8" y="662.4" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="398.4" y="662.4" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="24.0" y="681.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="33.6" y="681.6" text-anchor="middle" dominant-baseline="central">C</text>
+<text x="43.2" y="681.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="52.8" y="681.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="62.4" y="681.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="72.0" y="681.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="81.6" y="681.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="100.8" y="681.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="110.4" y="681.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="681.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="129.6" y="681.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="139.2" y="681.6" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="148.8" y="681.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="158.4" y="681.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="168.0" y="681.6" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="187.2" y="681.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="196.8" y="681.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="206.4" y="681.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="216.0" y="681.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="225.6" y="681.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="235.2" y="681.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="254.4" y="681.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="264.0" y="681.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="273.6" y="681.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="283.2" y="681.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="292.8" y="681.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="302.4" y="681.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="312.0" y="681.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="321.6" y="681.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="331.2" y="681.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="340.8" y="681.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="360.0" y="681.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="369.6" y="681.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="379.2" y="681.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="388.8" y="681.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="398.4" y="681.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="408.0" y="681.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="417.6" y="681.6" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="427.2" y="681.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="436.8" y="681.6" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="24.0" y="700.8" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="33.6" y="700.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="43.2" y="700.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="52.8" y="700.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="700.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="72.0" y="700.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="81.6" y="700.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="700.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="100.8" y="700.8" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="110.4" y="700.8" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="700.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="129.6" y="700.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="148.8" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="158.4" y="700.8" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="168.0" y="700.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="177.6" y="700.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="187.2" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="206.4" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="216.0" y="700.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="225.6" y="700.8" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="235.2" y="700.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="244.8" y="700.8" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="254.4" y="700.8" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="264.0" y="700.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="273.6" y="700.8" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="283.2" y="700.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="292.8" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="312.0" y="700.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="321.6" y="700.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="331.2" y="700.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="340.8" y="700.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="350.4" y="700.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="360.0" y="700.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="369.6" y="700.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="388.8" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="398.4" y="700.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="408.0" y="700.8" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="417.6" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="436.8" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="446.4" y="700.8" text-anchor="middle" dominant-baseline="central">.</text>
+<text x="456.0" y="700.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="465.6" y="700.8" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="24.0" y="720.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="33.6" y="720.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="43.2" y="720.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="52.8" y="720.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="720.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="72.0" y="720.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="81.6" y="720.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="720.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="100.8" y="720.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="110.4" y="720.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="720.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="129.6" y="720.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="148.8" y="720.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="158.4" y="720.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="168.0" y="720.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="177.6" y="720.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="187.2" y="720.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="206.4" y="720.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="216.0" y="720.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="225.6" y="720.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="235.2" y="720.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="244.8" y="720.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="254.4" y="720.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="264.0" y="720.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="273.6" y="720.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="292.8" y="720.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="302.4" y="720.0" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="312.0" y="720.0" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="321.6" y="720.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="43.2" y="739.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="52.8" y="739.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="62.4" y="739.2" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="72.0" y="739.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="81.6" y="739.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="91.2" y="739.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="100.8" y="739.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="110.4" y="739.2" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="129.6" y="739.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="139.2" y="739.2" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="148.8" y="739.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="739.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="168.0" y="739.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="177.6" y="739.2" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="187.2" y="739.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="196.8" y="739.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="206.4" y="739.2" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="225.6" y="739.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="235.2" y="739.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="254.4" y="739.2" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="264.0" y="739.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="273.6" y="739.2" text-anchor="middle" dominant-baseline="central">\</text>
+<text x="283.2" y="739.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="292.8" y="739.2" text-anchor="middle" dominant-baseline="central">\</text>
+<text x="302.4" y="739.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="312.0" y="739.2" text-anchor="middle" dominant-baseline="central">~</text>
+<text x="321.6" y="739.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="331.2" y="739.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="350.4" y="739.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="360.0" y="739.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="369.6" y="739.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="379.2" y="739.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="388.8" y="739.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="398.4" y="739.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="408.0" y="739.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="427.2" y="739.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="436.8" y="739.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="446.4" y="739.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="465.6" y="739.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="475.2" y="739.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="484.8" y="739.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="494.4" y="739.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="504.0" y="739.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="513.6" y="739.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="532.8" y="739.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="542.4" y="739.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="552.0" y="739.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="561.6" y="739.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="571.2" y="739.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="580.8" y="739.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="4.8" y="777.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="14.4" y="777.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="24.0" y="777.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="33.6" y="777.6" text-anchor="middle" dominant-baseline="central">f</text>
+<text x="43.2" y="777.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="52.8" y="777.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="777.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="81.6" y="777.6" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="91.2" y="777.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="100.8" y="777.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="110.4" y="777.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="120.0" y="777.6" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="129.6" y="777.6" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="139.2" y="777.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="777.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="158.4" y="777.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="168.0" y="777.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="177.6" y="777.6" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="187.2" y="777.6" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="196.8" y="777.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="206.4" y="777.6" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="216.0" y="777.6" text-anchor="middle" dominant-baseline="central">!</text>
+<text x="235.2" y="777.6" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="244.8" y="777.6" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="254.4" y="777.6" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="264.0" y="777.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="273.6" y="777.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="283.2" y="777.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="292.8" y="777.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="302.4" y="777.6" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="24.0" y="796.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="33.6" y="796.8" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="43.2" y="796.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="52.8" y="796.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="62.4" y="796.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="72.0" y="796.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="91.2" y="796.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="100.8" y="796.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="120.0" y="796.8" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="129.6" y="796.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="139.2" y="796.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="148.8" y="796.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="158.4" y="796.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="168.0" y="796.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="177.6" y="796.8" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="196.8" y="796.8" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="206.4" y="796.8" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="216.0" y="796.8" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="225.6" y="796.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="235.2" y="796.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="244.8" y="796.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="254.4" y="796.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="264.0" y="796.8" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="273.6" y="796.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="292.8" y="796.8" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="302.4" y="796.8" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="312.0" y="796.8" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="321.6" y="796.8" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="331.2" y="796.8" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="340.8" y="796.8" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="350.4" y="796.8" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="360.0" y="796.8" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="369.6" y="796.8" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="24.0" y="816.0" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="33.6" y="816.0" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="43.2" y="816.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="52.8" y="816.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="62.4" y="816.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="72.0" y="816.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="91.2" y="816.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="100.8" y="816.0" text-anchor="middle" dominant-baseline="central">W</text>
+<text x="110.4" y="816.0" text-anchor="middle" dominant-baseline="central">A</text>
+<text x="120.0" y="816.0" text-anchor="middle" dominant-baseline="central">R</text>
+<text x="129.6" y="816.0" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="139.2" y="816.0" text-anchor="middle" dominant-baseline="central">I</text>
+<text x="148.8" y="816.0" text-anchor="middle" dominant-baseline="central">N</text>
+<text x="158.4" y="816.0" text-anchor="middle" dominant-baseline="central">G</text>
+<text x="168.0" y="816.0" text-anchor="middle" dominant-baseline="central">:</text>
+<text x="187.2" y="816.0" text-anchor="middle" dominant-baseline="central">H</text>
+<text x="196.8" y="816.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="206.4" y="816.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="216.0" y="816.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="235.2" y="816.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="244.8" y="816.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="254.4" y="816.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="264.0" y="816.0" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="273.6" y="816.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="283.2" y="816.0" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="292.8" y="816.0" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="302.4" y="816.0" text-anchor="middle" dominant-baseline="central">k</text>
+<text x="321.6" y="816.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="331.2" y="816.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="340.8" y="816.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="350.4" y="816.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="360.0" y="816.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="369.6" y="816.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="379.2" y="816.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="388.8" y="816.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="408.0" y="816.0" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="417.6" y="816.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="427.2" y="816.0" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="436.8" y="816.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="446.4" y="816.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="456.0" y="816.0" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="465.6" y="816.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="475.2" y="816.0" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="484.8" y="816.0" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="24.0" y="835.2" text-anchor="middle" dominant-baseline="central">(</text>
+<text x="33.6" y="835.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="43.2" y="835.2" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="52.8" y="835.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="62.4" y="835.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="72.0" y="835.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="81.6" y="835.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="91.2" y="835.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="100.8" y="835.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="110.4" y="835.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="120.0" y="835.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="129.6" y="835.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="148.8" y="835.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="158.4" y="835.2" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="168.0" y="835.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="177.6" y="835.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="187.2" y="835.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="206.4" y="835.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="216.0" y="835.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="225.6" y="835.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="235.2" y="835.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="244.8" y="835.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="254.4" y="835.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="264.0" y="835.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="283.2" y="835.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="292.8" y="835.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="302.4" y="835.2" text-anchor="middle" dominant-baseline="central">-</text>
+<text x="312.0" y="835.2" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="321.6" y="835.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="331.2" y="835.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="340.8" y="835.2" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="350.4" y="835.2" text-anchor="middle" dominant-baseline="central">"</text>
+<text x="369.6" y="835.2" text-anchor="middle" dominant-baseline="central">v</text>
+<text x="379.2" y="835.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="388.8" y="835.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="398.4" y="835.2" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="408.0" y="835.2" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="417.6" y="835.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="427.2" y="835.2" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="436.8" y="835.2" text-anchor="middle" dominant-baseline="central">)</text>
+<text x="446.4" y="835.2" text-anchor="middle" dominant-baseline="central">)</text>
+</svg>
+</div>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Rollback Attacks</h3>
+<p>Attacker forces rollback to vulnerable version.</p>
+<p>Mitigation: - Threshold signatures for rollback (RFC-007) - Protected version list - Audit trail detection</p>
+<h3>History Manipulation</h3>
+<p>Hard rollback can hide evidence.</p>
+<p>Mitigation: - Prefer forward rollback - Audit before hard rollback - Federation replication preserves history</p>
+</section>
+<section>
+<h2>References</h2>
+<p>1. Semantic Versioning 2.0.0 (semver.org) 2. Git Reset, Checkout, and Revert (git-scm.com) 3. RFC-003: Cryptographic Audit Trail 4. RFC-006: Vault System Architecture</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-06</li>
+<li>Initial specification</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 ;;; Usage:
 ;;;   ./build.scm           # build all
 ;;;   ./build.scm library   # just library modules
-;;;   ./build.scm repl      # just repl
+;;;   ./build.scm repl      # just cyberspace-repl
 ;;;   ./build.scm app       # just Cyberspace.app
 
 (import scheme
@@ -17,33 +17,20 @@
         (chicken pathname))
 
 (define *library-modules*
-  '(;; Layer 0: No internal dependencies
-    "sexp" "crypto-ffi" "tty-ffi" "fips" "wordlist"
-    "display" "inspector" "catalog" "bloom" "os"
-    "smelter" "scrutinizer" "forum"
-    ;; Layer 1: Single deps
-    "cert"          ; needs sexp
-    "script"        ; needs cert
-    "capability"    ; no internal deps
-    "keyring"       ; needs display
-    "audit"         ; needs crypto-ffi
-    "forge"         ; needs smelter
-    ;; Layer 2
-    "security"      ; needs cert, capability, sexp
-    ;; Layer 3
-    "vault"         ; needs cert, crypto-ffi, audit, os
-    "mdns"          ; needs os
-    "portal"        ; needs os
-    "enroll"        ; needs crypto-ffi, wordlist
-    ;; Layer 4
-    "seal"          ; needs vault
-    "gossip"        ; needs bloom, catalog, crypto-ffi, os
-    ;; Layer 5
-    "auto-enroll"   ; needs enroll, capability, mdns, gossip, crypto-ffi
-    ;; Layer 6
-    "ui"            ; needs enroll, capability, auto-enroll
-    ;; Layer 7
-    "cyberspace"))  ; needs script
+  '(;; Core
+    "sexp" "crypto-ffi" "fips" "wordlist"
+    ;; SPKI
+    "cert" "capability" "security" "keyring"
+    ;; Storage
+    "vault" "catalog" "bloom" "audit"
+    ;; Network
+    "gossip" "mdns" "portal"
+    ;; Enrollment
+    "enroll" "auto-enroll"
+    ;; UI
+    "os" "ui" "display" "inspector"
+    ;; High-level
+    "board" "seal" "script" "cyberspace"))
 
 (define (run cmd)
   (printf "  ~a~n" cmd)
@@ -74,16 +61,16 @@
       (print "  (all modules current)"))))
 
 (define (build-repl)
-  (print "\n=== Building repl ===")
-  (if (newer? "repl.scm" "repl")
-      (run "csc -O2 -d1 repl.scm -o repl")
+  (print "\n=== Building cyberspace-repl ===")
+  (if (newer? "cyberspace-repl.scm" "cyberspace-repl")
+      (run "csc -O2 -d1 cyberspace-repl.scm -o cyberspace-repl")
       (print "  (current)")))
 
 (define (build-app)
   (print "\n=== Building Cyberspace.app ===")
-  (let* ((app-dir (make-pathname (current-directory) "app"))
-         (server-src "server.scm")
-         (server-dst (make-pathname app-dir "Cyberspace.app/Contents/Resources/server"))
+  (let* ((app-dir (make-pathname (current-directory) "darwin/application"))
+         (server-src "cyberspace-server.scm")
+         (server-dst (make-pathname app-dir "Cyberspace.app/Contents/Resources/cyberspace-server"))
          (main-src (make-pathname app-dir "main.m"))
          (main-dst (make-pathname app-dir "Cyberspace.app/Contents/MacOS/Cyberspace")))
     (if (or (newer? server-src server-dst)

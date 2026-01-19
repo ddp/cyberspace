@@ -115,9 +115,6 @@ didFailNavigation:(WKNavigation *)navigation
 - (void)webView:(WKWebView *)webView
 didFinishNavigation:(WKNavigation *)navigation {
     NSLog(@"[Cyberspace] Page loaded");
-    // Focus the webview and terminal
-    [webView becomeFirstResponder];
-    [webView evaluateJavaScript:@"if(term) term.focus();" completionHandler:nil];
 }
 
 @end
@@ -408,7 +405,7 @@ didFinishNavigation:(WKNavigation *)navigation {
     self.window.title = @"Cyberspace";
     self.window.delegate = self;
     self.window.minSize = NSMakeSize(800, 600);
-    // Frame persistence handled by PreferencesManager in windowDidResize/Move
+    self.window.frameAutosaveName = @"CyberspaceMainWindow";
 
     // Create WebView adapter (swappable)
     self.webView = [[WKWebViewAdapter alloc] init];
@@ -425,11 +422,11 @@ didFinishNavigation:(WKNavigation *)navigation {
     webViewNS.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [self.window.contentView addSubview:webViewNS];
 
-    // Start the Scheme backend server
+    // Start Scheme backend
     [self startSchemeBackend];
 
-    // Give server a moment to start, then load UI
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+    // Load UI after brief delay for backend to start
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
         NSURL *url = [NSURL URLWithString:
                       [NSString stringWithFormat:@"http://127.0.0.1:%d/", self.backendPort]];
@@ -483,11 +480,6 @@ didFinishNavigation:(WKNavigation *)navigation {
     self.schemeBackend.launchPath = executable;
     self.schemeBackend.arguments = arguments;
     self.schemeBackend.currentDirectoryPath = schemeDir;
-
-    // Set environment so REPL knows it's running in the app
-    NSMutableDictionary *env = [[[NSProcessInfo processInfo] environment] mutableCopy];
-    env[@"CYBERSPACE_APP"] = @"1";
-    self.schemeBackend.environment = env;
 
     // Capture output for logging
     NSPipe *outputPipe = [NSPipe pipe];

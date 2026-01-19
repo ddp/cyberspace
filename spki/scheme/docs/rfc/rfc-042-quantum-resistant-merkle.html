@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>rfc-042-quantum-resistant-merkle</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<h1 id="rfc-042-quantum-resistant-merkle-trees">RFC-042:
+Quantum-Resistant Merkle Trees</h1>
+<p><strong>Status:</strong> Draft <strong>Date:</strong> January 2026
+<strong>Author:</strong> Derrell Piper <a href="mailto:ddp@eludom.net"
+class="email">ddp@eludom.net</a> <strong>Requires:</strong> RFC-020
+(Content-Addressed Storage), RFC-040 (Security Architecture)</p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>SHA-512 won’t survive. Grover’s algorithm halves the effective
+security - 256 bits becomes 128. For the wilderness of mirrors to endure
+the quantum winter, we need quantum-resistant Merkle trees. This RFC
+specifies the transition from flat SHA-512 hashes to tree-structured
+SHAKE256 hashes.</p>
+<hr />
+<h2 id="the-problem">The Problem</h2>
+<p>Current cyberspace object identity:</p>
+<pre><code>sha512(content) → 64 bytes → object address</code></pre>
+<p>Against a quantum computer with Grover’s algorithm: - Classical
+security: 256 bits - Quantum security: 128 bits (square root)</p>
+<p>128 bits may be acceptable for some threat models, but cyberspace is
+built to last. The Library of Alexandria burned once. We won’t let
+quantum computers burn it again.</p>
+<hr />
+<h2 id="the-solution-merkle-trees">The Solution: Merkle Trees</h2>
+<p>Instead of hashing content as a flat blob, structure it as a
+tree:</p>
+<pre><code>                    ┌─────────────────┐
+                    │   Merkle Root   │  ← Object identity
+                    │  shake256(...)  │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+         ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
+         │ Node 0  │    │ Node 1  │    │ Node 2  │
+         └────┬────┘    └────┬────┘    └────┬────┘
+              │              │              │
+        ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
+        │           │  │           │  │           │
+    ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ...
+    │Chunk 0│ │Chunk 1│ │Chunk 2│ │Chunk 3│ │Chunk 4│
+    │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │
+    └───────┘ └───────┘ └───────┘ └───────┘ └───────┘</code></pre>
+<p><strong>Benefits:</strong></p>
+<ol type="1">
+<li><strong>Incremental updates</strong> - Change one chunk, rehash one
+branch</li>
+<li><strong>Selective disclosure</strong> - Prove a chunk exists without
+revealing siblings</li>
+<li><strong>Streaming verification</strong> - Verify chunks as they
+arrive</li>
+<li><strong>Parallelizable</strong> - Hash chunks concurrently</li>
+<li><strong>Quantum-resistant</strong> - SHAKE256 at every node</li>
+</ol>
+<hr />
+<h2 id="hash-function-shake256">Hash Function: SHAKE256</h2>
+<p>SHAKE256 is an extendable-output function (XOF) from the SHA-3
+(Keccak) family.</p>
+<p><strong>Why SHAKE256:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Security level</td>
+<td>256-bit classical, 128-bit quantum</td>
+</tr>
+<tr>
+<td>Output length</td>
+<td>Variable (we use 256 bits)</td>
+</tr>
+<tr>
+<td>Construction</td>
+<td>Sponge (different from SHA-2’s Merkle-Damgård)</td>
+</tr>
+<tr>
+<td>Standard</td>
+<td>NIST FIPS 202</td>
+</tr>
+<tr>
+<td>Used by</td>
+<td>SPHINCS+ (post-quantum signatures)</td>
+</tr>
+<tr>
+<td>In libsodium</td>
+<td>No, but in OpenSSL, libgcrypt</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Alternative: BLAKE3</strong></p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Security level</td>
+<td>256-bit classical, 128-bit quantum</td>
+</tr>
+<tr>
+<td>Output length</td>
+<td>Variable</td>
+</tr>
+<tr>
+<td>Construction</td>
+<td>Merkle tree internally</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>Very fast, SIMD optimized</td>
+</tr>
+<tr>
+<td>Standard</td>
+<td>Not NIST, but widely trusted</td>
+</tr>
+</tbody>
+</table>
+<p>BLAKE3 is faster and already tree-structured, but SHAKE256 has NIST
+blessing. We support both.</p>
+<hr />
+<h2 id="object-format">Object Format</h2>
+<h3 id="current-legacy">Current (Legacy)</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(object</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;sha512:3a7bd3e2c4f8...&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (size <span class="dv">1048576</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  (content <span class="op">...</span>))</span></code></pre></div>
+<h3 id="quantum-resistant">Quantum-Resistant</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(object</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (merkle-root <span class="st">&quot;shake256:7f4a2b9c...&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (hash-algorithm <span class="st">&quot;shake256&quot;</span>)          <span class="co">; or &quot;blake3&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  (tree-params</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    (chunk-size <span class="dv">4096</span>)                  <span class="co">; 4 KB chunks</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    (fanout <span class="dv">16</span>)                        <span class="co">; Children per node</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    (depth <span class="dv">4</span>))                         <span class="co">; Tree depth</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  (size <span class="dv">1048576</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  (content <span class="op">...</span>))</span></code></pre></div>
+<h3 id="transition-period-dual-hash">Transition Period (Dual Hash)</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(object</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (hash <span class="st">&quot;sha512:3a7bd3e2c4f8...&quot;</span>)           <span class="co">; Legacy - for old clients</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  (merkle-root <span class="st">&quot;shake256:7f4a2b9c...&quot;</span>)      <span class="co">; Quantum-resistant</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (hash-algorithm <span class="st">&quot;shake256&quot;</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  (tree-params</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    (chunk-size <span class="dv">4096</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    (fanout <span class="dv">16</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    (depth <span class="dv">4</span>))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  (size <span class="dv">1048576</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  (content <span class="op">...</span>))</span></code></pre></div>
+<p>Old clients use <code>hash</code>. New clients use
+<code>merkle-root</code>. Both verify the same content.</p>
+<hr />
+<h2 id="tree-construction">Tree Construction</h2>
+<h3 id="algorithm">Algorithm</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">merkle-hash </span>content algorithm chunk-size fanout)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Build Merkle tree, return root hash&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">;; 1. Split content into chunks</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let*</span> ((chunks (chunk-content content chunk-size))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; 2. Hash each chunk (leaves)</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>         (leaves (map (<span class="kw">lambda</span> (chunk)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                        (hash algorithm chunk))</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                      chunks))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>         <span class="co">;; 3. Build tree bottom-up</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>         (root (build-tree leaves fanout algorithm)))</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    root))</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">build-tree </span>nodes fanout algorithm)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Combine nodes into parent nodes until one root remains&quot;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">if</span> (<span class="op">&lt;=</span> (<span class="kw">length</span> nodes) <span class="dv">1</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">car</span> nodes)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((parents (map (<span class="kw">lambda</span> (group)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>                            (hash algorithm (apply <span class="kw">append</span> group)))</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>                          (<span class="kw">partition</span> nodes fanout))))</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>        (build-tree parents fanout algorithm))))</span></code></pre></div>
+<h3 id="node-hashing">Node Hashing</h3>
+<p>Each internal node hashes the concatenation of its children:</p>
+<pre><code>node_hash = shake256(child_0 || child_1 || ... || child_n)</code></pre>
+<p>For leaves:</p>
+<pre><code>leaf_hash = shake256(chunk_data)</code></pre>
+<h3 id="canonical-parameters">Canonical Parameters</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>chunk-size</td>
+<td>4096</td>
+<td>4 KB, filesystem-friendly</td>
+</tr>
+<tr>
+<td>fanout</td>
+<td>16</td>
+<td>Balance between depth and width</td>
+</tr>
+<tr>
+<td>algorithm</td>
+<td>shake256</td>
+<td>NIST approved</td>
+</tr>
+<tr>
+<td>output-length</td>
+<td>32</td>
+<td>256 bits</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="proofs">Proofs</h2>
+<h3 id="inclusion-proof">Inclusion Proof</h3>
+<p>Prove a chunk is part of an object without revealing other
+chunks:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(inclusion-proof</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (merkle-root <span class="st">&quot;shake256:7f4a2b9c...&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (chunk-index <span class="dv">42</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (chunk-hash <span class="st">&quot;shake256:abc123...&quot;</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (path</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    ((sibling <span class="st">&quot;shake256:def456...&quot;</span> position left)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>     (sibling <span class="st">&quot;shake256:789abc...&quot;</span> position right)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>     (sibling <span class="st">&quot;shake256:012def...&quot;</span> position left))))</span></code></pre></div>
+<p>Verifier reconstructs path to root:</p>
+<pre><code>chunk_hash → combine with sibling → ... → must equal merkle-root</code></pre>
+<h3 id="exclusion-proof">Exclusion Proof</h3>
+<p>Prove a chunk does NOT exist (for sparse objects):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(exclusion-proof</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  (merkle-root <span class="st">&quot;shake256:7f4a2b9c...&quot;</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  (chunk-index <span class="dv">999</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  (boundary-left <span class="dv">998</span> <span class="st">&quot;shake256:left...&quot;</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  (boundary-right <span class="dv">1000</span> <span class="st">&quot;shake256:right...&quot;</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  (path <span class="op">...</span>))</span></code></pre></div>
+<hr />
+<h2 id="streaming-verification">Streaming Verification</h2>
+<p>Large objects can be verified chunk-by-chunk as they stream:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">verify-stream </span>merkle-root chunk-size)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Return a verifier that checks chunks as they arrive&quot;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((received-chunks &#39;())</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        (verified-nodes (make-hash-table)))</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">lambda</span> (chunk-index chunk-data proof)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>      <span class="co">;; Verify this chunk against the proof</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">let</span> ((chunk-hash (shake256 chunk-data)))</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">if</span> (verify-inclusion-proof merkle-root chunk-index chunk-hash proof)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">begin</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>              (cache-verified-node! verified-nodes chunk-index chunk-hash)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>              <span class="dv">#t</span>)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>            <span class="dv">#f</span>)))))</span></code></pre></div>
+<p>You don’t need the whole object to start verifying. Each chunk
+carries its own proof.</p>
+<hr />
+<h2 id="the-forest">The Forest</h2>
+<p>The soup becomes a forest of Merkle trees:</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                    THE FOREST (formerly soup)                    │
+│                                                                  │
+│     🌲 obj    🌲 obj       ┌─────────────────┐      🌲 obj       │
+│          🌲 obj           │░░░░░░░░░░░░░░░░░│           🌲 obj  │
+│    🌲 obj          🌲 obj │░░░  REALM  ░░░░░│    🌲 obj         │
+│         🌲 obj            │░░░ (island) ░░░░│         🌲 obj    │
+│   🌲 obj       🌲 obj     │░░░░░░░░░░░░░░░░░│  🌲 obj           │
+│        🌲 obj             └─────────────────┘       🌲 obj      │
+│                                                                  │
+│   Each object a tree. Each tree quantum-hardened.               │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+<p>Objects are trees. The wilderness of mirrors becomes a forest. Agents
+navigate between trees, climbing branches, verifying paths. The
+capability chain is still their thread - but now the mirrors are
+structured.</p>
+<hr />
+<h2 id="migration">Migration</h2>
+<h3 id="phase-1-dual-hash-now-q-day---5-years">Phase 1: Dual Hash (Now →
+Q-Day - 5 years)</h3>
+<p>All new objects get both hashes. Old objects rehashed on access.</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">store-object </span>content)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">let</span> ((legacy-hash (sha512 content))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        (merkle-root (merkle-hash content &#39;shake256 <span class="dv">4096</span> <span class="dv">16</span>)))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    (vault-store</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>      `(object</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>        (hash ,(<span class="kw">string-append</span> <span class="st">&quot;sha512:&quot;</span> legacy-hash))</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        (merkle-root ,(<span class="kw">string-append</span> <span class="st">&quot;shake256:&quot;</span> merkle-root))</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">...</span>))))</span></code></pre></div>
+<h3 id="phase-2-merkle-primary-q-day---5-years-q-day">Phase 2: Merkle
+Primary (Q-Day - 5 years → Q-Day)</h3>
+<p>Merkle root becomes the canonical address. SHA-512 kept for
+compatibility.</p>
+<h3 id="phase-3-legacy-sunset-q-day-q-day-2-years">Phase 3: Legacy
+Sunset (Q-Day → Q-Day + 2 years)</h3>
+<p>SHA-512 hashes deprecated. Only Merkle roots used for addressing.</p>
+<h3 id="phase-4-pure-quantum-resistant-q-day-2-years">Phase 4: Pure
+Quantum-Resistant (Q-Day + 2 years →)</h3>
+<p>SHA-512 hashes removed from new objects. Legacy objects retain both
+for historical verification.</p>
+<hr />
+<h2 id="performance">Performance</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>SHA-512 (flat)</th>
+<th>SHAKE256 (Merkle)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hash 1 MB</td>
+<td>2 ms</td>
+<td>3 ms</td>
+<td>Slightly slower</td>
+</tr>
+<tr>
+<td>Hash 1 GB</td>
+<td>2000 ms</td>
+<td>2500 ms</td>
+<td>Tree overhead</td>
+</tr>
+<tr>
+<td>Update 4 KB in 1 GB</td>
+<td>2000 ms</td>
+<td>15 ms</td>
+<td>Merkle wins</td>
+</tr>
+<tr>
+<td>Prove inclusion</td>
+<td>N/A</td>
+<td>0.1 ms</td>
+<td>New capability</td>
+</tr>
+<tr>
+<td>Streaming verify</td>
+<td>N/A</td>
+<td>Per-chunk</td>
+<td>New capability</td>
+</tr>
+</tbody>
+</table>
+<p>The overhead is small. The benefits are large.</p>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="grovers-algorithm">Grover’s Algorithm</h3>
+<p>Grover’s algorithm provides quadratic speedup for searching: -
+SHA-512: 2^256 → 2^128 quantum operations - SHAKE256-256: 2^256 → 2^128
+quantum operations</p>
+<p>128-bit quantum security is considered sufficient for the foreseeable
+future.</p>
+<h3 id="second-preimage-resistance">Second Preimage Resistance</h3>
+<p>Finding another input that hashes to the same tree requires: -
+Classical: 2^256 operations - Quantum: 2^128 operations (Grover)</p>
+<h3 id="tree-structure-attacks">Tree Structure Attacks</h3>
+<p>The Merkle tree structure must prevent: - <strong>Length
+extension</strong>: SHAKE256 immune (sponge construction) -
+<strong>Subtree collision</strong>: Domain separation in node hashing -
+<strong>Malleability</strong>: Canonical serialization required</p>
+<h3 id="implementation">Implementation</h3>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode scheme"><code class="sourceCode scheme"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; Domain separation for nodes vs leaves</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">hash-leaf </span>algorithm chunk)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (hash algorithm (bytevector-append #u8(<span class="dv">0</span>) chunk)))</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>(<span class="ex">define</span><span class="fu"> </span>(<span class="fu">hash-node </span>algorithm children)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  (hash algorithm (bytevector-append #u8(<span class="dv">1</span>) (apply bytevector-append children))))</span></code></pre></div>
+<p>The <code>0x00</code> prefix for leaves and <code>0x01</code> for
+nodes prevents a leaf from being interpreted as a node.</p>
+<hr />
+<h2 id="invariants">Invariants</h2>
+<pre><code>M1. Object identity is Merkle root
+    id(o) = merkle-root(shake256, chunks(o))
+
+M2. Any chunk is provable
+    chunk(o,i) → ∃proof: verify(root(o), i, chunk, proof)
+
+M3. Tree structure is canonical
+    tree(content, params) is deterministic
+
+M4. Dual hashes are consistent
+    sha512(content) ↔ merkle-root(content) verify same content
+
+M5. Migration preserves identity
+    old-objects retain verifiable legacy hashes</code></pre>
+<hr />
+<h2 id="references">References</h2>
+<ol type="1">
+<li>NIST FIPS 202 - SHA-3 Standard (SHAKE256)</li>
+<li>BLAKE3 specification - https://github.com/BLAKE3-team/BLAKE3</li>
+<li>Merkle, R., “A Digital Signature Based on a Conventional Encryption
+Function”, 1987</li>
+<li>Grover, L., “A Fast Quantum Mechanical Algorithm for Database
+Search”, 1996</li>
+<li>RFC-040 - Cyberspace Security Architecture</li>
+</ol>
+<hr />
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li>2026-01-08 - Initial draft</li>
+</ul>
+</body>
+</html>

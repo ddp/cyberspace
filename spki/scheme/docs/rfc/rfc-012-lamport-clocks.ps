@@ -1,0 +1,370 @@
+%!PS-Adobe-3.0
+%%Title: rfc-012-lamport-clocks
+%%Creator: Library of Cyberspace RFC Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(RFC-012: Lamport Logical Clocks) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This RFC specifies Lamport logical clocks for Cyberspace distributed) show newline
+(ordering, providing a happened-before relation across federated vaults) show newline
+(without synchronized physical clocks.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Physical clocks lie:) show newline
+() show newline
+(- Clock skew: Machines disagree on time - Clock drift: Skew grows over) show newline
+(time - NTP failures: Synchronization breaks - Relativity: No global) show newline
+("now" anyway) show newline
+() show newline
+(Lamport clocks provide:) show newline
+() show newline
+(1. Logical ordering: a > b means a happened before b 2. No) show newline
+(synchronization: No NTP, no GPS, no trusted time 3. Causality tracking:) show newline
+(If a caused b, then C\(a\) < C\(b\) 4. Consistency: All nodes agree on) show newline
+(partial order) show newline
+() show newline
+(From Lamport \(1978\):) show newline
+() show newline
+() show newline
+(    "Time, Clocks, and the Ordering of Events in a Distributed System") show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SPECIFICATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(The Happened-Before Relation) show newline
+(----------------------------) show newline
+() show newline
+(Definition: a > b \(a happened before b\) if:) show newline
+() show newline
+(1. a and b are in same process and a comes before b, or 2. a is sending) show newline
+(a message and b is receiving it, or 3. ∃c such that a > c and c > b) show newline
+(\(transitivity\)) show newline
+() show newline
+() show newline
+(Lamport Clock Rules) show newline
+(-------------------) show newline
+() show newline
+(Each process P maintains counter C\(P\):) show newline
+() show newline
+() show newline
+(    Rule 1: Before each event, increment C\(P\)) show newline
+(             C\(P\) := C\(P\) + 1) show newline
+(    Rule 2: When sending message m, attach C\(P\)) show newline
+(             send\(m, C\(P\)\)) show newline
+(    Rule 3: When receiving message \(m, T\), update clock) show newline
+(             C\(P\) := max\(C\(P\), T\) + 1) show newline
+() show newline
+() show newline
+(Clock Condition) show newline
+(---------------) show newline
+() show newline
+(If a > b then C\(a\) < C\(b\).) show newline
+() show newline
+(Note: Converse is not guaranteed. C\(a\) < C\(b\) does not imply a > b.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DATA STRUCTURES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Logical Timestamp) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <lamport-clock>) show newline
+(      \(make-lamport-clock counter node-id\)) show newline
+(      lamport-clock?) show newline
+(      \(counter clock-counter\)) show newline
+(      \(node-id clock-node-id\)\)) show newline
+() show newline
+() show newline
+(Timestamped Event) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(    \(define-record-type <timestamped-event>) show newline
+(      \(make-timestamped-event clock event\)) show newline
+(      timestamped-event?) show newline
+(      \(clock event-clock\)) show newline
+(      \(event event-data\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(OPERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Increment \(Local Event\)) show newline
+(-----------------------) show newline
+() show newline
+() show newline
+(    \(define \(clock-tick! clock\)) show newline
+(      "Increment clock for local event") show newline
+(      \(set! \(clock-counter clock\)) show newline
+(            \(+ 1 \(clock-counter clock\)\)\)) show newline
+(      clock\)) show newline
+() show newline
+() show newline
+(Send \(Message Departure\)) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(define \(clock-send clock message\)) show newline
+(      "Attach timestamp to outgoing message") show newline
+(      \(clock-tick! clock\)) show newline
+(      \(make-timestamped-message) show newline
+(        \(clock-counter clock\)) show newline
+(        \(clock-node-id clock\)) show newline
+(        message\)\)) show newline
+() show newline
+() show newline
+(Receive \(Message Arrival\)) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(    \(define \(clock-receive! clock timestamped-message\)) show newline
+(      "Update clock on message receipt") show newline
+(      \(let \(\(remote-time \(message-timestamp timestamped-message\)\)\)) show newline
+(        \(set! \(clock-counter clock\)) show newline
+(              \(+ 1 \(max \(clock-counter clock\) remote-time\)\)\)) show newline
+(        \(message-payload timestamped-message\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TOTAL ORDERING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Lamport clocks give partial order. For total order, break ties with node) show newline
+(ID:) show newline
+() show newline
+() show newline
+(    \(define \(lamport-compare a b\)) show newline
+(      "Total order: compare by timestamp, then by node-id") show newline
+(      \(let \(\(ta \(clock-counter \(event-clock a\)\)\)) show newline
+(            \(tb \(clock-counter \(event-clock b\)\)\)) show newline
+(            \(na \(clock-node-id \(event-clock a\)\)\)) show newline
+(            \(nb \(clock-node-id \(event-clock b\)\)\)\)) show newline
+(        \(cond) show newline
+(          \(\(< ta tb\) -1\)) show newline
+(          \(\(> ta tb\) 1\)) show newline
+(          \(\(string<? na nb\) -1\)) show newline
+(          \(\(string>? na nb\) 1\)) show newline
+(          \(else 0\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(APPLICATION TO CYBERSPACE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Audit Trail Ordering) show newline
+(--------------------) show newline
+() show newline
+() show newline
+(    \(audit-entry) show newline
+(      \(lamport-clock 1042 "alice-vault"\)) show newline
+(      \(timestamp "2026-01-06T15:30:00Z"\)  ; Physical \(advisory\)) show newline
+(      \(action \(seal-commit "abc123"\)\)) show newline
+(      ...\)) show newline
+() show newline
+(Logical clock provides causal ordering even if physical clocks differ.) show newline
+() show newline
+() show newline
+(Federation Message Ordering) show newline
+(---------------------------) show newline
+() show newline
+() show newline
+(    \(federation-message) show newline
+(      \(logical-time 573\)) show newline
+(      \(from "bob-vault"\)) show newline
+(      \(type announcement\)) show newline
+(      \(payload ...\)\)) show newline
+() show newline
+(Receivers update their clocks, ensuring consistent view of causality.) show newline
+() show newline
+() show newline
+(Conflict Detection) show newline
+(------------------) show newline
+() show newline
+(If events are concurrent \(neither a > b nor b > a\):) show newline
+() show newline
+() show newline
+(    \(define \(concurrent? a b\)) show newline
+(      "True if neither event happened before the other") show newline
+(      \(let \(\(ta \(clock-counter \(event-clock a\)\)\)) show newline
+(            \(tb \(clock-counter \(event-clock b\)\)\)\)) show newline
+(        ;; If timestamps equal and different nodes, concurrent) show newline
+(        ;; More sophisticated: use vector clocks for accurate detection) show newline
+(        \(and \(= ta tb\)) show newline
+(             \(not \(equal? \(clock-node-id \(event-clock a\)\)) show newline
+(                          \(clock-node-id \(event-clock b\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VECTOR CLOCKS \(EXTENSION\)) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(For precise concurrency detection, use vector clocks:) show newline
+() show newline
+() show newline
+(    \(define-record-type <vector-clock>) show newline
+(      \(make-vector-clock entries\)) show newline
+(      vector-clock?) show newline
+(      \(entries vc-entries\)\)  ; Hash: node-id > counter) show newline
+(    ;; a > b iff VC\(a\) < VC\(b\) \(component-wise\)) show newline
+(    ;; a || b \(concurrent\) iff neither VC\(a\) < VC\(b\) nor VC\(b\) < VC\(a\)) show newline
+() show newline
+(Trade-off: O\(N\) space vs O\(1\) for Lamport clocks.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(INTEGRATION POINTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(With Audit Trail \(RFC-003\)) show newline
+(--------------------------) show newline
+() show newline
+() show newline
+(    \(audit-entry) show newline
+(      \(sequence 42\)           ; Local sequence) show newline
+(      \(lamport-clock 1042\)    ; Logical timestamp) show newline
+(      \(physical-time "..."\)   ; Advisory only) show newline
+(      ...\)) show newline
+() show newline
+() show newline
+(With Consensus \(RFC-011\)) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    \(consensus-message) show newline
+(      \(sequence 573\)          ; Consensus sequence) show newline
+(      \(lamport-clock 2891\)    ; Causal context) show newline
+(      ...\)) show newline
+() show newline
+() show newline
+(With Replication \(RFC-001\)) show newline
+(--------------------------) show newline
+() show newline
+() show newline
+(    \(seal-publish "2.0.0") show newline
+(      \(logical-time 892\)) show newline
+(      ...\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Clock Manipulation) show newline
+(------------------) show newline
+() show newline
+(A Byzantine node could: - Report artificially high clock values -) show newline
+(Attempt to order events incorrectly) show newline
+() show newline
+(Mitigations: - Clock values bounded by received values + margin -) show newline
+(Signatures prevent retroactive tampering - Audit trails detect anomalies) show newline
+() show newline
+() show newline
+(Denial of Service) show newline
+(-----------------) show newline
+() show newline
+(Flooding with high-timestamped messages forces clock advancement.) show newline
+() show newline
+(Mitigation: Rate limiting, reputation systems.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Thread Safety) show newline
+(-------------) show newline
+() show newline
+(Clock updates must be atomic:) show newline
+() show newline
+() show newline
+(    \(define \(atomic-tick! clock\)) show newline
+(      \(mutex-lock! clock-mutex\)) show newline
+(      \(clock-tick! clock\)) show newline
+(      \(mutex-unlock! clock-mutex\)\)) show newline
+() show newline
+() show newline
+(Persistence) show newline
+(-----------) show newline
+() show newline
+(Clock state survives restarts:) show newline
+() show newline
+() show newline
+(    \(define \(save-clock clock path\)) show newline
+(      \(with-output-to-file path) show newline
+(        \(lambda \(\)) show newline
+(          \(write `\(lamport-clock) show newline
+(                    \(counter ,\(clock-counter clock\)\)) show newline
+(                    \(node-id ,\(clock-node-id clock\)\)\)\)\)\)\)) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(1. Lamport, L. \(1978\). Time, Clocks, and the Ordering of Events in a) show newline
+(Distributed System. 2. Fidge, C. J. \(1988\). Timestamps in) show newline
+(Message-Passing Systems. 3. Mattern, F. \(1989\). Virtual Time and Global) show newline
+(States of Distributed Systems. 4. RFC-003: Cryptographic Audit Trail 5.) show newline
+(RFC-010: Federation Protocol) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * 2026-01-06) show newline
+(  * Initial specification) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

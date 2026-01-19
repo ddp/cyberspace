@@ -3460,6 +3460,15 @@ Cyberspace REPL - Available Commands
     (hex->blob \"deadbeef\")           Convert hex to blob
     (help)                           Show this help
 
+  Library Documentation:
+    ,memo                            Show memo catalog
+    ,memo N                          View memo N as text
+    ,memo N html                     Open memo N in browser
+    ,memo N ps                       Open memo N in Preview
+    ,memo N all                      Open all formats
+    ,memo build                      Regenerate all memos
+    ,memo N build                    Regenerate memo N
+
   Config Keys:
     'signing-key      Ed25519 private key (64 bytes)
     'archive-format   'tarball | 'bundle | 'cryptographic | 'zstd-age
@@ -6884,6 +6893,85 @@ See: Memo-0000 Declaration of Cyberspace
                     (if (null? matches)
                         (print "No completions for: " prefix)
                         (for-each (lambda (m) (print "  " m)) matches))))
+              (loop))
+
+             ;; Memo - view and build documentation
+             ((string=? cmd "memo")
+              (let ((memo-dir "docs/memo"))
+                (cond
+                  ;; No args - show catalog
+                  ((null? args)
+                   (print "Library Memos:")
+                   (print "")
+                   (for-each
+                     (lambda (f)
+                       (let* ((base (pathname-strip-extension (pathname-file f)))
+                              (num (and (>= (string-length base) 9)
+                                       (substring base 5 9)))
+                              (title (with-input-from-file f
+                                       (lambda ()
+                                         (let ((sexp (read)))
+                                           (and (pair? sexp)
+                                                (let ((t (assq 'title (cdr sexp))))
+                                                  (and t (cadr t)))))))))
+                         (when (and num title)
+                           (printf "  ~a  ~a~n" num title))))
+                     (sort (glob (make-pathname memo-dir "memo-*.scm"))
+                           string<?))
+                   (print "")
+                   (print "Usage: ,memo NUMBER [txt|html|ps|all|build]"))
+
+                  ;; "build" - regenerate all
+                  ((string=? (car args) "build")
+                   (print "Building memos...")
+                   (let ((build-script (make-pathname memo-dir "generate-memos.sh")))
+                     (if (file-exists? build-script)
+                         (system (sprintf "cd ~a && ./generate-memos.sh" memo-dir))
+                         (print "Error: generate-memos.sh not found"))))
+
+                  ;; Number - view memo
+                  (else
+                   (let* ((num-str (car args))
+                          (num (string->number num-str))
+                          (format (if (> (length args) 1) (cadr args) "txt"))
+                          (padded (if num (sprintf "~4,'0d" num) num-str))
+                          (pattern (make-pathname memo-dir (string-append "memo-" padded "-*")))
+                          (matches (glob pattern)))
+                     (if (null? matches)
+                         (print "Memo " num-str " not found")
+                         (let* ((base (pathname-strip-extension (car matches)))
+                                (txt-file (string-append base ".txt"))
+                                (html-file (string-append base ".html"))
+                                (ps-file (string-append base ".ps"))
+                                (open-cmd (if (string=? (car (string-split (car (process-context-argv)) "/")) "")
+                                              "open" "xdg-open")))
+                           (cond
+                             ((string=? format "txt")
+                              (if (file-exists? txt-file)
+                                  (system (sprintf "cat ~a" txt-file))
+                                  (print "Text file not found - run ,memo build")))
+                             ((string=? format "html")
+                              (if (file-exists? html-file)
+                                  (system (sprintf "~a ~a" open-cmd html-file))
+                                  (print "HTML file not found - run ,memo build")))
+                             ((string=? format "ps")
+                              (if (file-exists? ps-file)
+                                  (system (sprintf "~a ~a" open-cmd ps-file))
+                                  (print "PostScript file not found - run ,memo build")))
+                             ((string=? format "all")
+                              (when (file-exists? txt-file)
+                                (system (sprintf "cat ~a" txt-file)))
+                              (when (file-exists? html-file)
+                                (system (sprintf "~a ~a" open-cmd html-file)))
+                              (when (file-exists? ps-file)
+                                (system (sprintf "~a ~a" open-cmd ps-file))))
+                             ((string=? format "build")
+                              (print "Building memo " padded "...")
+                              (system (sprintf "cd ~a && csi -q generate-all.scm ~a"
+                                             memo-dir (car matches))))
+                             (else
+                              (print "Unknown format: " format)
+                              (print "Use: txt, html, ps, all, or build")))))))))
               (loop))
 
              ;; Unknown comma command

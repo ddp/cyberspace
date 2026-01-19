@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>RFC-019: Documentation Pipeline</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="rfc.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>RFC-019: Documentation Pipeline</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This RFC specifies the documentation pipeline for the Library of Cyberspace: automated generation of canonical document formats and index catalogs. Output formats are HTML, PostScript, and plain text—open formats that will outlast corporations.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>Documentation must be:</p>
+<p>1. Preserved - Open formats for long-term archival 2. Accessible - Viewable in any environment 3. Readable - Human-readable output 4. Discoverable - Indexed for navigation</p>
+<h3>Why PostScript, Not PDF</h3>
+<p>PDF is Adobe's proprietary format dressed in ISO clothing.[^h1] PostScript is:</p>
+<ul>
+<li>Open</li>
+<li>Published specification since 1984</li>
+<li>Stable</li>
+<li>Level 3 unchanged since 1997</li>
+<li>Readable</li>
+<li>Plain text you can grep, diff, edit</li>
+<li>Honest</li>
+<li>Describes rendering, doesn't control viewing</li>
+</ul>
+<p>NeXT got it right. The source is the document.[^h2]</p>
+<p>[^h1]: Historical: Adobe created PDF in 1993 as a proprietary format, then donated it to ISO in 2008 (ISO 32000) after market dominance was achieved. The "open standard" arrived after lock-in.</p>
+<p>[^h2]: Historical: NeXT's Display PostScript (1988) used PostScript as the native imaging model. What you saw on screen was what the printer rendered. Steve Jobs understood that the document format is the document.</p>
+</section>
+<section>
+<h2>RFC Categories</h2>
+<p>Following IETF tradition (RFC 2026, RFC 2223).[^d4]</p>
+<p>Table 0: RFC Categories and Authorship</p>
+<table>
+<tr><th>Category </th><th>Description </th><th>Author </th></tr>
+<tr><td>Standards Track </td><td>Core specifications defining the system </td><td>Core maintainers </td></tr>
+<tr><td>Informational </td><td>Guidelines, explanations, tutorials </td><td>Anyone in federation </td></tr>
+<tr><td>Experimental </td><td>New ideas being tested </td><td>Anyone in federation </td></tr>
+<tr><td>Best Current Practice </td><td>Recommended approaches </td><td>Core maintainers </td></tr>
+<tr><td>Historic </td><td>Deprecated specifications </td><td>Core maintainers </td></tr>
+</table>
+<p>Open Authorship: Any member of the federation may author Informational or Experimental RFCs. Standards Track, Best Current Practice, and Historic designations require core maintainer approval.</p>
+<p>[^d4]: Design: Following IETF tradition (RFC 2026). Informational RFCs lower the barrier to contribution while Standards Track maintains architectural coherence. The federation grows through documentation.</p>
+</section>
+<section>
+<h2>RFC Header Format</h2>
+<p>Every RFC begins with a standardized header block:</p>
+<pre class="language-markdown">
+# RFC-NNN: Title
+
+Status: Draft | Proposed | Implemented | Historic
+Category: Standards Track | Informational | Experimental | BCP | Historic
+Created: YYYY-MM-DD
+Updated: YYYY-MM-DD
+Author: Name &lt;email&gt;
+Updates: RFC-NNN (if applicable)
+Obsoletes: RFC-NNN (if applicable)
+
+---
+
+## Abstract
+
+One paragraph summary of the RFC.
+
+---
+
+## Status of This Memo
+
+This document specifies a [Standards Track/Informational/Experimental]
+protocol for the Library of Cyberspace community.
+
+Distribution of this memo is unlimited.
+</pre>
+<h3>Status Values</h3>
+<table>
+<tr><th>Status </th><th>Meaning </th></tr>
+<tr><td>Draft </td><td>Work in progress, not yet reviewed </td></tr>
+<tr><td>Proposed </td><td>Under review, seeking feedback </td></tr>
+<tr><td>Implemented </td><td>Specification complete, implementation exists </td></tr>
+<tr><td>Historic </td><td>Superseded or deprecated </td></tr>
+</table>
+<h3>Required Sections</h3>
+<p>1. Abstract — One paragraph summary 2. Motivation — Why this RFC exists 3. Specification — The technical details 4. Security Considerations — Required, even if "None" 5. References — Citations and dependencies</p>
+</section>
+<section>
+<h2>Footnote Categories</h2>
+<p>RFCs use categorized footnotes to separate different types of annotations:[^d2]</p>
+<p>Table 2: Footnote Categories</p>
+<table>
+<tr><th>Prefix </th><th>Category </th><th>Purpose </th></tr>
+<tr><td>[^d] </td><td>Design </td><td>Rationale, trade-offs, alternatives considered </td></tr>
+<tr><td>[^r] </td><td>Research </td><td>Academic references, papers, formal methods </td></tr>
+<tr><td>[^h] </td><td>Historical </td><td>Context, predecessors, lessons from past systems </td></tr>
+<tr><td>[^i] </td><td>Implementation </td><td>Code notes, performance, optimization details </td></tr>
+</table>
+<p>Convention: Number sequentially within category (e.g., [^d1], [^d2], [^h1], [^h2]).[^r1]</p>
+<p>[^d2]: Design: Categorized footnotes prevent mixing implementation details with historical context. Readers can skim by category.</p>
+<p>[^r1]: Research: Knuth's literate programming separates code from documentation. Our footnote categories extend this to separate design rationale from historical context from implementation notes. See Knuth, "Literate Programming" (1984).</p>
+</section>
+<section>
+<h2>Output Formats</h2>
+<p>Table 1: Output Formats</p>
+<table>
+<tr><th>Format </th><th>Extension </th><th>Purpose </th></tr>
+<tr><td>Text </td><td>.txt </td><td>IETF tradition, universal, immortal </td></tr>
+<tr><td>PostScript </td><td>.ps </td><td>Archival, printing </td></tr>
+<tr><td>Hypertext Markup Language </td><td>.html </td><td>Web viewing </td></tr>
+</table>
+<p>Philosophy: Text, PostScript, and Hypertext Markup Language cover all use cases with open formats. No proprietary gatekeepers. These three are canonical—don't add more.[^d1]</p>
+<p>[^d1]: Design: Three formats cover all use cases. Text is grep-able and eternal. PostScript is printable and archival. HTML is web-viewable. Adding PDF would be redundant (PostScript covers printing) and would introduce a proprietary dependency.</p>
+</section>
+<section>
+<h2>Pipeline Specification</h2>
+<h3>Output</h3>
+<p>For each RFC:</p>
+<pre>
+rfc-NNN-short-name.html   # Standalone HTML
+rfc-NNN-short-name.ps     # PostScript
+rfc-NNN-short-name.txt    # Plain text, 78 columns
+</pre>
+<p>Plus a navigational index:</p>
+<pre>
+index.html                # Hypertext catalog
+</pre>
+<h3>Generation</h3>
+<pre class="language-bash">
+./generate-rfcs.sh
+</pre>
+<p>The script handles all format generation automatically.</p>
+<h3>Table of Contents</h3>
+<p>Each RFC generates a table of contents from section headings:[^i1]</p>
+<ul>
+<li>Level 1: #</li>
+<li>RFC title (not in TOC)</li>
+<li>Level 2: ##</li>
+<li>Major sections</li>
+<li>Level 3: ###</li>
+<li>Subsections</li>
+</ul>
+<p>HTML output includes navigable TOC with anchor links.</p>
+<p>[^i1]: Implementation: Pandoc generates TOC with --toc flag. PostScript uses LaTeX \tableofcontents. Plain text uses indented section listing.</p>
+<h3>Index Generation</h3>
+<p>The index.html catalog provides:</p>
+<ul>
+<li>RFC number and title</li>
+<li>Links to all output formats (html, ps, txt)</li>
+<li>Clean, accessible HTML</li>
+</ul>
+<p>Structure:</p>
+<pre class="language-html">
+&lt;table&gt;
+  &lt;tr&gt;
+    &lt;td&gt;RFC Number&lt;/td&gt;
+    &lt;td&gt;Title&lt;/td&gt;
+    &lt;td&gt;html | ps | txt&lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+</pre>
+<h3>Permuted Index (KWIC)</h3>
+<p>A Key Word In Context index rotates titles around each significant word:[^h3]</p>
+<pre>
+              Architecture  RFC-002: Vault System Architecture
+                    Audit  RFC-003: Cryptographic Audit Trail
+Vault System  Architecture  RFC-002: Vault System Architecture
+Cryptographic       Audit  RFC-003: Cryptographic Audit Trail
+</pre>
+<p>Stop words excluded: a, an, and, for, in, of, on, or, the, to, with</p>
+<p>The permuted index enables discovery by concept rather than by RFC number.[^r2]</p>
+<p>[^h3]: Historical: KWIC indices originated at IBM (1958) for chemical abstracts. Unix ptx command generates permuted indices. The technique predates full-text search and remains valuable for browsable discovery.</p>
+<p>[^r2]: Research: Luhn, H.P. "Keyword-in-Context Index for Technical Literature (KWIC Index)" (1960). American Documentation 11(4):288-295.</p>
+</section>
+<section>
+<h2>Publication</h2>
+<h3>Pipeline Vocabulary</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 259.2 76.8" width="259.2" height="76.8" xmlns="http://www.w3.org/2000/svg">
+<style>
+  line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  text { font-family: 'Hack', 'SF Mono', monospace; font-size: 14px; fill: currentColor; }
+</style>
+<line x1="24.0" y1="19.2" x2="24.0" y2="38.4"/>
+<line x1="120.0" y1="19.2" x2="120.0" y2="38.4"/>
+<line x1="216.0" y1="19.2" x2="216.0" y2="38.4"/>
+<text x="4.8" y="9.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="14.4" y="9.6" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="24.0" y="9.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="33.6" y="9.6" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="43.2" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="52.8" y="9.6" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="81.6" y="9.6" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="110.4" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="120.0" y="9.6" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="129.6" y="9.6" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="139.2" y="9.6" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="168.0" y="9.6" text-anchor="middle" dominant-baseline="central">→</text>
+<text x="196.8" y="9.6" text-anchor="middle" dominant-baseline="central">p</text>
+<text x="206.4" y="9.6" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="216.0" y="9.6" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="225.6" y="9.6" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="235.2" y="9.6" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="244.8" y="9.6" text-anchor="middle" dominant-baseline="central">s</text>
+<text x="254.4" y="9.6" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="24.0" y="48.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="33.6" y="48.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="43.2" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="100.8" y="48.0" text-anchor="middle" dominant-baseline="central">g</text>
+<text x="110.4" y="48.0" text-anchor="middle" dominant-baseline="central">i</text>
+<text x="120.0" y="48.0" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="129.6" y="48.0" text-anchor="middle" dominant-baseline="central">h</text>
+<text x="139.2" y="48.0" text-anchor="middle" dominant-baseline="central">u</text>
+<text x="148.8" y="48.0" text-anchor="middle" dominant-baseline="central">b</text>
+<text x="187.2" y="48.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="196.8" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="206.4" y="48.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="216.0" y="48.0" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="225.6" y="48.0" text-anchor="middle" dominant-baseline="central">d</text>
+<text x="235.2" y="48.0" text-anchor="middle" dominant-baseline="central">y</text>
+<text x="244.8" y="48.0" text-anchor="middle" dominant-baseline="central">n</text>
+<text x="254.4" y="48.0" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="14.4" y="67.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="24.0" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="33.6" y="67.2" text-anchor="middle" dominant-baseline="central">c</text>
+<text x="43.2" y="67.2" text-anchor="middle" dominant-baseline="central">a</text>
+<text x="52.8" y="67.2" text-anchor="middle" dominant-baseline="central">l</text>
+<text x="100.8" y="67.2" text-anchor="middle" dominant-baseline="central">r</text>
+<text x="110.4" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="120.0" y="67.2" text-anchor="middle" dominant-baseline="central">m</text>
+<text x="129.6" y="67.2" text-anchor="middle" dominant-baseline="central">o</text>
+<text x="139.2" y="67.2" text-anchor="middle" dominant-baseline="central">t</text>
+<text x="148.8" y="67.2" text-anchor="middle" dominant-baseline="central">e</text>
+<text x="216.0" y="67.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="225.6" y="67.2" text-anchor="middle" dominant-baseline="central">w</text>
+<text x="235.2" y="67.2" text-anchor="middle" dominant-baseline="central">w</text>
+</svg>
+</div>
+<p>Table 3: Publication Commands</p>
+<table>
+<tr><th>Command </th><th>Action </th><th>Target </th></tr>
+<tr><td>commit </td><td>git commit </td><td>Local repository </td></tr>
+<tr><td>sync </td><td>git pull &amp;&amp; git push </td><td>GitHub (cyberspace) </td></tr>
+<tr><td>publish </td><td>rsync </td><td>Yoyodyne (www) </td></tr>
+</table>
+<p>Note: sync is intentionally ambiguous—it also means lazy clustering sync (RFC-016). Context disambiguates. The ambiguity with git is preserved.[^d3]</p>
+<p>[^d3]: Design: Overloaded vocabulary reflects reality. "Sync" universally means bidirectional reconciliation. Fighting this creates cognitive load. Embrace it.</p>
+<h3>Commit (Local)</h3>
+<pre class="language-bash">
+# Generate all formats
+./generate-rfcs.sh
+
+# Commit to vault
+git add -A &amp;&amp; git commit -m "Regenerate RFC documentation"
+</pre>
+<h3>Sync (GitHub)</h3>
+<pre class="language-bash">
+# Sync with remote
+git pull &amp;&amp; git push
+</pre>
+<h3>Publish (Yoyodyne)</h3>
+<pre class="language-bash">
+# Publish to yoyodyne
+rsync -avz --chmod=D755,F644 \
+  .html .ps *.txt \
+  ddp@www.yoyodyne.com:/www/yoyodyne/ddp/cyberspace/
+</pre>
+<p>Published URL: https://www.yoyodyne.com/ddp/cyberspace/</p>
+<p>Published: - .html - Web viewing - .ps - PostScript (archival, printing) - *.txt - Plain text - index.html - Catalog</p>
+<p>Permission model: - Directories: 755 (world-readable, owner-writable) - Files: 644 (world-readable, owner-writable)</p>
+</section>
+<section>
+<h2>Rich Formatting Pipeline</h2>
+<h3>HTML: Modern, Themeable</h3>
+<p>HTML output uses rfc.css for rich presentation:</p>
+<ul>
+<li>Light/dark themes: Respects prefers-color-scheme, toggleable</li>
+<li>Typography: System fonts with monospace fallbacks for code</li>
+<li>Code blocks: font-feature-settings ensures box-drawing alignment</li>
+<li>Responsive: Mobile-friendly with print styles</li>
+<li>Tables: Shadows, hover states, proper borders</li>
+</ul>
+<pre class="language-css">
+:root {
+  --bg: #fafafa; --fg: #1a1a1a; --accent: #0066cc;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1117; --fg: #e6edf3; --accent: #58a6ff; }
+}
+</pre>
+<h3>PostScript: Professional Typesetting</h3>
+<p>PostScript uses groff with ms macros for rich output:</p>
+<p>- Markdown sources: pandoc → groff ms → PostScript - Text-only sources: enscript with fancy headers - Page layout: 1" margins, 10pt body, Helvetica headers - Running headers: Title left, page number right</p>
+<pre class="language-bash">
+# From markdown (via groff)
+pandoc doc.md -t ms | groff -ms -Tps &gt; doc.ps
+
+# From text (via enscript)
+enscript --fancy-header=enscript -p doc.ps doc.txt
+</pre>
+<h3>Text: Immortal ASCII</h3>
+<p>Plain text remains intentionally simple:</p>
+<ul>
+<li>78 columns for universal display</li>
+<li>Unicode box-drawing converted to ASCII</li>
+<li>No formatting dependencies</li>
+<li>Grep-able, diff-able, eternal</li>
+</ul>
+</section>
+<section>
+<h2>Dependencies</h2>
+<table>
+<tr><th>Tool </th><th>Version </th><th>Purpose </th></tr>
+<tr><td>pandoc </td><td>2.x+ </td><td>Markdown → HTML, Markdown → groff ms </td></tr>
+<tr><td>groff </td><td>1.23+ </td><td>ms macros → PostScript </td></tr>
+<tr><td>enscript </td><td>1.6+ </td><td>Text → PostScript (fancy headers) </td></tr>
+<tr><td>rsync </td><td>3.x+ </td><td>Publication </td></tr>
+</table>
+<p>Install on macOS:</p>
+<pre class="language-bash">
+brew install pandoc groff enscript
+</pre>
+<p>PostScript viewers: TeXShop, Preview, Ghostscript, or read the source directly.</p>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Integrity</h3>
+<p>Generated documents inherit integrity from: - Git version control - Vault signatures (releases)</p>
+<h3>Publication</h3>
+<p>Remote publication uses: - SSH key authentication - No sensitive data in documents - World-readable permissions only</p>
+</section>
+<section>
+<h2>References</h2>
+<p>1. Pandoc User's Guide (preserved) 2. PostScript Language Reference Manual - Adobe (preserved) 3. RFC-006: Vault System Architecture</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-11</li>
+<li>Add rich formatting pipeline (groff, CSS themes) - 2026-01-07</li>
+<li>Add footnote categories, TOC, permuted index (KWIC) - 2026-01-07</li>
+<li>Replace PDF with PostScript (open format) - 2026-01-06</li>
+<li>Initial specification</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>
