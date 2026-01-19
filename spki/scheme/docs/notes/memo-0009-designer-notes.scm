@@ -164,7 +164,19 @@
         (item "Reads 256 test bytes and checks byte distribution")
         (item "Verifies no single byte appears more than ~10% (bias detection)")
         (item "Confirms at least 100 distinct byte values (diversity check)"))
-      (p "If verification fails, the module refuses to load. An easter egg with real security - someone exploring the REPL discovers (forge) and gets actual cryptographic passwords, not toys.")))
+      (p "If verification fails, the module refuses to load. An easter egg with real security - someone exploring the REPL discovers (forge) and gets actual cryptographic passwords, not toys."))
+
+    (subsection
+      "7.7 Audit Trail Heritage"
+      (p "The cryptographic audit trail (Memo-0005) descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:")
+      (list
+        (item "SECURITYPOLICY bit 7 propagation")
+        (item "Intrusion detection state replicated cluster-wide")
+        (item "Breakin attempts detected across all nodes as one")
+        (item "TLV-encoded object store")
+        (item "The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records"))
+      (p "The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.")
+      (p "Cyberspace audit trails apply the same principle at IPv6 scale.")))
 
   (section
     "8. The Novice Interface"
@@ -309,6 +321,7 @@
 
   (section
     "Changelog"
+    (p "- 2026-01-19 — Added Audit Trail Heritage (section 7.7), moved from Memo-0005")
     (p "- 2026-01-18 — Expanded Why Scheme with homoiconicity rationale (section 1.2)")
     (p "- 2026-01-18 — Added The Koan (section 8.6): complexity serves simplicity")
     (p "- 2026-01-17 — Added Cryptographic Selections section (section 9)")

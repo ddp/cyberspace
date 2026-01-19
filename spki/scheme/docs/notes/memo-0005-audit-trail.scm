@@ -10,18 +10,8 @@
     (p "Distributed systems require accountability. Who did what, when, and under whose authority? Without cryptographic audit trails, the answer is always \"we think so\" rather than \"we can prove it.\"")
     (p "Every security breach postmortem asks the same questions: What happened? When? Who had access? Could the logs have been tampered with? Traditional logging cannot answer these questions with certainty. Cyberspace audit trails can.")
     (subsection
-      "Heritage: VMS Cluster-Wide Audit"
-      (p "This audit trail descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:")
-      (list
-        (item "SECURITYPOLICY bit 7 propagation")
-        (item "Intrusion detection state replicated cluster-wide")
-        (item "Cluster-wide intrusion detection")
-        (item "Breakin attempts detected across all nodes as one")
-        (item "TLV-encoded object store")
-        (item "The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records"))
-      (p "These innovations established that security events must be visible across an entire distributed system, not just the node where they occur.")
-      (p "The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.")
-      (p "Cyberspace audit trails apply the same principle at IPv6 scale."))
+      "Heritage"
+      (p "Inspired by VMS cluster-wide audit (1993). See Memo-0009 section 7.7 for design heritage."))
     (subsection
       "The Problem"
       (p "Traditional logging fails on all counts:")
