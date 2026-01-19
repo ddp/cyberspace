@@ -6133,6 +6133,7 @@ See: Memo-0000 Declaration of Cyberspace
     (void)))
 
 ;; Pager support - pipe output through $PAGER (default: less)
+;; less supports forward/back navigation (j/k, arrows, pgup/pgdn)
 (define (with-pager thunk)
   "Run thunk with output piped to pager for interactive viewing."
   (let ((pager (or (get-environment-variable "PAGER") "less")))
@@ -6143,6 +6144,13 @@ See: Memo-0000 Declaration of Cyberspace
           (void))
         (with-output-to-port port thunk)
         (close-output-pipe port)))))
+
+;; General page command - pipe any output through pager
+;; Usage: (page (soup)) or (page (help 'topics))
+(define-syntax page
+  (syntax-rules ()
+    ((page expr)
+     (with-pager (lambda () expr (void))))))
 
 ;; KWIC - Key Word In Context search for memos
 (define (kwic keyword)
