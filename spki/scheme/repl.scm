@@ -5251,6 +5251,15 @@ Cyberspace REPL - Available Commands
   (let ((alias (assq cmd *command-aliases*)))
     (if alias (cdr alias) cmd)))
 
+(define (novice-command? cmd)
+  "Check if cmd is a recognized novice command"
+  (and (symbol? cmd)
+       (or (assq cmd *command-aliases*)
+           ;; Also allow some common Scheme functions
+           (memq cmd '(+ - * / define let if cond lambda quote
+                       car cdr cons list first second third
+                       print display newline)))))
+
 (define (parse-command-line line)
   "Parse command line into S-expression"
   (let* ((trimmed (string-trim-both line))
@@ -6643,9 +6652,19 @@ Cyberspace REPL - Available Commands
          (status)
          (loop))
 
+        ;; Shell escape: !command runs command in user's shell
+        ((and (> (string-length line) 0)
+              (char=? (string-ref line 0) #\!))
+         (let ((cmd (string-trim-both (substring line 1))))
+           (if (string=? cmd "")
+               (print "Usage: !command")
+               (let ((shell (or (get-environment-variable "SHELL") "/bin/sh")))
+                 (process-wait (process-run shell (list "-i" "-c" cmd))))))
+         (loop))
+
         ;; Reserved single-character graphics (UI reserved, not Scheme)
         ((and (= (string-length line) 1)
-              (string-contains "<>/;:\"[]{}\\|-=_+!@#$%^&*" line))
+              (string-contains "<>/;:\"[]{}\\|-=_+@#$%^&*" line))
          (print "Reserved for future use")
          (loop))
 
@@ -6796,6 +6815,13 @@ Cyberspace REPL - Available Commands
                         ;; novice/schemer mode toggles
                         ((equal? expr '(novice)) (novice))
                         ((equal? expr '(schemer)) (schemer))
+                        ;; Novice mode guard - catch unrecognized commands
+                        ((and *novice-mode*
+                              (pair? expr)
+                              (symbol? (car expr))
+                              (not (novice-command? (car expr))))
+                         (printf "Unknown command: ~a. Type ? for help.~%" (car expr))
+                         (void))
                         ;; Everything else - normal eval
                         (else (eval expr)))))
                  (unless (eq? result (void))

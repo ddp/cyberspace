@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <title>Memo 0056: CLI and Search Implementation</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0056: CLI and Search Implementation</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>Implementation notes for the Cyberspace CLI vocabulary and search commands. Documents --option=value parsing, apropos, kwic, and build system decisions.</p>
+</section>
+<section>
+<h2>1. CLI Vocabulary (2026-01-18)</h2>
+<p>Clean break from ad-hoc bare-word arguments to Linux-style --option=value:</p>
+<table>
+<tr><th>Option </th><th>Purpose </th></tr>
+<tr><td>--sync </td><td>Robust git sync (no errors, auto-resolve .meta conflicts) </td></tr>
+<tr><td>--clean </td><td>Remove .so, .import.scm, .forge/*.meta </td></tr>
+<tr><td>--rebuild </td><td>Force rebuild all modules </td></tr>
+<tr><td>--verbose </td><td>Show verbose output (silent by default) </td></tr>
+<tr><td>--boot=&lt;level&gt; </td><td>shadow|whisper|portal|gate|chronicle|oracle </td></tr>
+<tr><td>--eval='&lt;expr&gt;' </td><td>Evaluate and exit </td></tr>
+<tr><td>--version </td><td>Version info </td></tr>
+<tr><td>--help </td><td>Usage </td></tr>
+</table>
+<p>Design principle: operators don't debug git. The --sync command handles stash, pull, rebase, conflict resolution, and push. Metadata conflicts (.forge/*.meta) auto-resolve by preferring remote.</p>
+<p>Combined usage: cs --clean --rebuild for clean slate rebuild.</p>
+</section>
+<section>
+<h2>2. Search Commands (2026-01-18)</h2>
+<p>Two search paradigms following tradition:</p>
+<h3>2.1 apropos (Scheme tradition)</h3>
+<p>Search bound symbols containing pattern:</p>
+<pre>
+(apropos 'vault)
+=&gt; vault-stat, vault-commit, vault-keys, ...
+</pre>
+<h3>2.2 kwic (Library tradition)</h3>
+<p>Key Word In Context - concordance-style search of memo content:</p>
+<pre>
+(kwic 'soup)
+=&gt; Memo-001:42  ... forge -&gt; eggs -&gt; soup -&gt; vault ...
+   Memo-027:1   Soup Query Language
+</pre>
+<p>The library is the HyperSpec for Cyberspace. KWIC enables discovery across 58 memos.</p>
+</section>
+<section>
+<h2>3. Box Drawing Alignment</h2>
+<p>Forge boxes use fixed-width display with Unicode box characters. Display width calculation must account for multi-byte UTF-8 characters that render as single cells:</p>
+<table>
+<tr><th>Char </th><th>Bytes </th><th>Display </th></tr>
+<tr><td>· λ </td><td>2 </td><td>1 </td></tr>
+<tr><td>✓ ✗ ⚠ ≥ ≤ </td><td>3 </td><td>1 </td></tr>
+</table>
+<p>Off-by-one alignment errors traced to missing ≥ and ≤ in width calculation.</p>
+</section>
+<section>
+<h2>4. Build System</h2>
+<p>Sequential builds required due to Chicken import library race conditions. Parallel builds caused sporadic 'cannot import' errors even with correct dependency ordering.</p>
+<p>Build order is strict topological sort:</p>
+<pre>
+L0: os, crypto-ffi, sexp, capability, inspector
+L1: mdns, fips, audit, wordlist, bloom, catalog, keyring, portal
+L2: cert
+L3: security
+L4: vault
+L5: enroll, gossip
+L6: auto-enroll
+L7: ui
+</pre>
+<p>Clean removes .forge/*.meta with .so files - stale metadata causes git conflicts.</p>
+</section>
+<section>
+<h2>Changelog</h2>
+<p>2026-01-18 - Initial notes from CLI/search session</p>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>
