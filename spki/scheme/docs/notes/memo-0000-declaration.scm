@@ -47,7 +47,7 @@
       (row "6" "Vault Architecture" "Thou shalt address content by truth")
       (row "7" "Replication Layer" "Thou shalt federate thy distribution")
       (row "8" "Threshold Governance" "Thou shalt seek consensus over dictators")
-      (row "9" "Designer Notes" "Thou shalt know why thou chose this path"))
+      (row "9" "Designer Notes" "Thou shalt know why it was ordained"))
     (p "These ten form the core of the Library. All other memos build upon them."))
 
   (section
