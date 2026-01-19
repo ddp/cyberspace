@@ -18,6 +18,10 @@
    scrutinize-file
    scrutinize-string
 
+   ;; Polish mode - detect and fix conversion artifacts
+   scrutinize-polish
+   *polish-patterns*
+
    ;; Realmtime mode (scrutiny flows through the realm as time passes)
    *scrutinize-realmtime*
    scrutinize-realmtime!
@@ -106,6 +110,31 @@
     '(("Copyright"    . "no copyright in headers")
       ("LICENSE"      . "no license refs in headers")
       ("All rights"   . "no legal boilerplate")))
+
+  ;; ----------------------------------------------------------
+  ;; Polish Patterns
+  ;; ----------------------------------------------------------
+  ;; Artifacts from auto-conversion that need human polish.
+  ;; These are mechanical issues that can be detected and often fixed.
+
+  (define *polish-patterns*
+    '(;; Stale conversion comments
+      ("Auto-converted from Markdown"  . "remove stale conversion comment")
+      ("Review and edit as needed"     . "remove stale review comment")
+
+      ;; Markdown artifacts in S-expression content
+      ("#### "                         . "markdown header - use (subsection ...)")
+      ("^- .*- .*- "                   . "inline bullet list - use (list (item ...))")
+
+      ;; Malformed changelog entries
+      ("\\(item \"[0-9]{4}-[0-9]{2}-[0-9]{2}\"\\)" . "date-only changelog - add description")))
+
+  ;; Polish patterns that indicate missing narrative
+  (define *polish-missing*
+    '(;; Memos without opening quotes
+      (no-blockquote . "consider adding opening blockquote")
+      ;; Sections that are just lists without prose
+      (list-only-section . "add narrative context")))
 
   ;; ----------------------------------------------------------
   ;; Tone Rules by Context
@@ -393,6 +422,9 @@
         ((eq? target 'plans)
          (scrutinize-plans))
 
+        ((eq? target 'polish)
+         (scrutinize-polish))
+
         (else
          (scrutinize-library)
          (scrutinize-code)
@@ -433,6 +465,50 @@
            (files (glob-plans plans-dir)))
       (for-each (lambda (f) (scrutinize-text-file f 'memo)) files)
       (report-findings 'plans)))
+
+  (define (scrutinize-polish)
+    "Detect polish issues in memos: conversion artifacts, missing narrative"
+    (clear-findings!)
+    (print "")
+    (print "Scrutinizing for polish...")
+    (let* ((memo-dir (or (get-environment-variable "CYBERSPACE_MEMOS")
+                         "docs/notes"))
+           (files (glob-memos memo-dir)))
+      (for-each scrutinize-memo-polish files)
+      (report-findings 'polish)))
+
+  (define (scrutinize-memo-polish filepath)
+    "Check a memo for polish issues"
+    (call-with-input-file filepath
+      (lambda (port)
+        (let ((has-blockquote #f)
+              (basename (pathname-strip-directory filepath)))
+          (let loop ((line-num 1))
+            (let ((line (read-line port)))
+              (unless (eof-object? line)
+                ;; Check for stale conversion comments
+                (when (str-contains? line "Auto-converted from Markdown")
+                  (add-finding! 'polish filepath line-num 'stale-comment
+                                "remove 'Auto-converted from Markdown' comment"))
+                (when (str-contains? line "Review and edit as needed")
+                  (add-finding! 'polish filepath line-num 'stale-comment
+                                "remove 'Review and edit as needed' comment"))
+                ;; Check for markdown headers
+                (when (str-contains? line "#### ")
+                  (add-finding! 'polish filepath line-num 'markdown
+                                "markdown header - use (subsection ...)"))
+                ;; Check for inline bullet lists (rough heuristic)
+                (when (irregex-search " - .* - .* - " line)
+                  (add-finding! 'polish filepath line-num 'inline-list
+                                "inline bullet list - use (list (item ...))"))
+                ;; Track if memo has opening blockquote
+                (when (str-contains? line "(blockquote")
+                  (set! has-blockquote #t))
+                (loop (+ line-num 1)))))
+          ;; After reading whole file, check for missing blockquote
+          (unless has-blockquote
+            (add-finding! 'suggestion filepath 1 'narrative
+                          "consider adding opening blockquote"))))))
 
   (define (glob-plans dir)
     "Find plan markdown files"
