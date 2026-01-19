@@ -5490,8 +5490,8 @@ Cyberspace REPL - Available Commands
                  (let ((sym (car entry))
                        (title (cadr entry))
                        (count (length (cddr entry))))
-                   (print "  " (string-pad-right (symbol->string sym) 12)
-                          " - " title " (" count ")")))
+                   (print "  " (string-pad-right (symbol->string sym) 18)
+                          "- " title " (" count ")")))
                *help-topics*)
      (print ""))
 
