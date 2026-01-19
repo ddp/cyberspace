@@ -34,6 +34,12 @@
 <p>This Memo specifies the Simple Distributed Security Infrastructure/Simple Public Key Infrastructure (SDSI/SPKI) certificate system for Cyberspace, providing authorization without identity. Principals are identified by cryptographic keys, not names. Authorization flows through verifiable delegation chains.</p>
 </section>
 <section>
+<h2>E Pluribus</h2>
+<blockquote>
+<p>The question is not 'Who is this?' but 'What can this key do?' — Carl Ellison, SPKI co-author</p>
+</blockquote>
+</section>
+<section>
 <h2>Motivation</h2>
 <h3>Heritage: SDSI at IETF 29</h3>
 <p>Ron Rivest presented SDSI at Internet Engineering Task Force (IETF) 29 in Seattle (March 28 - April 1, 1994). The idea was elegant: self-certifying keys and local names. No global namespace. No certificate authorities. Just cryptographic principals naming what they choose to name.</p>
@@ -42,31 +48,42 @@
 <p>HP quietly adopted SPKI for their E-speak middleware and printer authorization. Printers. The technology worked. The politics didn't favor it.</p>
 <p>Cyberspace picks up where SPKI left off.</p>
 <h3>The X.509 Problem</h3>
-<p>X.509 certificates bind names to keys. This requires: - Certificate authorities (trust hierarchies) - Global name registries (DNS) - Identity verification (bureaucracy)</p>
+<p>X.509 certificates bind names to keys. This requires:</p>
+<ul>
+<li>Certificate authorities (trust hierarchies)</li>
+<li>Global name registries (DNS)</li>
+<li>Identity verification (bureaucracy)</li>
+</ul>
 <p>SPKI inverts this model:</p>
 <blockquote>
 <p>Keys are principals. Authorization is local. Delegation is explicit.</p>
 </blockquote>
-<p>Benefits: - No CA required - Trust flows from keys you choose - No global names - Local namespaces, local meanings - No identity - Grant permissions to keys, not people - Auditable - S-expression format is human-readable</p>
+<p>Benefits:</p>
+<ul>
+<li>No CA required: Trust flows from keys you choose</li>
+<li>No global names: Local namespaces, local meanings</li>
+<li>No identity: Grant permissions to keys, not people</li>
+<li>Auditable: S-expression format is human-readable</li>
+</ul>
 </section>
 <section>
 <h2>Specification</h2>
 <h3>Principals</h3>
-<p>A principal is an authorization endpoint. Two types:</p>
-<p>#### Key Principal</p>
-<p>Direct identification by public key:</p>
+<p>A principal is an authorization endpoint—the entity that can do things. In SPKI, principals are keys, not names. Two types:</p>
+<h3>Key Principal</h3>
+<p>Direct identification by public key. The simplest case: you are your key.</p>
 <pre class="language-scheme">
 (define-record-type &lt;key-principal&gt;
   (make-key-principal public-key)
   key-principal?
   (public-key principal-public-key))
 </pre>
-<p>S-expression: bare bytes</p>
+<p>S-expression representation: bare bytes</p>
 <pre class="language-scheme">
 #${32-byte-ed25519-public-key}
 </pre>
-<p>#### Key Hash Principal</p>
-<p>Identification by hash of public key:</p>
+<h3>Key Hash Principal</h3>
+<p>Identification by hash of public key. Useful when the full key isn't known yet or when size matters.</p>
 <pre class="language-scheme">
 (define-record-type &lt;keyhash-principal&gt;
   (make-keyhash-principal hash-alg hash)
@@ -74,7 +91,7 @@
   (hash-alg principal-hash-alg)
   (hash principal-hash))
 </pre>
-<p>S-expression:</p>
+<p>S-expression representation:</p>
 <pre class="language-scheme">
 (hash sha512 #${64-byte-hash})
 </pre>
@@ -408,8 +425,18 @@ Certificate:
 <section>
 <h2>Security Considerations</h2>
 <h3>Threat Model</h3>
-<p>Trusted: - Local key storage - Ed25519/SHA-512 (libsodium) - Certificate chain construction</p>
-<p>Untrusted: - Certificate sources - Network transport - Certificate claims (until verified)</p>
+<p>Trusted:</p>
+<ul>
+<li>Local key storage</li>
+<li>Ed25519/SHA-512 (libsodium)</li>
+<li>Certificate chain construction</li>
+</ul>
+<p>Untrusted:</p>
+<ul>
+<li>Certificate sources (anyone can create certs)</li>
+<li>Network transport (assume hostile)</li>
+<li>Certificate claims (until chain verified)</li>
+</ul>
 <h3>Attack Mitigations</h3>
 <table>
 <tr><th>Attack </th><th>Mitigation </th></tr>
@@ -472,10 +499,8 @@ Certificate:
 </section>
 <section>
 <h2>Changelog</h2>
-<ul>
-<li>2026-01-06</li>
-<li>Initial specification</li>
-</ul>
+<p>2026-01-19 - Added Ellison quote, expanded narrative, fixed formatting</p>
+<p>2026-01-06 - Initial specification</p>
 </section>
 <script>
 function toggleTheme() {

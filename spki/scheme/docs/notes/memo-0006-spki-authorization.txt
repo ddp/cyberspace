@@ -15,6 +15,14 @@ Authorization flows through verifiable delegation chains.
 
 
 ------------------------------------------------------------------------
+E PLURIBUS
+------------------------------------------------------------------------
+
+
+    "The question is not 'Who is this?' but 'What can this key do?' — Carl Ellison, SPKI co-author"
+
+
+------------------------------------------------------------------------
 MOTIVATION
 ------------------------------------------------------------------------
 
@@ -46,19 +54,23 @@ Cyberspace picks up where SPKI left off.
 The X.509 Problem
 -----------------
 
-X.509 certificates bind names to keys. This requires: - Certificate
-authorities (trust hierarchies) - Global name registries (DNS) -
-Identity verification (bureaucracy)
+X.509 certificates bind names to keys. This requires:
+
+  * Certificate authorities (trust hierarchies)
+  * Global name registries (DNS)
+  * Identity verification (bureaucracy)
 
 SPKI inverts this model:
 
 
     "Keys are principals. Authorization is local. Delegation is explicit."
 
-Benefits: - No CA required - Trust flows from keys you choose - No
-global names - Local namespaces, local meanings - No identity - Grant
-permissions to keys, not people - Auditable - S-expression format is
-human-readable
+Benefits:
+
+  * No CA required: Trust flows from keys you choose
+  * No global names: Local namespaces, local meanings
+  * No identity: Grant permissions to keys, not people
+  * Auditable: S-expression format is human-readable
 
 
 ------------------------------------------------------------------------
@@ -69,11 +81,15 @@ SPECIFICATION
 Principals
 ----------
 
-A principal is an authorization endpoint. Two types:
+A principal is an authorization endpoint—the entity that can do
+things. In SPKI, principals are keys, not names. Two types:
 
-#### Key Principal
 
-Direct identification by public key:
+Key Principal
+-------------
+
+Direct identification by public key. The simplest case: you are your
+key.
 
 
     (define-record-type <key-principal>
@@ -81,14 +97,17 @@ Direct identification by public key:
       key-principal?
       (public-key principal-public-key))
 
-S-expression: bare bytes
+S-expression representation: bare bytes
 
 
     #${32-byte-ed25519-public-key}
 
-#### Key Hash Principal
 
-Identification by hash of public key:
+Key Hash Principal
+------------------
+
+Identification by hash of public key. Useful when the full key isn't
+known yet or when size matters.
 
 
     (define-record-type <keyhash-principal>
@@ -97,7 +116,7 @@ Identification by hash of public key:
       (hash-alg principal-hash-alg)
       (hash principal-hash))
 
-S-expression:
+S-expression representation:
 
 
     (hash sha512 #${64-byte-hash})
@@ -378,11 +397,17 @@ SECURITY CONSIDERATIONS
 Threat Model
 ------------
 
-Trusted: - Local key storage - Ed25519/SHA-512 (libsodium) - Certificate
-chain construction
+Trusted:
 
-Untrusted: - Certificate sources - Network transport - Certificate
-claims (until verified)
+  * Local key storage
+  * Ed25519/SHA-512 (libsodium)
+  * Certificate chain construction
+
+Untrusted:
+
+  * Certificate sources (anyone can create certs)
+  * Network transport (assume hostile)
+  * Certificate claims (until chain verified)
 
 
 Attack Mitigations
@@ -470,7 +495,8 @@ REFERENCES
 CHANGELOG
 ------------------------------------------------------------------------
 
-  * 2026-01-06
-  * Initial specification
+2026-01-19 - Added Ellison quote, expanded narrative, fixed formatting
+
+2026-01-06 - Initial specification
 
 ------------------------------------------------------------------------

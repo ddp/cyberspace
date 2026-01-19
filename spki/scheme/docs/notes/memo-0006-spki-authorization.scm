@@ -1,12 +1,12 @@
-;; Auto-converted from Markdown
-;; Review and edit as needed
-
 (memo
   (number 6)
   (title "Public Key Authorization")
   (section
     "Abstract"
     (p "This Memo specifies the Simple Distributed Security Infrastructure/Simple Public Key Infrastructure (SDSI/SPKI) certificate system for Cyberspace, providing authorization without identity. Principals are identified by cryptographic keys, not names. Authorization flows through verifiable delegation chains."))
+  (section
+    "E Pluribus"
+    (blockquote "The question is not 'Who is this?' but 'What can this key do?' — Carl Ellison, SPKI co-author"))
   (section
     "Motivation"
     (subsection
@@ -18,24 +18,35 @@
       (p "Cyberspace picks up where SPKI left off."))
     (subsection
       "The X.509 Problem"
-      (p "X.509 certificates bind names to keys. This requires: - Certificate authorities (trust hierarchies) - Global name registries (DNS) - Identity verification (bureaucracy)")
+      (p "X.509 certificates bind names to keys. This requires:")
+      (list
+        (item "Certificate authorities (trust hierarchies)")
+        (item "Global name registries (DNS)")
+        (item "Identity verification (bureaucracy)"))
       (p "SPKI inverts this model:")
       (blockquote "Keys are principals. Authorization is local. Delegation is explicit.")
-      (p "Benefits: - No CA required - Trust flows from keys you choose - No global names - Local namespaces, local meanings - No identity - Grant permissions to keys, not people - Auditable - S-expression format is human-readable")))
+      (p "Benefits:")
+      (list
+        (item "No CA required: Trust flows from keys you choose")
+        (item "No global names: Local namespaces, local meanings")
+        (item "No identity: Grant permissions to keys, not people")
+        (item "Auditable: S-expression format is human-readable"))))
   (section
     "Specification"
     (subsection
       "Principals"
-      (p "A principal is an authorization endpoint. Two types:")
-      (p "#### Key Principal")
-      (p "Direct identification by public key:")
+      (p "A principal is an authorization endpoint—the entity that can do things. In SPKI, principals are keys, not names. Two types:"))
+    (subsection
+      "Key Principal"
+      (p "Direct identification by public key. The simplest case: you are your key.")
       (code scheme "(define-record-type <key-principal>\n  (make-key-principal public-key)\n  key-principal?\n  (public-key principal-public-key))")
-      (p "S-expression: bare bytes")
-      (code scheme "#${32-byte-ed25519-public-key}")
-      (p "#### Key Hash Principal")
-      (p "Identification by hash of public key:")
+      (p "S-expression representation: bare bytes")
+      (code scheme "#${32-byte-ed25519-public-key}"))
+    (subsection
+      "Key Hash Principal"
+      (p "Identification by hash of public key. Useful when the full key isn't known yet or when size matters.")
       (code scheme "(define-record-type <keyhash-principal>\n  (make-keyhash-principal hash-alg hash)\n  keyhash-principal?\n  (hash-alg principal-hash-alg)\n  (hash principal-hash))")
-      (p "S-expression:")
+      (p "S-expression representation:")
       (code scheme "(hash sha512 #${64-byte-hash})"))
     (subsection
       "Authorization Tags"
@@ -137,8 +148,16 @@
     "Security Considerations"
     (subsection
       "Threat Model"
-      (p "Trusted: - Local key storage - Ed25519/SHA-512 (libsodium) - Certificate chain construction")
-      (p "Untrusted: - Certificate sources - Network transport - Certificate claims (until verified)"))
+      (p "Trusted:")
+      (list
+        (item "Local key storage")
+        (item "Ed25519/SHA-512 (libsodium)")
+        (item "Certificate chain construction"))
+      (p "Untrusted:")
+      (list
+        (item "Certificate sources (anyone can create certs)")
+        (item "Network transport (assume hostile)")
+        (item "Certificate claims (until chain verified)")))
     (subsection
       "Attack Mitigations"
       (table
@@ -186,7 +205,6 @@
       (item "Lampson, B. (1971). Protection.")))
   (section
     "Changelog"
-    (list
-      (item "2026-01-06")
-      (item "Initial specification"))))
+    (p "2026-01-19 - Added Ellison quote, expanded narrative, fixed formatting")
+    (p "2026-01-06 - Initial specification")))
 
