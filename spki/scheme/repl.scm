@@ -6666,8 +6666,14 @@ See: Memo-0000 Declaration of Cyberspace
   (irregex-replace/all "\x1b\\[[0-9;]*[A-Za-z]" str ""))
 
 ;; Terminal raw mode for immediate single-char commands
-(define (stty-raw) (system "stty -icanon min 1 time 0 -echo 2>/dev/null"))
-(define (stty-cooked) (system "stty icanon echo 2>/dev/null"))
+;; Must read from /dev/tty directly - Scheme's stdin buffering ignores stty
+(define *tty-port* #f)
+(define (stty-raw)
+  (system "stty -icanon min 1 time 0 -echo </dev/tty 2>/dev/null")
+  (set! *tty-port* (open-input-file "/dev/tty")))
+(define (stty-cooked)
+  (system "stty icanon echo </dev/tty 2>/dev/null")
+  (when *tty-port* (close-input-port *tty-port*) (set! *tty-port* #f)))
 
 ;; Read line with immediate '.' and '?' handling
 (define (repl-read-line prompt)
@@ -6676,7 +6682,7 @@ See: Memo-0000 Declaration of Cyberspace
   (flush-output)
   (stty-raw)
   (let loop ((chars '()))
-    (let ((c (read-char)))  ; blocks in raw mode - no polling needed
+    (let ((c (read-char *tty-port*)))  ; read from /dev/tty, not stdin
       (cond
         ;; EOF
         ((eof-object? c)
