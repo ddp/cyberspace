@@ -1,6 +1,3 @@
-;; Auto-converted from Markdown
-;; Review and edit as needed
-
 (memo
   (number 1)
   (title "Architecture")
@@ -9,7 +6,7 @@
     (p "Cyberspace is a distributed systems architecture built on S-expressions and Scheme, designed for cryptographic security without complexity. This Memo describes the overall system design, philosophy, and components."))
   (section
     "E Pluribus Unum"
-    (p "Out of many, one.")
+    (p "Out of many, one. The VAXcluster motto: N nodes behave as one system. Cyberspace inherits this principle - distributed nodes, unified security domain, no central authority. The many remain autonomous; the one emerges from consensus.")
     (code "         ┌─────────────────────────────────────┐\n         │                                     │\n         │   Rough consensus, cryptography,    │\n         │   trusted systems, running code.    │\n         │                                     │\n         └─────────────────────────────────────┘"))
   (section
     "1. Motivation"
@@ -105,7 +102,7 @@
       (code scheme "(define shares (shamir-split master-key 5 3))\n;; Distribute 5 shares. Recover with any 3."))
     (subsection
       "3.6 Replication Layer"
-      (p "Federated distribution without central registry. See Memo-001.")
+      (p "Federated distribution without central registry. See Memo-004.")
       (code scheme "(seal-publish \"1.0.0\" remote: \"/shared/releases\")\n(seal-subscribe \"/shared/releases\" verify-key: alice-pub)\n(seal-synchronize peer-remote direction: 'both)"))
     (subsection
       "3.7 The Library Directory"
