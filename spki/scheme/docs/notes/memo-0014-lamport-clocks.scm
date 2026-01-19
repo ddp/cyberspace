@@ -82,13 +82,13 @@
   (section
     "Integration Points"
     (subsection
-      "With Audit Trail (Memo-003)"
+      "With Audit Trail (Memo-005)"
       (code scheme "(audit-entry\n  (sequence 42)           ; Local sequence\n  (lamport-clock 1042)    ; Logical timestamp\n  (physical-time \"...\")   ; Advisory only\n  ...)"))
     (subsection
       "With Consensus (Memo-011)"
       (code scheme "(consensus-message\n  (sequence 573)          ; Consensus sequence\n  (lamport-clock 2891)    ; Causal context\n  ...)"))
     (subsection
-      "With Replication (Memo-0002)"
+      "With Replication (Memo-007)"
       (code scheme "(seal-publish \"2.0.0\"\n  (logical-time 892)\n  ...)")))
   (section
     "Security Considerations"

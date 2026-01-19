@@ -181,7 +181,7 @@
   (section
     "Implementation Status"
     (subsection
-      "Implemented (Memo-001)"
+      "Implemented (Memo-007)"
       (list
         (item "seal-publish: Push to single remote - seal-subscribe: Pull from single remote - seal-synchronize: Bidirectional with single peer")
         (item "Transport: git, HTTP, filesystem")))
@@ -199,8 +199,8 @@
       (item "Birman, K. (2007). The Promise, and Limitations, of Gossip Protocols.")
       (item "Demers, A., et al. (1987). Epidemic Algorithms for Replicated Database Maintenance.")
       (item "Shapiro, M., et al. (2011). Conflict-Free Replicated Data Types.")
-      (item "Memo-0002: Replication Layer")
-      (item "Memo-004: SPKI Authorization")))
+      (item "Memo-007: Replication Layer")
+      (item "Memo-003: SPKI Authorization")))
   (section
     "Changelog"
     (list

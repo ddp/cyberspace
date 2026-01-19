@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <title>Memo 0010: Progressive Metadata Levels</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0010: Progressive Metadata Levels</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This Memo specifies progressive metadata levels for vault commits, enabling configurable richness from minimal overhead to full preservation context. Three levels serve different use cases: minimal (fast iteration), catalog (discovery), and preserve (archival).</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>Different commits deserve different metadata:</p>
+<ul>
+<li>Quick fix: Just record it happened</li>
+<li>Feature release: Add searchable keywords</li>
+<li>Archival snapshot: Capture full environment</li>
+</ul>
+<p>Traditional VCS provides one-size-fits-all commit messages. Cyberspace provides progressive levels:</p>
+<ul>
+<li>Minimal - Hash, timestamp, message (default)</li>
+<li>Catalog - Add subjects, keywords, descriptions (discovery)</li>
+<li>Preserve - Add environment, dependencies, git state (archival)</li>
+</ul>
+</section>
+<section>
+<h2>Specification</h2>
+<h3>Level 1: Minimal (Default)</h3>
+<p>Every commit includes:</p>
+<pre class="language-scheme">
+(commit-metadata
+  (hash "abc123...")
+  (timestamp 1767685100)
+  (message "Fix typo in README"))
+</pre>
+<p>Usage:</p>
+<pre class="language-scheme">
+(seal-commit "Fix typo in README")
+</pre>
+<p>This is the default. No extra flags needed. Git handles storage.</p>
+<h3>Level 2: Catalog</h3>
+<p>Adds discovery metadata:</p>
+<pre class="language-scheme">
+(commit-metadata
+  (hash "def456...")
+  (timestamp 1767685200)
+  (message "Implement user authentication")
+  (catalog
+    (subjects "authentication" "security")
+    (keywords "login" "oauth" "jwt")
+    (description "Added OAuth2 authentication flow with JWT tokens")))
+</pre>
+<p>Usage:</p>
+<pre class="language-scheme">
+(seal-commit "Implement user authentication"
+  catalog: #t
+  subjects: '("authentication" "security")
+  keywords: '("login" "oauth" "jwt")
+  description: "Added OAuth2 authentication flow with JWT tokens")
+</pre>
+<p>Purpose: Enable search and categorization without full environmental capture.</p>
+<h3>Level 3: Preserve</h3>
+<p>Adds archival metadata:</p>
+<pre class="language-scheme">
+(commit-metadata
+  (hash "789abc...")
+  (timestamp 1767685300)
+  (message "Release v2.0.0")
+  (preservation
+    (environment
+      (platform "darwin")
+      (hostname "dev-machine")
+      (chicken-version "5.x")
+      (timestamp 1767685300))
+    (dependencies
+      (egg "srfi-1" "1.0")
+      (egg "crypto-ffi" "0.1"))
+    (git-state
+      (branch "main")
+      (remote "git@github.com:ddp/cyberspace.git"))))
+</pre>
+<p>Usage:</p>
+<pre class="language-scheme">
+(seal-commit "Release v2.0.0"
+  preserve: #t)
+</pre>
+<p>Purpose: Capture everything needed to understand and reproduce the commit environment.</p>
+</section>
+<section>
+<h2>Metadata Fields</h2>
+<h3>Catalog Fields</h3>
+<table>
+<tr><th>Field </th><th>Type </th><th>Description </th></tr>
+<tr><td>subjects </td><td>list </td><td>Library of Congress style subject headings </td></tr>
+<tr><td>keywords </td><td>list </td><td>Free-form search terms </td></tr>
+<tr><td>description </td><td>string </td><td>Extended description (beyond commit message) </td></tr>
+</table>
+<h3>Preservation Fields</h3>
+<table>
+<tr><th>Field </th><th>Type </th><th>Description </th></tr>
+<tr><td>environment.platform </td><td>string </td><td>OS type (darwin, linux, etc.) </td></tr>
+<tr><td>environment.hostname </td><td>string </td><td>Machine name </td></tr>
+<tr><td>environment.chicken-version </td><td>string </td><td>Scheme implementation version </td></tr>
+<tr><td>environment.timestamp </td><td>integer </td><td>Unix epoch seconds </td></tr>
+<tr><td>dependencies </td><td>list </td><td>Installed eggs/libraries </td></tr>
+<tr><td>git-state.branch </td><td>string </td><td>Current branch </td></tr>
+<tr><td>git-state.remote </td><td>string </td><td>Remote URL </td></tr>
+</table>
+</section>
+<section>
+<h2>Storage</h2>
+<p>Metadata stored in .vault/metadata/:</p>
+<pre>
+.vault/
+  metadata/
+    abc123.sexp
+    def456.sexp
+    789abc.sexp
+</pre>
+<p>Filename is commit hash. Content is S-expression metadata.</p>
+<h3>Optional Git Tracking</h3>
+<pre class="language-scheme">
+(vault-config 'track-metadata #t)
+</pre>
+<p>When enabled, metadata files are staged for the next commit, creating a self-documenting archive.</p>
+</section>
+<section>
+<h2>Implementation</h2>
+<h3>save-commit-metadata</h3>
+<pre class="language-scheme">
+(define (save-commit-metadata commit-hash
+          #!key message catalog subjects keywords description preserve)
+  "Save optional metadata for a commit"
+  (create-directory ".vault/metadata" #t)
+
+  (let ((metadata-file (sprintf ".vault/metadata/~a.sexp" commit-hash)))
+
+    ;; Build metadata structure
+    (let ((metadata (list 'commit-metadata
+                         (list 'hash commit-hash)
+                         (list 'timestamp (current-seconds))
+                         (list 'message message))))
+
+      ;; Add catalog if requested
+      (when (or catalog subjects keywords description)
+        (set! metadata (append metadata (list (build-catalog ...)))))
+
+      ;; Add preservation if requested
+      (when preserve
+        (set! metadata (append metadata (list (build-preservation ...)))))
+
+      ;; Write metadata file
+      (with-output-to-file metadata-file
+        (lambda ()
+          (write metadata)
+          (newline))))))
+</pre>
+<h3>Environment Capture</h3>
+<pre class="language-scheme">
+(define (get-environment-snapshot)
+  "Capture current build environment"
+  ((platform ,(or (get-environment-variable "OSTYPE") "unknown"))
+    (hostname ,(or (get-environment-variable "HOSTNAME") "unknown"))
+    (chicken-version "5.x")
+    (timestamp ,(current-seconds))))
+
+(define (get-dependencies-snapshot)
+  "Capture current dependencies"
+  ;; Could scan imports, check installed eggs
+  '())
+
+(define (get-git-state-snapshot)
+  "Capture git repository state"
+  (let ((branch (with-input-from-pipe "git branch --show-current" read-line))
+        (remote (with-input-from-pipe "git remote -v" read-line)))
+    ((branch ,branch)
+      (remote ,remote))))
+</pre>
+</section>
+<section>
+<h2>Use Cases</h2>
+<h3>Daily Development (Minimal)</h3>
+<pre class="language-scheme">
+(seal-commit "WIP: refactoring auth module")
+(seal-commit "Fix off-by-one error")
+(seal-commit "Update dependencies")
+</pre>
+<p>Fast, lightweight, no overhead.</p>
+<h3>Feature Completion (Catalog)</h3>
+<pre class="language-scheme">
+(seal-commit "Add two-factor authentication"
+  catalog: #t
+  subjects: '("authentication" "security" "2FA")
+  keywords: '("totp" "authenticator" "login")
+  description: "Implements TOTP-based 2FA per RFC 6238")
+</pre>
+<p>Enables later discovery: "find all commits about authentication"</p>
+<h3>Release Snapshot (Preserve)</h3>
+<pre class="language-scheme">
+(seal-commit "Release v2.0.0"
+  preserve: #t)
+</pre>
+<p>Captures full environment for reproducibility and forensics.</p>
+</section>
+<section>
+<h2>Query Support</h2>
+<p>Future enhancement: query interface for metadata.</p>
+<pre class="language-scheme">
+;; Find by subject
+(vault-search subjects: '("authentication"))
+
+;; Find by keyword
+(vault-search keywords: '("oauth"))
+
+;; Find by date range
+(vault-search from: "2026-01-01" to: "2026-01-31")
+
+;; Find with preservation data
+(vault-search has-preservation: #t)
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Information Leakage</h3>
+<p>Preservation metadata captures: - Hostname (could reveal infrastructure) - Platform (could reveal vulnerabilities) - Dependencies (could reveal attack surface)</p>
+<p>Recommendation: Use preserve level only for internal archives. Strip when publishing externally.</p>
+<h3>Metadata Integrity</h3>
+<p>Metadata files are not automatically signed. For tamper-evidence:</p>
+<ul>
+<li>Enable track-metadata to include in commits</li>
+<li>Use seal-release for cryptographic sealing</li>
+<li>Audit trail captures metadata operations</li>
+</ul>
+</section>
+<section>
+<h2>Design Rationale</h2>
+<h3>Why Not Always Full Metadata?</h3>
+<ul>
+<li>Performance: Environment capture adds latency</li>
+<li>Noise: Not every commit needs forensic detail</li>
+<li>Privacy: Some metadata reveals sensitive info</li>
+<li>Storage: Full metadata increases repository size</li>
+</ul>
+<p>Progressive levels let developers choose the right tradeoff between speed and forensic detail for each commit.</p>
+<h3>Why S-expressions?</h3>
+<ul>
+<li>Readable: Human-inspectable without tools</li>
+<li>Parseable: Machine-processable</li>
+<li>Extensible: Add fields without schema changes</li>
+<li>Native: Scheme can read/write directly</li>
+</ul>
+<h3>Why Separate Files?</h3>
+<ul>
+<li>Git-friendly: Small files diff well</li>
+<li>Query-friendly: Can glob/grep metadata</li>
+<li>Optional: Metadata doesn't bloat git objects</li>
+<li>Flexible: Can delete without rewriting history</li>
+</ul>
+</section>
+<section>
+<h2>References</h2>
+<ul>
+<li>Dublin Core Metadata Initiative (DCMI)</li>
+<li>Library of Congress Subject Headings (LCSH)</li>
+<li>Software Heritage Archive Metadata</li>
+<li>Reproducible Builds Project</li>
+</ul>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-06</li>
+<li>Initial specification</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>
