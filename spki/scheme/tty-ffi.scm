@@ -10,19 +10,23 @@
 
   (import scheme
           (chicken base)
-          (chicken foreign)
-          (chicken process))
+          (chicken foreign))
 
   ;; Raw getchar - returns char code, -1 on EOF
+  ;; Also disables stdin buffering before read
   (define tty-raw-char
-    (foreign-lambda int "getchar"))
+    (foreign-lambda* int ()
+      "setvbuf(stdin, NULL, _IONBF, 0);"
+      "return getchar();"))
 
-  ;; Set terminal to raw mode (no line buffering, no echo)
-  (define (tty-set-raw)
-    (process-wait (process-run "stty" '("-icanon" "min" "1" "-echo"))))
+  ;; Set terminal to raw mode via system() - runs in same process
+  (define tty-set-raw
+    (foreign-lambda* int ()
+      "return system(\"stty -icanon min 1 -echo\");"))
 
   ;; Restore terminal to cooked mode
-  (define (tty-set-cooked)
-    (process-wait (process-run "stty" '("icanon" "echo"))))
+  (define tty-set-cooked
+    (foreign-lambda* int ()
+      "return system(\"stty icanon echo\");"))
 
 ) ;; end module
