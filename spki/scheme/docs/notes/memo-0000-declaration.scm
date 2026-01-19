@@ -34,19 +34,21 @@
     (p "The language is incidental. The shape is inevitable."))
 
   (section
-    "The Ten Specifications"
+    "The Ten Commandments"
+    (p "The foundational specifications, ordered by dependency from primitive to composite:")
     (table
-      (header "No." "Title" "Principle")
-      (row "I" "Replication Layer" "Distribution without permission")
-      (row "II" "Architecture" "Separation of mechanism and policy")
-      (row "III" "Audit Trail" "Accountability through transparency")
-      (row "IV" "Public Key Authorization" "Authority without identity")
-      (row "V" "Metadata Levels" "Progressive disclosure")
-      (row "VI" "Vault Architecture" "Sealed truth")
-      (row "VII" "Threshold Governance" "Democracy in code")
-      (row "VIII" "Shamir Sharing" "Trust through distribution")
-      (row "IX" "Library Directory" "Knowledge freely accessible")
-      (row "X" "Federation" "Union without empire")))
+      (header "№" "Memo" "Commandment")
+      (row "0" "Declaration" "Thou shalt have no central authority")
+      (row "1" "Conventions" "Thou shalt document in S-expressions")
+      (row "2" "Architecture" "Thou shalt know the vision")
+      (row "3" "SPKI Authorization" "Keys are principals, capabilities are rights")
+      (row "4" "Shamir Sharing" "No single point of failure")
+      (row "5" "Audit Trail" "All actions witnessed, none forgotten")
+      (row "6" "Vault Architecture" "Content-addressed truth")
+      (row "7" "Replication Layer" "Federated distribution")
+      (row "8" "Threshold Governance" "Consensus over dictators")
+      (row "9" "Designer Notes" "Know why we chose this path"))
+    (p "These ten form the core of the Library. All other memos build upon them."))
 
   (section
     "License"
