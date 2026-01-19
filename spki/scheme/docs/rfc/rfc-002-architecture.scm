@@ -96,6 +96,11 @@
     (subsection
       "3.6 Replication Layer"
       (p "Federated distribution without central registry. See RFC-001.")
+      (p "The fundamental insight:")
+      (blockquote "A node is a λ that accepts or rejects artifacts.")
+      (p "Everything else is implementation detail. A node is a closure that captures identity, a trust predicate, a store, and a Lamport clock. Artifacts flow between nodes. Each node decides whether to welcome or reject based on its trust function.")
+      (code scheme ";; A node is a λ\n(define (make-node name trust?)\n  (let ((store '()) (clock 0))\n    (lambda (op artifact)\n      (if (and (eq? op 'receive) (trust? (signer artifact)))\n          (begin\n            (set! clock (+ 1 (max clock (lamport artifact))))\n            (set! store (cons artifact store))\n            `(welcomed at λ ,clock))\n          '(rejected)))))")
+      (p "The weave flows where trust allows. Consent by λ. Privacy by architecture.")
       (code scheme "(seal-publish \"1.0.0\" remote: \"/shared/releases\")\n(seal-subscribe \"/shared/releases\" verify-key: alice-pub)\n(seal-synchronize peer-remote direction: 'both)"))
     (subsection
       "3.7 The Library Directory"
