@@ -18,7 +18,7 @@
 
 (define *library-modules*
   '(;; Layer 0: No internal dependencies
-    "sexp" "crypto-ffi" "fips" "wordlist"
+    "sexp" "crypto-ffi" "tty-ffi" "fips" "wordlist"
     "display" "inspector" "catalog" "bloom" "os"
     "smelter" "scrutinizer" "forum"
     ;; Layer 1: Single deps

@@ -37,7 +37,8 @@
         srfi-4
         srfi-13
         srfi-69   ; hash tables
-        (chicken tcp))
+        (chicken tcp)
+        tty-ffi)  ; raw char input for immediate keypress
 
 ;;; ============================================================
 ;;; Command Line Interface
@@ -6666,14 +6667,9 @@ See: Memo-0000 Declaration of Cyberspace
   (irregex-replace/all "\x1b\\[[0-9;]*[A-Za-z]" str ""))
 
 ;; Terminal raw mode for immediate single-char commands
-;; Must read from /dev/tty directly - Scheme's stdin buffering ignores stty
-(define *tty-port* #f)
-(define (stty-raw)
-  (system "stty -icanon min 1 time 0 -echo </dev/tty 2>/dev/null")
-  (set! *tty-port* (open-input-file "/dev/tty")))
-(define (stty-cooked)
-  (system "stty icanon echo </dev/tty 2>/dev/null")
-  (when *tty-port* (close-input-port *tty-port*) (set! *tty-port* #f)))
+;; Uses tty-ffi module for raw getchar (bypasses Scheme's stdio buffering)
+(define (stty-raw) (tty-set-raw))
+(define (stty-cooked) (tty-set-cooked))
 
 ;; Read line with immediate '.' and '?' handling
 (define (repl-read-line prompt)
@@ -6682,7 +6678,8 @@ See: Memo-0000 Declaration of Cyberspace
   (flush-output)
   (stty-raw)
   (let loop ((chars '()))
-    (let ((c (read-char *tty-port*)))  ; read from /dev/tty, not stdin
+    (let ((code (tty-raw-char)))  ; FFI getchar bypasses Scheme buffering
+      (let ((c (if (= code -1) (eof-object) (integer->char code))))
       (cond
         ;; EOF
         ((eof-object? c)
@@ -6723,7 +6720,7 @@ See: Memo-0000 Declaration of Cyberspace
         (else
          (display c)
          (flush-output)
-         (loop (cons c chars)))))))
+         (loop (cons c chars))))))))
 
 ;; History stubs - no-op without linenoise
 (define (repl-history-add line) #f)
