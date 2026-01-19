@@ -1,9 +1,9 @@
 (memo
   (number 56)
-  (title "Designer Notes")
+  (title "CLI and Search Implementation")
   (section
     "Abstract"
-    (p "Working notes from collaborative design sessions. Documents decisions, rationale, and evolution of the Cyberspace interface."))
+    (p "Implementation notes for the Cyberspace CLI vocabulary and search commands. Documents --option=value parsing, apropos, kwic, and build system decisions."))
   (section
     "1. CLI Vocabulary (2026-01-18)"
     (p "Clean break from ad-hoc bare-word arguments to Linux-style --option=value:")

@@ -51,10 +51,36 @@ central coordination.
 1.2 Why Scheme
 --------------
 
-Scheme was chosen not for nostalgia but for precision. Homoiconicity
-makes S-expressions natural for both code and data - certificates, audit
-records, and configuration are all readable by the same parser that
-reads the implementation.
+Scheme was chosen because its homoiconic S-expressions make the
+representation of programs and structured data the same kind of thing.
+One parser, one set of tools works uniformly over code, certificates,
+audit trails, and configuration.
+
+In a homoiconic language, the primary representation of programs is also
+a data structure in a primitive type of the language. Scheme uses
+S-expressions—nested lists and atoms—as both surface syntax and
+natural tree-shaped data. The abstract syntax tree and textual form
+closely align.
+
+The same reader parses program text, configuration records, and
+application data into a single uniform format. Certificates, audit
+records, memos, and code are all S-expressions manipulated with the same
+combinators:
+
+
+    ;; All the same representation
+    (read)           ; parse code
+    (read-cert)      ; parse certificate
+    (read-audit)     ; parse audit trail
+    (kwic 'soup)     ; search memos
+
+One minimal, well-specified parser eliminates impedance mismatches
+between code format and data format. No JSON-to-object mapping. No
+protobuf schema compiler. Structures representing policies look exactly
+like structures representing the code enforcing them.
+
+When you (kwic 'soup) you search S-expressions with S-expressions. The
+memos are data. The code is data. The boundary dissolves.
 
 The language that Abelson and Sussman used to teach computational
 thinking at MIT is the same language used to implement the security
@@ -545,6 +571,9 @@ prove the crypto, evolve the rest freely.
 ------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
+
+- 2026-01-18 — Expanded Why Scheme with homoiconicity rationale
+(section 1.2)
 
 - 2026-01-18 — Added The Koan (section 8.6): complexity serves
 simplicity
