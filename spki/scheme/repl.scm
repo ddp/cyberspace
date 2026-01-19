@@ -167,6 +167,7 @@
   ;; Exit only if --clean alone (no --rebuild, no --boot)
   (unless (or (cli-option? "rebuild") (cli-option "boot"))
     (flush-output)
+    (flush-output (current-error-port))
     (exit 0)))
 
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
@@ -6640,6 +6641,12 @@ Cyberspace REPL - Available Commands
          (loop))
         ((string=? line ".")
          (status)
+         (loop))
+
+        ;; Reserved single-character graphics (UI reserved, not Scheme)
+        ((and (= (string-length line) 1)
+              (string-contains "<>/;:\"[]{}\\|-=_+!@#$%^&*" line))
+         (print "Reserved for future use")
          (loop))
 
         ;; Natural language exit (with optional trailing period)
