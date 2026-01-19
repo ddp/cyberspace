@@ -5488,6 +5488,7 @@ Cyberspace REPL - Available Commands
      (if (eq? *user-mode* 'novice)
          ;; Novice: plain English, no acronyms
          (begin
+           (print "  soup              - Browse the object store")
            (print "  library           - Browse the Library of memos")
            (print "  search 'topic     - Search for anything")
            (print "  kwic 'word        - See word in context across memos")
@@ -5499,6 +5500,7 @@ Cyberspace REPL - Available Commands
            (print "  .  ?  bye         - status, help, exit"))
          ;; Schemer: full Scheme syntax
          (begin
+           (print "  (soup)            - Browse the object store")
            (print "  (library)         - Enter the Library")
            (print "  (search 'topic)   - Search everything")
            (print "  (kwic 'word)      - Keyword-in-context search")
