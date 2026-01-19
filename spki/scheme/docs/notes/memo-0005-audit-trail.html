@@ -35,7 +35,11 @@
 </section>
 <section>
 <h2>Motivation</h2>
-<p>Distributed systems require accountability. Who did what, when, and under whose authority?</p>
+<blockquote>
+<p>The first principle is that you must not fool yourself—and you are the easiest person to fool. — Richard Feynman</p>
+</blockquote>
+<p>Distributed systems require accountability. Who did what, when, and under whose authority? Without cryptographic audit trails, the answer is always "we think so" rather than "we can prove it."</p>
+<p>Every security breach postmortem asks the same questions: What happened? When? Who had access? Could the logs have been tampered with? Traditional logging cannot answer these questions with certainty. Cyberspace audit trails can.</p>
 <h3>Heritage: VMS Cluster-Wide Audit</h3>
 <p>This audit trail descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:</p>
 <ul>
@@ -50,7 +54,13 @@
 <p>The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.</p>
 <p>Cyberspace audit trails apply the same principle at IPv6 scale.</p>
 <h3>The Problem</h3>
-<p>Traditional logging fails on all counts: - Tamperable: Text files can be edited - Anonymous: No cryptographic identity - Disconnected: No provable ordering - Unverifiable: No mathematical proof of integrity</p>
+<p>Traditional logging fails on all counts:</p>
+<ul>
+<li>Tamperable: Text files can be edited after the fact</li>
+<li>Anonymous: No cryptographic identity binds actor to action</li>
+<li>Disconnected: No provable ordering between entries</li>
+<li>Unverifiable: No mathematical proof of integrity</li>
+</ul>
 <p>Cyberspace audit trails provide:</p>
 <ul>
 <li>Content-addressed entries - Tamper-evident by hash</li>
@@ -101,6 +111,7 @@
 <tr><td>seal </td><td>record </td><td>Cryptographic signature </td></tr>
 </table>
 <h3>Actor Record</h3>
+<p>Every action has an actor. Not a username—a cryptographic identity that can be verified mathematically.</p>
 <pre class="language-scheme">
 (define-record-type &lt;audit-actor&gt;
   (make-audit-actor principal authorization-chain)
@@ -108,8 +119,14 @@
   (principal actor-principal)              ; Public key blob
   (authorization-chain actor-authorization-chain))  ; SPKI cert chain
 </pre>
-<p>The actor is identified by: - Principal: Ed25519 public key (32 bytes) - Authorization chain: Optional SPKI certificate chain proving delegation</p>
+<p>The actor is identified by:</p>
+<ul>
+<li>Principal: Ed25519 public key (32 bytes) - unforgeable identity</li>
+<li>Authorization chain: Optional SPKI certificate chain proving delegation</li>
+</ul>
+<p>The authorization chain answers "under whose authority?" - crucial for auditing delegated actions.</p>
 <h3>Action Record</h3>
+<p>Actions are structured as verb-object-parameters, mirroring natural language: "Alice committed version 1.0 to the vault."</p>
 <pre class="language-scheme">
 (define-record-type &lt;audit-action&gt;
   (make-audit-action verb object parameters)
@@ -118,8 +135,17 @@
   (object action-object)    ; Primary target
   (parameters action-parameters))  ; Additional arguments
 </pre>
-<p>Standard verbs: - seal-commit - Version control commit - seal-publish - Release publication - seal-subscribe - Subscription to remote - seal-synchronize - Bidirectional sync - seal-release - Version tagging</p>
+<p>Standard verbs:</p>
+<table>
+<tr><th>Verb </th><th>Meaning </th></tr>
+<tr><td>seal-commit </td><td>Version control commit to local vault </td></tr>
+<tr><td>seal-publish </td><td>Release publication to remote </td></tr>
+<tr><td>seal-subscribe </td><td>Subscription to remote feed </td></tr>
+<tr><td>seal-synchronize </td><td>Bidirectional sync with peer </td></tr>
+<tr><td>seal-release </td><td>Version tagging for distribution </td></tr>
+</table>
 <h3>Context Record</h3>
+<p>Machines record what happened. Humans need to know why. The context record captures motivation in natural language—the commit message, the reason for the release, the justification for the access.</p>
 <pre class="language-scheme">
 (define-record-type &lt;audit-context&gt;
   (make-audit-context motivation relates-to language)
@@ -128,7 +154,13 @@
   (relates-to context-relates-to)    ; Related entries
   (language context-language))       ; ISO 639-1 code
 </pre>
-<p>Context provides: - Motivation: Why the action was taken (human-readable) - Relates-to: Cross-references to related audit entries - Language: For internationalization</p>
+<p>Context provides:</p>
+<ul>
+<li>Motivation: Why the action was taken, in the actor's own words</li>
+<li>Relates-to: Cross-references to related audit entries</li>
+<li>Language: ISO 639-1 code for internationalization</li>
+</ul>
+<p>Six months later, "Fixed the bug" means nothing. "Fixed CVE-2026-1234 buffer overflow in certificate parser" means everything.</p>
 <h3>Seal Record</h3>
 <pre class="language-scheme">
 (define-record-type &lt;audit-seal&gt;
@@ -178,11 +210,17 @@
 <li>Verify Ed25519 signature</li>
 </ul>
 <h3>audit-chain</h3>
-<p>Verify entire audit chain.</p>
+<p>Verify the entire audit chain from genesis to present. One broken link invalidates everything after it.</p>
 <pre class="language-scheme">
 (audit-chain verify-key: public-key)
 </pre>
-<p>Verifies: - Each entry's signature is valid - Parent-id references form valid chain - Sequence numbers are monotonic</p>
+<p>Verifies:</p>
+<ul>
+<li>Each entry's signature is valid</li>
+<li>Parent-id references form unbroken chain</li>
+<li>Sequence numbers are strictly monotonic</li>
+</ul>
+<p>A valid chain proves no entries were inserted, deleted, or modified after signing.</p>
 <h3>audit-read</h3>
 <p>Read specific audit entry.</p>
 <pre class="language-scheme">
@@ -192,7 +230,7 @@
 </section>
 <section>
 <h2>Storage Format</h2>
-<p>Entries stored as individual S-expression files:</p>
+<p>Simplicity over cleverness. Entries are individual S-expression files, one per action, named by sequence number.</p>
 <pre>
 .vault/audit/
   1.sexp
@@ -200,13 +238,32 @@
   3.sexp
   ...
 </pre>
-<p>File naming by sequence number enables efficient: - Sequential reads - Range queries - Latest entry lookup</p>
+<p>This format trades storage density for operational simplicity:</p>
+<ul>
+<li>Sequential reads: cat the files in order</li>
+<li>Range queries: list files between N and M</li>
+<li>Latest entry: highest-numbered file</li>
+<li>Debugging: read any entry with a text editor</li>
+</ul>
+<p>No database. No binary format. No special tools required to inspect the audit trail.</p>
 </section>
 <section>
 <h2>Security Considerations</h2>
 <h3>Threat Model</h3>
-<p>Trusted: - Local filesystem (during operation) - Ed25519 implementation (libsodium) - Private keys</p>
-<p>Untrusted: - Storage medium (after creation) - Network transport - Other actors</p>
+<p>We trust as little as possible.</p>
+<p>Trusted:</p>
+<ul>
+<li>Local filesystem during operation (not after)</li>
+<li>Ed25519 implementation (libsodium, audited)</li>
+<li>Private keys (your responsibility)</li>
+</ul>
+<p>Untrusted:</p>
+<ul>
+<li>Storage medium after entry creation</li>
+<li>Network transport between nodes</li>
+<li>Other actors, including administrators</li>
+</ul>
+<p>This threat model assumes a hostile environment where storage can be tampered with and network traffic can be intercepted. The cryptography protects the audit trail even when everything else is compromised.</p>
 <h3>Attack Mitigations</h3>
 <table>
 <tr><th>Attack </th><th>Mitigation </th></tr>
@@ -217,7 +274,14 @@
 <tr><td>Replay attacks </td><td>Sequence numbers detect duplicates </td></tr>
 </table>
 <h3>Non-Repudiation</h3>
-<p>Once an entry is signed and published: - Actor cannot deny performing the action - Timestamp cannot be backdated - Content cannot be altered - Signature mathematically proves authorship</p>
+<p>Once an entry is signed and published, the actor cannot credibly deny it. This is non-repudiation: mathematical proof of authorship.</p>
+<ul>
+<li>Actor cannot deny performing the action—their key signed it</li>
+<li>Timestamp cannot be backdated—hash chain enforces ordering</li>
+<li>Content cannot be altered—hash would change</li>
+<li>Signature mathematically proves authorship—no "someone else used my account"</li>
+</ul>
+<p>In court, in audits, in incident response: cryptographic proof beats testimony.</p>
 </section>
 <section>
 <h2>Integration Points</h2>
@@ -441,10 +505,10 @@ Entry #2
 <h2>Implementation Notes</h2>
 <h3>Dependencies</h3>
 <ul>
-<li>crypto-ffi</li>
-<li>Ed25519 signatures, SHA-512 hashing - srfi-1</li>
-<li>List utilities - srfi-4 - u8vectors for binary data - srfi-13</li>
-<li>String utilities</li>
+<li>crypto-ffi: Ed25519 signatures, SHA-512 hashing</li>
+<li>srfi-1: List utilities</li>
+<li>srfi-4: u8vectors for binary data</li>
+<li>srfi-13: String utilities</li>
 </ul>
 <h3>Performance Considerations</h3>
 <ul>
@@ -464,10 +528,8 @@ Entry #2
 </section>
 <section>
 <h2>Changelog</h2>
-<ul>
-<li>2026-01-06</li>
-<li>Initial specification</li>
-</ul>
+<p>2026-01-19 - Expanded narrative and rationale</p>
+<p>2026-01-06 - Initial specification</p>
 </section>
 <script>
 function toggleTheme() {

@@ -17,8 +17,17 @@ Ed25519 signatures.
 MOTIVATION
 ------------------------------------------------------------------------
 
+
+    "The first principle is that you must not fool yourself—and you are the easiest person to fool. — Richard Feynman"
+
 Distributed systems require accountability. Who did what, when, and
-under whose authority?
+under whose authority? Without cryptographic audit trails, the answer is
+always "we think so" rather than "we can prove it."
+
+Every security breach postmortem asks the same questions: What happened?
+When? Who had access? Could the logs have been tampered with?
+Traditional logging cannot answer these questions with certainty.
+Cyberspace audit trails can.
 
 
 Heritage: VMS Cluster-Wide Audit
@@ -48,9 +57,12 @@ Cyberspace audit trails apply the same principle at IPv6 scale.
 The Problem
 -----------
 
-Traditional logging fails on all counts: - Tamperable: Text files can be
-edited - Anonymous: No cryptographic identity - Disconnected: No
-provable ordering - Unverifiable: No mathematical proof of integrity
+Traditional logging fails on all counts:
+
+  * Tamperable: Text files can be edited after the fact
+  * Anonymous: No cryptographic identity binds actor to action
+  * Disconnected: No provable ordering between entries
+  * Unverifiable: No mathematical proof of integrity
 
 Cyberspace audit trails provide:
 
@@ -113,6 +125,9 @@ Core Fields
 Actor Record
 ------------
 
+Every action has an actor. Not a username—a cryptographic identity
+that can be verified mathematically.
+
 
     (define-record-type <audit-actor>
       (make-audit-actor principal authorization-chain)
@@ -120,12 +135,20 @@ Actor Record
       (principal actor-principal)              ; Public key blob
       (authorization-chain actor-authorization-chain))  ; SPKI cert chain
 
-The actor is identified by: - Principal: Ed25519 public key (32 bytes) -
-Authorization chain: Optional SPKI certificate chain proving delegation
+The actor is identified by:
+
+  * Principal: Ed25519 public key (32 bytes) - unforgeable identity
+  * Authorization chain: Optional SPKI certificate chain proving delegation
+
+The authorization chain answers "under whose authority?" - crucial for
+auditing delegated actions.
 
 
 Action Record
 -------------
+
+Actions are structured as verb-object-parameters, mirroring natural
+language: "Alice committed version 1.0 to the vault."
 
 
     (define-record-type <audit-action>
@@ -135,13 +158,23 @@ Action Record
       (object action-object)    ; Primary target
       (parameters action-parameters))  ; Additional arguments
 
-Standard verbs: - seal-commit - Version control commit - seal-publish -
-Release publication - seal-subscribe - Subscription to remote -
-seal-synchronize - Bidirectional sync - seal-release - Version tagging
+Standard verbs:
+
+
+  Verb               Meaning                                 
+  seal-commit        Version control commit to local vault   
+  seal-publish       Release publication to remote           
+  seal-subscribe     Subscription to remote feed             
+  seal-synchronize   Bidirectional sync with peer            
+  seal-release       Version tagging for distribution        
 
 
 Context Record
 --------------
+
+Machines record what happened. Humans need to know why. The context
+record captures motivation in natural language—the commit message, the
+reason for the release, the justification for the access.
 
 
     (define-record-type <audit-context>
@@ -151,9 +184,14 @@ Context Record
       (relates-to context-relates-to)    ; Related entries
       (language context-language))       ; ISO 639-1 code
 
-Context provides: - Motivation: Why the action was taken
-(human-readable) - Relates-to: Cross-references to related audit entries
-- Language: For internationalization
+Context provides:
+
+  * Motivation: Why the action was taken, in the actor's own words
+  * Relates-to: Cross-references to related audit entries
+  * Language: ISO 639-1 code for internationalization
+
+Six months later, "Fixed the bug" means nothing. "Fixed CVE-2026-1234
+buffer overflow in certificate parser" means everything.
 
 
 Seal Record
@@ -224,13 +262,20 @@ Verification steps:
 audit-chain
 -----------
 
-Verify entire audit chain.
+Verify the entire audit chain from genesis to present. One broken link
+invalidates everything after it.
 
 
     (audit-chain verify-key: public-key)
 
-Verifies: - Each entry's signature is valid - Parent-id references form
-valid chain - Sequence numbers are monotonic
+Verifies:
+
+  * Each entry's signature is valid
+  * Parent-id references form unbroken chain
+  * Sequence numbers are strictly monotonic
+
+A valid chain proves no entries were inserted, deleted, or modified
+after signing.
 
 
 audit-read
@@ -247,7 +292,8 @@ Read specific audit entry.
 STORAGE FORMAT
 ------------------------------------------------------------------------
 
-Entries stored as individual S-expression files:
+Simplicity over cleverness. Entries are individual S-expression files,
+one per action, named by sequence number.
 
 
     .vault/audit/
@@ -256,8 +302,15 @@ Entries stored as individual S-expression files:
       3.sexp
       ...
 
-File naming by sequence number enables efficient: - Sequential reads -
-Range queries - Latest entry lookup
+This format trades storage density for operational simplicity:
+
+  * Sequential reads: cat the files in order
+  * Range queries: list files between N and M
+  * Latest entry: highest-numbered file
+  * Debugging: read any entry with a text editor
+
+No database. No binary format. No special tools required to inspect the
+audit trail.
 
 
 ------------------------------------------------------------------------
@@ -268,11 +321,23 @@ SECURITY CONSIDERATIONS
 Threat Model
 ------------
 
-Trusted: - Local filesystem (during operation) - Ed25519 implementation
-(libsodium) - Private keys
+We trust as little as possible.
 
-Untrusted: - Storage medium (after creation) - Network transport - Other
-actors
+Trusted:
+
+  * Local filesystem during operation (not after)
+  * Ed25519 implementation (libsodium, audited)
+  * Private keys (your responsibility)
+
+Untrusted:
+
+  * Storage medium after entry creation
+  * Network transport between nodes
+  * Other actors, including administrators
+
+This threat model assumes a hostile environment where storage can be
+tampered with and network traffic can be intercepted. The cryptography
+protects the audit trail even when everything else is compromised.
 
 
 Attack Mitigations
@@ -290,9 +355,16 @@ Attack Mitigations
 Non-Repudiation
 ---------------
 
-Once an entry is signed and published: - Actor cannot deny performing
-the action - Timestamp cannot be backdated - Content cannot be altered -
-Signature mathematically proves authorship
+Once an entry is signed and published, the actor cannot credibly deny
+it. This is non-repudiation: mathematical proof of authorship.
+
+  * Actor cannot deny performing the action—their key signed it
+  * Timestamp cannot be backdated—hash chain enforces ordering
+  * Content cannot be altered—hash would change
+  * Signature mathematically proves authorship—no "someone else used my account"
+
+In court, in audits, in incident response: cryptographic proof beats
+testimony.
 
 
 ------------------------------------------------------------------------
@@ -374,10 +446,10 @@ IMPLEMENTATION NOTES
 Dependencies
 ------------
 
-  * crypto-ffi
-  * Ed25519 signatures, SHA-512 hashing - srfi-1
-  * List utilities - srfi-4 - u8vectors for binary data - srfi-13
-  * String utilities
+  * crypto-ffi: Ed25519 signatures, SHA-512 hashing
+  * srfi-1: List utilities
+  * srfi-4: u8vectors for binary data
+  * srfi-13: String utilities
 
 
 Performance Considerations
@@ -402,7 +474,8 @@ REFERENCES
 CHANGELOG
 ------------------------------------------------------------------------
 
-  * 2026-01-06
-  * Initial specification
+2026-01-19 - Expanded narrative and rationale
+
+2026-01-06 - Initial specification
 
 ------------------------------------------------------------------------

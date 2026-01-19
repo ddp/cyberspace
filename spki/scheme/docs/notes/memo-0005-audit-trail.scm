@@ -1,6 +1,3 @@
-;; Auto-converted from Markdown
-;; Review and edit as needed
-
 (memo
   (number 5)
   (title "Cryptographic Audit Trail")
@@ -9,7 +6,9 @@
     (p "This Memo specifies the cryptographic audit trail system for the Library of Cyberspace, providing tamper-evident, hash-chained logging with Simple Public Key Infrastructure (SPKI) principal attribution and Ed25519 signatures."))
   (section
     "Motivation"
-    (p "Distributed systems require accountability. Who did what, when, and under whose authority?")
+    (blockquote "The first principle is that you must not fool yourself—and you are the easiest person to fool. — Richard Feynman")
+    (p "Distributed systems require accountability. Who did what, when, and under whose authority? Without cryptographic audit trails, the answer is always \"we think so\" rather than \"we can prove it.\"")
+    (p "Every security breach postmortem asks the same questions: What happened? When? Who had access? Could the logs have been tampered with? Traditional logging cannot answer these questions with certainty. Cyberspace audit trails can.")
     (subsection
       "Heritage: VMS Cluster-Wide Audit"
       (p "This audit trail descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:")
@@ -25,7 +24,12 @@
       (p "Cyberspace audit trails apply the same principle at IPv6 scale."))
     (subsection
       "The Problem"
-      (p "Traditional logging fails on all counts: - Tamperable: Text files can be edited - Anonymous: No cryptographic identity - Disconnected: No provable ordering - Unverifiable: No mathematical proof of integrity")
+      (p "Traditional logging fails on all counts:")
+      (list
+        (item "Tamperable: Text files can be edited after the fact")
+        (item "Anonymous: No cryptographic identity binds actor to action")
+        (item "Disconnected: No provable ordering between entries")
+        (item "Unverifiable: No mathematical proof of integrity"))
       (p "Cyberspace audit trails provide:")
       (list
         (item "Content-addressed entries - Tamper-evident by hash")
@@ -53,16 +57,35 @@
         (row "seal " "record " "Cryptographic signature ")))
     (subsection
       "Actor Record"
+      (p "Every action has an actor. Not a username—a cryptographic identity that can be verified mathematically.")
       (code scheme "(define-record-type <audit-actor>\n  (make-audit-actor principal authorization-chain)\n  audit-actor?\n  (principal actor-principal)              ; Public key blob\n  (authorization-chain actor-authorization-chain))  ; SPKI cert chain")
-      (p "The actor is identified by: - Principal: Ed25519 public key (32 bytes) - Authorization chain: Optional SPKI certificate chain proving delegation"))
+      (p "The actor is identified by:")
+      (list
+        (item "Principal: Ed25519 public key (32 bytes) - unforgeable identity")
+        (item "Authorization chain: Optional SPKI certificate chain proving delegation"))
+      (p "The authorization chain answers \"under whose authority?\" - crucial for auditing delegated actions."))
     (subsection
       "Action Record"
+      (p "Actions are structured as verb-object-parameters, mirroring natural language: \"Alice committed version 1.0 to the vault.\"")
       (code scheme "(define-record-type <audit-action>\n  (make-audit-action verb object parameters)\n  audit-action?\n  (verb action-verb)        ; Symbol: seal-commit, seal-publish, etc.\n  (object action-object)    ; Primary target\n  (parameters action-parameters))  ; Additional arguments")
-      (p "Standard verbs: - seal-commit - Version control commit - seal-publish - Release publication - seal-subscribe - Subscription to remote - seal-synchronize - Bidirectional sync - seal-release - Version tagging"))
+      (p "Standard verbs:")
+      (table
+        (header "Verb " "Meaning ")
+        (row "seal-commit " "Version control commit to local vault ")
+        (row "seal-publish " "Release publication to remote ")
+        (row "seal-subscribe " "Subscription to remote feed ")
+        (row "seal-synchronize " "Bidirectional sync with peer ")
+        (row "seal-release " "Version tagging for distribution ")))
     (subsection
       "Context Record"
+      (p "Machines record what happened. Humans need to know why. The context record captures motivation in natural language—the commit message, the reason for the release, the justification for the access.")
       (code scheme "(define-record-type <audit-context>\n  (make-audit-context motivation relates-to language)\n  audit-context?\n  (motivation context-motivation)    ; Human explanation\n  (relates-to context-relates-to)    ; Related entries\n  (language context-language))       ; ISO 639-1 code")
-      (p "Context provides: - Motivation: Why the action was taken (human-readable) - Relates-to: Cross-references to related audit entries - Language: For internationalization"))
+      (p "Context provides:")
+      (list
+        (item "Motivation: Why the action was taken, in the actor's own words")
+        (item "Relates-to: Cross-references to related audit entries")
+        (item "Language: ISO 639-1 code for internationalization"))
+      (p "Six months later, \"Fixed the bug\" means nothing. \"Fixed CVE-2026-1234 buffer overflow in certificate parser\" means everything."))
     (subsection
       "Seal Record"
       (code scheme "(define-record-type <audit-seal>\n  (make-audit-seal algorithm content-hash signature)\n  audit-seal?\n  (algorithm seal-algorithm)        ; \"ed25519-sha512\"\n  (content-hash seal-content-hash)  ; SHA-512 of unsealed entry\n  (signature seal-signature))       ; Ed25519 signature")))
@@ -97,24 +120,45 @@
         (item "Verify Ed25519 signature")))
     (subsection
       "audit-chain"
-      (p "Verify entire audit chain.")
+      (p "Verify the entire audit chain from genesis to present. One broken link invalidates everything after it.")
       (code scheme "(audit-chain verify-key: public-key)")
-      (p "Verifies: - Each entry's signature is valid - Parent-id references form valid chain - Sequence numbers are monotonic"))
+      (p "Verifies:")
+      (list
+        (item "Each entry's signature is valid")
+        (item "Parent-id references form unbroken chain")
+        (item "Sequence numbers are strictly monotonic"))
+      (p "A valid chain proves no entries were inserted, deleted, or modified after signing."))
     (subsection
       "audit-read"
       (p "Read specific audit entry.")
       (code scheme "(audit-read sequence: 42)\n(audit-read id: \"sha512:...\")")))
   (section
     "Storage Format"
-    (p "Entries stored as individual S-expression files:")
+    (p "Simplicity over cleverness. Entries are individual S-expression files, one per action, named by sequence number.")
     (code ".vault/audit/\n  1.sexp\n  2.sexp\n  3.sexp\n  ...")
-    (p "File naming by sequence number enables efficient: - Sequential reads - Range queries - Latest entry lookup"))
+    (p "This format trades storage density for operational simplicity:")
+    (list
+      (item "Sequential reads: cat the files in order")
+      (item "Range queries: list files between N and M")
+      (item "Latest entry: highest-numbered file")
+      (item "Debugging: read any entry with a text editor"))
+    (p "No database. No binary format. No special tools required to inspect the audit trail."))
   (section
     "Security Considerations"
     (subsection
       "Threat Model"
-      (p "Trusted: - Local filesystem (during operation) - Ed25519 implementation (libsodium) - Private keys")
-      (p "Untrusted: - Storage medium (after creation) - Network transport - Other actors"))
+      (p "We trust as little as possible.")
+      (p "Trusted:")
+      (list
+        (item "Local filesystem during operation (not after)")
+        (item "Ed25519 implementation (libsodium, audited)")
+        (item "Private keys (your responsibility)"))
+      (p "Untrusted:")
+      (list
+        (item "Storage medium after entry creation")
+        (item "Network transport between nodes")
+        (item "Other actors, including administrators"))
+      (p "This threat model assumes a hostile environment where storage can be tampered with and network traffic can be intercepted. The cryptography protects the audit trail even when everything else is compromised."))
     (subsection
       "Attack Mitigations"
       (table
@@ -126,7 +170,13 @@
         (row "Replay attacks " "Sequence numbers detect duplicates ")))
     (subsection
       "Non-Repudiation"
-      (p "Once an entry is signed and published: - Actor cannot deny performing the action - Timestamp cannot be backdated - Content cannot be altered - Signature mathematically proves authorship")))
+      (p "Once an entry is signed and published, the actor cannot credibly deny it. This is non-repudiation: mathematical proof of authorship.")
+      (list
+        (item "Actor cannot deny performing the action—their key signed it")
+        (item "Timestamp cannot be backdated—hash chain enforces ordering")
+        (item "Content cannot be altered—hash would change")
+        (item "Signature mathematically proves authorship—no \"someone else used my account\""))
+      (p "In court, in audits, in incident response: cryptographic proof beats testimony.")))
   (section
     "Integration Points"
     (subsection
@@ -155,10 +205,10 @@
     (subsection
       "Dependencies"
       (list
-        (item "crypto-ffi")
-        (item "Ed25519 signatures, SHA-512 hashing - srfi-1")
-        (item "List utilities - srfi-4 - u8vectors for binary data - srfi-13")
-        (item "String utilities")))
+        (item "crypto-ffi: Ed25519 signatures, SHA-512 hashing")
+        (item "srfi-1: List utilities")
+        (item "srfi-4: u8vectors for binary data")
+        (item "srfi-13: String utilities")))
     (subsection
       "Performance Considerations"
       (list
@@ -174,7 +224,6 @@
       (item "SDSI/SPKI - RFC 2693, RFC 2692")))
   (section
     "Changelog"
-    (list
-      (item "2026-01-06")
-      (item "Initial specification"))))
+    (p "2026-01-19 - Expanded narrative and rationale")
+    (p "2026-01-06 - Initial specification")))
 
