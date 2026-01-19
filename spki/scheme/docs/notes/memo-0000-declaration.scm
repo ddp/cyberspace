@@ -41,7 +41,7 @@
       (row "0" "Declaration" "Thou shalt have no central authority")
       (row "1" "Conventions" "Thou shalt document in S-expressions")
       (row "2" "Architecture" "Thou shalt know the vision")
-      (row "3" "SPKI Authorization" "Keys are principals, capabilities are rights")
+      (row "3" "Public Key Authorization" "Keys are principals, capabilities are rights")
       (row "4" "Shamir Sharing" "No single point of failure")
       (row "5" "Audit Trail" "All actions witnessed, none forgotten")
       (row "6" "Vault Architecture" "Content-addressed truth")
