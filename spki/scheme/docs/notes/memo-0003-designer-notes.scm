@@ -28,7 +28,16 @@
 
     (subsection
       "1.2 Why Scheme"
-      (p "Scheme was chosen not for nostalgia but for precision. Homoiconicity makes S-expressions natural for both code and data - certificates, audit records, and configuration are all readable by the same parser that reads the implementation.")
+      (p "Scheme was chosen because its homoiconic S-expressions make the representation of programs and structured data the same kind of thing. One parser, one set of tools works uniformly over code, certificates, audit trails, and configuration.")
+      (p "In a homoiconic language, the primary representation of programs is also a data structure in a primitive type of the language. Scheme uses S-expressions—nested lists and atoms—as both surface syntax and natural tree-shaped data. The abstract syntax tree and textual form closely align.")
+      (p "The same reader parses program text, configuration records, and application data into a single uniform format. Certificates, audit records, memos, and code are all S-expressions manipulated with the same combinators:")
+      (code scheme ";; All the same representation
+(read)           ; parse code
+(read-cert)      ; parse certificate
+(read-audit)     ; parse audit trail
+(kwic 'soup)     ; search memos")
+      (p "One minimal, well-specified parser eliminates impedance mismatches between code format and data format. No JSON-to-object mapping. No protobuf schema compiler. Structures representing policies look exactly like structures representing the code enforcing them.")
+      (p "When you (kwic 'soup) you search S-expressions with S-expressions. The memos are data. The code is data. The boundary dissolves.")
       (p "The language that Abelson and Sussman used to teach computational thinking at MIT is the same language used to implement the security architecture that MIT research defined. Full circle.")
       (p "Cyberspace Scheme is intentionally R5RS and R7RS-small, following CHICKEN Scheme's philosophy: a small, portable core with extensions as libraries rather than language features. R5RS (1998) remains the most widely implemented Scheme standard. R7RS-small (2013) preserves that minimalist tradition while adding practical improvements like define-library. The large dialect (R7RS-large, ongoing) is explicitly avoided - complexity belongs in libraries, not the language specification.")
       (p "CHICKEN was chosen over faster implementations (Chez, Racket, Gambit) for its elegance and deployment model. CHICKEN compiles to C, producing standalone executables with no runtime dependencies. The egg system provides a curated library ecosystem. Speed matters less than simplicity when the bottleneck is cryptographic operations in libsodium, not interpreter overhead.")))
@@ -300,6 +309,7 @@
 
   (section
     "Changelog"
+    (p "- 2026-01-18 — Expanded Why Scheme with homoiconicity rationale (section 1.2)")
     (p "- 2026-01-18 — Added The Koan (section 8.6): complexity serves simplicity")
     (p "- 2026-01-17 — Added Cryptographic Selections section (section 9)")
     (p "- 2026-01-17 — Corrected heritage: SDSI/Rivest, SPKI/Ellison, IETF merger (section 1.1)")

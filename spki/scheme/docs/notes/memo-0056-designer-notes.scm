@@ -46,20 +46,5 @@
     (code "L0: os, crypto-ffi, sexp, capability, inspector\nL1: mdns, fips, audit, wordlist, bloom, catalog, keyring, portal\nL2: cert\nL3: security\nL4: vault\nL5: enroll, gossip\nL6: auto-enroll\nL7: ui")
     (p "Clean removes .forge/*.meta with .so files - stale metadata causes git conflicts."))
   (section
-    "5. Why Scheme (2026-01-18)"
-    (p "Scheme was chosen because its homoiconic S-expressions make the representation of programs and structured data the same kind of thing. One parser, one set of tools works uniformly over code, certificates, audit trails, and configuration.")
-    (subsection
-      "5.1 Homoiconicity"
-      (p "In a homoiconic language, the primary representation of programs is also a data structure in a primitive type of the language. Scheme uses S-expressions—nested lists and atoms—as both surface syntax and natural tree-shaped data. The abstract syntax tree and textual form closely align."))
-    (subsection
-      "5.2 One Representation"
-      (p "The same reader parses program text, configuration records, and application data into a single uniform format. Certificates, audit records, memos, and code are all S-expressions manipulated with the same combinators.")
-      (code ";; All the same representation\n(read)           ; parse code\n(read-cert)      ; parse certificate\n(read-audit)     ; parse audit trail\n(kwic 'soup)     ; search memos"))
-    (subsection
-      "5.3 Practical Benefits"
-      (p "One minimal, well-specified parser eliminates impedance mismatches between code format and data format. No JSON-to-object mapping. No protobuf schema compiler. Structures representing policies look exactly like structures representing the code enforcing them.")
-      (p "When you (kwic 'soup) you search S-expressions with S-expressions. The memos are data. The code is data. The boundary dissolves.")))
-  (section
     "Changelog"
-    (p "2026-01-18 - Add homoiconicity rationale")
     (p "2026-01-18 - Initial notes from CLI/search session")))
