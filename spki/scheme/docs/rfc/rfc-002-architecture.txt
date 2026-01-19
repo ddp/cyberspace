@@ -285,6 +285,31 @@ Survive key loss with Shamir splitting.
 
 Federated distribution without central registry. See RFC-001.
 
+The fundamental insight:
+
+
+    "A node is a λ that accepts or rejects artifacts."
+
+Everything else is implementation detail. A node is a closure that
+captures identity, a trust predicate, a store, and a Lamport clock.
+Artifacts flow between nodes. Each node decides whether to welcome or
+reject based on its trust function.
+
+
+    ;; A node is a λ
+    (define (make-node name trust?)
+      (let ((store '()) (clock 0))
+        (lambda (op artifact)
+          (if (and (eq? op 'receive) (trust? (signer artifact)))
+              (begin
+                (set! clock (+ 1 (max clock (lamport artifact))))
+                (set! store (cons artifact store))
+                `(welcomed at λ ,clock))
+              '(rejected)))))
+
+The weave flows where trust allows. Consent by λ. Privacy by
+architecture.
+
 
     (seal-publish "1.0.0" remote: "/shared/releases")
     (seal-subscribe "/shared/releases" verify-key: alice-pub)
