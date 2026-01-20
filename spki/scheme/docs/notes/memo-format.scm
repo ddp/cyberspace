@@ -211,7 +211,7 @@
 (define (text->svg-diagram text)
   "Convert text with box-drawing characters to SVG.
    Box characters become geometric primitives (lines/rects).
-   Text characters are positioned at exact pixel coordinates."
+   Text characters are grouped into spans for proper rendering."
   (let* ((raw-lines (string-split text "\n"))
          ;; Normalize line widths so right box edges align properly
          (lines (normalize-box-lines raw-lines))
@@ -221,32 +221,44 @@
          (height (* nrows cell-height))
          (elements '()))
 
-    ;; Process each character
+    ;; Process each line, grouping consecutive text characters
     (let row-loop ((lines lines) (row 0))
       (when (pair? lines)
         (let* ((line (car lines))
-               (chars (utf8-chars line)))
-          (let col-loop ((chars chars) (col 0))
-            (when (pair? chars)
-              (let* ((char-pair (car chars))
-                     (cp (car char-pair))
-                     (char-str (cdr char-pair))
-                     ;; Center of this cell
-                     (cx (+ (* col cell-width) (/ cell-width 2)))
-                     (cy (+ (* row cell-height) (/ cell-height 2))))
-                (cond
-                  ;; Box-drawing character - get SVG primitives
-                  ((box-drawing-codepoint? cp)
-                   (let ((prims (codepoint->svg cp cx cy)))
-                     (set! elements (append elements prims))))
-                  ;; Space - skip
-                  ((= cp 32) #f)
-                  ;; Regular text character - emit as text element
-                  (else
-                   (set! elements
-                         (append elements
-                                 `((text ,cx ,cy ,char-str))))))
-                (col-loop (cdr chars) (+ col 1))))))
+               (chars (utf8-chars line))
+               (cy (+ (* row cell-height) (/ cell-height 2))))
+          ;; Process chars, accumulating text runs
+          (let col-loop ((chars chars) (col 0) (text-run '()) (run-start 0))
+            (define (flush-text-run)
+              (when (pair? text-run)
+                (let* ((text-str (apply string-append (reverse text-run)))
+                       (start-x (* run-start cell-width)))
+                  (set! elements
+                        (append elements
+                                `((text-span ,start-x ,cy ,text-str)))))))
+            (if (null? chars)
+                ;; End of line - flush any pending text
+                (flush-text-run)
+                (let* ((char-pair (car chars))
+                       (cp (car char-pair))
+                       (char-str (cdr char-pair))
+                       (cx (+ (* col cell-width) (/ cell-width 2))))
+                  (cond
+                    ;; Box-drawing character - flush text, emit primitive
+                    ((box-drawing-codepoint? cp)
+                     (flush-text-run)
+                     (let ((prims (codepoint->svg cp cx cy)))
+                       (set! elements (append elements prims)))
+                     (col-loop (cdr chars) (+ col 1) '() (+ col 1)))
+                    ;; Space - flush text, skip
+                    ((= cp 32)
+                     (flush-text-run)
+                     (col-loop (cdr chars) (+ col 1) '() (+ col 1)))
+                    ;; Regular text character - accumulate
+                    (else
+                     (col-loop (cdr chars) (+ col 1)
+                               (cons char-str text-run)
+                               (if (null? text-run) col run-start))))))))
         (row-loop (cdr lines) (+ row 1))))
 
     ;; Build SVG string
@@ -258,7 +270,7 @@
       (display "<style>\n" out)
       (display "  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }\n" out)
       (display "  .diagram rect { fill: currentColor; }\n" out)
-      (display "  .diagram text { font-family: monospace; font-size: 14px; fill: currentColor; text-anchor: middle; dominant-baseline: central; }\n" out)
+      (display "  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }\n" out)
       (display "</style>\n" out)
 
       ;; Emit elements
@@ -279,7 +291,7 @@
                   (h (list-ref elem 4)))
               (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\"/>\n"
                                x y w h) out)))
-           ((text)
+           ((text-span)
             (let ((x (list-ref elem 1))
                   (y (list-ref elem 2))
                   (s (list-ref elem 3)))
