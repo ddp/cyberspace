@@ -38,7 +38,8 @@
         srfi-13
         srfi-69   ; hash tables
         (chicken tcp)
-        tty-ffi)  ; raw char input for immediate keypress
+        tty-ffi   ; raw char input for immediate keypress
+        linenoise) ; line editing with history
 
 ;;; ============================================================
 ;;; Command Line Interface
@@ -5303,6 +5304,8 @@ Cyberspace REPL - Available Commands
   "Check if cmd is a recognized novice command"
   (and (symbol? cmd)
        (or (assq cmd *command-aliases*)
+           ;; Also accept resolved command names (values in alias alist)
+           (find (lambda (pair) (eq? (cdr pair) cmd)) *command-aliases*)
            ;; Also allow some common Scheme functions
            (memq cmd '(+ - * / define let if cond lambda quote
                        car cdr cons list first second third
@@ -6688,59 +6691,39 @@ See: Memo-0000 Declaration of Cyberspace
 (define (stty-cooked) (tty-set-cooked))
 
 ;; Read line with immediate '.' and '?' handling
-(define (repl-read-line prompt)
-  "Read line with immediate single-char shortcuts"
-  (display prompt)
-  (flush-output)
-  (stty-raw)
-  (let loop ((chars '()))
-    (let ((code (tty-raw-char)))  ; FFI getchar bypasses Scheme buffering
-      (let ((c (if (= code -1) (eof-object) (integer->char code))))
-      (cond
-        ;; EOF
-        ((eof-object? c)
-         (stty-cooked)
-         c)
-        ;; Immediate commands - only when first char
-        ((and (null? chars) (char=? c #\.))
-         (display ".\n")
-         (stty-cooked)
-         ".")
-        ((and (null? chars) (char=? c #\?))
-         (display "?\n")
-         (stty-cooked)
-         "?")
-        ;; Enter - return accumulated line
-        ((or (char=? c #\newline) (char=? c #\return))
-         (newline)
-         (stty-cooked)
-         (strip-ansi (list->string (reverse chars))))
-        ;; Backspace/DEL
-        ((or (char=? c #\backspace) (char=? c #\delete) (= (char->integer c) 127))
-         (if (null? chars)
-             (loop chars)
-             (begin
-               (display "\b \b")  ; erase char
-               (flush-output)
-               (loop (cdr chars)))))
-        ;; Ctrl-C
-        ((= (char->integer c) 3)
-         (stty-cooked)
-         (newline)
-         (signal-condition! (make-property-condition 'user-interrupt)))
-        ;; Ctrl-D on empty line = EOF
-        ((and (null? chars) (= (char->integer c) 4))
-         (stty-cooked)
-         (eof-object))
-        ;; Regular char - echo and accumulate
-        (else
-         (display c)
-         (flush-output)
-         (loop (cons c chars))))))))
+;; History file in vault or home directory
+(define *history-file*
+  (let ((vault-hist ".vault/repl-history")
+        (home-hist (make-pathname (get-environment-variable "HOME") ".cyberspace-history")))
+    (if (directory-exists? ".vault")
+        vault-hist
+        home-hist)))
 
-;; History stubs - no-op without linenoise
-(define (repl-history-add line) #f)
-(define (repl-history-save) #f)
+(define *history-loaded* #f)
+
+(define (repl-history-load)
+  "Load history from file"
+  (unless *history-loaded*
+    (when (file-exists? *history-file*)
+      (linenoise#load-history-from-file *history-file*))
+    (set! *history-loaded* #t)))
+
+(define (repl-history-add line)
+  "Add line to history"
+  (when (and (string? line) (> (string-length line) 0))
+    (linenoise#history-add line)))
+
+(define (repl-history-save)
+  "Save history to file"
+  (linenoise#save-history-to-file *history-file*))
+
+(define (repl-read-line prompt)
+  "Read line with linenoise (history, editing, Ctrl-a/e, arrows)"
+  (repl-history-load)
+  (let ((line (linenoise#linenoise prompt)))
+    (if line
+        (strip-ansi line)
+        line)))  ; #f on EOF
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
@@ -7016,6 +6999,10 @@ See: Memo-0000 Declaration of Cyberspace
                         ;; novice/schemer mode toggles
                         ((equal? expr '(novice)) (novice))
                         ((equal? expr '(schemer)) (schemer))
+                        ;; Module imports not in eval env - call directly
+                        ((equal? expr '(introspect-system)) (status))
+                        ((and (pair? expr) (eq? (car expr) 'soup))
+                         (apply soup (cdr expr)))
                         ;; Novice mode guard - catch unrecognized commands
                         ((and (eq? *user-mode* 'novice)
                               (pair? expr)

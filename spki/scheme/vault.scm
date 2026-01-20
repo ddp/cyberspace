@@ -1758,7 +1758,10 @@ Object Types:
                                 types)))
            (last-idx (- (length non-empty) 1)))
       (if (zero? total)
-          (printf "~%Empty~%")
+          (let ((name (realm-name)))
+            (if name
+                (printf "~%Empty (realm: ~a)~%" name)
+                (printf "~%Empty~%")))
           (begin
             (printf "~%Soup~%")
             (let loop ((remaining non-empty) (idx 0))
