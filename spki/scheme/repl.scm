@@ -656,7 +656,8 @@
     ;; We include library paths for all modules since it's harmless
     ;; for those that don't need it and ensures correct linking for
     ;; the crypto dependency chain (Memo-056: covert channel awareness).
-    (let* ((strict-exempt '())  ; none - all modules typed
+    ;; vault uses set! in lambda closures which -strict-types breaks
+    (let* ((strict-exempt '("vault"))
            (beta-flags (if (and *beta-build* (not (member module strict-exempt)))
                            " -strict-types" ""))
            ;; crypto-ffi needs includes for header files, others just need lib path
@@ -5263,7 +5264,7 @@ Cyberspace REPL - Available Commands
 
 (define *command-aliases*
   '((status    . introspect-system)
-    (vault     . introspect-system)
+    (vault     . soup)
     (commit    . tracked-commit)
     (release   . tracked-release)
     (archive   . tracked-archive)
