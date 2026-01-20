@@ -150,6 +150,24 @@
         (row "\"No write up\" " "Attenuation only " "∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁) "))
       (p "The capability graph IS the lattice. Delegation flows down. Authority cannot flow up."))
     (subsection
+      "Beyond Bell-LaPadula and Biba"
+      (p "Bell-LaPadula (1973) and Biba (1977) formalized information flow as lattice properties enforced by a central reference monitor. Both require:")
+      (list
+        (item "Security labels attached to subjects and objects")
+        (item "A trusted reference monitor that mediates all access")
+        (item "Hierarchical classification (UNCLASSIFIED < SECRET < TOP SECRET)"))
+      (p "Cyberspace inverts this architecture:")
+      (table
+        (header "Traditional MAC " "Capability-Based Flow ")
+        (row "Labels on objects " "No labels—objects are just content ")
+        (row "Central reference monitor " "Decentralized verification ")
+        (row "Policy in the monitor " "Policy in the certificates ")
+        (row "Lattice of security levels " "Graph of capability delegation ")
+        (row "Clearance assigned by authority " "Capability granted by delegation "))
+      (p "The key insight: information flow is measurable. Every channel has bandwidth—bits per second, bytes per second. Shannon's information theory applies. If you can measure the flow, you can reason about where information leaks.")
+      (p "In capability systems, the flow is explicit: you hold a capability or you don't. The audit trail records every exercise. Covert channels remain (timing, storage), but the overt channels are precisely the capability graph. No hidden ambient authority. No implicit flows through the reference monitor's state.")
+      (p "This is not weaker than MAC—it's differently shaped. Bell-LaPadula prevents \"read up\" by checking labels; capabilities prevent it by requiring possession. The math is equivalent; the architecture is decentralized."))
+    (subsection
       "Confidentiality"
       (p "Information flows only through capabilities:")
       (code "∀ read(P,O): P ∈ holders(capread(O))\n∀ write(P,O): P ∈ holders(capwrite(O))\n∀ delegate(P₁,P₂,C): C ⊆ capabilities(P₁)")
@@ -461,6 +479,8 @@
   (section
     "Changelog"
     (list
+      (item "2026-01-20")
+      (item "Add 'Beyond Bell-LaPadula and Biba' subsection: capability-based flow vs MAC, Shannon bandwidth")
       (item "2026-01-16")
       (item "Add Unlinkability section: blind signatures, bearer capabilities, Chaum integration")
       (item "2026-01-08")
