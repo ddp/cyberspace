@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
+#include <sys/select.h>
 
 static struct termios orig_termios;
 static int raw_mode = 0;
@@ -57,10 +58,22 @@ int tty_get_cols(void) {
 int tty_is_tty(void) {
     return isatty(STDIN_FILENO);
 }
+
+/* Check if input is available (with timeout in milliseconds) */
+int tty_char_ready(int timeout_ms) {
+    fd_set fds;
+    struct timeval tv;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0;
+}
 <#
 
 (module tty-ffi
   (tty-raw-char
+   tty-char-ready?
    tty-set-raw
    tty-set-cooked
    tty-rows
@@ -74,6 +87,10 @@ int tty_is_tty(void) {
   ;; Read one char directly from fd 0 (bypasses all buffering)
   (define tty-raw-char
     (foreign-lambda int "tty_read_char"))
+
+  ;; Check if input is ready (with timeout in ms, 0 = poll)
+  (define tty-char-ready?
+    (foreign-lambda bool "tty_char_ready" int))
 
   ;; Set terminal to raw mode via termios
   (define tty-set-raw

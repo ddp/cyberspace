@@ -799,22 +799,27 @@
   (let ((c (tty-raw-char)))
     (cond
      ((= c 27)  ; ESC
-      (let ((c2 (tty-raw-char)))
-        (cond
-         ((= c2 91)  ; [
-          (let ((c3 (tty-raw-char)))
-            (case c3
-              ((65) 'up)
-              ((66) 'down)
-              ((67) 'right)
-              ((68) 'left)
-              ((72) 'home)
-              ((70) 'end)
-              ((51) (tty-raw-char) 'delete)  ; ~
-              ((53) (tty-raw-char) 'page-up)
-              ((54) (tty-raw-char) 'page-down)
-              (else 'unknown))))
-         (else 'escape))))
+      ;; Check if more input within 50ms (escape sequence) or bare ESC
+      (if (tty-char-ready? 50)
+          (let ((c2 (tty-raw-char)))
+            (cond
+             ((= c2 91)  ; [
+              (let ((c3 (tty-raw-char)))
+                (case c3
+                  ((65) 'up)
+                  ((66) 'down)
+                  ((67) 'right)
+                  ((68) 'left)
+                  ((72) 'home)
+                  ((70) 'end)
+                  ((51) (tty-raw-char) 'delete)  ; ~
+                  ((53) (tty-raw-char) 'page-up)
+                  ((54) (tty-raw-char) 'page-down)
+                  (else 'unknown))))
+             ((= c2 27)  ; ESC ESC = still just escape
+              'escape)
+             (else 'escape)))
+          'escape))
      ((= c 127) 'backspace)
      ((= c 13) 'enter)
      ((= c 9) 'tab)
@@ -957,6 +962,12 @@
         (screen-clear) (loop))
        ((equal? key '(ctrl . #\E))
         (set-editor-wrap-mode! ed (not (editor-wrap-mode? ed)))
+        (loop))
+
+       ;; ESC - cancel/clear
+       ((eq? key 'escape)
+        (editor-unmark! ed)
+        (set-editor-status! ed "")
         (loop))
 
        ;; Page up/down
