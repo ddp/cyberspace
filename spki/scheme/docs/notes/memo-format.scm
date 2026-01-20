@@ -178,28 +178,66 @@
          (let ((last-cp (car (last-pair chars))))
            (memv (car last-cp) '(#x2502 #x2510 #x2518 #x2524 #x2551 #x2557 #x255D))))))
 
-(define (normalize-box-lines lines)
-  "Pad lines to same width, only if all box-edge lines have same width.
-   Otherwise, return lines unchanged to preserve intentional layout."
+(define (fix-box-line-widths lines)
+  "Auto-fix box diagram lines to have consistent right-edge alignment.
+   Lines ending with box edges are adjusted to match the most common width."
   (let* ((char-counts (map utf8-length lines))
-         (max-len (apply max 1 char-counts))
          ;; Find widths of lines ending with box edges
-         (box-edge-widths (filter-map
-                           (lambda (line count)
-                             (and (string-ends-with-box-edge? line) count))
-                           lines char-counts)))
-    ;; Only normalize if all box edges are at same width, or no box edges
-    (if (or (null? box-edge-widths)
-            (apply = box-edge-widths))
-        ;; All box edges aligned - normalize all lines to max width
-        (map (lambda (line count)
-               (let ((pad (- max-len count)))
-                 (if (<= pad 0)
-                     line
-                     (string-append line (make-string pad #\space)))))
-             lines char-counts)
-        ;; Box edges at different widths - don't normalize
-        lines)))
+         (box-edge-info (filter-map
+                         (lambda (line count)
+                           (and (string-ends-with-box-edge? line)
+                                (cons count line)))
+                         lines char-counts)))
+    (if (null? box-edge-info)
+        lines  ; No box edges, nothing to fix
+        (let* ((edge-widths (map car box-edge-info))
+               ;; Target width = most common width among box-edge lines
+               (target-width (let ((counts (map (lambda (w)
+                                                  (cons w (count (lambda (x) (= x w)) edge-widths)))
+                                                (delete-duplicates edge-widths))))
+                               (car (car (sort counts (lambda (a b) (> (cdr a) (cdr b)))))))))
+          (map (lambda (line count)
+                 (if (not (string-ends-with-box-edge? line))
+                     line  ; Not a box-edge line, leave unchanged
+                     (let ((diff (- target-width count)))
+                       (cond
+                         ((= diff 0) line)  ; Already correct
+                         ((> diff 0)
+                          ;; Need to add spaces before the edge
+                          (let* ((chars (utf8-chars line))
+                                 (n (length chars))
+                                 (last-char (cdr (list-ref chars (- n 1))))
+                                 (prefix-strs (map cdr (take chars (- n 1))))
+                                 (prefix (apply string-append prefix-strs)))
+                            (string-append prefix (make-string diff #\space) last-char)))
+                         (else
+                          ;; Need to remove spaces before the edge
+                          (let* ((chars (utf8-chars line))
+                                 (n (length chars))
+                                 (last-char (cdr (list-ref chars (- n 1))))
+                                 ;; Find and remove trailing spaces before edge
+                                 (prefix-chars (take chars (- n 1)))
+                                 (trimmed (let trim-loop ((cs (reverse prefix-chars))
+                                                          (to-remove (- diff)))
+                                            (if (or (null? cs) (>= to-remove 0))
+                                                (reverse cs)
+                                                (if (= (car (car cs)) 32)  ; space
+                                                    (trim-loop (cdr cs) (+ to-remove 1))
+                                                    (reverse cs))))))
+                            (string-append (apply string-append (map cdr trimmed)) last-char)))))))
+               lines char-counts)))))
+
+(define (normalize-box-lines lines)
+  "Normalize box diagram lines - fix widths and pad to max."
+  (let* ((fixed (fix-box-line-widths lines))
+         (char-counts (map utf8-length fixed))
+         (max-len (apply max 1 char-counts)))
+    (map (lambda (line count)
+           (let ((pad (- max-len count)))
+             (if (<= pad 0)
+                 line
+                 (string-append line (make-string pad #\space)))))
+         fixed char-counts)))
 
 (define (box-drawing-codepoint? cp)
   "Check if codepoint is a box-drawing character."
