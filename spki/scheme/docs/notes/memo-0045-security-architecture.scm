@@ -3,7 +3,7 @@
 
 (memo
   (number 45)
-  (title "Cyberspace Security Architecture")
+  (title "Security Architecture")
   (section
     "Abstract"
     (p "This document defines how cyberspace protects itself. The model is simple: capabilities all the way down. Objects are content. Authorization flows through signed certificates. No labels, no ACLs, no ambient authority. You hold a capability or you don't.")
