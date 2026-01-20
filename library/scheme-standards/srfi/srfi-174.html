@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SRFI 174: POSIX Timespecs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+P<small>OSIX</small> Timespecs
+
+<h1>Author</h1>
+
+John Cowan &lt;cowan@ccil.org&gt;
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+174+at+srfi+dotschemers+dot+org">srfi-174@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-174">archive</a>.</p>
+<ul>
+  <li>Received: 2019-09-14</li>
+  <li>Draft #1 published: 2019-09-16</li>
+  <li>Draft #2 published: 2019-11-10</li>
+  <li>Draft #3 published: 2019-11-11</li>
+  <li>Finalized: 2019-12-21</li>
+  <li>Revised to fix errata:<ul>
+    <li>2020-02-03 (Fixed markup errors and merge mistake.)</li></ul></li>
+</ul>
+
+<h1>Abstract</h1>
+
+<p>This SRFI defines the trivial type <i>timespec</i>, which is used
+to represent the <code>struct timespec</code> defined by the
+<a href="https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/time.h.html">
+P<small>OSIX</small> <code>&lt;time.h&gt;</code> header</a>.</p>
+
+<h1>Rationale</h1>
+
+<p>The reason for putting this very simple and straightforward type
+into a SRFI (and library) of its own is that timespecs are part of the
+interface for more than one SRFI.  If they are defined in just
+one SRFI and imported by the rest, that produces an otherwise useless
+and unnecessary dependency on the SRFI containing the definition.
+This arises particularly
+in R6RS and R7RS because record types are generative (distinct
+definitions lead to distinct record types) and because most implementations
+report a warning or even an error if the same identifier is imported from
+more than one library, unless they have both imported it in turn
+from the same original library.</p>
+
+<h1>Specification</h1>
+
+<p>Timespec is an immutable type that holds two exact integer values:</p>
+<ul>
+<li><p>The <i>seconds</i> component &mdash; If non-negative, the number of whole
+seconds since a particular
+<a href="https://en.wikipedia.org/wiki/Epoch_(computing)">epoch</a>.
+If negative, the number of whole seconds to go back in time from the epoch.
+Normally excludes leap seconds (i.e. a leap second that occurs between the
+epoch and <i>seconds</i> does not increment or decrement <i>seconds</i>).
+The minimum range of values is 2<sup>-39</sup> (inclusive)
+to 2<sup>39</sup> (exclusive), allowing a range of at least 15,000 years
+before and after the epoch.</p></li>
+<li><p>The <i>nanoseconds</i> component &mdash; The partial second added to
+<i>seconds</i>. Always non-negative and less than 10<sup>9</sup>.
+If <i>seconds</i> is non-negative, this is the number of additional
+nanoseconds to go toward the future after <i>seconds</i>.
+If <i>seconds</i> is negative, this is the number of additional nanoseconds
+to go further back in time before <i>seconds</i>.</p></li>
+</ul>
+<p>It is recommended, but not absolutely required, that timespecs
+be a disjoint and immutable type.  For efficiency's sake they may be represented
+otherwise in particular implementations.  If they are not disjoint, the
+exact representation (such as a SRFI 19 time object
+or a pair) must be documented by the implementation.</p>
+
+<p>If timespecs are represented as SRFI 19 time objects,
+the <code>timespec</code> constructor must set the
+SRFI 19 time type to <code>TIME_UTC</code>.
+It is an error to mutate a time object (or pair, or other type)
+that is serving as a timespec,
+and if this is done, code relying on the immutability of timespecs will break.</p>
+
+<p>Note that IEEE 64-bit floats are <i>not</i> a sufficient
+representation for timespecs because their nanosecond-precision range
+is confined to a period of 208 days centered on the epoch.</p>
+
+<p>In no case can this SRFI guarantee anything about the accuracy of
+timespecs, or the precision of any timespec sources. Since it is difficult
+to usefully determine and communicate timestamp precision and accuracy
+in most applications, the timespec type does not contain any standard
+field to hold such information.</p>
+
+<h2>Documentation requirements</h2>
+
+<p>An implementation of this SRFI must document:</p>
+<ul>
+<li>Which concrete representation is used for the timespec abstract
+data type (a disjoint type, a pair, etc.)</li>
+<li>The minimum and maximum values of the <i>seconds</i>
+component.</li>
+</ul>
+
+<h2>Procedures</h2>
+
+<p><code>(timespec </code><i>seconds nanoseconds</i><code>)</code></p>
+
+<p>Returns a timespec with the given <i>seconds</i>
+and <i>nanoseconds</i> components.</p>
+
+<p><code>(timespec? </code><i>obj</i><code>)</code></p>
+
+<p>Returns <code>#f</code> if <i>obj</i> is definitely not a timespec,
+and <code>#t</code> if it is most probably one.</p>
+
+<p>If timespecs are a disjoint type, this procedure simply tests whether
+<i>obj</i> belongs to that type.  If not, then each component
+is checked to see if it is an exact integer, and in the case
+of the <i>nanoseconds</i> component, whether it is a non-negative integer
+less than 10<sup>9</sup>.
+In addition, if the implementation knows that its fixnum width is at least 40 bits,
+it can also check that the value of the seconds component is a fixnum.</p>
+
+<p><code>(timespec-seconds </code><i>timespec</i><code>)</code></p>
+
+<p>Returns the <i>seconds</i> component of <i>timespec</i>.
+The result must be the same (in the sense of <code>eqv?</code>)
+as the value passed to <code>timespec</code>.</p>
+
+<p><code>(timespec-nanoseconds </code><i>timespec</i><code>)</code></p>
+
+<p>Returns the <i>nanoseconds</i> component of <i>timespec</i>.
+The result must be the same (in the sense of <code>eqv?</code>)
+as the value passed to <code>timespec</code>.</p>
+
+<p><code>(inexact->timespec </code><i>inexact</i><code>)</code></p>
+
+<p>Converts <i>inexact</i> into an approximate number of seconds and
+nanoseconds since the (unspecified) epoch and returns the results as
+a timespec object.</p>
+
+<p><code>(timespec->inexact </code><i>timespec</i><code>)</code></p>
+
+<p>Returns an inexact number representing the seconds from the epoch to
+the value of <i>timespec</i>.</p>
+
+<p>Note that these operations are not inverses, because inexact numbers
+typically do not have nanosecond precision.</p>
+
+<p><code>(timespec=? </code><i>timespec1 timespec2</i><code>)</code></p>
+
+<p>Returns <code>#t</code> if <i>timespec1</i> and <i>timespec2</i>
+represent the same instant of time, and <code>#f</code> otherwise.
+
+<p><code>(timespec&lt;? </code><i>timespec1 timespec2</i><code>)</code></p>
+
+<p>Returns <code>#t</code> if <i>timespec1</i> represents an earlier
+instant of time than <i>timespec2</i>, and <code>#f</code> otherwise.
+
+<p>Note that it is an (undetectable) error to compare two
+timespecs that are relative to different epochs.</p>
+
+<p><code>(timespec-hash </code><i>timespec</i><code>)</code></p>
+
+<p>Returns an exact non-negative integer representing a hash code
+for <i>timespec</i>.</p>
+
+<h1>Implementation</h1>
+
+<p>An implementation of SRFI 174 is in the repository of this SRFI.
+The files are:</p>
+
+<ul>
+<li><code>srfi/174.sld</code> - uses a disjoint type</li>
+<li><code>chibi-tests.scm</code> - Tests using <code>(chibi tests)</code></li>
+</ul>
+<p>Note: A pair-based implementation is also available; simply
+comment out the <code>define-record-type</code> declaration
+in <code>srfi/174.sld</code> and remove the comment markers
+from the declarations that follow.
+</p>
+
+<h1>Acknowledgements</h1>
+
+<p>Discussions between me, Lassi Kortela, and Harold Ancell, mostly on the
+<a href="https://srfi-email.schemers.org/srfi-170/">SRFI 170
+mailing list</a>, made the need for this SRFI clear.</p>
+
+<h1>Copyright</h1>
+Copyright &copy; John Cowan (2019).
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

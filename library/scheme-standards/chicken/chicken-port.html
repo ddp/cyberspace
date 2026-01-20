@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Module (chicken port) - The CHICKEN Scheme wiki</title>
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="/chicken.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body>
+<div id="menu">
+<ul>
+<li><a href="/" class="internal">Wiki</a></li>
+<li><a href="//code.call-cc.org/" class="external">Download</a></li>
+<li><a href="/manual/index" class="internal">Manual</a></li>
+<li><a href="//eggs.call-cc.org" class="external">Eggs</a></li>
+<li><a href="//api.call-cc.org/5/doc/" class="external">API</a></li>
+<li><a href="//tests.call-cc.org/" class="external">Tests</a></li>
+<li><a href="//bugs.call-cc.org/" class="external">Bugs</a></li></ul></div>
+<ul id="page-specific-links">
+<li><a href="?action=show">show</a></li>
+<li><a href="?action=edit" rel="nofollow">edit</a></li>
+<li><a href="?action=history">history</a></li></ul>
+<div id="content">
+<ul class="tags">
+<li>manual</li></ul>
+<div id="toc">
+<ol>
+<li><a href="#module-chicken-port">Module (chicken port)</a>
+<ol>
+<li><a href="#port-attributes">Port attributes</a>
+<ol>
+<li><a href="#port-name">port-name</a></li>
+<li><a href="#port-position">port-position</a></li>
+<li><a href="#set-port-name">set-port-name!</a></li></ol></li>
+<li><a href="#setting-the-file-buffering-mode">Setting the file buffering mode</a>
+<ol>
+<li><a href="#set-buffering-mode">set-buffering-mode!</a></li></ol></li>
+<li><a href="#terminal-ports">Terminal ports</a>
+<ol>
+<li><a href="#terminal-name">terminal-name</a></li>
+<li><a href="#terminal-port">terminal-port?</a></li>
+<li><a href="#terminal-size">terminal-size</a></li></ol></li>
+<li><a href="#inputoutput-port-extensions">Input/output port extensions</a>
+<ol>
+<li><a href="#with-output-to-port">with-output-to-port</a></li>
+<li><a href="#make-input-port">make-input-port</a></li>
+<li><a href="#make-output-port">make-output-port</a></li>
+<li><a href="#with-error-output-to-port">with-error-output-to-port</a></li>
+<li><a href="#with-input-from-port">with-input-from-port</a></li></ol></li>
+<li><a href="#string-port-extensions">String-port extensions</a>
+<ol>
+<li><a href="#call-with-input-string">call-with-input-string</a></li>
+<li><a href="#call-with-output-string">call-with-output-string</a></li>
+<li><a href="#with-input-from-string">with-input-from-string</a></li>
+<li><a href="#with-output-to-string">with-output-to-string</a></li>
+<li><a href="#with-error-output-to-string">with-error-output-to-string</a></li></ol></li>
+<li><a href="#port-iterators">Port iterators</a>
+<ol>
+<li><a href="#port-for-each">port-for-each</a></li>
+<li><a href="#port-map">port-map</a></li>
+<li><a href="#port-fold">port-fold</a></li>
+<li><a href="#copy-port">copy-port</a></li></ol></li>
+<li><a href="#funky-ports">Funky ports</a>
+<ol>
+<li><a href="#make-bidirectional-port">make-bidirectional-port</a></li>
+<li><a href="#make-broadcast-port">make-broadcast-port</a></li>
+<li><a href="#make-concatenated-port">make-concatenated-port</a></li></ol></li></ol></li></ol></div><a href="#module-chicken-port">
+<h2 id="module-chicken-port">Module (chicken port)</h2></a>
+<p>This module contains various extended port definitions.</p>
+<p>All errors related to failing port operations will signal a condition of kind <tt>exn</tt>.</p>
+<ul>
+<li>New in CHICKEN 5.4.0: Errors caused by underlying C calls that change errno will produce a condition object with an <tt>errno</tt> property, which can be accessed with <tt>(get-condition-property &lt;the-condition-object&gt; 'exn 'errno)</tt>.</li></ul><a href="#port-attributes">
+<h3 id="port-attributes">Port attributes</h3></a><a href="#port-name">
+<h4 id="port-name">port-name</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(port-name [PORT])</tt>
+<br /></span>
+<p>Fetch filename from <tt>PORT</tt>. This returns the filename that was used to open this file. Returns a special tag string, enclosed into parentheses for non-file ports. <tt>PORT</tt> defaults to the value of <tt>(current-input-port)</tt>.</p><a href="#port-position">
+<h4 id="port-position">port-position</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(port-position [PORT])</tt>
+<br /></span>
+<p>Returns the current position of <tt>PORT</tt> as two values: row and column number. If the port does not support such an operation an error is signaled. This procedure is currently only available for input ports. <tt>PORT</tt> defaults to the value of <tt>(current-input-port)</tt>.</p><a href="#set-port-name">
+<h4 id="set-port-name">set-port-name!</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(set-port-name! PORT STRING)</tt>
+<br /></span>
+<p>Sets the name of <tt>PORT</tt> to <tt>STRING</tt>.</p><a href="#setting-the-file-buffering-mode">
+<h3 id="setting-the-file-buffering-mode">Setting the file buffering mode</h3></a><a href="#set-buffering-mode">
+<h4 id="set-buffering-mode">set-buffering-mode!</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(set-buffering-mode! PORT MODE [BUFSIZE])</tt>
+<br /></span>
+<p>Sets the buffering-mode for the file associated with <tt>PORT</tt> to <tt>MODE</tt>, which should be one of the keywords <tt>#:full</tt>, <tt>#:line</tt> or <tt>#:none</tt>. If <tt>BUFSIZE</tt> is specified it determines the size of the buffer to be used (if any).</p>
+<p>This procedure doesn't work on custom ports, such as those created with <tt>make-input-port</tt> or <tt>make-output-port</tt>.</p><a href="#terminal-ports">
+<h3 id="terminal-ports">Terminal ports</h3></a><a href="#terminal-name">
+<h4 id="terminal-name">terminal-name</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(terminal-name PORT)</tt>
+<br /></span>
+<p>Returns the name of the terminal that is connected to <tt>PORT</tt>.</p>
+<p>On Windows, this procedure always raises an exception.</p><a href="#terminal-port">
+<h4 id="terminal-port">terminal-port?</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(terminal-port? PORT)</tt>
+<br /></span>
+<p>Returns <tt>#t</tt> if <tt>PORT</tt> is connected to a terminal and <tt>#f</tt> otherwise.</p><a href="#terminal-size">
+<h4 id="terminal-size">terminal-size</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(terminal-size PORT)</tt>
+<br /></span>
+<p>Returns two values, the number of rows and columns of the terminal that is connected to <tt>PORT</tt> or <tt>0</tt>, <tt>0</tt> if the terminal size can not be obtained.</p>
+<p>On Windows, this procedure always raises an exception.</p><a href="#inputoutput-port-extensions">
+<h3 id="inputoutput-port-extensions">Input/output port extensions</h3></a><a href="#with-output-to-port">
+<h4 id="with-output-to-port">with-output-to-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(with-output-to-port PORT THUNK)</tt>
+<br /></span>
+<p>Call procedure <tt>THUNK</tt> with the current output-port temporarily bound to <tt>PORT</tt>.</p><a href="#make-input-port">
+<h4 id="make-input-port">make-input-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(make-input-port READ-CHAR CHAR-READY? CLOSE [PEEK-CHAR [READ-STRING! [READ-LINE]]])</tt>
+<br /></span>
+<p>Returns a custom input port. Common operations on this port are handled by the given parameters, which should be procedures of no arguments.  The following arguments are all different kinds of reader procedures:</p>
+<ul>
+<li><tt>READ-CHAR</tt> is the most fundamental reader, and must always be present.  It is a thunk which is called when the next character is to be read and it should return a character or <tt>#!eof</tt>.</li>
+<li><tt>CHAR-READY?</tt> is a thunk which is called when <tt>char-ready?</tt> is called on this port and should return <tt>#t</tt> or <tt>#f</tt>.</li>
+<li><tt>CLOSE</tt> is a thunk which is called when the port is closed.</li>
+<li><tt>PEEK-CHAR</tt> is a thunk which is called when <tt>peek-char</tt> is called on this port and should return a character or <tt>#!eof</tt>. If it is not provided or <tt>#f</tt>, <tt>READ-CHAR</tt> will be used instead and the created port object handles peeking automatically (by calling <tt>READ</tt> and buffering the character).</li>
+<li><tt>READ-STRING!</tt> is called when <tt>read-string!</tt> is called (or the higher-level non-mutating <tt>read-string</tt>).  It will be invoked with 4 arguments: the port created by <tt>make-input-port</tt>, the number of bytes to read, a string (or sometimes a blob) to read into (which may be assumed to be big enough to hold the data) and the offset into the buffer at which to put the data to read.  It should return the number of bytes that have successfully been read, which should always be equal to the requested bytes unless EOF was hit, in which case it can be less.  If this procedure is not provided or <tt>#f</tt>, the buffer will be filled by repeated reads to <tt>READ-CHAR</tt>.</li>
+<li><tt>READ-LINE</tt> is called when <tt>read-line</tt> is called.  It will be invoked with two arguments: the port created by <tt>make-input-port</tt> and the maximum number of characters to read (or <tt>#f</tt>).  If this procedure is not provided or <tt>#f</tt>, the buffer will be filled by repeated reads to <tt>READ-CHAR</tt>.</li></ul>
+<p>All the optional procedures except for <tt>PEEK-CHAR</tt> are responsible for updating the port's position, which currently can only be done via low-level slot accessors like <tt>##sys#setslot</tt>; slot 4 is the row number (ie, the line) and slot 5 is the column number (ie, the character on the line).  If the port's positions are not updated, <tt>port-position</tt> won't work.</p><a href="#make-output-port">
+<h4 id="make-output-port">make-output-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(make-output-port WRITE CLOSE [FLUSH])</tt>
+<br /></span>
+<p>Returns a custom output port. Common operations on this port are handled by the given parameters, which should be procedures.  <tt>WRITE</tt> is called when output is sent to the port and receives a single argument, a string.  <tt>CLOSE</tt> is called when the port is closed and should be a procedure of no arguments. <tt>FLUSH</tt> (if provided) is called for flushing the output port.</p><a href="#with-error-output-to-port">
+<h4 id="with-error-output-to-port">with-error-output-to-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(with-error-output-to-port PORT THUNK)</tt>
+<br /></span>
+<p>Call procedure <tt>THUNK</tt> with the current error output-port temporarily bound to <tt>PORT</tt>.</p><a href="#with-input-from-port">
+<h4 id="with-input-from-port">with-input-from-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(with-input-from-port PORT THUNK)</tt>
+<br /></span>
+<p>Call procedure <tt>THUNK</tt> with the current input-port temporarily bound to <tt>PORT</tt>.</p><a href="#string-port-extensions">
+<h3 id="string-port-extensions">String-port extensions</h3></a><a href="#call-with-input-string">
+<h4 id="call-with-input-string">call-with-input-string</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(call-with-input-string STRING PROC)</tt>
+<br /></span>
+<p>Calls the procedure <tt>PROC</tt> with a single argument that is a string-input-port with the contents of <tt>STRING</tt>.</p><a href="#call-with-output-string">
+<h4 id="call-with-output-string">call-with-output-string</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(call-with-output-string PROC)</tt>
+<br /></span>
+<p>Calls the procedure <tt>PROC</tt> with a single argument that is a string-output-port.  Returns the accumulated output-string.</p><a href="#with-input-from-string">
+<h4 id="with-input-from-string">with-input-from-string</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(with-input-from-string STRING THUNK)</tt>
+<br /></span>
+<p>Call procedure <tt>THUNK</tt> with the current input-port temporarily bound to an input-string-port with the contents of <tt>STRING</tt>.</p><a href="#with-output-to-string">
+<h4 id="with-output-to-string">with-output-to-string</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(with-output-to-string THUNK)</tt>
+<br /></span>
+<p>Call procedure <tt>THUNK</tt> with the current output-port temporarily bound to a string-output-port and return the accumulated output string.</p><a href="#with-error-output-to-string">
+<h4 id="with-error-output-to-string">with-error-output-to-string</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(with-error-output-to-string THUNK)</tt>
+<br /></span>
+<p>Call procedure <tt>THUNK</tt> with the current error output-port temporarily bound to a string-output-port and return the accumulated output string.</p><a href="#port-iterators">
+<h3 id="port-iterators">Port iterators</h3></a><a href="#port-for-each">
+<h4 id="port-for-each">port-for-each</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(port-for-each FN THUNK)</tt>
+<br /></span>
+<p>Apply <tt>FN</tt> to successive results of calling the zero argument procedure <tt>THUNK</tt> (typically <tt>read</tt>) until it returns <tt>#!eof</tt>, discarding the results.</p><a href="#port-map">
+<h4 id="port-map">port-map</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(port-map FN THUNK)</tt>
+<br /></span>
+<p>Apply <tt>FN</tt> to successive results of calling the zero argument procedure <tt>THUNK</tt> (typically <tt>read</tt>) until it returns <tt>#!eof</tt>, returning a list of the collected results.</p><a href="#port-fold">
+<h4 id="port-fold">port-fold</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(port-fold FN ACC THUNK)</tt>
+<br /></span>
+<p>Apply <tt>FN</tt> to successive results of calling the zero argument procedure <tt>THUNK</tt>, (typically <tt>read</tt>) passing the <tt>ACC</tt> value as the second argument. The <tt>FN</tt> result becomes the new <tt>ACC</tt> value. When <tt>THUNK</tt> returns <tt>#!eof</tt>, the last <tt>FN</tt> result is returned.</p><a href="#copy-port">
+<h4 id="copy-port">copy-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(copy-port FROM TO [READ [WRITE]])</tt>
+<br /></span>
+<p>Reads all remaining data from port <tt>FROM</tt> using the reader procedure <tt>READ</tt> and writes it to port <tt>TO</tt> using the writer procedure <tt>WRITE</tt>. <tt>READ</tt> defaults to <tt>read-char</tt> and <tt>WRITE</tt> to <tt>write-char</tt>. Note that this procedure does not check <tt>FROM</tt> and <tt>TO</tt> for being ports, so the reader and writer procedures may perform arbitrary operations as long as they can be invoked as <tt>(READ FROM)</tt> and <tt>(WRITE X TO)</tt>, respectively. <tt>copy-port</tt> returns an undefined value.</p>
+<p><tt>copy-port</tt> was introduced in CHICKEN 4.6.0.</p><a href="#funky-ports">
+<h3 id="funky-ports">Funky ports</h3></a><a href="#make-bidirectional-port">
+<h4 id="make-bidirectional-port">make-bidirectional-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(make-bidirectional-port INPUT-PORT OUTPUT-PORT)</tt>
+<br /></span>
+<p>Returns a joint input/output port that proxies port operations to the given <tt>INPUT-PORT</tt> and <tt>OUTPUT-PORT</tt>, respectively. This port satisfies both <tt>input-port?</tt> and <tt>output-port?</tt>, and its two directions may be closed independently.</p><a href="#make-broadcast-port">
+<h4 id="make-broadcast-port">make-broadcast-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(make-broadcast-port PORT ...)</tt>
+<br /></span>
+<p>Returns a custom output port that emits everything written into it to the ports given as <tt>PORT ...</tt>. Closing the broadcast port does not close any of the argument ports.</p><a href="#make-concatenated-port">
+<h4 id="make-concatenated-port">make-concatenated-port</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(make-concatenated-port PORT1 PORT2 ...)</tt>
+<br /></span>
+<p>Returns a custom input port that reads its input from <tt>PORT1</tt>, until it is empty, then from <tt>PORT2</tt> and so on. Closing the concatenated port does not close any of the argument ports.</p>
+<hr />
+<p>Previous: <a href="Module (chicken plist)" class="internal">Module (chicken plist)</a></p>
+<p>Next: <a href="Module (chicken pretty-print)" class="internal">Module (chicken pretty-print)</a></p></div></body></html>

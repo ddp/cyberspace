@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Module (chicken gc) - The CHICKEN Scheme wiki</title>
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="/chicken.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body>
+<div id="menu">
+<ul>
+<li><a href="/" class="internal">Wiki</a></li>
+<li><a href="//code.call-cc.org/" class="external">Download</a></li>
+<li><a href="/manual/index" class="internal">Manual</a></li>
+<li><a href="//eggs.call-cc.org" class="external">Eggs</a></li>
+<li><a href="//api.call-cc.org/5/doc/" class="external">API</a></li>
+<li><a href="//tests.call-cc.org/" class="external">Tests</a></li>
+<li><a href="//bugs.call-cc.org/" class="external">Bugs</a></li></ul></div>
+<ul id="page-specific-links">
+<li><a href="?action=show">show</a></li>
+<li><a href="?action=edit" rel="nofollow">edit</a></li>
+<li><a href="?action=history">history</a></li></ul>
+<div id="content">
+<ul class="tags">
+<li>manual</li></ul>
+<div id="toc">
+<ol>
+<li><a href="#module-chicken-gc">Module (chicken gc)</a>
+<ol>
+<li><a href="#gc">gc</a></li>
+<li><a href="#current-gc-milliseconds">current-gc-milliseconds</a></li>
+<li><a href="#memory-statistics">memory-statistics</a></li>
+<li><a href="#set-finalizer">set-finalizer!</a></li>
+<li><a href="#make-finalizer">make-finalizer</a></li>
+<li><a href="#add-to-finalizer">add-to-finalizer</a></li>
+<li><a href="#force-finalizers">force-finalizers</a></li>
+<li><a href="#set-gc-report">set-gc-report!</a></li></ol></li></ol></div><a href="#module-chicken-gc">
+<h2 id="module-chicken-gc">Module (chicken gc)</h2></a>
+<p>This module provides some control over the garbage collector.</p><a href="#gc">
+<h3 id="gc">gc</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(gc [FLAG])</tt>
+<br /></span>
+<p>Invokes a garbage-collection and returns the number of free bytes in the heap. The flag specifies whether a minor (<tt>#f</tt>) or major (<tt>#t</tt>) GC is to be triggered. If no argument is given, <tt>#t</tt> is assumed. An explicit <tt>#t</tt> argument will cause all pending finalizers to be executed.</p><a href="#current-gc-milliseconds">
+<h3 id="current-gc-milliseconds">current-gc-milliseconds</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(current-gc-milliseconds)</tt>
+<br /></span>
+<p>Returns the number of milliseconds spent in major garbage collections since the last call of <tt>current-gc-milliseconds</tt> and returns an exact integer.</p><a href="#memory-statistics">
+<h3 id="memory-statistics">memory-statistics</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(memory-statistics)</tt>
+<br /></span>
+<p>Performs a major garbage collection and returns a three element vector containing the total heap size in bytes, the number of bytes currently used and the size of the nursery (the first heap generation). Note that the actual heap is actually twice the size given in the heap size, because CHICKEN uses a copying semi-space collector.</p><a href="#set-finalizer">
+<h3 id="set-finalizer">set-finalizer!</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(set-finalizer! X PROC)</tt>
+<br /></span>
+<p>Registers a procedure of one argument <tt>PROC</tt>, that will be called as soon as the non-immediate data object <tt>X</tt> is about to be garbage-collected (with that object as its argument). This procedure returns <tt>X</tt>.</p>
+<p>Finalizers installed using <tt>set-finalizer!</tt> are invoked asynchronously, in the thread that happens to be currently running. Finalizers for data that has become garbage are called on normal program exit. Finalizers are not run on abnormal program exit. A normal program exit does not run finalizers that are still reachable from global data.</p>
+<p>Multiple finalizers can be registered for the same object. The order in which the finalizers run is undefined. Execution of finalizers may be nested.</p>
+<p>NOTE 1: The finalizer will <b>not</b> be called while interrupts are disabled.</p>
+<p>NOTE 2: When a finalizable object has any weak references (i.e., weak locatives or weak pairs) to objects that are only reachable through it or other finalizable objects, those references will be broken like when the objects had already been collected.  This is done in order to avoid user code from accessing objects that are possibly in an invalid state.</p><a href="#make-finalizer">
+<h3 id="make-finalizer">make-finalizer</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(make-finalizer OBJECT ...)</tt>
+<br /></span>
+<p>Registers the set of non-immediate argument objects for finalization and returns a procedure of zero or one arguments. Invoking this procedure will return the first object from the set that is not referenced from any other globally reachable data and can be garbage collected. Non-immediate objects are anything that is not a small integer (&quot;fixnum&quot;), a character, a boolean, the empty list, the undefined value, the end-of-file value (<tt>#!eof</tt>) or the broken-weak-pair object (<tt>#!bwp</tt>).</p>
+<p>Note that you can pass procedures created by <tt>make-finalizer</tt> to <tt>make-finalizer</tt> itself, implying that a finalizer procedure is finalized when all associated objects are.</p>
+<p>The procedure returned by <tt>make-finalizer</tt> behaves differently depending on the argument given: If the argument is missing or <tt>#f</tt>, then it returns <tt>#f</tt> when no object has as yet been finalized. When the argument is <tt>#t</tt>, execution of the current thread suspends until a finalization occurs. If no other threads are executing then execution pauses for eternity.</p>
+<p>The same caveat regarding weak references applies to finalizers registered with <tt>make-finalizer</tt>.  See <tt>NOTE 2</tt> in <tt>set-finalizer!</tt>.</p><a href="#add-to-finalizer">
+<h3 id="add-to-finalizer">add-to-finalizer</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(add-to-finalizer FINALIZER OBJECT ...)</tt>
+<br /></span>
+<p>Add further objects to the finalization procedure <tt>FINALIZER</tt>, in addition to the objects already supplied when invoking <tt>make-finalizer</tt>.</p><a href="#force-finalizers">
+<h3 id="force-finalizers">force-finalizers</h3></a><span class="definition parameter"><em>[parameter]</em> <tt>(force-finalizers)</tt>
+<br /></span>
+<p>If true, force and execute all pending finalizers before exiting the program (either explicitly by <tt>exit</tt> or implicitly when the last toplevel expression has been executed). Default is <tt>#t</tt>.</p><a href="#set-gc-report">
+<h3 id="set-gc-report">set-gc-report!</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(set-gc-report! FLAG)</tt>
+<br /></span>
+<p>Print statistics after every GC, depending on <tt>FLAG</tt>. A value of <tt>#t</tt> shows statistics after every major GC. A true value different from <tt>#t</tt> shows statistics after every minor GC. <tt>#f</tt> switches statistics off.</p>
+<hr />
+<p>Previous: <a href="Module (chicken format)" class="internal">Module (chicken format)</a></p>
+<p>Next: <a href="Module (chicken io)" class="internal">Module (chicken io)</a></p></div></body></html>

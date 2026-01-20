@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <title>Memo 0006: Public Key Authorization</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0006: Public Key Authorization</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>This Memo specifies the Simple Distributed Security Infrastructure/Simple Public Key Infrastructure (SDSI/SPKI) certificate system for Cyberspace, providing authorization without identity. Principals are identified by cryptographic keys, not names. Authorization flows through verifiable delegation chains.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<h3>Heritage: SDSI at IETF 29</h3>
+<p>Ron Rivest presented SDSI at Internet Engineering Task Force (IETF) 29 in Seattle (March 28 - April 1, 1994). The idea was elegant: self-certifying keys and local names. No global namespace. No certificate authorities. Just cryptographic principals naming what they choose to name.</p>
+<p>SDSI later merged with SPKI to form SDSI/SPKI, standardized in RFC 2692 and RFC 2693 (1999).</p>
+<p>Some in the PKI industry understood SPKI was technically superior. But they saw a monopoly to be mined—certificate authorities as toll booths on the internet. SPKI threatened that model. It was too decentralized to profit from.</p>
+<p>HP quietly adopted SPKI for their E-speak middleware and printer authorization. Printers. The technology worked. The politics didn't favor it.</p>
+<p>Cyberspace picks up where SPKI left off.</p>
+<h3>The X.509 Problem</h3>
+<p>X.509 certificates bind names to keys. This requires: - Certificate authorities (trust hierarchies) - Global name registries (DNS) - Identity verification (bureaucracy)</p>
+<p>SPKI inverts this model:</p>
+<blockquote>
+<p>Keys are principals. Authorization is local. Delegation is explicit.</p>
+</blockquote>
+<p>Benefits: - No CA required - Trust flows from keys you choose - No global names - Local namespaces, local meanings - No identity - Grant permissions to keys, not people - Auditable - S-expression format is human-readable</p>
+</section>
+<section>
+<h2>Specification</h2>
+<h3>Principals</h3>
+<p>A principal is an authorization endpoint. Two types:</p>
+<p>#### Key Principal</p>
+<p>Direct identification by public key:</p>
+<pre class="language-scheme">
+(define-record-type &lt;key-principal&gt;
+  (make-key-principal public-key)
+  key-principal?
+  (public-key principal-public-key))
+</pre>
+<p>S-expression: bare bytes</p>
+<pre class="language-scheme">
+#${32-byte-ed25519-public-key}
+</pre>
+<p>#### Key Hash Principal</p>
+<p>Identification by hash of public key:</p>
+<pre class="language-scheme">
+(define-record-type &lt;keyhash-principal&gt;
+  (make-keyhash-principal hash-alg hash)
+  keyhash-principal?
+  (hash-alg principal-hash-alg)
+  (hash principal-hash))
+</pre>
+<p>S-expression:</p>
+<pre class="language-scheme">
+(hash sha512 #${64-byte-hash})
+</pre>
+<h3>Authorization Tags</h3>
+<p>Tags define what permissions are granted:</p>
+<pre class="language-scheme">
+(define-record-type &lt;tag&gt;
+  (make-tag sexp)
+  tag?
+  (sexp tag-sexp))
+</pre>
+<p>Example tags:</p>
+<pre class="language-scheme">
+;; Read access to library
+(read (path /library/lamport-papers))
+
+;; Agent spawning limit
+(spawn-agent (max-count 5))
+
+;; HTTP API access
+(http-api (method POST) (path /deploy/))
+
+;; All permissions (wildcard)
+()
+</pre>
+<h3>Validity Period</h3>
+<p>Optional time constraints:</p>
+<pre class="language-scheme">
+(define-record-type &lt;validity&gt;
+  (make-validity not-before not-after)
+  validity?
+  (not-before validity-not-before)   ; ISO 8601 string
+  (not-after validity-not-after))    ; ISO 8601 string
+</pre>
+<h3>Certificate Structure</h3>
+<pre class="language-scheme">
+(define-record-type &lt;cert&gt;
+  (make-cert issuer subject tag validity propagate)
+  cert?
+  (issuer cert-issuer)         ; Principal granting permission
+  (subject cert-subject)       ; Principal receiving permission
+  (tag cert-tag)               ; What is being granted
+  (validity cert-validity)     ; When valid (optional)
+  (propagate cert-propagate))  ; Can subject re-delegate?
+</pre>
+<p>S-expression format:</p>
+<pre class="language-scheme">
+(cert
+  (issuer #${alice-public-key})
+  (subject #${bob-public-key})
+  (tag (read (path /library/*)))
+  (valid
+    (not-before "2026-01-01")
+    (not-after "2026-12-31"))
+  (propagate))
+</pre>
+<h3>Signed Certificate</h3>
+<pre class="language-scheme">
+(define-record-type &lt;signed-cert&gt;
+  (make-signed-cert cert signature)
+  signed-cert?
+  (cert signed-cert-cert)
+  (signature signed-cert-signature))
+
+(define-record-type &lt;signature&gt;
+  (make-signature hash-alg cert-hash sig-bytes)
+  signature?
+  (hash-alg signature-hash-alg)
+  (cert-hash signature-cert-hash)
+  (sig-bytes signature-sig-bytes))
+</pre>
+</section>
+<section>
+<h2>Operations</h2>
+<h3>Creating Certificates</h3>
+<pre class="language-scheme">
+(define cert
+  (create-cert
+    (make-key-principal alice-public)
+    (make-key-principal bob-public)
+    (make-tag '(read (path /library/*)))
+    validity: (make-validity "2026-01-01" "2026-12-31")
+    propagate: #t))
+</pre>
+<h3>Signing Certificates</h3>
+<pre class="language-scheme">
+(define signed-cert
+  (sign-cert cert alice-private))
+</pre>
+<p>Process:</p>
+<ul>
+<li>Convert certificate to canonical S-expression</li>
+<li>Hash with SHA-512</li>
+<li>Sign hash with Ed25519</li>
+<li>Create signature record</li>
+<li>Combine into signed certificate</li>
+</ul>
+<h3>Verifying Certificates</h3>
+<pre class="language-scheme">
+(verify-signed-cert signed-cert alice-public)
+</pre>
+<p>Verification:</p>
+<ul>
+<li>Recompute canonical S-expression</li>
+<li>Hash with SHA-512</li>
+<li>Compare with stored hash</li>
+<li>Verify Ed25519 signature</li>
+</ul>
+<h3>Verifying Delegation Chains</h3>
+<pre class="language-scheme">
+(verify-chain root-key cert-list target-tag)
+</pre>
+<p>Chain verification ensures:</p>
+<ul>
+<li>Each certificate is validly signed</li>
+<li>Issuer of cert[n+1] matches subject of cert[n]</li>
+<li>Tags are properly delegated (each implies the next)</li>
+<li>Propagation is allowed (except final cert)</li>
+<li>Final tag implies target tag</li>
+</ul>
+</section>
+<section>
+<h2>CLI Tools</h2>
+<h3>spki-keygen</h3>
+<p>Generate Ed25519 keypair:</p>
+<pre class="language-bash">
+$ ./spki-keygen alice
+Generated keypair:
+  Public:  alice.public
+  Private: alice.private
+</pre>
+<h3>spki-cert</h3>
+<p>Create and sign certificate:</p>
+<pre class="language-bash">
+$ ./spki-cert \
+    --issuer alice.private \
+    --subject bob.public \
+    --tag '(read (path /library/*))' \
+    --propagate \
+    --not-after "2026-12-31" \
+    --output alice-to-bob.cert
+</pre>
+<h3>spki-verify</h3>
+<p>Verify certificate signature:</p>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 460 40" width="460" height="40" xmlns="http://www.w3.org/2000/svg">
+<style>
+  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
+  .diagram rect { fill: currentColor; }
+  .diagram text { font-family: monospace; font-size: 14px; fill: currentColor; text-anchor: middle; dominant-baseline: central; }
+</style>
+<text x="5" y="10">$</text>
+<text x="25" y="10">.</text>
+<text x="35" y="10">/</text>
+<text x="45" y="10">s</text>
+<text x="55" y="10">p</text>
+<text x="65" y="10">k</text>
+<text x="75" y="10">i</text>
+<text x="85" y="10">-</text>
+<text x="95" y="10">v</text>
+<text x="105" y="10">e</text>
+<text x="115" y="10">r</text>
+<text x="125" y="10">i</text>
+<text x="135" y="10">f</text>
+<text x="145" y="10">y</text>
+<text x="165" y="10">a</text>
+<text x="175" y="10">l</text>
+<text x="185" y="10">i</text>
+<text x="195" y="10">c</text>
+<text x="205" y="10">e</text>
+<text x="215" y="10">.</text>
+<text x="225" y="10">p</text>
+<text x="235" y="10">u</text>
+<text x="245" y="10">b</text>
+<text x="255" y="10">l</text>
+<text x="265" y="10">i</text>
+<text x="275" y="10">c</text>
+<text x="295" y="10">a</text>
+<text x="305" y="10">l</text>
+<text x="315" y="10">i</text>
+<text x="325" y="10">c</text>
+<text x="335" y="10">e</text>
+<text x="345" y="10">-</text>
+<text x="355" y="10">t</text>
+<text x="365" y="10">o</text>
+<text x="375" y="10">-</text>
+<text x="385" y="10">b</text>
+<text x="395" y="10">o</text>
+<text x="405" y="10">b</text>
+<text x="415" y="10">.</text>
+<text x="425" y="10">c</text>
+<text x="435" y="10">e</text>
+<text x="445" y="10">r</text>
+<text x="455" y="10">t</text>
+<text x="5" y="30">✓</text>
+<text x="25" y="30">C</text>
+<text x="35" y="30">e</text>
+<text x="45" y="30">r</text>
+<text x="55" y="30">t</text>
+<text x="65" y="30">i</text>
+<text x="75" y="30">f</text>
+<text x="85" y="30">i</text>
+<text x="95" y="30">c</text>
+<text x="105" y="30">a</text>
+<text x="115" y="30">t</text>
+<text x="125" y="30">e</text>
+<text x="145" y="30">s</text>
+<text x="155" y="30">i</text>
+<text x="165" y="30">g</text>
+<text x="175" y="30">n</text>
+<text x="185" y="30">a</text>
+<text x="195" y="30">t</text>
+<text x="205" y="30">u</text>
+<text x="215" y="30">r</text>
+<text x="225" y="30">e</text>
+<text x="245" y="30">v</text>
+<text x="255" y="30">a</text>
+<text x="265" y="30">l</text>
+<text x="275" y="30">i</text>
+<text x="285" y="30">d</text>
+</svg>
+</div>
+<h3>spki-show</h3>
+<p>Display certificate in human-readable form:</p>
+<pre class="language-bash">
+$ ./spki-show alice-to-bob.cert
+Certificate:
+  Issuer:  ed25519:cbc9b260da65f6a7...
+  Subject: ed25519:a5f8c9e3d2b1f0e4...
+  Tag:     (read (path /library/*))
+  Valid:   until 2026-12-31
+  Propagate: yes
+</pre>
+</section>
+<section>
+<h2>Tag Semantics</h2>
+<h3>Tag Implication</h3>
+<p>Tag A implies Tag B if A grants at least all permissions of B.</p>
+<pre class="language-scheme">
+(define (tag-implies tag1 tag2)
+  (cond
+    ((all-perms? tag1) #t)    ; () implies everything
+    ((all-perms? tag2) #f)    ; Only () implies (*)
+    (else (equal? tag1 tag2)))) ; Simple equality (extensible)
+</pre>
+<h3>Standard Tag Vocabulary</h3>
+<table>
+<tr><th>Tag </th><th>Meaning </th></tr>
+<tr><td>(*) </td><td>All permissions </td></tr>
+<tr><td>(read (path P)) </td><td>Read access to path P </td></tr>
+<tr><td>(write (path P)) </td><td>Write access to path P </td></tr>
+<tr><td>(spawn-agent (max-count N)) </td><td>Spawn up to N agents </td></tr>
+<tr><td>(http-api (method M) (path P)) </td><td>HTTP API access </td></tr>
+<tr><td>(seal-release) </td><td>Permission to create releases </td></tr>
+<tr><td>(seal-publish (remote R)) </td><td>Permission to publish to R </td></tr>
+</table>
+</section>
+<section>
+<h2>Delegation Chains</h2>
+<h3>Example: Three-Level Delegation</h3>
+<div class="diagram-container">
+<svg class="diagram" viewBox="0 0 450 20" width="450" height="20" xmlns="http://www.w3.org/2000/svg">
+<style>
+  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
+  .diagram rect { fill: currentColor; }
+  .diagram text { font-family: monospace; font-size: 14px; fill: currentColor; text-anchor: middle; dominant-baseline: central; }
+</style>
+<text x="5" y="10">A</text>
+<text x="15" y="10">l</text>
+<text x="25" y="10">i</text>
+<text x="35" y="10">c</text>
+<text x="45" y="10">e</text>
+<text x="65" y="10">(</text>
+<text x="75" y="10">r</text>
+<text x="85" y="10">o</text>
+<text x="95" y="10">o</text>
+<text x="105" y="10">t</text>
+<text x="115" y="10">)</text>
+<text x="135" y="10">→</text>
+<text x="155" y="10">B</text>
+<text x="165" y="10">o</text>
+<text x="175" y="10">b</text>
+<text x="195" y="10">(</text>
+<text x="205" y="10">a</text>
+<text x="215" y="10">d</text>
+<text x="225" y="10">m</text>
+<text x="235" y="10">i</text>
+<text x="245" y="10">n</text>
+<text x="255" y="10">)</text>
+<text x="275" y="10">→</text>
+<text x="295" y="10">C</text>
+<text x="305" y="10">a</text>
+<text x="315" y="10">r</text>
+<text x="325" y="10">o</text>
+<text x="335" y="10">l</text>
+<text x="355" y="10">(</text>
+<text x="365" y="10">o</text>
+<text x="375" y="10">p</text>
+<text x="385" y="10">e</text>
+<text x="395" y="10">r</text>
+<text x="405" y="10">a</text>
+<text x="415" y="10">t</text>
+<text x="425" y="10">o</text>
+<text x="435" y="10">r</text>
+<text x="445" y="10">)</text>
+</svg>
+</div>
+<p>Certificates:</p>
+<pre class="language-scheme">
+;; Alice grants admin to Bob
+(cert
+  (issuer #${alice-key})
+  (subject #${bob-key})
+  (tag (*))
+  (propagate))
+
+;; Bob grants operator to Carol
+(cert
+  (issuer #${bob-key})
+  (subject #${carol-key})
+  (tag (seal-publish (remote origin))))
+</pre>
+<p>Verification:</p>
+<pre class="language-scheme">
+(verify-chain alice-public
+              (list alice-to-bob bob-to-carol)
+              (make-tag '(seal-publish (remote origin))))
+;; =&gt; #t if Carol can publish
+</pre>
+</section>
+<section>
+<h2>Security Considerations</h2>
+<h3>Threat Model</h3>
+<p>Trusted: - Local key storage - Ed25519/SHA-512 (libsodium) - Certificate chain construction</p>
+<p>Untrusted: - Certificate sources - Network transport - Certificate claims (until verified)</p>
+<h3>Attack Mitigations</h3>
+<table>
+<tr><th>Attack </th><th>Mitigation </th></tr>
+<tr><td>Certificate forgery </td><td>Ed25519 signatures </td></tr>
+<tr><td>Unauthorized delegation </td><td>Propagate flag </td></tr>
+<tr><td>Expired permissions </td><td>Validity period checks </td></tr>
+<tr><td>Over-delegation </td><td>Tag implication checking </td></tr>
+</table>
+<h3>Key Management</h3>
+<ul>
+<li>Generation: Use secure random (libsodium)</li>
+<li>Storage: Private keys in protected files</li>
+<li>Backup: Shamir secret sharing (see Memo-0007)</li>
+<li>Rotation: Issue new certs, revoke old</li>
+</ul>
+<p>Key management is the operational foundation of SPKI security; cryptographic strength means nothing if keys are generated predictably, stored carelessly, or lost irretrievably.</p>
+</section>
+<section>
+<h2>Integration Points</h2>
+<h3>Vault Authorization</h3>
+<pre class="language-scheme">
+(vault-init signing-key: alice-private)
+(seal-release "1.0.0")  ; Requires seal-release tag
+</pre>
+<h3>Audit Trail Attribution</h3>
+<pre class="language-scheme">
+(audit-append
+  actor: bob-public
+  action: '(seal-commit "abc123")
+  authorization-chain: (list alice-to-bob-cert))
+</pre>
+<h3>Replication Access Control</h3>
+<pre class="language-scheme">
+(seal-publish "1.0.0"
+  remote: "origin"
+  authorization: bob-to-carol-cert)
+</pre>
+</section>
+<section>
+<h2>SPKI vs X.509</h2>
+<table>
+<tr><th>Aspect </th><th>X.509 </th><th>SPKI </th></tr>
+<tr><td>Identity </td><td>Names (DN) </td><td>Keys </td></tr>
+<tr><td>Trust </td><td>CA hierarchy </td><td>Local choice </td></tr>
+<tr><td>Namespaces </td><td>Global (DNS) </td><td>Local </td></tr>
+<tr><td>Revocation </td><td>CRL/OCSP </td><td>Validity periods </td></tr>
+<tr><td>Format </td><td>ASN.1/DER </td><td>S-expressions </td></tr>
+<tr><td>Readability </td><td>Requires tools </td><td>Human-readable </td></tr>
+<tr><td>Delegation </td><td>Implicit (CA) </td><td>Explicit (propagate) </td></tr>
+</table>
+</section>
+<section>
+<h2>References</h2>
+<ul>
+<li>Ellison, C., et al. (1999). SPKI Certificate Theory. RFC 2693.</li>
+<li>Ellison, C., et al. (1999). SPKI Requirements. RFC 2692.</li>
+<li>Rivest, R., &amp; Lampson, B. (1996). SDSI - A Simple Distributed Security Infrastructure.</li>
+<li>Lampson, B. (1971). Protection.</li>
+</ul>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-06</li>
+<li>Initial specification</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

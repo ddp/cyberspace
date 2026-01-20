@@ -1,0 +1,604 @@
+%!PS-Adobe-3.0
+%%Title: memo-0003-designer-notes
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0003: Designer Notes) show newline
+() show newline
+(Status: Draft) show newline
+(Date: January 2026) show newline
+(Author: Derrell Piper <ddp@eludom.net>) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(NOTICE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(This is a living document, not a specification. It records the) show newline
+(intellectual heritage, design philosophy, and collaborative process) show newline
+(behind Cyberspace.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(1. INTELLECTUAL HERITAGE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(1.1 MIT Athena and SPKI) show newline
+(-----------------------) show newline
+() show newline
+(Cyberspace traces its lineage to MIT's Project Athena and the Simple) show newline
+(Public Key Infrastructure \(SPKI\) work that emerged from MIT and the) show newline
+(Internet Engineering Task Force \(IETF\).) show newline
+() show newline
+(Athena \(1983-1991\) introduced Kerberos, distributed authentication, and) show newline
+(the concept of a unified computing environment across heterogeneous) show newline
+(systems. Digital Equipment Corporation \(DEC\) funded Athena and) show newline
+(contributed workstations.) show newline
+() show newline
+(Two independent threads merged at IETF to form SDSI/SPKI:) show newline
+() show newline
+(  * Simple Distributed Security Infrastructure \(SDSI\) - Ron Rivest at MIT, focusing on naming and local name spaces) show newline
+(  * SPKI - Carl Ellison at IETF, focusing on authorization and capabilities) show newline
+() show newline
+(Ellison's SPKI RFCs \(2693, 2692\) formalized capability-based) show newline
+(authorization through certificate chains. When IETF standardized this) show newline
+(work, Rivest's SDSI naming merged in. The result \(SDSI/SPKI 2.0\) gave us) show newline
+(both authorization and naming.) show newline
+() show newline
+(These ideas were absorbed during the same lamport epoch as R4RS Scheme) show newline
+(\(1991\) and SDSI \(1996\), alongside the practical education of Boston) show newline
+(traffic negotiation - both exercises in asserting authority without) show newline
+(central coordination.) show newline
+() show newline
+() show newline
+(1.2 Why Scheme) show newline
+(--------------) show newline
+() show newline
+(Scheme was chosen not for nostalgia but for precision. Homoiconicity) show newline
+(makes S-expressions natural for both code and data - certificates, audit) show newline
+(records, and configuration are all readable by the same parser that) show newline
+(reads the implementation.) show newline
+() show newline
+(The language that Abelson and Sussman used to teach computational) show newline
+(thinking at MIT is the same language used to implement the security) show newline
+(architecture that MIT research defined. Full circle.) show newline
+() show newline
+(Cyberspace Scheme is intentionally R5RS and R7RS-small, following) show newline
+(CHICKEN Scheme's philosophy: a small, portable core with extensions as) show newline
+(libraries rather than language features. R5RS \(1998\) remains the most) show newline
+(widely implemented Scheme standard. R7RS-small \(2013\) preserves that) show newline
+(minimalist tradition while adding practical improvements like) show newline
+(define-library. The large dialect \(R7RS-large, ongoing\) is explicitly) show newline
+(avoided - complexity belongs in libraries, not the language) show newline
+(specification.) show newline
+() show newline
+(CHICKEN was chosen over faster implementations \(Chez, Racket, Gambit\)) show newline
+(for its elegance and deployment model. CHICKEN compiles to C, producing) show newline
+(standalone executables with no runtime dependencies. The egg system) show newline
+(provides a curated library ecosystem. Speed matters less than simplicity) show newline
+(when the bottleneck is cryptographic operations in libsodium, not) show newline
+(interpreter overhead.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(2. COLLABORATIVE DESIGN) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Cyberspace was designed in collaboration with Claude \(Anthropic\), an AI) show newline
+(assistant. This collaboration is documented in Memo-056.) show newline
+() show newline
+(The interaction model: human provides vision and constraints, AI) show newline
+(provides implementation and exploration. Neither could have built this) show newline
+(alone.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(3. NAMING COHERENCE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Knuth's principle from TAOCP: names should be consistent across the) show newline
+(totality of a system. When we renamed 'RFC' to 'Memo' internally, we) show newline
+(applied s/rfc/memo/g globally - not just to files being edited, but to) show newline
+(every reference in the codebase.) show newline
+() show newline
+(Single source of truth extends to terminology. MEMO_NUMBER_WIDTH is) show newline
+(defined once; the four-digit format flows from that constant through) show newline
+(Scheme and shell. When the namespace overflows to five digits, one) show newline
+(change propagates everywhere.) show newline
+() show newline
+(Piecemeal renaming creates inconsistent states where variables say one) show newline
+(thing and filenames say another. The systematic approach is the only) show newline
+(approach.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(4. TARGET ENVIRONMENTS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Primary targets:) show newline
+() show newline
+(  * macOS \(Apple Silicon\) - Cyberspace.app native shell) show newline
+(  * Linux - including MIT Athena) show newline
+(  * Any POSIX system with CHICKEN Scheme 5.x) show newline
+() show newline
+(The system should feel native on a Mac, work cleanly on Athena, and) show newline
+(build anywhere Scheme runs.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(5. THE SCHEME BENEATH) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Scheme is the implementation language, not the user interface. The) show newline
+(novice sees a shell; the schemer sees a REPL. Same system, different) show newline
+(lenses.) show newline
+() show newline
+(By default, Scheme internals are hidden:) show newline
+() show newline
+(  * Inspector disabled - errors show simple messages, not debug> prompts) show newline
+(  * Exception display uses plain language, not 'unbound variable') show newline
+(  * Help shows commands, not S-expressions) show newline
+(  * The : prompt is a portal, not a lambda) show newline
+() show newline
+(Schemers opt in with \(enable-inspector!\) and see the machinery. The) show newline
+(abstraction layer is permeable but not transparent.) show newline
+() show newline
+(This is not dumbing down. It is layered revelation - the same principle) show newline
+(that makes Cyberspace.app feel native on Mac while running pure Scheme) show newline
+(underneath.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(6. THE SCRUTINIZER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Consistency requires tooling. The scrutinizer audits tone and) show newline
+(terminology across library and code.) show newline
+() show newline
+(Two failure modes:) show newline
+() show newline
+(  * Overreach - poetry where precision needed, whimsy in error messages) show newline
+(  * Underreach - dry jargon where warmth appropriate, internal vocabulary leaking through) show newline
+() show newline
+(Passes:) show newline
+() show newline
+(  * Vocabulary audit - banned terms in user-facing strings) show newline
+(  * Tone consistency - memos vs help vs errors) show newline
+(  * S-expression exposure - Scheme leaking to surface) show newline
+() show newline
+(Interface:) show newline
+() show newline
+() show newline
+(    \(scrutinize\)               ; both passes \(default\)) show newline
+(    \(scrutinize 'library\)      ; memos only) show newline
+(    \(scrutinize 'code\)         ; code only) show newline
+(    \(scrutinize #f\)            ; disable) show newline
+(    *scrutinize-realmtime*     ; parameter, default #f) show newline
+(    \(scrutinize-realmtime! #t\) ; enable during dev) show newline
+() show newline
+(Realmtime mode invokes spacetime - scrutiny flows through the realm as) show newline
+(time passes. When enabled, violations surface as modules load. Off in) show newline
+(production, on in beta.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(7. FORGE AND SMELTER) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The forge module generates pronounceable passwords using Markov chains) show newline
+(on digraph statistics. The lineage traces back to Multics.) show newline
+() show newline
+() show newline
+(7.1 Heritage) show newline
+(------------) show newline
+() show newline
+(Original design by Morrie Gasser in PL/1 on Multics. Gasser, author of) show newline
+('Building a Secure Computer System' \(1988\), carried the code forward to) show newline
+(VAX/VMS where it remained in PL/1 until the Alpha transition.) show newline
+() show newline
+(When DEC moved to Alpha architecture, PL/1 wasn't in the initial) show newline
+(compiler release. The code had to be expunged from the TCB. Derrell) show newline
+(Piper and Jon Callas rewrote it for VMS 6.0 \(circa 1991\): Piper wrote) show newline
+(the BLISS system service for the Trusted Computing Base; Callas wrote) show newline
+(the user-mode TPU smelter.) show newline
+() show newline
+(US and EU DEC patents were filed on the design \(now expired\). The) show newline
+(terminology - forge, smelter - comes from metallurgy: the smelter) show newline
+(refines raw ore \(word lists\) into workable material \(digraph) show newline
+(statistics\); the forge shapes the final product \(pronounceable words\).) show newline
+() show newline
+(Callas later became a principal author of OpenPGP \(RFC 4880\) and) show newline
+(co-founded PGP Corporation and Silent Circle. He remains a planned beta) show newline
+(tester for Cyberspace.) show newline
+() show newline
+(The chain of custody: Gasser \(Multics PL/1\) > Piper/Callas \(VMS 6.0) show newline
+(BLISS/TPU\) > Cyberspace \(Scheme\).) show newline
+() show newline
+() show newline
+(7.2 Design) show newline
+(----------) show newline
+() show newline
+(The smelter reads word lists and extracts digraph \(character pair\)) show newline
+(statistics:) show newline
+() show newline
+(  * Starting pair frequency - which pairs begin words) show newline
+(  * Transition probability - given 'ab', what characters follow) show newline
+(  * Termination markers - which pairs end words) show newline
+() show newline
+(The forge walks these statistics with weighted random selection,) show newline
+(producing words that follow the phonetic patterns of the source) show newline
+(language. Entropy is tracked in 'decibits' \(tenths of bits\) to quantify) show newline
+(password strength.) show newline
+() show newline
+() show newline
+(7.3 Languages) show newline
+(-------------) show newline
+() show newline
+(Original VMS languages: English, Latin, Italian, Dutch, Sindarin,) show newline
+(Webster. The VT100 diacriticals were encoded in DEC MCS \(Multinational) show newline
+(Character Set\).) show newline
+() show newline
+(Cyberspace expansion to 40+ languages follows roughly the operational) show newline
+(map of the Office of Strategic Services - another egg for those who) show newline
+(recognize the geography:) show newline
+() show newline
+(  * Western Europe: French, German, Spanish, Portuguese) show newline
+(  * Iberia: Catalan, Galician, Basque) show newline
+(  * Nordic \(resistance networks\): Swedish, Norwegian, Danish, Finnish) show newline
+(  * Atlantic fringe: Irish, Welsh, Scottish Gaelic, Breton) show newline
+(  * Balkans \(partisan country\): Greek, Albanian, Serbian, Croatian, Slovenian, Macedonian) show newline
+(  * Eastern front: Polish, Czech, Slovak, Hungarian, Romanian) show newline
+(  * Baltic: Lithuanian, Latvian, Estonian) show newline
+(  * Soviet theater: Russian, Ukrainian, Bulgarian) show newline
+(  * Near East: Turkish, Armenian) show newline
+(  * Mediterranean \(George Cross island\): Maltese) show newline
+(  * Detachment 101: Vietnamese, Thai, Lao, Korean) show newline
+(  * Literary: Sindarin \(Tolkien's Elvish\), Dante's Divina Commedia) show newline
+() show newline
+(Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo,) show newline
+(and the Princeton Dante Project. All diacriticals converted to UTF-8.) show newline
+() show newline
+(Sindarin preserves Tolkien's circumflexes: Manwë, Aulë, Andúril.) show newline
+(Dante's medieval Italian sits alongside. The OSS framing is itself an) show newline
+(easter egg - layers of meaning for those who dig.) show newline
+() show newline
+() show newline
+(7.4 Related Standards) show newline
+(---------------------) show newline
+() show newline
+(Forge predates but relates to two password generation standards:) show newline
+() show newline
+(  * FIPS 181 \(1993\) - Automated Password Generator. Uses trigraph \(3-letter\) statistics and hyphenation rules. More structured but less natural. Forge's digraph approach \(1991\) produces smoother results by learning from actual language patterns rather than syllable rules.) show newline
+(  * OPIE/S/Key - One-time Passwords In Everything. Uses a fixed 2048-word dictionary optimized for spoken communication over phone lines. Words are short and phonetically distinct. Different goal: memorability for one-time use vs. pronounceability for permanent passwords.) show newline
+() show newline
+(Forge's contribution was combining Markov chain language modeling with) show newline
+(entropy tracking - knowing not just that a password sounds right, but) show newline
+(exactly how many bits of randomness it contains.) show newline
+() show newline
+() show newline
+(7.5 Interface) show newline
+(-------------) show newline
+() show newline
+() show newline
+(    \(forge\)              ; one English word) show newline
+(    \(forge 5\)            ; five English words) show newline
+(    \(forge 'sindarin\)    ; one Elvish word) show newline
+(    \(forge 'latin 3\)     ; three Latin words) show newline
+(    \(forge 'passphrase\)  ; 4-word passphrase) show newline
+(    \(forge 'german 'passphrase 6\) ; 6-word German passphrase) show newline
+() show newline
+(Each word reports its entropy. Passphrases join words with hyphens. The) show newline
+(forge is an easter egg - undocumented in help, discovered by schemers) show newline
+(exploring the REPL.) show newline
+() show newline
+() show newline
+(7.6 Cryptographic Entropy) show newline
+(-------------------------) show newline
+() show newline
+(Passwords fall naturally out of pronounceable words when the entropy) show newline
+(source is sound. Forge uses /dev/urandom for cryptographically secure) show newline
+(randomness, not pseudo-random generators.) show newline
+() show newline
+(Boot-time verification runs automatically on module load:) show newline
+() show newline
+(  * Confirms /dev/urandom exists and is readable) show newline
+(  * Reads 256 test bytes and checks byte distribution) show newline
+(  * Verifies no single byte appears more than ~10% \(bias detection\)) show newline
+(  * Confirms at least 100 distinct byte values \(diversity check\)) show newline
+() show newline
+(If verification fails, the module refuses to load. An easter egg with) show newline
+(real security - someone exploring the REPL discovers \(forge\) and gets) show newline
+(actual cryptographic passwords, not toys.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(8. THE NOVICE INTERFACE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Cyberspace must be approachable by normal people. The terminal is for) show newline
+(operators. A friendly interface layer serves everyone else.) show newline
+() show newline
+() show newline
+(8.1 The Problem) show newline
+(---------------) show newline
+() show newline
+(A novice asked: "Why would I want to use this? I have iCloud. They have) show newline
+(recipes and cat pictures.") show newline
+() show newline
+(Valid question. The answer must be compelling without mentioning) show newline
+(Ed25519, SPKI certificates, hash chains, Merkle trees, or S-expressions.) show newline
+() show newline
+() show newline
+(8.2 What Novices Want) show newline
+(---------------------) show newline
+() show newline
+(They don't want a distributed cryptographic vault. They want:) show newline
+() show newline
+(  * My stuff is mine - Not rented from a corporation) show newline
+(  * It survives - No company shutdown deletes my photos) show newline
+(  * I control sharing - Family, not platforms) show newline
+(  * Privacy - My recipes aren't AI training data) show newline
+(  * Legacy - Grandkids can inherit the vault) show newline
+(  * No ads - I'm not the product) show newline
+() show newline
+() show newline
+(8.3 Two Doors) show newline
+(-------------) show newline
+() show newline
+() show newline
+(                        CYBERSPACE) show newline
+(                            |) show newline
+(               +------------+------------+) show newline
+(               |                         |) show newline
+(         +-----v-----+             +-----v-----+) show newline
+(         | Terminal  |             | Friendly  |) show newline
+(         |   \(cs\)    |             |   Door    |) show newline
+(         +-----+-----+             +-----+-----+) show newline
+(               |                         |) show newline
+(           Operators                  Novices) show newline
+(            Hackers                   Family) show newline
+(            Admins                   Everyone) show newline
+() show newline
+(The terminal offers full power and complexity for those who want it. The) show newline
+(friendly door offers drag-and-drop simplicity - same operations,) show newline
+(different presentation.) show newline
+() show newline
+(Both doors lead to the same vault. Both use the same Scheme underneath.) show newline
+() show newline
+() show newline
+(8.4 Principles) show newline
+(--------------) show newline
+() show newline
+(  * Never dumb down the core - Scheme stays Scheme) show newline
+(  * Add layers, don't subtract - Friendly is additional, not replacement) show newline
+(  * Same operations - Both doors do the same things) show newline
+(  * Gradual revelation - Novices can discover the terminal if curious) show newline
+(  * Family friendly - Grandma can use it) show newline
+() show newline
+() show newline
+(8.5 The Test) show newline
+(------------) show newline
+() show newline
+(If a novice can create a vault in 30 seconds, add a photo in 5 seconds,) show newline
+(invite family in 1 minute, and understand what they have - we've) show newline
+(succeeded.) show newline
+() show newline
+() show newline
+(8.6 The Koan) show newline
+(------------) show newline
+() show newline
+(There is no point scaling to 2^128 if you assume everyone is a Schemer.) show newline
+() show newline
+(The cryptographic address space, the capability chains, the Merkle) show newline
+(proofs — all of that is implementation. The user doesn't sign) show newline
+(certificates, they approve a peer. They don't query the vault, they) show newline
+(inspect soup.) show newline
+() show newline
+(If the system requires understanding SPKI to use safely, the system) show newline
+(failed. The security properties must emerge from natural actions, not) show newline
+(careful ones.) show newline
+() show newline
+(The complexity serves the simplicity, not the other way around.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(9. CRYPTOGRAPHIC SELECTIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Every cryptographic algorithm in Cyberspace was chosen for specific) show newline
+(properties. This section documents the selections and their rationale.) show newline
+() show newline
+() show newline
+(9.1 Signatures) show newline
+(--------------) show newline
+() show newline
+() show newline
+(  Algorithm  Use                       Selection Rationale                                               ) show newline
+(  Ed25519    Primary signatures        Small keys \(32B\), fast, constant-time, no RNG needed for signing  ) show newline
+(  SPHINCS+   Post-quantum \(planned\)    Hash-based, conservative security, stateless                      ) show newline
+(  Dilithium  Post-quantum \(planned\)    Lattice-based, smaller signatures than SPHINCS+, NIST selected    ) show newline
+(  Lamport    Reference implementation  Educational, hash-only security, foundation for SPHINCS+          ) show newline
+() show newline
+(Ed25519 is the current standard. Post-quantum migration uses hybrid) show newline
+(signatures \(Ed25519 + SPHINCS+ or Dilithium\) to preserve security if) show newline
+(either scheme breaks.) show newline
+() show newline
+() show newline
+(9.2 Hash Functions) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Algorithm  Use                            Selection Rationale                                   ) show newline
+(  SHA-512    Object identity, signatures    Conservative choice, 256-bit quantum security         ) show newline
+(  BLAKE2b    Content addressing, KDF        Faster than SHA-2, proven design, libsodium native    ) show newline
+(  SHAKE256   Post-quantum Merkle \(planned\)  XOF for variable output, SHA-3 family, NIST standard  ) show newline
+(  Argon2id   Passphrase stretching          Memory-hard, resists GPU/ASIC, winner of PHC          ) show newline
+() show newline
+(Hash functions survive quantum computers. Shor's algorithm \(exponential) show newline
+(speedup\) breaks signatures and key exchange but not hashes. Grover's) show newline
+(algorithm provides only quadratic speedup against hashes — halving) show newline
+(effective security bits, not destroying them.) show newline
+() show newline
+(SHA-512's 512 bits become 256-bit quantum security. Still beyond brute) show newline
+(force. SHA-256 would drop to 128-bit quantum security — acceptable but) show newline
+(less margin. We chose SHA-512 for the conservative 256-bit post-quantum) show newline
+(level.) show newline
+() show newline
+(BLAKE2b \(256-bit output\) provides 128-bit quantum security, sufficient) show newline
+(for content addressing where collision resistance matters more than) show newline
+(preimage resistance.) show newline
+() show newline
+() show newline
+(9.3 Symmetric Encryption) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(  Algorithm           Use                Selection Rationale                       ) show newline
+(  XSalsa20-Poly1305   Vault encryption   NaCl default, 24-byte nonce, proven AEAD  ) show newline
+(  ChaCha20-Poly1305   Object encryption  IETF standard, 12-byte nonce, streaming   ) show newline
+(  XChaCha20-Poly1305  Keystore           Extended nonce \(24B\), random nonce safe   ) show newline
+() show newline
+(The Salsa20/ChaCha20 family was chosen over AES: no timing attacks, no) show newline
+(hardware requirements, Poly1305 is provably secure MAC. The 'X' variants) show newline
+(use extended nonces, safe for random generation.) show newline
+() show newline
+() show newline
+(9.4 Key Exchange) show newline
+(----------------) show newline
+() show newline
+() show newline
+(  Algorithm  Use                     Selection Rationale                               ) show newline
+(  X25519     Ephemeral key exchange  Curve25519 ECDH, constant-time, small keys        ) show newline
+(  HKDF       Key derivation          RFC 5869, extract-then-expand, domain separation  ) show newline
+() show newline
+(X25519 provides forward secrecy for CIP channels. Session keys are) show newline
+(derived via HKDF with protocol-specific info strings for domain) show newline
+(separation.) show newline
+() show newline
+() show newline
+(9.5 Secret Sharing) show newline
+(------------------) show newline
+() show newline
+() show newline
+(  Algorithm   Use                             Selection Rationale                                 ) show newline
+(  Shamir SSS  Key backup, threshold recovery  Information-theoretic security, GF\(2^8\) arithmetic  ) show newline
+() show newline
+(Shamir's scheme splits secrets into n shares where any k can) show newline
+(reconstruct. Used for master key backup \(5-of-9\) and threshold) show newline
+(governance.) show newline
+() show newline
+() show newline
+(9.6 Blind Signatures \(Chaum\)) show newline
+(----------------------------) show newline
+() show newline
+(David Chaum's 1982 blind signature scheme enables anonymous credentials.) show newline
+(The Library holds four Chaum papers:) show newline
+() show newline
+(  * Blind Signatures for Untraceable Payments \(1982\) — the foundation) show newline
+(  * Untraceable Electronic Cash \(1988, with Fiat & Naor\)) show newline
+(  * Untraceable Electronic Mail \(1981\) — mix networks) show newline
+(  * The Dining Cryptographers Problem \(1988\) — unconditional anonymity) show newline
+() show newline
+(Cyberspace uses Chaum-style blind signatures for bearer capabilities:) show newline
+(prove authorization without revealing identity. The issuer signs a) show newline
+(blinded credential; when unblinded and presented, the signature verifies) show newline
+(but cannot be linked to issuance.) show newline
+() show newline
+(This preserves the choice Bitcoin abandoned: registered capabilities) show newline
+(when you need accountability, bearer capabilities when you need privacy.) show newline
+() show newline
+() show newline
+(9.7 Merkle Trees) show newline
+(----------------) show newline
+() show newline
+(Content authentication via binary hash trees. Current implementation) show newline
+(uses SHA-512; post-quantum migration to SHAKE256 or BLAKE3.) show newline
+() show newline
+(Properties: O\(log n\) inclusion proofs, streaming verification,) show newline
+(append-only audit logs. Merkle's 1987 paper is in the Library.) show newline
+() show newline
+() show newline
+(9.8 Random Number Generation) show newline
+(----------------------------) show newline
+() show newline
+(All randomness flows through libsodium's randombytes_buf\(\), which uses:) show newline
+() show newline
+(  * Linux: getrandom\(2\) syscall) show newline
+(  * macOS: arc4random_buf\(\)) show newline
+(  * OpenBSD: arc4random_buf\(\) \(ChaCha20-based\)) show newline
+() show newline
+(Hardware entropy \(RDRAND/RDSEED\) feeds the OS pool. Quantum RNG \(ID) show newline
+(Quantique, drand beacons\) planned for Phase 3+.) show newline
+() show newline
+() show newline
+(9.9 The TCB Principle) show newline
+(---------------------) show newline
+() show newline
+(The Trusted Computing Base holds only:) show newline
+() show newline
+(  * Ed25519 sign/verify) show newline
+(  * SHA-512 hash) show newline
+(  * Certificate chain verification) show newline
+() show newline
+(Everything else is policy. The TCB is ~1000 lines of OCaml calling) show newline
+(libsodium, proven in Coq, frozen. This minimizes the attack surface:) show newline
+(prove the crypto, evolve the rest freely.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CHANGELOG) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(- 2026-01-18 — Added The Koan \(section 8.6\): complexity serves) show newline
+(simplicity) show newline
+() show newline
+(- 2026-01-17 — Added Cryptographic Selections section \(section 9\)) show newline
+() show newline
+(- 2026-01-17 — Corrected heritage: SDSI/Rivest, SPKI/Ellison, IETF) show newline
+(merger \(section 1.1\)) show newline
+() show newline
+(- 2026-01-17 — Added Novice Interface section \(section 8\)) show newline
+() show newline
+(- 2026-01-15 — Gasser Multics provenance added \(section 7.1\)) show newline
+() show newline
+(- 2026-01-15 — OSS operational geography framing, 40+ languages) show newline
+(\(section 7.3\)) show newline
+() show newline
+(- 2026-01-15 — Added cryptographic RNG with boot-time verification) show newline
+(\(section 7.6\)) show newline
+() show newline
+(- 2026-01-15 — Added forge/smelter heritage \(section 7\)) show newline
+() show newline
+(- 2026-01-15 — Initial draft, heritage notes) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

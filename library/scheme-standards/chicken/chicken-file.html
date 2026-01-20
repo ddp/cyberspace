@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Module (chicken file) - The CHICKEN Scheme wiki</title>
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="/chicken.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body>
+<div id="menu">
+<ul>
+<li><a href="/" class="internal">Wiki</a></li>
+<li><a href="//code.call-cc.org/" class="external">Download</a></li>
+<li><a href="/manual/index" class="internal">Manual</a></li>
+<li><a href="//eggs.call-cc.org" class="external">Eggs</a></li>
+<li><a href="//api.call-cc.org/5/doc/" class="external">API</a></li>
+<li><a href="//tests.call-cc.org/" class="external">Tests</a></li>
+<li><a href="//bugs.call-cc.org/" class="external">Bugs</a></li></ul></div>
+<ul id="page-specific-links">
+<li><a href="?action=show">show</a></li>
+<li><a href="?action=edit" rel="nofollow">edit</a></li>
+<li><a href="?action=history">history</a></li></ul>
+<div id="content">
+<ul class="tags">
+<li>manual</li></ul>
+<div id="toc">
+<ol>
+<li><a href="#module-chicken-file">Module (chicken file)</a>
+<ol>
+<li><a href="#basic-file-operations">Basic file operations</a>
+<ol>
+<li><a href="#create-directory">create-directory</a></li>
+<li><a href="#copy-file">copy-file</a></li>
+<li><a href="#move-file">move-file</a></li>
+<li><a href="#delete-file">delete-file</a></li>
+<li><a href="#delete-file">delete-file*</a></li>
+<li><a href="#delete-directory">delete-directory</a></li>
+<li><a href="#directory">directory</a></li>
+<li><a href="#directory-exists">directory-exists?</a></li>
+<li><a href="#file-exists">file-exists?</a></li>
+<li><a href="#rename-file">rename-file</a></li>
+<li><a href="#file-readable">file-readable?</a></li>
+<li><a href="#file-writable">file-writable?</a></li>
+<li><a href="#file-executable">file-executable?</a></li></ol></li>
+<li><a href="#temporary-files-and-directories">Temporary files and directories</a>
+<ol>
+<li><a href="#create-temporary-file">create-temporary-file</a></li>
+<li><a href="#create-temporary-directory">create-temporary-directory</a></li></ol></li>
+<li><a href="#finding-files">Finding files</a>
+<ol>
+<li><a href="#find-files">find-files</a></li>
+<li><a href="#glob">glob</a></li></ol></li></ol></li></ol></div><a href="#module-chicken-file">
+<h2 id="module-chicken-file">Module (chicken file)</h2></a>
+<p>This module provides various generic operations on files and directories.  For more specific operations, see also <a href="Module (chicken file posix)" class="internal">Module (chicken file posix)</a>.</p>
+<p>All errors related to failing file-operations will signal a condition of kind <tt>(exn i/o file)</tt>.</p>
+<ul>
+<li>New in CHICKEN 5.4.0: Errors caused by underlying C calls that change errno will produce a condition object with an <tt>errno</tt> property, which can be accessed with <tt>(get-condition-property &lt;the-condition-object&gt; 'exn 'errno)</tt>.</li></ul><a href="#basic-file-operations">
+<h3 id="basic-file-operations">Basic file operations</h3></a><a href="#create-directory">
+<h4 id="create-directory">create-directory</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(create-directory NAME #!optional PARENTS?)</tt>
+<br /></span>
+<p>Creates a directory with the pathname <tt>NAME</tt>.  If the <tt>PARENTS?</tt> argument is given and not false, any nonexistent parent directories are also created.</p>
+<p>Notice that if <tt>NAME</tt> exists, <tt>create-directory</tt> won't try to create it and will return <tt>NAME</tt> (i.e., it won't raise an error when given a <tt>NAME</tt> that already exists).</p><a href="#copy-file">
+<h4 id="copy-file">copy-file</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(copy-file ORIGFILE NEWFILE #!optional CLOBBER BLOCKSIZE)</tt>
+<br /></span>
+<p>Copies <tt>ORIGFILE</tt> (a string denoting some filename) to <tt>NEWFILE</tt>, <tt>BLOCKSIZE</tt> bytes at a time.  <tt>BLOCKSIZE</tt> defaults to 1024, and must be a positive integer.  Returns the number of bytes copied on success, or errors on failure.  <tt>CLOBBER</tt> determines the behaviour of <tt>copy-file</tt> when <tt>NEWFILE</tt> is already extant.  When set to <tt>#f</tt> (default), an error is signaled.  When set to any other value, <tt>NEWFILE</tt> is overwritten.  <tt>copy-file</tt> will work across filesystems and devices and is not platform-dependent.</p><a href="#move-file">
+<h4 id="move-file">move-file</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(move-file ORIGFILE NEWFILE #!optional CLOBBER BLOCKSIZE)</tt>
+<br /></span>
+<p>Moves <tt>ORIGFILE</tt> (a string denoting some filename) to <tt>NEWFILE</tt>, with the same semantics as <tt>copy-file</tt>, above.  <tt>move-file</tt> is safe across filesystems and devices (unlike <tt>rename-file</tt>).  It is possible for an error to be signaled despite partial success if <tt>NEWFILE</tt> could be created and fully written but removing <tt>ORIGFILE</tt> fails.</p>
+<p>If <tt>CLOBBER</tt> is given and not <tt>#f</tt>, <tt>NEWFILE</tt> will be replaced when it already exists, otherwise an error is signaled.</p>
+<p>The <tt>BLOCKSIZE</tt> argument indicates the block size to use when copying the file a block at a time.  It must be a positive integer, and it defaults to 1024.</p><a href="#delete-file">
+<h4 id="delete-file">delete-file</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(delete-file STRING)</tt>
+<br /></span>
+<p>Deletes the file with the pathname <tt>STRING</tt>. If the file does not exist, an error is signaled.</p><a href="#delete-file">
+<h4 id="delete-file">delete-file*</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(delete-file* STRING)</tt>
+<br /></span>
+<p>If the file with pathname <tt>STRING</tt> exists, it is deleted and <tt>#t</tt> is returned.  If the file does not exist, nothing happens and <tt>#f</tt> is returned.</p><a href="#delete-directory">
+<h4 id="delete-directory">delete-directory</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(delete-directory NAME [RECURSIVE])</tt>
+<br /></span>
+<p>Deletes the directory with the pathname <tt>NAME</tt>. If <tt>RECURSIVE</tt> is not given or false, then the directory has to be empty.</p><a href="#directory">
+<h4 id="directory">directory</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(directory [PATHNAME [SHOW-DOTFILES?]])</tt>
+<br /></span>
+<p>Returns a list with all files that are contained in the directory with the name <tt>PATHNAME</tt> (which defaults to the value of <tt>(current-directory)</tt>). Files beginning with <tt>.</tt> are included only if <tt>SHOW-DOTFILES?</tt> is given and not <tt>#f</tt>.</p><a href="#directory-exists">
+<h4 id="directory-exists">directory-exists?</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(directory-exists? STRING)</tt>
+<br /></span>
+<p>Returns <tt>STRING</tt> if a directory with the given pathname exists, or <tt>#f</tt> otherwise.</p><a href="#file-exists">
+<h4 id="file-exists">file-exists?</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(file-exists? STRING)</tt>
+<br /></span>
+<p>Returns <tt>STRING</tt> if a file or directory with the given pathname exists, or <tt>#f</tt> otherwise.</p><a href="#rename-file">
+<h4 id="rename-file">rename-file</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(rename-file OLD NEW #!optional CLOBBER)</tt>
+<br /></span>
+<p>Renames the file or directory with the pathname <tt>OLD</tt> to <tt>NEW</tt>. If the operation does not succeed, an error is signaled.</p>
+<p>If <tt>CLOBBER</tt> is given and not <tt>#f</tt>, <tt>NEW</tt> will be replaced when it already exists, otherwise an error is signaled.</p><a href="#file-readable">
+<h4 id="file-readable">file-readable?</h4></a><a href="#file-writable">
+<h4 id="file-writable">file-writable?</h4></a><a href="#file-executable">
+<h4 id="file-executable">file-executable?</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(file-readable? FILENAME)</tt>
+<br /></span><span class="definition procedure"><em>[procedure]</em> <tt>(file-writable? FILENAME)</tt>
+<br /></span><span class="definition procedure"><em>[procedure]</em> <tt>(file-executable? FILENAME)</tt>
+<br /></span>
+<p>These procedures return <tt>#t</tt> if the current user has read, write or execute permissions on the file named <tt>FILENAME</tt>.</p><a href="#temporary-files-and-directories">
+<h3 id="temporary-files-and-directories">Temporary files and directories</h3></a><a href="#create-temporary-file">
+<h4 id="create-temporary-file">create-temporary-file</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(create-temporary-file [EXTENSION])</tt>
+<br /></span>
+<p>Creates an empty temporary file and returns its pathname. If <tt>EXTENSION</tt> is not given, then <tt>.tmp</tt> is used. If the environment variable <tt>TMPDIR</tt>, <tt>TEMP</tt> or <tt>TMP</tt> is set, then the pathname names a file in that directory. If none of the environment variables is given, the location of the temporary file defaults to <tt>/tmp</tt>.</p>
+<p>Note that <tt>TMPDIR</tt>, <tt>TEMP</tt> and <tt>TMP</tt> are checked in this order. It means that, for example, if both <tt>TMPDIR</tt> and <tt>TEMP</tt> are set, the value of <tt>TMPDIR</tt> will be used.</p>
+<p>Changed in CHICKEN 5.4.0: the values of the <tt>TMPDIR</tt>, <tt>TEMP</tt> and <tt>TMP</tt> environment variables are no longer memoized (see <a href="#" class="internal">https://bugs.call-cc.org/ticket/1830</a>).</p><a href="#create-temporary-directory">
+<h4 id="create-temporary-directory">create-temporary-directory</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(create-temporary-directory)</tt>
+<br /></span>
+<p>Creates an empty temporary directory and returns its pathname. If the environment variable <tt>TMPDIR</tt>, <tt>TEMP</tt> or <tt>TMP</tt> is set, then the temporary directory is created at that location. If none of the environment variables is given, the location of the temporary directory defaults to <tt>/tmp</tt>.</p>
+<p>Note that <tt>TMPDIR</tt>, <tt>TEMP</tt> and <tt>TMP</tt> are checked in this order. It means that, for example, if both <tt>TMPDIR</tt> and <tt>TEMP</tt> are set, the value of <tt>TMPDIR</tt> will be used.</p>
+<p>Changed in CHICKEN 5.4.0: the values of the <tt>TMPDIR</tt>, <tt>TEMP</tt> and <tt>TMP</tt> environment variables are no longer memoized (see <a href="#" class="internal">https://bugs.call-cc.org/ticket/1830</a>).</p><a href="#finding-files">
+<h3 id="finding-files">Finding files</h3></a><a href="#find-files">
+<h4 id="find-files">find-files</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(find-files DIRECTORY #!key test action seed limit dotfiles follow-symlinks)</tt>
+<br /></span>
+<p>Recursively traverses the contents of <tt>DIRECTORY</tt> (which should be a string) and invokes the procedure <tt>action</tt> for all files in which the procedure <tt>test</tt> is true.</p>
+<p><tt>test</tt> may be a procedure of one argument or an irregex object, regex string or SRE expression that will be matched with a full pathname using <tt>irregex-match</tt>. <tt>test</tt> defaults to <tt>(constantly #t)</tt>.</p>
+<p><tt>action</tt> should be a procedure of two arguments: the currently encountered file and the result of the previous invocation of <tt>action</tt>, or, if this is the first invocation, the value of <tt>seed</tt>. <tt>action</tt> defaults to <tt>cons</tt>, <tt>seed</tt> defaults to <tt>()</tt>.</p>
+<p><tt>limit</tt> should be a procedure of one argument that is called for each nested directory and which should return true, if that directory is to be traversed recursively. <tt>limit</tt> may also be an exact integer that gives the maximum recursion depth. For example, a depth of <tt>0</tt> means that only files in the top-level, specified directory are to be traversed. In this case, all nested directories are ignored. <tt>limit</tt> may also be <tt>#f</tt> (the default), which is equivalent to <tt>(constantly #t)</tt>.</p>
+<p>If <tt>dotfiles</tt> is given and true, then files starting with a &quot;<tt>.</tt>&quot; character will not be ignored (but note that &quot;<tt>.</tt>&quot; and &quot;<tt>..</tt>&quot;  are always ignored). if <tt>follow-symlinks</tt> is given and true, then the traversal of a symbolic link that points to a directory will recursively traverse the latter. By default, symbolic links are not followed.</p>
+<p>Note that <tt>action</tt> is called with the full pathname of each file, including the directory prefix.</p><a href="#glob">
+<h4 id="glob">glob</h4></a><span class="definition procedure"><em>[procedure]</em> <tt>(glob PATTERN1 ...)</tt>
+<br /></span>
+<p>Returns a list of the pathnames of all existing files matching <tt>PATTERN1 ...</tt>, which should be strings containing the usual file-patterns (with <tt>*</tt> matching zero or more characters and <tt>?</tt> matching zero or one character).</p>
+<hr />
+<p>Previous: <a href="Module (chicken eval)" class="internal">Module (chicken eval)</a></p>
+<p>Next: <a href="Module (chicken file posix)" class="internal">Module (chicken file posix)</a></p></div></body></html>

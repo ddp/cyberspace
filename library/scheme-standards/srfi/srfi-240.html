@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 240: Reconciled Records</title>
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="https://srfi.schemers.org/srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      var { white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI surfboard logo" /></a>240: Reconciled Records</h1>
+
+    <p>by Marc Nieper-Wißkirchen</p>
+
+    <h2 id="status">Status</h2>
+
+    <p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+240+at+srfi+dotschemers+dot+org">srfi-240@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-240/">archive</a>.</p>
+    <ul>
+      <li>Received: 2022-10-03</li>
+      <li>Draft #1 published: 2022-11-05</li>
+      <li>Finalized: 2023-05-02</li>
+    </ul>
+
+    <h2 id="abstract">Abstract</h2>
+
+    <p>This SRFI defines a version of
+      the <code>define-record-type</code> definition
+      of <code>R<sup>6</sup>RS</code>
+      and <a href="https://srfi.schemers.org/srfi-237/">SRFI
+      237</a> that extends the <code>define-record-type</code> syntax
+      of <code>R<sup>7</sup>RS</code>, reconciling both systems.</p>
+
+    <p>This SRFI is meant to be adopted by R<sup>7</sup>RS-large to
+      integrate essentially the R<sup>6</sup>RS record system
+      compatibly with the existing R<sup>7</sup>RS-small record
+      system.</p>
+
+    <h2 id="issues">Issues</h2>
+
+    <ul>
+      <li><p>There have been requests to extend the <a href="https://srfi.schemers.org/srfi-9/">SRFI 9</a>-syntax
+	  of <code>define-record-type</code> to bring it feature-wise
+	  on par with the R<sup>6</sup>RS syntax.  At the moment, it
+	  is unclear how to do this so that non-default constructors
+	  can be specified in a way that naturally embraces the idea
+	  of the SRFI 9 syntax.</p></li>
+    </ul>
+
+    <h2 id="rationale">Rationale</h2>
+
+    <p>In contrast to R<sup>6</sup>RS, the Scheme standard
+      R<sup>7</sup>RS does not yet have record types that can be
+      extended via single inheritance, can be defined procedurally, or
+      can be inspected.  Several proposals, including <a href="https://srfi.schemers.org/srfi-99/">SRFI 99</a>, SRFI
+      131, <a href="https://srfi.schemers.org/srfi-136/">SRFI 136</a>, and <a href="https://srfi.schemers.org/srfi-150/">SRFI 150</a>, have been made to add such record
+      types to R<sup>7</sup>RS.  Each of these proposals, however, is
+      lacking in at least one of the following areas:</p>
+
+    <ul>
+      <li>
+        <p>The proposed syntax and/or semantics are new and untested in
+          the large.</p>
+      </li>
+      <li>
+        <p>The proposed semantics are not compatible with
+          R<sup>7</sup>RS field names interpreted as (hygienic)
+          identifiers.</p>
+      </li>
+      <li>
+        <p>The proposed semantics are not reconciled with
+          R<sup>6</sup>RS.</p>
+      </li>
+    </ul>
+
+    <p>This SRFI therefore proposes adoption of the established and
+      widely used R<sup>6</sup>RS record system for R<sup>7</sup>RS.
+      For this, the <code>define-record-type</code> form of R<sup>7</sup>RS is extended (see below).</p>
+
+    <p>The advantages of this proposal include the following:</p>
+
+    <ul>
+      <li>
+        <p>R<sup>7</sup>RS gets a record-type facility as powerful
+          as the R<sup>6</sup>RS record-type facility, including
+          single inheritance, a procedural interface, and
+          inspection.</p>
+      </li>
+      <li>
+        <p>Porting code and sharing specifications between R<sup>6</sup>RS and R<sup>7</sup>RS is simplified.</p>
+      </li>
+      <li>
+        <p>Scheme systems supporting both R<sup>6</sup>RS and
+          R<sup>7</sup>RS need only one implementation of record types.</p>
+      </li>
+      <li>
+        <p>In principle, the proposal works with the SRFI 9 record
+          field names interpreted as identifiers or as symbols.</p>
+      </li>
+      <li>
+        <p>The record-type facility is known and tested in the large.</p>
+      </li>
+    </ul>
+
+    <p><i>Note:</i> Objections against the R<sup>6</sup>RS record
+      system were were voiced by people voting against ratification of
+      that standard's latest candidate draft.  These objections
+      touched the complexity, the role of the procedural layer, and
+      the compatibility between the syntactic and the procedural layer
+      of the R<sup>6</sup>RS record system.  These objections can be addressed as follows:</p>
+
+    <ul>
+      <li>
+        <p>While the complexity of the record system would have
+          exceeded the scope and size of R<sup>7</sup>RS-small, it
+          fits the scope and size of R<sup>7</sup>RS-large.  Moreover,
+          the refinements of SRFI 237 simplify the use of the
+          R<sup>6</sup>RS record-type facility.</p>
+      </li>
+      <li>
+        <p>The procedural layer is intended to be used when record
+          types have to be constructed at runtime, e.g. by
+          interpreters that need to construct host-compatible record
+          types.  The procedural layer, much like the inspection layer,
+          is therefore not needed for most code.  Therefore, the vast
+          majority of programmers can ignore the procedural layer.</p>
+	<p>This is strengthened by SRFI 237, which
+	  removes the restriction that the syntactic layer can only define
+	  one constructor per record type defined.</p>
+      </li>
+      <li>
+        <p>The syntactic and the procedural layer are compatible, and a
+          syntactically defined record type can inherit from a
+          procedurally defined record type, and vice versa.  Whether a
+          record type has been defined syntactically or procedurally
+          is generally unobservable.  To inherit from a record type,
+          all that has to be exposed from it is either the (bound)
+          record name or the record type descriptor (with or without a
+          record constructor descriptor).</p>
+
+	<p>The latter is even simplified by SRFI 237 as the latter
+	  three entities can be used effectively interchangeably.</p>
+      </li>
+    </ul>
+
+    <h3>Examples</h3>
+
+    <p>Both of the following record type definitions are allowed with
+    the syntax provided by this SRFI, and are equivalent:</p>
+
+    <pre>(define-record-type foo
+  (make-foo x)
+  foo?
+  (x foo-x)
+  (y foo-y foo-set-y!))</pre>
+
+    <pre>(define-record-type (foo make-foo foo?)
+  (fields (immutable x foo-x)
+          (mutable y foo-y foo-set-y!))
+  (protocol
+    (lambda (new)
+      (lambda (x)
+        (new x (if #f #f))))))</pre>
+
+    <h2 id="specification">Specification</h2>
+
+    <p>The syntax is exported by the R<sup>6</sup>RS
+      libraries <code>(srfi :240)</code> and <code>(srfi :240
+	define-record-type)</code>, and by the R<sup>7</sup>RS
+      library <code>(srfi 240)</code>.</p>
+
+    <p>An R<sup>7</sup>RS system supporting this SRFI should provide
+      the <code>define-record-type</code> syntax also in
+      the <code>(scheme base)</code> library.  In this case, the
+      feature identifier <code>srfi-240</code> should be provided.</p>
+
+    <p>The record mechanism described in this SRFI is based on the
+      record mechanism described in SRFI 237, which, in turn, is based
+      on the record mechanism of R<sup>6</sup>RS.  Unless said
+      otherwise, definitions and semantics remain unchanged from SRFI
+      237.</p>
+
+    <p>The libraries exports the auxiliary
+      syntax <code>fields</code>, <code>mutable</code>, <code>immutable</code>, <code>parent</code>, <code>protocol</code>, <code>sealed</code>, <code>opaque</code>, <code>nongenerative</code>, <code>parent-rtd</code> and <code>generative</code>
+      identical to the exports by the same name of <code>(srfi :237 records)</code>.
+
+    <p><code>(define-record-type &lang;name spec&rang; &lang;record clause&rang; &hellip;)</code></p>
+
+    <p><i>Syntax:</i> This syntax is equivalent to the syntax of the
+      record-type-defining form <code>define-record-type</code>
+      exported by <code>(srfi :237 records)</code>.</p>
+
+    <p><i>Semantics:</i>
+      This definition is equivalent to the record-type-defining
+      form <code>define-record-type</code> exported by <code>(srfi :237 records)</code>.</p>
+
+    <p><code>(define-record-type &lang;name&rang;
+        (&lang;constructor name&rang; &lang;field name&rang; &hellip;)
+        &lang;pred&rang; &lang;field&rang; &hellip;)</code></p>
+
+    <p><i>Syntax:</i>
+      <code>&lang;Name&rang;</code>, <code>&lang;constructor
+      name&rang;</code>, <code>&lang;pred&rang;</code> are
+      identifiers, each <code>&lang;field&rang;</code> is of the
+      form <code>(&lang;field name&rang; &lang;accessor
+      name&rang;)</code> or <code>(&lang;field name&rang;
+      &lang;accessor name&rang; &lang;mutator name&rang;)</code>, and
+      all <code>&lang;field names&rang;</code>, <code>&lang;accessor
+      names&rang;</code> and <code>&lang;mutator names&rang;</code>
+      are identifiers.</p>
+
+    <p>It is an error for the same identifier to occur more than once
+      as a field name.</p>
+
+    <p><i>Semantics:</i> A new non-sealed, non-opaque and generative
+      base record type is generated, and the form expands into a set
+      of definitions in the environment where
+      the <code>define-record-type</code> form appears.</p>
+
+    <p>The record type has as many fields as there
+      are <code>&lang;fields&rang;</code>, with the
+      given <code>&lang;field names&rang;</code>, in that order.
+      Each <code>&lang;field&rang;</code>, if of the first form, defines
+      an immutable field, and a mutable <code>&lang;field&rang;</code> otherwise.</p>
+
+    <p><code>&lang;Name&rang;</code> is defined by this definition to
+      the (bound) record name of the record type.  If this record
+      name is used in the <code>parent</code> clause of
+      another <code>define-record-type</code> definition, it is an
+      error if that <code>define-record-type</code> definition specifies no <code>protocol</code> clause.</p>
+
+    <p><code>&lang;Constructor name&rang;</code> is bound by the
+      definition to a constructor for the defined record type.  The
+      constructor takes as many arguments as there
+      are <code>&lang;field names&rang;</code> listed
+      with <code>&lang;constructor name&rang;</code>.  When the
+      constructor is invoked, fields of the new created record whose
+      names are listed with <code>&lang;constructor name&rang;</code>
+      take their (initial) values from the corresponding actual
+      arguments.  The (initial) values of all other fields of the newly
+      created record are unspecified.
+
+    <p>It is an error for a field name
+      to be listed with <code>&lang;constructor name&rang;</code> but
+      not as a field name of a field.</p>
+
+    <p><code>&lang;Predicate&rang;</code> is bound by the definition
+    to a predicate for the defined record type.</p>
+
+    <p>The <code>&lang;accessor names&rang;</code>
+      and <code>&lang;mutator names&rang;</code> are bound by the
+      definition to the accessors and mutators, respectively, of the
+      corresponding fields.</p>
+
+    <h3>Example</h3>
+
+    <p>The following example program runs without an error.</p>
+
+    <pre>(import (rnrs base (6))
+        (except (srfi :237 records) define-record-type)
+	(srfi :240 define-record-type))
+
+(define-record-type foo
+  (make-foo x)
+  foo?
+  (x foo-x)
+  (y foo-y foo-set-y!))
+
+(assert (equal? #t (foo? (make-foo 1))))
+
+(assert (equal? 2 (foo-x (make-foo 2))))
+
+(assert (equal? '(3 4) (let ((foo (make-foo 3)))
+                         (foo-set-y! foo 4)
+                         (list (foo-x foo) (foo-y foo)))))
+
+(define rtd (record-type-descriptor foo))
+(define rcd (record-constructor-descriptor foo))
+
+(assert (equal? 'foo (record-type-name rtd)))
+
+(assert (not (record-type-parent rtd)))
+
+(assert (record-type-generative? rtd))
+
+(assert (not (record-type-sealed? rtd)))
+
+(assert (not (record-type-opaque? rtd)))
+
+(assert (equal? '#(x y) (record-type-field-names rtd)))
+
+(assert (not (record-field-mutable? rtd 0)))
+
+(assert (record-field-mutable? rtd 1))
+
+(assert rcd)
+
+(define-record-type bar
+  (parent foo)
+  (fields z)
+  (protocol
+   (lambda (n)
+     (lambda (x z)
+       ((n x) z)))))
+
+(assert (foo? (make-bar 5 6)))
+(assert (equal? 5 (foo-x (make-bar 5 6))))
+(assert (equal? 6 (bar-z (make-bar 5 6))))
+(assert (equal? 7 (let ([bar (make-bar 5 6)])
+                    (foo-set-y! bar 7)
+                    (foo-y bar))))</pre>
+
+    <h2 id="implementation">Implementation</h2>
+
+    <p>A <a href="https://github.com/scheme-requests-for-implementation/srfi-240/tree/master/lib/">portable
+      implementation</a> for R<sup>6</sup>RS systems with an implementation of <a href="https://srfi.schemers.org/srfi-237/">SRFI 237</a> is
+    in <a href="https://github.com/scheme-requests-for-implementation/srfi-240">this
+    SRFI's repository</a>.</p>
+
+    <h2 id="acknowledgements">Acknowledgements</h2>
+
+    <p>The Larceny Scheme implementation pioneered the idea of
+      a <code>define-record-type</code> form that unites the syntax of
+      R<sup>6</sup>RS and R<sup>7</sup>RS.</p>
+
+    <p>The foundations of the record facility described here come from
+      R<sup>6</sup>RS.  This SRFI reuses language from R<sup>6</sup>RS.</p>
+
+    <ol>
+      <li id="larcenists">
+        <p>
+          The Larcenists:
+          <a href="https://larcenists.github.io/Documentation/Documentation1.3/user-manual-alt.html#R6rsChapter"><cite>Records</cite></a>. Larceny
+          User Manual, R<sup>6</sup>R6 Standard Libraries.
+        </p>
+      </li>
+      <li id="sperber">
+	<p>Michael Sperber, R. Kent Dybvig, Matthew Flatt,
+	  Anton van Straaten, Robby Findler, and Jacob
+	  Matthews: <cite>Revised<sup>6</sup> Report on the Algorithmic
+	    Language Scheme</cite>. Journal of Functional Programming,
+	  Volume 19, Supplement S1, August 2009,
+	  pp. 1-301. DOI: <a href="https://doi.org/10.1017/S0956796809990074">10.1017/S0956796809990074</a>.</p>
+      </li>
+    </ol>
+
+    <h2 id="copyright">Copyright</h2>
+    <p>&copy; 2022 Marc Nieper-Wißkirchen.</p>
+
+    <p>
+      Permission is hereby granted, free of charge, to any person
+      obtaining a copy of this software and associated documentation files
+      (the "Software"), to deal in the Software without restriction,
+      including without limitation the rights to use, copy, modify, merge,
+      publish, distribute, sublicense, and/or sell copies of the Software,
+      and to permit persons to whom the Software is furnished to do so,
+      subject to the following conditions:</p>
+
+    <p>
+      The above copyright notice and this permission notice (including the
+      next paragraph) shall be included in all copies or substantial
+      portions of the Software.</p>
+    <p>
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+      NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+      CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.</p>
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

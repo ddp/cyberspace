@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Module (chicken string) - The CHICKEN Scheme wiki</title>
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="/chicken.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body>
+<div id="menu">
+<ul>
+<li><a href="/" class="internal">Wiki</a></li>
+<li><a href="//code.call-cc.org/" class="external">Download</a></li>
+<li><a href="/manual/index" class="internal">Manual</a></li>
+<li><a href="//eggs.call-cc.org" class="external">Eggs</a></li>
+<li><a href="//api.call-cc.org/5/doc/" class="external">API</a></li>
+<li><a href="//tests.call-cc.org/" class="external">Tests</a></li>
+<li><a href="//bugs.call-cc.org/" class="external">Bugs</a></li></ul></div>
+<ul id="page-specific-links">
+<li><a href="?action=show">show</a></li>
+<li><a href="?action=edit" rel="nofollow">edit</a></li>
+<li><a href="?action=history">history</a></li></ul>
+<div id="content">
+<ul class="tags">
+<li>manual</li></ul>
+<div id="toc">
+<ol>
+<li><a href="#module-chicken-string">Module (chicken string)</a>
+<ol>
+<li><a href="#conc">conc</a></li>
+<li><a href="#string">-&gt;string</a></li>
+<li><a href="#string-chop">string-chop</a></li>
+<li><a href="#string-chomp">string-chomp</a></li>
+<li><a href="#string-compare3">string-compare3</a></li>
+<li><a href="#string-intersperse">string-intersperse</a></li>
+<li><a href="#string-split">string-split</a></li>
+<li><a href="#string-translate">string-translate</a></li>
+<li><a href="#string-translate">string-translate*</a></li>
+<li><a href="#substring">substring=?</a></li>
+<li><a href="#substring-index">substring-index</a></li>
+<li><a href="#reverse-list-string">reverse-list-&gt;string</a></li>
+<li><a href="#reverse-string-append">reverse-string-append</a></li></ol></li></ol></div><a href="#module-chicken-string">
+<h2 id="module-chicken-string">Module (chicken string)</h2></a>
+<p>This module contains procedures which can perform various useful string operations.</p><a href="#conc">
+<h3 id="conc">conc</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(conc X ...)</tt>
+<br /></span>
+<p>Returns a string with the string-represenation of all arguments concatenated together. <tt>conc</tt> could be implemented as</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default"><i><span class="symbol">define</span></i> <span class="paren2">(<span class="default">conc . args</span>)</span>
+  <span class="paren2">(<span class="default">apply string-append <span class="paren3">(<span class="default">map -&gt;string args</span>)</span></span>)</span> </span>)</span></tt></pre><a href="#string">
+<h3 id="string">-&gt;string</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(-&gt;string X)</tt>
+<br /></span>
+<p>Returns a string-representation of <tt>X</tt>.</p><a href="#string-chop">
+<h3 id="string-chop">string-chop</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(string-chop STRING LENGTH)</tt>
+<br /></span>
+<p>Returns a list of substrings taken by <i>chopping</i> <tt>STRING</tt> every <tt>LENGTH</tt> characters:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">string-chop <span class="string">&quot;one two three&quot;</span> 4</span>)</span>  ==&gt;  <span class="paren1">(<span class="default"><span class="string">&quot;one &quot;</span> <span class="string">&quot;two &quot;</span> <span class="string">&quot;thre&quot;</span> <span class="string">&quot;e&quot;</span></span>)</span></tt></pre><a href="#string-chomp">
+<h3 id="string-chomp">string-chomp</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(string-chomp STRING [SUFFIX])</tt>
+<br /></span>
+<p>If <tt>STRING</tt> ends with <tt>SUFFIX</tt>, then this procedure returns a copy of its first argument with the suffix removed, otherwise returns <tt>STRING</tt> unchanged. <tt>SUFFIX</tt> defaults to <tt>&quot;\n&quot;</tt>.</p><a href="#string-compare3">
+<h3 id="string-compare3">string-compare3</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(string-compare3 STRING1 STRING2)</tt>
+<br /></span><span class="definition procedure"><em>[procedure]</em> <tt>(string-compare3-ci STRING1 STRING2)</tt>
+<br /></span>
+<p>Perform a three-way comparison between the <tt>STRING1</tt> and <tt>STRING2</tt>, returning either <tt>-1</tt> if <tt>STRING1</tt> is lexicographically less than <tt>STRING2</tt>, <tt>0</tt> if it is equal, or <tt>1</tt> if it s greater. <tt>string-compare3-ci</tt> performs a case-insensitive comparison.</p><a href="#string-intersperse">
+<h3 id="string-intersperse">string-intersperse</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(string-intersperse LIST [STRING])</tt>
+<br /></span>
+<p>Returns a string that contains all strings in <tt>LIST</tt> concatenated together.  <tt>STRING</tt> is placed between each concatenated string and defaults to <tt>&quot; &quot;</tt>.</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">string-intersperse '<span class="paren2">(<span class="default"><span class="string">&quot;one&quot;</span> <span class="string">&quot;two&quot;</span></span>)</span> <span class="string">&quot;three&quot;</span></span>)</span></tt></pre>
+<p>is equivalent to</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">apply string-append <span class="paren2">(<span class="default">intersperse '<span class="paren3">(<span class="default"><span class="string">&quot;one&quot;</span> <span class="string">&quot;two&quot;</span></span>)</span> <span class="string">&quot;three&quot;</span></span>)</span></span>)</span></tt></pre><a href="#string-split">
+<h3 id="string-split">string-split</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(string-split STRING [DELIMITER-STRING [KEEPEMPTY]])</tt>
+<br /></span>
+<p>Split string into substrings delimited by any of the characters given in the delimiter string. If no delimiters are specified, a string comprising the tab, newline and space characters is assumed. If the parameter <tt>KEEPEMPTY</tt> is given and not <tt>#f</tt>, then empty substrings are retained:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">string-split <span class="string">&quot;one  two  three&quot;</span></span>)</span> ==&gt; <span class="paren1">(<span class="default"><span class="string">&quot;one&quot;</span> <span class="string">&quot;two&quot;</span> <span class="string">&quot;three&quot;</span></span>)</span>
+<span class="paren1">(<span class="default">string-split <span class="string">&quot;foo:bar::baz:&quot;</span> <span class="string">&quot;:&quot;</span> #t</span>)</span> ==&gt; <span class="paren1">(<span class="default"><span class="string">&quot;foo&quot;</span> <span class="string">&quot;bar&quot;</span> <span class="string">&quot;&quot;</span> <span class="string">&quot;baz&quot;</span> <span class="string">&quot;&quot;</span></span>)</span>
+<span class="paren1">(<span class="default">string-split <span class="string">&quot;foo:bar:baz,quux,zot&quot;</span> <span class="string">&quot;:,&quot;</span> </span>)</span> ==&gt; <span class="paren1">(<span class="default"><span class="string">&quot;foo&quot;</span> <span class="string">&quot;bar&quot;</span> <span class="string">&quot;baz&quot;</span> <span class="string">&quot;quux&quot;</span> <span class="string">&quot;zot&quot;</span></span>)</span></tt></pre><a href="#string-translate">
+<h3 id="string-translate">string-translate</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(string-translate STRING FROM [TO])</tt>
+<br /></span>
+<p>Returns a fresh copy of <tt>STRING</tt> with characters matching <tt>FROM</tt> translated to <tt>TO</tt>.  If <tt>TO</tt> is omitted, then matching characters are removed. <tt>FROM</tt> and <tt>TO</tt> may be a character, a string or a list. If both <tt>FROM</tt> and <tt>TO</tt> are strings, then the character at the same position in <tt>TO</tt> as the matching character in <tt>FROM</tt> is substituted.</p><a href="#string-translate">
+<h3 id="string-translate">string-translate*</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(string-translate* STRING SMAP)</tt>
+<br /></span>
+<p>Substitutes elements of <tt>STRING</tt> according to <tt>SMAP</tt>. <tt>SMAP</tt> should be an association-list where each element of the list is a pair of the form <tt>(MATCH . REPLACEMENT)</tt>. Every occurrence of the string <tt>MATCH</tt> in <tt>STRING</tt> will be replaced by the string <tt>REPLACEMENT</tt>:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">string-translate*
+  <span class="string">&quot;&lt;h1&gt;this is a </span><span class="string">\&quot;</span><span class="string">string</span><span class="string">\&quot;</span><span class="string">&lt;/h1&gt;&quot;</span>
+  '<span class="paren2">(<span class="default"><span class="paren3">(<span class="default"><span class="string">&quot;&lt;&quot;</span> . <span class="string">&quot;&amp;lt;&quot;</span></span>)</span> <span class="paren3">(<span class="default"><span class="string">&quot;&gt;&quot;</span> . <span class="string">&quot;&amp;gt;&quot;</span></span>)</span> <span class="paren3">(<span class="default"><span class="string">&quot;</span><span class="string">\&quot;</span><span class="string">&quot;</span> . <span class="string">&quot;&amp;quot;&quot;</span></span>)</span></span>)</span> </span>)</span>
+=&gt;  <span class="string">&quot;&amp;lt;h1&amp;gt;this is a &amp;quot;string&amp;quot;&amp;lt;/h1&amp;gt;&quot;</span></tt></pre><a href="#substring">
+<h3 id="substring">substring=?</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(substring=? STRING1 STRING2 [START1 [START2 [LENGTH]]])</tt>
+<br /></span><span class="definition procedure"><em>[procedure]</em> <tt>(substring-ci=? STRING1 STRING2 [START1 [START2 [LENGTH]]])</tt>
+<br /></span>
+<p>Returns <tt>#t</tt> if the strings <tt>STRING1</tt> and <tt>STRING2</tt> are equal, or <tt>#f</tt> otherwise.  The comparison starts at the positions <tt>START1</tt> and <tt>START2</tt> (which default to 0), comparing <tt>LENGTH</tt> characters (which defaults to the minimum of the remaining length of both strings).</p><a href="#substring-index">
+<h3 id="substring-index">substring-index</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(substring-index MAYBE-SUBSTRING STRING [START])</tt>
+<br /></span><span class="definition procedure"><em>[procedure]</em> <tt>(substring-index-ci MAYBE-SUBSTRING STRING [START])</tt>
+<br /></span>
+<p>Searches for first index in string <tt>STRING</tt> where string <tt>MAYBE-SUBSTRING</tt> occurs.  If the optional argument <tt>START</tt> is given, then the search starts at that index.  <tt>substring-index-ci</tt> is a case-insensitive version of <tt>substring-index</tt>.</p><a href="#reverse-list-string">
+<h3 id="reverse-list-string">reverse-list-&gt;string</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(reverse-list-&gt;string LIST)</tt>
+<br /></span>
+<p>Returns a string with the characters in <tt>LIST</tt> in reverse order. This is equivalent to <tt>(list-&gt;string (reverse LIST))</tt>, but much more efficient.</p><a href="#reverse-string-append">
+<h3 id="reverse-string-append">reverse-string-append</h3></a><span class="definition procedure"><em>[procedure]</em> <tt>(reverse-string-append LIST)</tt>
+<br /></span>
+<p><tt>(apply string-append (reverse LIST))</tt></p>
+<hr />
+<p>Previous: <a href="Module (chicken sort)" class="internal">Module (chicken sort)</a></p>
+<p>Next: <a href="Module (chicken syntax)" class="internal">Module (chicken syntax)</a></p></div></body></html>

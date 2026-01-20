@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 188: Splicing binding constructs for syntactic
+keywords</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/srfi.css" type="text/css" />
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Splicing binding constructs for syntactic keywords
+
+<h1>Author</h1>
+
+Marc Nieper-Wißkirchen
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+188+at+srfi+dotschemers+dot+org">srfi-188@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-188">archive</a>.</p>
+<ul>
+  <li>Received: 2020-03-25</li>
+  <li>Draft #1 published: 2020-03-25</li>
+  <li>Draft #2 published: 2020-03-28</li>
+  <li>Finalized: 2020-06-03</li>
+</ul>
+
+<h1>Abstract</h1>
+
+<p>Splicing binding constructs for syntactic keywords are versions
+  of <code>let-syntax</code> and <code>letrec-syntax</code> that can
+  be used in a definition context in the same way
+  as <code>begin</code>.
+</p>
+
+<h1>Rationale</h1>
+
+<p>The R7RS defines two binding constructs for syntactic keywords,
+  namely <code>let-syntax</code> and <code>letrec-syntax</code>.  Both
+  are equivalent to their R5RS versions and are expressions.</p>
+
+<p>The R6RS versions of <code>let-syntax</code>
+  and <code>letrec-syntax</code> are equivalent to the R5RS/R7RS
+  version when they are not in a definition context.  In a definition
+  context, however, the R6RS versions splice their body forms in the
+  enclosing definition context.
+</p>
+
+<p>In some sense, the R6RS splicing versions are more fundamental than the
+  R5RS/R7RS non-splicing versions as one can easily define the
+  non-splicing versions by way of a <code>syntax-rules</code> macro in
+  terms of the splicing versions.  Moreover, the non-splicing versions
+  can also be defined by way of a <code>syntax-rules</code> macro in
+  terms of the local <code>define-syntax</code>.
+</p>
+
+<p>On the other hand, the splicing versions cannot be defined through
+  the non-splicing versions or <code>define-syntax</code>.
+</p>
+
+<p>The usefulness of the splicing versions seems to be
+  non-controversial.  For
+  example, <a href="https://srfi.schemers.org/srfi-148/srfi-148.html#em">SRFI
+  148's <code>em</code> syntax</a> would become unnecessary.
+</p>
+
+<p>Thus, this SRFI proposes splicing versions
+  of <code>let-syntax</code> and <code>letrec-syntax</code> for R7RS
+  under a different name.  Note, however, that, in some corner cases,
+  the splicing versions cannot be a drop-in replacement for the
+  non-splicing forms (only that the non-splicing forms can be defined
+  as derived syntax in terms of the splicing forms).
+</p>
+
+<h1>Examples</h1>
+
+<p>The following examples show the difference between the non-splicing
+and splicing behavior.</p>
+
+<p>This expression evaluates to <code>let-syntax</code>:</p>
+
+<pre>
+(let ((x 'let-syntax))
+  (let-syntax ()
+    (define x 'splicing-let-syntax)
+    #f)
+  x)
+</pre>
+
+<p>This expression evaluates to <code>splicing-let-syntax</code>:</p>
+
+<pre>
+(let ((x 'let-syntax))
+  (splicing-let-syntax ()
+    (define x 'splicing-let-syntax)
+    #f)
+  x)
+</pre>
+
+<p>For more examples, see the test suite that comes bundled with this
+specification.</p>
+
+<h1>Specification</h1>
+
+<h2>Syntax</h2>
+
+<p><code>(splicing-let-syntax ((〈keyword〉 〈transformer spec〉) ...)
+〈form〉 ...)</code></p>
+
+<p>Like <code>(let-syntax ((〈keyword〉 〈transformer spec〉) ...)
+    〈form〉 ...)</code> except that in a definition context, the forms
+  <code>〈form〉 ...</code> are spliced into the enclosing definition context (in the
+  same way as for <code>begin</code>).
+</p>
+
+<p>Note: The R6RS version is a bit more restricted.  There, in a definition context,
+  the forms <code>〈form〉 ...</code> all have to be definitions and, in an expression
+  context, the forms <code>〈form〉 ...</code> all have to expressions.
+</p>
+
+<p><code>(splicing-letrec-syntax ((〈keyword〉 〈transformer spec〉) ...)
+〈form〉 ...)</code></p>
+
+<p>Like <code>(letrec-syntax ((〈keyword〉 〈transformer spec〉) ...)
+    〈form〉 ...)</code> except that in a definition context, the forms
+  <code>〈form〉 ...</code> are spliced into the enclosing definition context (in the
+  same way as for <code>begin</code>).
+</p>
+
+<p>Note: The R6RS version is a bit more restricted.  There, in a definition context,
+  the forms <code>〈form〉 ...</code> all have to be definitions and, in an expression
+  context, the forms <code>〈form〉 ...</code> all have to expressions.
+</p>
+
+<h1>Implementation</h1>
+
+<p>A portable R7RS implementation of the binding constructs described
+  here is not possible.
+</p>
+
+<p>The splicing binding constructs as described here are at least provided by
+  Chibi Scheme, Chez Scheme, and Racket.
+</p>
+
+<p>A Chibi Scheme implementation (<code><a href="https://srfi.schemers.org/srfi-188/srfi-188.tgz">.tgz</a></code>, <a href="https://github.com/scheme-requests-for-implementation/srfi-188">Github</a>)
+  together with a SRFI 64 test suite is bundled with this
+  specification.</p>
+
+<h1>Acknowledgements</h1>
+
+<p>The constructs described here aren't new but go back to the
+R4RS/R5RS (in the non-splicing version) and the R6RS (in the splicing
+version).  Thanks go to the editors of the (revised) reports on the
+algorithmic language Scheme.
+</p>
+
+<h1>Copyright</h1>
+Copyright &copy; Marc Nieper-Wißkirchen (2020).
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur
+    A. Gleckler</a></address></body></html>

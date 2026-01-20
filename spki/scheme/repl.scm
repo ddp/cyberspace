@@ -852,6 +852,7 @@
 (import portal)
 (import forum)
 (import display)
+(import info)      ; hypertext doc browser with pager
 
 ;; Initialize libsodium
 (sodium-init)
@@ -5549,16 +5550,16 @@ Cyberspace REPL - Available Commands
      (if (eq? *user-mode* 'novice)
          ;; Novice: plain English, no acronyms
          (begin
-           (print "  soup              - Browse the object store")
-           (print "  library           - Browse the Library of memos")
-           (print "  search 'topic     - Search for anything")
-           (print "  kwic 'word        - See word in context across memos")
-           (print "  status            - Show what's happening")
-           (print "  inspect thing     - Look inside any object")
+           (print "  soup        - Browse the object store")
+           (print "  library     - Browse the Library of memos")
+           (print "  search 'x   - Search for anything")
+           (print "  kwic 'word  - See word in context across memos")
+           (print "  status      - Show what's happening")
+           (print "  inspect x   - Look inside any object")
            (print "")
-           (printf "  help topics       - All help topics (~a commands)~%"
+           (printf "  help topics - All help topics (~a commands)~%"
                    (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
-           (print "  .  ?  bye         - status, help, exit"))
+           (print "  .  ?  bye   - status, help, exit"))
          ;; Schemer: full Scheme syntax
          (begin
            (print "  (soup)            - Browse the object store")
@@ -6775,18 +6776,69 @@ See: Memo-0000 Declaration of Cyberspace
 (define *mode-threshold* 5)   ; expressions before auto-switch
 
 (define (novice)
-  "Switch to novice mode - simpler help, command-focused"
+  "Switch to novice mode - guardrails on, confirmations required"
   (set! *user-mode* 'novice)
   (set! *prompt* ": ")
-  (print "Novice mode. Bare commands work: status, keys, soup")
-  (print "Type ? for help"))
+  (print "Novice mode. Guardrails on.")
+  (print "Destructive ops require confirmation. Type ? for help."))
 
 (define (schemer)
-  "Switch to schemer mode - full power, detailed help"
+  "Switch to schemer mode - full power, no safety rails"
   (set! *user-mode* 'schemer)
   (set! *prompt* "λ ")
-  (print "Schemer mode. Full Scheme: (soup 'keys), (map f list)")
-  (print "Type (help 'topics) for command index"))
+  (print "Schemer mode. Full power, no confirmations.")
+  (print "You asked for it."))
+
+;; Novice mode guardrails - dangerous operations need confirmation
+(define *dangerous-ops*
+  '(seal-release seal-commit key-delete key-revoke
+    vault-reset vault-wipe gossip-broadcast
+    enroll-revoke capability-revoke))
+
+(define (confirm? prompt)
+  "Ask user for confirmation, returns #t if confirmed"
+  (printf "~a [y/N] " prompt)
+  (flush-output)
+  (let ((response (read-line)))
+    (and response
+         (> (string-length response) 0)
+         (char-ci=? (string-ref response 0) #\y))))
+
+(define (novice-guard op-name thunk)
+  "Wrap dangerous operation with confirmation in novice mode"
+  (if (eq? *user-mode* 'novice)
+      (if (confirm? (sprintf "~a is destructive. Continue?" op-name))
+          (thunk)
+          (begin (print "Cancelled.") (void)))
+      (thunk)))
+
+(define-syntax guarded
+  (syntax-rules ()
+    ((guarded op-name body ...)
+     (novice-guard 'op-name (lambda () body ...)))))
+
+;; Guarded wrappers for dangerous operations
+;; In novice mode, these require confirmation. In schemer mode, direct.
+
+(define (release! version . args)
+  "Create a sealed release (guarded in novice mode)"
+  (guarded seal-release
+    (apply seal-release version args)))
+
+(define (wipe-vault!)
+  "Wipe the entire vault - DESTRUCTIVE (guarded in novice mode)"
+  (guarded vault-wipe
+    (vault-wipe)))
+
+(define (delete-key! key-id)
+  "Delete a key from the keyring - DESTRUCTIVE (guarded in novice mode)"
+  (guarded key-delete
+    (keyring-delete key-id)))
+
+(define (broadcast! artifact)
+  "Broadcast artifact to all peers - cannot be recalled (guarded in novice mode)"
+  (guarded gossip-broadcast
+    (gossip-broadcast artifact)))
 
 (define (check-mode-shift!)
   "Auto-detect mode shift based on usage patterns"

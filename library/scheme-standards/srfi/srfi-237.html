@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 237: R6RS Records (refined)</title>
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="https://srfi.schemers.org/srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      var { white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI surfboard logo" /></a>237: R6RS Records (refined)</h1>
+
+    <p>by Marc Nieper-Wißkirchen</p>
+
+    <h2 id="status">Status</h2>
+
+    <p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+237+at+srfi+dotschemers+dot+org">srfi-237@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-237/">archive</a>.</p>
+    <ul>
+      <li>Received: 2022-10-03</li>
+      <li>Draft #1 published: 2022-10-04</li>
+      <li>Draft #2 published: 2022-10-27</li>
+      <li>Draft #3 published: 2022-10-29</li>
+      <li>Draft #4 published: 2022-11-05</li>
+      <li>Draft #5 published: 2023-04-05</li>
+      <li>Draft #6 published: 2023-04-09</li>
+      <li>Finalized: 2023-05-02</li>
+    </ul>
+
+    <h2>Table of contents</h2>
+    <ul>
+      <li>
+        <a href="#rationale">Rationale</a>
+        <ul>
+          <li><a href="#examples">Examples</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#specification">Specification</a>
+        <ul>
+          <li>
+            <a href="#syntactic-layer">Syntactic layer</a>
+            <ul>
+              <li><a href="#syntax">Syntax</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#procedural-layer">Procedural layer</a>
+            <ul>
+              <li><a href="#procedures">Procedures</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#inspection-layer">Inspection layer</a>
+            <ul>
+              <li><a href="#procedures-2">Procedures</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#reading-and-writing-of-record-types">Reading and writing of record types</a>
+            <ul>
+              <li><a href="#procedures-3">Procedures</a></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li><a href="#implementation">Implementation</a></li>
+      <li><a href="#acknowledgements">Acknowledgements</a></li>
+    </ul>
+
+    <h2 id="abstract">Abstract</h2>
+
+    <p>The record mechanism of R<sup>6</sup>RS is refined.  In
+      particular, the triad of record names, record-type descriptors
+      and record constructor descriptors can be effectively ignored
+      and replaced with the single notion of a record descriptor.  We
+      also remove the restriction that the syntactic layer can only
+      define one constructor per record type defined.</p>
+
+    <h2 id="rationale">Rationale</h2>
+
+    <p>Objections against the R<sup>6</sup>RS record system were were
+      voiced by people voting against ratification of that standard's
+      latest candidate draft.  These objections touched the
+      complexity, the role of the procedural layer, and the
+      compatibility between the syntactic and the procedural layer of
+      the R<sup>6</sup>RS record system.  This SRFI addresses these
+      objections while remaining compatible with the R<sup>6</sup>RS
+      record system.</p>
+
+    <ul>
+      <li>
+	<p>The conceptual distinction between record
+	  names, record-type descriptors, and record constructor
+	  descriptors made in R<sup>6</sup>RS has been perceived as
+	  challenging by users.  This SRFI therefore refines the
+	  R<sup>6</sup>RS record mechanism so that the triad of record
+	  names, record-type descriptors and record constructor
+	  descriptors can be effectively ignored and replaced with the
+	  single notion of a <i>record descriptor</i>.  In particular,
+	  the <code>parent-rtd</code> clause and
+	  the <code>record-type-descriptor</code> and
+	  the <code>record-constructor-descriptor</code> syntax are no
+	  longer needed.
+	</p>
+      </li>
+      <li>
+        <p>The procedural layer is intended to be used when record
+          types have to be constructed at runtime, e.g. by
+          interpreters that need to construct host-compatible record
+          types.  The procedural layer, much like the inspection layer,
+          is therefore not needed for most code.  Therefore, the vast
+          majority of programmers can ignore the procedural layer.
+          This is strengthened by this SRFI, which removes the
+          restriction that the syntactic layer can only define one
+          constructor per record type defined.</p>
+      </li>
+      <li>
+        <p>The syntactic and the procedural layer are compatible, and a
+          syntactically defined record type can inherit from a
+          procedurally defined record type, and vice versa.  Whether a
+          record type has been defined syntactically or procedurally
+          is generally unobservable.  To inherit from a record type,
+          all that has to be exposed from it is either the (bound)
+          record name or the record type descriptor (with or without a
+          record constructor descriptor).
+
+          The latter is simplified by this SRFI, as the latter three
+	  entities can be used effectively interchangeably.</p>
+      </li>
+    </ul>
+
+    <p>Record type definitions and the record types defined through them can have one or more of the
+      following
+      attributes in R<sup>6</sup>RS: <i>non-generativity</i>, <i>sealedness</i>,
+      and <i>opacity</i>.  Each has its respective <i>raison d'être</i>:</p>
+
+    <ul>
+      <li>
+        <p> A record type (definition) is <dfn>non-generative</dfn> if
+          evaluating a definition creates a new record type only once
+          per expansion of the defining form.  This makes local record
+          type definitions to take advantage of lexical scoping
+          feasible.  In fact, non-generative record type definitions
+          behave as definitions of records/structures/classes in
+          statically typed languages.
+        </p>
+      </li>
+      <li>
+        <p>
+          If a record type is <dfn>sealed</dfn>, no extensions of the
+          record type can be created.  While this allows a compiler to
+          generate slightly more efficient code for such a record
+          type's accessors and mutators, the real use of sealedness is
+          that it can guarantee correctness.  When the type predicate
+          of a Scheme record type returns <code>#t</code> for a record
+          type, it also returns <code>#t</code> on all child record
+          types of this type.  Thus, the argument types of procedures
+          that have to rely on the type predicate to check for type
+          correctness are automatically contravariant.  Sealedness
+          breaks contravariance and is thus a method to define
+          procedures for record types that are non-contravariant.
+        </p>
+      </li>
+      <li>
+        <p>
+          An <dfn>opaque</dfn> record type cannot be inspected through
+          the inspection layer.  Unless its record name or record
+          type-descriptor is exported, it behaves as a non-record
+          type.  Opaque record types can thus be used to implement
+          fundamental types like pairs while enforcing portability of
+          code.  Most of the disjoint types introduced by SRFIs should
+          be implemented as opaque record types.
+        </p>
+      </li>
+    </ul>
+
+    <h3 id="examples">Examples</h3>
+
+    <p>Record types defined by the syntactic and by the procedural layer are fully compatible, and can simply inherit from each other:</p>
+
+    <pre>(define-record-type rec1
+  (fields a)
+  (protocol
+   (lambda (p)
+     (lambda (a/2)
+       (p (* 2 a/2))))))
+
+(define rec2
+  (make-record-descriptor 'rec2
+    rec1 #f #f #f
+    '#((immutable b))
+    (lambda (n)
+      (lambda (a/2 b)
+        ((n a/2) b)))))
+(define make-rec2 (record-constructor rec2))
+(define rec2? (record-predicate rec2))
+(define rec2-b (record-accessor rec2 0))
+
+(define-record-type rec3
+  (parent rec2)
+  (fields c)
+  (protocol
+   (lambda (n)
+     (lambda (c)
+       ((n c c) c)))))</pre>
+
+   <p>The following library defines a simplified abstract (read-only)
+     dictionary type, which can appear as a dictionary based on a hash
+     table or on an alist.  For this, it defines one record type, but
+     with several names:</p>
+
+   <pre>(library (example dictionary)
+  (export dictionary dictionary? dictionary-ref
+          dictionary-from-hashtable make-dictionary-from-hashtable
+          dictionary-from-alist make-dictionary-from-alist)
+  (import (rnrs base (6))
+          (rnrs hashtables (6))
+          (srfi :237))
+
+  (define-record-type dictionary
+    (nongenerative) (opaque #t)
+    (fields ht)
+    (protocol
+     (lambda (p)
+       (lambda args
+         (assert #f)))))
+
+  (define dictionary-ref
+    (lambda (dict key default)
+      (assert (dictionary? key))
+      (hashtable-ref (dictionary-ht dict) key default)))
+
+  (define-record-name (dictionary-from-hashtable dictionary)
+    (protocol
+     (lambda (p)
+       (lambda (ht)
+         (assert (hashtable? ht))
+         (p ht)))))
+
+  (define-record-name (dictionary-from-alist dictionary)
+    (protocol
+     (lambda (p)
+       (lambda (alist)
+         (define ht (make-eqv-hashtable))
+         (assert (list? alist))
+         (for-each
+          (lambda (entry)
+            (assert (pair? entry))
+            (hashtable-set! ht (car entry) (cdr entry)))
+          alist)
+         (p ht))))))</pre>
+
+   <p>This library can be used to define child record types based on
+     either appearance:</p>
+
+   <pre>(define-record-type owned-dictionary
+  (parent dictionary)
+  (fields owner)
+  (protocol
+   (lambda (n)
+     (lambda args
+       (assert #f)))))
+
+(define-record-name (owned-dictionary-from-hashtable owned-dictionary)
+  (parent dictionary-from-hashtable)
+  (protocol
+   (lambda (n)
+     (lambda (ht owner)
+       ((n ht) owner)))))
+
+(define-record-name (owned-dictionary-from-alist owned-dictionary)
+  (parent dictionary-from-alist)
+  (protocol
+   (lambda (n)
+     (lambda (alist owner)
+       ((n alist) owner)))))</pre>
+
+    <h2 id="specification">Specification</h2>
+
+    <p>The record mechanism spans four R<sup>6</sup>RS libraries:</p>
+    <ul>
+      <li>the <code>(srfi :237 records syntactic)</code> library, a
+        syntactic layer for defining a record type and associated
+        constructor, predicate, accessor, and mutators,</li>
+      <li>the <code>(srfi :237 records procedural)</code> library, a
+        procedural layer for creating and manipulating record types and
+        creating constructors, predicates, accessors, and mutators,</li>
+      <li>the <code>(srfi :237 records inspection)</code> library, a
+        set of inspection procedures.</li>
+      <li>the <code>(srfi :237 records ports)</code> library, a set of
+        procedures for controlling external representations of
+        records.</li>
+    </ul>
+
+    <p>The <code>(srfi :237)</code> and <code>(srfi :237
+      records)</code> libraries are each a composite of these four
+      libraries.  This composite library exports all procedures and
+      syntactic forms provided by the component libraries.</p>
+
+    <p>The corresponding R<sup>7</sup>RS library names are <code>(srfi
+        237 syntactic)</code>,
+      <code>(srfi 237 procedural)</code>, <code>(srfi 237
+        inspection)</code>, <code>(srfi 237 port)</code>,
+        and <code>(srfi 237)</code>, respectively.</p>
+
+    <p>The record mechanism described in this SRFI is based on the
+      record mechanism described in R<sup>6</sup>RS.  Unless said
+      otherwise, definitions and semantics remain unchanged from
+      R<sup>6</sup>RS.</p>
+
+    <p>A <dfn>record descriptor</dfn> is what is called a <i>record
+	constructor descriptor</i> in R<sup>6</sup>RS.  The term <i>record
+	constructor descriptor</i> is deprecated.</p>
+
+    <p>The naming convention <code><var>rd</var></code> in the
+      procedure entries below implies that the type of the argument must
+      be a record descriptor.</p>
+
+    <p>The type of record descriptors is a subtype of the type of
+      record-type descriptors.  A record-type descriptor that is not a
+      record descriptor is a <dfn>simple record-type descriptor</dfn>.
+      Each record descriptor has an <dfn>underlying simple record-type
+      descriptor</dfn> and an <dfn>underlying parent descriptor</dfn>.
+      The underlying simple record-type descriptor of a simple
+      record-type descriptor is the simple record-type descriptor
+      itself.  The underlying parent descriptor of a record descriptor
+      representing a base record type is <code>#f</code>.</p>
+
+    <p>Whenever a syntax or procedure described below expects a
+      record-type descriptor, the result is equivalent to when the
+      record-type descriptor is replaced by its underlying simple
+      record-type descriptor.</p>
+
+    <p><i>Note:</i> Conceptually, a record descriptor is a simple
+      record-type descriptor together with an R<sup>6</sup>RS record
+      constructor descriptor whose associated record type is
+      represented by the simple record-type descriptor.</p>
+
+    <p><i>Note:</i> Most users can safely ignore the notion of an
+      underlying simple record-type descriptor and just use record
+      descriptors.</p>
+
+    <h3 id="syntactic-layer">Syntactic layer</h3>
+
+    <p>The syntactic layer is provided by the <code>(srfi :237 records
+        syntactic)</code> library.</p>
+
+    <h4 id="syntax">Syntax</h4>
+
+    <p>The library exports the auxiliary
+      syntax <code>fields</code>, <code>mutable</code>, <code>immutable</code>, <code>parent</code>, <code>protocol</code>, <code>sealed</code>, <code>opaque</code>, <code>nongenerative</code>, and <code>parent-rtd</code>,
+      each identical to the export by the same name from <code>(rnrs records
+      syntactic (6))</code>.  It also exports the auxiliary
+      syntax <code>generative</code>.</p>
+
+    <p><code>(define-record-type &lang;name spec&rang; &lang;record clause&rang; &hellip;)</code></p>
+
+    <p><i>Syntax:</i> This syntax is equivalent to the syntax of the
+      record-type-defining form <code>define-record-type</code>
+      exported by <code>(rnrs records syntactic (6))</code>.</p>
+
+    <p><i>Semantics:</i>
+      This definition is equivalent to the record-type-defining
+      form <code>define-record-type</code> exported by <code>(rnrs
+        records syntactic (6))</code> with the followings additions:</p>
+
+    <p>The <code>&lang;record name&rang;</code> is bound to a <dfn>record
+	name</dfn>, which is a keyword.  As an expression, this keyword
+      evaluates to the underlying record descriptor whose underlying
+      simple record-type descriptor is the simple record-type
+      descriptor associated with the type specified by <code>&lang;record
+	name&rang;</code> and whose underlying parent descriptor is the record descriptor of the
+      parent of the type, or <code>#f</code> in case of a base type.</p>
+
+    <p><i>Note:</i> R<sup>6</sup>RS allows <code>&lang;record
+        name&rang;</code> to be bound to an expand-time or run-time representation.</p>
+
+    <p>The <code>&lang;name spec&rang;</code> can also be of the
+      form <code>(&lang;rtd name&rang; &lang;record name&rang;
+        &lang;constructor name&rang; &lang;predicate
+        name&rang;)</code> or <code>(&lang;rtd name&rang; &lang;record
+        name&rang;)</code>.  In these cases, <code>&lang;rtd
+        name&rang;</code>, instead of <code>&lang;record
+        name&rang;</code>, taken as a symbol, becomes the name of the
+      record type.  The second form is an abbreviation for the first
+      form where the constructor and the predicate name is derived
+      from the <code>&lang;rtd name&rang;</code>, instead of
+      the <code>&lang;record name&rang;</code>.</p>
+
+    <p>In a <code>parent</code> clause, the <code>&lang;parent
+      name&rang;</code> can be either a record name or an expression
+      that must evaluate to a record-type descriptor or record
+      descriptor.  If <code>&lang;parent name&rang;</code> is a record
+      name, the <code>parent</code> clause is equivalent to
+      a <code>parent</code> clause of the R<sup>6</sup>RS syntactic
+      layer.</p>
+
+    <p>Otherwise, if the expression evaluates to a record-type
+      descriptor <code><var>rtd</var></code>, the <code>parent</code>
+      clause is equivalent to the
+      clause <code>(parent-rtd <var>rtd</var> #f)</code> of the
+      R<sup>6</sup>RS syntactic layer.</p>
+
+    <p>Finally, if the expression evaluates to a record
+      descriptor <code><var>rd</var></code>, the <code>parent</code>
+      clause is equivalent to the
+      clause <code>(parent-rtd <var>rd</var> <var>rd</var>)</code> of the
+      R<sup>6</sup>RS syntactic layer.</p>
+
+    <p>The <code>parent-rtd</code> clause is deprecated.</p>
+
+    <p>A clause of the <code>(generative)</code> specifies that the
+      record type is generative.  This clause is mutually exclusive with
+      the <code>non-generative</code> clause.</p>
+
+    <p><i>Note:</i> While this clause is superfluous as its absence
+      (and the absence of a <code>non-generative</code> clause) also
+      specifies that the record type is generative, it makes it
+      sensible to encourage implementations to raise a continuable
+      exception of type <code>&warning</code> when
+      a <code>define-record-type</code> with neither
+      a <code>generative</code> nor <code>non-generative</code> clause
+      is expanded.  This helps detecting accidental specifications of generative record types.</p>
+
+    <p><i>Note:</i> An implementation is also encouraged to raise a
+      continuable exception of type <code>&warning</code> when
+      a <code>non-generative</code> clause without
+      a <code>&lang;uid&rang;</code> is specified, as such record types
+      are not compatible across different expansions of
+      a <code>define-record-type</code> form, e.g. when a library is
+      visited more than once.</p>
+
+    <p><i>Remark:</i> In Chez Scheme, the equivalent of the
+      clause <code>(generative)</code> is a clause of the
+      form <code>(nongenerative #f)</code>.  This syntax is not used
+      in this SRFI to avoid double-negation and misunderstanding
+      because <code>#f</code> often stands for a default value, which,
+      in this context, could have been a generated uid.</p>
+
+    <p><code>(define-record-name &lang;name spec&rang; &lang;record clause&rang; &hellip;)</code></p>
+
+    <p><i>Syntax:</i> The <code>&lang;name spec&rang;</code> is of the
+      form <code>(&lang;record name&rang; &lang;record type&rang;
+        &lang;constructor name&rang;)</code> or <code>(&lang;record
+        name&rang; &lang;record type&rang;)</code>.
+      The <code>&lang;record name&rang;</code> must be an identifier,
+      the <code>&lang;record type&rang;</code> a record name or an
+      expression.</p>
+
+    <p>The second form of <code>&lang;name spec&rang;</code> is an
+      abbreviation for the first form, where the name of the
+      constructor is generated by prefixing the record name
+      with <code>make-</code>.</p>
+
+    <p>A <code>&lang;record clause&rang;</code> is as for
+      the <code>define-record-type</code> syntax except that only
+      a <code>parent</code> and a <code>protocol</code> clause are
+      allowed.</p>
+
+    <p><i>Semantics:</i> If <code>&lang;record type&rang;</code> is
+      bound to a record name (e.g. by a
+      previous <code>define-record-type</code>
+      or <code>define-record-name</code> definition),
+      let <var>rd</var> be the underlying record descriptor.
+      Otherwise, <code>&lang;record type&rang;</code> must evaluate to
+      a record descriptor <var>rd</var>.</p>
+
+    <p>This definition binds the <code>&lang;record name&rang;</code>
+      to a record name as defined in the description of
+      the <code>define-record-type</code> definition.  The underlying
+      record descriptor is one whose underlying simple record-type
+      descriptor is the simple record-type descriptor underlying <var>rd</var> and
+      whose underlying parent descriptor is the record descriptor of
+      the parent, or the underlying parent descriptor
+      of <var>rd</var>.
+
+    <p>The <code>protocol</code> clause specifies the constructor
+      descriptor of the record descriptor
+      underlying <code>&lang;record name&rang;</code>.</p>
+
+    <p><code>(record-type-descriptor &lang;record name&rang;)</code></p>
+
+    <p>Equivalent to the syntax with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p>The <code>record-type-descriptor</code> syntax is deprecated.</p>
+
+    <p><i>Note:</i> Use <code>(record-descriptor-rtd &lang;record name&rang;)</code> instead.</p>
+
+    <p><code>(record-constructor-descriptor &lang;record name&rang;)</code></p>
+
+    <p>Equivalent to the syntax with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p>The <code>record-constructor-descriptor</code> syntax is deprecated.</p>
+
+    <p><i>Note:</i> Use <code>(values &lang;record name&rang;)</code> instead.</p>
+
+    <h3 id="procedural-layer">Procedural layer</h3>
+
+    <p>The syntactic layer is provided by the <code>(srfi :237 records
+        procedural)</code> library.</p>
+
+    <h4 id="procedures">Procedures</h4>
+
+    <p><code>(make-record-type-descriptor <var>name</var> <var>parent</var> <var>uid</var> <var>sealed?</var> <var>opaque?</var> <var>fields</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.  The returned record-type descriptor is a
+      simple record-type descriptor.</p>
+
+    <p><code>(record-type-descriptor? <var>obj</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(make-record-descriptor <var>rtd</var> <var>parent-descriptor</var> <var>protocol</var>)</code></p>
+    <p><code>(make-record-constructor-descriptor <var>rtd</var> <var>parent-descriptor</var> <var>protocol</var>)</code></p>
+
+    <p>Equivalent to the procedure with the latter name in
+      R<sup>6</sup>RS.  The underlying simple record-type descriptor
+      of the returned record descriptor is the underlying simple
+      record-type descriptor of <code><var>rtd</var></code>.  The
+      underlying parent descriptor of the record descriptor is
+      the <code><var>parent-descriptor</var></code>.</p>
+
+    <p>The name <code>make-record-constructor-descriptor</code> is
+        deprecated.</p>
+
+    <p><code>(make-record-descriptor <var>name</var> <var>parent</var> <var>uid</var> <var>sealed?</var> <var>opaque?</var> <var>fields</var>
+	<var>protocol</var>)</code></p>
+
+    <p>Equivalent to <code>(make-record-descriptor (make-record-type-descriptor <var>name</var> <var>parent</var> <var>uid</var> <var>sealed?</var> <var>opaque?</var> <var>fields</var>)
+	<var>parent</var> <var>protocol</var>)</code>.</p>
+
+    <p><code>(record-descriptor-rtd <var>rd</var>)</code></p>
+
+    <p>Returns the underlying simple record-type descriptor of <code>rd</code>.</p>
+
+    <p><code>(record-descriptor-parent <var>rd</var>)</code></p>
+
+    <p>Returns the underlying parent record descriptor of <code>rd</code>.</p>
+
+    <p><code>(record-descriptor? <var>obj</var>)</code></p>
+    <p><code>(record-constructor-descriptor? <var>obj</var>)</code></p>
+
+    <p>Returns <code>#t</code> if the argument is a record
+      descriptor, <code>#f</code> otherwise.</p>
+
+    <p><i>Note:</i> This predicate is missing in R<sup>6</sup>RS.
+      According to at least one of the editors, it shouldn't be.</p>
+
+    <p>The name <code>record-constructor-descriptor?</code> is
+        deprecated.</p>
+
+    <p><code>(record-constructor <var>rd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-predicate <var>rtd</var> <var>k</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-accessor <var>rtd</var> <var>k</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-mutator <var>rtd</var> <var>k</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <h3 id="inspection-layer">Inspection layer</h3>
+
+    <p>The syntactic layer is provided by the <code>(srfi :237 records
+        inspection)</code> library.</p>
+
+    <h4 id="procedures-2">Procedures</h4>
+
+    <p><code>(record? <var>obj</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-rtd <var>record</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-type-name <var>rtd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-type-parent <var>rtd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-type-uid <var>rtd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-type-generative? <var>rtd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-type-sealed? <var>rtd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-type-opaque? <var>rtd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-type-field-names <var>rtd</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-field-mutable? <var>rtd</var> <var>k</var>)</code></p>
+
+    <p>Equivalent to the procedure with the same name in
+      R<sup>6</sup>RS.</p>
+
+    <p><code>(record-uid->rtd <var>uid</var>)</code></p>
+
+    <p>The <code><var>uid</var></code> must be a symbol.</p>
+
+    <p>If a previous call to <code>make-record-type-descriptor</code>
+      was made with the <code><var>uid</var></code> symbol, return the
+      same (in the sense of <code>eqv?</code>) record-type descriptor
+      as this previous call.  Otherwise, return a record-type
+      descriptor <code><var>rtd</var></code> such
+      that <code>(record-type-uid <var>rtd</var>)</code> would return
+      the symbol <code><var>uid</var></code>, or <code>#f</code>.</p>
+
+    <h3 id="reading-and-writing-of-record-types">Reading and writing of record types</h3>
+
+    <p>Records of non-generative, non-opaque record types whose field
+      values are datum values are added to the set of Scheme datum
+      values and thus have an external representation.  These records
+      are constant literals; an expression consisting of a
+      representation of such a record therefore evaluates "to itself".
+      (Note that literal constants are immutable objects; this is
+      regardless of whether a record type has mutable fields.)</p>
+
+    <p>The external representation for a record is given
+      by <code>#r(&lang;rtd&rang; &lang;datum&rang;
+      &hellip;)</code> where <code>&lang;rtd&rang;</code> is a
+      representation (see below) of the record type's record-type
+      descriptor and the <code>&lang;datums&rang;</code> are external
+      representations of the record's field values.</p>
+
+    <p>An external representation <code>&lang;rtd&rang;</code> of a
+      record-type descriptor (of a non-generative record-type) is
+      either an external representation of its uid or a list-like
+      representation given by <code>(&lang;name datum&rang;
+      &lang;parent rtd&rang; &lang;uid datum&rang; &lang;sealed?
+      datum&rang; &lang;opaque? datum&rang; &lang;fields
+      datum&rang;)</code> where the <code>&lang;name
+      datum&rang;</code>, <code>&lang;uid datum&rang;</code>,
+      <code>&lang;sealed? datum&rang;</code>, <code>&lang;opaque?
+        datum&rang;</code>, and <code>&lang;fields datum&rang;</code>
+        correspond to external representations of the respective
+        arguments to <code>make-record-type-descriptor</code>
+      and <code>&lang;parent rtd&rang;</code> is an external representation
+      of the parent's record-type descriptor as defined in this
+      paragraph, or <code>#f</code> if the record-type is a base
+      type.</p>
+
+    <p>External representations of record-type descriptors are not
+      used outside of external representations of records.</p>
+
+    <p>The ancestor types of a record-type of a read or written
+      record should be non-generative as well.</p>
+
+    <p>Shared or cyclic structure may be created as long as all cycles
+      are resolvable, however, without mutation of an immutable
+      record field.</p>
+
+    <p>The lexical syntax <code>#!srfi-237</code> indicates that
+      subsequent input may contain external representations of records
+      as defined here.  Otherwise, it is treated as a comment.
+      Implementations of SRFI 237 must not
+      treat <code>#!srfi-237</code> as a lexical violation.</p>
+
+    <p><i>Remark:</i> The syntax <code>#!srfi-237</code> is useful for
+      signifying implementations that cannot support the external
+      representations of records as defined here in their default or
+      native modes.</p>
+
+    <p><i>Note:</i> Syntactic datums of records may appear in
+      quotations, in syntax objects, in <code>syntax-case</code>
+      patterns, and in <code>syntax</code> templates.  The expander
+      does not push mark and substitution wraps down into record
+      datums.
+    </p>
+
+    <p>The following are examples of external representations of
+    records assuming the following definitions.</p>
+
+    <pre>(define-record-type point
+  (nongenerative point-6366d320-a1dd-48f9-b13f-5543399c1a90)
+  (fields x y))
+
+(define-record-type colored-point
+  (nongenerative colored-point-e6abbd89-f453-4354-985e-12f17fbf35c2)
+  (parent point)
+  (fields color))
+
+#r(point-6366d320-a1dd-48f9-b13f-5543399c1a90 1.0 2.0)
+#r(colored-point-e6abbd89-f453-4354-985e-12f17fbf35c2 1.0 2.0 'red)
+#r((point #f point-6366d320-a1dd-48f9-b13f-5543399c1a90 #f #f #((mutable x) (mutable y)))
+   1.0 2.0)
+#r((colored-point
+    (point #f point-6366d320-a1dd-48f9-b13f-5543399c1a90 #f #f #((mutable x) (mutable y)))
+    colored-point-e6abbd89-f453-4354-985e-12f17fbf35c2
+    #f #f #((mutable color)))
+   1.0 2.0 'red)
+#r((colored-point
+    point-6366d320-a1dd-48f9-b13f-5543399c1a90
+    colored-point-e6abbd89-f453-4354-985e-12f17fbf35c2
+    #f #f #((mutable color)))
+   1.0 2.0 'red)</pre>
+
+    <p>The third datum syntax represents the same record as the first,
+      and the fourth and fifth datum syntax the same record as the
+      second.  The third and fourth syntaxes are self-contained (and
+      don't need the preceding explicit definitions).  The fifth is self-contained
+      once the third is read.</p>
+
+    <h4 id="procedures-3">Procedures</h4>
+
+    <p>The following procedures are provided by the <code>(srfi :237 records
+        ports)</code> library.</p>
+
+    <p>Each textual input port has an associated parameter
+      (see <a href="https://srfi.schemers.org/srfi-226/">SRFI
+        226</a>), called the <dfn>rtd read flag</dfn>, whose initial
+      value is <code>#t</code>.</p>
+
+    <p>Each textual output port has an associated parameter, called
+      the <dfn>rtd write flag</dfn>, whose initial value
+      is <code>#f</code>.</p>
+
+    <p>When the value of the rtd read flag is <code>#f</code>, the
+      external representation of a record-type descriptor must be the
+      external representation of a uid symbol of a previously created
+      record-type when syntactic data is read from the port.</p>
+
+    <p>Otherwise, when the value of the rtd read flag is
+      not <code>#f</code>, and the external representation of a
+      record-type descriptor is not the external representation of a
+      uid symbol of a previously created record-type, it must be a
+      list-like external representation of the record-type descriptor
+      and the corresponding record-type descriptors are created (in
+      left-to-right order) as if through
+      calling <code>make-record-type-descriptor</code>.</p>
+
+    <p><i>Remark:</i> When reading from an untrusted source, the rtd
+      read flag should be set to <code>#f</code> as non-generative
+      record-type definitions cannot be garbage-collected.</p>
+
+    <p>When the value of the rtd write flag is <code>#f</code>,
+      external representations of a record-type descriptor are just
+      the external representations of a uid symbol when syntactic data
+      is written to the port.  Otherwise, at least as many list-like
+      external representations of record-type descriptors are included
+      in the external representations of records when a syntactic
+      datum is written to the port such that it can be read back from
+      the port without prior calls
+      to <code>make-record-type-descriptor</code>.</p>
+
+    <p><code>(port-read-rtd <var>textual-input-port</var>)</code></p>
+
+    <p><code>Returns the rtd read flag of <code><var>textual-input-port</var></code>.</code>
+
+    <p><code>(port-write-rtd <var>textual-output-port</var>)</code></p>
+
+    <p><code>Returns the rtd write flag of <code><var>textual-output-port</var></code>.</code>
+
+    <h2 id="implementation">Implementation</h2>
+
+    <p>A <a href="https://github.com/scheme-requests-for-implementation/srfi-237/tree/main/lib">portable
+      implementation</a> for R<sup>6</sup>RS systems with an
+      implementation
+      of <a href="https://srfi.schemers.org/srfi-213/">SRFI 213</a> is
+      in <a href="https://github.com/scheme-requests-for-implementation/srfi-237">this
+        SRFI's repository</a>.</p>
+
+    <p>The sample implementation does not support reading and writing
+      of record types as this would have implied a rewrite
+      of <code>get-datum</code> and <code>put-datum</code>.</p>
+
+    <p>Chez Scheme supports some of the external representations,
+      albeit using the lexical syntax <code>#[&hellip;]</code> instead
+      of <code>#r(&hellip;)</code></p>
+
+    <h2 id="acknowledgements">Acknowledgements</h2>
+
+    <p>The foundations of the record facility described here come from
+      R<sup>6</sup>RS.  This SRFI reuses language from R<sup>6</sup>RS.</p>
+
+    <ol>
+      <li id="sperber">
+	<p>Michael Sperber, R. Kent Dybvig, Matthew Flatt,
+	  Anton van Straaten, Robby Findler, and Jacob
+	  Matthews: <cite>Revised<sup>6</sup> Report on the Algorithmic
+	    Language Scheme</cite>. Journal of Functional Programming,
+	  Volume 19, Supplement S1, August 2009,
+	  pp. 1-301. DOI: <a href="https://doi.org/10.1017/S0956796809990074">10.1017/S0956796809990074</a>.</p>
+      </li>
+    </ol>
+
+    <h2 id="copyright">Copyright</h2>
+<h1></h1>
+    <p>&copy; 2022 Marc Nieper-Wißkirchen.</p>
+
+    <p>
+      Permission is hereby granted, free of charge, to any person
+      obtaining a copy of this software and associated documentation files
+      (the "Software"), to deal in the Software without restriction,
+      including without limitation the rights to use, copy, modify, merge,
+      publish, distribute, sublicense, and/or sell copies of the Software,
+      and to permit persons to whom the Software is furnished to do so,
+      subject to the following conditions:</p>
+
+    <p>
+      The above copyright notice and this permission notice (including the
+      next paragraph) shall be included in all copies or substantial
+      portions of the Software.</p>
+    <p>
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+      NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+      CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.</p>
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

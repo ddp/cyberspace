@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>SRFI 238: Codesets</title>
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="https://srfi.schemers.org/srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <h1 id="srfi-238-codesets"><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI surfboard logo" /></a>SRFI 238: Codesets</h1>
+  <p>by Lassi Kortela</p>
+  <h2 id="status">Status</h2>
+
+  <p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+238+at+srfi+dotschemers+dot+org">srfi-238@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-238/">archive</a>.</p>
+  <ul>
+    <li>Received: 2022-10-24</li>
+    <li>Draft #1 published: 2022-11-03</li>
+    <li>Draft #2 published: 2022-12-13</li>
+    <li>Draft #3 published: 2023-01-03</li>
+    <li>Finalized: 2023-01-16</li>
+  </ul>
+  <h2 id="abstract">Abstract</h2>
+  <p>Many programming interfaces rely on a set of condition codes
+  where each code has a numeric ID, a mnemonic symbol, and a
+  human-readable message. This SRFI defines a facility to translate
+  between numbers and symbols in a codeset and to fetch messages by
+  code. Examples are given using the Unix <em>errno</em> and
+  <em>signal</em> codesets.</p>
+  <h2>Table of contents</h2>
+  <ul>
+    <li>
+      <a href="#rationale">Rationale</a>
+      <ul>
+        <li><a href="#motivation">Motivation</a></li>
+        <li><a href="#goals">Goals</a></li>
+        <li><a href="#convenience">Convenience</a></li>
+        <li><a href="#enumerations-and-predicates">Enumerations and predicates</a></li>
+        <li><a href="#survey-of-prior-art">Survey of prior art</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#specification">Specification</a>
+      <ul>
+        <li><a href="#codeset-objects">Codeset objects</a></li>
+        <li><a href="#codeset-registry">Codeset registry</a></li>
+        <li><a href="#degenerate-cases">Degenerate cases</a></li>
+        <li><a href="#procedures">Procedures</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#examples">Examples</a>
+      <ul>
+        <li><a href="#basic-usage">Basic usage</a></li>
+        <li><a href="#promoting-numbers-to-symbols">Promoting numbers to symbols</a></li>
+        <li><a href="#enumerations">Enumerations</a></li>
+        <li><a href="#introspection">Introspection</a></li>
+      </ul>
+    </li>
+    <li><a href="#implementation">Implementation</a></li>
+  </ul>
+  <h2 id="rationale">Rationale</h2>
+  <h3 id="motivation">Motivation</h3>
+  <p>Instead of having a separate lookup interface for each codeset,
+  with trivial variations between them, it is easier to have just one.</p>
+  <h3 id="goals">Goals</h3>
+  <p>The goals of this SRFI are as follows.</p>
+  <ul>
+      <li>Provide a comfortable user interface.</li>
+      <li>Support a wide range of implementation strategies and
+      environments.</li>
+      <li>Impose a minimum of fuss on the implementer.</li>
+  </ul>
+  <p>The SRFI defines a minimal foundation which can be supplied by
+  even the most featherweight Scheme implementation. More features can
+  be built on top of this foundation. In particular, this SRFI does
+  not provide a way for users to define their own codesets. That's
+  something a Scheme implementation with a <em>foreign function
+  interface</em> should provide, and which should perhaps be
+  standardized in another SRFI.</p>
+  <h3 id="convenience">Convenience</h3>
+  <p>The interface given in this SRFI prioritizes convenience and
+  simplicity for the caller. Common codesets can be referred to using
+  symbols; the user does not have to fetch a special codeset object
+  before making queries. The interface is lenient, returning
+  <code>#f</code> instead of raising an exception whenever information
+  is unavailable.</p>
+  <p>Error handling is typically regarded as a chore into which
+  programmers do not like to invest extra time. It is hoped that a
+  forgiving interface encourages Scheme programmers to add
+  user-friendly error reporting in more places.</p>
+  <h3 id="enumerations-and-predicates">Enumerations and predicates</h3>
+  <p>It is not appropriate to define a standard list of codes for each
+  codeset since the full set of values encountered in the wild is not
+  easily fixed. For many codesets, especially those retrieved from a
+  low-level language using a groveler, there is no reliable way to
+  enumerate all the codes that might be manifest on a given system.
+  New codes are often added by new versions of software, new editions
+  of standards, and implementations which extend the standards.</p>
+  <p>For example, assume a hypothetical C library called
+  <code>libfoo</code> whose version 1.1 adds the error code
+  <code>FOO_LOST_MOJO</code>. A Scheme system built against
+  <code>libfoo</code> version 1.0 would say that
+  <code>(codeset-symbol? 'libfoo 'FOO_LOST_MOJO)</code> is false.
+  But if the backward-compatible <code>libfoo</code> 1.1 is
+  dynamically linked to that Scheme system, the claim becomes
+  misleading.</p>
+  <p>For that reason the predicates
+  <code>codeset-symbol?</code> and <code>codeset-number?</code> are
+  not provided.</p>
+  <p>In a similar vein, some users would prefer that the code symbols
+  come from a pre-defined enumeration. Such enumerations can be
+  created in R<sup>6</sup>RS, for instance. The author's opinion is
+  that Scheme permits users to easily create their own enumerations
+  from whichever symbols they wish. Each application or library
+  wishing to use an enumeration should list the codes that it
+  needs.</p>
+  <h3 id="survey-of-prior-art">Survey of prior art</h3>
+  <p>This survey is limited to <code>errno</code> wrappers.</p>
+  <ul>
+      <li>Gauche has two hash tables for <code>errno</code> lookup.</li>
+      <li>Chicken has an <code>errno</code> module exporting the
+      constants.</li>
+      <li>GNU CLISP has an <code>errno</code> function that accepts
+      either a number or a symbol and returns the other. It also has a
+      <code>strerror</code> function.</li>
+      <li>The Standard ML Basis Library defines <code>OS.syserror</code>
+      as an abstract data type. In SML/NJ the concrete type is an
+      integer.</li>
+      <li>Python has an <code>errno</code> module exporting the
+      constants and a lookup table.</li>
+  </ul>
+  <p>There are sure to be countless similar interfaces in other
+  systems.</p>
+  <h2 id="specification">Specification</h2>
+  <h3 id="codeset-objects">Codeset objects</h3>
+  <p>The procedures in this SRFI take a <em>codeset</em> argument. It
+  can be either a symbol or some kind of implementation-defined
+  object. It is an error to pass a <em>codeset</em> argument of some
+  other type.</p>
+  <p>It is valid to pass a <em>codeset</em> symbol that does not refer
+  to a codeset known to the implementation. In this case the unknown
+  codeset is treated like an empty codeset. The <code>codeset?</code>
+  procedure can be used to differentiate between unknown and known
+  empty codesets.</p>
+  <p>The data structure used to implement a codeset is unspecified. It
+  is also unspecified whether information about a codeset is loaded on
+  demand or ahead of time. The codesets provided by an implementation
+  can mix different implementation strategies.</p>
+  <h3 id="codeset-registry">Codeset registry</h3>
+  <p>Symbols denoting a codeset are tracked in the <a href=
+  "https://registry.scheme.org/#codesets">Scheme Registry</a>.</p>
+  <h3 id="degenerate-cases">Degenerate cases</h3>
+  <p>The implementation is permitted to supply the following.</p>
+  <ul>
+      <li>Empty codesets.</li>
+      <li>Codesets for which no messages are known.</li>
+      <li>Codesets for which only symbols are known. This still lets
+      the user list the symbols and look up messages.</li>
+      <li>Codesets for which only numbers are known. This still lets
+      the user look up messages.</li>
+  </ul>
+  <h3 id="procedures">Procedures</h3>
+  <p><code>(codeset? object) =&gt; boolean</code></p>
+  <p>Return <code>#t</code> if <em>object</em> is either</p>
+  <ul>
+    <li>a symbol naming a codeset known to the implementation,
+    or</li>
+    <li>an implementation-defined codeset object.</li>
+  </ul>
+  <p>Else return <code>#f</code>.</p>
+  <p><code>(codeset-symbols codeset) =&gt; symbol-list</code></p>
+  <p>Return a list of zero or more symbols in arbitrary order with
+  no duplicates.</p>
+  <p>The list should comprise all symbols in <em>codeset</em>. In many
+  cases there is no way to reliably enumerate all extant symbols. In
+  those cases the list should contain as many as are known.</p>
+  <p>It’s up to the implementation whether the result list is fresh
+  or an old list is re-used. It is an error for the caller to
+  mutate the result.</p>
+  <p><code>(codeset-symbol codeset code) =&gt; symbol or
+  #f</code></p>
+  <p>If <em>code</em> is an integer matching a code in
+  <em>codeset</em>, return the corresponding symbol.</p>
+  <p>If <em>code</em> is some other exact integer, return
+  <code>#f</code>.</p>
+  <p>If <em>code</em> is a symbol, return it as-is.</p>
+  <p>It is an error if <em>code</em> is something other than a
+  symbol or an exact integer.</p>
+  <p><code>(codeset-number codeset code) =&gt; integer or
+  #f</code></p>
+  <p>If <em>code</em> is a symbol matching a code in
+  <em>codeset</em>, return the corresponding integer value.</p>
+  <p>If <em>code</em> is some other symbol, return
+  <code>#f</code>.</p>
+  <p>If <em>code</em> is an exact integer, return it as-is.</p>
+  <p>It is an error if <em>code</em> is something other than a
+  symbol or an exact integer.</p>
+  <p><code>(codeset-message codeset code) =&gt; string or
+  #f</code></p>
+  <p>If <em>code</em> is a symbol or an integer matching a code in
+  <em>codeset</em>, and a message is known for that code, return
+  the message as a string.</p>
+  <p>If no message is known to be associated with <em>code</em>,
+  return <code>#f</code>.</p>
+  <p>It is an error if <em>code</em> is something other than a
+  symbol or an exact integer.</p>
+  <p>The implementation is free to return a message in any language.
+  Extensions of this procedure should add an optional third argument
+  for the locale. It's permitted to export such an extended procedure
+  from this SRFI's library, but users of this SRFI shall not expect
+  the extended argument to be available.</p>
+  <p>It’s up to the implementation whether the result string is
+  fresh. It is an error for the caller to mutate the result.</p>
+  <h2 id="examples">Examples</h2>
+  <h3 id="basic-usage">Basic usage</h3>
+  <p>Implementations that provide the <code>errno</code> codeset
+      are expected to behave as follows.</p>
+  <pre>(codeset? 'errno) =&gt; #t
+
+(codeset-symbols 'errno) =&gt; (EPERM ENOENT ESRCH ...)
+
+(codeset-symbol 'errno 'EPERM) =&gt; EPERM
+(codeset-symbol 'errno 1) =&gt; EPERM
+
+(codeset-number 'errno 'EPERM) =&gt; 1
+(codeset-number 'errno 1) =&gt; 1
+
+(codeset-message 'errno 'EPERM) =&gt; "Operation not permitted"
+(codeset-message 'errno 1) =&gt; "Operation not permitted"</pre>
+  <p>The symbols may be listed in a different order. In some cases the
+  number may differ and the message may be in a language other than
+  English.</p>
+  <h3 id="promoting-numbers-to-symbols">Promoting numbers to symbols</h3>
+  <p>The following idiom promotes numeric error codes to symbolic ones
+  where possible. For unknown codes it retains the number so that at
+  least some information about the error is preserved.</p>
+  <pre>(let ((code (or (codeset-symbol 'errno code)
+                code)))
+  (display code))
+  </pre>
+  <h3 id="enumerations">Enumerations</h3>
+  <p>The following is a way to use R<sup>6</sup>RS enumerations with
+  codesets.</p>
+  <pre>(define-enumeration errno
+  (EPERM
+   ENOENT
+   ESRCH
+   EINTR
+   EIO
+   ENXIO
+   E2BIG
+   ENOEXEC
+   EBADF
+   ECHILD)
+  errno-set)
+
+(codeset-message 'errno (errno ENOENT))</pre>
+  <p>The following is a simple way to roll your own enumeration.</p>
+  <pre>(define-syntax define-symbols
+  (syntax-rules ()
+    ((define-symbols symbol ...)
+     (begin (define symbol 'symbol) ...))))
+
+(define-symbols
+  EPERM
+  ENOENT
+  ESRCH
+  EINTR
+  EIO
+  ENXIO
+  E2BIG
+  ENOEXEC
+  EBADF
+  ECHILD)</pre>
+  <p>Now typos such as
+  <code>(codeset-message 'errno ECHILE)</code> will be caught.</p>
+  <h3 id="introspection">Introspection</h3>
+  <p>When learning an interface, programmers often like to get an
+  overview of the territory. The tools in this SRFI are accessible
+  from the REPL, providing introspection capabilities to help.</p>
+  <p>First, let's define a helper procedure.</p>
+  <pre>(define (sorted-symbols set)
+  (list-sort (lambda (code1 code2)
+               (&lt; (codeset-number set code1)
+                  (codeset-number set code2)))
+             (codeset-symbols set)))</pre>
+  <p>We can list all the <code>errno</code> symbols in numerical
+    order. This places the oldest codes first, giving us a window into
+    the evolution of Unix. The first 35 codes have to do with files
+    and terminals, with pipes and non-blocking I/O added relatively
+    late. Then comes the socket support.</p>
+<pre>(sorted-symbols 'errno)
+=&gt; (EPERM ENOENT ESRCH EINTR EIO ENXIO E2BIG ENOEXEC EBADF ECHILD
+    EDEADLK ENOMEM EACCES EFAULT ENOTBLK EBUSY EEXIST EXDEV ENODEV
+    ENOTDIR EISDIR EINVAL ENFILE EMFILE ENOTTY ETXTBSY EFBIG
+    ENOSPC ESPIPE EROFS EMLINK EPIPE EDOM ERANGE EAGAIN EWOULDBLOCK
+    EINPROGRESS EALREADY ENOTSOCK EDESTADDRREQ EMSGSIZE EPROTOTYPE
+    ENOPROTOOPT EPROTONOSUPPORT ESOCKTNOSUPPORT EPFNOSUPPORT
+    EAFNOSUPPORT EADDRINUSE EADDRNOTAVAIL ENETDOWN ....)</pre>
+<p>Likewise, the earliest 30 Windows API error codes.</p>
+<pre>(take (sorted-symbols 'windows) 30)
+=&gt; (ERROR_SUCCESS ERROR_INVALID_FUNCTION ERROR_FILE_NOT_FOUND
+    ERROR_PATH_NOT_FOUND ERROR_TOO_MANY_OPEN_FILES ERROR_ACCESS_DENIED
+    ERROR_INVALID_HANDLE ERROR_ARENA_TRASHED ERROR_NOT_ENOUGH_MEMORY
+    ERROR_INVALID_BLOCK ERROR_BAD_ENVIRONMENT ERROR_BAD_FORMAT
+    ERROR_INVALID_ACCESS ERROR_INVALID_DATA ERROR_OUTOFMEMORY
+    ERROR_INVALID_DRIVE ERROR_CURRENT_DIRECTORY ERROR_NOT_SAME_DEVICE
+    ERROR_NO_MORE_FILES ERROR_WRITE_PROTECT ERROR_BAD_UNIT
+    ERROR_NOT_READY ERROR_BAD_COMMAND ERROR_CRC ERROR_BAD_LENGTH
+    ERROR_SEEK ERROR_NOT_DOS_DISK ERROR_SECTOR_NOT_FOUND
+    ERROR_OUT_OF_PAPER ERROR_WRITE_FAULT)</pre>
+  <p>We can also find the maximum Windows API error code. This gives
+  us an idea of the complexity of the API, and tells us how many bits
+  are needed to store codes.</p>
+  <pre>(let ((set 'windows))
+   (fold max 0 (map (lambda (x) (codeset-number set x))
+                    (codeset-symbols set))))
+=&gt; 2250</pre>
+  <p>A network programmer can list the HTTP 4xx codes, showing all the
+  ways in which a request can fail.</p>
+  <pre>(let ((set 'http))
+   (map (lambda (code)
+          (list (codeset-number set code)
+                (codeset-message set code)))
+        (filter (lambda (code)
+                  (&lt;= 400 (codeset-number set code) 499))
+                (sorted-symbols set))))
+=&gt; ((400 "Bad Request") (401 "Unauthorized") (402 "Payment Required")
+    (403 "Forbidden") (404 "Not Found") (405 "Method Not Allowed")
+    (406 "Not Acceptable") (407 "Proxy Authentication Required")
+    (408 "Request Timeout") (409 "Conflict") (410 "Gone")
+    (411 "Length Required") (412 "Precondition Failed")
+    (413 "Request Entity Too Large") (414 "Request URI Too Long")
+    (415 "Unsupported Media Type") (416 "Requested Range Not Satisfiable")
+    (417 "Expectation Failed") (418 "I'm a teapot")
+    (421 "Misdirected Request") (422 "Unprocessable Entity")
+    (423 "Locked") (424 "Failed Dependency") (425 "Too Early")
+    (426 "Upgrade Required") (428 "Precondition Required")
+    (429 "Too Many Requests") (431 "Request Header Fields Too Large")
+    (451 "Unavailable For Legal Reasons"))</pre>
+  <h2 id="implementation">Implementation</h2>
+  <p>An implementation for Gambit and Gauche is available in this SRFI’s
+    <a href="https://github.com/scheme-requests-for-implementation/srfi-238">repository</a>. It provides two codesets, <code>errno</code> and
+  <code>signal</code>, based on the codes of those Unix interfaces
+  retrieved from the C programming language.</p>
+  <p>For the sake of curiosity, a null implementation and a Common
+  Lisp implementation are also supplied.</p>
+  <h2 id="copyright">Copyright</h2>
+  <p>&copy; 2022, 2023 Lassi Kortela.</p>
+  <p>Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation
+  files (the “Software”), to deal in the Software without
+  restriction, including without limitation the rights to use,
+  copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the
+  Software is furnished to do so, subject to the following
+  conditions:</p>
+  <p>The above copyright notice and this permission notice
+  (including the next paragraph) shall be included in all copies or
+  substantial portions of the Software.</p>
+  <p>THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY
+  KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+  WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
+  AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  OTHER DEALINGS IN THE SOFTWARE.</p>
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 190: Coroutine Generators</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/srfi.css" type="text/css">
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Coroutine Generators
+
+<h1>Author</h1>
+
+Marc Nieper-Wißkirchen
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+190+at+srfi+dotschemers+dot+org">srfi-190@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-190">archive</a>.</p>
+<ul>
+  <li>Received: 2020-03-30</li>
+  <li>Draft #1 published: 2020-03-30</li>
+  <li>Finalized: 2020-06-11</li>
+</ul>
+
+<h1>Abstract</h1>
+
+<p>This SRFI defines syntax to create
+  <a href="https://srfi.schemers.org/srfi-121/">SRFI
+    121</a>/<a href="https://srfi.schemers.org/srfi-158/">158</a>
+  coroutine generators conveniently and in the flavor of Python
+  generator functions.
+</p>
+
+<h1>Rationale</h1>
+
+<p>In some sense, the most fundamental generator is the coroutine
+  generator.  SRFI 121/158 allow the easy creation of a coroutine
+  generator by calling the
+  procedure <code>make-coroutine-generator</code>.
+</p>
+
+<p>For example, the following evaluates to a generator that produces
+  the series 0, 1, and 2:</p>
+
+<pre>
+(make-coroutine-generator
+  (lambda (yield)
+    (do ((i 0 (+ i 1)))
+        ((&lt;= 3 i))
+      (yield i)))))
+</pre>
+
+<p>These generators are similar to the generator functions of Python.
+  When using <code>make-coroutine-generator</code>, though, the
+  programmer has to wrap the actual coroutine body in a lambda and
+  has to explicitly bind the name of the yielding procedure.</p>
+
+<p>In this SRFI, a syntax that evaluates to coroutine generators is
+  defined that simplifies the creation of coroutine generators and
+  avoids the need of binding the yielding procedure to a name.</p>
+
+<p>Using the syntax of this SRFI, the above example becomes:</p>
+
+<pre>
+(coroutine-generator
+  (do ((i 0 (+ i 1)))
+      ((&lt;= 3 i))
+    (yield i)))
+</pre>
+
+<p>The yielding procedure can be passed to helper procedures.</p>
+
+<pre>
+(let ((yield-square (lambda (yield i) (yield (* i i)))))
+  (coroutine-generator
+    (do ((i 0 (+ i 1)))
+        ((&lt;= 3 i))
+      (yield-square yield i))))
+</pre>
+
+<p>An equivalent version using a local macro would be:</p>
+
+<pre>
+(let-syntax ((yield-square (syntax-rules () ((_ i) (yield (* i i))))))
+  (coroutine-generator
+    (do ((i 0 (+ i 1)))
+        ((&lt;= 3 i))
+      (yield-square i))))
+</pre>
+
+<p>A Python generator function is not completely equivalent to a
+  coroutine generator in the sense of SRFI 121/158 and this SRFI as a
+  Python generator function has to be called first to return a
+  generator.  This SRFI includes convenience syntax to define a
+  generator function in the sense of Python.
+</p>
+
+<p>The following defines a procedure that returns a generator
+  producing the series 0, 1, …, n − 1.</p>
+
+<pre>
+(define-coroutine-generator (g n)
+  (do ((i 0 (+ i 1)))
+      ((&lt;= n i))
+    (yield i)))
+</pre>
+
+<p>All syntax defined in this SRFI is hygienic.  In particular, the
+  identifier <code>yield</code> is exported (and bound to syntax) by
+  any library implementing this SRFI.</p>
+
+<p> While the sample implementation uses syntax parameters and
+  identifier macros, a specific implementation that is being shipped
+  by a particular Scheme system doesn't have to.  In fact, this is a
+  reasonable thing for those systems for which
+  <code>make-coroutine-generator</code> from SRFI 121/158 is slow
+  because <code>call/cc</code> is slow in these systems (unfortunately,
+  such systems exist). As <code>coroutine-generator</code> SRFI 190 is
+  just syntax and offers no more than Python's generator functions (note
+  that Python doesn't have <code>call/cc</code>), those systems can
+  translate it directly into fast code that does not have to rely on
+  first-class continuations. For this translation to be easy (and no
+  more difficult than that what CPython has to do), it is crucial that
+  <code>yield</code> is lexically scoped (and thus confined to the
+  expanded body of the coroutine) and not dynamically bound.
+</p>
+
+<h1>Specification</h1>
+
+<h2>Syntax</h2>
+
+<p><code>(coroutine-generator 〈body〉)</code></p>
+
+<p>Creates a generator from a coroutine.  When evaluated, immediately
+returns a generator <var>g</var>.  When <var>g</var> is called, the
+  definitions and expressions in <code>〈body〉</code> are evaluated
+  until the yielding procedure of the coroutine generator is called.
+  Calling the yielding procedure of the coroutine generator causes the
+  evaluation of <code>〈body〉</code> to be suspended,
+  and <var>g</var> returns the value passed to yield.</p>
+
+<p>Whether this generator is finite or infinite depends on the
+  behavior of <code>〈body〉</code>. If the last expression
+  in <code>〈body〉</code> returns, it is the end of the sequence —
+<var>g</var>
+  returns an end-of-file object from then on.</p>
+
+<p><code>yield</code></p>
+
+<p>Evaluates to the yielding procedure in the (expansion of the)
+  <code>〈body〉</code> of a coroutine generator.</p>
+
+<p>It is an error to evaluate <code>yield</code> outside the body of
+a coroutine generator.</p>
+
+<p><code>(define-coroutine-generator 〈name〉 〈body〉)</code></p>
+<p><code>(define-coroutine-generator (〈name〉 . 〈formals〉) 〈body〉)</code></p>
+
+<p>Expands into</p>
+
+  <pre>  (define 〈name〉 (coroutine-generator 〈body〉))</pre>
+
+and
+
+  <pre>  (define (〈name〉 . 〈formals〉) (coroutine-generator 〈body〉))</pre>
+
+<p>respectively.</p>
+
+<h1>Implementation</h1>
+
+<p>The following implementation based on SRFI 121/158 makes use of
+  syntax parameters as defined in SRFI 139 and identifier syntax as
+  defined in the R6RS.</p>
+
+<pre>
+(define-syntax-parameter yield
+  (lambda (stx)
+    (syntax-case stx ()
+      (_ (error "yield used outside coroutine generator" stx)))))
+
+(define-syntax coroutine-generator
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ . body)
+       #'(make-coroutine-generator
+          (lambda (%yield)
+            (syntax-parameterize ((yield (identifier-syntax %yield)))
+              . body)))))))
+
+(define-syntax define-coroutine-generator
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ name . body) #'(define name (coroutine-generator . body))))))
+</pre>
+
+<p>Any implementation will define the identifiers <code>yield</code>,
+  <code>define-coroutine-generator</code>,
+  and <code>coroutine-generator</code> in the library <code>(srfi
+    190)</code>.
+</p>
+
+<h1>Acknowledgements</h1>
+
+<p>Credits go to the authors of SRFI 121 and SRFI 158, Shiro Kawai, John
+Cowan,
+  and Thomas Gilray.
+</p>
+
+<h1>Copyright</h1>
+Copyright &copy; Marc Nieper-Wißkirchen (2020).
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org
+">Arthur
+    A. Gleckler</a></address></body></html>

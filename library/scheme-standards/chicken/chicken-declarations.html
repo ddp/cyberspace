@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Declarations - The CHICKEN Scheme wiki</title>
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="/chicken.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body>
+<div id="menu">
+<ul>
+<li><a href="/" class="internal">Wiki</a></li>
+<li><a href="//code.call-cc.org/" class="external">Download</a></li>
+<li><a href="/manual/index" class="internal">Manual</a></li>
+<li><a href="//eggs.call-cc.org" class="external">Eggs</a></li>
+<li><a href="//api.call-cc.org/5/doc/" class="external">API</a></li>
+<li><a href="//tests.call-cc.org/" class="external">Tests</a></li>
+<li><a href="//bugs.call-cc.org/" class="external">Bugs</a></li></ul></div>
+<ul id="page-specific-links">
+<li><a href="?action=show">show</a></li>
+<li><a href="?action=edit" rel="nofollow">edit</a></li>
+<li><a href="?action=history">history</a></li></ul>
+<div id="content">
+<ul class="tags">
+<li>manual</li></ul>
+<div id="toc">
+<ol>
+<li><a href="#declarations">Declarations</a>
+<ol>
+<li><a href="#declare">declare</a></li>
+<li><a href="#always-bound">always-bound</a></li>
+<li><a href="#block">block</a></li>
+<li><a href="#block-global">block-global</a></li>
+<li><a href="#hide">hide</a></li>
+<li><a href="#bound-to-procedure">bound-to-procedure</a></li>
+<li><a href="#enforce-argument-types">enforce-argument-types</a></li>
+<li><a href="#export">export</a></li>
+<li><a href="#emit-external-prototypes-first">emit-external-prototypes-first</a></li>
+<li><a href="#disable-interrupts">disable-interrupts</a></li>
+<li><a href="#emit-import-library">emit-import-library</a></li>
+<li><a href="#emit-types-file">emit-types-file</a></li>
+<li><a href="#inline">inline</a></li>
+<li><a href="#inline-global">inline-global</a></li>
+<li><a href="#inline-limit">inline-limit</a></li>
+<li><a href="#unroll-limit">unroll-limit</a></li>
+<li><a href="#keep-shadowed-macros">keep-shadowed-macros</a></li>
+<li><a href="#local">local</a></li>
+<li><a href="#no-argc-checks">no-argc-checks</a></li>
+<li><a href="#no-bound-checks">no-bound-checks</a></li>
+<li><a href="#no-procedure-checks">no-procedure-checks</a></li>
+<li><a href="#no-procedure-checks-for-usual-bindings">no-procedure-checks-for-usual-bindings</a></li>
+<li><a href="#no-procedure-checks-for-toplevel-bindings">no-procedure-checks-for-toplevel-bindings</a></li>
+<li><a href="#predicate">predicate</a></li>
+<li><a href="#profile">profile</a></li>
+<li><a href="#pure">pure</a></li>
+<li><a href="#number-type">number-type</a></li>
+<li><a href="#fixnum-arithmetic">fixnum-arithmetic</a></li>
+<li><a href="#compile-syntax">compile-syntax</a></li>
+<li><a href="#safe-globals">safe-globals</a></li>
+<li><a href="#specialize">specialize</a></li>
+<li><a href="#standard-bindings">standard-bindings</a></li>
+<li><a href="#strict-types">strict-types</a></li>
+<li><a href="#type">type</a></li>
+<li><a href="#extended-bindings">extended-bindings</a></li>
+<li><a href="#usual-integrations">usual-integrations</a></li>
+<li><a href="#unit">unit</a></li>
+<li><a href="#unsafe">unsafe</a></li>
+<li><a href="#unused">unused</a></li>
+<li><a href="#uses">uses</a></li></ol></li></ol></div><a href="#declarations">
+<h2 id="declarations">Declarations</h2></a>
+<p>Declarations can be used to control compiler settings directly inside the compiled code and are always global in scope. In many (but not all) cases an associated command-line option exists. When in conflict, declarations override command-line options. When multiple declarations conflict, the one appearing textually last overrides any previous one.</p>
+<p>Declarations can be used to improve performance and to give entities like procedures and variables special properties that can result in better performing code. Most of these declarations subtly change the semantics of standard Scheme code with respect to the declared entities, so care must be taken when using them.</p>
+<p>Declarations are always ignored in <tt>csi</tt> (the interpreter) or in evaluated code.</p><a href="#declare">
+<h3 id="declare">declare</h3></a><span class="definition syntax"><em>[syntax]</em> <tt>(declare DECLSPEC ...)</tt>
+<br /></span>
+<p>Process declaration specifiers. Declarations always override any command-line settings.  Declarations are valid for the whole compilation-unit (source file), the position of the declaration in the source file can be arbitrary. Declarations are ignored in the interpreter but not in code evaluated at compile-time (by <tt>eval-when</tt> or in syntax extensions loaded via <tt>require-extension</tt>). <tt>DECLSPEC</tt> may be any of the following:</p><a href="#always-bound">
+<h3 id="always-bound">always-bound</h3></a>
+<pre><tt>[declaration specifier] (always-bound IDENTIFIER ...)</tt></pre>
+<p>Declares that the given variables are always bound and accesses to those have not to be checked.</p><a href="#block">
+<h3 id="block">block</h3></a>
+<pre><tt>[declaration specifier] (block)</tt></pre>
+<p>Assume global variables are never redefined. This is the same as specifying the <tt>-block</tt> option.</p><a href="#block-global">
+<h3 id="block-global">block-global</h3></a><a href="#hide">
+<h3 id="hide">hide</h3></a>
+<pre><tt>[declaration specifier] (block-global IDENTIFIER ...)
+[declaration specifier] (hide IDENTIFIER ...)</tt></pre>
+<p>Declares that the toplevel bindings for <tt>IDENTIFIER ...</tt> should not be accessible from code in other compilation units or by <tt>eval</tt>. Access to toplevel bindings declared as block global is also more efficient. <tt>(declare (hide))</tt> is equivalent to <tt>(declare (block))</tt>.</p><a href="#bound-to-procedure">
+<h3 id="bound-to-procedure">bound-to-procedure</h3></a>
+<pre><tt>[declaration specifier] (bound-to-procedure IDENTIFIER ...)</tt></pre>
+<p>Declares that the given identifiers are always bound to procedure values.</p><a href="#enforce-argument-types">
+<h3 id="enforce-argument-types">enforce-argument-types</h3></a>
+<pre><tt>[declaration-specifier] (enforce-argument-types IDENTIFIER ...)</tt></pre>
+<p>Declares that the toplevel procedures listed check the type of their arguments (either explicitly or by calling other enforcing procedures) and so a successfull invocation will indicate the arguments are of the types declared.</p><a href="#export">
+<h3 id="export">export</h3></a>
+<pre><tt>[declaration specifier] (export IDENTIFIER ...)</tt></pre>
+<p>The opposite of <tt>hide</tt>. All given identifiers will be exported and all toplevel variables not listed will be hidden and not be accessible outside of this compilation unit.</p><a href="#emit-external-prototypes-first">
+<h3 id="emit-external-prototypes-first">emit-external-prototypes-first</h3></a>
+<pre><tt>[declaration specifier] (emit-external-prototypes-first)</tt></pre>
+<p>Emit prototypes for callbacks defined with <tt>define-external</tt> before any other foreign declarations. Equivalent to giving the <tt>-emit-external-prototypes-first</tt> option to the compiler.</p><a href="#disable-interrupts">
+<h3 id="disable-interrupts">disable-interrupts</h3></a>
+<pre><tt>[declaration specifier] (disable-interrupts)</tt></pre>
+<p>Disable timer-interrupts checks in the compiled program. Threads can not be preempted in main- or library-units that contain this declaration.</p><a href="#emit-import-library">
+<h3 id="emit-import-library">emit-import-library</h3></a>
+<pre><tt>[declaration specifier] (emit-import-library MODULENAME | (MODULENAME FILENAME) ...)</tt></pre>
+<p>Declares that any following definition of a module named <tt>MODULENAME</tt> should be written to an external file (either a specified one or a file named <tt>&quot;MODULENAME.import.scm&quot;</tt>). The compiler option <tt>-emit-import-library</tt> may also be used instead.</p>
+<p>Note that the import library is only generated if it cannot be found in the current directory, or if it exists but is not equal to the one that would be generated.</p><a href="#emit-types-file">
+<h3 id="emit-types-file">emit-types-file</h3></a>
+<pre><tt>[declaration specifier] (emit-types-file [FILENAME])</tt></pre>
+<p>Enables generation of a types file for the current compilation unit, which will be written to the specified <tt>FILENAME</tt> or to <tt>&lt;source-filename&gt;.types</tt> in the current directory. This filename can be overridden with the <tt>-emit-types-file</tt> command line flag, which takes precedence over this declaration.</p><a href="#inline">
+<h3 id="inline">inline</h3></a>
+<pre><tt>[declaration specifier] (inline)
+[declaration specifier] (not inline)
+[declaration specifier] (inline IDENTIFIER ...)
+[declaration specifier] (not inline IDENTIFIER ...)</tt></pre>
+<p>If given without an identifier-list, inlining of known procedures is enabled (this is equivalent to the <tt>-inline</tt> compiler option). When an identifier-list is given, then inlining is enabled only for the specified global procedures. The negated forms <tt>(not inline)</tt> and <tt>(not inline IDENTIFIER)</tt> disable global inlining, or inlining for the given global procedures only, respectively.</p><a href="#inline-global">
+<h3 id="inline-global">inline-global</h3></a>
+<pre><tt> [declaration specifier] (inline-global)
+ [declaration specifier] (not inline-global)
+ [declaration specifier] (inline-global IDENTIFIER ...)
+ [declaration specifier] (not inline-global IDENTIFIER ...)</tt></pre>
+<p>Declare that then given toplevel procedures (or all) are subject to cross-module inlining. Potentially inlinable procedures in the current compilation unit will be written to an external <tt>&lt;source-filename&gt;.inline</tt> file in the current directory. Globally inlinable procedures from other compilation units referred to via <tt>(declare (uses ...))</tt> or <tt>require-extension</tt> are loaded from <tt>.inline</tt> files (if available in the current include path) and inlined in the current compilation unit.</p>
+<p>Enabling global inlining implies <tt>(declare (inline))</tt>.</p><a href="#inline-limit">
+<h3 id="inline-limit">inline-limit</h3></a>
+<pre><tt>[declaration specifier] (inline-limit THRESHOLD)</tt></pre>
+<p>Sets the maximum size of procedures which may potentially be inlined. The default threshold is <tt>20</tt>.</p><a href="#unroll-limit">
+<h3 id="unroll-limit">unroll-limit</h3></a>
+<pre><tt>[declaration specifier] (unroll-limit LIMIT)</tt></pre>
+<p>Sets the maximum number of times a self-recursive call is inlined and so effectively &quot;unrolled&quot;. The default limit is 1.</p><a href="#keep-shadowed-macros">
+<h3 id="keep-shadowed-macros">keep-shadowed-macros</h3></a>
+<pre><tt>[declaration specifier] (keep-shadowed-macros)</tt></pre>
+<p>Normally, when a toplevel variable is assigned or defined that has the same name as a macro, the macro-definition will be removed (in addition to showing a warning). This declaration will disable the removal of the macro.</p><a href="#local">
+<h3 id="local">local</h3></a>
+<pre><tt>[declaration specifier] (local)
+[declaration specifier] (local IDENTIFIER ...)</tt></pre>
+<p>Declares that the listed (or all) toplevel variables defined in the current compilation unit are not modified from code outside of this compilation unit. See also the documentation for the <tt>-local</tt> compiler option about the implications of this.</p><a href="#no-argc-checks">
+<h3 id="no-argc-checks">no-argc-checks</h3></a>
+<pre><tt>[declaration specifier] (no-argc-checks)</tt></pre>
+<p>Disables argument count checking.</p><a href="#no-bound-checks">
+<h3 id="no-bound-checks">no-bound-checks</h3></a>
+<pre><tt>[declaration specifier] (no-bound-checks)</tt></pre>
+<p>Disables the bound-checking of toplevel bindings.</p><a href="#no-procedure-checks">
+<h3 id="no-procedure-checks">no-procedure-checks</h3></a>
+<pre><tt>[declaration specifier] (no-procedure-checks)</tt></pre>
+<p>Disables checking of values in operator position for being of procedure type.</p><a href="#no-procedure-checks-for-usual-bindings">
+<h3 id="no-procedure-checks-for-usual-bindings">no-procedure-checks-for-usual-bindings</h3></a>
+<pre><tt>[declaration specifier] (no-procedure-checks-for-usual-bindings)</tt></pre>
+<p>Disables checking of procedures for the default standard- and extended toplevel bindings.</p><a href="#no-procedure-checks-for-toplevel-bindings">
+<h3 id="no-procedure-checks-for-toplevel-bindings">no-procedure-checks-for-toplevel-bindings</h3></a>
+<pre><tt>[declaration specifier] (no-procedure-checks-for-toplevel-bindings)</tt></pre>
+<p>Disables checking of procedures for calls to procedures referenced via a toplevel variable (calls to explicitly named procedures).</p><a href="#predicate">
+<h3 id="predicate">predicate</h3></a>
+<pre><tt>[declaration specifier] (predicate (IDENTIFIER TYPE) ...)</tt></pre>
+<p>Marks the global procedure <tt>IDENTIFIER</tt> as a predicate on <tt>TYPE</tt>.</p><a href="#profile">
+<h3 id="profile">profile</h3></a>
+<pre><tt>[declaration specifier] (profile IDENTIFIER ...)</tt></pre>
+<p>Enable profiling exclusively for given identifiers. Normally the compiler enables profiling decorations for all globally defined procedures. With this declaration, profiling can be enabled for selected procedures.</p><a href="#pure">
+<h3 id="pure">pure</h3></a>
+<pre><tt>[declaration specifier] (pure IDENTIFIER ...)</tt></pre>
+<p>Declares the procedures with the names <tt>IDENTIFIER ...</tt> as referentially transparent, that is, as not having any side effects. This can help the compiler to remove non-side-effecting expressions.</p><a href="#number-type">
+<h3 id="number-type">number-type</h3></a><a href="#fixnum-arithmetic">
+<h3 id="fixnum-arithmetic">fixnum-arithmetic</h3></a>
+<pre><tt>[declaration specifier] ([number-type] TYPE)
+[declaration specifier] (fixnum-arithmetic)</tt></pre>
+<p>Declares that only numbers of the given type are used. <tt>TYPE</tt> may be <tt>fixnum</tt> or <tt>generic</tt> (which is the default).</p><a href="#compile-syntax">
+<h3 id="compile-syntax">compile-syntax</h3></a>
+<pre><tt>[declaration specifier] (compile-syntax)</tt></pre>
+<p>Equivalent to the compiler option of the same name - macros defined in the compiled code are also made available at runtime.</p><a href="#safe-globals">
+<h3 id="safe-globals">safe-globals</h3></a>
+<pre><tt>[declaration specifier] (safe-globals)</tt></pre>
+<p>Assumes variables assigned in the current compilation unit are always bound and that any calls to these variables can always be assumed to be calls to proper procedures.</p><a href="#specialize">
+<h3 id="specialize">specialize</h3></a>
+<pre><tt>[declaration specifier] (specialize)</tt></pre>
+<p>Enables specialization. This is equivalent to passing the <tt>-specialize</tt> option to the compiler.</p><a href="#standard-bindings">
+<h3 id="standard-bindings">standard-bindings</h3></a>
+<pre><tt>[declaration specifier] (standard-bindings IDENTIFIER ...)
+[declaration specifier] (not standard-bindings IDENTIFIER ...)</tt></pre>
+<p>Declares that all given standard procedures (or all if no symbols are specified) are never globally redefined.  If <tt>not</tt> is specified, then all but the given standard bindings are assumed to be never redefined.</p><a href="#strict-types">
+<h3 id="strict-types">strict-types</h3></a>
+<pre><tt>[declaration specifier] (strict-types)</tt></pre>
+<p>Declares that the type of variables is not changed by assignment. Equivalent to giving the <tt>-strict-types</tt> compiler option.</p><a href="#type">
+<h3 id="type">type</h3></a>
+<pre><tt> [declaration specifier] (type (IDENTIFIER TYPE) ...)</tt></pre>
+<p>Declares toplevel procedures to have a specific type for scrutiny. <tt>IDENTIFIER</tt> should name a toplevel variable and <tt>TYPE</tt> should be a type specification.  A type-declaration overrides any previous declaration for the same identifier.  See also <a href="Types" class="internal">Types</a> for more information about using types, the syntax of type-specifiers and a more convenient type-declaration syntax (<tt>:</tt>).</p><a href="#extended-bindings">
+<h3 id="extended-bindings">extended-bindings</h3></a>
+<pre><tt>[declaration specifier] (extended-bindings IDENTIFIER ...)
+[declaration specifier] (not extended-bindings IDENTIFIER ...)</tt></pre>
+<p>Declares that all given non-standard and CHICKEN-specific procedures (or all if no symbols are specified) are never globally redefined. If <tt>not</tt> is specified, then all but the given extended bindings are assumed to be never redefined.</p><a href="#usual-integrations">
+<h3 id="usual-integrations">usual-integrations</h3></a>
+<pre><tt>[declaration specifier] (usual-integrations IDENTIFIER ...)
+[declaration specifier] (not usual-integrations IDENTIFIER ...)</tt></pre>
+<p>Declares that all given standard and extended bindings (or all if no symbols are specified) are never globally redefined.  If <tt>not</tt> is specified, then all but the given standard and extended bindings are assumed to be never redefined. Note that this is the default behaviour, unless the <tt>-no-usual-integrations</tt> option has been given.</p><a href="#unit">
+<h3 id="unit">unit</h3></a>
+<pre><tt>[declaration specifier] (unit IDENTIFIER)</tt></pre>
+<p>Specify compilation unit-name (if this is a library)</p><a href="#unsafe">
+<h3 id="unsafe">unsafe</h3></a>
+<pre><tt>[declaration specifier] (unsafe)
+[declaration specifier] (not safe)</tt></pre>
+<p>Do not generate safety-checks. This is the same as specifying the <tt>-unsafe</tt> option.  Also implies</p>
+<pre><tt>(declare (no-bound-checks) (no-procedure-checks) (no-argc-checks))</tt></pre><a href="#unused">
+<h3 id="unused">unused</h3></a>
+<pre><tt>[declaration specifier] (unused IDENTIFIER ...)</tt></pre>
+<p>Disables any warnings when the global variable <tt>IDENTIFIER</tt> is not defined but used, or defined but never used and not exported.</p><a href="#uses">
+<h3 id="uses">uses</h3></a>
+<pre><tt>[declaration specifier] (uses IDENTIFIER ...)</tt></pre>
+<p>Gives a list of used library-units. Before the toplevel-expressions of the main-module are executed, all used units evaluate their toplevel-expressions in the order in which they appear in this declaration. If a library unit A uses another unit B, then B's toplevel expressions are evaluated before A's.  Furthermore, the used symbols are registered as features during compile-time, so <tt>cond-expand</tt> knows about them.</p>
+<hr />
+<p>Previous: <a href="Types" class="internal">Types</a></p>
+<p>Next: <a href="Extensions" class="internal">Extensions</a></p></div></body></html>

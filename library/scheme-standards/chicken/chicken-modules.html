@@ -1,0 +1,278 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Modules - The CHICKEN Scheme wiki</title>
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="/chicken.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body>
+<div id="menu">
+<ul>
+<li><a href="/" class="internal">Wiki</a></li>
+<li><a href="//code.call-cc.org/" class="external">Download</a></li>
+<li><a href="/manual/index" class="internal">Manual</a></li>
+<li><a href="//eggs.call-cc.org" class="external">Eggs</a></li>
+<li><a href="//api.call-cc.org/5/doc/" class="external">API</a></li>
+<li><a href="//tests.call-cc.org/" class="external">Tests</a></li>
+<li><a href="//bugs.call-cc.org/" class="external">Bugs</a></li></ul></div>
+<ul id="page-specific-links">
+<li><a href="?action=show">show</a></li>
+<li><a href="?action=edit" rel="nofollow">edit</a></li>
+<li><a href="?action=history">history</a></li></ul>
+<div id="content">
+<ul class="tags">
+<li>manual</li></ul>
+<div id="toc">
+<ol>
+<li><a href="#modules">Modules</a>
+<ol>
+<li><a href="#module">module</a></li>
+<li><a href="#export">export</a></li>
+<li><a href="#exportrename">export/rename</a></li>
+<li><a href="#import">import</a>
+<ol>
+<li><a href="#only">only</a></li>
+<li><a href="#except">except</a></li>
+<li><a href="#rename">rename</a></li>
+<li><a href="#prefix">prefix</a></li></ol></li>
+<li><a href="#import-syntax">import-syntax</a></li>
+<li><a href="#import-for-syntax">import-for-syntax</a></li>
+<li><a href="#import-syntax-for-syntax">import-syntax-for-syntax</a></li>
+<li><a href="#reexport">reexport</a></li></ol></li>
+<li><a href="#define-interface">define-interface</a></li>
+<li><a href="#import-libraries">import libraries</a></li>
+<li><a href="#predefined-modules">Predefined modules</a></li>
+<li><a href="#examples-of-using-modules">Examples of using modules</a></li>
+<li><a href="#example-of-compiling-modules-and-linking-them-into-an-executable">Example of compiling modules and linking them into an executable</a></li>
+<li><a href="#functors">Functors</a></li>
+<li><a href="#current-module">current-module</a></li></ol></div><a href="#modules">
+<h3 id="modules">Modules</h3></a>
+<p>To allow control over visible bindings and to organize code in namespaces, a module system is available. A <i>module</i> defines a set of toplevel expressions that are initially evaluated in an empty syntactical environment. By <i>importing</i> other modules, exported value- and syntax-bindings are made visible inside the environment of the module that imports them.</p>
+<p>Note that modules are purely syntactical - they do not change the control flow or delay the execution of the contained toplevel forms. The body of a module is executed at load-time, when code is loaded or imported, just like normal toplevel expressions. Exported syntax-definitions are compiled as well, and can be accessed in interpreted or compiled code by loading and importing the compiled file that contains the module.</p>
+<p>Imported toplevel bindings are mutable and can be assigned (with <tt>set!</tt>), any modifications to these will change the global value and will be visible to other modules that export or import the same toplevel binding.</p>
+<p>A module is initially empty (has no visible bindings with the exception of  <tt>import</tt> and <tt>cond-expand</tt>). You must at least import the <tt>scheme</tt> module to do anything useful. To access any of the non-standard macros and procedures, import the <tt>(chicken base)</tt> module.</p>
+<p>CHICKEN's module system has the following features:</p>
+<ul>
+<li>Separation of compile/expansion-time and run-time code is provided, which allows cross compilation</li>
+<li>Supports batch-compilation of separate compilation units</li>
+<li>Imports can be lexically scoped</li>
+<li>Parameterized modules are supported</li></ul>
+<p>At toplevel and outside of a module, the initially available bindings are everything that is exported from the <a href="Module scheme" class="internal">scheme</a>, <a href="Module (chicken base)" class="internal">(chicken base)</a> and <a href="Module (chicken syntax)" class="internal">(chicken syntax)</a> modules.</p><a href="#module">
+<h4 id="module">module</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(module NAME (EXPORT ...) BODY ...)</tt>
+<br /></span><span class="definition syntax"><em>[syntax]</em> <tt>(module NAME (EXPORT ...) FILENAME)</tt>
+<br /></span><span class="definition syntax"><em>[syntax]</em> <tt>(module NAME * BODY ...)</tt>
+<br /></span><span class="definition syntax"><em>[syntax]</em> <tt>(module NAME = (FUNCTORNAME MODULENAME1 ...))</tt>
+<br /></span><span class="definition syntax"><em>[syntax]</em> <tt>(module NAME = FUNCTORNAME BODY ...)</tt>
+<br /></span>
+<p>Defines a module with the name <tt>NAME</tt>, a set of exported bindings and a contained sequence of toplevel expressions that are evaluated in an empty syntactical environment.</p>
+<p><tt>NAME</tt> and <tt>FUNCTORNAME</tt> should be symbols or lists of symbols and integers, where <tt>(foo bar baz)</tt> is equivalent to <tt>foo.bar.baz</tt>.</p>
+<p><tt>(EXPORT ...)</tt> should be an export-specification which holds a list of identifiers to be exported from the module and which should be visible when imported into another module or the toplevel environment. <tt>EXPORT</tt> may have any of the following forms:</p>
+<p><tt>IDENTIFIER</tt> names a value- or syntax binding to be exported.</p>
+<p><tt>(IDENTIFIER1 ...)</tt> or <tt>(syntax: IDENTIFIER1 ...)</tt> exports <tt>IDENTIFIER1</tt> (which should name a macro) and also arranges for the remaining identifiers in the list to be visible as value bindings in the expansion of the macro (this is a hint to the module expander to export bindings referenced by syntax-definitions which make use of them, but which would normally be internal to the module - which gives more opportunities for optimization).</p>
+<p><tt>(interface: INTERFACENAME)</tt> adds all exports defined for the given interface to be added to the list of exported identifiers of this module.</p>
+<p>As a special case, specifying <tt>*</tt> instead of an export-list will export all definitions. As another special case, the export-list may be a symbol naming an interface.</p>
+<p>When the <tt>BODY</tt> consists of a single string, it is treated like <tt>(include FILENAME)</tt>.</p>
+<p><tt>(module NAME = (FUNCTORNAME MODULENAME1 ...))</tt> instantiates a <i>functor</i> (see below for information about functors).</p>
+<p><tt>(module NAME = FUNCTORNAME BODY ...)</tt> is a special form of <i>functor instantiation</i> where the <tt>BODY</tt> implements a module satisfying a single functor argument to <tt>FUNCTORNAME</tt>.</p>
+<p>Nested modules, modules not at toplevel (i.e. local modules) or mutually recursive modules are not supported.</p>
+<p>When compiled, the module information, including exported syntax is stored in the generated binary and available when loading it into interpreted or compiled code. Note that this is different to normal syntax (outside of module declarations), which are normally not exported from compiled code.</p>
+<p>Note that the module system is only a device for controlling the mapping of identifiers to value or syntax bindings. Modules do not instantiate separate environments that contain their own bindings, as do many other module systems. Redefinition or assignment of value or syntax bindings will modify the original, imported definition.</p>
+<p>Syntax expansions may result in module-definitions, but must be at toplevel.</p><a href="#export">
+<h4 id="export">export</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(export EXPORT ...)</tt>
+<br /></span>
+<p>Allows augmenting module-exports from inside the module-body. <tt>EXPORT</tt> is if the same form as an export-specifier in a <tt>module</tt> export list. An export must precede its first occurrence (either use or definition).</p>
+<p>If used outside of a module, then this form does nothing.</p><a href="#exportrename">
+<h4 id="exportrename">export/rename</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(export/rename (NAME EXPORT) ...)</tt>
+<br /></span>
+<p>Allows augmenting module-exports from inside the module-body. Each argument should be a two-element list containing the name of the local value- or syntax-definition (NAME) and the name under which the definition should be exported (EXPORT).</p>
+<p>If used outside of a module, then this form does nothing.</p><a href="#import">
+<h4 id="import">import</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(import IMPORT ...)</tt>
+<br /></span>
+<p>Imports module bindings into the current syntactical environment. The visibility of any imported bindings is limited to the current module, if used inside a module-definition, or to the current compilation unit, if compiled and used outside of a module.</p>
+<p>Importing a module will also load or link its associated library when needed.</p>
+<p><tt>IMPORT</tt> may be a module name or an <i>import specifier</i>, where a module name is either a symbol or a list of symbols and integers. An <tt>IMPORT</tt> defines a set of bindings that are to be made visible in the current scope.</p><a href="#only">
+<h5 id="only">only</h5></a>
+<pre><tt>[import specifier] (only IMPORT IDENTIFIER ...)</tt></pre>
+<p>Only import the listed value- or syntax bindings from the set given by <tt>IMPORT</tt>.</p><a href="#except">
+<h5 id="except">except</h5></a>
+<pre><tt>[import specifier] (except IMPORT IDENTIFIER ...)</tt></pre>
+<p>Remove the listed identifiers from the import-set defined by <tt>IMPORT</tt>.</p><a href="#rename">
+<h5 id="rename">rename</h5></a>
+<pre><tt>[import specifier] (rename IMPORT (OLD1 NEW1) ...)</tt></pre>
+<p>Renames identifiers imported from <tt>IMPORT</tt>.</p><a href="#prefix">
+<h5 id="prefix">prefix</h5></a>
+<pre><tt>[import specifier] (prefix IMPORT SYMBOL)</tt></pre>
+<p>Prefixes all imported identifiers with <tt>SYMBOL</tt>.</p><a href="#import-syntax">
+<h4 id="import-syntax">import-syntax</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(import-syntax IMPORT ...)</tt>
+<br /></span>
+<p>Similar to <tt>import</tt> but only import syntactic definitions such as macros, as well as identifiers, but does not load or link the library containing the module.</p><a href="#import-for-syntax">
+<h4 id="import-for-syntax">import-for-syntax</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(import-for-syntax IMPORT ...)</tt>
+<br /></span>
+<p>Similar to <tt>import</tt>, but imports exported bindings of a module into the environment in which macro transformers are evaluated.</p>
+<p>Note: currently this isn't fully correct - value bindings are still imported into the normal environment because a separate import environment for syntax has not been implemented (syntactic bindings are kept separate correctly).</p><a href="#import-syntax-for-syntax">
+<h4 id="import-syntax-for-syntax">import-syntax-for-syntax</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(import-syntax-for-syntax IMPORT ...)</tt>
+<br /></span>
+<p>Combination of <tt>import-syntax</tt> and <tt>import-for-syntax</tt>. Loads syntactic definitions and valinside the environment in which macro transformers are evaluated but do not load the associated library.</p><a href="#reexport">
+<h4 id="reexport">reexport</h4></a><span class="definition syntax"><em>[syntax]</em> <tt>(reexport IMPORT ...)</tt>
+<br /></span>
+<p>Imports <tt>IMPORT ...</tt> and automatically exports all imported identifiers. This can be used to build <i>compound modules</i>: modules that just extend other modules:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">module r4rs <span class="paren2">(<span class="default"></span>)</span>
+  <span class="paren2">(<span class="default">import scheme <span class="paren3">(<span class="default">chicken module</span>)</span></span>)</span>
+  <span class="paren2">(<span class="default">reexport 
+    <span class="paren3">(<span class="default">except scheme 
+      dynamic-wind values call-with-values eval scheme-report-environment
+      null-environment interaction-environment</span>)</span></span>)</span></span>)</span></tt></pre><a href="#define-interface">
+<h3 id="define-interface">define-interface</h3></a><span class="definition syntax"><em>[syntax]</em> <tt>(define-interface INTERFACENAME (EXPORT ...))</tt>
+<br /></span>
+<p>Defines an <i>interface</i>, a group of exports that can be used in module-definitions using the <tt>(interface: INTERFACE)</tt> syntax. See the definition of <tt>module</tt> above for an explanation of <tt>EXPORT</tt> specifications.</p>
+<p>Interface names use a distinct global namespace. Interfaces defined inside modules are not visible outside of the module body.</p><a href="#import-libraries">
+<h3 id="import-libraries">import libraries</h3></a>
+<p><i>import libraries</i> allow the syntactical (compile-time) and run-time parts of a compiled module to be separated into a normal compiled file and a shared library that only contains macro definitions and module information. This reduces the size of executables and simplifies compiling code that uses modules for a different architecture than the machine the compiler is executing on (i.e. &quot;cross&quot; compilation).</p>
+<p>By using the <tt>emit-import-library</tt> compiler-option or declaration, a separate file is generated that only contains syntactical information (including macros) for a module. <tt>import</tt> will automatically find and load an import library for a currently unknown module, if the import- library is either in the extension repository or the current include path. Interpreted code can simply load the import library to make the module-definition available. Syntax-support definitions defined with <tt>define-for-syntax</tt> and expansion-time expressions of the form <tt>(begin-for-syntax ...)</tt> will be added to import libraries to make them available for exported syntax. Note that these definitions will ruthlessly pollute the toplevel namespace and so they should be used sparingly.</p><a href="#predefined-modules">
+<h3 id="predefined-modules">Predefined modules</h3></a>
+<p>Import libraries for the following modules are initially available outside of a module:</p>
+<pre><tt>[module] scheme
+[module] (chicken base)
+[module] (chicken syntax)</tt></pre>
+<p>Every other module needs to be imported explicitly to have access to its exported identifiers.</p><a href="#examples-of-using-modules">
+<h3 id="examples-of-using-modules">Examples of using modules</h3></a>
+<p>Here is a silly little test module to demonstrate how modules are defined and used:</p>
+<pre><tt>;; hello.scm
+
+(module test (hello greet)
+  (import scheme)
+
+  (define-syntax greet
+    (syntax-rules ()
+      ((_ whom) 
+       (begin
+         (display &quot;Hello, &quot;)
+         (display whom)
+         (display &quot; !\n&quot;) ) ) ) )
+
+  (define (hello)
+    (greet &quot;world&quot;) )  )</tt></pre>
+<p>The module <tt>test</tt> exports one value (<tt>hello</tt>) and one syntax binding (<tt>greet</tt>). To use it in <tt>csi</tt>, the interpreter, simply load and import it:</p>
+<pre><tt> #;1&gt; ,l hello.scm
+ ; loading hello.scm ...
+ ; loading /usr/local/lib/chicken/4/scheme.import.so ...
+ #;1&gt; (import test)
+ #;2&gt; (hello)
+ Hello, world !
+ #;3&gt; (greet &quot;you&quot;)
+ Hello, you !</tt></pre>
+<p>The module can easily be compiled</p>
+<pre><tt> % csc -s hello.scm</tt></pre>
+<p>and used in an identical manner:</p>
+<pre><tt> #;1&gt; ,l hello.so
+ ; loading hello.so ...
+ #;1&gt; (import test)
+ #;2&gt; (hello)
+ Hello, world !
+ #;3&gt; (greet &quot;you&quot;)
+ Hello, you !</tt></pre>
+<p>If you want to keep macro-definitions in a separate file, use import libraries:</p>
+<pre><tt> % csc -s hello.scm -j test
+ % csc -s test.import.scm</tt></pre>
+<pre><tt> #;1&gt; ,l hello.so
+ ; loading hello.so ...
+ #;1&gt; (import test)
+ ; loading ./test.import.so ...
+ #;2&gt; (hello)
+ Hello, world !
+ #;3&gt; (greet &quot;you&quot;)
+ Hello, you !</tt></pre>
+<p>If an import library (compiled or in source-form) is located somewhere in the extensions-repository or include path, it is automatically loaded on import. Otherwise you have to load it manually:</p>
+<pre><tt> #;1&gt; ,l hello.so
+ ; loading hello.so ...
+ #;1&gt; ,l test.import.so
+ ; loading test.import.so ...
+ #;1&gt; (import test)
+ #;2&gt; </tt></pre>
+<p>Note that you must use import libraries if you compile code that depends on other modules. The compiler will not execute the modules that are referred to by compiled code, and thus the binding information and exported syntax of the former must be available separately.</p><a href="#example-of-compiling-modules-and-linking-them-into-an-executable">
+<h3 id="example-of-compiling-modules-and-linking-them-into-an-executable">Example of compiling modules and linking them into an executable</h3></a>
+<p>Here is a test module, in the file mymod.scm:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">module mymod <span class="paren2">(<span class="default">hello</span>)</span>
+  <span class="paren2">(<span class="default">import scheme</span>)</span>
+  <span class="paren2">(<span class="default"><i><span class="symbol">define</span></i> <span class="paren3">(<span class="default">hello</span>)</span>
+    <span class="paren3">(<span class="default">display <span class="string">&quot;Hello, World, I'm in mymod!&quot;</span></span>)</span>
+    <span class="paren3">(<span class="default">newline</span>)</span></span>)</span></span>)</span></tt></pre>
+<p>Here is the main module, in the file trymod.scm:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">module trymod <span class="paren2">(<span class="default"></span>)</span>
+  <span class="paren2">(<span class="default">import scheme</span>)</span>
+  <span class="paren2">(<span class="default">import mymod</span>)</span>
+  <span class="paren2">(<span class="default">display <span class="string">&quot;I'm in trymod!&quot;</span></span>)</span>
+  <span class="paren2">(<span class="default">newline</span>)</span>
+  <span class="paren2">(<span class="default">hello</span>)</span>
+  <span class="paren2">(<span class="default">display <span class="string">&quot;Now I'm back in trymod!&quot;</span></span>)</span>
+  <span class="paren2">(<span class="default">newline</span>)</span></span>)</span></tt></pre>
+<p>You can compile mymod.scm into a shared object and compile trymod.scm into an executable  trymod that uses that shared object like this:</p>
+<pre><tt> csc -s -J mymod.scm
+ csc trymod.scm</tt></pre>
+<p>You can execute trymod and it will load the shared object mymod.so.  When loading a shared object, the CHICKEN runtime uses the libld API to obtain the entry point (&quot;C_toplevel&quot;) to invoke top-level initialization code of the module (which also setups up global bindings, etc.).  However, if you move the trymod executable to another directory, it won't be able to find mymod.so to load it.  If you want include the object into the executable directly, it needs to have a unique entry point name, separate from any other entry point of other linked modules.</p>
+<p>To give the module a name, we pass the &quot;-unit modulename&quot; argument to csc, and the name of the module is added to the entry point, so the entry point for mymod would become &quot;C_mymod_toplevel&quot;.  Then the &quot;-uses modulename&quot; argument is passed to csc while compiling and linking trymod so it knows to use that entry point.</p>
+<p>To compile mymod.scm and trymod.scm and link them into the executable trymod, issue the following commands:</p>
+<pre><tt> csc -c -J mymod.scm -unit mymod -o mymod.o
+ csc -o trymod mymod.o -uses mymod trymod.scm</tt></pre>
+<p>This creates an executable that is dynamically linked against libchicken.so, but which includes the mymod.o object file directly.</p>
+<p>To create an executable that is statically linked, issue the following commands:</p>
+<pre><tt> csc -c -static -J mymod.scm -unit mymod -o mymod.o
+ csc -o trymod -static mymod.o -uses mymod trymod.scm</tt></pre>
+<p>If you later add another module you'd need to compile it similar to how mymod.scm is compiled and add a &quot;modulename.o -uses modulename&quot; to the csc command that compiles trymod.scm.</p>
+<p>It is possible to use the csm program installed by the <a href="/egg/csm" class="internal">csm egg</a> to do this automatically.  To produce a dynamically linked program you would do:</p>
+<pre><tt> csm -program trymod</tt></pre>
+<p>To produce a statically linked program you would do:</p>
+<pre><tt> csm -static -program trymod</tt></pre><a href="#functors">
+<h3 id="functors">Functors</h3></a>
+<p>A <i>functor</i> is a higher-order module that can be parameterized with other modules. A functor defines the body of a module for a set of argument modules and can be instantiated with concrete module names specializing the code contained in the functor. This is best explained with a silly and pointless example:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">functor <span class="paren2">(<span class="default">squaring-functor <span class="paren3">(<span class="default">M <span class="paren4">(<span class="default">multiply</span>)</span></span>)</span></span>)</span> <span class="paren2">(<span class="default">square</span>)</span>
+  <span class="paren2">(<span class="default">import scheme M</span>)</span>
+  <span class="paren2">(<span class="default"><i><span class="symbol">define</span></i> <span class="paren3">(<span class="default">square x</span>)</span> <span class="paren3">(<span class="default">multiply x x</span>)</span></span>)</span></span>)</span></tt></pre>
+<p>This defines a generic &quot;squaring&quot; operation that uses <tt>multiply</tt>, a procedure (or macro!) exported by the as-yet-unknown module <tt>M</tt>. Now let's instantiate the functor for a specific input module:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">module nums <span class="paren2">(<span class="default">multiply</span>)</span>
+  <span class="paren2">(<span class="default">import scheme</span>)</span>
+  <span class="paren2">(<span class="default"><i><span class="symbol">define</span></i> <span class="paren3">(<span class="default">multiply x y</span>)</span> <span class="paren3">(<span class="default">* x y</span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="default">module number-squarer = <span class="paren2">(<span class="default">squaring-functor nums</span>)</span></span>)</span>
+
+<span class="paren1">(<span class="default">import number-squarer</span>)</span>
+<span class="paren1">(<span class="default">square 3</span>)</span>                ===&gt;  9</tt></pre>
+<p>We can easily instantiate the functor for other inputs:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">module stars <span class="paren2">(<span class="default">multiply</span>)</span>
+  <span class="paren2">(<span class="default">import scheme</span>)</span>
+  <span class="paren2">(<span class="default"><i><span class="symbol">define</span></i> <span class="paren3">(<span class="default">list-tabulate n f</span>)</span>
+    <span class="paren3">(<span class="default"><i><span class="symbol">let</span></i> <i><span class="symbol">loop</span></i> <span class="paren4">(<span class="default"><span class="paren5">(<span class="default">i 0</span>)</span></span>)</span>
+      <span class="paren4">(<span class="default"><i><span class="symbol">if</span></i> <span class="paren5">(<span class="default">= i n</span>)</span>
+          '<span class="paren5">(<span class="default"></span>)</span>
+          <span class="paren5">(<span class="default">cons <span class="paren6">(<span class="default">f i</span>)</span> <span class="paren6">(<span class="default"><i><span class="symbol">loop</span></i> <span class="paren1">(<span class="default">+ i 1</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="default"><i><span class="symbol">define</span></i> <span class="paren3">(<span class="default">multiply x y</span>)</span> 
+    <span class="paren3">(<span class="default">list-tabulate x <span class="paren4">(<span class="default"><i><span class="symbol">lambda</span></i> _ <span class="paren5">(<span class="default">list-tabulate y <span class="paren6">(<span class="default"><i><span class="symbol">lambda</span></i> _ '*</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="default">module star-squarer = <span class="paren2">(<span class="default">squaring-functor stars</span>)</span></span>)</span>
+
+<span class="paren1">(<span class="default">import star-squarer</span>)</span>
+<span class="paren1">(<span class="default">square 3</span>)</span>                ===&gt;  <span class="paren1">(<span class="default"><span class="paren2">(<span class="default">* * *</span>)</span>
+                                 <span class="paren2">(<span class="default">* * *</span>)</span>
+                                 <span class="paren2">(<span class="default">* * *</span>)</span></span>)</span></tt></pre>
+<p>So whenever you have a generic algorithm it can be packaged into a functor and specialized for specific input modules.  The instantiation will check that the argument modules match the required signature, <tt>(multiply)</tt> in the case above.  The argument module must export at least the signature given in the functor definition. You can use <tt>define-interface</tt> to reduce typing and give a more meaningful name to a set of exports.</p>
+<p>The general syntax of a functor definition looks like this:</p><span class="definition syntax"><em>[syntax]</em> <tt>(functor (FUNCTORNAME (ARGUMENTMODULE1 EXPORTS1) ...) FUNCTOREXPORTS BODY)</tt>
+<br /></span>
+<p>Defines a &quot;functor&quot;, a parameterized module.</p>
+<p>This functor definition does not generate any code. This is done by <i>instantiating</i> the functor for specific input modules:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">module MODULENAME = <span class="paren2">(<span class="default">FUNCTORNAME MODULENAME1 ...</span>)</span></span>)</span></tt></pre>
+<p>Inside <tt>BODY</tt>, references to <tt>ARGUMENTMODULE</tt> will be replaced by the corresponding <tt>MODULENAME</tt> argument. The instantiation expands into the complete functor-code <tt>BODY</tt> and as such can be considered a particular sort of macro-expansion. Note that there is no requirement that a specific export of an argument-module must be syntax or non-syntax - it can be syntax in one instantiation and a procedure definition in another.</p>
+<p><tt>ARGUMENTMODULE</tt> may also be a list of the form <tt>(ALIAS DEFAULT)</tt> to allow specifying a default- or optional functor argument in case the instanation doesn't provide one. Optional functor arguments may only be followed by non-optional functor arguments.</p>
+<p>The common case of using a functor with a single argument module that is not used elsewhere can be expressed in the following way:</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">module NAME = FUNCTORNAME BODY ...</span>)</span></tt></pre>
+<p>which is the same as</p>
+<pre><tt class="highlight scheme-language"><span class="paren1">(<span class="default">begin
+  <span class="paren2">(<span class="default">module _NAME * BODY ...</span>)</span>
+  <span class="paren2">(<span class="default">module NAME = <span class="paren3">(<span class="default">FUNCTORNAME _NAME</span>)</span></span>)</span></span>)</span></tt></pre>
+<p>Since functors exist at compile time, they can be stored in import-libraries via <tt>-emit-import-library FUNCTORNAME</tt> or <tt>-emit-all-import-libraries</tt> (see <a href="Using the compiler" class="internal">Using the compiler</a> for more information about this). That allows you to import functors for later instantiation. Internally, a functor-definition also defines a module with the same name, but importing this module has no effect. It also has no runtime code, so it is sufficient to merely <tt>import</tt> it (as opposed to using <tt>require-extension</tt> or one of its variants, which also loads the run-time part of a module).</p>
+<p>Note that functor-instantiation creates a complete copy of the functor body.</p><a href="#current-module">
+<h3 id="current-module">current-module</h3></a><span class="definition syntax"><em>[syntax]</em> <tt>(current-module)</tt>
+<br /></span>
+<p>This will expand to a symbol which matches the current module's name when used inside a module.  If not inside a module (i.e., at toplevel), this expands to <tt>#f</tt>.</p>
+<hr />
+<p>Previous: <a href="Interface to external functions and variables" class="internal">Interface to external functions and variables</a></p>
+<p>Next: <a href="Types" class="internal">Types</a></p></div></body></html>
