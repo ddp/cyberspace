@@ -5263,6 +5263,7 @@ Cyberspace REPL - Available Commands
 
 (define *command-aliases*
   '((status    . introspect-system)
+    (vault     . introspect-system)
     (commit    . tracked-commit)
     (release   . tracked-release)
     (archive   . tracked-archive)
