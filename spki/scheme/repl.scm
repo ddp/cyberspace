@@ -6841,12 +6841,64 @@ See: Memo-0000 Declaration of Cyberspace
   (linenoise#save-history-to-file *history-file*))
 
 (define (repl-read-line prompt)
-  "Read line with linenoise (history, editing, Ctrl-a/e, arrows)"
+  "Read line with immediate single-char shortcuts, linenoise for the rest.
+   . and ? respond immediately without Enter."
   (repl-history-load)
-  (let ((line (linenoise#linenoise prompt)))
-    (if line
-        (strip-ansi line)
-        line)))  ; #f on EOF
+  (display prompt)
+  (flush-output)
+  ;; Peek first char in raw mode
+  (tty-set-raw)
+  (let ((c (tty-raw-char)))
+    (tty-set-cooked)
+    (cond
+      ;; EOF
+      ((< c 0) #f)
+      ;; Immediate shortcuts (no Enter needed)
+      ((= c 46)  ; .
+       (display ".\n")
+       ".")
+      ((= c 63)  ; ?
+       (display "?\n")
+       "?")
+      ((= c 44)  ; , (start of comma command - read rest immediately)
+       (display ",")
+       (flush-output)
+       (tty-set-raw)
+       (let loop ((chars '()))
+         (let ((ch (tty-raw-char)))
+           (cond
+             ((or (< ch 0) (= ch 4))  ; EOF or Ctrl-D
+              (tty-set-cooked)
+              #f)
+             ((or (= ch 10) (= ch 13))  ; Enter
+              (tty-set-cooked)
+              (newline)
+              (list->string (cons #\, (reverse chars))))
+             ((= ch 127)  ; Backspace
+              (when (pair? chars)
+                (display "\b \b")
+                (flush-output))
+              (loop (if (pair? chars) (cdr chars) chars)))
+             (else
+              (display (integer->char ch))
+              (flush-output)
+              (loop (cons (integer->char ch) chars)))))))
+      ;; Ctrl-D = EOF
+      ((= c 4) #f)
+      ;; Ctrl-C = cancel, return empty
+      ((= c 3)
+       (newline)
+       "")
+      ;; Otherwise, echo the char and read the rest with linenoise
+      (else
+       ;; Show the char we already read
+       (display (integer->char c))
+       (flush-output)
+       ;; Read rest of line (linenoise starts fresh, so we handle simply)
+       (let ((rest (linenoise#linenoise "")))
+         (if rest
+             (strip-ansi (string-append (string (integer->char c)) rest))
+             #f))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
