@@ -178,6 +178,7 @@ if [[ -o interactive ]]; then
     alias gstat='git status -uno'   # ignore untracked files
     alias guile='rlwrap guile'      # Keep guile if you still want it
     alias hd='xxd -g 4'
+    alias hext="open -a 'HexEdit'"
     alias hst='~/bin/hst.pl'
     alias ls='ls -h '
     alias lsacc='ls -lau'

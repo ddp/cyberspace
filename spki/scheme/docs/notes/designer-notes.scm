@@ -99,12 +99,40 @@ Everything else: Chicken Scheme, can evolve freely"))
       (p "VAXcluster had multiple subsystems (MSCP, DLM, SCS, quorum disk, LAVC). Cyberspace has one abstraction: the vault. It subsumes all of them."))
 
     (subsection
-      "2.3 Audit Everything"
+      "2.3 Audit Everything (TCSEC Audit Reduction)"
       (p "$CHKPRO checked privileges. The auditing subsystem logged decisions. Both were ours. Cyberspace continues this:")
       (code scheme "(define (check-capability actor action resource)
   (let ((granted (spki-verify actor action resource)))
     (audit-append actor: actor action: action granted: granted)
-    granted))")))
+    granted))")
+      (p "The lineage of serious security engineering:")
+      (code "MULTICS (1965) → security rings, capabilities, audit
+    ↓
+VAX/VMS (1977) → ANALYZE/AUDIT_JOURNAL, TCSEC C2 evaluation
+    ↓
+Windows NT (1993) → Cutler brought VMS discipline
+    ↓
+Cyberspace (2026) → capabilities + audit + content-addressed soup")
+      (p "Steve Lipner was there for MULTICS, pushed for SDL at Microsoft. He understood: security isn't a feature, it's a discipline. The audit trail isn't logging--it's your ground truth when everything else is suspect.")
+      (p "TCSEC audit reduction means presenting data in forms humans can perceive patterns in:")
+      (code "(audit 'heatmap)    ; Time × day-of-week grid
+(audit 'rhythm)     ; Condensed sparkline per day
+
+Audit Rhythm (7d)
+         00  03  06  09  12  15  18  21
+   Sun  │                        ░░  │
+   Mon  │        ░▒▓█▓▒░             │
+   Tue  │        ░▒▓█▓▒░             │
+   ...
+   ░ sparse  ▒ normal  ▓ busy  █ peak")
+      (p "Visual patterns tell the story:")
+      (list
+        (item "Flatline = quiescence (nothing happening--or too quiet?)")
+        (item "Rhythm = normal ops (humans work 9-5, cron runs at midnight)")
+        (item "Chaos = noise/probing (assume hostile realms)"))
+      (p "In the Wilderness of Mirrors, all bets are off. When federated realms might be hostile, when capabilities can be forged by compromised nodes, the only thing you can trust is what you witnessed and signed yourself. The audit trail is the last honest witness.")
+      (p "VMS ANALYZE/AUDIT_JOURNAL let operators see patterns. We're doing the same with heatmaps and rhythm plots. The visual cortex is a pattern detector--use it.")
+      (p "Tufte would approve: sparklines (▁▂▃▄▅▆▇█), small multiples (days as rows), high data density (24×7 grid), show the data not decoration. The rhythm plot is a word-sized graphic--intense, immediate, true.")))
 
   (section
     "3. Interface Philosophy"

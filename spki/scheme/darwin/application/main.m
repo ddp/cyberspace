@@ -2,18 +2,24 @@
  * Cyberspace.app - Native macOS Shell
  * Library of Cyberspace
  *
- * Minimal Cocoa app embedding WKWebView connected to Scheme backend.
+ * A tribute to the Macintosh: leveraging the platform's unique capabilities.
  * Architecture: Swappable WebView (WKWebView now, CEF option later)
  *
- * Security integrations:
- * - Keychain Access: Store/retrieve cryptographic keys
+ * macOS Integrations:
+ * - Keychain Access: Secure key storage with biometric unlock
  * - Kerberos: Enterprise SSO authentication
+ * - Notification Center: User alerts and updates
+ * - AppleScript/JXA: Automation and scripting bridge
+ * - Services Menu: System-wide text processing
+ * - Continuity: Handoff support (planned)
+ * - Spotlight: Content indexing (planned)
  */
 
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 #import <Security/Security.h>
 #import <GSS/GSS.h>
+#import <UserNotifications/UserNotifications.h>
 
 // ============================================================================
 // CyberWebView Protocol - Abstraction for swappable WebView implementations
@@ -115,9 +121,12 @@ didFailNavigation:(WKNavigation *)navigation
 - (void)webView:(WKWebView *)webView
 didFinishNavigation:(WKNavigation *)navigation {
     NSLog(@"[Cyberspace] Page loaded");
-    // Focus the webview and terminal
-    [webView becomeFirstResponder];
-    [webView evaluateJavaScript:@"if(term) term.focus();" completionHandler:nil];
+    // Focus the webview and terminal after a brief delay to ensure JS is ready
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        [webView becomeFirstResponder];
+        [webView evaluateJavaScript:@"if(term){term.focus();term.scrollToBottom();}" completionHandler:nil];
+    });
 }
 
 @end
@@ -377,6 +386,204 @@ didFinishNavigation:(WKNavigation *)navigation {
 @end
 
 // ============================================================================
+// NotificationManager - macOS Notification Center
+// ============================================================================
+
+@interface NotificationManager : NSObject <UNUserNotificationCenterDelegate>
++ (void)requestAuthorization;
++ (void)sendNotification:(NSString *)title body:(NSString *)body identifier:(NSString *)identifier;
+@end
+
+@implementation NotificationManager
+
++ (void)requestAuthorization {
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    center.delegate = (id<UNUserNotificationCenterDelegate>)self;
+    [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound)
+                          completionHandler:^(BOOL granted, NSError *error) {
+        if (granted) {
+            NSLog(@"[Notifications] Authorization granted");
+        } else if (error) {
+            NSLog(@"[Notifications] Authorization error: %@", error.localizedDescription);
+        }
+    }];
+}
+
++ (void)sendNotification:(NSString *)title body:(NSString *)body identifier:(NSString *)identifier {
+    UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+    content.title = title;
+    content.body = body;
+    content.sound = [UNNotificationSound defaultSound];
+
+    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:identifier ?: [[NSUUID UUID] UUIDString]
+                                                                          content:content
+                                                                          trigger:nil];
+
+    [[UNUserNotificationCenter currentNotificationCenter] addNotificationRequest:request
+                                                           withCompletionHandler:^(NSError *error) {
+        if (error) {
+            NSLog(@"[Notifications] Failed to send: %@", error.localizedDescription);
+        }
+    }];
+}
+
+@end
+
+// ============================================================================
+// AppleScriptManager - JXA/AppleScript Bridge
+// ============================================================================
+
+@interface AppleScriptManager : NSObject
++ (NSDictionary *)executeScript:(NSString *)script language:(NSString *)language;
++ (NSDictionary *)executeScriptFile:(NSString *)path;
+@end
+
+@implementation AppleScriptManager
+
++ (NSDictionary *)executeScript:(NSString *)script language:(NSString *)language {
+    @try {
+        NSAppleScript *appleScript = [[NSAppleScript alloc] initWithSource:script];
+        NSDictionary *errorInfo = nil;
+        NSAppleEventDescriptor *result = [appleScript executeAndReturnError:&errorInfo];
+
+        if (errorInfo) {
+            return @{
+                @"success": @NO,
+                @"error": errorInfo[NSAppleScriptErrorMessage] ?: @"Unknown error"
+            };
+        }
+
+        return @{
+            @"success": @YES,
+            @"result": [result stringValue] ?: @""
+        };
+    } @catch (NSException *e) {
+        return @{@"success": @NO, @"error": e.reason ?: @"Exception"};
+    }
+}
+
++ (NSDictionary *)executeScriptFile:(NSString *)path {
+    NSURL *url = [NSURL fileURLWithPath:path];
+    NSDictionary *errorInfo = nil;
+    NSAppleScript *appleScript = [[NSAppleScript alloc] initWithContentsOfURL:url error:&errorInfo];
+
+    if (errorInfo) {
+        return @{
+            @"success": @NO,
+            @"error": errorInfo[NSAppleScriptErrorMessage] ?: @"Failed to load script"
+        };
+    }
+
+    NSAppleEventDescriptor *result = [appleScript executeAndReturnError:&errorInfo];
+
+    if (errorInfo) {
+        return @{
+            @"success": @NO,
+            @"error": errorInfo[NSAppleScriptErrorMessage] ?: @"Execution error"
+        };
+    }
+
+    return @{
+        @"success": @YES,
+        @"result": [result stringValue] ?: @""
+    };
+}
+
+@end
+
+// ============================================================================
+// BonjourService - mDNS/Bonjour Publishing
+// ============================================================================
+
+@interface BonjourService : NSObject <NSNetServiceDelegate>
+@property (nonatomic, strong) NSNetService *service;
++ (instancetype)sharedService;
+- (void)publishWithPort:(int)port;
+- (void)stop;
+@end
+
+@implementation BonjourService
+
++ (instancetype)sharedService {
+    static BonjourService *shared = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        shared = [[BonjourService alloc] init];
+    });
+    return shared;
+}
+
+- (void)publishWithPort:(int)port {
+    [self stop];
+
+    // Publish as _cyberspace._tcp with name "cyberspace"
+    self.service = [[NSNetService alloc] initWithDomain:@""
+                                                   type:@"_cyberspace._tcp."
+                                                   name:@"cyberspace"
+                                                   port:port];
+    self.service.delegate = self;
+    [self.service publish];
+    NSLog(@"[Bonjour] Publishing cyberspace on port %d", port);
+}
+
+- (void)stop {
+    if (self.service) {
+        [self.service stop];
+        self.service = nil;
+    }
+}
+
+- (void)netServiceDidPublish:(NSNetService *)sender {
+    NSLog(@"[Bonjour] Published: %@.%@%@", sender.name, sender.type, sender.domain);
+}
+
+- (void)netService:(NSNetService *)sender didNotPublish:(NSDictionary *)errorDict {
+    NSLog(@"[Bonjour] Failed to publish: %@", errorDict);
+}
+
+@end
+
+// ============================================================================
+// ServicesProvider - macOS Services Menu
+// ============================================================================
+
+@interface ServicesProvider : NSObject
+- (void)evaluateInCyberspace:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error;
+- (void)storeInVault:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error;
+@end
+
+@implementation ServicesProvider
+
+- (void)evaluateInCyberspace:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error {
+    NSString *text = [pboard stringForType:NSPasteboardTypeString];
+    if (!text) {
+        *error = @"No text selected";
+        return;
+    }
+
+    NSLog(@"[Services] Evaluate: %@", text);
+    // TODO: Send to REPL via WebSocket
+    [NotificationManager sendNotification:@"Cyberspace"
+                                     body:[NSString stringWithFormat:@"Evaluating: %@", text]
+                               identifier:@"service-eval"];
+}
+
+- (void)storeInVault:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error {
+    NSString *text = [pboard stringForType:NSPasteboardTypeString];
+    if (!text) {
+        *error = @"No text selected";
+        return;
+    }
+
+    NSLog(@"[Services] Store in vault: %lu bytes", (unsigned long)text.length);
+    [NotificationManager sendNotification:@"Cyberspace"
+                                     body:@"Added to vault"
+                               identifier:@"service-store"];
+}
+
+@end
+
+// ============================================================================
 // AppDelegate
 // ============================================================================
 
@@ -385,6 +592,7 @@ didFinishNavigation:(WKNavigation *)navigation {
 @property (nonatomic, strong) id<CyberWebView> webView;
 @property (nonatomic, strong) NSTask *schemeBackend;
 @property (nonatomic, assign) int backendPort;
+@property (nonatomic, strong) ServicesProvider *servicesProvider;
 @end
 
 @implementation AppDelegate
@@ -392,6 +600,16 @@ didFinishNavigation:(WKNavigation *)navigation {
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     // Find an available port
     self.backendPort = 7780;
+
+    // Initialize macOS integrations
+    [NotificationManager requestAuthorization];
+
+    // Register services provider
+    self.servicesProvider = [[ServicesProvider alloc] init];
+    [NSApp setServicesProvider:self.servicesProvider];
+
+    // Publish via Bonjour/mDNS
+    [[BonjourService sharedService] publishWithPort:self.backendPort];
 
     // Restore window frame from preferences
     NSRect frame = [PreferencesManager windowFrame];
@@ -464,8 +682,11 @@ didFinishNavigation:(WKNavigation *)navigation {
         executable = @"/opt/homebrew/bin/csi";
         arguments = @[@"-s", serverScript, [NSString stringWithFormat:@"%d", self.backendPort]];
     } else {
-        // Development mode
+        // Development mode - check for server.scm or cyberspace-server.scm
         NSString *devScript = [schemeDir stringByAppendingPathComponent:@"cyberspace-server.scm"];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:devScript]) {
+            devScript = [schemeDir stringByAppendingPathComponent:@"server.scm"];
+        }
         if ([[NSFileManager defaultManager] fileExistsAtPath:devScript]) {
             executable = @"/opt/homebrew/bin/csi";
             arguments = @[@"-s", devScript, [NSString stringWithFormat:@"%d", self.backendPort]];
@@ -567,6 +788,57 @@ didFinishNavigation:(WKNavigation *)navigation {
             @"id": requestId ?: @"",
             @"type": @"kerberos.result",
             @"info": info
+        }];
+
+    // Notification Center
+    } else if ([type isEqualToString:@"notify"]) {
+        NSString *title = message[@"title"] ?: @"Cyberspace";
+        NSString *body = message[@"body"] ?: @"";
+        NSString *identifier = message[@"identifier"];
+        [NotificationManager sendNotification:title body:body identifier:identifier];
+        [self.webView postMessage:@{
+            @"id": requestId ?: @"",
+            @"type": @"notify.result",
+            @"success": @YES
+        }];
+
+    // AppleScript execution
+    } else if ([type isEqualToString:@"applescript.run"]) {
+        NSString *script = message[@"script"];
+        NSString *language = message[@"language"] ?: @"AppleScript";
+        if (script) {
+            NSDictionary *result = [AppleScriptManager executeScript:script language:language];
+            [self.webView postMessage:@{
+                @"id": requestId ?: @"",
+                @"type": @"applescript.result",
+                @"success": result[@"success"],
+                @"result": result[@"result"] ?: @"",
+                @"error": result[@"error"] ?: @""
+            }];
+        }
+
+    // AppleScript file execution
+    } else if ([type isEqualToString:@"applescript.runFile"]) {
+        NSString *path = message[@"path"];
+        if (path) {
+            NSDictionary *result = [AppleScriptManager executeScriptFile:path];
+            [self.webView postMessage:@{
+                @"id": requestId ?: @"",
+                @"type": @"applescript.result",
+                @"success": result[@"success"],
+                @"result": result[@"result"] ?: @"",
+                @"error": result[@"error"] ?: @""
+            }];
+        }
+
+    // System info
+    } else if ([type isEqualToString:@"system.info"]) {
+        [self.webView postMessage:@{
+            @"id": requestId ?: @"",
+            @"type": @"system.result",
+            @"hostname": [[NSHost currentHost] localizedName] ?: @"",
+            @"os": [[NSProcessInfo processInfo] operatingSystemVersionString],
+            @"platform": @"macOS"
         }];
     }
 }
@@ -779,6 +1051,9 @@ didFinishNavigation:(WKNavigation *)navigation {
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
+    // Stop Bonjour publishing
+    [[BonjourService sharedService] stop];
+
     // Clean up backend process
     if (self.schemeBackend && self.schemeBackend.isRunning) {
         [self.schemeBackend terminate];

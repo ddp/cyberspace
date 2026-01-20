@@ -2,11 +2,13 @@
 ;;;
 ;;; Scheme's read-char uses stdio buffering that ignores stty.
 ;;; This uses termios directly for true unbuffered input.
+;;; Also provides terminal size detection for full-screen apps.
 
 #>
 #include <termios.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 
 static struct termios orig_termios;
 static int raw_mode = 0;
@@ -37,12 +39,33 @@ int tty_read_char(void) {
     if (read(STDIN_FILENO, &c, 1) == 1) return c;
     return -1;
 }
+
+/* Terminal size detection */
+int tty_get_rows(void) {
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) return 24;
+    return ws.ws_row;
+}
+
+int tty_get_cols(void) {
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) return 80;
+    return ws.ws_col;
+}
+
+/* Check if we have a tty */
+int tty_is_tty(void) {
+    return isatty(STDIN_FILENO);
+}
 <#
 
 (module tty-ffi
   (tty-raw-char
    tty-set-raw
-   tty-set-cooked)
+   tty-set-cooked
+   tty-rows
+   tty-cols
+   tty?)
 
   (import scheme
           (chicken base)
@@ -59,5 +82,16 @@ int tty_read_char(void) {
   ;; Restore terminal to cooked mode
   (define tty-set-cooked
     (foreign-lambda int "tty_set_cooked_mode"))
+
+  ;; Terminal dimensions
+  (define tty-rows
+    (foreign-lambda int "tty_get_rows"))
+
+  (define tty-cols
+    (foreign-lambda int "tty_get_cols"))
+
+  ;; Check if stdin is a tty
+  (define tty?
+    (foreign-lambda int "tty_is_tty"))
 
 ) ;; end module

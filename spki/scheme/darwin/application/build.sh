@@ -26,6 +26,7 @@ clang -fobjc-arc \
     -framework WebKit \
     -framework Security \
     -framework GSS \
+    -framework UserNotifications \
     -o "$MACOS/$APP_NAME" \
     "$SCRIPT_DIR/main.m"
 
@@ -37,21 +38,25 @@ fi
 # Create PkgInfo
 echo -n "APPLCYSM" > "$CONTENTS/PkgInfo"
 
-# Create placeholder icon if missing
-if [ ! -f "$RESOURCES/Cyberspace.icns" ]; then
+# Copy app icon
+if [ -f "$SCRIPT_DIR/Cyberspace.icns" ]; then
+    cp "$SCRIPT_DIR/Cyberspace.icns" "$RESOURCES/"
+    echo "  Copied app icon"
+elif [ ! -f "$RESOURCES/Cyberspace.icns" ]; then
     echo "  Note: No app icon (Cyberspace.icns) - using default"
 fi
 
 # Copy and compile Scheme server
-if [ -f "$SCRIPT_DIR/../cyberspace-server.scm" ]; then
+SCHEME_DIR="$SCRIPT_DIR/../.."
+if [ -f "$SCHEME_DIR/server.scm" ]; then
     echo "  Copying server script..."
-    cp "$SCRIPT_DIR/../cyberspace-server.scm" "$RESOURCES/"
+    cp "$SCHEME_DIR/server.scm" "$RESOURCES/cyberspace-server.scm"
 
     # Try to compile if csc is available
     if command -v csc &> /dev/null; then
         echo "  Compiling cyberspace-server..."
-        cd "$SCRIPT_DIR/.."
-        csc -O2 -o "$RESOURCES/cyberspace-server" cyberspace-server.scm 2>/dev/null || {
+        cd "$SCHEME_DIR"
+        csc -O2 -o "$RESOURCES/cyberspace-server" server.scm 2>/dev/null || {
             echo "  Note: Server compilation skipped (will use interpreted)"
         }
         cd "$SCRIPT_DIR"

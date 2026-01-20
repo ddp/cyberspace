@@ -3208,6 +3208,14 @@ Cyberspace REPL - Available Commands
     clear                          Clear screen
     quit                           Exit
 
+  Comma Commands:
+    ,e [file]                      Edit (Emacs or Electric Pencil)
+    ,pencil [file]                 Electric Pencil (built-in)
+    ,hd file                       Hex dump (xxd, terminal)
+    ,hext file                     Hex edit (HexEdit, GUI)
+    ,l file                        Load Scheme file
+    ,q                             Quit
+
   Scheme Mode (full power):
     (define x 42)                  Define variables
     (map f list)                   Full Scheme available
@@ -5281,7 +5289,7 @@ Cyberspace REPL - Available Commands
     (approve   . tracked-enroll-approve)
     (discover  . discover-peers)
     (gossip    . gossip-status)
-    (audit     . audit-read)
+    (audit     . audit)
     (clear     . clear)
     (open      . open)
     (theme     . theme!)
@@ -5437,10 +5445,18 @@ Cyberspace REPL - Available Commands
      ("(discover-peers)" "Find _cyberspace._tcp peers")
      ("(gossip-status)" "Gossip daemon status"))
 
-    (audit "Audit Trail"
-     ("(audit-read)" "Read audit trail")
+    (audit "Audit Trail (TCSEC Reduction)"
+     ("(audit)" "Summary of audit entries")
+     ("(audit 'brief)" "Recent entries, one per line")
+     ("(audit 'full)" "Full details for each entry")
+     ("(audit 'plot)" "ASCII histogram (24h activity)")
+     ("(audit 'heatmap)" "Time × day-of-week grid")
+     ("(audit 'heatmap '(span \"30d\"))" "Monthly rhythm pattern")
+     ("(audit 'rhythm \"7d\")" "Condensed daily sparkline")
+     ("(audit 'query '(type sync))" "Filter by type")
+     ("(audit 'query '(since \"1h\"))" "Entries in last hour")
      ("(audit-chain)" "Verify chain integrity")
-     ("(audit-append TYPE MSG)" "Append audit entry"))
+     ("Visual:" "flatline=quiet, rhythm=normal, chaos=hostile"))
 
     (inspector "Debugger & Inspector"
      ("(inspect OBJ)" "Inspect any object")
@@ -5449,6 +5465,15 @@ Cyberspace REPL - Available Commands
      ("(frame N)" "Examine stack frame")
      ("(enable-inspector!)" "Turn on debug> prompt")
      ("(disable-inspector!)" "Turn off debug> prompt"))
+
+    (editor "Editing Files"
+     (",e [file]" "Edit with Emacs (if available)")
+     (",pencil [file]" "Edit with Electric Pencil (built-in)")
+     ("$EMACSCLIENT" "Override emacsclient path")
+     ("Emacs:" "Uses emacsclient -t (terminal mode)")
+     ("Pencil:" "Gap buffer editor, WASD movement")
+     ("Ctrl-WASD" "Pencil: movement diamond (↑←↓→)")
+     ("Ctrl-Q" "Pencil: quit editor"))
 
     (forge "Build & Metrics"
      ("(sicp)" "SICP metrics for all modules")
@@ -5935,6 +5960,81 @@ See: Memo-0000 Declaration of Cyberspace
       (printf "~%Audit Activity (~a, ~a buckets)~%~%" span-spec bucket-spec)
       (audit-print-histogram buckets 8))))
 
+;; Heat map characters for intensity (space to full block)
+(define *heat-chars* '#(" " "░" "▒" "▓" "█"))
+
+(define (audit-heatmap entries span-spec)
+  "Show time-of-day × day-of-week heat map.
+   Quiescence is flat, rhythm is normal, chaos is probing."
+  (let* ((now (current-seconds))
+         (span-secs (- now (audit-parse-time-spec span-spec)))
+         (start-time (- now span-secs))
+         ;; 7 days × 24 hours grid
+         (grid (make-vector 7 #f)))
+    ;; Initialize grid
+    (do ((d 0 (+ d 1))) ((>= d 7))
+      (vector-set! grid d (make-vector 24 0)))
+    ;; Count entries by day-of-week and hour
+    (for-each
+     (lambda (e)
+       (let ((ts (audit-entry-epoch e)))
+         (when (>= ts start-time)
+           (let* ((time-vec (seconds->local-time ts))
+                  (hour (vector-ref time-vec 2))      ; tm_hour
+                  (wday (vector-ref time-vec 6)))     ; tm_wday (0=Sun)
+             (let ((day-vec (vector-ref grid wday)))
+               (vector-set! day-vec hour (+ 1 (vector-ref day-vec hour))))))))
+     entries)
+    ;; Find max for scaling
+    (let ((max-count 1))
+      (do ((d 0 (+ d 1))) ((>= d 7))
+        (do ((h 0 (+ h 1))) ((>= h 24))
+          (set! max-count (max max-count (vector-ref (vector-ref grid d) h)))))
+      ;; Print header
+      (printf "~%Audit Rhythm (~a)~%" span-spec)
+      (printf "         00  03  06  09  12  15  18  21~%")
+      (printf "         ├───┼───┼───┼───┼───┼───┼───┤~%")
+      ;; Print each day
+      (let ((days '#("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat")))
+        (do ((d 0 (+ d 1))) ((>= d 7))
+          (printf "   ~a  │" (vector-ref days d))
+          (do ((h 0 (+ h 1))) ((>= h 24))
+            (let* ((count (vector-ref (vector-ref grid d) h))
+                   (intensity (if (zero? max-count) 0
+                                  (min 4 (inexact->exact (floor (* 5 (/ count max-count))))))))
+              (display (vector-ref *heat-chars* intensity))))
+          (printf "│~%")))
+      (printf "         └───────────────────────────┘~%")
+      ;; Legend
+      (printf "~%   ░ sparse  ▒ normal  ▓ busy  █ peak~%")
+      ;; Summary stats
+      (let ((total (length (filter (lambda (e) (>= (audit-entry-epoch e) start-time)) entries))))
+        (printf "   ~a entries in ~a~%" total span-spec)))))
+
+(define (audit-rhythm entries span-spec)
+  "Condensed rhythm view - one sparkline per day."
+  (let* ((now (current-seconds))
+         (span-secs (- now (audit-parse-time-spec span-spec)))
+         (start-time (- now span-secs))
+         (days-back (max 1 (quotient span-secs 86400)))
+         (day-counts (make-vector days-back 0)))
+    ;; Count per day
+    (for-each
+     (lambda (e)
+       (let ((ts (audit-entry-epoch e)))
+         (when (>= ts start-time)
+           (let ((day-idx (min (- days-back 1) (quotient (- ts start-time) 86400))))
+             (vector-set! day-counts day-idx (+ 1 (vector-ref day-counts day-idx)))))))
+     entries)
+    ;; Build sparkline
+    (let ((max-count (apply max 1 (vector->list day-counts))))
+      (printf "~%~a: " span-spec)
+      (do ((i 0 (+ i 1))) ((>= i days-back))
+        (let* ((count (vector-ref day-counts i))
+               (level (min 8 (inexact->exact (floor (* 9 (/ count max-count)))))))
+          (display (vector-ref *audit-vbars* level))))
+      (printf " (~a)~%" (apply + (vector->list day-counts))))))
+
 (define (audit . args)
   "Query and display audit trail.
 
@@ -5942,12 +6042,18 @@ See: Memo-0000 Declaration of Cyberspace
   (audit 'brief)                   Brief listing of entries
   (audit 'full)                    Full details for each entry
   (audit 'summary)                 Counts grouped by type
-  (audit 'summary 'hour)           Counts grouped by hour
   (audit 'plot)                    ASCII histogram (24h, 1h buckets)
   (audit 'plot '(span \"7d\"))       7-day plot
+  (audit 'heatmap)                 Time × day-of-week grid (7d)
+  (audit 'heatmap '(span \"30d\"))   Monthly rhythm
+  (audit 'rhythm \"30d\")            Condensed daily sparkline
   (audit 'query '(type sync))      Filter by action type
   (audit 'query '(since \"1h\"))     Entries in last hour
-  (audit 'analyze ...)             Combined VMS-style analysis"
+
+  Visual patterns (TCSEC audit reduction):
+    Flatline = quiescence (nothing happening)
+    Rhythm   = normal ops (humans work 9-5, cron at midnight)
+    Chaos    = noise/probing (assume hostile realms)"
 
   (session-stat! 'queries)
   (let ((entries (audit-load-entries)))
@@ -5995,6 +6101,22 @@ See: Memo-0000 Declaration of Cyberspace
                ((bucket) (set! bucket (cadr arg))))))
          (cdr args))
         (audit-print-plot entries bucket span)))
+
+     ;; Heatmap - time × day-of-week (TCSEC audit reduction)
+     ((eq? (car args) 'heatmap)
+      (let ((span "7d"))
+        (for-each
+         (lambda (arg)
+           (when (and (list? arg) (>= (length arg) 2))
+             (case (car arg)
+               ((span) (set! span (cadr arg))))))
+         (cdr args))
+        (audit-heatmap entries span)))
+
+     ;; Rhythm - condensed sparkline per day
+     ((eq? (car args) 'rhythm)
+      (let ((span (if (> (length args) 1) (cadr args) "30d")))
+        (audit-rhythm entries span)))
 
      ;; Query with criteria
      ((eq? (car args) 'query)
@@ -6955,6 +7077,50 @@ See: Memo-0000 Declaration of Cyberspace
                              (else
                               (print "Unknown format: " format)
                               (print "Use: txt, html, ps, all, or build")))))))))
+              (loop))
+
+             ;; Edit file with Emacs (preferred) or Electric Pencil
+             ;; Uses emacsclient -s ns -t for terminal mode (matches ~/.zshrc ect alias)
+             ((or (string=? cmd "e") (string=? cmd "edit"))
+              (let* ((emacsclient (or (get-environment-variable "EMACSCLIENT")
+                                      "/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"))
+                     (emacs-app "/Applications/Emacs.app/Contents/MacOS/Emacs")
+                     (file (if (null? args) "" (car args))))
+                (if (file-exists? emacsclient)
+                    ;; emacsclient -s ns -t -a EMACS: terminal mode, server "ns", fallback to Emacs
+                    (let ((cmd (sprintf "~a -s ns -t -a '~a' ~a" emacsclient emacs-app file)))
+                      (system cmd))
+                    ;; Fallback to Electric Pencil
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (begin
+                        (load "pencil.scm")
+                        (if (null? args)
+                            ((eval 'pencil))
+                            ((eval 'pencil) (car args)))))))
+              (loop))
+
+             ;; Electric Pencil explicitly
+             ((string=? cmd "pencil")
+              (handle-exceptions exn
+                (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                (begin
+                  (load "pencil.scm")
+                  (if (null? args)
+                      ((eval 'pencil))
+                      ((eval 'pencil) (car args)))))
+              (loop))
+
+             ;; Hex edit - terminal (xxd) or GUI (HexEdit)
+             ((or (string=? cmd "hd") (string=? cmd "hex"))
+              (if (null? args)
+                  (print "Usage: ,hd <file>")
+                  (system (sprintf "xxd -g 4 ~a | less" (car args))))
+              (loop))
+             ((string=? cmd "hext")
+              (if (null? args)
+                  (print "Usage: ,hext <file>")
+                  (system (sprintf "open -a 'HexEdit' ~a" (car args))))
               (loop))
 
              ;; Unknown comma command
