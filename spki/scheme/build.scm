@@ -14,11 +14,13 @@
         (chicken format)
         (chicken file)
         (chicken file posix)
-        (chicken pathname))
+        (chicken pathname)
+        (chicken io)
+        (chicken string))
 
 (define *library-modules*
   '(;; Core
-    "sexp" "crypto-ffi" "fips" "wordlist"
+    "sexp" "crypto-ffi" "fips" "wordlist" "tty-ffi"
     ;; SPKI
     "cert" "capability" "security" "keyring"
     ;; Storage
@@ -83,6 +85,28 @@
   (build-repl)
   (build-app))
 
+(define (install-eggs)
+  "Install eggs from freckles manifest"
+  (print "\n=== Installing eggs from freckles ===")
+  (if (file-exists? "freckles")
+      (let ((eggs (with-input-from-file "freckles"
+                    (lambda ()
+                      (let loop ((lines '()))
+                        (let ((line (read-line)))
+                          (if (eof-object? line)
+                              (reverse lines)
+                              (let ((trimmed (string-trim-both line)))
+                                (if (or (string=? trimmed "")
+                                        (string-prefix? ";" trimmed))
+                                    (loop lines)
+                                    (loop (cons trimmed lines)))))))))))
+        (for-each
+          (lambda (egg)
+            (printf "  ~a~n" egg)
+            (system (sprintf "chicken-install ~a 2>/dev/null || sudo chicken-install ~a" egg egg)))
+          eggs))
+      (print "  (no freckles file found)")))
+
 (define (publish-library)
   (print "\n=== Publishing library ===")
   (let ((dest "www.yoyodyne.com:public_html/ddp/cyberspace/spki/scheme/"))
@@ -99,6 +123,7 @@
 (define (main args)
   (let ((target (if (pair? args) (car args) "all")))
     (cond
+      ((string=? target "eggs")    (install-eggs))
       ((string=? target "library") (build-library))
       ((string=? target "repl")    (build-repl))
       ((string=? target "app")     (build-app))
@@ -106,7 +131,7 @@
       ((string=? target "publish") (publish-library))
       (else
         (printf "Unknown target: ~a~n" target)
-        (print "Usage: ./build.scm [library|repl|app|all|publish]")
+        (print "Usage: ./build.scm [eggs|library|repl|app|all|publish]")
         (exit 1))))
   (print "\nDone."))
 
