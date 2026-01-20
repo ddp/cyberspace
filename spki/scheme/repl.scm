@@ -6923,15 +6923,47 @@ See: Memo-0000 Declaration of Cyberspace
   (linenoise#save-history-to-file *history-file*))
 
 (define (repl-read-line prompt)
-  "Read line with linenoise (full line editing: Ctrl+A, Ctrl+E, Ctrl+W, history).
-   Shortcuts . and ? work but require Enter."
+  "Read line with immediate shortcuts and linenoise history.
+   . and ? respond immediately. ESC (arrows) defers to linenoise for history."
   (repl-history-load)
-  (let ((line (linenoise#linenoise prompt)))
-    (if line
-        (begin
-          (repl-history-add line)
-          (strip-ansi line))
-        #f)))
+  (display prompt)
+  (flush-output)
+  ;; Peek first char in raw mode
+  (tty-set-raw)
+  (let ((c (tty-raw-char)))
+    (tty-set-cooked)
+    (cond
+      ;; EOF
+      ((< c 0) #f)
+      ;; Immediate shortcuts (no Enter needed)
+      ((= c 46)  ; .
+       (display ".\n")
+       ".")
+      ((= c 63)  ; ?
+       (display "?\n")
+       "?")
+      ;; ESC = arrow key or other escape sequence
+      ;; Defer entirely to linenoise (user pressed up/down for history)
+      ((= c 27)
+       (let ((line (linenoise#linenoise prompt)))
+         (when line (repl-history-add line))
+         (and line (strip-ansi line))))
+      ;; Ctrl-D = EOF
+      ((= c 4) #f)
+      ;; Ctrl-C = cancel
+      ((= c 3)
+       (newline)
+       "")
+      ;; Regular char - echo it, then linenoise for rest
+      (else
+       (display (integer->char c))
+       (flush-output)
+       (let ((rest (linenoise#linenoise "")))
+         (if rest
+             (let ((full (string-append (string (integer->char c)) rest)))
+               (repl-history-add full)
+               (strip-ansi full))
+             #f))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)

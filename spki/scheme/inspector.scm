@@ -60,7 +60,8 @@
           (chicken repl)
           (only srfi-1 filter iota)
           srfi-13
-          srfi-69)
+          srfi-69
+          tty-ffi)
 
   ;; ============================================================
   ;; State
@@ -328,6 +329,30 @@
   ;; Inspector REPL
   ;; ============================================================
 
+  (define (debug-read-line prompt)
+    "Read line with immediate shortcuts (. ?) for inspector.
+     ESC defers to regular read-line for special keys."
+    (display prompt)
+    (flush-output)
+    (tty-set-raw)
+    (let ((c (tty-raw-char)))
+      (tty-set-cooked)
+      (cond
+        ((< c 0) #f)              ; EOF
+        ((= c 46) (newline) ".")  ; . immediate
+        ((= c 63) (newline) "?")  ; ? immediate
+        ((= c 27) (read-line))    ; ESC - let read-line handle
+        ((= c 4) #f)              ; Ctrl-D
+        ((= c 3) (newline) "")    ; Ctrl-C
+        (else
+         ;; Regular char - echo and read rest
+         (display (integer->char c))
+         (flush-output)
+         (let ((rest (read-line)))
+           (if (eof-object? rest)
+               (string (integer->char c))
+               (string-append (string (integer->char c)) rest)))))))
+
   (define (inspector-repl condition)
     "Enter inspector REPL for condition"
     (set! *current-condition* condition)
@@ -374,11 +399,9 @@
 
     ;; Inspector loop
     (let loop ()
-      (display "debug> ")
-      (flush-output)
-      (let ((input (read-line)))
+      (let ((input (debug-read-line "debug> ")))
         (cond
-          ((or (eof-object? input)
+          ((or (not input) (eof-object? input)
                (member input '(":q" ":quit" ",q" "bye" "bye." "exit" "(exit)" "q" "quit")))
            (print "Returning to REPL.")
            #f)
