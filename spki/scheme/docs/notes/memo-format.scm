@@ -152,7 +152,7 @@
       ((or (= cp #x2193) (= cp #x25BC))  ; ↓ ▼
        `((text ,cx ,cy "↓")))
 
-      ;; Block elements
+      ;; Block elements (solid)
       ((= cp #x2588) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 1.0)))       ; █
       ((= cp #x2587) `((rect ,(- cx hw) ,(- cy (* hh 0.75)) ,cell-width ,(* cell-height 0.875) 1.0)))
       ((= cp #x2586) `((rect ,(- cx hw) ,(- cy (* hh 0.5)) ,cell-width ,(* cell-height 0.75) 1.0)))
@@ -161,6 +161,11 @@
       ((= cp #x2583) `((rect ,(- cx hw) ,(+ cy (* hh 0.25)) ,cell-width ,(* cell-height 0.375) 1.0)))
       ((= cp #x2582) `((rect ,(- cx hw) ,(+ cy (* hh 0.5)) ,cell-width ,(* cell-height 0.25) 1.0)))
       ((= cp #x2581) `((rect ,(- cx hw) ,(+ cy (* hh 0.75)) ,cell-width ,(* cell-height 0.125) 1.0)))
+
+      ;; Shade characters (with opacity)
+      ((= cp #x2591) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 0.25)))      ; ░ light shade
+      ((= cp #x2592) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 0.50)))      ; ▒ medium shade
+      ((= cp #x2593) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 0.75)))      ; ▓ dark shade
 
       ;; Math symbols - render as text
       ((= cp #x2205) `((text ,cx ,cy "∅")))  ; ∅
@@ -328,9 +333,13 @@
             (let ((x (list-ref elem 1))
                   (y (list-ref elem 2))
                   (w (list-ref elem 3))
-                  (h (list-ref elem 4)))
-              (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\"/>\n"
-                               x y w h) out)))
+                  (h (list-ref elem 4))
+                  (opacity (if (> (length elem) 5) (list-ref elem 5) 1.0)))
+              (if (< opacity 1.0)
+                  (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\" fill-opacity=\"~a\"/>\n"
+                                   x y w h opacity) out)
+                  (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\"/>\n"
+                                   x y w h) out))))
            ((text-span)
             (let ((x (list-ref elem 1))
                   (y (list-ref elem 2))
