@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <title>Memo 0057: Typesetting</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0057: Typesetting</h1>
+<dl class="metadata">
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>HTML was born without typographic discipline. Browsers render monospace text with variable-width box-drawing characters, destroying the careful geometry of ASCII diagrams. This memo specifies how Cyberspace solves the problem: convert character-cell art to SVG at generation time, preserving the author's intent in a form browsers cannot corrupt.</p>
+</section>
+<section>
+<h2>The Original Sin</h2>
+<p>In the beginning, there was the teletype. Characters occupied fixed cells. Box-drawing characters (│ ─ ┌ ┐ └ ┘) aligned perfectly because geometry was enforced by hardware.</p>
+<p>Then came HTML, and the browser vendors said: 'Let there be font substitution.' And there was chaos.</p>
+<p>The problem:</p>
+<ul>
+<li>Browsers substitute fonts freely, even within 'monospace'</li>
+<li>Box-drawing glyphs often come from different fonts than text</li>
+<li>Different fonts have different metrics</li>
+<li>A '│' from one font may be wider than '─' from another</li>
+<li>Vertical lines no longer align across rows</li>
+</ul>
+<p>The result: carefully composed ASCII diagrams render as visual garbage. Decades of terminal art, protocol diagrams, and architectural sketches—broken by 'progress.'</p>
+</section>
+<section>
+<h2>The Solution: Compile to Geometry</h2>
+<p>We solve this at the source. During memo generation, text containing box-drawing characters is converted to SVG—a format where geometry is explicit and browsers cannot reinterpret.</p>
+<h3>Character Cell Model</h3>
+<p>Every character occupies a fixed cell:</p>
+<pre class="language-scheme">
+(define cell-width 10)    ; pixels
+(define cell-height 20)   ; pixels
+</pre>
+<p>Text characters are positioned at cell centers. Box-drawing characters become geometric primitives—lines and rectangles with exact coordinates.</p>
+<h3>Box-Drawing Primitives</h3>
+<p>Each box-drawing codepoint maps to SVG elements:</p>
+<table>
+<tr><th>Glyph </th><th>Codepoint </th><th>SVG Primitives </th></tr>
+<tr><td>─ </td><td>U+2500 </td><td>Horizontal line through cell center </td></tr>
+<tr><td>│ </td><td>U+2502 </td><td>Vertical line through cell center </td></tr>
+<tr><td>┌ </td><td>U+250C </td><td>Lines: center→right, center→down </td></tr>
+<tr><td>┐ </td><td>U+2510 </td><td>Lines: center→left, center→down </td></tr>
+<tr><td>└ </td><td>U+2514 </td><td>Lines: center→right, center→up </td></tr>
+<tr><td>┘ </td><td>U+2518 </td><td>Lines: center→left, center→up </td></tr>
+<tr><td>├ </td><td>U+251C </td><td>Lines: up↔down, center→right </td></tr>
+<tr><td>┤ </td><td>U+2524 </td><td>Lines: up↔down, center→left </td></tr>
+<tr><td>┬ </td><td>U+252C </td><td>Lines: left↔right, center→down </td></tr>
+<tr><td>┴ </td><td>U+2534 </td><td>Lines: left↔right, center→up </td></tr>
+<tr><td>┼ </td><td>U+253C </td><td>Lines: full cross </td></tr>
+</table>
+<p>Double-line variants (═ ║ ╔ ╗ ╚ ╝) use the same geometry with doubled strokes.</p>
+<h3>Text Grouping</h3>
+<p>Consecutive text characters are grouped into single SVG text elements:</p>
+<pre>
+Before: &lt;text x="5"&gt;c&lt;/text&gt;&lt;text x="15"&gt;h&lt;/text&gt;&lt;text x="25"&gt;a&lt;/text&gt;...
+After:  &lt;text x="0"&gt;chaotic&lt;/text&gt;
+</pre>
+<p>This reduces SVG size and ensures proper kerning within text runs. Spaces and box-drawing characters break the grouping.</p>
+</section>
+<section>
+<h2>Auto-Alignment</h2>
+<p>Authors make mistakes. Lines in a box diagram may differ by one character—an extra space, a missing padding. The renderer detects and corrects this automatically.</p>
+<h3>The Algorithm</h3>
+<ul>
+<li>Identify lines ending with box right-edges (│ ┐ ┘ ┤ ║ ╗ ╝)</li>
+<li>Find the most common width among these lines</li>
+<li>Adjust each box-edge line to match the target width</li>
+<li>Add spaces before the edge if too short</li>
+<li>Remove trailing spaces before the edge if too long</li>
+</ul>
+<p>This preserves author intent while correcting typographic errors. A 64-character line among 63-character siblings gets trimmed. A 62-character line gets padded.</p>
+<h3>Why Most Common, Not Maximum</h3>
+<p>If 14 lines are 63 characters and 1 line is 64 characters, the outlier is the error. Taking the maximum would pad 14 correct lines to match 1 broken one. Taking the mode identifies the intended width.</p>
+</section>
+<section>
+<h2>Implementation</h2>
+<p>The typesetting pipeline lives in memo-format.scm:</p>
+<pre class="language-scheme">
+;; Core functions
+(utf8-chars str)           ; Extract Unicode codepoints
+(box-drawing-codepoint? cp) ; Identify box characters  
+(codepoint-&gt;svg cp cx cy)   ; Map to SVG primitives
+(fix-box-line-widths lines) ; Auto-align right edges
+(text-&gt;svg-diagram text)    ; Full conversion
+</pre>
+<p>The pipeline:</p>
+<ul>
+<li>Split text into lines</li>
+<li>Auto-fix line widths for consistent box edges</li>
+<li>Process each character: box-drawing → geometry, text → grouped spans</li>
+<li>Emit SVG with embedded styles for theme compatibility</li>
+</ul>
+</section>
+<section>
+<h2>Design Principles</h2>
+<ul>
+<li>Compile, don't interpret: Fix problems at generation time, not render time</li>
+<li>Preserve intent: The author's diagram should appear as conceived</li>
+<li>Fail gracefully: Unknown characters pass through as text</li>
+<li>Theme-aware: Use currentColor so diagrams respect dark/light mode</li>
+<li>Self-contained: Each SVG includes its own styles</li>
+</ul>
+<p>These principles ensure diagrams render correctly across browsers, operating systems, and color schemes—now and in the future.</p>
+</section>
+<section>
+<h2>Heritage</h2>
+<p>This work stands on foundations:</p>
+<ul>
+<li>Knuth's TeX (1978): The discipline of precise typographic control</li>
+<li>Ossanna's troff (1973): Document formatting as compilation</li>
+<li>Adobe PostScript (1984): Page description as a programming language</li>
+<li>Unicode box-drawing block (1991): Standardized character geometry</li>
+<li>SVG 1.0 (2001): Vector graphics for the web</li>
+</ul>
+<p>We honor these by taking typography seriously in an age that has largely forgotten it.</p>
+</section>
+<section>
+<h2>References</h2>
+<ul>
+<li>Knuth, D. E. (1984). The TeXbook</li>
+<li>Unicode Standard, Chapter 22: Symbols - Box Drawing</li>
+<li>SVG 1.1 Specification, W3C Recommendation</li>
+<li>Kernighan, B. W. (1978). A TROFF Tutorial</li>
+</ul>
+</section>
+<section>
+<h2>Changelog</h2>
+<ul>
+<li>2026-01-20</li>
+<li>Initial specification</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

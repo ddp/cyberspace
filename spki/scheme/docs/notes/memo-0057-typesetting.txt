@@ -1,0 +1,200 @@
+Memo 0057: Typesetting
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+ABSTRACT
+------------------------------------------------------------------------
+
+HTML was born without typographic discipline. Browsers render monospace
+text with variable-width box-drawing characters, destroying the careful
+geometry of ASCII diagrams. This memo specifies how Cyberspace solves
+the problem: convert character-cell art to SVG at generation time,
+preserving the author's intent in a form browsers cannot corrupt.
+
+
+------------------------------------------------------------------------
+THE ORIGINAL SIN
+------------------------------------------------------------------------
+
+In the beginning, there was the teletype. Characters occupied fixed
+cells. Box-drawing characters (| - + + + +) aligned perfectly because
+geometry was enforced by hardware.
+
+Then came HTML, and the browser vendors said: 'Let there be font
+substitution.' And there was chaos.
+
+The problem:
+
+  * Browsers substitute fonts freely, even within 'monospace'
+  * Box-drawing glyphs often come from different fonts than text
+  * Different fonts have different metrics
+  * A '|' from one font may be wider than '-' from another
+  * Vertical lines no longer align across rows
+
+The result: carefully composed ASCII diagrams render as visual garbage.
+Decades of terminal art, protocol diagrams, and architectural
+sketches—broken by 'progress.'
+
+
+------------------------------------------------------------------------
+THE SOLUTION: COMPILE TO GEOMETRY
+------------------------------------------------------------------------
+
+We solve this at the source. During memo generation, text containing
+box-drawing characters is converted to SVG—a format where geometry is
+explicit and browsers cannot reinterpret.
+
+
+Character Cell Model
+--------------------
+
+Every character occupies a fixed cell:
+
+
+    (define cell-width 10)    ; pixels
+    (define cell-height 20)   ; pixels
+
+Text characters are positioned at cell centers. Box-drawing characters
+become geometric primitives—lines and rectangles with exact
+coordinates.
+
+
+Box-Drawing Primitives
+----------------------
+
+Each box-drawing codepoint maps to SVG elements:
+
+
+  Glyph   Codepoint   SVG Primitives                         
+  -       U+2500      Horizontal line through cell center    
+  |       U+2502      Vertical line through cell center      
+  +       U+250C      Lines: center>right, center>down       
+  +       U+2510      Lines: center>left, center>down        
+  +       U+2514      Lines: center>right, center>up         
+  +       U+2518      Lines: center>left, center>up          
+  +       U+251C      Lines: up↔down, center>right         
+  +       U+2524      Lines: up↔down, center>left          
+  +       U+252C      Lines: left↔right, center>down       
+  +       U+2534      Lines: left↔right, center>up         
+  +       U+253C      Lines: full cross                      
+
+Double-line variants (- | + + + +) use the same geometry with doubled
+strokes.
+
+
+Text Grouping
+-------------
+
+Consecutive text characters are grouped into single SVG text elements:
+
+
+    Before: <text x="5">c</text><text x="15">h</text><text x="25">a</text>...
+    After:  <text x="0">chaotic</text>
+
+This reduces SVG size and ensures proper kerning within text runs.
+Spaces and box-drawing characters break the grouping.
+
+
+------------------------------------------------------------------------
+AUTO-ALIGNMENT
+------------------------------------------------------------------------
+
+Authors make mistakes. Lines in a box diagram may differ by one
+character—an extra space, a missing padding. The renderer detects and
+corrects this automatically.
+
+
+The Algorithm
+-------------
+
+  * Identify lines ending with box right-edges (| + + + | + +)
+  * Find the most common width among these lines
+  * Adjust each box-edge line to match the target width
+  * Add spaces before the edge if too short
+  * Remove trailing spaces before the edge if too long
+
+This preserves author intent while correcting typographic errors. A
+64-character line among 63-character siblings gets trimmed. A
+62-character line gets padded.
+
+
+Why Most Common, Not Maximum
+----------------------------
+
+If 14 lines are 63 characters and 1 line is 64 characters, the outlier
+is the error. Taking the maximum would pad 14 correct lines to match 1
+broken one. Taking the mode identifies the intended width.
+
+
+------------------------------------------------------------------------
+IMPLEMENTATION
+------------------------------------------------------------------------
+
+The typesetting pipeline lives in memo-format.scm:
+
+
+    ;; Core functions
+    (utf8-chars str)           ; Extract Unicode codepoints
+    (box-drawing-codepoint? cp) ; Identify box characters  
+    (codepoint->svg cp cx cy)   ; Map to SVG primitives
+    (fix-box-line-widths lines) ; Auto-align right edges
+    (text->svg-diagram text)    ; Full conversion
+
+The pipeline:
+
+  * Split text into lines
+  * Auto-fix line widths for consistent box edges
+  * Process each character: box-drawing > geometry, text > grouped spans
+  * Emit SVG with embedded styles for theme compatibility
+
+
+------------------------------------------------------------------------
+DESIGN PRINCIPLES
+------------------------------------------------------------------------
+
+  * Compile, don't interpret: Fix problems at generation time, not render time
+  * Preserve intent: The author's diagram should appear as conceived
+  * Fail gracefully: Unknown characters pass through as text
+  * Theme-aware: Use currentColor so diagrams respect dark/light mode
+  * Self-contained: Each SVG includes its own styles
+
+These principles ensure diagrams render correctly across browsers,
+operating systems, and color schemes—now and in the future.
+
+
+------------------------------------------------------------------------
+HERITAGE
+------------------------------------------------------------------------
+
+This work stands on foundations:
+
+  * Knuth's TeX (1978): The discipline of precise typographic control
+  * Ossanna's troff (1973): Document formatting as compilation
+  * Adobe PostScript (1984): Page description as a programming language
+  * Unicode box-drawing block (1991): Standardized character geometry
+  * SVG 1.0 (2001): Vector graphics for the web
+
+We honor these by taking typography seriously in an age that has largely
+forgotten it.
+
+
+------------------------------------------------------------------------
+REFERENCES
+------------------------------------------------------------------------
+
+  * Knuth, D. E. (1984). The TeXbook
+  * Unicode Standard, Chapter 22: Symbols - Box Drawing
+  * SVG 1.1 Specification, W3C Recommendation
+  * Kernighan, B. W. (1978). A TROFF Tutorial
+
+
+------------------------------------------------------------------------
+CHANGELOG
+------------------------------------------------------------------------
+
+  * 2026-01-20
+  * Initial specification
+
+------------------------------------------------------------------------
