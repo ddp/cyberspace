@@ -5604,6 +5604,35 @@ Cyberspace REPL - Available Commands
 (define security security-summary)
 (define announce announce-presence)
 
+;; Easter egg: TECO tribute
+(define (teco)
+  "TECO - the editor that Emacs was written in"
+  (print "
+TECO - Text Editor and COrrector (1962)
+Dan Murphy, MIT
+
+  The gap buffer's ancestor. Every keystroke a command.
+  Every command sequence does *something* - often unintended.
+
+  Sample TECO to uppercase a word:
+    .,.+5XA QA\"A ^T' QA-32UA QA,.G
+
+  Translation: Mark point, grab 5 chars to register A,
+               if alphabetic print it, subtract 32 (ASCII magic),
+               store back, insert from register.
+
+  TECO's gift to computing:
+    - Emacs (written IN TECO, then bootstrapped)
+    - The gap buffer (register + point = proto-gap)
+    - Proof that line noise can be Turing-complete
+
+  \"Real programmers can write FORTRAN in any language.
+   TECO programmers write in line noise.\"
+
+  See also: (pencil) - our tribute to Michael Shrayer's 1976 editor
+")
+  (void))
+
 ;; Easter egg for schemers: the Ten Commandments
 (define (commandments)
   "The Ten Commandments of Cyberspace"
