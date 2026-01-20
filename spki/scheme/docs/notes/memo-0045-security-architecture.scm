@@ -442,7 +442,7 @@
   (section
     "Trusted Path"
     (p "When it matters, talk directly to the core.")
-    (code "┌──────────────────────────────────────┐\n│           HUMAN OPERATOR              │\n└─────────────────┬────────────────────┘\n                  │ Local terminal, no network\n┌─────────────────▼────────────────────┐\n│          CYBERSPACE REPL              │\n│    ╔═════════════════════════════╗   │\n│    ║  TRUSTED PATH ACTIVE        ║   │\n│    ╚═════════════════════════════╝   │\n└─────────────────┬────────────────────┘\n                  │\n┌─────────────────▼────────────────────┐\n│           TRUSTED CORE                │\n└──────────────────────────────────────┘")
+    (code "┌──────────────────────────────────────┐\n│          HUMAN OPERATOR              │\n└─────────────────┬────────────────────┘\n                  │ Local terminal, no network\n┌─────────────────▼────────────────────┐\n│         CYBERSPACE REPL              │\n│   ╔═════════════════════════════╗    │\n│   ║  TRUSTED PATH ACTIVE        ║    │\n│   ╚═════════════════════════════╝    │\n└─────────────────┬────────────────────┘\n                  │\n┌─────────────────▼────────────────────┐\n│          TRUSTED CORE                │\n└──────────────────────────────────────┘")
     (p "Operations requiring trusted path: - (ed25519-keypair) - key generation - (node-role 'coordinator) - role assignment - (seal-release \"1.0.0\") - signing releases - Key ceremony (Memo-022)"))
   (section
     "Threats"

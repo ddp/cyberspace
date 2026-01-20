@@ -179,25 +179,27 @@
            (memv (car last-cp) '(#x2502 #x2510 #x2518 #x2524 #x2551 #x2557 #x255D))))))
 
 (define (normalize-box-lines lines)
-  "Pad lines to same width, inserting space before right box edge."
+  "Pad lines to same width, only if all box-edge lines have same width.
+   Otherwise, return lines unchanged to preserve intentional layout."
   (let* ((char-counts (map utf8-length lines))
-         (max-len (apply max 1 char-counts)))
-    (map (lambda (line count)
-           (let ((pad (- max-len count)))
-             (cond
-               ((<= pad 0) line)  ; Already correct width or longer
-               ((and (string-ends-with-box-edge? line) (> count 1))
-                ;; Insert padding before the final box character
-                (let* ((chars (utf8-chars line))
-                       (n (length chars))
-                       (last-char (cdr (list-ref chars (- n 1))))
-                       (prefix-strs (map cdr (take chars (- n 1))))
-                       (prefix (apply string-append prefix-strs)))
-                  (string-append prefix (make-string pad #\space) last-char)))
-               (else
-                ;; No box edge or single char - just pad at end
-                (string-append line (make-string pad #\space))))))
-         lines char-counts)))
+         (max-len (apply max 1 char-counts))
+         ;; Find widths of lines ending with box edges
+         (box-edge-widths (filter-map
+                           (lambda (line count)
+                             (and (string-ends-with-box-edge? line) count))
+                           lines char-counts)))
+    ;; Only normalize if all box edges are at same width, or no box edges
+    (if (or (null? box-edge-widths)
+            (apply = box-edge-widths))
+        ;; All box edges aligned - normalize all lines to max width
+        (map (lambda (line count)
+               (let ((pad (- max-len count)))
+                 (if (<= pad 0)
+                     line
+                     (string-append line (make-string pad #\space)))))
+             lines char-counts)
+        ;; Box edges at different widths - don't normalize
+        lines)))
 
 (define (box-drawing-codepoint? cp)
   "Check if codepoint is a box-drawing character."
