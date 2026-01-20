@@ -5264,7 +5264,8 @@ Cyberspace REPL - Available Commands
     result))
 
 (define *command-aliases*
-  '((status    . introspect-system)
+  '((status    . status)
+    (apropos   . apropos)
     (vault     . soup)
     (commit    . tracked-commit)
     (release   . tracked-release)
