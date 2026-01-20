@@ -986,11 +986,21 @@
 ;;; Entry Point
 ;;; ============================================================
 
-(define (pencil #!optional filename)
-  "Start Electric Pencil editor"
+(define (pencil #!optional arg)
+  "Start Electric Pencil editor.
+   (pencil)              - new empty buffer
+   (pencil \"file.txt\")   - edit file
+   (pencil \"hello!\")     - edit text directly (Newton-style)"
   (let ((ed (editor-new)))
-    (when filename
-      (editor-load! ed filename))
+    (when arg
+      (if (file-exists? arg)
+          ;; It's a file - load it
+          (editor-load! ed arg)
+          ;; It's text - put it in the buffer (Newton MessagePad style)
+          (begin
+            (gb-insert-string! (editor-buf ed) arg)
+            (gb-goto! (editor-buf ed) 0)
+            (set-editor-status! ed "Scratch"))))
     (editor-run ed)))
 
 ;; Run if executed directly
