@@ -17,7 +17,8 @@
         (chicken condition)
         (chicken time)
         srfi-1
-        srfi-13)
+        srfi-13
+        srfi-69)
 
 (load "memo-format.scm")
 
@@ -33,7 +34,7 @@
 
 (define (memo-number filename)
   "Extract Memo number from filename for sorting."
-  (let ((m (irregex-match "memo-([0-9]+)" filename)))
+  (let ((m (irregex-search "memo-([0-9]+)" filename)))
     (if m
         (string->number (irregex-match-substring m 1))
         999)))
@@ -113,21 +114,22 @@
 (define (check-duplicate-numbers memos)
   "Fail fast if any memo numbers are duplicated."
   (let* ((numbers (map memo-number memos))
-         (seen '())
+         (seen (make-hash-table))
          (dupes '()))
-    (for-each (lambda (n f)
-                (if (member n seen)
+    (for-each (lambda (n)
+                (if (hash-table-exists? seen n)
                     (set! dupes (cons n dupes))
-                    (set! seen (cons n seen))))
-              numbers memos)
+                    (hash-table-set! seen n #t)))
+              numbers)
     (when (not (null? dupes))
       (print "")
       (print "*** ERROR: Duplicate memo numbers detected! ***")
       (for-each (lambda (n)
-                  (print "  " (string-pad (number->string n) 4 #\0) ": "
-                         (string-intersperse
-                           (filter (lambda (f) (= (memo-number f) n)) memos)
-                           ", ")))
+                  (let ((num-str (number->string n)))
+                    (print "  " (string-append (make-string (- 4 (string-length num-str)) #\0) num-str) ": "
+                           (string-intersperse
+                             (filter (lambda (f) (= (memo-number f) n)) memos)
+                             ", "))))
                 (delete-duplicates (reverse dupes)))
       (print "")
       (print "The Ten Commandments (0000-0009) are fixed:")
