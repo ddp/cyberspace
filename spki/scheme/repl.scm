@@ -910,8 +910,9 @@
 (import info)      ; hypertext doc browser with pager
 
 ;; Resident editors - load once, always ready (like LSE, VAX Emacs)
-(load "teco.scm")   ; Dan Murphy's TECO (1962)
-(load "pencil.scm") ; Michael Shrayer's Electric Pencil (1976)
+(load "teco.scm")     ; Dan Murphy's TECO (1962)
+(load "pencil.scm")   ; Michael Shrayer's Electric Pencil (1976)
+(load "schemacs.scm") ; Emacs-style editor in Scheme (2026)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -3273,6 +3274,7 @@ Cyberspace REPL - Available Commands
     ,e [file]                      Edit (Emacs or Electric Pencil)
     ,pencil [file]                 Electric Pencil (built-in)
     ,teco [file]                   TECO (DEC heritage)
+    ,schemacs [file]               Schemacs (Emacs-style)
     ,hd file                       Hex dump (xxd, terminal)
     ,hext file                     Hex edit (HexEdit, GUI)
     ,l file                        Load Scheme file
@@ -5538,6 +5540,7 @@ Cyberspace REPL - Available Commands
      (",e [file]" "Edit with configured editor")
      (",pencil [file]" "Electric Pencil (built-in)")
      (",teco [file]" "TECO (Dan Murphy heritage)")
+     (",schemacs [file]" "Schemacs (Emacs-style)")
      (",hd file" "Hex dump (xxd | less)")
      (",hext file" "HexEdit (GUI)")
      ("$EDITOR/$PAGER" "Environment fallbacks")
@@ -5637,18 +5640,18 @@ Cyberspace REPL - Available Commands
            (printf "  help topics - All help topics (~a commands)~%"
                    (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
            (print "  .  ?  bye   - status, help, exit"))
-         ;; Schemer: full Scheme syntax
+         ;; Schemer: comma commands (like Chicken CSI)
          (begin
-           (print "  (soup)            - Browse the object store")
-           (print "  (library)         - Enter the Library")
-           (print "  (search 'topic)   - Search everything")
-           (print "  (kwic 'word)      - Keyword-in-context search")
-           (print "  (status)          - Node status")
-           (print "  (inspect OBJ)     - Inspect anything")
+           (print "  ,soup             Browse the object store")
+           (print "  ,library          Enter the Library")
+           (print "  ,search TOPIC     Search everything")
+           (print "  ,kwic WORD        Keyword-in-context search")
+           (print "  ,s                Node status")
+           (print "  ,i OBJ            Inspect anything")
            (print "")
-           (printf "  (help 'topics)    - All help topics (~a commands)~%"
+           (printf "  ,? or ,help       All help topics (~a commands)~%"
                    (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
-           (print "  (.) status  (?) help  (bye) exit")))
+           (print "  ,q                Quit")))
      (print "")))
   (void))
 
@@ -7040,6 +7043,16 @@ See: Memo-0000 Declaration of Cyberspace
       ((= c 3)
        (newline)
        "")
+      ;; Comma - start command mode, echo and continue
+      ((= c 44)
+       (display ",")
+       (flush-output)
+       (let ((rest (linenoise#linenoise "")))
+         (if rest
+             (let ((full (string-append "," rest)))
+               (repl-history-add full)
+               (strip-ansi full))
+             ",")))
       ;; Regular char - include in linenoise prompt so backspace is safe
       (else
        (let* ((first-char (string (integer->char c)))
@@ -7123,11 +7136,30 @@ See: Memo-0000 Declaration of Cyberspace
                   (string=? cmd "exit"))
               (goodbye repl-history-save *boot-verbosity*))
 
-             ;; Help
+             ;; Help - comma style (like Chicken CSI)
              ((or (string=? cmd "h")
                   (string=? cmd "help")
                   (string=? cmd "?"))
-              (help)
+              (print "")
+              (print "Comma commands:")
+              (print "")
+              (print "  ,?              This help")
+              (print "  ,soup           Browse the object store")
+              (print "  ,library        Enter the Library")
+              (print "  ,search TOPIC   Search everything")
+              (print "  ,kwic WORD      Keyword-in-context search")
+              (print "  ,s              Node status")
+              (print "  ,i OBJ          Inspect anything")
+              (print "  ,e FILE         Edit file")
+              (print "  ,teco           TECO editor")
+              (print "  ,pencil         Electric Pencil editor")
+              (print "  ,novice         Electric Pencil (novice mode)")
+              (print "  ,schemacs       Schemacs (Emacs-style)")
+              (print "  ,q              Quit")
+              (print "")
+              (printf "  ,help topics    All help topics (~a commands)~%"
+                      (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
+              (print "")
               (loop))
 
              ;; Apropos - search symbols
@@ -7312,6 +7344,11 @@ See: Memo-0000 Declaration of Cyberspace
                    (handle-exceptions exn
                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
                      (if (null? args) (teco) (teco (car args)))))
+                  ;; Built-in Schemacs (resident)
+                  ((or (string=? ed "schemacs") (string=? ed "emacs"))
+                   (handle-exceptions exn
+                     (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                     (if (null? args) (schemacs) (schemacs (car args)))))
                   ;; External editor
                   (else
                    (system (sprintf "~a ~a" ed file)))))
@@ -7342,6 +7379,15 @@ See: Memo-0000 Declaration of Cyberspace
                 (if (null? args)
                     (teco)
                     (teco (car args))))
+              (loop))
+
+             ;; Schemacs (resident Emacs-style editor)
+             ((or (string=? cmd "schemacs") (string=? cmd "emacs"))
+              (handle-exceptions exn
+                (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                (if (null? args)
+                    (schemacs)
+                    (schemacs (car args))))
               (loop))
 
              ;; Hex edit - terminal (xxd) or GUI (HexEdit)
