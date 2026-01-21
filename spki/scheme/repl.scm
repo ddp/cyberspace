@@ -301,13 +301,21 @@
 (define (editor)
   "Get configured editor command - Electric Pencil is our nano"
   (or *editor*
+      (and (directory-exists? ".vault")
+           (vault-config 'editor))
       (get-environment-variable "EDITOR")
       "pencil"))
 
 (define (editor! cmd)
-  "Set editor preference"
+  "Set editor preference (persists to vault)"
   (set! *editor* cmd)
-  (print "[editor: " (editor) "]"))
+  (when (directory-exists? ".vault")
+    (vault-config 'editor cmd))
+  (print "Editor: " (editor))
+  (print "  pencil = Electric Pencil (built-in)")
+  (print "  teco   = TECO (built-in)")
+  (print "  emacs  = Emacsclient")
+  (print "  Other  = External command"))
 
 (define (pager)
   "Get configured pager command"
@@ -7257,21 +7265,32 @@ See: Memo-0000 Declaration of Cyberspace
                               (print "Use: txt, html, ps, all, or build")))))))))
               (loop))
 
-             ;; Edit file with configured editor (see: preferences)
+             ;; Edit file with configured editor (see: editor!)
              ((or (string=? cmd "e") (string=? cmd "edit"))
               (let* ((ed (editor))
                      (file (if (null? args) "" (car args))))
-                (if (string=? ed "pencil")
-                    ;; Built-in Electric Pencil
-                    (handle-exceptions exn
-                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
-                      (begin
-                        (load "pencil.scm")
-                        (if (null? args)
-                            ((eval 'pencil))
-                            ((eval 'pencil) (car args)))))
-                    ;; External editor
-                    (system (sprintf "~a ~a" ed file))))
+                (cond
+                  ;; Built-in Electric Pencil
+                  ((string=? ed "pencil")
+                   (handle-exceptions exn
+                     (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                     (begin
+                       (load "pencil.scm")
+                       (if (null? args)
+                           ((eval 'pencil))
+                           ((eval 'pencil) (car args))))))
+                  ;; Built-in TECO
+                  ((string=? ed "teco")
+                   (handle-exceptions exn
+                     (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                     (begin
+                       (load "teco.scm")
+                       (if (null? args)
+                           ((eval 'teco))
+                           ((eval 'teco) (car args))))))
+                  ;; External editor
+                  (else
+                   (system (sprintf "~a ~a" ed file)))))
               (loop))
 
              ;; Electric Pencil explicitly
