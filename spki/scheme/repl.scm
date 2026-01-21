@@ -7375,6 +7375,67 @@ See: Memo-0000 Declaration of Cyberspace
               (print "Chicken version:  " (chicken-version))
               (loop))
 
+             ;; Dump data (Chicken's ,du)
+             ((string=? cmd "du")
+              (if (null? args)
+                  (print "Usage: ,du <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (let ((val (eval (with-input-from-string expr-str read))))
+                        (##sys#dump-heap-state)
+                        (##sys#print-info val)))))
+              (loop))
+
+             ;; Load and print (Chicken's ,ln)
+             ((string=? cmd "ln")
+              (if (null? args)
+                  (print "Usage: ,ln <filename>")
+                  (begin
+                    (print "Loading " (car args) " (verbose)...")
+                    (load (car args) (lambda (x) (pp x)))))
+              (loop))
+
+             ;; Expression history (Chicken's ,h - we use ,history to avoid conflict)
+             ((string=? cmd "history")
+              (let ((hist (reverse *repl-history*)))
+                (let lp ((h hist) (i 1))
+                  (when (pair? h)
+                    (printf "~3d: ~a~%" i (car h))
+                    (lp (cdr h) (+ i 1)))))
+              (loop))
+
+             ;; Clear history (Chicken's ,ch)
+             ((string=? cmd "ch")
+              (set! *repl-history* '())
+              (print "History cleared")
+              (loop))
+
+             ;; Last exception (Chicken's ,exn)
+             ((string=? cmd "exn")
+              (if (and (pair? *call-stack*) (condition? (cdar *call-stack*)))
+                  (describe-condition (cdar *call-stack*))
+                  (print "No recent exception"))
+              (loop))
+
+             ;; Get variable from frame (Chicken's ,g)
+             ((string=? cmd "g")
+              (if (null? args)
+                  (print "Usage: ,g <name>")
+                  (print "Frame variable access not implemented"))
+              (loop))
+
+             ;; Switch module (Chicken's ,m)
+             ((string=? cmd "m")
+              (if (null? args)
+                  (print "Usage: ,m <module>")
+                  (let ((mod (string->symbol (car args))))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (eval `(import ,mod))
+                      (print "Switched to module: " mod))))
+              (loop))
+
              ;; Unknown comma command
              (else
               (print "Unknown command: ," cmd)
