@@ -327,7 +327,7 @@
                         screen-top cursor-row cursor-col
                         mark-start mark-end clipboard
                         search-string wrap-mode
-                        rows cols status-msg)
+                        rows cols status-msg novice)
   editor?
   (buf editor-buf set-editor-buf!)
   (filename editor-filename set-editor-filename!)
@@ -343,9 +343,10 @@
   (wrap-mode editor-wrap-mode? set-editor-wrap-mode!)
   (rows editor-rows set-editor-rows!)
   (cols editor-cols set-editor-cols!)
-  (status-msg editor-status set-editor-status!))
+  (status-msg editor-status set-editor-status!)
+  (novice editor-novice? set-editor-novice!))
 
-(define (editor-new)
+(define (editor-new #!optional novice)
   "Create new editor state"
   (make-editor-internal
    (gb-new)                             ; buffer
@@ -362,7 +363,8 @@
    #t                                   ; wrap mode on
    (tty-rows)                           ; terminal rows
    (tty-cols)                           ; terminal cols
-   ""))                                 ; status message
+   ""                                   ; status message
+   (or novice #f)))                     ; novice mode
 
 ;;; ============================================================
 ;;; Line Operations (for screen display)
@@ -760,7 +762,9 @@
     ;; Menu bar (Sol-20 style command hints)
     (screen-goto rows 1)
     (screen-dim)
-    (let ((menu "^Q quit  ^O open  ^P save  ^F find  ^R replace  ^B/K block  ^V paste  ^I ins/ovr  ^L refresh"))
+    (let ((menu (if (editor-novice? ed)
+                    "Ctrl-Q=Quit  Ctrl-O=Open  Ctrl-P=Save  Ctrl-F=Find  Arrows=Move  Type to insert"
+                    "^Q quit  ^O open  ^P save  ^F find  ^R replace  ^B/K block  ^V paste  ^I ins/ovr")))
       (display (string-take menu (min (string-length menu) cols)))
       (display (make-string (max 0 (- cols (string-length menu))) #\space)))
     (screen-reset)
@@ -1016,26 +1020,36 @@
 ;;; Entry Point
 ;;; ============================================================
 
+(define (pencil-internal arg novice)
+  "Internal: start editor with optional novice mode"
+  (let ((ed (editor-new novice)))
+    (when arg
+      (if (file-exists? arg)
+          (editor-load! ed arg)
+          (begin
+            (gb-insert-string! (editor-buf ed) arg)
+            (gb-goto! (editor-buf ed) 0)
+            (set-editor-status! ed "Scratch"))))
+    (when novice
+      (set-editor-status! ed "Novice mode - Ctrl-Q to quit"))
+    (editor-run ed)))
+
 (define (pencil #!optional arg)
   "Start Electric Pencil editor.
    (pencil)              - new empty buffer
    (pencil \"file.txt\")   - edit file
    (pencil \"hello!\")     - edit text directly (Newton-style)"
-  (let ((ed (editor-new)))
-    (when arg
-      (if (file-exists? arg)
-          ;; It's a file - load it
-          (editor-load! ed arg)
-          ;; It's text - put it in the buffer (Newton MessagePad style)
-          (begin
-            (gb-insert-string! (editor-buf ed) arg)
-            (gb-goto! (editor-buf ed) 0)
-            (set-editor-status! ed "Scratch"))))
-    (editor-run ed)))
+  (pencil-internal arg #f))
+
+(define (pencil-novice #!optional arg)
+  "Start Electric Pencil in novice mode (extra help, verbose prompts).
+   (pencil-novice)            - new empty buffer with guidance
+   (pencil-novice \"file.txt\") - edit file with training wheels"
+  (pencil-internal arg #t))
 
 ;; Run if executed directly
 (when (and (pair? (command-line-arguments))
            (not (string-prefix? "-" (car (command-line-arguments)))))
   (pencil (car (command-line-arguments))))
 
-(print "Electric Pencil loaded. (pencil \"file.txt\") to edit.")
+(print "Electric Pencil loaded. (pencil) or (pencil-novice) to edit.")

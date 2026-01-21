@@ -7298,6 +7298,15 @@ See: Memo-0000 Declaration of Cyberspace
                     (pencil (car args))))
               (loop))
 
+             ;; Electric Pencil novice mode
+             ((or (string=? cmd "pencil-novice") (string=? cmd "novice"))
+              (handle-exceptions exn
+                (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                (if (null? args)
+                    (pencil-novice)
+                    (pencil-novice (car args))))
+              (loop))
+
              ;; TECO (resident, like LSE on VMS)
              ((string=? cmd "teco")
               (handle-exceptions exn
