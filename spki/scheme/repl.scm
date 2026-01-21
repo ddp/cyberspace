@@ -1,6 +1,10 @@
 #!/usr/bin/env csi -q -w
 ;;; repl - Cyberspace Scheme
 ;;;
+;;; Copyright (c) 2026 ddp@eludom.net
+;;; MIT License - see LICENSE file
+;;; Currently unpublished and proprietary; license applies upon public release.
+;;;
 ;;; Usage: ./repl
 ;;;
 ;;; Preloads all Cyberspace modules for interactive exploration:
