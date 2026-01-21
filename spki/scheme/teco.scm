@@ -310,12 +310,25 @@
                (begin (goto-end) (loop (+ pos 2) #f))
                (begin (set! num (buffer-size)) (loop (+ pos 1) num))))
 
-          ;; H modifier (whole buffer)
+          ;; H modifier (whole buffer) - sets range to entire buffer
+          ;; HK = kill whole buffer, HT = type whole buffer
           ((#\H)
-           (if (and (< (+ pos 1) (string-length str))
-                    (char-ci=? (string-ref str (+ pos 1)) #\T))
-               (begin (display *buffer*) (loop (+ pos 2) #f))
-               (loop (+ pos 1) #f)))
+           (cond
+             ((and (< (+ pos 1) (string-length str))
+                   (char-ci=? (string-ref str (+ pos 1)) #\T))
+              (display *buffer*)
+              (loop (+ pos 2) #f))
+             ((and (< (+ pos 1) (string-length str))
+                   (char-ci=? (string-ref str (+ pos 1)) #\K))
+              ;; HK = kill whole buffer
+              (set! *buffer* "")
+              (set! *dot* 0)
+              (set! *modified* #t)
+              (loop (+ pos 2) #f))
+             (else
+              ;; H alone sets num to buffer size, dot to 0
+              (goto-beginning)
+              (loop (+ pos 1) (buffer-size)))))
 
           ;; Q-registers
           ((#\U)
@@ -330,8 +343,8 @@
           ;; Ctrl-C (in command string) = abort
           ((#\x03) 'abort)
 
-          ;; Whitespace/delimiters - ignore
-          ((#\space #\tab #\newline #\$ #\return #\x0d) (loop (+ pos 1) num))
+          ;; Whitespace/delimiters - ignore (ESC = $ = x1b)
+          ((#\space #\tab #\newline #\$ #\return #\x0d #\x1b) (loop (+ pos 1) num))
 
           ;; Unknown command
           (else
