@@ -285,6 +285,52 @@
   (string-append (->string (realm-signature)) "> "))
 
 ;;; ============================================================
+;;; UI Preferences
+;;; ============================================================
+;;; User-configurable editor and pager. Defaults to environment
+;;; variables, falls back to Emacs/less, ultimate fallback to
+;;; built-in Electric Pencil/cat.
+
+(define *editor* #f)   ; #f = auto-detect
+(define *pager* #f)    ; #f = auto-detect
+
+(define (editor)
+  "Get configured editor command"
+  (or *editor*
+      (get-environment-variable "EDITOR")
+      (let ((emacsclient "/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"))
+        (if (file-exists? emacsclient)
+            (string-append emacsclient " -s ns -t")
+            "pencil"))))  ; built-in fallback
+
+(define (editor! cmd)
+  "Set editor preference"
+  (set! *editor* cmd)
+  (print "[editor: " (editor) "]"))
+
+(define (pager)
+  "Get configured pager command"
+  (or *pager*
+      (get-environment-variable "PAGER")
+      "less"))
+
+(define (pager! cmd)
+  "Set pager preference"
+  (set! *pager* cmd)
+  (print "[pager: " (pager) "]"))
+
+(define (preferences)
+  "Show current UI preferences"
+  (print "")
+  (print "UI Preferences:")
+  (print "  editor: " (editor))
+  (print "  pager:  " (pager))
+  (print "")
+  (print "Set with (editor! CMD) or (pager! CMD)")
+  (print "Environment: $EDITOR, $PAGER")
+  (print ""))
+
+;;; ============================================================
 ;;; Unicode Helpers
 ;;; ============================================================
 ;;; make-string doesn't work with multi-byte Unicode chars.
@@ -5294,6 +5340,8 @@ Cyberspace REPL - Available Commands
     (discover  . discover-peers)
     (gossip    . gossip-status)
     (audit     . audit)
+    (prefs     . preferences)
+    (preferences . preferences)
     (clear     . clear)
     (open      . open)
     (theme     . theme!)
@@ -5471,18 +5519,17 @@ Cyberspace REPL - Available Commands
      ("(disable-inspector!)" "Turn off debug> prompt"))
 
     (editor "Editing Files"
-     (",e [file]" "Edit with Emacs (if available)")
-     (",pencil [file]" "Edit with Electric Pencil (built-in)")
-     (",teco [file]" "TECO (DEC heritage easter egg)")
-     ("$EMACSCLIENT" "Override emacsclient path")
-     ("Emacs:" "Uses emacsclient -t (terminal mode)")
-     ("Pencil:" "Gap buffer editor, WASD movement")
-     ("Ctrl-WASD" "Pencil: movement diamond (↑←↓→)")
-     ("Ctrl-Q" "Pencil: quit editor")
-     ("TECO:" "PDP-style text editor, * prompt")
-     ("ERfile$" "TECO: read file ($ = ESC)")
-     ("Itext$" "TECO: insert text")
-     ("EX" "TECO: exit"))
+     ("(preferences)" "Show editor/pager settings")
+     ("(editor! CMD)" "Set editor (or \"pencil\")")
+     ("(pager! CMD)" "Set pager (e.g. \"less\")")
+     (",e [file]" "Edit with configured editor")
+     (",pencil [file]" "Electric Pencil (built-in)")
+     (",teco [file]" "TECO (Dan Murphy heritage)")
+     (",hd file" "Hex dump (xxd | less)")
+     (",hext file" "HexEdit (GUI)")
+     ("$EDITOR/$PAGER" "Environment fallbacks")
+     ("Pencil:" "Gap buffer, WASD, Ctrl-Q quit")
+     ("TECO:" "PDP-style, * prompt, ERfile$/EX"))
 
     (forge "Build & Metrics"
      ("(sicp)" "SICP metrics for all modules")
@@ -7204,25 +7251,21 @@ See: Memo-0000 Declaration of Cyberspace
                               (print "Use: txt, html, ps, all, or build")))))))))
               (loop))
 
-             ;; Edit file with Emacs (preferred) or Electric Pencil
-             ;; Uses emacsclient -s ns -t for terminal mode (matches ~/.zshrc ect alias)
+             ;; Edit file with configured editor (see: preferences)
              ((or (string=? cmd "e") (string=? cmd "edit"))
-              (let* ((emacsclient (or (get-environment-variable "EMACSCLIENT")
-                                      "/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"))
-                     (emacs-app "/Applications/Emacs.app/Contents/MacOS/Emacs")
+              (let* ((ed (editor))
                      (file (if (null? args) "" (car args))))
-                (if (file-exists? emacsclient)
-                    ;; emacsclient -s ns -t -a EMACS: terminal mode, server "ns", fallback to Emacs
-                    (let ((cmd (sprintf "~a -s ns -t -a '~a' ~a" emacsclient emacs-app file)))
-                      (system cmd))
-                    ;; Fallback to Electric Pencil
+                (if (string=? ed "pencil")
+                    ;; Built-in Electric Pencil
                     (handle-exceptions exn
                       (print "Error: " ((condition-property-accessor 'exn 'message) exn))
                       (begin
                         (load "pencil.scm")
                         (if (null? args)
                             ((eval 'pencil))
-                            ((eval 'pencil) (car args)))))))
+                            ((eval 'pencil) (car args)))))
+                    ;; External editor
+                    (system (sprintf "~a ~a" ed file))))
               (loop))
 
              ;; Electric Pencil explicitly
