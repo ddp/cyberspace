@@ -295,13 +295,10 @@
 (define *pager* #f)    ; #f = auto-detect
 
 (define (editor)
-  "Get configured editor command"
+  "Get configured editor command - Electric Pencil is our nano"
   (or *editor*
       (get-environment-variable "EDITOR")
-      (let ((emacsclient "/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"))
-        (if (file-exists? emacsclient)
-            (string-append emacsclient " -s ns -t")
-            "pencil"))))  ; built-in fallback
+      "pencil"))
 
 (define (editor! cmd)
   "Set editor preference"
@@ -7079,6 +7076,11 @@ See: Memo-0000 Declaration of Cyberspace
                 (cmd (if (null? parts) "" (car parts)))
                 (args (if (null? parts) '() (cdr parts))))
            (cond
+             ;; Bare comma - show preferences
+             ((string=? cmd "")
+              (preferences)
+              (loop))
+
              ;; Quit
              ((or (string=? cmd "q")
                   (string=? cmd "quit")
