@@ -7110,6 +7110,14 @@ See: Memo-0000 Declaration of Cyberspace
               (help)
               (loop))
 
+             ;; Apropos - search symbols
+             ((or (string=? cmd "a")
+                  (string=? cmd "apropos"))
+              (if (null? args)
+                  (print "Usage: ,a <pattern>")
+                  (apropos (string->symbol (car args))))
+              (loop))
+
              ;; Load file
              ((string=? cmd "l")
               (if (null? args)
@@ -7326,6 +7334,45 @@ See: Memo-0000 Declaration of Cyberspace
               (if (null? args)
                   (print "Usage: ,hext <file>")
                   (system (sprintf "open -a 'HexEdit' ~a" (car args))))
+              (loop))
+
+             ;; Pretty print expression
+             ((string=? cmd "p")
+              (if (null? args)
+                  (print "Usage: ,p <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (pp (eval (with-input-from-string expr-str read))))))
+              (loop))
+
+             ;; Expand expression
+             ((string=? cmd "x")
+              (if (null? args)
+                  (print "Usage: ,x <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (pp (expand (with-input-from-string expr-str read))))))
+              (loop))
+
+             ;; Time expression
+             ((string=? cmd "t")
+              (if (null? args)
+                  (print "Usage: ,t <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (time (eval (with-input-from-string expr-str read))))))
+              (loop))
+
+             ;; System info (Chicken's ,r)
+             ((string=? cmd "r")
+              (print "Machine type:     " (machine-type))
+              (print "Software type:    " (software-type))
+              (print "Software version: " (software-version))
+              (print "Build platform:   " (build-platform))
+              (print "Chicken version:  " (chicken-version))
               (loop))
 
              ;; Unknown comma command
