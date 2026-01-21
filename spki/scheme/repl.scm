@@ -7008,6 +7008,15 @@ See: Memo-0000 Declaration of Cyberspace
       ((= c 63)  ; ?
        (display "?\n")
        "?")
+      ;; Comma - include in linenoise prompt like regular chars
+      ((= c 44)  ; ,
+       (let* ((first-char ",")
+              (rest (linenoise#linenoise (string-append prompt first-char))))
+         (if rest
+             (let ((full (string-append first-char rest)))
+               (repl-history-add full)
+               (strip-ansi full))
+             #f)))
       ;; ESC = arrow key or other escape sequence
       ;; Defer entirely to linenoise (user pressed up/down for history)
       ((= c 27)

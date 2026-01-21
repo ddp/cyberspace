@@ -108,7 +108,7 @@ OTHER DEALINGS IN THE SOFTWARE.")
     (code "@ddp+{sign,delegate}:/declarations/cyberspace/000
   realm:      Starlight
   principal:  ed25519:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
-  ddp@eludom.net
+  email:      ddp@eludom.net
   node:       Darwin-arm64 (Apple M4, 10 cores, 32GB)
   federation: Sovereign
   timestamp:  2026-01-06T00:00:00Z
