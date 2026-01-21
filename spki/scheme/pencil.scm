@@ -7,6 +7,17 @@
 ;;; Gap buffer implementation for efficient editing.
 ;;; Full-screen ANSI terminal control.
 ;;;
+;;; Heritage:
+;;;   1976  Michael Shrayer writes Electric Pencil on MITS Altair (8K RAM)
+;;;   1977  Ports to TRS-80, Apple II, CP/M - launches microcomputer word processing
+;;;   2026  Reborn in Cyberspace Scheme as bootstrap editor
+;;;
+;;; See also: teco.scm - Dan Murphy's TECO (1962), foundation of EMACS
+;;;
+;;; The Electric Pencil exists for bootstrapping - when Emacs isn't available,
+;;; when you're on a minimal system, when you need to edit and nothing else
+;;; is there. Like nano for Unix, but for Cyberspace.
+;;;
 ;;; Commands (Ctrl-key):
 ;;;   Movement (WASDZX diamond):
 ;;;     Ctrl-W  up          Ctrl-A  left

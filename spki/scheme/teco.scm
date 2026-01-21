@@ -1,11 +1,29 @@
 #!/usr/bin/env csi -s
 ;;; teco.scm - TECO: Text Editor and COrrector
 ;;;
-;;; A tribute to DEC's legendary editor (1962-present).
+;;; A tribute to Dan Murphy's legendary editor (1962-present).
+;;; Created on the PDP-1 at MIT, foundation of EMACS.
 ;;; As the saying goes: "Real programmers use TECO."
 ;;;
 ;;; Every character is a command. Every string is a program.
 ;;; If it looks like line noise, you're doing it right.
+;;;
+;;; Heritage:
+;;;   1962  Dan Murphy creates TECO on PDP-1 at MIT
+;;;   1960s Spreads to PDP-8, PDP-11, all DEC systems
+;;;   1976  EMACS created as TECO macros (Editor MACroS)
+;;;   1970s Jupiter (DECsystem-20 follow-on) cancelled; 36-bit era ends
+;;;   1977  Dan Murphy joins VMS Engineering after Jupiter
+;;;   2026  Reborn in Cyberspace Scheme
+;;;
+;;; References:
+;;;   Dan Murphy's site: http://www.opost.com/dlm
+;;;   IEEE Annals article: "The Beginnings of TECO" (Oct-Dec 2009)
+;;;   TECOC (portable C): https://github.com/blakemcbride/TECOC
+;;;   TECO-64: https://github.com/fpjohnston/TECO-64
+;;;   Tom Almy's macOS builds: https://almy.us/teco.html
+;;;
+;;; See also: pencil.scm - Michael Shrayer's Electric Pencil (1976)
 ;;;
 ;;; Commands (subset):
 ;;;   Movement:
