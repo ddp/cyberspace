@@ -53,6 +53,7 @@
 
    ;; For editors
    text-gap-buffer  ; expose internal for low-level access
+   text-clear-modified!  ; mark as saved (for file operations)
    )
 
   (import scheme
@@ -228,6 +229,7 @@
 (define (text->string t) (gap-buffer->string (text-buffer t)))
 (define (text-modified? t) (text-modified t))
 (define (text-gap-buffer t) (text-buffer t))  ; for editors
+(define (text-clear-modified! t) (set-text-modified! t #f))  ; for save operations
 
 (define (text-substring t start end)
   "Extract substring"

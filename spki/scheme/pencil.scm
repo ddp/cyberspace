@@ -61,6 +61,9 @@
         srfi-13
         tty-ffi)
 
+(load "text.scm")
+(import text)
+
 ;;; ============================================================
 ;;; Screen Module - ANSI Terminal Control
 ;;; ============================================================
@@ -162,176 +165,46 @@
 ;;; Text is stored in a vector with a gap at the cursor position.
 ;;; Operations at cursor are O(1), moving gap is O(n) but amortized.
 ;;;
-;;;   [H][e][l][l][o][ ][ ][ ][ ][w][o][r][l][d]
-;;;                   ^gap-start  ^gap-end
-;;;                   cursor here
-;;;
-;;; Characters before gap-start: text before cursor
-;;; Characters from gap-end to end: text after cursor
+;;; Gap buffer operations now delegate to text.scm
+;;; These wrappers maintain API compatibility during transition
 
-(define-record-type <gap-buffer>
-  (make-gap-buffer-internal vec gap-start gap-end size)
-  gap-buffer?
-  (vec gb-vec set-gb-vec!)
-  (gap-start gb-gap-start set-gb-gap-start!)
-  (gap-end gb-gap-end set-gb-gap-end!)
-  (size gb-size set-gb-size!))          ; capacity
+(define (gb-length t) (text-length t))
+(define (gb-cursor t) (text-cursor t))
+(define (gb-char-at t pos) (text-char-at t pos))
+(define (gb->string t) (text->string t))
+(define (string->gb str) (text-from-string str))
+(define (gb-goto! t pos) (text-goto! t pos))
+(define (gb-forward! t #!optional (n 1)) (text-move! t n))
+(define (gb-backward! t #!optional (n 1)) (text-move! t (- n)))
+(define (gb-insert! t char) (text-insert! t (string char)))
+(define (gb-insert-string! t str) (text-insert! t str))
+(define (gb-delete-forward! t #!optional (n 1)) (text-delete! t n))
+(define (gb-delete-backward! t #!optional (n 1))
+  (when (> (text-cursor t) 0)
+    (text-move! t (- (min n (text-cursor t))))
+    (text-delete! t (min n (text-cursor t)))))
 
-(define *default-gap-size* 256)
-(define *initial-size* 1024)
-
-(define (gb-new #!optional (initial-size *initial-size*))
-  "Create new gap buffer"
-  (make-gap-buffer-internal
-   (make-vector initial-size #\space)
-   0                                    ; gap-start = cursor at beginning
-   initial-size                         ; gap-end = whole buffer is gap
-   initial-size))
-
-(define (gb-length buf)
-  "Number of characters in buffer (excluding gap)"
-  (- (gb-size buf) (- (gb-gap-end buf) (gb-gap-start buf))))
-
-(define (gb-gap-size buf)
-  "Size of gap"
-  (- (gb-gap-end buf) (gb-gap-start buf)))
-
-(define (gb-cursor buf)
-  "Current cursor position (0-indexed)"
-  (gb-gap-start buf))
-
-(define (gb-grow! buf #!optional (min-gap *default-gap-size*))
-  "Expand buffer to ensure gap >= min-gap"
-  (when (< (gb-gap-size buf) min-gap)
-    (let* ((old-vec (gb-vec buf))
-           (old-size (gb-size buf))
-           (new-size (* 2 (+ old-size min-gap)))
-           (new-vec (make-vector new-size #\space))
-           (gap-start (gb-gap-start buf))
-           (gap-end (gb-gap-end buf))
-           (after-gap (- old-size gap-end))
-           (new-gap-end (- new-size after-gap)))
-      ;; Copy before gap
-      (do ((i 0 (+ i 1)))
-          ((>= i gap-start))
-        (vector-set! new-vec i (vector-ref old-vec i)))
-      ;; Copy after gap to end of new buffer
-      (do ((i 0 (+ i 1)))
-          ((>= i after-gap))
-        (vector-set! new-vec (+ new-gap-end i) (vector-ref old-vec (+ gap-end i))))
-      (set-gb-vec! buf new-vec)
-      (set-gb-gap-end! buf new-gap-end)
-      (set-gb-size! buf new-size))))
-
-(define (gb-move-gap! buf pos)
-  "Move gap to position (0 to length)"
-  (let ((gap-start (gb-gap-start buf))
-        (gap-end (gb-gap-end buf))
-        (vec (gb-vec buf)))
-    (cond
-     ((= pos gap-start) #t)             ; already there
-     ((< pos gap-start)
-      ;; Move gap left: shift chars [pos, gap-start) to right
-      (let ((shift (- gap-start pos)))
-        (do ((i (- gap-start 1) (- i 1))
-             (j (- gap-end 1) (- j 1)))
-            ((< i pos))
-          (vector-set! vec j (vector-ref vec i)))
-        (set-gb-gap-start! buf pos)
-        (set-gb-gap-end! buf (- gap-end shift))))
-     (else
-      ;; Move gap right: shift chars [gap-end, gap-end + delta) to left
-      (let ((delta (- pos gap-start)))
-        (do ((i 0 (+ i 1)))
-            ((>= i delta))
-          (vector-set! vec (+ gap-start i) (vector-ref vec (+ gap-end i))))
-        (set-gb-gap-start! buf pos)
-        (set-gb-gap-end! buf (+ gap-end delta)))))))
-
-(define (gb-insert! buf char)
-  "Insert character at cursor"
-  (gb-grow! buf 1)
-  (let ((gap-start (gb-gap-start buf)))
-    (vector-set! (gb-vec buf) gap-start char)
-    (set-gb-gap-start! buf (+ gap-start 1))))
-
-(define (gb-insert-string! buf str)
-  "Insert string at cursor"
-  (for-each (lambda (c) (gb-insert! buf c)) (string->list str)))
-
-(define (gb-delete-forward! buf #!optional (n 1))
-  "Delete n characters after cursor"
-  (let ((gap-end (gb-gap-end buf))
-        (size (gb-size buf)))
-    (let ((actual (min n (- size gap-end))))
-      (set-gb-gap-end! buf (+ gap-end actual)))))
-
-(define (gb-delete-backward! buf #!optional (n 1))
-  "Delete n characters before cursor"
-  (let ((gap-start (gb-gap-start buf)))
-    (let ((actual (min n gap-start)))
-      (set-gb-gap-start! buf (- gap-start actual)))))
-
-(define (gb-char-at buf pos)
-  "Get character at position"
-  (let ((gap-start (gb-gap-start buf))
-        (gap-end (gb-gap-end buf))
-        (vec (gb-vec buf)))
-    (cond
-     ((< pos gap-start) (vector-ref vec pos))
-     (else (vector-ref vec (+ gap-end (- pos gap-start)))))))
-
-(define (gb-set-char! buf pos char)
-  "Set character at position"
-  (let ((gap-start (gb-gap-start buf))
-        (gap-end (gb-gap-end buf))
-        (vec (gb-vec buf)))
-    (cond
-     ((< pos gap-start) (vector-set! vec pos char))
-     (else (vector-set! vec (+ gap-end (- pos gap-start)) char)))))
-
-(define (gb->string buf)
-  "Extract buffer contents as string"
-  (let ((len (gb-length buf)))
-    (let ((result (make-string len)))
-      (do ((i 0 (+ i 1)))
-          ((>= i len) result)
-        (string-set! result i (gb-char-at buf i))))))
-
-(define (string->gb str)
-  "Create gap buffer from string"
-  (let* ((len (string-length str))
-         (buf (gb-new (max *initial-size* (* 2 len)))))
-    (gb-insert-string! buf str)
-    buf))
-
-(define (gb-goto! buf pos)
-  "Move cursor to position"
-  (let ((len (gb-length buf)))
-    (gb-move-gap! buf (max 0 (min pos len)))))
-
-(define (gb-forward! buf #!optional (n 1))
-  "Move cursor forward"
-  (gb-goto! buf (+ (gb-cursor buf) n)))
-
-(define (gb-backward! buf #!optional (n 1))
-  "Move cursor backward"
-  (gb-goto! buf (- (gb-cursor buf) n)))
+;; For overwrite mode - set char at position
+(define (gb-set-char! t pos char)
+  (let ((saved (text-cursor t)))
+    (text-goto! t pos)
+    (text-delete! t 1)
+    (text-insert! t (string char))
+    (text-goto! t saved)))
 
 ;;; ============================================================
 ;;; Editor State
 ;;; ============================================================
 
 (define-record-type <editor>
-  (make-editor-internal buf filename modified insert-mode
+  (make-editor-internal txt filename insert-mode
                         screen-top cursor-row cursor-col
                         mark-start mark-end clipboard
                         search-string wrap-mode
                         rows cols status-msg novice)
   editor?
-  (buf editor-buf set-editor-buf!)
+  (txt editor-text set-editor-text!)      ; text object (was buf)
   (filename editor-filename set-editor-filename!)
-  (modified editor-modified? set-editor-modified!)
   (insert-mode editor-insert-mode? set-editor-insert-mode!)
   (screen-top editor-screen-top set-editor-screen-top!)
   (cursor-row editor-cursor-row set-editor-cursor-row!)
@@ -346,12 +219,14 @@
   (status-msg editor-status set-editor-status!)
   (novice editor-novice? set-editor-novice!))
 
+;; Compatibility: modified comes from text object now
+(define (editor-modified? ed) (text-modified? (editor-text ed)))
+
 (define (editor-new #!optional novice)
   "Create new editor state"
   (make-editor-internal
-   (gb-new)                             ; buffer
+   (text-new)                           ; text object
    #f                                   ; filename
-   #f                                   ; modified
    #t                                   ; insert mode (not overwrite)
    0                                    ; screen-top line
    1                                    ; cursor row (1-indexed for screen)
@@ -436,7 +311,7 @@
 
 (define (editor-move-up! ed)
   "Move cursor up one line"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (pos (gb-cursor buf))
          (col (- pos (gb-line-start buf pos)))
          (line-start (gb-line-start buf pos)))
@@ -449,7 +324,7 @@
 
 (define (editor-move-down! ed)
   "Move cursor down one line"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (pos (gb-cursor buf))
          (col (- pos (gb-line-start buf pos)))
          (line-end (gb-line-end buf pos))
@@ -463,25 +338,25 @@
 
 (define (editor-move-left! ed)
   "Move cursor left"
-  (gb-backward! (editor-buf ed)))
+  (gb-backward! (editor-text ed)))
 
 (define (editor-move-right! ed)
   "Move cursor right"
-  (gb-forward! (editor-buf ed)))
+  (gb-forward! (editor-text ed)))
 
 (define (editor-move-line-start! ed)
   "Move to start of line"
-  (let ((buf (editor-buf ed)))
+  (let ((buf (editor-text ed)))
     (gb-goto! buf (gb-line-start buf (gb-cursor buf)))))
 
 (define (editor-move-line-end! ed)
   "Move to end of line"
-  (let ((buf (editor-buf ed)))
+  (let ((buf (editor-text ed)))
     (gb-goto! buf (gb-line-end buf (gb-cursor buf)))))
 
 (define (editor-move-word-forward! ed)
   "Move forward one word"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (len (gb-length buf))
          (pos (gb-cursor buf)))
     ;; Skip current word
@@ -499,7 +374,7 @@
 
 (define (editor-move-word-backward! ed)
   "Move backward one word"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (pos (gb-cursor buf)))
     (when (> pos 0)
       ;; Skip whitespace
@@ -522,7 +397,7 @@
 
 (define (editor-insert-char! ed char)
   "Insert character at cursor"
-  (let ((buf (editor-buf ed)))
+  (let ((buf (editor-text ed)))
     (if (editor-insert-mode? ed)
         (gb-insert! buf char)
         ;; Overwrite mode
@@ -532,33 +407,29 @@
               (begin
                 (gb-set-char! buf pos char)
                 (gb-forward! buf))
-              (gb-insert! buf char))))
-    (set-editor-modified! ed #t)))
+              (gb-insert! buf char)))))) ;; modified tracked by text object
 
 (define (editor-insert-newline! ed)
   "Insert newline"
-  (gb-insert! (editor-buf ed) #\newline)
-  (set-editor-modified! ed #t))
+  (gb-insert! (editor-text ed) #\newline)) ;; modified tracked by text object
 
 (define (editor-delete-char! ed)
   "Delete character at cursor"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (len (gb-length buf))
          (pos (gb-cursor buf)))
     (when (< pos len)
-      (gb-delete-forward! buf)
-      (set-editor-modified! ed #t))))
+      (gb-delete-forward! buf)))) ;; modified tracked by text object
 
 (define (editor-backspace! ed)
   "Delete character before cursor"
-  (let ((buf (editor-buf ed)))
+  (let ((buf (editor-text ed)))
     (when (> (gb-cursor buf) 0)
-      (gb-delete-backward! buf)
-      (set-editor-modified! ed #t))))
+      (gb-delete-backward! buf)))) ;; modified tracked by text object
 
 (define (editor-delete-word! ed)
   "Delete word at cursor"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (start (gb-cursor buf))
          (len (gb-length buf)))
     ;; Find word end
@@ -573,20 +444,18 @@
            ((>= q len) (gb-delete-forward! buf (- q start)))
            ((char-whitespace? (gb-char-at buf q)) (skip (+ q 1)))
            (else (gb-delete-forward! buf (- q start))))))
-       (else (loop (+ p 1)))))
-    (set-editor-modified! ed #t)))
+       (else (loop (+ p 1))))))) ;; modified tracked by text object
 
 (define (editor-delete-line! ed)
   "Delete current line"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (pos (gb-cursor buf))
          (start (gb-line-start buf pos))
          (end (gb-line-end buf pos))
          (len (gb-length buf)))
     (gb-goto! buf start)
     ;; Delete including newline if present
-    (gb-delete-forward! buf (if (< end len) (+ 1 (- end start)) (- end start)))
-    (set-editor-modified! ed #t)))
+    (gb-delete-forward! buf (if (< end len) (+ 1 (- end start)) (- end start))))) ;; modified tracked by text object
 
 ;;; ============================================================
 ;;; Block Operations
@@ -594,13 +463,13 @@
 
 (define (editor-mark-begin! ed)
   "Set block start mark"
-  (set-editor-mark-start! ed (gb-cursor (editor-buf ed)))
+  (set-editor-mark-start! ed (gb-cursor (editor-text ed)))
   (set-editor-status! ed "Block start marked"))
 
 (define (editor-mark-end! ed)
   "Set block end and copy to clipboard"
   (let ((start (editor-mark-start ed))
-        (buf (editor-buf ed)))
+        (buf (editor-text ed)))
     (if start
         (let* ((end (gb-cursor buf))
                (actual-start (min start end))
@@ -618,10 +487,10 @@
 (define (editor-paste! ed)
   "Paste clipboard at cursor"
   (let ((text (editor-clipboard ed))
-        (buf (editor-buf ed)))
+        (buf (editor-text ed)))
     (when (and text (> (string-length text) 0))
       (gb-insert-string! buf text)
-      (set-editor-modified! ed #t)
+      ;; modified tracked by text object
       (set-editor-status! ed (format #f "Pasted ~a chars" (string-length text))))))
 
 (define (editor-unmark! ed)
@@ -636,7 +505,7 @@
 
 (define (editor-find! ed pattern)
   "Find next occurrence of pattern"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (len (gb-length buf))
          (start (+ (gb-cursor buf) 1))
          (plen (string-length pattern)))
@@ -672,12 +541,12 @@
 
 (define (editor-replace! ed old new)
   "Replace occurrence at cursor"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (olen (string-length old)))
     (when (string-match-at? buf (gb-cursor buf) old olen)
       (gb-delete-forward! buf olen)
       (gb-insert-string! buf new)
-      (set-editor-modified! ed #t)
+      ;; modified tracked by text object
       (set-editor-status! ed "Replaced"))))
 
 ;;; ============================================================
@@ -686,7 +555,7 @@
 
 (define (editor-update-position! ed)
   "Update cursor row/col from buffer position"
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (pos (gb-cursor buf)))
     (set-editor-cursor-row! ed (gb-line-number buf pos))
     (set-editor-cursor-col! ed (gb-column buf pos))))
@@ -706,7 +575,7 @@
   "Redraw screen"
   (editor-update-position! ed)
   (editor-ensure-visible! ed)
-  (let* ((buf (editor-buf ed))
+  (let* ((buf (editor-text ed))
          (rows (editor-rows ed))
          (cols (editor-cols ed))
          (top (editor-screen-top ed))
@@ -791,10 +660,10 @@
   "Load file into editor"
   (if (file-exists? filename)
       (let ((content (with-input-from-file filename read-string)))
-        (set-editor-buf! ed (string->gb content))
+        (set-editor-text! ed (string->gb content))
         (set-editor-filename! ed filename)
-        (set-editor-modified! ed #f)
-        (gb-goto! (editor-buf ed) 0)
+        (text-clear-modified! (editor-text ed))
+        (gb-goto! (editor-text ed) 0)
         (set-editor-screen-top! ed 0)
         (set-editor-status! ed (format #f "Loaded ~a" filename)))
       (begin
@@ -807,9 +676,9 @@
     (if fname
         (begin
           (with-output-to-file fname
-            (lambda () (display (gb->string (editor-buf ed)))))
+            (lambda () (display (gb->string (editor-text ed)))))
           (set-editor-filename! ed fname)
-          (set-editor-modified! ed #f)
+          (text-clear-modified! (editor-text ed))
           (set-editor-status! ed (format #f "Saved ~a" fname)))
         (set-editor-status! ed "No filename"))))
 
@@ -1027,8 +896,8 @@
       (if (file-exists? arg)
           (editor-load! ed arg)
           (begin
-            (gb-insert-string! (editor-buf ed) arg)
-            (gb-goto! (editor-buf ed) 0)
+            (gb-insert-string! (editor-text ed) arg)
+            (gb-goto! (editor-text ed) 0)
             (set-editor-status! ed "Scratch"))))
     (when novice
       (set-editor-status! ed "Novice mode - Ctrl-Q to quit"))
