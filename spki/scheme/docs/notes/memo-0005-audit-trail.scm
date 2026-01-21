@@ -1,6 +1,6 @@
 (memo
   (number 5)
-  (title "Cryptographic Audit Trail")
+  (title "Audit Trail")
   (section
     "Abstract"
     (p "This Memo specifies the cryptographic audit trail system for the Library of Cyberspace, providing tamper-evident, hash-chained logging with Simple Public Key Infrastructure (SPKI) principal attribution and Ed25519 signatures."))
