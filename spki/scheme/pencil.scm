@@ -693,7 +693,7 @@
   "Scroll if cursor is outside visible area"
   (let ((row (editor-cursor-row ed))
         (top (editor-screen-top ed))
-        (visible-rows (- (editor-rows ed) 2))) ; minus status and prompt
+        (visible-rows (- (editor-rows ed) 3))) ; minus status and prompt
     (cond
      ((< row (+ top 1))
       (set-editor-screen-top! ed (max 0 (- row 1))))
@@ -708,7 +708,7 @@
          (rows (editor-rows ed))
          (cols (editor-cols ed))
          (top (editor-screen-top ed))
-         (visible-rows (- rows 2)))
+         (visible-rows (- rows 3)))
     (screen-cursor-hide)
     (screen-home)
     (screen-black-bg)
@@ -755,6 +755,14 @@
                            (editor-status ed))))
       (display (string-take status (min (string-length status) cols)))
       (display (make-string (max 0 (- cols (string-length status))) #\space)))
+    (screen-reset)
+
+    ;; Menu bar (Sol-20 style command hints)
+    (screen-goto rows 1)
+    (screen-dim)
+    (let ((menu "^Q quit  ^O open  ^P save  ^F find  ^R replace  ^B/K block  ^V paste  ^I ins/ovr  ^L refresh"))
+      (display (string-take menu (min (string-length menu) cols)))
+      (display (make-string (max 0 (- cols (string-length menu))) #\space)))
     (screen-reset)
     (screen-green)
 
@@ -983,11 +991,11 @@
 
        ;; Page up/down
        ((eq? key 'page-up)
-        (let ((visible (- (editor-rows ed) 2)))
+        (let ((visible (- (editor-rows ed) 3)))
           (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-up! ed)))
         (loop))
        ((eq? key 'page-down)
-        (let ((visible (- (editor-rows ed) 2)))
+        (let ((visible (- (editor-rows ed) 3)))
           (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-down! ed)))
         (loop))
 

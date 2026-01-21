@@ -25,42 +25,63 @@
 ;;;
 ;;; See also: pencil.scm - Michael Shrayer's Electric Pencil (1976)
 ;;;
-;;; Commands (subset):
+;;; Commands (VMS TECO compatible):
 ;;;   Movement:
-;;;     j       Jump to beginning
-;;;     zj      Jump to end
+;;;     J       Jump to beginning
+;;;     nJ      Jump to position n
+;;;     ZJ      Jump to end
 ;;;     nC      Move forward n characters (default 1)
 ;;;     nR      Move backward n characters (default 1)
 ;;;     nL      Move forward n lines (default 1)
+;;;     .       Current position (as numeric)
+;;;     Z       End of buffer position
 ;;;
 ;;;   Editing:
 ;;;     nD      Delete n characters forward
 ;;;     nK      Kill n lines
-;;;     Itext$  Insert text ($ = ESC or Ctrl-])
+;;;     HK      Kill entire buffer
+;;;     Itext$  Insert text ($ = ESC)
 ;;;
 ;;;   Search:
-;;;     Stext$  Search forward for text
-;;;     Ntext$  Search and continue
+;;;     Stext$  Search forward
+;;;     _text$  Search backward
+;;;     Ntext$  Search with wrap
+;;;     :Stext$ Search returning value (-1/0)
+;;;     FSold$new$  Find and substitute
 ;;;
 ;;;   File:
 ;;;     ERfile$ Read file into buffer
 ;;;     EWfile$ Write buffer to file
 ;;;     EX      Exit (save if modified)
-;;;     ^^C     Abort (no save)
+;;;     ^C      Abort (no save)
 ;;;
 ;;;   Display:
 ;;;     V       View current line
 ;;;     HT      Type entire buffer
 ;;;     nT      Type n lines
+;;;     n=      Type numeric value
 ;;;
-;;;   Q-registers:
-;;;     nUq     Store n in Q-register q
-;;;     Qq      Retrieve Q-register q
+;;;   Q-registers (both numeric and text parts):
+;;;     nUq     Store n in Q-register q (numeric)
+;;;     Qq      Retrieve Q-register q (numeric)
 ;;;     n%q     Add n to Q-register q
+;;;     ^Uqtext$  Store text in Q-register q
+;;;     nXq     Extract n lines to Q-register (text)
+;;;     Gq      Insert Q-register text into buffer
+;;;     :Gq     Type Q-register text (no insert)
+;;;     [q      Push Q-register onto stack
+;;;     ]q      Pop Q-register from stack
+;;;     Mq      Execute Q-register as macro
 ;;;
-;;;   Macros:
-;;;     Mq      Execute macro in Q-register q
-;;;     @       Modify next command
+;;;   Programming:
+;;;     n<cmds> Loop n times (0 = infinite)
+;;;     F;      Break from loop
+;;;     n"Ecmds' Conditional if n=0
+;;;     n"Ncmds' Conditional if n≠0
+;;;     n"Gcmds' Conditional if n>0
+;;;     n"Lcmds' Conditional if n<0
+;;;     +,-,*,/ Arithmetic
+;;;     &,#     Bitwise AND, OR
 ;;;
 ;;; Heritage: PDP-1 (1962), PDP-8, PDP-11, VAX, EMACS foundation
 
@@ -72,7 +93,9 @@
         (chicken file)
         (chicken port)
         (chicken process-context)
-        srfi-13)
+        (chicken bitwise)
+        srfi-13
+        tty-ffi)
 
 ;;; ============================================================
 ;;; Buffer - Simple string buffer with dot (point)
@@ -82,7 +105,8 @@
 (define *dot* 0)            ; Current position (point)
 (define *filename* #f)      ; Current file
 (define *modified* #f)      ; Buffer modified?
-(define *q-registers* (make-vector 36 ""))  ; Q-registers A-Z, 0-9
+(define *last-search* "")   ; Last search string (for N command)
+;; Q-registers now in separate section below (numeric + text parts)
 
 (define (buffer-size) (string-length *buffer*))
 
@@ -177,6 +201,18 @@
         (begin (set! *dot* pos) #t)
         #f)))
 
+(define (search-backward text)
+  "Search backward for text from dot, return #t if found"
+  (let ((len (string-length text)))
+    (let loop ((p (- *dot* 1)))
+      (cond
+        ((< p 0) #f)
+        ((and (<= (+ p len) (buffer-size))
+              (string=? text (substring *buffer* p (+ p len))))
+         (set! *dot* p)
+         #t)
+        (else (loop (- p 1)))))))
+
 ;;; ============================================================
 ;;; File Operations
 ;;; ============================================================
@@ -199,8 +235,13 @@
   (printf "~a bytes written~%" (buffer-size)))
 
 ;;; ============================================================
-;;; Q-Registers
+;;; Q-Registers (VMS TECO style)
+;;; Each Q-register has both a numeric part and a text part
 ;;; ============================================================
+
+(define *q-numeric* (make-vector 36 0))     ; Numeric values
+(define *q-text* (make-vector 36 ""))       ; Text values
+(define *q-stack* '())                       ; Push/pop stack
 
 (define (q-index name)
   "Convert Q-register name to index (A-Z=0-25, 0-9=26-35)"
@@ -211,10 +252,36 @@
       (else 0))))
 
 (define (q-get name)
-  (vector-ref *q-registers* (q-index name)))
+  "Get numeric value from Q-register"
+  (vector-ref *q-numeric* (q-index name)))
 
 (define (q-set name value)
-  (vector-set! *q-registers* (q-index name) value))
+  "Set numeric value in Q-register"
+  (vector-set! *q-numeric* (q-index name) value))
+
+(define (q-get-text name)
+  "Get text value from Q-register"
+  (vector-ref *q-text* (q-index name)))
+
+(define (q-set-text name text)
+  "Set text value in Q-register"
+  (vector-set! *q-text* (q-index name) text))
+
+(define (q-push name)
+  "Push Q-register onto stack ([q command)"
+  (let ((idx (q-index name)))
+    (set! *q-stack* (cons (cons (vector-ref *q-numeric* idx)
+                                (vector-ref *q-text* idx))
+                          *q-stack*))))
+
+(define (q-pop name)
+  "]q command - Pop Q-register from stack"
+  (when (pair? *q-stack*)
+    (let ((idx (q-index name))
+          (val (car *q-stack*)))
+      (vector-set! *q-numeric* idx (car val))
+      (vector-set! *q-text* idx (cdr val))
+      (set! *q-stack* (cdr *q-stack*)))))
 
 ;;; ============================================================
 ;;; Command Parser
@@ -284,9 +351,61 @@
           ;; Search
           ((#\S)
            (let ((result (parse-string str (+ pos 1) #\$)))
+             (set! *last-search* (car result))
              (unless (search-forward (car result))
                (print "?SRH  Search failed"))
              (loop (cdr result) #f)))
+
+          ;; N - search and continue (for single-file, same as S but continues)
+          ((#\N)
+           (let* ((result (parse-string str (+ pos 1) #\$))
+                  (pattern (car result)))
+             (set! *last-search* pattern)
+             (unless (search-forward pattern)
+               ;; Wrap around to beginning
+               (set! *dot* 0)
+               (unless (search-forward pattern)
+                 (print "?SRH  Search failed")))
+             (loop (cdr result) #f)))
+
+          ;; _ (underscore) - backward search
+          ((#\_)
+           (let ((result (parse-string str (+ pos 1) #\$)))
+             (set! *last-search* (car result))
+             (unless (search-backward (car result))
+               (print "?SRH  Search failed"))
+             (loop (cdr result) #f)))
+
+          ;; : (colon) - modify next command
+          ;; :S = search returning value, :G = type Q-register, etc.
+          ((#\:)
+           (if (< (+ pos 1) (string-length str))
+               (let ((next-cmd (char-upcase (string-ref str (+ pos 1)))))
+                 (case next-cmd
+                   ;; :S - search returning value (-1=found, 0=not found)
+                   ((#\S)
+                    (let ((result (parse-string str (+ pos 2) #\$)))
+                      (set! *last-search* (car result))
+                      (if (search-forward (car result))
+                          (set! num -1)  ; found
+                          (set! num 0))  ; not found
+                      (loop (cdr result) num)))
+
+                   ;; :G - type Q-register contents (don't insert)
+                   ((#\G)
+                    (when (< (+ pos 2) (string-length str))
+                      (let ((text (q-get-text (string-ref str (+ pos 2)))))
+                        (when (string? text)
+                          (display text)
+                          (newline))))
+                    (loop (+ pos 3) #f))
+
+                   ;; :EG - return environment variable
+                   ((#\E)
+                    (loop (+ pos 2) #f))
+
+                   (else (loop (+ pos 2) #f))))
+               (loop (+ pos 1) #f)))
 
           ;; Display
           ((#\V) (print (current-line)) (loop (+ pos 1) #f))
@@ -357,15 +476,89 @@
           ;; Mq - execute macro in Q-register
           ((#\M)
            (when (< (+ pos 1) (string-length str))
-             (let ((macro (q-get (string-ref str (+ pos 1)))))
-               (when (string? macro)
+             (let ((macro (q-get-text (string-ref str (+ pos 1)))))
+               (when (and (string? macro) (> (string-length macro) 0))
                  (execute-commands macro))))
            (loop (+ pos 2) #f))
+
+          ;; Gq - insert Q-register text into buffer at dot
+          ((#\G)
+           (when (< (+ pos 1) (string-length str))
+             (let ((text (q-get-text (string-ref str (+ pos 1)))))
+               (when (string? text)
+                 (insert-text text))))
+           (loop (+ pos 2) #f))
+
+          ;; nXq - extract n lines to Q-register (default 1)
+          ;; Stores text from dot to end of n lines
+          ((#\X)
+           (when (< (+ pos 1) (string-length str))
+             (let* ((n (or num 1))
+                    (start *dot*)
+                    (end-pos (let find-end ((p *dot*) (lines n))
+                               (cond
+                                 ((= lines 0) p)
+                                 ((>= p (buffer-size)) p)
+                                 ((char=? (string-ref *buffer* p) #\newline)
+                                  (find-end (+ p 1) (- lines 1)))
+                                 (else (find-end (+ p 1) lines))))))
+               (q-set-text (string-ref str (+ pos 1))
+                           (substring *buffer* start end-pos))))
+           (loop (+ pos 2) #f))
+
+          ;; [q - push Q-register onto stack
+          ((#\[)
+           (when (< (+ pos 1) (string-length str))
+             (q-push (string-ref str (+ pos 1))))
+           (loop (+ pos 2) #f))
+
+          ;; ]q - pop Q-register from stack
+          ((#\])
+           (when (< (+ pos 1) (string-length str))
+             (q-pop (string-ref str (+ pos 1))))
+           (loop (+ pos 2) #f))
+
+          ;; %q - add numeric arg to Q-register (returns new value)
+          ((#\%)
+           (when (< (+ pos 1) (string-length str))
+             (let* ((reg (string-ref str (+ pos 1)))
+                    (val (+ (q-get reg) (or num 1))))
+               (q-set reg val)
+               (set! num val)))
+           (loop (+ pos 2) num))
 
           ;; Value commands - return numeric values
           ((#\.) (loop (+ pos 1) *dot*))          ; . = current position
           ((#\B) (loop (+ pos 1) 0))              ; B = beginning (always 0)
           ;; Z already handled above as modifier
+
+          ;; A - ASCII value of character at dot+n (default 0)
+          ;; nA returns ASCII of character at position dot+n
+          ((#\A)
+           (let* ((offset (or num 0))
+                  (pos-at (+ *dot* offset)))
+             (if (and (>= pos-at 0) (< pos-at (buffer-size)))
+                 (set! num (char->integer (string-ref *buffer* pos-at)))
+                 (set! num -1)))  ; -1 for end of buffer
+           (loop (+ pos 1) num))
+
+          ;; ^^ - ASCII value of next character in command string
+          ((#\^)
+           (if (and (< (+ pos 1) (string-length str))
+                    (char=? (string-ref str (+ pos 1)) #\^))
+               ;; ^^ = get ASCII of following char
+               (if (< (+ pos 2) (string-length str))
+                   (begin
+                     (set! num (char->integer (string-ref str (+ pos 2))))
+                     (loop (+ pos 3) num))
+                   (loop (+ pos 2) #f))
+               ;; Single ^ - could be control char prefix
+               (if (< (+ pos 1) (string-length str))
+                   (let ((ctl-char (char-upcase (string-ref str (+ pos 1)))))
+                     ;; ^A = 1, ^B = 2, etc.
+                     (set! num (- (char->integer ctl-char) 64))
+                     (loop (+ pos 2) num))
+                   (loop (+ pos 1) #f))))
 
           ;; Arithmetic
           ((#\+)
@@ -436,20 +629,110 @@
                          (count-loop (- n 1)))))))
              (loop end-pos #f)))
 
-          ;; F; - break from loop (semicolon = success exit)
+          ;; F commands - F; (break), FS (find/substitute), etc.
           ((#\F)
-           (if (and (< (+ pos 1) (string-length str))
-                    (char=? (string-ref str (+ pos 1)) #\;))
+           (if (< (+ pos 1) (string-length str))
+               (let ((f-cmd (char-upcase (string-ref str (+ pos 1)))))
+                 (case f-cmd
+                   ;; F; - break from loop
+                   ((#\;) 'break)
+
+                   ;; FSold$new$ - find and substitute
+                   ((#\S)
+                    (let* ((old-result (parse-string str (+ pos 2) #\$))
+                           (old-str (car old-result))
+                           (new-result (parse-string str (cdr old-result) #\$))
+                           (new-str (car new-result)))
+                      (if (search-forward old-str)
+                          (begin
+                            ;; Delete old string and insert new
+                            (delete-chars (string-length old-str))
+                            (insert-text new-str))
+                          (print "?SRH  Search failed"))
+                      (loop (cdr new-result) #f)))
+
+                   ;; FR - replace (at current position, no search)
+                   ((#\R)
+                    (let* ((old-result (parse-string str (+ pos 2) #\$))
+                           (old-str (car old-result))
+                           (new-result (parse-string str (cdr old-result) #\$))
+                           (new-str (car new-result)))
+                      ;; Assume we just found old-str, delete and replace
+                      (delete-chars (string-length old-str))
+                      (insert-text new-str)
+                      (loop (cdr new-result) #f)))
+
+                   ;; FC - find and change (like FS but bounded search)
+                   ((#\C)
+                    (let* ((old-result (parse-string str (+ pos 2) #\$))
+                           (old-str (car old-result))
+                           (new-result (parse-string str (cdr old-result) #\$))
+                           (new-str (car new-result)))
+                      (if (search-forward old-str)
+                          (begin
+                            (delete-chars (string-length old-str))
+                            (insert-text new-str))
+                          (print "?SRH  Search failed"))
+                      (loop (cdr new-result) #f)))
+
+                   (else (loop (+ pos 2) #f))))
+               (loop (+ pos 1) #f)))
+
+          ;; = - type numeric value (== for octal, === for hex)
+          ((#\=)
+           (cond
+             ((and (< (+ pos 2) (string-length str))
+                   (char=? (string-ref str (+ pos 1)) #\=)
+                   (char=? (string-ref str (+ pos 2)) #\=))
+              ;; === hex
+              (printf "~x~%" (or num 0))
+              (loop (+ pos 3) #f))
+             ((and (< (+ pos 1) (string-length str))
+                   (char=? (string-ref str (+ pos 1)) #\=))
+              ;; == octal
+              (printf "~o~%" (or num 0))
+              (loop (+ pos 2) #f))
+             (else
+              ;; = decimal
+              (printf "~a~%" (or num 0))
+              (loop (+ pos 1) #f))))
+
+          ;; ; - conditional exit from loop/iteration
+          ;; n; exits if n >= 0
+          ((#\;)
+           (if (and num (>= num 0))
                'break
                (loop (+ pos 1) #f)))
 
-          ;; = - type numeric value
-          ((#\=)
-           (printf "~a~%" (or num 0))
-           (loop (+ pos 1) #f))
-
           ;; Ctrl-C (in command string) = abort
           ((#\x03) 'abort)
+
+          ;; ^Uqtext$ - store text in Q-register q (text part)
+          ((#\x15)  ; Ctrl-U
+           (if (< (+ pos 1) (string-length str))
+               (let* ((reg (string-ref str (+ pos 1)))
+                      (result (parse-string str (+ pos 2) #\$)))
+                 (q-set-text reg (car result))
+                 (loop (cdr result) #f))
+               (loop (+ pos 1) #f)))
+
+          ;; ^T - type character at dot as numeric (returns ASCII value)
+          ((#\x14)  ; Ctrl-T
+           (if (< *dot* (buffer-size))
+               (set! num (char->integer (string-ref *buffer* *dot*)))
+               (set! num -1))
+           (loop (+ pos 1) num))
+
+          ;; ^S - return negative of last string length
+          ((#\x13)  ; Ctrl-S
+           (set! num (- (string-length *last-search*)))
+           (loop (+ pos 1) num))
+
+          ;; ^Q - quote next char (insert literal)
+          ((#\x11)  ; Ctrl-Q
+           (when (< (+ pos 1) (string-length str))
+             (insert-text (string (string-ref str (+ pos 1)))))
+           (loop (+ pos 2) #f))
 
           ;; Whitespace/delimiters - ignore (ESC = $ = x1b)
           ((#\space #\tab #\newline #\$ #\return #\x0d #\x1b) (loop (+ pos 1) num))
@@ -467,23 +750,104 @@
   (print "")
   (print "TECO - Text Editor and COrrector")
   (print "A tribute to Dan Murphy (MIT '65, BBN, DEC)")
+  (print "\"I started writing TECO in 1962 in order to edit")
+  (print " programs I was writing on the PDP-1.\"")
   (print "opost.com/tenex/")
   (print "")
-  (print "  ERfile$  Read file       EWfile$  Write file")
-  (print "  Itext$   Insert          nD       Delete n chars")
-  (print "  Stext$   Search          V        View line")
-  (print "  J        Beginning       ZJ       End")
-  (print "  nC/nR    Move fwd/back   nL       Move n lines")
-  (print "  HT       Type all        EX       Exit")
-  (print "  ?        This help       $ = ESC")
+  (print "Movement:        Editing:          Search:")
+  (print "  J   beginning    Itext$  insert    Stext$  forward")
+  (print "  ZJ  end          nD      delete    _text$  backward")
+  (print "  nC  forward      nK      kill      FSold$new$  subst")
+  (print "  nR  backward     HK      kill all")
+  (print "  nL  n lines")
   (print "")
-  (print "\"I started writing TECO in 1962 in order to edit")
-  (print " programs I was writing on the PDP-1.\" - Dan Murphy"))
+  (print "File:            Q-registers:      Programming:")
+  (print "  ERfile$  read    nUq  store       n<cmds>  loop")
+  (print "  EWfile$  write   Qq   get         n\"Ecmds' if =0")
+  (print "  EX       exit    Gq   insert      F;       break")
+  (print "  HT       type    Mq   execute")
+  (print "")
+  (print "  V  view line   .  position   =  print   ?  help")
+  (print "")
+  (print "  $$ = execute (ESC ESC)    ^G = cancel    ^U = kill line")
+  (print ""))
 
 (define (teco-prompt)
+  "VMS TECO style prompt: accumulate commands, $$ executes.
+   ESC echoes as $, double-ESC executes command string."
   (display "*")
   (flush-output)
-  (read-line))
+  (tty-set-raw)
+  (let loop ((chars '()) (last-was-esc #f))
+    (let ((c (tty-raw-char)))
+      (cond
+        ;; EOF or error
+        ((< c 0)
+         (tty-set-cooked)
+         (newline)
+         #f)
+
+        ;; ESC (27)
+        ((= c 27)
+         (display "$")
+         (flush-output)
+         (if last-was-esc
+             ;; Double ESC - execute!
+             (begin
+               (tty-set-cooked)
+               (newline)
+               (list->string (reverse chars)))
+             ;; First ESC - add to command string, remember
+             (loop (cons (integer->char c) chars) #t)))
+
+        ;; Ctrl-G (7) - cancel current input, reprompt
+        ((= c 7)
+         (tty-set-cooked)
+         (newline)
+         (print "^G")
+         "")
+
+        ;; Ctrl-C (3) - abort, exit TECO
+        ((= c 3)
+         (tty-set-cooked)
+         (newline)
+         'abort)
+
+        ;; Backspace (127) or DEL (8)
+        ((or (= c 127) (= c 8))
+         (when (pair? chars)
+           ;; Erase character from display
+           (display "\b \b")
+           (flush-output))
+         (loop (if (pair? chars) (cdr chars) chars) #f))
+
+        ;; Ctrl-U (21) - kill line
+        ((= c 21)
+         ;; Erase all characters
+         (let erase ((n (length chars)))
+           (when (> n 0)
+             (display "\b \b")
+             (erase (- n 1))))
+         (flush-output)
+         (loop '() #f))
+
+        ;; CR (13) or LF (10) - execute (alternate to $$)
+        ((or (= c 13) (= c 10))
+         (tty-set-cooked)
+         (newline)
+         (list->string (reverse chars)))
+
+        ;; Regular character
+        (else
+         (let ((ch (integer->char c)))
+           ;; Echo the character (control chars as ^X)
+           (if (< c 32)
+               (begin
+                 (display "^")
+                 (display (integer->char (+ c 64))))
+               (display ch))
+           (flush-output)
+           (loop (cons ch chars) #f)))))))
 
 (define (teco #!optional filename)
   "TECO main entry point"
@@ -502,11 +866,16 @@
   (let loop ()
     (let ((cmd (teco-prompt)))
       (cond
-        ((or (eof-object? cmd) (not cmd))
-         (print "")
+        ((or (eof-object? cmd) (not cmd) (eq? cmd 'abort))
+         (void))
+        ((not (string? cmd))
+         ;; Non-string result (symbol) - exit
          (void))
         ((string=? cmd "?")
          (teco-banner)
+         (loop))
+        ((string=? cmd "")
+         ;; Empty command - just reprompt
          (loop))
         ((member cmd '("q" "quit" "exit"))
          (when (and *modified* *filename*)
@@ -522,7 +891,6 @@
          (let ((result (execute-commands cmd)))
            (case result
              ((exit)
-              (print "")
               (void))
              ((abort)
               (print "^C")

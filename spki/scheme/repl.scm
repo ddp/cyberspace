@@ -909,6 +909,10 @@
 (import display)
 (import info)      ; hypertext doc browser with pager
 
+;; Resident editors - load once, always ready (like LSE, VAX Emacs)
+(load "teco.scm")   ; Dan Murphy's TECO (1962)
+(load "pencil.scm") ; Michael Shrayer's Electric Pencil (1976)
+
 ;; Initialize libsodium
 (sodium-init)
 
@@ -7270,49 +7274,37 @@ See: Memo-0000 Declaration of Cyberspace
               (let* ((ed (editor))
                      (file (if (null? args) "" (car args))))
                 (cond
-                  ;; Built-in Electric Pencil
+                  ;; Built-in Electric Pencil (resident)
                   ((string=? ed "pencil")
                    (handle-exceptions exn
                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
-                     (begin
-                       (load "pencil.scm")
-                       (if (null? args)
-                           ((eval 'pencil))
-                           ((eval 'pencil) (car args))))))
-                  ;; Built-in TECO
+                     (if (null? args) (pencil) (pencil (car args)))))
+                  ;; Built-in TECO (resident)
                   ((string=? ed "teco")
                    (handle-exceptions exn
                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
-                     (begin
-                       (load "teco.scm")
-                       (if (null? args)
-                           ((eval 'teco))
-                           ((eval 'teco) (car args))))))
+                     (if (null? args) (teco) (teco (car args)))))
                   ;; External editor
                   (else
                    (system (sprintf "~a ~a" ed file)))))
               (loop))
 
-             ;; Electric Pencil explicitly
+             ;; Electric Pencil (resident)
              ((string=? cmd "pencil")
               (handle-exceptions exn
                 (print "Error: " ((condition-property-accessor 'exn 'message) exn))
-                (begin
-                  (load "pencil.scm")
-                  (if (null? args)
-                      ((eval 'pencil))
-                      ((eval 'pencil) (car args)))))
+                (if (null? args)
+                    (pencil)
+                    (pencil (car args))))
               (loop))
 
-             ;; TECO - DEC heritage easter egg
+             ;; TECO (resident, like LSE on VMS)
              ((string=? cmd "teco")
               (handle-exceptions exn
                 (print "Error: " ((condition-property-accessor 'exn 'message) exn))
-                (begin
-                  (load "teco.scm")
-                  (if (null? args)
-                      ((eval 'teco))
-                      ((eval 'teco) (car args)))))
+                (if (null? args)
+                    (teco)
+                    (teco (car args))))
               (loop))
 
              ;; Hex edit - terminal (xxd) or GUI (HexEdit)
