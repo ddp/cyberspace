@@ -110,6 +110,41 @@
          (print "  [WARN] " base ": " (string-intersperse errors ", ")))
        (null? errors)))))
 
+(define (check-duplicate-numbers memos)
+  "Fail fast if any memo numbers are duplicated."
+  (let* ((numbers (map memo-number memos))
+         (seen '())
+         (dupes '()))
+    (for-each (lambda (n f)
+                (if (member n seen)
+                    (set! dupes (cons n dupes))
+                    (set! seen (cons n seen))))
+              numbers memos)
+    (when (not (null? dupes))
+      (print "")
+      (print "*** ERROR: Duplicate memo numbers detected! ***")
+      (for-each (lambda (n)
+                  (print "  " (string-pad (number->string n) 4 #\0) ": "
+                         (string-intersperse
+                           (filter (lambda (f) (= (memo-number f) n)) memos)
+                           ", ")))
+                (delete-duplicates (reverse dupes)))
+      (print "")
+      (print "The Ten Commandments (0000-0009) are fixed:")
+      (print "  0000 Declaration")
+      (print "  0001 Conventions")
+      (print "  0002 Architecture")
+      (print "  0003 Public Key Authorization")
+      (print "  0004 Shamir Sharing")
+      (print "  0005 Audit Trail")
+      (print "  0006 Vault Architecture")
+      (print "  0007 Replication Layer")
+      (print "  0008 Threshold Governance")
+      (print "  0009 Designer Notes")
+      (print "")
+      (print "Fix duplicates before regenerating.")
+      (exit 1))))
+
 (define (main)
   (print "=== Memo Generation (S-expression Pipeline) ===")
   (print "")
@@ -118,6 +153,10 @@
          (memos (discover-memos))
          (docs (discover-docs))
          (all-files (append memos docs)))
+
+    ;; Fail fast on duplicate numbers
+    (check-duplicate-numbers memos)
+
     (print "Found " (length memos) " Memos, " (length docs) " docs")
     (print "")
 
