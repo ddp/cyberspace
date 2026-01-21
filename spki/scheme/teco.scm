@@ -897,6 +897,8 @@
               (void))
              (else (loop)))))))))
 
+(print "TECO loaded. (teco) or (teco \"file.txt\") to edit.")
+
 ;; If run as script
 (when (or (member "-s" (command-line-arguments))
           (member "--script" (command-line-arguments)))
