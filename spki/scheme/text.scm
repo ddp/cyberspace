@@ -46,6 +46,10 @@
    text-search
    text-search-backward
 
+   ;; Provenance
+   text-source-hash
+   text-parent-hash
+
    ;; Soup integration
    text-seal
    text-unseal
@@ -203,24 +207,25 @@
 ;;; ============================================================
 
 (define-record-type <text>
-  (make-text-raw buffer modified name)
+  (make-text-raw buffer modified source-hash parent-hash)
   text?
   (buffer text-buffer)
   (modified text-modified set-text-modified!)
-  (name text-name set-text-name!))
+  (source-hash text-source-hash set-text-source-hash!)  ; where it came from
+  (parent-hash text-parent-hash set-text-parent-hash!)) ; previous version
 
-(define (text-new #!optional (name #f))
+(define (text-new)
   "Create empty text object"
-  (make-text-raw (gap-buffer-new) #f name))
+  (make-text-raw (gap-buffer-new) #f #f #f))
 
-(define (text-from-string str #!optional (name #f))
+(define (text-from-string str)
   "Create text from string"
-  (make-text-raw (string->gap-buffer str) #f name))
+  (make-text-raw (string->gap-buffer str) #f #f #f))
 
 (define (text-from-file filename)
-  "Load text from file"
+  "Load text from file (bootstrap only - files are not native)"
   (let ((content (with-input-from-file filename read-string)))
-    (make-text-raw (string->gap-buffer content) #f filename)))
+    (make-text-raw (string->gap-buffer content) #f #f #f)))
 
 ;; Query
 (define (text-length t) (gap-buffer-length (text-buffer t)))
@@ -373,14 +378,19 @@
     (string-append "text:" (number->string (string-length content)))))
 
 (define (text-seal t)
-  "Seal text to soup, return hash"
+  "Seal text to soup, return hash. Captures parent for undo chain."
   ;; TODO: Actually store in vault
-  (set-text-modified! t #f)
-  (text-hash t))
+  (let ((old-hash (text-source-hash t))
+        (new-hash (text-hash t)))
+    (set-text-parent-hash! t old-hash)  ; previous version
+    (set-text-source-hash! t new-hash)  ; now points to self
+    (set-text-modified! t #f)
+    new-hash))
 
 (define (text-unseal hash)
-  "Load text from soup by hash"
+  "Load text from soup by hash. Sets source-hash for provenance."
   ;; TODO: Actually load from vault
+  ;; When implemented: load content, create text, set source-hash to hash
   (error "text-unseal not yet implemented"))
 
 ) ; end module
