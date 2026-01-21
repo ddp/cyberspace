@@ -16,6 +16,7 @@
         (chicken irregex)
         (chicken condition)
         (chicken time)
+        (chicken process)
         srfi-1
         srfi-13
         srfi-69)
@@ -174,6 +175,11 @@
       (if (= failed 0)
           (print "  All " passed " files passed validation")
           (print "  " failed " file(s) have warnings")))
+
+    ;; Regenerate index.html
+    (print "")
+    (print "=== Index Generation ===")
+    (system "bash gen-index.sh")
 
     (let* ((end-time (current-milliseconds))
            (elapsed-ms (- end-time start-time))
