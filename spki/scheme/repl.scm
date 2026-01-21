@@ -5563,6 +5563,17 @@ Cyberspace REPL - Available Commands
      ("(fips-status)" "FIPS self-test status")
      ("(goodbye)" "Exit with session summary"))
 
+    (cs "Command Line"
+     ("cs" "Start REPL (default)")
+     ("cs --sync" "Sync vault with remote, then start REPL")
+     ("cs --clean" "Remove compiled artifacts")
+     ("cs --rebuild" "Force rebuild all modules")
+     ("cs --verbose" "Show verbose output")
+     ("cs --boot=<level>" "shadow|whisper|portal|oracle")
+     ("cs --eval='<expr>'" "Evaluate expression and exit")
+     ("cs --version" "Show version information")
+     ("cs --help" "Show command line help"))
+
     (boot "Boot Verbosity Levels"
      ("CYBERSPACE_BOOT=shadow" "0: Silent - just prompt (default)")
      ("CYBERSPACE_BOOT=whisper" "1: Version + Ready")
