@@ -71,6 +71,7 @@
         (chicken io)
         (chicken file)
         (chicken port)
+        (chicken process-context)
         srfi-13)
 
 ;;; ============================================================
@@ -327,10 +328,10 @@
            (loop (+ pos 2) num))
 
           ;; Ctrl-C (in command string) = abort
-          ((#\003) 'abort)
+          ((#\x03) 'abort)
 
           ;; Whitespace/delimiters - ignore
-          ((#\space #\tab #\newline #\$ #\return) (loop (+ pos 1) num))
+          ((#\space #\tab #\newline #\$ #\return #\x0d) (loop (+ pos 1) num))
 
           ;; Unknown command
           (else
