@@ -345,13 +345,17 @@
         ((= c 4) #f)              ; Ctrl-D
         ((= c 3) (newline) "")    ; Ctrl-C
         (else
-         ;; Regular char - echo and read rest
-         (display (integer->char c))
-         (flush-output)
-         (let ((rest (read-line)))
-           (if (eof-object? rest)
-               (string (integer->char c))
-               (string-append (string (integer->char c)) rest)))))))
+         ;; Regular char - redisplay prompt+char so backspace is safe
+         (let ((first-char (string (integer->char c))))
+           ;; Clear line and redisplay with first char as part of "prompt"
+           (display "\r")
+           (display prompt)
+           (display first-char)
+           (flush-output)
+           (let ((rest (read-line)))
+             (if (eof-object? rest)
+                 first-char
+                 (string-append first-char rest))))))))
 
   (define (inspector-repl condition)
     "Enter inspector REPL for condition"

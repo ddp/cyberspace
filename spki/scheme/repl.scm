@@ -6954,13 +6954,14 @@ See: Memo-0000 Declaration of Cyberspace
       ((= c 3)
        (newline)
        "")
-      ;; Regular char - echo it, then linenoise for rest
+      ;; Regular char - include in linenoise prompt so backspace is safe
       (else
-       (display (integer->char c))
-       (flush-output)
-       (let ((rest (linenoise#linenoise "")))
+       (let* ((first-char (string (integer->char c)))
+              ;; Show prompt + first char as linenoise's "prompt"
+              ;; User can't backspace into it, but display stays clean
+              (rest (linenoise#linenoise (string-append prompt first-char))))
          (if rest
-             (let ((full (string-append (string (integer->char c)) rest)))
+             (let ((full (string-append first-char rest)))
                (repl-history-add full)
                (strip-ansi full))
              #f))))))
