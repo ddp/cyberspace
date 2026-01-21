@@ -97,121 +97,98 @@
         srfi-13
         tty-ffi)
 
+(load "text.scm")
+(import text)
+
 ;;; ============================================================
-;;; Buffer - Simple string buffer with dot (point)
+;;; Buffer - Now backed by text object (gap buffer)
 ;;; ============================================================
 
-(define *buffer* "")        ; The text buffer
-(define *dot* 0)            ; Current position (point)
+(define *text* (text-new))  ; The text object
 (define *filename* #f)      ; Current file
-(define *modified* #f)      ; Buffer modified?
 (define *last-search* "")   ; Last search string (for N command)
 ;; Q-registers now in separate section below (numeric + text parts)
 
-(define (buffer-size) (string-length *buffer*))
+;; Compatibility layer - TECO ops delegate to text object
+(define (buffer-size) (text-length *text*))
+(define *dot* 0)  ; Kept for compatibility, synced with text cursor
+
+(define (sync-dot!)
+  "Sync *dot* from text cursor"
+  (set! *dot* (text-cursor *text*)))
 
 (define (clamp-dot)
-  (set! *dot* (max 0 (min *dot* (buffer-size)))))
+  (text-goto! *text* *dot*)
+  (sync-dot!))
 
 (define (goto-beginning)
-  (set! *dot* 0))
+  (text-beginning! *text*)
+  (sync-dot!))
 
 (define (goto-end)
-  (set! *dot* (buffer-size)))
+  (text-end! *text*)
+  (sync-dot!))
 
 (define (move-forward n)
-  (set! *dot* (+ *dot* n))
-  (clamp-dot))
+  (text-move! *text* n)
+  (sync-dot!))
 
 (define (move-backward n)
-  (set! *dot* (- *dot* n))
-  (clamp-dot))
+  (text-move! *text* (- n))
+  (sync-dot!))
 
 (define (move-lines n)
   "Move n lines forward (negative = backward)"
   (let loop ((remaining (abs n)))
     (when (> remaining 0)
       (if (>= n 0)
-          ;; Forward: find next newline
-          (let ((pos (string-index *buffer* #\newline *dot*)))
-            (if pos
-                (set! *dot* (+ pos 1))
-                (set! *dot* (buffer-size))))
-          ;; Backward: find previous newline
-          (let loop-back ((p (- *dot* 1)))
-            (cond
-              ((< p 0) (set! *dot* 0))
-              ((char=? (string-ref *buffer* p) #\newline)
-               (set! *dot* p))
-              (else (loop-back (- p 1))))))
+          (text-next-line! *text*)
+          (text-prev-line! *text*))
       (loop (- remaining 1))))
-  (clamp-dot))
+  (sync-dot!))
 
 (define (current-line)
   "Return the current line containing dot"
-  (let* ((start (let loop ((p *dot*))
-                  (cond ((= p 0) 0)
-                        ((char=? (string-ref *buffer* (- p 1)) #\newline) p)
-                        (else (loop (- p 1))))))
-         (end (let loop ((p *dot*))
-                (cond ((>= p (buffer-size)) p)
-                      ((char=? (string-ref *buffer* p) #\newline) p)
-                      (else (loop (+ p 1)))))))
-    (substring *buffer* start end)))
+  (let ((saved (text-cursor *text*)))
+    (text-line-start! *text*)
+    (let ((start (text-cursor *text*)))
+      (text-line-end! *text*)
+      (let ((end (text-cursor *text*)))
+        (text-goto! *text* saved)
+        (text-substring *text* start end)))))
 
 (define (delete-chars n)
   "Delete n characters at dot"
   (when (> n 0)
-    (let ((end (min (+ *dot* n) (buffer-size))))
-      (set! *buffer* (string-append
-                       (substring *buffer* 0 *dot*)
-                       (substring *buffer* end)))
-      (set! *modified* #t)
-      (clamp-dot))))
+    (text-delete! *text* n)
+    (sync-dot!)))
 
 (define (kill-lines n)
   "Kill n lines from dot"
-  (let* ((end-pos *dot*))
-    (let loop ((remaining n) (pos *dot*))
-      (cond
-        ((= remaining 0) (set! end-pos pos))
-        ((>= pos (buffer-size)) (set! end-pos pos))
-        ((char=? (string-ref *buffer* pos) #\newline)
-         (loop (- remaining 1) (+ pos 1)))
-        (else (loop remaining (+ pos 1)))))
-    (set! *buffer* (string-append
-                     (substring *buffer* 0 *dot*)
-                     (substring *buffer* end-pos)))
-    (set! *modified* #t)
-    (clamp-dot)))
+  (let loop ((remaining n))
+    (when (> remaining 0)
+      (text-kill-line! *text*)
+      (loop (- remaining 1))))
+  (sync-dot!))
 
-(define (insert-text text)
+(define (insert-text str)
   "Insert text at dot"
-  (set! *buffer* (string-append
-                   (substring *buffer* 0 *dot*)
-                   text
-                   (substring *buffer* *dot*)))
-  (set! *dot* (+ *dot* (string-length text)))
-  (set! *modified* #t))
+  (text-insert! *text* str)
+  (sync-dot!))
 
-(define (search-forward text)
+(define (search-forward pattern)
   "Search for text from dot, return #t if found"
-  (let ((pos (string-contains *buffer* text *dot*)))
+  (let ((pos (text-search *text* pattern)))
     (if pos
-        (begin (set! *dot* pos) #t)
+        (begin (text-goto! *text* pos) (sync-dot!) #t)
         #f)))
 
-(define (search-backward text)
+(define (search-backward pattern)
   "Search backward for text from dot, return #t if found"
-  (let ((len (string-length text)))
-    (let loop ((p (- *dot* 1)))
-      (cond
-        ((< p 0) #f)
-        ((and (<= (+ p len) (buffer-size))
-              (string=? text (substring *buffer* p (+ p len))))
-         (set! *dot* p)
-         #t)
-        (else (loop (- p 1)))))))
+  (let ((pos (text-search-backward *text* pattern)))
+    (if pos
+        (begin (text-goto! *text* pos) (sync-dot!) #t)
+        #f)))
 
 ;;; ============================================================
 ;;; File Operations
@@ -220,18 +197,16 @@
 (define (read-file filename)
   (if (file-exists? filename)
       (begin
-        (set! *buffer* (with-input-from-file filename read-string))
+        (set! *text* (text-from-file filename))
         (set! *filename* filename)
-        (set! *dot* 0)
-        (set! *modified* #f)
+        (sync-dot!)
         (printf "~a bytes~%" (buffer-size)))
       (printf "?NFI  Not found: ~a~%" filename)))
 
 (define (write-file filename)
   (with-output-to-file filename
-    (lambda () (display *buffer*)))
+    (lambda () (display (text->string *text*))))
   (set! *filename* filename)
-  (set! *modified* #f)
   (printf "~a bytes written~%" (buffer-size)))
 
 ;;; ============================================================
@@ -431,7 +406,7 @@
                                         fn)))
                       (loop (cdr result) #f)))
                    ((#\X)
-                    (when (and *modified* *filename*)
+                    (when (and (text-modified? *text*) *filename*)
                       (write-file *filename*))
                     'exit)
                    (else (loop (+ pos 2) #f))))
@@ -450,14 +425,13 @@
            (cond
              ((and (< (+ pos 1) (string-length str))
                    (char-ci=? (string-ref str (+ pos 1)) #\T))
-              (display *buffer*)
+              (display (text->string *text*))
               (loop (+ pos 2) #f))
              ((and (< (+ pos 1) (string-length str))
                    (char-ci=? (string-ref str (+ pos 1)) #\K))
               ;; HK = kill whole buffer
-              (set! *buffer* "")
-              (set! *dot* 0)
-              (set! *modified* #t)
+              (set! *text* (text-new))
+              (sync-dot!)
               (loop (+ pos 2) #f))
              (else
               ;; H alone sets num to buffer size, dot to 0
@@ -499,11 +473,11 @@
                                (cond
                                  ((= lines 0) p)
                                  ((>= p (buffer-size)) p)
-                                 ((char=? (string-ref *buffer* p) #\newline)
+                                 ((char=? (text-char-at *text* p) #\newline)
                                   (find-end (+ p 1) (- lines 1)))
                                  (else (find-end (+ p 1) lines))))))
                (q-set-text (string-ref str (+ pos 1))
-                           (substring *buffer* start end-pos))))
+                           (text-substring *text* start end-pos))))
            (loop (+ pos 2) #f))
 
           ;; [q - push Q-register onto stack
@@ -538,7 +512,7 @@
            (let* ((offset (or num 0))
                   (pos-at (+ *dot* offset)))
              (if (and (>= pos-at 0) (< pos-at (buffer-size)))
-                 (set! num (char->integer (string-ref *buffer* pos-at)))
+                 (set! num (char->integer (text-char-at *text* pos-at)))
                  (set! num -1)))  ; -1 for end of buffer
            (loop (+ pos 1) num))
 
@@ -719,7 +693,7 @@
           ;; ^T - type character at dot as numeric (returns ASCII value)
           ((#\x14)  ; Ctrl-T
            (if (< *dot* (buffer-size))
-               (set! num (char->integer (string-ref *buffer* *dot*)))
+               (set! num (char->integer (text-char-at *text* *dot*)))
                (set! num -1))
            (loop (+ pos 1) num))
 
@@ -851,10 +825,9 @@
 
 (define (teco #!optional filename)
   "TECO main entry point"
-  (set! *buffer* "")
+  (set! *text* (text-new))
   (set! *dot* 0)
   (set! *filename* #f)
-  (set! *modified* #f)
 
   (teco-banner)
 
@@ -878,7 +851,7 @@
          ;; Empty command - just reprompt
          (loop))
         ((member cmd '("q" "quit" "exit"))
-         (when (and *modified* *filename*)
+         (when (and (text-modified? *text*) *filename*)
            (printf "Save ~a? " *filename*)
            (flush-output)
            (let ((ans (read-line)))
