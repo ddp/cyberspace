@@ -3213,6 +3213,7 @@ Cyberspace REPL - Available Commands
   Comma Commands:
     ,e [file]                      Edit (Emacs or Electric Pencil)
     ,pencil [file]                 Electric Pencil (built-in)
+    ,teco [file]                   TECO (DEC heritage)
     ,hd file                       Hex dump (xxd, terminal)
     ,hext file                     Hex edit (HexEdit, GUI)
     ,l file                        Load Scheme file
@@ -5472,11 +5473,16 @@ Cyberspace REPL - Available Commands
     (editor "Editing Files"
      (",e [file]" "Edit with Emacs (if available)")
      (",pencil [file]" "Edit with Electric Pencil (built-in)")
+     (",teco [file]" "TECO (DEC heritage easter egg)")
      ("$EMACSCLIENT" "Override emacsclient path")
      ("Emacs:" "Uses emacsclient -t (terminal mode)")
      ("Pencil:" "Gap buffer editor, WASD movement")
      ("Ctrl-WASD" "Pencil: movement diamond (↑←↓→)")
-     ("Ctrl-Q" "Pencil: quit editor"))
+     ("Ctrl-Q" "Pencil: quit editor")
+     ("TECO:" "PDP-style text editor, * prompt")
+     ("ERfile$" "TECO: read file ($ = ESC)")
+     ("Itext$" "TECO: insert text")
+     ("EX" "TECO: exit"))
 
     (forge "Build & Metrics"
      ("(sicp)" "SICP metrics for all modules")
@@ -7228,6 +7234,17 @@ See: Memo-0000 Declaration of Cyberspace
                   (if (null? args)
                       ((eval 'pencil))
                       ((eval 'pencil) (car args)))))
+              (loop))
+
+             ;; TECO - DEC heritage easter egg
+             ((string=? cmd "teco")
+              (handle-exceptions exn
+                (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                (begin
+                  (load "teco.scm")
+                  (if (null? args)
+                      ((eval 'teco))
+                      ((eval 'teco) (car args)))))
               (loop))
 
              ;; Hex edit - terminal (xxd) or GUI (HexEdit)
