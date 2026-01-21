@@ -1,9 +1,9 @@
 #!/usr/bin/env csi -s
 ;;; teco.scm - TECO: Text Editor and COrrector
 ;;;
-;;; A tribute to Dan Murphy's legendary editor (1962-present).
-;;; Created on the PDP-1 at MIT, foundation of EMACS.
-;;; As the saying goes: "Real programmers use TECO."
+;;; A tribute to Dan Murphy, who created TECO in 1962 while an
+;;; undergraduate at MIT: "I started writing TECO in order to edit
+;;; programs I was writing on the PDP-1."
 ;;;
 ;;; Every character is a command. Every string is a program.
 ;;; If it looks like line noise, you're doing it right.
@@ -344,7 +344,8 @@
 (define (teco-banner)
   (print "")
   (print "TECO - Text Editor and COrrector")
-  (print "PDP Heritage Edition (Cyberspace)")
+  (print "A tribute to Dan Murphy (MIT '65, BBN, DEC)")
+  (print "opost.com/tenex/")
   (print "")
   (print "  ERfile$  Read file       EWfile$  Write file")
   (print "  Itext$   Insert          nD       Delete n chars")
@@ -354,9 +355,8 @@
   (print "  HT       Type all        EX       Exit")
   (print "  ?        This help       $ = ESC")
   (print "")
-  (print "Tip: Every character is a command. Stringing them")
-  (print "     together makes a program. It's not a bug,")
-  (print "     it's TECO."))
+  (print "\"I started writing TECO in 1962 in order to edit")
+  (print " programs I was writing on the PDP-1.\" - Dan Murphy"))
 
 (define (teco-prompt)
   (display "*")
