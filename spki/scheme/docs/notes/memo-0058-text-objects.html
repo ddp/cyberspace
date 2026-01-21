@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <title>Memo 0058: Text Objects</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0058: Text Objects</h1>
+<dl class="metadata">
+  <dt>Status</dt><dd>Draft</dd>
+  <dt>Date</dt><dd>January 2026</dd>
+</dl>
+<hr>
+<section>
+<h2>Abstract</h2>
+<p>Text in Cyberspace is not files. This Memo specifies the native text object representation: gap buffers for editing, merkle chunks for storage, and how editors like Electric Pencil and TECO share a common substrate.</p>
+</section>
+<section>
+<h2>The Problem with Files</h2>
+<p>Unix thinks text lives in files. Files are byte streams with names. You open them, read them into memory, edit the memory, write them back. The file is the truth; memory is a copy.</p>
+<p>This is backwards. In Cyberspace, the text IS the object. It lives in the soup, content-addressed. There is no 'file' to open—there is only the text, and operations on it. Editors are views, not owners.</p>
+</section>
+<section>
+<h2>Text as Object</h2>
+<p>A text object has:</p>
+<ul>
+<li>Content: the characters</li>
+<li>Cursor: current position (for editing)</li>
+<li>Hash: content address in the soup</li>
+<li>Modified: dirty bit for seal semantics</li>
+</ul>
+<p>Text objects are created, edited, and sealed. Once sealed, they are immutable—editing creates a new object with a new hash. The soup naturally preserves history.</p>
+</section>
+<section>
+<h2>Gap Buffer: The Editing Representation</h2>
+<p>For editing, text uses a gap buffer—the same data structure Emacs has used for 50 years. A gap buffer is an array with a gap at the cursor position:</p>
+<pre>
+[text before cursor][    gap    ][text after cursor]
+</pre>
+<p>Operations:</p>
+<table>
+<tr><th>Operation</th><th>Cost</th><th>Mechanism</th></tr>
+<tr><td>Insert at cursor</td><td>O(1)</td><td>Fill gap from left</td></tr>
+<tr><td>Delete at cursor</td><td>O(1)</td><td>Expand gap</td></tr>
+<tr><td>Move cursor</td><td>O(n)</td><td>Shift text across gap</td></tr>
+<tr><td>Random access</td><td>O(1)</td><td>Index arithmetic</td></tr>
+</table>
+<p>The gap buffer is mutable. It is the working copy during editing. When you seal, the gap is closed and the content is hashed.</p>
+</section>
+<section>
+<h2>Merkle Chunks: The Storage Representation</h2>
+<p>For storage in the soup, large text objects are chunked into a merkle tree:</p>
+<pre>
+(text-object
+  (chunks
+    sha512:abc123...  ; first 64KB
+    sha512:def456...  ; second 64KB
+    sha512:789ghi...  ; third 64KB
+  )
+  (root sha512:xyz789...))
+</pre>
+<p>Small edits touch one chunk, creating one new hash. The rest of the tree stays the same. This scales to 2^128 addressable objects without copying gigabytes on every keystroke.</p>
+</section>
+<section>
+<h2>Seal Semantics</h2>
+<p>Text follows the chaotic/quiescent state model (Memo-010):</p>
+<ul>
+<li>Chaotic: text is being edited, gap buffer is mutable</li>
+<li>Quiescent: text is sealed, content-addressed, immutable</li>
+</ul>
+<p>Sealing a text object:</p>
+<pre>
+(define hash (text-seal t))  ; returns content address
+</pre>
+<p>Unsealing retrieves a copy for editing:</p>
+<pre>
+(define t (text-unseal hash))  ; new gap buffer, same content
+</pre>
+<p>Every sealed version persists. Undo is just pointing to the previous hash. Branching is natural—two editors can seal independently from the same starting point.</p>
+</section>
+<section>
+<h2>Editors as Views</h2>
+<p>Electric Pencil and TECO both use the same text object. They differ in interface, not representation:</p>
+<table>
+<tr><th>Editor</th><th>Heritage</th><th>Interface</th><th>Style</th></tr>
+<tr><td>Electric Pencil</td><td>Shrayer 1976</td><td>Full-screen ANSI</td><td>Visual, WYSIWYG</td></tr>
+<tr><td>TECO</td><td>Murphy 1962</td><td>Command-line</td><td>Programmatic, macros</td></tr>
+</table>
+<p>Both import the text module. Both operate on gap buffers. Both seal to the soup. The buffer is the truth; editors are lenses.</p>
+</section>
+<section>
+<h2>API Summary</h2>
+<p>Construction:</p>
+<pre>
+(text-new)              ; empty text
+(text-from-string s)    ; from string
+(text-from-file path)   ; load file (for bootstrap)
+</pre>
+<p>Query:</p>
+<pre>
+(text-length t)         ; character count
+(text-cursor t)         ; cursor position
+(text-char-at t pos)    ; character at position
+(text-&gt;string t)        ; extract as string
+(text-modified? t)      ; dirty bit
+</pre>
+<p>Movement:</p>
+<pre>
+(text-goto! t pos)      ; absolute position
+(text-move! t delta)    ; relative movement
+(text-beginning! t)     ; start of text
+(text-end! t)           ; end of text
+(text-line-start! t)    ; start of line
+(text-line-end! t)      ; end of line
+</pre>
+<p>Editing:</p>
+<pre>
+(text-insert! t str)    ; insert at cursor
+(text-delete! t n)      ; delete n chars forward
+(text-kill-line! t)     ; delete to end of line
+(text-replace! t s e new) ; replace region
+</pre>
+<p>Search:</p>
+<pre>
+(text-search t pattern) ; find forward, return position or #f
+(text-search-backward t pattern)
+</pre>
+<p>Soup:</p>
+<pre>
+(text-seal t)           ; seal to soup, return hash
+(text-unseal hash)      ; load from soup
+(text-hash t)           ; content address
+</pre>
+</section>
+<section>
+<h2>Implementation Notes</h2>
+<p>The gap buffer implementation is in text.scm. Key decisions:</p>
+<ul>
+<li>Vector of characters, not string (for mutation)</li>
+<li>Automatic growth when gap fills (doubling)</li>
+<li>Gap size defaults to 256 characters</li>
+<li>Line operations scan for newlines (no line table yet)</li>
+</ul>
+<p>Future optimizations:</p>
+<ul>
+<li>Rope overlay for very large texts</li>
+<li>Line index for O(1) line access</li>
+<li>Piece table variant for collaborative editing</li>
+<li>Lazy chunk loading for huge objects</li>
+</ul>
+</section>
+<section>
+<h2>See Also</h2>
+<ul>
+<li>Memo-0022: Content-Addressed Storage</li>
+<li>Memo-0051: Terminal Interface Conventions</li>
+<li>text.scm: Implementation</li>
+<li>pencil.scm: Electric Pencil editor</li>
+<li>teco.scm: TECO editor</li>
+</ul>
+</section>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

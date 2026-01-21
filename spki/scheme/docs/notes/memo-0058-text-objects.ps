@@ -1,0 +1,246 @@
+%!PS-Adobe-3.0
+%%Title: memo-0058-text-objects
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0058: Text Objects) show newline
+() show newline
+(Status: Draft) show newline
+(Date: January 2026) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Text in Cyberspace is not files. This Memo specifies the native text) show newline
+(object representation: gap buffers for editing, merkle chunks for) show newline
+(storage, and how editors like Electric Pencil and TECO share a common) show newline
+(substrate.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE PROBLEM WITH FILES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Unix thinks text lives in files. Files are byte streams with names. You) show newline
+(open them, read them into memory, edit the memory, write them back. The) show newline
+(file is the truth; memory is a copy.) show newline
+() show newline
+(This is backwards. In Cyberspace, the text IS the object. It lives in) show newline
+(the soup, content-addressed. There is no 'file' to open—there is only) show newline
+(the text, and operations on it. Editors are views, not owners.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TEXT AS OBJECT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(A text object has:) show newline
+() show newline
+(  * Content: the characters) show newline
+(  * Cursor: current position \(for editing\)) show newline
+(  * Hash: content address in the soup) show newline
+(  * Modified: dirty bit for seal semantics) show newline
+() show newline
+(Text objects are created, edited, and sealed. Once sealed, they are) show newline
+(immutable—editing creates a new object with a new hash. The soup) show newline
+(naturally preserves history.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(GAP BUFFER: THE EDITING REPRESENTATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(For editing, text uses a gap buffer—the same data structure Emacs has) show newline
+(used for 50 years. A gap buffer is an array with a gap at the cursor) show newline
+(position:) show newline
+() show newline
+() show newline
+(    [text before cursor][    gap    ][text after cursor]) show newline
+() show newline
+(Operations:) show newline
+() show newline
+() show newline
+(  Operation         Cost  Mechanism              ) show newline
+(  Insert at cursor  O\(1\)  Fill gap from left     ) show newline
+(  Delete at cursor  O\(1\)  Expand gap             ) show newline
+(  Move cursor       O\(n\)  Shift text across gap  ) show newline
+(  Random access     O\(1\)  Index arithmetic       ) show newline
+() show newline
+(The gap buffer is mutable. It is the working copy during editing. When) show newline
+(you seal, the gap is closed and the content is hashed.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MERKLE CHUNKS: THE STORAGE REPRESENTATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(For storage in the soup, large text objects are chunked into a merkle) show newline
+(tree:) show newline
+() show newline
+() show newline
+(    \(text-object) show newline
+(      \(chunks) show newline
+(        sha512:abc123...  ; first 64KB) show newline
+(        sha512:def456...  ; second 64KB) show newline
+(        sha512:789ghi...  ; third 64KB) show newline
+(      \)) show newline
+(      \(root sha512:xyz789...\)\)) show newline
+() show newline
+(Small edits touch one chunk, creating one new hash. The rest of the tree) show newline
+(stays the same. This scales to 2^128 addressable objects without copying) show newline
+(gigabytes on every keystroke.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SEAL SEMANTICS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Text follows the chaotic/quiescent state model \(Memo-010\):) show newline
+() show newline
+(  * Chaotic: text is being edited, gap buffer is mutable) show newline
+(  * Quiescent: text is sealed, content-addressed, immutable) show newline
+() show newline
+(Sealing a text object:) show newline
+() show newline
+() show newline
+(    \(define hash \(text-seal t\)\)  ; returns content address) show newline
+() show newline
+(Unsealing retrieves a copy for editing:) show newline
+() show newline
+() show newline
+(    \(define t \(text-unseal hash\)\)  ; new gap buffer, same content) show newline
+() show newline
+(Every sealed version persists. Undo is just pointing to the previous) show newline
+(hash. Branching is natural—two editors can seal independently from the) show newline
+(same starting point.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EDITORS AS VIEWS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Electric Pencil and TECO both use the same text object. They differ in) show newline
+(interface, not representation:) show newline
+() show newline
+() show newline
+(  Editor           Heritage      Interface         Style                 ) show newline
+(  Electric Pencil  Shrayer 1976  Full-screen ANSI  Visual, WYSIWYG       ) show newline
+(  TECO             Murphy 1962   Command-line      Programmatic, macros  ) show newline
+() show newline
+(Both import the text module. Both operate on gap buffers. Both seal to) show newline
+(the soup. The buffer is the truth; editors are lenses.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(API SUMMARY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Construction:) show newline
+() show newline
+() show newline
+(    \(text-new\)              ; empty text) show newline
+(    \(text-from-string s\)    ; from string) show newline
+(    \(text-from-file path\)   ; load file \(for bootstrap\)) show newline
+() show newline
+(Query:) show newline
+() show newline
+() show newline
+(    \(text-length t\)         ; character count) show newline
+(    \(text-cursor t\)         ; cursor position) show newline
+(    \(text-char-at t pos\)    ; character at position) show newline
+(    \(text->string t\)        ; extract as string) show newline
+(    \(text-modified? t\)      ; dirty bit) show newline
+() show newline
+(Movement:) show newline
+() show newline
+() show newline
+(    \(text-goto! t pos\)      ; absolute position) show newline
+(    \(text-move! t delta\)    ; relative movement) show newline
+(    \(text-beginning! t\)     ; start of text) show newline
+(    \(text-end! t\)           ; end of text) show newline
+(    \(text-line-start! t\)    ; start of line) show newline
+(    \(text-line-end! t\)      ; end of line) show newline
+() show newline
+(Editing:) show newline
+() show newline
+() show newline
+(    \(text-insert! t str\)    ; insert at cursor) show newline
+(    \(text-delete! t n\)      ; delete n chars forward) show newline
+(    \(text-kill-line! t\)     ; delete to end of line) show newline
+(    \(text-replace! t s e new\) ; replace region) show newline
+() show newline
+(Search:) show newline
+() show newline
+() show newline
+(    \(text-search t pattern\) ; find forward, return position or #f) show newline
+(    \(text-search-backward t pattern\)) show newline
+() show newline
+(Soup:) show newline
+() show newline
+() show newline
+(    \(text-seal t\)           ; seal to soup, return hash) show newline
+(    \(text-unseal hash\)      ; load from soup) show newline
+(    \(text-hash t\)           ; content address) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(IMPLEMENTATION NOTES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The gap buffer implementation is in text.scm. Key decisions:) show newline
+() show newline
+(  * Vector of characters, not string \(for mutation\)) show newline
+(  * Automatic growth when gap fills \(doubling\)) show newline
+(  * Gap size defaults to 256 characters) show newline
+(  * Line operations scan for newlines \(no line table yet\)) show newline
+() show newline
+(Future optimizations:) show newline
+() show newline
+(  * Rope overlay for very large texts) show newline
+(  * Line index for O\(1\) line access) show newline
+(  * Piece table variant for collaborative editing) show newline
+(  * Lazy chunk loading for huge objects) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SEE ALSO) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * Memo-0022: Content-Addressed Storage) show newline
+(  * Memo-0051: Terminal Interface Conventions) show newline
+(  * text.scm: Implementation) show newline
+(  * pencil.scm: Electric Pencil editor) show newline
+(  * teco.scm: TECO editor) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

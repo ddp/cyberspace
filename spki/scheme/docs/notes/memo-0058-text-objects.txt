@@ -1,0 +1,213 @@
+Memo 0058: Text Objects
+
+Status: Draft
+Date: January 2026
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+ABSTRACT
+------------------------------------------------------------------------
+
+Text in Cyberspace is not files. This Memo specifies the native text
+object representation: gap buffers for editing, merkle chunks for
+storage, and how editors like Electric Pencil and TECO share a common
+substrate.
+
+
+------------------------------------------------------------------------
+THE PROBLEM WITH FILES
+------------------------------------------------------------------------
+
+Unix thinks text lives in files. Files are byte streams with names. You
+open them, read them into memory, edit the memory, write them back. The
+file is the truth; memory is a copy.
+
+This is backwards. In Cyberspace, the text IS the object. It lives in
+the soup, content-addressed. There is no 'file' to open—there is only
+the text, and operations on it. Editors are views, not owners.
+
+
+------------------------------------------------------------------------
+TEXT AS OBJECT
+------------------------------------------------------------------------
+
+A text object has:
+
+  * Content: the characters
+  * Cursor: current position (for editing)
+  * Hash: content address in the soup
+  * Modified: dirty bit for seal semantics
+
+Text objects are created, edited, and sealed. Once sealed, they are
+immutable—editing creates a new object with a new hash. The soup
+naturally preserves history.
+
+
+------------------------------------------------------------------------
+GAP BUFFER: THE EDITING REPRESENTATION
+------------------------------------------------------------------------
+
+For editing, text uses a gap buffer—the same data structure Emacs has
+used for 50 years. A gap buffer is an array with a gap at the cursor
+position:
+
+
+    [text before cursor][    gap    ][text after cursor]
+
+Operations:
+
+
+  Operation         Cost  Mechanism              
+  Insert at cursor  O(1)  Fill gap from left     
+  Delete at cursor  O(1)  Expand gap             
+  Move cursor       O(n)  Shift text across gap  
+  Random access     O(1)  Index arithmetic       
+
+The gap buffer is mutable. It is the working copy during editing. When
+you seal, the gap is closed and the content is hashed.
+
+
+------------------------------------------------------------------------
+MERKLE CHUNKS: THE STORAGE REPRESENTATION
+------------------------------------------------------------------------
+
+For storage in the soup, large text objects are chunked into a merkle
+tree:
+
+
+    (text-object
+      (chunks
+        sha512:abc123...  ; first 64KB
+        sha512:def456...  ; second 64KB
+        sha512:789ghi...  ; third 64KB
+      )
+      (root sha512:xyz789...))
+
+Small edits touch one chunk, creating one new hash. The rest of the tree
+stays the same. This scales to 2^128 addressable objects without copying
+gigabytes on every keystroke.
+
+
+------------------------------------------------------------------------
+SEAL SEMANTICS
+------------------------------------------------------------------------
+
+Text follows the chaotic/quiescent state model (Memo-010):
+
+  * Chaotic: text is being edited, gap buffer is mutable
+  * Quiescent: text is sealed, content-addressed, immutable
+
+Sealing a text object:
+
+
+    (define hash (text-seal t))  ; returns content address
+
+Unsealing retrieves a copy for editing:
+
+
+    (define t (text-unseal hash))  ; new gap buffer, same content
+
+Every sealed version persists. Undo is just pointing to the previous
+hash. Branching is natural—two editors can seal independently from the
+same starting point.
+
+
+------------------------------------------------------------------------
+EDITORS AS VIEWS
+------------------------------------------------------------------------
+
+Electric Pencil and TECO both use the same text object. They differ in
+interface, not representation:
+
+
+  Editor           Heritage      Interface         Style                 
+  Electric Pencil  Shrayer 1976  Full-screen ANSI  Visual, WYSIWYG       
+  TECO             Murphy 1962   Command-line      Programmatic, macros  
+
+Both import the text module. Both operate on gap buffers. Both seal to
+the soup. The buffer is the truth; editors are lenses.
+
+
+------------------------------------------------------------------------
+API SUMMARY
+------------------------------------------------------------------------
+
+Construction:
+
+
+    (text-new)              ; empty text
+    (text-from-string s)    ; from string
+    (text-from-file path)   ; load file (for bootstrap)
+
+Query:
+
+
+    (text-length t)         ; character count
+    (text-cursor t)         ; cursor position
+    (text-char-at t pos)    ; character at position
+    (text->string t)        ; extract as string
+    (text-modified? t)      ; dirty bit
+
+Movement:
+
+
+    (text-goto! t pos)      ; absolute position
+    (text-move! t delta)    ; relative movement
+    (text-beginning! t)     ; start of text
+    (text-end! t)           ; end of text
+    (text-line-start! t)    ; start of line
+    (text-line-end! t)      ; end of line
+
+Editing:
+
+
+    (text-insert! t str)    ; insert at cursor
+    (text-delete! t n)      ; delete n chars forward
+    (text-kill-line! t)     ; delete to end of line
+    (text-replace! t s e new) ; replace region
+
+Search:
+
+
+    (text-search t pattern) ; find forward, return position or #f
+    (text-search-backward t pattern)
+
+Soup:
+
+
+    (text-seal t)           ; seal to soup, return hash
+    (text-unseal hash)      ; load from soup
+    (text-hash t)           ; content address
+
+
+------------------------------------------------------------------------
+IMPLEMENTATION NOTES
+------------------------------------------------------------------------
+
+The gap buffer implementation is in text.scm. Key decisions:
+
+  * Vector of characters, not string (for mutation)
+  * Automatic growth when gap fills (doubling)
+  * Gap size defaults to 256 characters
+  * Line operations scan for newlines (no line table yet)
+
+Future optimizations:
+
+  * Rope overlay for very large texts
+  * Line index for O(1) line access
+  * Piece table variant for collaborative editing
+  * Lazy chunk loading for huge objects
+
+
+------------------------------------------------------------------------
+SEE ALSO
+------------------------------------------------------------------------
+
+  * Memo-0022: Content-Addressed Storage
+  * Memo-0051: Terminal Interface Conventions
+  * text.scm: Implementation
+  * pencil.scm: Electric Pencil editor
+  * teco.scm: TECO editor
+
+------------------------------------------------------------------------
