@@ -1,4 +1,4 @@
-;;; cyberspace-server.scm - HTTP/WebSocket server for Cyberspace.app
+;;; server.scm - HTTP/WebSocket server for Cyberspace.app
 ;;;
 ;;; Serves the web UI and provides WebSocket bridge to Scheme REPL.
 ;;; Lightweight embedded server for the native macOS application.
@@ -10,7 +10,6 @@
 ;;;   GET /static/*   - Static assets (CSS, JS)
 ;;;   WS  /ws         - WebSocket REPL connection
 ;;;
-;;; Copyright (c) 2026 Yoyodyne. See LICENSE.
 
 (import scheme
         (chicken base)
@@ -259,7 +258,9 @@
     (flush-output out)))
 
 (define (ws-send-text out msg)
-  (ws-send-frame out 1 msg))
+  (handle-exceptions exn
+    (printf "[ws] Send failed: ~a~n" ((condition-property-accessor 'exn 'message) exn))
+    (ws-send-frame out 1 msg)))
 
 (define (ws-send-close out)
   (ws-send-frame out 8 ""))
@@ -276,10 +277,10 @@
 (define (start-pty-repl)
   "Start REPL with PTY via script(1) for VT100."
   (let* ((cwd (current-directory))
-         (repl (cond ((file-exists? (make-pathname cwd "cyberspace-repl"))
-                      (list (make-pathname cwd "cyberspace-repl")))
+         (repl (cond ((file-exists? (make-pathname cwd "repl"))
+                      (list (make-pathname cwd "repl")))
                      (else (list "/opt/homebrew/bin/csi" "-q" "-w"
-                                 (make-pathname cwd "cyberspace-repl.scm"))))))
+                                 (make-pathname cwd "repl.scm"))))))
     (receive (stdout stdin pid) (process "/usr/bin/script" (cons* "-q" "/dev/null" repl))
       (set! *pty-pid* pid)
       (set! *pty-master* (cons stdout stdin))
@@ -287,10 +288,10 @@
 
 (define (ensure-repl-running ws-out)
   "Start the REPL if not running, connect output to WebSocket"
+  ;; Always update the WebSocket output for new connections
+  (set! *ws-out* ws-out)
   (unless (and *pty-pid* *pty-master*)
     (start-pty-repl)
-    (set! *ws-out* ws-out)
-
     ;; Start reader thread - robust: auto-restart REPL on EOF
     (set! *reader-thread*
       (thread-start!
@@ -520,21 +521,23 @@
 
 (define (handle-request in out)
   (let ((request-line (read-line in)))
-    (when (and request-line (not (eof-object? request-line)))
-      (let-values (((method path) (parse-request-line request-line)))
-        (let ((headers (parse-headers in)))
-          (printf "[http] ~a ~a~n" method path)
+    (if (or (not request-line) (eof-object? request-line))
+        #f
+        (let-values (((method path) (parse-request-line request-line)))
+          (let ((headers (parse-headers in)))
+            (printf "[http] ~a ~a~n" method path)
 
-          (cond
-            ;; WebSocket upgrade
-            ((and (equal? path "/ws")
-                  (assoc "upgrade" headers)
-                  (string-ci=? (cdr (assoc "upgrade" headers)) "websocket"))
-             (handle-websocket in out headers))
+            (cond
+              ;; WebSocket upgrade - returns 'websocket to keep connection open
+              ((and (equal? path "/ws")
+                    (assoc "upgrade" headers)
+                    (string-ci=? (cdr (assoc "upgrade" headers)) "websocket"))
+               (handle-websocket in out headers)
+               'websocket)
 
-            ;; Main page
-            ((or (equal? path "/") (equal? path "/index.html"))
-             (http-ok out "text/html; charset=utf-8" (index-html)))
+              ;; Main page
+              ((or (equal? path "/") (equal? path "/index.html"))
+               (http-ok out "text/html; charset=utf-8" (index-html)))
 
             ;; API: system info
             ((equal? path "/api/info")
@@ -808,7 +811,9 @@
       setTimeout(() => {
         fitAddon.fit();
         term.focus();
-      }, 100);
+      }, 200);
+      // Also focus when window gets focus
+      window.addEventListener('focus', () => { if(term) term.focus(); });
 
       // Handle window resize
       window.addEventListener('resize', () => {
@@ -1037,10 +1042,11 @@ EOF
                     ((condition-property-accessor 'exn 'message) exn))
                   (close-input-port in)
                   (close-output-port out))
-                (begin
-                  (handle-request in out)
-                  (close-input-port in)
-                  (close-output-port out))))))
+                (let ((keep-alive (handle-request in out)))
+                  ;; WebSocket connections return 'websocket and manage their own lifecycle
+                  (unless (eq? keep-alive 'websocket)
+                    (close-input-port in)
+                    (close-output-port out)))))))
         (loop)))))
 
 ;; ============================================================
