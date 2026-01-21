@@ -3,7 +3,7 @@
 
 (memo
   (number 43)
-  (title "Cryptographic Entropy Sources")
+  (title "Entropy Pool")
   (section
     "Abstract"
     (p "All cryptographic operations in Cyberspace require high-quality entropy. This Memo specifies the canonical entropy sources for each platform, ensuring consistent, auditable, and secure randomness across the entire system."))
