@@ -53,7 +53,10 @@
   (section
     "License"
     (p "The Library of Cyberspace is released under the MIT License:")
-    (code "Copyright (c) Derrell Piper
+    (code "Copyright (c) 2026 ddp@eludom.net
+
+NOTE: This software is currently unpublished and proprietary.
+The MIT License will apply upon public release.
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -67,7 +70,10 @@ conditions:
 The above copyright notice and this permission notice shall be
 included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.")
+THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT.")
     (p "No GNU. No GPL. No copyleft. Mathematics belongs to everyone."))
 
   (section
