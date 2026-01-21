@@ -132,6 +132,10 @@ if [[ -o interactive ]]; then
         sysctl -n hw.acpi.battery.life 2>/dev/null | awk '{print $1 "%"}'
     }
 
+    # History helpers
+    h() { history ${1:--50}; }             # last N commands (default 50)
+    hg() { history 1 | grep -i "$1"; }     # search history
+
     updateapalooza() {
         brew update
         opam update
@@ -195,6 +199,14 @@ if [[ -o interactive ]]; then
     alias lsuse='ls -lau'
     alias lstree='tree -h -L 2 . && echo "Total size: $(du -sh . | cut -f1)"'
     alias lsxattr='ls -la@'
+
+    # Zsh glob qualifiers (requires EXTENDED_GLOB)
+    alias lsdir='ls -ld *(/)'              # directories only
+    alias lsfile='ls -la *(.)'             # files only
+    alias lsexe='ls -la *(*)'              # executables only
+    alias lsrecent='ls -la *(m-1)'         # modified in last day
+    alias lsbig='ls -lahS *(.L+1M)'        # files > 1MB, sorted by size
+    alias lsempty='ls -la *(.L0)'          # empty files
     alias mayfair='rlwrap ~/src/dvcs/BIN/microvax3900'
     alias netscan='nmap -sT -v 192.168.0.0/24'
     alias norns='ping -c 1 192.168.0.161; ping6 -c1 norns.local'
