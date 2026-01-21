@@ -109,7 +109,7 @@
 
 (define (publish-library)
   (print "\n=== Publishing library ===")
-  (let ((dest "www.yoyodyne.com:public_html/ddp/cyberspace/spki/scheme/"))
+  (let ((dest "www.yoyodyne.com:ddp/cyberspace/spki/scheme/"))
     ;; Publish .so modules and import files
     (run (sprintf "rsync -avz --include='*.so' --include='*.import.scm' --exclude='*' . ~a" dest))
     ;; Publish source for reference
