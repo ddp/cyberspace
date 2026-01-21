@@ -85,17 +85,19 @@ cat > index.html << 'HEADER'
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       max-width: 900px;
       margin: 0 auto;
-      padding: 2rem;
-      line-height: 1.6;
+      padding: 0.5rem;
+      line-height: 1.1;
       color: #333;
     }
-    h1 { border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
-    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd; }
+    h1 { border-bottom: 1px solid #333; padding-bottom: 0.1rem; margin: 0 0 0.3rem 0; font-size: 1.2rem; }
+    h2 { margin: 0.4rem 0 0.1rem 0; font-size: 1rem; }
+    p { margin: 0.1rem 0; font-size: 0.9rem; }
+    table { border-collapse: collapse; width: 100%; margin: 0.1rem 0; }
+    th, td { padding: 0.1rem 0.3rem; text-align: left; border-bottom: 1px solid #ddd; font-size: 0.9rem; }
     th { background: #f5f5f5; }
-    .formats a { margin-right: 0.5rem; }
-    .kwic { font-family: monospace; font-size: 0.85rem; }
-    .kwic td { padding: 0.25rem 0.5rem; white-space: nowrap; }
+    .formats a { margin-right: 0.3rem; font-size: 0.85rem; }
+    .kwic { font-family: monospace; font-size: 0.8rem; }
+    .kwic td { padding: 0 0.2rem; white-space: nowrap; border-bottom: none; }
     .kwic .left { text-align: right; color: #666; }
     .kwic .keyword { font-weight: bold; }
     .kwic .right { text-align: left; color: #666; }
