@@ -241,6 +241,21 @@
        (cons (list->string (reverse chars)) (+ p 1)))
       (else (loop (+ p 1) (cons (string-ref str p) chars))))))
 
+(define (find-matching str pos open close)
+  "Find matching delimiter, handling nesting. Returns position after close."
+  (let loop ((p pos) (depth 1))
+    (cond
+      ((>= p (string-length str)) p)
+      ((char=? (string-ref str p) open) (loop (+ p 1) (+ depth 1)))
+      ((char=? (string-ref str p) close)
+       (if (= depth 1) (+ p 1) (loop (+ p 1) (- depth 1))))
+      (else (loop (+ p 1) depth)))))
+
+(define (extract-block str pos open close)
+  "Extract block between delimiters, return (content . pos-after-close)"
+  (let ((end (find-matching str pos open close)))
+    (cons (substring str pos (- end 1)) end)))
+
 (define (execute-commands str)
   "Execute a TECO command string"
   (let loop ((pos 0) (num #f))
@@ -339,6 +354,99 @@
            (when (< (+ pos 1) (string-length str))
              (set! num (q-get (string-ref str (+ pos 1)))))
            (loop (+ pos 2) num))
+          ;; Mq - execute macro in Q-register
+          ((#\M)
+           (when (< (+ pos 1) (string-length str))
+             (let ((macro (q-get (string-ref str (+ pos 1)))))
+               (when (string? macro)
+                 (execute-commands macro))))
+           (loop (+ pos 2) #f))
+
+          ;; Value commands - return numeric values
+          ((#\.) (loop (+ pos 1) *dot*))          ; . = current position
+          ((#\B) (loop (+ pos 1) 0))              ; B = beginning (always 0)
+          ;; Z already handled above as modifier
+
+          ;; Arithmetic
+          ((#\+)
+           (if num
+               (let ((result (parse-number str (+ pos 1))))
+                 (loop (cdr result) (+ num (or (car result) 0))))
+               (loop (+ pos 1) num)))
+          ((#\*)
+           (if num
+               (let ((result (parse-number str (+ pos 1))))
+                 (loop (cdr result) (* num (or (car result) 1))))
+               (loop (+ pos 1) num)))
+          ((#\/)
+           (if num
+               (let ((result (parse-number str (+ pos 1))))
+                 (let ((divisor (or (car result) 1)))
+                   (loop (cdr result) (if (zero? divisor) 0 (quotient num divisor)))))
+               (loop (+ pos 1) num)))
+          ((#\&)  ; bitwise AND
+           (if num
+               (let ((result (parse-number str (+ pos 1))))
+                 (loop (cdr result) (bitwise-and num (or (car result) 0))))
+               (loop (+ pos 1) num)))
+          ((#\#)  ; bitwise OR
+           (if num
+               (let ((result (parse-number str (+ pos 1))))
+                 (loop (cdr result) (bitwise-ior num (or (car result) 0))))
+               (loop (+ pos 1) num)))
+
+          ;; Conditionals: n"Xcommands'
+          ;; "E = if equal to 0, "N = if not equal, "G = if greater, "L = if less
+          ((#\")
+           (if (< (+ pos 1) (string-length str))
+               (let* ((cond-type (char-upcase (string-ref str (+ pos 1))))
+                      (test-val (or num 0))
+                      (block (extract-block str (+ pos 2) #\" #\'))
+                      (body (car block))
+                      (end-pos (cdr block))
+                      (do-it (case cond-type
+                               ((#\E) (zero? test-val))        ; Equal to 0
+                               ((#\N) (not (zero? test-val)))  ; Not equal to 0
+                               ((#\G) (> test-val 0))          ; Greater than 0
+                               ((#\L) (< test-val 0))          ; Less than 0
+                               ((#\T) #t)                       ; Always true
+                               ((#\F) #f)                       ; Always false
+                               (else #f))))
+                 (when do-it (execute-commands body))
+                 (loop end-pos #f))
+               (loop (+ pos 1) #f)))
+
+          ;; Loops: n<commands> - repeat n times (0 = infinite until F;)
+          ((#\<)
+           (let* ((block (extract-block str (+ pos 1) #\< #\>))
+                  (body (car block))
+                  (end-pos (cdr block))
+                  (count (or num 1)))
+             (if (zero? count)
+                 ;; Infinite loop - need F; to break
+                 (let inf-loop ()
+                   (let ((result (execute-commands body)))
+                     (unless (eq? result 'break)
+                       (inf-loop))))
+                 ;; Counted loop
+                 (let count-loop ((n count))
+                   (when (> n 0)
+                     (let ((result (execute-commands body)))
+                       (unless (eq? result 'break)
+                         (count-loop (- n 1)))))))
+             (loop end-pos #f)))
+
+          ;; F; - break from loop (semicolon = success exit)
+          ((#\F)
+           (if (and (< (+ pos 1) (string-length str))
+                    (char=? (string-ref str (+ pos 1)) #\;))
+               'break
+               (loop (+ pos 1) #f)))
+
+          ;; = - type numeric value
+          ((#\=)
+           (printf "~a~%" (or num 0))
+           (loop (+ pos 1) #f))
 
           ;; Ctrl-C (in command string) = abort
           ((#\x03) 'abort)
