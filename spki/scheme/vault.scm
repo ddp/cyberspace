@@ -102,6 +102,10 @@
    vault-config
    get-vault-principal
 
+   ;; Provenance (introspectable)
+   vault-license
+   vault-copyright
+
    ;; Capability Set (weave self-awareness)
    capability-add!
    capability-remove!
@@ -192,6 +196,22 @@
       (age-recipients . ())        ; List of age recipients (public keys or identities)
       (age-identity . #f)          ; Path to age identity file for decryption
       (migration-dir . "migrations"))) ; Directory for migration scripts
+
+  ;; Vault provenance - embedded copyright and license (introspectable)
+  (define *vault-provenance*
+    '((copyright . "Copyright (c) 2026 ddp@eludom.net")
+      (license . "MIT")
+      (license-status . "unpublished-proprietary")
+      (license-note . "License applies upon public release")
+      (project . "Library of Cyberspace")))
+
+  (define (vault-license)
+    "Return vault license and copyright information (introspectable metadata)"
+    *vault-provenance*)
+
+  (define (vault-copyright)
+    "Return copyright string"
+    (alist-ref 'copyright *vault-provenance*))
 
   (define (vault-config key #!optional value)
     "Get or set vault configuration"
