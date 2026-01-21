@@ -62,6 +62,10 @@ fi
 echo "  Signing (ad-hoc)..."
 codesign --force --deep --sign - "$APP_BUNDLE" 2>/dev/null || true
 
+# Register with LaunchServices (refreshes icon cache)
+echo "  Registering with LaunchServices..."
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_BUNDLE" 2>/dev/null || true
+
 echo "Done. Run with: open $APP_BUNDLE"
 echo ""
 echo "Or from command line:"
