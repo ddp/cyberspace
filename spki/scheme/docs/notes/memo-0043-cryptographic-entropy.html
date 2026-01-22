@@ -127,39 +127,39 @@ randombytes_buf(buffer, size)
 <p>Randomness is the foundation of all cryptography. This section explores the physics and engineering of true randomness.</p>
 <h3>The Entropy Hierarchy</h3>
 <pre class="diagram">
-┌─────────────────────────────────────────────────────────────┐
-│                    Entropy Quality Pyramid                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│                    ┌───────────────┐                         │
-│           ★★★     │  Quantum RNG  │  ← TRUE RANDOMNESS      │
-│                    └───────────────┘    (required for        │
-│                         ▲                cryptographic       │
-│                         │                security)           │
-│                    ─────┴─────                               │
-│                    SECURITY BOUNDARY                         │
-│                    ───────────────                           │
-│                         │                                    │
-│                         ▼                                    │
-│                  ┌───────────────────┐                       │
-│                  │  Hardware TRNG    │  ← Best effort       │
-│                  └───────────────────┘    (should feed       │
-│                ┌───────────────────────┐   quantum source)   │
-│                │  Environmental/Analog │                     │
-│                └───────────────────────┘                     │
-│              ┌───────────────────────────┐                   │
-│              │  Public Beacons (NIST)    │  ← Verifiable     │
-│              └───────────────────────────┘                   │
-│            ┌───────────────────────────────┐                 │
-│            │  OS Entropy Pool              │  ← Mixed        │
-│            └───────────────────────────────┘                 │
-│          ┌───────────────────────────────────┐               │
-│          │  CSPRNG (seeded from above)       │  ← Expansion  │
-│          └───────────────────────────────────┘               │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│                   Entropy Quality Pyramid                   │
+├───────────────────────────────────────────────────────────┤
+│                                                             │
+│                    ┌───────────────┐                        │
+│           ***      │  Quantum RNG  │  &lt;- TRUE RANDOMNESS    │
+│                    └───────────────┘     (required for      │
+│                          ^               cryptographic      │
+│                          │               security)          │
+│                    ──────┴──────                            │
+│                    SECURITY BOUNDARY                        │
+│                    ─────────────────                        │
+│                          │                                  │
+│                          v                                  │
+│                  ┌───────────────────┐                      │
+│                  │  Hardware TRNG    │  &lt;- Best effort      │
+│                  └───────────────────┘     (should feed     │
+│                ┌───────────────────────┐   quantum source)  │
+│                │  Environmental/Analog │                    │
+│                └───────────────────────┘                    │
+│              ┌───────────────────────────┐                  │
+│              │  Public Beacons (NIST)    │  &lt;- Verifiable   │
+│              └───────────────────────────┘                  │
+│            ┌───────────────────────────────┐                │
+│            │  OS Entropy Pool              │  &lt;- Mixed      │
+│            └───────────────────────────────┘                │
+│          ┌───────────────────────────────────┐              │
+│          │  CSPRNG (seeded from above)       │  &lt;- Expand   │
+│          └───────────────────────────────────┘              │
+│                                                             │
+└───────────────────────────────────────────────────────────┘
 
-   ★★★ = Cryptographic operations MUST ultimately trace to quantum sources
+   *** = Cryptographic operations MUST trace to quantum sources
 </pre>
 <p>Critical distinction: Everything below the security boundary is computationally secure (hard to predict), not information-theoretically secure (impossible to predict). For operations like key generation that must withstand future advances in computation and modeling, only quantum sources provide provable security.</p>
 <h3>Practical Access to Quantum Randomness</h3>
