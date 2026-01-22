@@ -20,8 +20,8 @@
       (table
         (header "Mode " "Prompt " "Commands ")
         (row "novice " ": " "inspect soup, describe vault, help ")
-        (row "schemer " ": " "(soup 'keys), (vault-stat), expressions "))
-      (p "Novice mode is the default. The prompt is the same. The difference is what commands are available and how results are presented."))
+        (row "schemer " "λ " "(soup 'keys), ,s ,p ,x, expressions "))
+      (p "Novice mode is the default. Schemer mode uses the lambda prompt (λ). The difference is what commands are available and how results are presented."))
 
     (subsection
       "2.2 Dylan-Style Inspectors"
@@ -46,15 +46,17 @@
 
     (subsection
       "2.5 Mode Switching"
-      (p "The system auto-detects mode from usage. Type parentheses, become a schemer:")
+      (p "The system auto-detects mode from usage. Type parentheses or comma commands, become a schemer:")
       (code ": (+ 1 2 3)\nDetected Scheme usage - switching to schemer mode.\nType (novice) to switch back.\n6")
+      (p "Comma commands also assert schemer mode:")
+      (code ": ,s\nλ ")
       (p "Explicit switching:")
       (table
         (header "Command " "Effect ")
-        (row "schemers " "Switch to schemer mode ")
-        (row "novice " "Switch to novice mode ")
-        (row "(novice) " "Also works with parens "))
-      (p "Schemer mode shows the λ prompt, enables (enable-inspector!) for debug> prompts, and treats the REPL as a full Scheme environment. Self-selecting: use parentheses and you become a schemer.")))
+        (row "(schemer) " "Switch to schemer mode ")
+        (row "(novice) " "Switch to novice mode ")
+        (row ",anything " "Comma usage implies schemer "))
+      (p "Schemer mode shows the λ prompt and treats the REPL as a full Scheme environment. Self-selecting: use parentheses or comma commands and you become a schemer.")))
 
   (section
     "3. Box Drawing"
@@ -97,9 +99,10 @@
       "4.2 Prompt Variants"
       (table
         (header "Context " "Prompt " "Usage ")
-        (row "Normal " ":  " "Default ")
-        (row "Continuation " ">  " "Multi-line input ")
-        (row "Debug " "[n]:  " "In debugger at frame n "))))
+        (row "Novice " ": " "Default, English-like commands ")
+        (row "Schemer " "λ " "Full Scheme mode ")
+        (row "Continuation " "> " "Multi-line input ")
+        (row "Debug " "[n]: " "In debugger at frame n "))))
   (section
     "5. Color and Emphasis"
     (subsection
@@ -197,11 +200,52 @@
     "11. Single-Character Shortcuts"
     (table
       (header "Symbol " "Function " "Description ")
-      (row "\\" ".\\" " " "status " "Compact status display ")
-      (row "\\" "?\\" " " "help " "Show help "))
-    (p "These use pipe-delimited symbols to avoid conflict with Scheme."))
+      (row "." "status " "Compact status display ")
+      (row "?" "help " "Show help (novice mode) "))
+    (p "These single characters work in novice mode without prefix."))
   (section
-    "12. Terminal Window"
+    "12. Comma Commands (Schemer Mode)"
+    (p "Comma commands follow Chicken CSI conventions. Using any comma command asserts schemer mode (prompt changes to λ).")
+    (subsection
+      "12.1 Cyberspace Commands"
+      (table
+        (header "Command " "Description ")
+        (row ",soup " "Browse vault contents ")
+        (row ",library " "Show available modules ")
+        (row ",search PAT " "Search documentation ")
+        (row ",kwic PAT " "KWIC concordance search ")))
+    (subsection
+      "12.2 REPL Commands"
+      (table
+        (header "Command " "Description ")
+        (row ",s " "Status ")
+        (row ",i EXPR " "Inspect expression ")
+        (row ",e FILE " "Edit file in $EDITOR ")
+        (row ",q " "Quit (alias for (bye)) ")
+        (row ",? " "Help (mode-aware) ")))
+    (subsection
+      "12.3 Chicken CSI Commands"
+      (table
+        (header "Command " "Description ")
+        (row ",p EXPR " "Pretty-print expression ")
+        (row ",x EXPR " "Macro-expand expression ")
+        (row ",t EXPR " "Time expression evaluation ")
+        (row ",du EXPR " "Hex dump of u8vector ")
+        (row ",r " "System info (cores, memory, uptime) ")
+        (row ",sh CMD " "Execute shell command ")
+        (row ",bt " "Show backtrace ")
+        (row ",exn " "Show last exception ")))
+    (subsection
+      "12.4 Module Commands"
+      (table
+        (header "Command " "Description ")
+        (row ",a PAT " "Apropos - search symbols ")
+        (row ",l FILE " "Load Scheme file ")
+        (row ",m MOD " "Enter module ")
+        (row ",d SYM " "Describe symbol ")))
+    (p "The comma is the escape to Chicken. Use Scheme syntax or Chicken escapes—you win Scheme either way."))
+  (section
+    "13. Terminal Window"
     (subsection
       "12.1 Title"
       (p "Set terminal title on startup:")
@@ -211,7 +255,7 @@
       "12.2 Clear Screen"
       (code scheme "(define (clear)\n  (display \"\\x1b[2J\\x1b[H\")\n  (void))")))
   (section
-    "13. Implementation Notes"
+    "14. Implementation Notes"
     (subsection
       "13.1 UTF-8 and string-ref"
       (p "Do NOT use string-ref on strings containing multi-byte UTF-8 characters. Use vectors of strings instead:")
@@ -220,7 +264,7 @@
       "13.2 Width Calculations"
       (p "String length for box padding must account for display width, not byte length. ASCII characters are safe. For emoji or CJK, additional handling is needed.")))
   (section
-    "14. Linting Checklist"
+    "15. Linting Checklist"
     (p "When auditing terminal output:")
     (list
       (item "[ ] Boxes use Unicode box-drawing characters")
@@ -234,7 +278,7 @@
       (item "[ ] No ASCII art boxes (+---, |, etc.)")
       (item "[ ] No tabs in output (spaces only)")))
   (section
-    "15. References"
+    "16. References"
     (list
       (item "Memo-0051 - Friendly Interface (GUI counterpart)")
       (item "Memo-0001 - Architecture (\"English on top, Scheme underneath\")")
@@ -242,6 +286,7 @@
       (item "ECMA-48 - Control Functions for Coded Character Sets (VT100)")))
   (section
     "Changelog"
+    (p "- 2026-01-22 — Add comma commands (CSI-style), schemer λ prompt, mode assertion")
     (p "- 2026-01-13 — Add boot verbosity levels (shadow, whisper, portal, chronicle, oracle)")
     (p "- 2026-01-11 — Initial specification")))
 
