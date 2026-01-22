@@ -152,7 +152,7 @@
       ((or (= cp #x2193) (= cp #x25BC))  ; ↓ ▼
        `((text ,cx ,cy "↓")))
 
-      ;; Block elements
+      ;; Block elements (solid)
       ((= cp #x2588) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 1.0)))       ; █
       ((= cp #x2587) `((rect ,(- cx hw) ,(- cy (* hh 0.75)) ,cell-width ,(* cell-height 0.875) 1.0)))
       ((= cp #x2586) `((rect ,(- cx hw) ,(- cy (* hh 0.5)) ,cell-width ,(* cell-height 0.75) 1.0)))
@@ -162,6 +162,11 @@
       ((= cp #x2582) `((rect ,(- cx hw) ,(+ cy (* hh 0.5)) ,cell-width ,(* cell-height 0.25) 1.0)))
       ((= cp #x2581) `((rect ,(- cx hw) ,(+ cy (* hh 0.75)) ,cell-width ,(* cell-height 0.125) 1.0)))
 
+      ;; Shade characters (with opacity)
+      ((= cp #x2591) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 0.25)))      ; ░ light shade
+      ((= cp #x2592) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 0.50)))      ; ▒ medium shade
+      ((= cp #x2593) `((rect ,(- cx hw) ,(- cy hh) ,cell-width ,cell-height 0.75)))      ; ▓ dark shade
+
       ;; Math symbols - render as text
       ((= cp #x2205) `((text ,cx ,cy "∅")))  ; ∅
 
@@ -170,6 +175,29 @@
 (define (utf8-length str)
   "Count Unicode characters in UTF-8 string."
   (length (utf8-chars str)))
+
+(define (codepoint-display-width cp)
+  "Return display width of a codepoint (1 or 2 cells).
+   Emojis and wide characters take 2 cells in monospace fonts."
+  (cond
+    ;; Emoji ranges (commonly used)
+    ((<= #x1F300 cp #x1F9FF) 2)   ; Miscellaneous Symbols, Emoticons, etc.
+    ((<= #x2600 cp #x26FF) 2)     ; Miscellaneous Symbols
+    ((<= #x2700 cp #x27BF) 2)     ; Dingbats
+    ;; CJK and other wide characters
+    ((<= #x1100 cp #x115F) 2)     ; Hangul Jamo
+    ((<= #x2E80 cp #x9FFF) 2)     ; CJK
+    ((<= #xAC00 cp #xD7A3) 2)     ; Hangul Syllables
+    ((<= #xF900 cp #xFAFF) 2)     ; CJK Compatibility
+    ((<= #xFE10 cp #xFE1F) 2)     ; Vertical forms
+    ((<= #xFF00 cp #xFF60) 2)     ; Fullwidth forms
+    ((<= #x20000 cp #x2FFFF) 2)   ; CJK Extension B+
+    (else 1)))
+
+(define (display-width str)
+  "Calculate display width of string in monospace character cells."
+  (apply + (map (lambda (cp-pair) (codepoint-display-width (car cp-pair)))
+                (utf8-chars str))))
 
 (define (string-ends-with-box-edge? str)
   "Check if string ends with a box right edge (│ or ┐ or ┘ or ┤)."
@@ -181,7 +209,7 @@
 (define (fix-box-line-widths lines)
   "Auto-fix box diagram lines to have consistent right-edge alignment.
    Lines ending with box edges are adjusted to match the most common width."
-  (let* ((char-counts (map utf8-length lines))
+  (let* ((char-counts (map display-width lines))
          ;; Find widths of lines ending with box edges
          (box-edge-info (filter-map
                          (lambda (line count)
@@ -217,12 +245,13 @@
                                  (last-char (cdr (list-ref chars (- n 1))))
                                  ;; Find and remove trailing spaces before edge
                                  (prefix-chars (take chars (- n 1)))
+                                 (to-remove (- diff))  ; positive count of columns to remove
                                  (trimmed (let trim-loop ((cs (reverse prefix-chars))
-                                                          (to-remove (- diff)))
-                                            (if (or (null? cs) (>= to-remove 0))
+                                                          (remaining to-remove))
+                                            (if (or (null? cs) (<= remaining 0))
                                                 (reverse cs)
                                                 (if (= (car (car cs)) 32)  ; space
-                                                    (trim-loop (cdr cs) (+ to-remove 1))
+                                                    (trim-loop (cdr cs) (- remaining 1))
                                                     (reverse cs))))))
                             (string-append (apply string-append (map cdr trimmed)) last-char)))))))
                lines char-counts)))))
@@ -230,7 +259,7 @@
 (define (normalize-box-lines lines)
   "Normalize box diagram lines - fix widths and pad to max."
   (let* ((fixed (fix-box-line-widths lines))
-         (char-counts (map utf8-length fixed))
+         (char-counts (map display-width fixed))
          (max-len (apply max 1 char-counts)))
     (map (lambda (line count)
            (let ((pad (- max-len count)))
@@ -256,7 +285,7 @@
          ;; Normalize line widths so right box edges align properly
          (lines (normalize-box-lines raw-lines))
          (nrows (length lines))
-         (ncols (apply max 1 (map utf8-length lines)))
+         (ncols (apply max 1 (map display-width lines)))
          (width (* ncols cell-width))
          (height (* nrows cell-height))
          (elements '()))
@@ -282,6 +311,7 @@
                 (let* ((char-pair (car chars))
                        (cp (car char-pair))
                        (char-str (cdr char-pair))
+                       (char-width (codepoint-display-width cp))
                        (cx (+ (* col cell-width) (/ cell-width 2))))
                   (cond
                     ;; Box-drawing character - flush text, emit primitive
@@ -289,14 +319,14 @@
                      (flush-text-run)
                      (let ((prims (codepoint->svg cp cx cy)))
                        (set! elements (append elements prims)))
-                     (col-loop (cdr chars) (+ col 1) '() (+ col 1)))
+                     (col-loop (cdr chars) (+ col char-width) '() (+ col char-width)))
                     ;; Space - flush text, skip
                     ((= cp 32)
                      (flush-text-run)
                      (col-loop (cdr chars) (+ col 1) '() (+ col 1)))
-                    ;; Regular text character - accumulate
+                    ;; Regular text character - accumulate (advance by char width)
                     (else
-                     (col-loop (cdr chars) (+ col 1)
+                     (col-loop (cdr chars) (+ col char-width)
                                (cons char-str text-run)
                                (if (null? text-run) col run-start))))))))
         (row-loop (cdr lines) (+ row 1))))
@@ -328,9 +358,13 @@
             (let ((x (list-ref elem 1))
                   (y (list-ref elem 2))
                   (w (list-ref elem 3))
-                  (h (list-ref elem 4)))
-              (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\"/>\n"
-                               x y w h) out)))
+                  (h (list-ref elem 4))
+                  (opacity (if (> (length elem) 5) (list-ref elem 5) 1.0)))
+              (if (< opacity 1.0)
+                  (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\" fill-opacity=\"~a\"/>\n"
+                                   x y w h opacity) out)
+                  (display (format "<rect x=\"~a\" y=\"~a\" width=\"~a\" height=\"~a\"/>\n"
+                                   x y w h) out))))
            ((text-span)
             (let ((x (list-ref elem 1))
                   (y (list-ref elem 2))

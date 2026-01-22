@@ -1,7 +1,6 @@
 (memo
   (number 53)
   (title "AI Assistants")
-  (status "Draft")
   (date "2026-01-13")
   (author "Derrell Piper" "ddp@eludom.net")
 

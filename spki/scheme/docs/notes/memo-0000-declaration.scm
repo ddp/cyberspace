@@ -4,7 +4,6 @@
 (memo
   (number 0)
   (title "Declaration of Cyberspace")
-  (status "Ratified")
   (date "January 2026 (2026-01-01T00:00:00Z)")
 
   (section

@@ -4,7 +4,6 @@
 (memo
   (number 9)
   (title "Designer Notes")
-  (status "Draft")
   (date "January 2026 (2026-01-22T04:31:00Z)")
   (author "Derrell Piper" "ddp@eludom.net")
 

@@ -1,7 +1,6 @@
 (memo
   (number 58)
   (title "Text Objects")
-  (status "Draft")
   (date "January 2026 (2026-01-20T00:00:00Z)")
   (section
     "Abstract"
