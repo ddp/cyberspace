@@ -426,6 +426,9 @@ echo "  SCM:  ${#MEMOS[@]}"
 echo ""
 sanity_check || exit 1
 
+# Fix local permissions (your umask is 027, web needs 644)
+chmod 644 *.html *.ps *.txt *.css 2>/dev/null || true
+
 # Publish to yoyodyne
 echo ""
 echo "=== Publishing to yoyodyne ==="
@@ -439,7 +442,8 @@ if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_MEMO_PATH"
   rsync -av --delete --chmod=F644,D755 *.html *.pdf *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_MEMO_PATH"
   echo "  -> $YOYODYNE_MEMO_PATH"
-  /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
+  # Ensure web-readable permissions (rsync --chmod sometimes ignored by server umask)
+  /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type f -exec chmod 644 {} \; && find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
   echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/memo/"
 else
   echo "  [skip] Cannot reach yoyodyne"
