@@ -147,6 +147,7 @@ generate_index() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Library of Cyberspace - Memos</title>
   <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <link rel="stylesheet" href="index.css">
   <script>
 (function(){
   var h=new Date().getHours(),c;
@@ -161,51 +162,6 @@ generate_index() {
   document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
 })();
   </script>
-  <style>
-    :root {
-      /* Dark theme (default) - terminal phosphor */
-      --bg: #000; --fg: #0f0; --fg-dim: #080; --fg-bright: #fff;
-      --border: #0f0; --border-dim: #040; --bg-alt: #010;
-      --link: #0f0; --link-visited: #0c0; --link-hover: #fff;
-    }
-    [data-theme="light"] {
-      /* Light theme - parchment */
-      --bg: #f4f1e8; --fg: #1a1a1a; --fg-dim: #555; --fg-bright: #000;
-      --border: #1a1a1a; --border-dim: #ccc; --bg-alt: #e8e4d8;
-      --link: #0645ad; --link-visited: #551a8b; --link-hover: #000;
-    }
-    @media (prefers-color-scheme: light) {
-      :root:not([data-theme="dark"]) {
-        --bg: #f4f1e8; --fg: #1a1a1a; --fg-dim: #555; --fg-bright: #000;
-        --border: #1a1a1a; --border-dim: #ccc; --bg-alt: #e8e4d8;
-        --link: #0645ad; --link-visited: #551a8b; --link-hover: #000;
-      }
-    }
-    body {
-      font-family: "SF Mono", Monaco, Inconsolata, "Fira Code", Consolas, monospace;
-      max-width: 900px; margin: 0 auto; padding: 1rem;
-      line-height: 1.25; background: var(--bg); color: var(--fg);
-    }
-    h1 { border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; font-size: 14pt; margin: 0 0 0.5rem 0; }
-    h2 { font-size: 11pt; margin: 1rem 0 0.3rem 0; border-bottom: 1px solid var(--border-dim); }
-    p { margin: 0.3rem 0; font-size: 9pt; color: var(--fg-dim); }
-    table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
-    th, td { padding: 0.2rem 0.4rem; text-align: left; border-bottom: 1px solid var(--border-dim); font-size: 9pt; }
-    th { background: var(--bg-alt); color: var(--fg); }
-    a { color: var(--link); text-decoration: none; }
-    a:hover { color: var(--link-hover); text-decoration: underline; }
-    a:visited { color: var(--link-visited); }
-    .formats a { margin-right: 0.4rem; font-size: 8pt; }
-    footer { margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid var(--border-dim); font-size: 8pt; color: var(--fg-dim); }
-    .kwic { font-size: 8pt; }
-    .kwic td { padding: 0.1rem 0.3rem; white-space: nowrap; }
-    .kwic .left { text-align: right; color: var(--fg-dim); }
-    .kwic .keyword { font-weight: bold; color: var(--fg); }
-    .kwic .right { text-align: left; color: var(--fg-dim); }
-    .kwic .memo { text-align: left; }
-    .theme-toggle { float: right; font-size: 8pt; cursor: pointer; color: var(--fg-dim); }
-    .theme-toggle:hover { color: var(--fg); }
-  </style>
 </head>
 <body>
   <span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
@@ -304,6 +260,21 @@ FOOTER
   echo "  -> index.html"
 }
 
+# Redundant words in titles - implied by project context
+REDUNDANT_TITLE_WORDS="Cyberspace Cryptographic"
+
+check_redundant_title() {
+  local title="$1"
+  local memo="$2"
+  for word in ${=REDUNDANT_TITLE_WORDS}; do
+    if [[ "$title" == *"$word"* ]]; then
+      echo "  [WARN] $memo: '$word' is redundant in title"
+      return 1
+    fi
+  done
+  return 0
+}
+
 # Sanity check before publish
 sanity_check() {
   local errors=0
@@ -354,6 +325,20 @@ sanity_check() {
     errors=$((errors + 1))
   else
     echo "  [OK] memo.css present"
+  fi
+
+  # Check for redundant words in titles
+  local redundant=0
+  for memo in "${MEMOS[@]}"; do
+    is_reserved "$memo" && continue
+    local title=$(get_title "$memo")
+    check_redundant_title "$title" "$memo" || redundant=$((redundant + 1))
+  done
+  if [[ $redundant -gt 0 ]]; then
+    echo "  [FAIL] $redundant memo(s) have redundant words in titles"
+    errors=$((errors + 1))
+  else
+    echo "  [OK] No redundant title prefixes"
   fi
 
   if [[ $errors -gt 0 ]]; then

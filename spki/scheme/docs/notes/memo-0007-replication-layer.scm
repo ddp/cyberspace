@@ -1,6 +1,6 @@
 (memo
   (number 7)
-  (title "Replication Layer for Library of Cyberspace")
+  (title "Replication Layer")
   (section
     "Abstract"
     (p "This Memo specifies a replication layer for the Library of Cyberspace preservation architecture, enabling cryptographically sealed releases to be published, subscribed to, and synchronized across distributed locations while maintaining tamper-evident audit trails."))
