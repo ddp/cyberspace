@@ -377,9 +377,10 @@ if [[ $GEN_STATUS -ne 0 ]]; then
 fi
 
 # Compile LaTeX to PDF (if xelatex available)
+# Disabled: too slow for routine generation. Run manually with: xelatex memo-*.tex
 # MacTeX installs to /Library/TeX/texbin
 [[ -d /Library/TeX/texbin ]] && export PATH="/Library/TeX/texbin:$PATH"
-if command -v xelatex &> /dev/null; then
+if false && command -v xelatex &> /dev/null; then
   echo ""
   echo "Compiling LaTeX to PDF..."
   PDF_COUNT=0

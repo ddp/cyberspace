@@ -2,7 +2,7 @@
 ;; Review and edit as needed
 
 (memo
-  (number 15)
+  (number 16)
   (title "TLA+ Formal Specification")
   (section
     "Abstract"

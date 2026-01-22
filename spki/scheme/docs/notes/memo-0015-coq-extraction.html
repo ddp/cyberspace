@@ -5,7 +5,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <title>Memo 0016: Coq Verification of the Authorization TCB</title>
+  <title>Memo 0015: Coq Verification of the Authorization TCB</title>
   <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
   <script>
 (function(){
@@ -25,7 +25,7 @@
 </head>
 <body>
 <span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
-<h1>Memo 0016: Coq Verification of the Authorization TCB</h1>
+<h1>Memo 0015: Coq Verification of the Authorization TCB</h1>
 <dl class="metadata">
   <dt>Date</dt><dd>January 2026 (2026-01-22T05:17:00Z)</dd>
   <dt>Author</dt><dd>Derrell Piper &lt;ddp@eludom.net&gt;</dd>
@@ -53,31 +53,31 @@
 <section>
 <h2>Architecture</h2>
 <pre class="diagram">
-┌─────────────────────────────────────────────────────────────┐
-│                    CYBERSPACE TCB                           │
-│                                                             │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │              SpkiTcb.v (Coq Proofs)                 │   │
-│   │                                                     │   │
-│   │  Types: principal, tag, cert, auth_request          │   │
-│   │  Algorithms: tag_intersect, verify_chain, authorize │   │
-│   │  Theorems: authorize_requester_match, etc.          │   │
-│   └──────────────────────┬──────────────────────────────┘   │
-│                          │ Extraction                       │
-│   ┌──────────────────────▼──────────────────────────────┐   │
-│   │         spki_tcb_extracted.ml (generated)           │   │
-│   └──────────────────────┬──────────────────────────────┘   │
-│                          │ Bridge                           │
-│   ┌──────────────────────▼──────────────────────────────┐   │
-│   │              spki_tcb.ml + tcb_stubs.c              │   │
-│   │         (bytes conversion, libsodium FFI)           │   │
-│   └──────────────────────┬──────────────────────────────┘   │
-│                          │                                  │
-│                   ┌──────▼──────┐                           │
-│                   │  libsodium  │                           │
-│                   │  (trusted)  │                           │
-│                   └─────────────┘                           │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│                      CYBERSPACE TCB                       │
+│                                                           │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │              SpkiTcb.v (Coq Proofs)                 │  │
+│  │                                                     │  │
+│  │  Types: principal, tag, cert, auth_request          │  │
+│  │  Algorithms: tag_intersect, verify_chain, authorize │  │
+│  │  Theorems: authorize_requester_match, etc.          │  │
+│  └──────────────────────┬──────────────────────────────┘  │
+│                         │ Extraction                      │
+│  ┌──────────────────────v──────────────────────────────┐  │
+│  │         spki_tcb_extracted.ml (generated)           │  │
+│  └──────────────────────┬──────────────────────────────┘  │
+│                         │ Bridge                          │
+│  ┌──────────────────────v──────────────────────────────┐  │
+│  │              spki_tcb.ml + tcb_stubs.c              │  │
+│  │         (bytes conversion, libsodium FFI)           │  │
+│  └──────────────────────┬──────────────────────────────┘  │
+│                         │                                 │
+│                  ┌──────v──────┐                          │
+│                  │  libsodium  │                          │
+│                  │  (trusted)  │                          │
+│                  └─────────────┘                          │
+└───────────────────────────────────────────────────────────┘
 </pre>
 <p>The extraction pipeline: SpkiTcb.v → spki_tcb_extracted.ml → OCaml library → Scheme FFI.</p>
 </section>
