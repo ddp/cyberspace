@@ -42,6 +42,10 @@ if [[ -o interactive ]]; then
     
     # Environment variables
     export EGG_FRECKELS=T
+
+    # Ollama local LLM (Anthropic-compatible API)
+    export ANTHROPIC_AUTH_TOKEN=ollama
+    export ANTHROPIC_BASE_URL=http://localhost:11434
     
     # OS PATH detection
     path=(
