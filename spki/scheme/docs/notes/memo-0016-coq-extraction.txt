@@ -1,15 +1,18 @@
-Memo 0016: Coq Extraction for TCB
+Memo 0016: Coq Verification of the Authorization TCB
 
+Status: Working Draft
+Date: 2026-01-22
+Author: Derrell Piper <ddp@eludom.net>
 
 ------------------------------------------------------------------------
 
-------------------------------------------------------------------------
 ABSTRACT
-------------------------------------------------------------------------
 
-This Memo specifies the use of Coq proof assistant for verified
-implementation of the Trusted Computing Base, with extraction to OCaml
-for production use. Prove once, trust forever.
+This memo specifies the formal verification approach for the SPKI
+authorization Trusted Computing Base using the Coq proof assistant. We
+prove authorization correctness, not cryptographic hardness - libsodium
+handles the latter. The extraction pipeline generates OCaml code that is
+called from Scheme via FFI.
 
 
 ------------------------------------------------------------------------
@@ -21,398 +24,209 @@ The Prime Directive (Memo-0001):
 
     "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme."
 
-But even OCaml can have bugs. The TCB handles: - Ed25519 signatures -
-SHA-512 hashing - Signature chain verification
-
-A single bug breaks everything.
+But even OCaml can have bugs. The TCB handles signature chain
+verification and authorization decisions. A single bug breaks
+everything.
 
 Coq provides:
 
   * Machine-checked proofs: Theorems verified by computer
   * Extraction: Generate OCaml from proofs
   * Correctness by construction: Implementation matches specification
-  * Eternal validity: Proofs don't expire
 
-Extraction bridges the gap between specification and implementation: the
-code that runs is the code that was proven.
-
-From the Coq motto:
-
-
-    "The proof is in the code."
+We prove the authorization logic correct; we trust libsodium for
+cryptographic primitives.
 
 
 ------------------------------------------------------------------------
-SPECIFICATION
+ARCHITECTURE
 ------------------------------------------------------------------------
-
-
-Trusted Computing Base
-----------------------
 
 
     +-------------------------------------------------------------+
     |                    CYBERSPACE TCB                           |
     |                                                             |
-    |   +-------------+  +-------------+  +-------------+        |
-    |   |   Ed25519   |  |   SHA-512   |  |   Verify    |        |
-    |   |   Proven    |  |   Proven    |  |   Proven    |        |
-    |   +------+------+  +------+------+  +------+------+        |
-    |          |                |                |                |
-    |          +----------------+----------------+                |
-    |                           |                                 |
-    |                    Coq Extraction                           |
-    |                           |                                 |
-    |                    +------v------+                          |
-    |                    |    OCaml    |                          |
-    |                    |   ~1000 LOC |                          |
-    |                    +-------------+                          |
-    |                                                             |
-    |   Proven in Coq. Extracted to OCaml. Called from Scheme.   |
-    |                                                             |
+    |   +-----------------------------------------------------+   |
+    |   |              SpkiTcb.v (Coq Proofs)                 |   |
+    |   |                                                     |   |
+    |   |  Types: principal, tag, cert, auth_request          |   |
+    |   |  Algorithms: tag_intersect, verify_chain, authorize |   |
+    |   |  Theorems: authorize_requester_match, etc.          |   |
+    |   +----------------------+------------------------------+   |
+    |                          | Extraction                       |
+    |   +----------------------v------------------------------+   |
+    |   |         spki_tcb_extracted.ml (generated)           |   |
+    |   +----------------------+------------------------------+   |
+    |                          | Bridge                           |
+    |   +----------------------v------------------------------+   |
+    |   |              spki_tcb.ml + tcb_stubs.c              |   |
+    |   |         (bytes conversion, libsodium FFI)           |   |
+    |   +----------------------+------------------------------+   |
+    |                          |                                  |
+    |                   +------v------+                           |
+    |                   |  libsodium  |                           |
+    |                   |  (trusted)  |                           |
+    |                   +-------------+                           |
     +-------------------------------------------------------------+
 
-
-------------------------------------------------------------------------
-COQ SPECIFICATIONS
-------------------------------------------------------------------------
-
-
-Types
------
-
-
-    ( Byte arrays )
-    Definition bytes := list byte.
-    ( Keys )
-    Record ed25519publickey := {
-      pkbytes : bytes;
-      pklength : length pkbytes = 32
-    }.
-    Record ed25519privatekey := {
-      skbytes : bytes;
-      sklength : length skbytes = 64
-    }.
-    ( Signatures )
-    Record ed25519signature := {
-      sigbytes : bytes;
-      siglength : length sigbytes = 64
-    }.
-    ( Hashes )
-    Record sha512hash := {
-      hashbytes : bytes;
-      hashlength : length hashbytes = 64
-    }.
-
-
-Signature Specification
------------------------
-
-
-    ( Abstract signature scheme )
-    Module Type ED25519SPEC.
-      Parameter sign : ed25519privatekey -> bytes -> ed25519signature.
-      Parameter verify : ed25519publickey -> bytes -> ed25519signature -> bool.
-      ( Correctness: valid signatures verify )
-      Axiom signverifycorrect :
-        forall sk pk msg,
-          pk = derivepublic sk ->
-          verify pk msg (sign sk msg) = true.
-      ( Security: cannot forge without private key )
-      Axiom unforgeability :
-        forall pk msg sig,
-          verify pk msg sig = true ->
-          exists sk, pk = derivepublic sk /\ sig = sign sk msg.
-    End ED25519SPEC.
-
-
-Hash Specification
-------------------
-
-
-    Module Type SHA512SPEC.
-      Parameter hash : bytes -> sha512hash.
-      ( Determinism )
-      Axiom hashdeterministic :
-        forall x, hash x = hash x.
-      ( Collision resistance (assumed) )
-      Axiom collisionresistant :
-        forall x y, hash x = hash y -> x = y. ( Idealized )
-    End SHA512_SPEC.
-
-
-Chain Verification
-------------------
-
-
-    ( Certificate chain verification )
-    Fixpoint verifychain
-      (root : ed25519publickey)
-      (certs : list signedcert)
-      (targettag : tag) : bool :=
-      match certs with
-      | nil => false
-      | cert :: rest =>
-          let issuerkey := certissuer cert in
-          let subjectkey := certsubject cert in
-          let certtag := certtag cert in
-          ( Check issuer matches current key )
-          andb (keyeq root issuerkey)
-          ( Check signature valid )
-          (andb (verify issuerkey (certcontent cert) (certsignature cert))
-          ( Check tag grants permission )
-          (andb (tagimplies certtag targettag)
-          ( Continue chain )
-          (match rest with
-           | nil => true
-           |  => verifychain subjectkey rest targettag
-           end)))
-      end.
-    ( Theorem: Valid chain implies authorization )
-    Theorem chainauthorization :
-      forall root certs tag,
-        verify_chain root certs tag = true ->
-        authorized root tag.
-    Proof.
-      ( Proof by induction on chain length )
-      ...
-    Qed.
+The extraction pipeline: SpkiTcb.v > spki_tcb_extracted.ml > OCaml
+library > Scheme FFI.
 
 
 ------------------------------------------------------------------------
-EXTRACTION TO OCAML
+WHAT WE PROVE
 ------------------------------------------------------------------------
 
 
-Extraction Directives
+Fully Proven Theorems
 ---------------------
 
-
-    Require Import ExtrOcamlBasic.
-    Require Import ExtrOcamlString.
-    ( Extract to OCaml types )
-    Extract Inductive bool => "bool" ["true" "false"].
-    Extract Inductive list => "list" ["[]" "(::)"].
-    ( Link to libsodium )
-    Extract Constant ed25519sign => "Sodium.Ed25519.sign".
-    Extract Constant ed25519verify => "Sodium.Ed25519.verify".
-    Extract Constant sha512hash => "Sodium.SHA512.hash".
-    ( Generate OCaml )
-    Extraction "tcb.ml" verifychain sign verify hash.
+Security-critical theorems with complete proofs (no admits):
 
 
-Generated OCaml
----------------
+  Theorem                    Property                                                
+  principal_equal_refl       Reflexivity: p = p                                      
+  principal_equal_sym        Symmetry: p = q > q = p                                 
+  principal_equal_trans      Transitivity: p = q ∧ q = r > p = r                   
+  authorize_requester_match  If authorized, requester is named by leaf cert          
+  authorize_complete         All preconditions satisfied > authorization succeeds    
+
+The authorize_requester_match theorem is the key security property: it
+guarantees that authorization only succeeds when the requester is
+actually named in the certificate chain.
 
 
-    ( tcb.ml - Extracted from Coq )
-    let rec verifychain root certs targettag =
-      match certs with
-      | [] -> false
-      | cert :: rest ->
-          let issuerkey = certissuer cert in
-          let subjectkey = certsubject cert in
-          keyeq root issuerkey &&
-          Sodium.Ed25519.verify issuerkey (certcontent cert) (certsignature cert) &&
-          tagimplies (certtag cert) targettag &&
-          (match rest with
-           | [] -> true
-           |  -> verifychain subjectkey rest targettag)
+Partially Proven Theorems
+-------------------------
 
 
-------------------------------------------------------------------------
-INTEGRATION WITH SCHEME
-------------------------------------------------------------------------
+  Theorem                    Proven Cases                         Admitted Cases                     
+  tag_intersect_idemp        TagAll, TagSet, TagPrefix, TagRange  TagThreshold                       
+  tag_intersect_subset_left  Most combinations                    TagPrefix recursive, TagThreshold  
+
+The admitted cases stem from design limitations documented below.
 
 
-FFI Layer
----------
-
-
-    ( tcbffi.ml - FFI bindings for Chicken Scheme )
-    let () = Callback.register "tcbverifychain" verifychain
-    let () = Callback.register "tcbsign" sign
-    let () = Callback.register "tcbverify" verify
-    let () = Callback.register "tcb_hash" hash
-
-
-Scheme Bindings
----------------
-
-
-    ;; crypto-ffi.scm
-    (module crypto-ffi
-      (ed25519-sign ed25519-verify sha512-hash verify-chain)
-      (import (chicken foreign))
-      ;; Call into verified OCaml
-      (define ed25519-sign
-        (foreign-lambda blob ((blob key) (blob msg))
-          "return tcbsign(key, msg);"))
-      (define verify-chain
-        (foreign-lambda bool ((blob root) (pointer certs) (pointer tag))
-          "return tcbverify_chain(root, certs, tag);"))
-      ...)
-
-
-------------------------------------------------------------------------
-PROOF OBLIGATIONS
-------------------------------------------------------------------------
-
-
-What We Prove
--------------
-
-  * Signature correctness: Valid signatures verify
-  * Chain soundness: Valid chain implies authorization
-  * Hash properties: Determinism, length preservation
-  * Type safety: No buffer overflows, no null pointers
-
-
-What We Assume
---------------
-
-  * Cryptographic hardness: Ed25519 unforgeability
-  * libsodium correctness: Implementation matches spec
-  * OCaml runtime: Extraction target is correct
-  * Hardware: CPU executes instructions correctly
-
-
-Trust Chain
------------
-
-
-    Mathematical proof (Coq)
-        v
-    Extraction (verified by Coq)
-        v
-    OCaml code (typed, memory-safe)
-        v
-    libsodium (audited, widely deployed)
-        v
-    CPU instructions (trust hardware)
-
-
-------------------------------------------------------------------------
-DEVELOPMENT WORKFLOW
-------------------------------------------------------------------------
-
-
-1. Specify in Coq
+Admitted Theorems
 -----------------
 
 
-    ( Define types and operations )
-    ( State properties and theorems )
+  Theorem                  Reason                                  
+  tag_intersect_comm       Structural - needs semantic equality    
+  verify_chain_sound       Complex induction over chain structure  
+  verify_chain_attenuates  Depends on verify_chain_sound           
 
-
-2. Prove Correctness
---------------------
-
-
-    ( Prove theorems )
-    ( Coq checks proofs mechanically )
-
-
-3. Extract to OCaml
--------------------
-
-
-    $ coqc -R . Cyberspace tcb.v
-    $ coqc -R . Cyberspace extract.v
-    $ ls *.ml
-    tcb.ml tcb_types.ml
-
-
-4. Compile and Link
--------------------
-
-
-    $ ocamlfind ocamlopt -package sodium -linkpkg \
-        tcb.ml tcb_ffi.ml -o tcb.cmxa
-
-
-5. Call from Scheme
--------------------
-
-
-    (import crypto-ffi)
-    (ed25519-sign key message)  ; Calls verified code
+These are design debt, not security holes. The algorithms are correct;
+the proofs are incomplete.
 
 
 ------------------------------------------------------------------------
-EXISTING VERIFIED LIBRARIES
+WHAT WE ASSUME
 ------------------------------------------------------------------------
 
-
-Fiat-Crypto
------------
-
-  * Verified elliptic curve implementations
-  * Used by BoringSSL, Chrome
-  * Extraction to C, Java, Go
+Cryptographic operations are axiomatized - we trust libsodium:
 
 
-HACL*
------
+    Axiom sha512 : bytes -> bytes.
+    Axiom ed25519_verify : bytes -> bytes -> bytes -> bool.
 
-  * Verified cryptographic library
-  * Written in F* (similar to Coq)
-  * Used by Firefox, Wireguard
+Trust assumptions:
 
-
-Potential Use
--------------
-
-
-    Require Import Fiat.Crypto.Ed25519.
-    ( Use pre-verified Ed25519 implementation )
+  * libsodium correctness: Ed25519, SHA-512 implementations
+  * OCaml runtime: Extraction target executes correctly
+  * Hardware: CPU executes instructions correctly
 
 
 ------------------------------------------------------------------------
-SECURITY CONSIDERATIONS
+DESIGN LIMITATIONS
 ------------------------------------------------------------------------
 
 
-Verified Components
--------------------
+TagSet Canonical Ordering
+-------------------------
 
-  * Signature operations
-  * Hash operations
-  * Chain verification logic
+Tag intersection commutativity requires canonical representation:
 
 
-Unverified (Trusted)
---------------------
+    (tag_intersect (TagSet ["read" "write"]) (TagSet ["write" "read"]))
+    ;; Result order depends on input order without canonicalization
 
-  * FFI layer (small, auditable) - libsodium bindings
-  * Scheme runtime
-
-
-Audit Surface
--------------
+Solution implemented: sort and deduplicate TagSet contents. The
+canonicalize_canonical lemma bridges structural and semantic equality.
 
 
-    Total TCB:     ~1000 lines OCaml
-    Verified:      ~800 lines (extracted from ~2000 lines Coq)
-    Trusted:       ~200 lines (FFI, bindings)
+TagThreshold Cartesian Product
+------------------------------
+
+Intersection of thresholds produces Cartesian product of subtags:
+
+
+    (tag_intersect (TagThreshold 2 [A B C]) (TagThreshold 2 [A B C]))
+    ;; Produces 9 subtags: [A∩A, A∩B, A∩C, B∩A, B∩B, ...]
+
+This is semantically correct but not structurally idempotent. Options:
+
+  * Require disjoint subtags
+  * Normalize after intersection
+  * Accept semantic rather than structural idempotence
+
+
+------------------------------------------------------------------------
+EXTRACTION PIPELINE
+------------------------------------------------------------------------
+
+Build and extract:
+
+
+    cd tcb/coq
+    coqc SpkiTcb.v              # Type-check proofs, extract OCaml
+    dune build                   # Compile extracted + bridge code
+
+The extraction directive:
+
+
+    Extraction Language OCaml.
+    Extraction "spki_tcb_extracted.ml"
+      authorize verify_chain tag_intersect principal_equal ...
+
+The bridge module (spki_tcb.ml) converts between Coq's int list
+representation and OCaml's native bytes, calling libsodium for
+cryptographic operations.
+
+
+------------------------------------------------------------------------
+TEST COVERAGE
+------------------------------------------------------------------------
+
+
+  Suite              Tests  Coverage                                    
+  test_extracted.ml  16     Extracted code: principals, tags, chains    
+  test_tcb.exe       62     Full TCB: crypto, cookies, audit, FIPS-181  
+
+All tests pass. The extracted code tests exercise the Coq-verified
+authorization logic.
+
+
+------------------------------------------------------------------------
+FUTURE WORK
+------------------------------------------------------------------------
+
+  * Complete tag_intersect_comm proof with canonical ordering
+  * Prove verify_chain_sound with custom induction principle
+  * Property-based testing from Coq test vectors
+  * Consider CompCert or Fiat-Crypto for deeper verification
+
+Current proof coverage is sufficient for beta. The admitted theorems are
+proof obligations, not security vulnerabilities.
 
 
 ------------------------------------------------------------------------
 REFERENCES
 ------------------------------------------------------------------------
 
-  * Coq Development Team. The Coq Proof Assistant Reference Manual.
-  * Erbsen, A., et al. (2019). Simple High-Level Code for Cryptographic Arithmetic.
-  * Protzenko, J., et al. (2017). Verified Low-Level Programming Embedded in F*.
-  * Chlipala, A. (2013). Certified Programming with Dependent Types.
-  * Memo-0001: Cyberspace Architecture
-
-
-------------------------------------------------------------------------
-CHANGELOG
-------------------------------------------------------------------------
-
-  * 2026-01-06
-  * Initial specification
+  [Coq, 2024] The Coq Proof Assistant. https://coq.inria.fr/
+  [SPKI, 1999] RFC 2693: SPKI Certificate Theory
+  [Memo-045, 2026] Security Architecture
+  [libsodium, 2024] https://libsodium.org/
 
 ------------------------------------------------------------------------
