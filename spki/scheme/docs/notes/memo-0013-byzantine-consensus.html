@@ -68,60 +68,21 @@ Cryptography: Ed25519 signatures (authenticated channels)
 <p>Validity: If all honest nodes propose v, decision is v.</p>
 <p>Termination: All honest nodes eventually decide.</p>
 <h3>Protocol: Practical Byzantine Fault Tolerance (PBFT)</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 540 200" width="540" height="200" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">Phase</text>
-<text x="60" y="10">1:</text>
-<text x="90" y="10">PRE-PREPARE</text>
-<text x="20" y="30">Primary</text>
-<text x="100" y="30">broadcasts</text>
-<text x="210" y="30">⟨PRE-PREPARE,</text>
-<text x="350" y="30">v,</text>
-<text x="380" y="30">n,</text>
-<text x="410" y="30">sig⟩</text>
-<text x="0" y="50">Phase</text>
-<text x="60" y="50">2:</text>
-<text x="90" y="50">PREPARE</text>
-<text x="20" y="70">On</text>
-<text x="50" y="70">valid</text>
-<text x="110" y="70">PRE-PREPARE,</text>
-<text x="240" y="70">broadcast</text>
-<text x="340" y="70">⟨PREPARE,</text>
-<text x="440" y="70">v,</text>
-<text x="470" y="70">n,</text>
-<text x="500" y="70">sig⟩</text>
-<text x="20" y="90">Collect</text>
-<text x="100" y="90">2f</text>
-<text x="130" y="90">PREPARE</text>
-<text x="210" y="90">messages</text>
-<text x="0" y="110">Phase</text>
-<text x="60" y="110">3:</text>
-<text x="90" y="110">COMMIT</text>
-<text x="20" y="130">On</text>
-<text x="50" y="130">2f+1</text>
-<text x="100" y="130">PREPARE,</text>
-<text x="190" y="130">broadcast</text>
-<text x="290" y="130">⟨COMMIT,</text>
-<text x="380" y="130">v,</text>
-<text x="410" y="130">n,</text>
-<text x="440" y="130">sig⟩</text>
-<text x="20" y="150">Collect</text>
-<text x="100" y="150">2f+1</text>
-<text x="150" y="150">COMMIT</text>
-<text x="220" y="150">messages</text>
-<text x="0" y="170">Decision:</text>
-<text x="20" y="190">On</text>
-<text x="50" y="190">2f+1</text>
-<text x="100" y="190">COMMIT,</text>
-<text x="180" y="190">decide</text>
-<text x="250" y="190">v</text>
-</svg>
-</div>
+<pre class="diagram">
+Phase 1: PRE-PREPARE
+  Primary broadcasts ⟨PRE-PREPARE, v, n, sig⟩
+
+Phase 2: PREPARE
+  On valid PRE-PREPARE, broadcast ⟨PREPARE, v, n, sig⟩
+  Collect 2f PREPARE messages
+
+Phase 3: COMMIT
+  On 2f+1 PREPARE, broadcast ⟨COMMIT, v, n, sig⟩
+  Collect 2f+1 COMMIT messages
+
+Decision:
+  On 2f+1 COMMIT, decide v
+</pre>
 <h3>Message Formats</h3>
 <pre class="language-scheme">
 (consensus-message
@@ -151,44 +112,13 @@ Cryptography: Ed25519 signatures (authenticated channels)
 <section>
 <h2>View Change</h2>
 <p>When primary fails or is Byzantine:</p>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 490 100" width="490" height="100" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">1.</text>
-<text x="30" y="10">Replica</text>
-<text x="110" y="10">timeout</text>
-<text x="190" y="10">on</text>
-<text x="220" y="10">PRE-PREPARE</text>
-<text x="0" y="30">2.</text>
-<text x="30" y="30">Broadcast</text>
-<text x="130" y="30">⟨VIEW-CHANGE,</text>
-<text x="270" y="30">v+1,</text>
-<text x="320" y="30">prepared-proofs⟩</text>
-<text x="0" y="50">3.</text>
-<text x="30" y="50">New</text>
-<text x="70" y="50">primary</text>
-<text x="150" y="50">collects</text>
-<text x="240" y="50">2f+1</text>
-<text x="290" y="50">VIEW-CHANGE</text>
-<text x="0" y="70">4.</text>
-<text x="30" y="70">New</text>
-<text x="70" y="70">primary</text>
-<text x="150" y="70">broadcasts</text>
-<text x="260" y="70">⟨NEW-VIEW,</text>
-<text x="370" y="70">v+1,</text>
-<text x="420" y="70">proofs⟩</text>
-<text x="0" y="90">5.</text>
-<text x="30" y="90">Resume</text>
-<text x="100" y="90">protocol</text>
-<text x="190" y="90">in</text>
-<text x="220" y="90">new</text>
-<text x="260" y="90">view</text>
-</svg>
-</div>
+<pre class="diagram">
+1. Replica timeout on PRE-PREPARE
+2. Broadcast ⟨VIEW-CHANGE, v+1, prepared-proofs⟩
+3. New primary collects 2f+1 VIEW-CHANGE
+4. New primary broadcasts ⟨NEW-VIEW, v+1, proofs⟩
+5. Resume protocol in new view
+</pre>
 </section>
 <section>
 <h2>Application to Cyberspace</h2>
@@ -267,43 +197,16 @@ Direct to COMMIT with 3f+1 matching responses
 <section>
 <h2>Implementation Notes</h2>
 <h3>State Machine</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 560 160" width="560" height="160" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">(define-record-type</text>
-<text x="200" y="10">&lt;pbft-state&gt;</text>
-<text x="20" y="30">(make-pbft-state</text>
-<text x="190" y="30">view</text>
-<text x="240" y="30">sequence</text>
-<text x="330" y="30">log</text>
-<text x="370" y="30">prepared</text>
-<text x="460" y="30">committed)</text>
-<text x="20" y="50">pbft-state?</text>
-<text x="20" y="70">(view</text>
-<text x="80" y="70">pbft-view)</text>
-<text x="20" y="90">(sequence</text>
-<text x="120" y="90">pbft-sequence)</text>
-<text x="20" y="110">(log</text>
-<text x="70" y="110">pbft-log)</text>
-<text x="300" y="110">;</text>
-<text x="320" y="110">sequence</text>
-<text x="430" y="110">messages</text>
-<text x="20" y="130">(prepared</text>
-<text x="120" y="130">pbft-prepared)</text>
-<text x="300" y="130">;</text>
-<text x="320" y="130">sequence</text>
-<text x="430" y="130">value</text>
-<text x="20" y="150">(committed</text>
-<text x="130" y="150">pbft-committed))</text>
-<text x="300" y="150">;</text>
-<text x="320" y="150">sequence</text>
-<text x="430" y="150">value</text>
-</svg>
-</div>
+<pre class="diagram">
+(define-record-type &lt;pbft-state&gt;
+  (make-pbft-state view sequence log prepared committed)
+  pbft-state?
+  (view pbft-view)
+  (sequence pbft-sequence)
+  (log pbft-log)              ; sequence → messages
+  (prepared pbft-prepared)    ; sequence → value
+  (committed pbft-committed)) ; sequence → value
+</pre>
 <h3>Dependencies</h3>
 <ul>
 <li>crypto-ffi</li>

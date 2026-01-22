@@ -103,52 +103,21 @@ age -d -i &lt;identity&gt; &lt; archive.tar.zst.age | zstd -d | tar -xf -
 <section>
 <h2>Performance Characteristics</h2>
 <h3>Compression</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 430 220" width="430" height="220" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">Zstd</text>
-<text x="50" y="10">default</text>
-<text x="130" y="10">(-3):</text>
-<text x="20" y="30">Compression:</text>
-<text x="170" y="30">~400</text>
-<text x="220" y="30">MB/s</text>
-<text x="20" y="50">Decompression:</text>
-<text x="170" y="50">~800</text>
-<text x="220" y="50">MB/s</text>
-<text x="20" y="70">Ratio:</text>
-<text x="170" y="70">~3:1</text>
-<text x="220" y="70">(typical</text>
-<text x="310" y="70">source</text>
-<text x="380" y="70">code)</text>
-<text x="0" y="90">Zstd</text>
-<text x="50" y="90">parallel</text>
-<text x="140" y="90">(-T0):</text>
-<text x="20" y="110">Compression:</text>
-<text x="170" y="110">~400</text>
-<text x="220" y="110">MB/s</text>
-<text x="270" y="110">×</text>
-<text x="290" y="110">cores</text>
-<text x="20" y="130">Decompression:</text>
-<text x="170" y="130">~800</text>
-<text x="220" y="130">MB/s</text>
-<text x="270" y="130">×</text>
-<text x="290" y="130">cores</text>
-<text x="0" y="150">Gzip</text>
-<text x="50" y="150">comparison:</text>
-<text x="20" y="170">Compression:</text>
-<text x="170" y="170">~30</text>
-<text x="210" y="170">MB/s</text>
-<text x="20" y="190">Decompression:</text>
-<text x="170" y="190">~200</text>
-<text x="220" y="190">MB/s</text>
-<text x="20" y="210">Ratio:</text>
-<text x="170" y="210">~2.5:1</text>
-</svg>
-</div>
+<pre class="diagram">
+Zstd default (-3):
+  Compression:   ~400 MB/s
+  Decompression: ~800 MB/s
+  Ratio:         ~3:1 (typical source code)
+
+Zstd parallel (-T0):
+  Compression:   ~400 MB/s × cores
+  Decompression: ~800 MB/s × cores
+
+Gzip comparison:
+  Compression:   ~30 MB/s
+  Decompression: ~200 MB/s
+  Ratio:         ~2.5:1
+</pre>
 <h3>Encryption</h3>
 <pre>
 Age X25519:
@@ -161,78 +130,29 @@ Age overhead:
   MAC:      16 bytes
 </pre>
 <h3>Signature</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 210 80" width="210" height="80" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">Ed25519:</text>
-<text x="20" y="30">Sign:</text>
-<text x="120" y="30">~10</text>
-<text x="160" y="30">μs</text>
-<text x="20" y="50">Verify:</text>
-<text x="120" y="50">~10</text>
-<text x="160" y="50">μs</text>
-<text x="20" y="70">Signature:</text>
-<text x="130" y="70">64</text>
-<text x="160" y="70">bytes</text>
-</svg>
-</div>
+<pre class="diagram">
+Ed25519:
+  Sign:     ~10 μs
+  Verify:   ~10 μs
+  Signature: 64 bytes
+</pre>
 <h3>Total Pipeline</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 300 240" width="300" height="240" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">10</text>
-<text x="30" y="10">MB</text>
-<text x="60" y="10">archive:</text>
-<text x="20" y="30">Compress</text>
-<text x="110" y="30">(zstd</text>
-<text x="170" y="30">-T0):</text>
-<text x="230" y="30">~25</text>
-<text x="270" y="30">ms</text>
-<text x="20" y="50">Encrypt</text>
-<text x="100" y="50">(age):</text>
-<text x="230" y="50">~10</text>
-<text x="270" y="50">ms</text>
-<text x="20" y="70">Hash</text>
-<text x="70" y="70">(SHA-512):</text>
-<text x="230" y="70">~1</text>
-<text x="260" y="70">ms</text>
-<text x="20" y="90">Sign</text>
-<text x="70" y="90">(Ed25519):</text>
-<text x="230" y="90">~10</text>
-<text x="270" y="90">μs</text>
-<text x="20" y="110">Total:</text>
-<text x="230" y="110">~36</text>
-<text x="270" y="110">ms</text>
-<text x="0" y="130">vs</text>
-<text x="30" y="130">gzip</text>
-<text x="80" y="130">legacy:</text>
-<text x="20" y="150">Compress</text>
-<text x="110" y="150">(gzip):</text>
-<text x="230" y="150">~300</text>
-<text x="280" y="150">ms</text>
-<text x="20" y="170">Hash</text>
-<text x="70" y="170">(SHA-512):</text>
-<text x="230" y="170">~1</text>
-<text x="260" y="170">ms</text>
-<text x="20" y="190">Sign</text>
-<text x="70" y="190">(Ed25519):</text>
-<text x="230" y="190">~10</text>
-<text x="270" y="190">μs</text>
-<text x="20" y="210">Total:</text>
-<text x="230" y="210">~301</text>
-<text x="280" y="210">ms</text>
-<text x="0" y="230">Speedup:</text>
-<text x="90" y="230">~8x</text>
-</svg>
-</div>
+<pre class="diagram">
+10 MB archive:
+  Compress (zstd -T0): ~25 ms
+  Encrypt (age):       ~10 ms
+  Hash (SHA-512):      ~1 ms
+  Sign (Ed25519):      ~10 μs
+  Total:               ~36 ms
+
+vs gzip legacy:
+  Compress (gzip):     ~300 ms
+  Hash (SHA-512):      ~1 ms
+  Sign (Ed25519):      ~10 μs
+  Total:               ~301 ms
+
+Speedup: ~8x
+</pre>
 </section>
 <section>
 <h2>Security Model</h2>

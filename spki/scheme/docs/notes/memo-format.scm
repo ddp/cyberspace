@@ -754,11 +754,11 @@
                  (lang (if has-lang (symbol->string (cadr elem)) ""))
                  (content (if has-lang (caddr elem) (cadr elem))))
             (if (string-has-box-chars? content)
-                ;; Box-drawing detected - render as SVG (client-independent geometry)
+                ;; Box-drawing detected - use pre with diagram class (Unicode renders fine)
                 (begin
-                  (display "<div class=\"diagram-container\">\n" port)
-                  (display (text->svg-diagram content) port)
-                  (display "\n</div>\n" port))
+                  (display "<pre class=\"diagram\">\n" port)
+                  (display (html-escape content) port)
+                  (display "\n</pre>\n" port))
                 ;; Regular code - use pre
                 (begin
                   (display (format "<pre~a>\n"

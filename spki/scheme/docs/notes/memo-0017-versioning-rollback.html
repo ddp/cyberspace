@@ -44,74 +44,25 @@
 </ul>
 <p>These questions are universal but git answers them with mechanisms rather than semantics, requiring users to understand implementation details.</p>
 <p>Git provides mechanisms. Cyberspace provides semantics:</p>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 510 80" width="510" height="80" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">seal-version</text>
-<text x="230" y="10">"2.1.0"</text>
-<text x="0" y="30">seal-versions</text>
-<text x="230" y="30">[1.0.0,</text>
-<text x="310" y="30">1.1.0,</text>
-<text x="380" y="30">2.0.0,</text>
-<text x="450" y="30">2.1.0]</text>
-<text x="0" y="50">seal-rollback</text>
-<text x="140" y="50">2.0.0</text>
-<text x="230" y="50">Done.</text>
-<text x="290" y="50">Now</text>
-<text x="330" y="50">at</text>
-<text x="360" y="50">2.0.0.</text>
-<text x="0" y="70">seal-recover</text>
-<text x="230" y="70">Here's</text>
-<text x="300" y="70">what</text>
-<text x="350" y="70">you</text>
-<text x="390" y="70">can</text>
-<text x="430" y="70">recover.</text>
-</svg>
-</div>
+<pre class="diagram">
+seal-version         → "2.1.0"
+seal-versions        → [1.0.0, 1.1.0, 2.0.0, 2.1.0]
+seal-rollback 2.0.0  → Done. Now at 2.0.0.
+seal-recover         → Here's what you can recover.
+</pre>
 </section>
 <section>
 <h2>Specification</h2>
 <h3>Version Model</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 500 140" width="500" height="140" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="250" y="10">HEAD</text>
-<text x="40" y="50">1.0.0</text>
-<line x1="100" y1="50" x2="110" y2="50"/>
-<line x1="110" y1="50" x2="120" y2="50"/>
-<text x="140" y="50">1.1.0</text>
-<line x1="200" y1="50" x2="210" y2="50"/>
-<line x1="210" y1="50" x2="220" y2="50"/>
-<text x="240" y="50">2.0.0</text>
-<line x1="300" y1="50" x2="310" y2="50"/>
-<line x1="310" y1="50" x2="320" y2="50"/>
-<text x="340" y="50">2.1.0</text>
-<line x1="65" y1="59" x2="65" y2="81"/>
-<line x1="265" y1="59" x2="265" y2="81"/>
-<line x1="65" y1="79" x2="65" y2="101"/>
-<line x1="265" y1="90" x2="270" y2="90"/>
-<line x1="265" y1="79" x2="265" y2="90"/>
-<line x1="270" y1="90" x2="280" y2="90"/>
-<line x1="280" y1="90" x2="290" y2="90"/>
-<text x="300" y="90">seal-rollback</text>
-<text x="440" y="90">target</text>
-<line x1="265" y1="99" x2="265" y2="121"/>
-<line x1="65" y1="130" x2="70" y2="130"/>
-<line x1="65" y1="119" x2="65" y2="130"/>
-<line x1="70" y1="130" x2="80" y2="130"/>
-<line x1="80" y1="130" x2="90" y2="130"/>
-<text x="100" y="130">seal-archive</text>
-<text x="230" y="130">snapshots</text>
-</svg>
-</div>
+<pre class="diagram">
+                         HEAD
+                          ↓
+    1.0.0 ──→ 1.1.0 ──→ 2.0.0 ──→ 2.1.0
+      │                   │
+      │                   └── seal-rollback target
+      │
+      └── seal-archive snapshots
+</pre>
 <p>Versions are semantic (X.Y.Z), immutable, signed.</p>
 <p>HEAD is current working state.</p>
 <p>Rollback creates forward commit that restores past state.</p>
@@ -183,60 +134,17 @@ Reason: [user-provided or "Manual rollback"]
 <section>
 <h2>Rollback Semantics</h2>
 <h3>Forward Rollback (Default)</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 580 140" width="580" height="140" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">Before:</text>
-<text x="90" y="10">1.0.0</text>
-<text x="170" y="10">1.1.0</text>
-<text x="250" y="10">2.0.0</text>
-<text x="330" y="10">2.1.0</text>
-<text x="410" y="10">HEAD</text>
-<text x="210" y="50">rollback</text>
-<text x="300" y="50">target</text>
-<text x="0" y="70">After:</text>
-<text x="90" y="70">1.0.0</text>
-<text x="170" y="70">1.1.0</text>
-<text x="250" y="70">2.0.0</text>
-<text x="330" y="70">2.1.0</text>
-<text x="410" y="70">[rollback</text>
-<text x="510" y="70">commit]</text>
-<line x1="265" y1="79" x2="265" y2="101"/>
-<line x1="495" y1="79" x2="495" y2="101"/>
-<line x1="265" y1="110" x2="270" y2="110"/>
-<line x1="265" y1="99" x2="265" y2="110"/>
-<line x1="270" y1="110" x2="280" y2="110"/>
-<line x1="280" y1="110" x2="290" y2="110"/>
-<line x1="290" y1="110" x2="300" y2="110"/>
-<line x1="300" y1="110" x2="310" y2="110"/>
-<line x1="310" y1="110" x2="320" y2="110"/>
-<line x1="320" y1="110" x2="330" y2="110"/>
-<line x1="330" y1="110" x2="340" y2="110"/>
-<line x1="340" y1="110" x2="350" y2="110"/>
-<line x1="350" y1="110" x2="360" y2="110"/>
-<line x1="360" y1="110" x2="370" y2="110"/>
-<line x1="370" y1="110" x2="380" y2="110"/>
-<line x1="380" y1="110" x2="390" y2="110"/>
-<line x1="390" y1="110" x2="400" y2="110"/>
-<line x1="400" y1="110" x2="410" y2="110"/>
-<line x1="410" y1="110" x2="420" y2="110"/>
-<line x1="420" y1="110" x2="430" y2="110"/>
-<line x1="430" y1="110" x2="440" y2="110"/>
-<line x1="440" y1="110" x2="450" y2="110"/>
-<line x1="450" y1="110" x2="460" y2="110"/>
-<line x1="460" y1="110" x2="470" y2="110"/>
-<line x1="470" y1="110" x2="480" y2="110"/>
-<line x1="480" y1="110" x2="490" y2="110"/>
-<line x1="490" y1="110" x2="495" y2="110"/>
-<line x1="495" y1="99" x2="495" y2="110"/>
-<text x="300" y="130">contents</text>
-<text x="390" y="130">match</text>
-</svg>
-</div>
+<pre class="diagram">
+Before:  1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → HEAD
+                          ↑
+                     rollback target
+
+After:   1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → [rollback commit]
+                          │                      │
+                          └──────────────────────┘
+                              contents match
+
+</pre>
 <p>History preserved. Audit trail shows rollback.</p>
 <h3>Hard Rollback (Dangerous)</h3>
 <pre class="language-scheme">
@@ -326,119 +234,39 @@ Reason: [user-provided or "Manual rollback"]
 </section>
 <section>
 <h2>CLI Interface</h2>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 570 520" width="570" height="520" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">#</text>
-<text x="20" y="10">Current</text>
-<text x="100" y="10">version</text>
-<text x="0" y="30">$</text>
-<text x="20" y="30">seal</text>
-<text x="70" y="30">version</text>
-<text x="0" y="50">2.1.0+3</text>
-<text x="0" y="70">#</text>
-<text x="20" y="70">List</text>
-<text x="70" y="70">versions</text>
-<text x="0" y="90">$</text>
-<text x="20" y="90">seal</text>
-<text x="70" y="90">versions</text>
-<text x="0" y="110">1.0.0</text>
-<text x="80" y="110">2026-01-01</text>
-<text x="210" y="110">Initial</text>
-<text x="290" y="110">release</text>
-<text x="0" y="130">1.1.0</text>
-<text x="80" y="130">2026-01-05</text>
-<text x="210" y="130">Bug</text>
-<text x="250" y="130">fixes</text>
-<text x="0" y="150">2.0.0</text>
-<text x="80" y="150">2026-01-10</text>
-<text x="210" y="150">New</text>
-<text x="250" y="150">governance</text>
-<text x="360" y="150">model</text>
-<text x="0" y="170">2.1.0</text>
-<text x="80" y="170">2026-01-15</text>
-<text x="210" y="170">Performance</text>
-<text x="330" y="170">improvements</text>
-<text x="0" y="190">#</text>
-<text x="20" y="190">Rollback</text>
-<text x="0" y="210">$</text>
-<text x="20" y="210">seal</text>
-<text x="70" y="210">rollback</text>
-<text x="160" y="210">2.0.0</text>
-<text x="0" y="230">Rolling</text>
-<text x="80" y="230">back</text>
-<text x="130" y="230">to</text>
-<text x="160" y="230">2.0.0...</text>
-<text x="0" y="250">✓</text>
-<text x="30" y="250">Rollback</text>
-<text x="120" y="250">complete.</text>
-<text x="220" y="250">Now</text>
-<text x="260" y="250">at</text>
-<text x="290" y="250">2.0.0.</text>
-<text x="0" y="270">#</text>
-<text x="20" y="270">Rollback</text>
-<text x="110" y="270">with</text>
-<text x="160" y="270">reason</text>
-<text x="0" y="290">$</text>
-<text x="20" y="290">seal</text>
-<text x="70" y="290">rollback</text>
-<text x="160" y="290">2.0.0</text>
-<text x="220" y="290">--reason</text>
-<text x="310" y="290">"Production</text>
-<text x="430" y="290">incident</text>
-<text x="520" y="290">#123"</text>
-<text x="0" y="310">#</text>
-<text x="20" y="310">Compare</text>
-<text x="100" y="310">versions</text>
-<text x="0" y="330">$</text>
-<text x="20" y="330">seal</text>
-<text x="70" y="330">diff</text>
-<text x="120" y="330">2.0.0</text>
-<text x="180" y="330">2.1.0</text>
-<text x="10" y="350">M</text>
-<text x="30" y="350">config.scm</text>
-<text x="10" y="370">A</text>
-<text x="30" y="370">new-feature.scm</text>
-<text x="10" y="390">D</text>
-<text x="30" y="390">deprecated.scm</text>
-<text x="0" y="410">#</text>
-<text x="20" y="410">Recovery</text>
-<text x="110" y="410">options</text>
-<text x="0" y="430">$</text>
-<text x="20" y="430">seal</text>
-<text x="70" y="430">recover</text>
-<text x="0" y="450">Recovery</text>
-<text x="90" y="450">options:</text>
-<text x="20" y="470">1.</text>
-<text x="50" y="470">seal</text>
-<text x="100" y="470">undo</text>
-<text x="240" y="470">-</text>
-<text x="260" y="470">Undo</text>
-<text x="310" y="470">last</text>
-<text x="360" y="470">commit</text>
-<text x="20" y="490">2.</text>
-<text x="50" y="490">seal</text>
-<text x="100" y="490">rollback</text>
-<text x="190" y="490">2.1.0</text>
-<text x="250" y="490">-</text>
-<text x="270" y="490">Return</text>
-<text x="340" y="490">to</text>
-<text x="370" y="490">last</text>
-<text x="420" y="490">release</text>
-<text x="20" y="510">3.</text>
-<text x="50" y="510">seal</text>
-<text x="100" y="510">stash</text>
-<text x="160" y="510">pop</text>
-<text x="240" y="510">-</text>
-<text x="260" y="510">Recover</text>
-<text x="340" y="510">stashed</text>
-<text x="420" y="510">changes</text>
-</svg>
-</div>
+<pre class="diagram">
+# Current version
+$ seal version
+2.1.0+3
+
+# List versions
+$ seal versions
+1.0.0   2026-01-01   Initial release
+1.1.0   2026-01-05   Bug fixes
+2.0.0   2026-01-10   New governance model
+2.1.0   2026-01-15   Performance improvements
+
+# Rollback
+$ seal rollback 2.0.0
+Rolling back to 2.0.0...
+✓ Rollback complete. Now at 2.0.0.
+
+# Rollback with reason
+$ seal rollback 2.0.0 --reason "Production incident #123"
+
+# Compare versions
+$ seal diff 2.0.0 2.1.0
+ M config.scm
+ A new-feature.scm
+ D deprecated.scm
+
+# Recovery options
+$ seal recover
+Recovery options:
+  1. seal undo          - Undo last commit
+  2. seal rollback 2.1.0 - Return to last release
+  3. seal stash pop     - Recover stashed changes
+</pre>
 </section>
 <section>
 <h2>Safety Mechanisms</h2>
@@ -468,165 +296,52 @@ Reason: [user-provided or "Manual rollback"]
 <section>
 <h2>Implementation</h2>
 <h3>seal-rollback Implementation</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 810 700" width="810" height="700" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">(define</text>
-<text x="80" y="10">(seal-rollback</text>
-<text x="230" y="10">version</text>
-<text x="310" y="10">#!key</text>
-<text x="370" y="10">hard</text>
-<text x="420" y="10">stash</text>
-<text x="480" y="10">force</text>
-<text x="540" y="10">reason</text>
-<text x="610" y="10">tag)</text>
-<text x="20" y="30">"Roll</text>
-<text x="80" y="30">back</text>
-<text x="130" y="30">vault</text>
-<text x="190" y="30">to</text>
-<text x="220" y="30">specified</text>
-<text x="320" y="30">version"</text>
-<text x="20" y="50">;;</text>
-<text x="50" y="50">Validate</text>
-<text x="140" y="50">version</text>
-<text x="220" y="50">exists</text>
-<text x="20" y="70">(unless</text>
-<text x="100" y="70">(tag-exists?</text>
-<text x="230" y="70">version)</text>
-<text x="40" y="90">(error</text>
-<text x="110" y="90">"Version</text>
-<text x="200" y="90">not</text>
-<text x="240" y="90">found"</text>
-<text x="310" y="90">version))</text>
-<text x="20" y="110">;;</text>
-<text x="50" y="110">Check</text>
-<text x="110" y="110">for</text>
-<text x="150" y="110">uncommitted</text>
-<text x="270" y="110">changes</text>
-<text x="20" y="130">(when</text>
-<text x="80" y="130">(uncommitted-changes?)</text>
-<text x="40" y="150">(cond</text>
-<text x="60" y="170">(stash</text>
-<text x="130" y="170">(seal-stash))</text>
-<text x="60" y="190">(force</text>
-<text x="130" y="190">(void))</text>
-<text x="60" y="210">(else</text>
-<text x="120" y="210">(error</text>
-<text x="190" y="210">"Uncommitted</text>
-<text x="320" y="210">changes.</text>
-<text x="410" y="210">Use</text>
-<text x="450" y="210">stash:</text>
-<text x="520" y="210">or</text>
-<text x="550" y="210">force:"))))</text>
-<text x="20" y="230">;;</text>
-<text x="50" y="230">Record</text>
-<text x="120" y="230">current</text>
-<text x="200" y="230">state</text>
-<text x="20" y="250">(let</text>
-<text x="70" y="250">((current</text>
-<text x="170" y="250">(seal-version)))</text>
-<text x="40" y="270">;;</text>
-<text x="70" y="270">Perform</text>
-<text x="150" y="270">rollback</text>
-<text x="40" y="290">(if</text>
-<text x="80" y="290">hard</text>
-<text x="80" y="310">(hard-rollback!</text>
-<text x="240" y="310">version)</text>
-<text x="80" y="330">(forward-rollback!</text>
-<text x="270" y="330">version</text>
-<text x="350" y="330">reason))</text>
-<text x="40" y="350">;;</text>
-<text x="70" y="350">Create</text>
-<text x="140" y="350">tag</text>
-<text x="180" y="350">if</text>
-<text x="210" y="350">requested</text>
-<text x="40" y="370">(when</text>
-<text x="100" y="370">tag</text>
-<text x="60" y="390">(run-command</text>
-<text x="190" y="390">"git"</text>
-<text x="250" y="390">"tag"</text>
-<text x="310" y="390">tag))</text>
-<text x="40" y="410">;;</text>
-<text x="70" y="410">Audit</text>
-<text x="40" y="430">(audit-append</text>
-<text x="60" y="450">actor:</text>
-<text x="130" y="450">(get-vault-principal</text>
-<text x="340" y="450">(vault-config</text>
-<text x="480" y="450">'signing-key))</text>
-<text x="60" y="470">action:</text>
-<text x="140" y="470">(list</text>
-<text x="200" y="470">'seal-rollback</text>
-<text x="350" y="470">version)</text>
-<text x="60" y="490">motivation:</text>
-<text x="180" y="490">(or</text>
-<text x="220" y="490">reason</text>
-<text x="290" y="490">(sprintf</text>
-<text x="380" y="490">"Rollback</text>
-<text x="480" y="490">from</text>
-<text x="530" y="490">~a</text>
-<text x="560" y="490">to</text>
-<text x="590" y="490">~a"</text>
-<text x="630" y="490">current</text>
-<text x="710" y="490">version)))</text>
-<text x="40" y="510">(print</text>
-<text x="110" y="510">"✓</text>
-<text x="150" y="510">Rolled</text>
-<text x="220" y="510">back</text>
-<text x="270" y="510">to</text>
-<text x="300" y="510">"</text>
-<text x="320" y="510">version)))</text>
-<text x="0" y="530">(define</text>
-<text x="80" y="530">(forward-rollback!</text>
-<text x="270" y="530">version</text>
-<text x="350" y="530">reason)</text>
-<text x="20" y="550">"Create</text>
-<text x="100" y="550">rollback</text>
-<text x="190" y="550">commit</text>
-<text x="260" y="550">(preserves</text>
-<text x="370" y="550">history)"</text>
-<text x="20" y="570">(run-command</text>
-<text x="150" y="570">"git"</text>
-<text x="210" y="570">"checkout"</text>
-<text x="320" y="570">version</text>
-<text x="400" y="570">"--"</text>
-<text x="450" y="570">".")</text>
-<text x="20" y="590">(run-command</text>
-<text x="150" y="590">"git"</text>
-<text x="210" y="590">"commit"</text>
-<text x="300" y="590">"-m"</text>
-<text x="40" y="610">(sprintf</text>
-<text x="130" y="610">"Rollback</text>
-<text x="230" y="610">to</text>
-<text x="260" y="610">~a\n\n~a"</text>
-<text x="360" y="610">version</text>
-<text x="440" y="610">(or</text>
-<text x="480" y="610">reason</text>
-<text x="550" y="610">""))))</text>
-<text x="0" y="630">(define</text>
-<text x="80" y="630">(hard-rollback!</text>
-<text x="240" y="630">version)</text>
-<text x="20" y="650">"Reset</text>
-<text x="90" y="650">to</text>
-<text x="120" y="650">version</text>
-<text x="200" y="650">(destroys</text>
-<text x="300" y="650">history)"</text>
-<text x="20" y="670">(print</text>
-<text x="90" y="670">"WARNING:</text>
-<text x="190" y="670">Hard</text>
-<text x="240" y="670">rollback</text>
-<text x="330" y="670">destroys</text>
-<text x="420" y="670">history")</text>
-<text x="20" y="690">(run-command</text>
-<text x="150" y="690">"git"</text>
-<text x="210" y="690">"reset"</text>
-<text x="290" y="690">"--hard"</text>
-<text x="380" y="690">version))</text>
-</svg>
-</div>
+<pre class="diagram">
+(define (seal-rollback version #!key hard stash force reason tag)
+  "Roll back vault to specified version"
+
+  ;; Validate version exists
+  (unless (tag-exists? version)
+    (error "Version not found" version))
+
+  ;; Check for uncommitted changes
+  (when (uncommitted-changes?)
+    (cond
+      (stash (seal-stash))
+      (force (void))
+      (else (error "Uncommitted changes. Use stash: or force:"))))
+
+  ;; Record current state
+  (let ((current (seal-version)))
+
+    ;; Perform rollback
+    (if hard
+        (hard-rollback! version)
+        (forward-rollback! version reason))
+
+    ;; Create tag if requested
+    (when tag
+      (run-command "git" "tag" tag))
+
+    ;; Audit
+    (audit-append
+      actor: (get-vault-principal (vault-config 'signing-key))
+      action: (list 'seal-rollback version)
+      motivation: (or reason (sprintf "Rollback from ~a to ~a" current version)))
+
+    (print "✓ Rolled back to " version)))
+
+(define (forward-rollback! version reason)
+  "Create rollback commit (preserves history)"
+  (run-command "git" "checkout" version "--" ".")
+  (run-command "git" "commit" "-m"
+    (sprintf "Rollback to ~a\n\n~a" version (or reason ""))))
+
+(define (hard-rollback! version)
+  "Reset to version (destroys history)"
+  (print "WARNING: Hard rollback destroys history")
+  (run-command "git" "reset" "--hard" version))
+</pre>
 </section>
 <section>
 <h2>Security Considerations</h2>

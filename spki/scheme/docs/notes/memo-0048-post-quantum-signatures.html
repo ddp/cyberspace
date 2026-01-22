@@ -139,93 +139,30 @@ Maturity:       Newer, but extensively analyzed
 <section>
 <h2>Key Generation</h2>
 <h3>SPHINCS+-SHAKE-256s</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 650 420" width="650" height="420" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">(define</text>
-<text x="80" y="10">(sphincs+-keygen)</text>
-<text x="20" y="30">"Generate</text>
-<text x="120" y="30">SPHINCS+</text>
-<text x="210" y="30">keypair</text>
-<text x="290" y="30">using</text>
-<text x="350" y="30">SHAKE256"</text>
-<text x="20" y="50">(let*</text>
-<text x="80" y="50">((seed</text>
-<text x="150" y="50">(random-bytes</text>
-<text x="290" y="50">96))</text>
-<text x="430" y="50">;</text>
-<text x="450" y="50">3</text>
-<text x="470" y="50">×</text>
-<text x="490" y="50">32-byte</text>
-<text x="570" y="50">seeds</text>
-<text x="90" y="70">(sk-seed</text>
-<text x="180" y="70">(subbytevector</text>
-<text x="330" y="70">seed</text>
-<text x="380" y="70">0</text>
-<text x="400" y="70">32))</text>
-<text x="90" y="90">(sk-prf</text>
-<text x="170" y="90">(subbytevector</text>
-<text x="320" y="90">seed</text>
-<text x="370" y="90">32</text>
-<text x="400" y="90">64))</text>
-<text x="90" y="110">(pk-seed</text>
-<text x="180" y="110">(subbytevector</text>
-<text x="330" y="110">seed</text>
-<text x="380" y="110">64</text>
-<text x="410" y="110">96))</text>
-<text x="90" y="130">(keypair</text>
-<text x="180" y="130">(sphincs+-generate</text>
-<text x="370" y="130">sk-seed</text>
-<text x="450" y="130">sk-prf</text>
-<text x="520" y="130">pk-seed)))</text>
-<text x="40" y="150">keypair))</text>
-<text x="0" y="170">;;</text>
-<text x="30" y="170">Keystore</text>
-<text x="120" y="170">storage</text>
-<text x="200" y="170">(encrypted)</text>
-<text x="0" y="190">(realm-private-key</text>
-<text x="20" y="210">(version</text>
-<text x="110" y="210">1)</text>
-<text x="20" y="230">(algorithm</text>
-<text x="130" y="230">"sphincs+-shake-256s")</text>
-<text x="20" y="250">(parameters</text>
-<text x="40" y="270">(n</text>
-<text x="70" y="270">32)</text>
-<text x="430" y="270">;</text>
-<text x="450" y="270">Security</text>
-<text x="540" y="270">parameter</text>
-<text x="40" y="290">(h</text>
-<text x="70" y="290">64)</text>
-<text x="430" y="290">;</text>
-<text x="450" y="290">Tree</text>
-<text x="500" y="290">height</text>
-<text x="40" y="310">(d</text>
-<text x="70" y="310">8)</text>
-<text x="430" y="310">;</text>
-<text x="450" y="310">Hypertree</text>
-<text x="550" y="310">layers</text>
-<text x="40" y="330">(k</text>
-<text x="70" y="330">22)</text>
-<text x="430" y="330">;</text>
-<text x="450" y="330">FORS</text>
-<text x="500" y="330">trees</text>
-<text x="40" y="350">(w</text>
-<text x="70" y="350">16))</text>
-<text x="430" y="350">;</text>
-<text x="450" y="350">Winternitz</text>
-<text x="560" y="350">parameter</text>
-<text x="20" y="370">(protection</text>
-<text x="140" y="370">"passphrase")</text>
-<text x="20" y="390">(kdf</text>
-<text x="70" y="390">"argon2id")</text>
-<text x="20" y="410">(ciphertext</text>
-<text x="140" y="410">#${encrypted-sk}))</text>
-</svg>
-</div>
+<pre class="diagram">
+(define (sphincs+-keygen)
+  "Generate SPHINCS+ keypair using SHAKE256"
+  (let* ((seed (random-bytes 96))          ; 3 × 32-byte seeds
+         (sk-seed (subbytevector seed 0 32))
+         (sk-prf (subbytevector seed 32 64))
+         (pk-seed (subbytevector seed 64 96))
+         (keypair (sphincs+-generate sk-seed sk-prf pk-seed)))
+    keypair))
+
+;; Keystore storage (encrypted)
+(realm-private-key
+  (version 1)
+  (algorithm "sphincs+-shake-256s")
+  (parameters
+    (n 32)                                 ; Security parameter
+    (h 64)                                 ; Tree height
+    (d 8)                                  ; Hypertree layers
+    (k 22)                                 ; FORS trees
+    (w 16))                                ; Winternitz parameter
+  (protection "passphrase")
+  (kdf "argon2id")
+  (ciphertext #${encrypted-sk}))
+</pre>
 <h3>Dilithium3</h3>
 <pre class="language-scheme">
 (define (dilithium-keygen)
@@ -433,66 +370,22 @@ Future:    sphincs+:8a9b0c1d2e3f...
 </section>
 <section>
 <h2>Invariants</h2>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 780 200" width="780" height="200" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">S1.</text>
-<text x="40" y="10">Post-quantum</text>
-<text x="170" y="10">signatures</text>
-<text x="280" y="10">are</text>
-<text x="320" y="10">unforgeable</text>
-<text x="440" y="10">(given</text>
-<text x="510" y="10">hash</text>
-<text x="560" y="10">security)</text>
-<text x="40" y="30">forge(sphincs+-sig)</text>
-<text x="240" y="30">requires</text>
-<text x="330" y="30">break(shake256)</text>
-<text x="0" y="50">S2.</text>
-<text x="40" y="50">Hybrid</text>
-<text x="110" y="50">requires</text>
-<text x="200" y="50">both</text>
-<text x="250" y="50">valid</text>
-<text x="40" y="70">valid(hybrid-sig)</text>
-<text x="220" y="70">↔</text>
-<text x="240" y="70">valid(ed25519-sig)</text>
-<text x="430" y="70">∧</text>
-<text x="450" y="70">valid(pq-sig)</text>
-<text x="0" y="90">S3.</text>
-<text x="40" y="90">Algorithm</text>
-<text x="140" y="90">indicated</text>
-<text x="240" y="90">in</text>
-<text x="270" y="90">signature</text>
-<text x="40" y="110">verify(sig)</text>
-<text x="160" y="110">uses</text>
-<text x="210" y="110">algorithm(sig),</text>
-<text x="370" y="110">not</text>
-<text x="410" y="110">ambient</text>
-<text x="490" y="110">config</text>
-<text x="0" y="130">S4.</text>
-<text x="40" y="130">Key</text>
-<text x="80" y="130">algorithm</text>
-<text x="180" y="130">matches</text>
-<text x="260" y="130">signature</text>
-<text x="360" y="130">algorithm</text>
-<text x="40" y="150">sign(sphincs+-key,</text>
-<text x="230" y="150">msg)</text>
-<text x="280" y="150">produces</text>
-<text x="370" y="150">sphincs+-signature</text>
-<text x="0" y="170">S5.</text>
-<text x="40" y="170">Migration</text>
-<text x="140" y="170">preserves</text>
-<text x="240" y="170">capability</text>
-<text x="350" y="170">validity</text>
-<text x="40" y="190">valid-pre-migration(cert)</text>
-<text x="320" y="190">valid-post-migration(cert)</text>
-<text x="590" y="190">[during</text>
-<text x="670" y="190">transition]</text>
-</svg>
-</div>
+<pre class="diagram">
+S1. Post-quantum signatures are unforgeable (given hash security)
+    forge(sphincs+-sig) requires break(shake256)
+
+S2. Hybrid requires both valid
+    valid(hybrid-sig) ↔ valid(ed25519-sig) ∧ valid(pq-sig)
+
+S3. Algorithm indicated in signature
+    verify(sig) uses algorithm(sig), not ambient config
+
+S4. Key algorithm matches signature algorithm
+    sign(sphincs+-key, msg) produces sphincs+-signature
+
+S5. Migration preserves capability validity
+    valid-pre-migration(cert) → valid-post-migration(cert) [during transition]
+</pre>
 </section>
 <section>
 <h2>The Quantum Winter</h2>

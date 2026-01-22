@@ -132,133 +132,40 @@
 (print "Threshold: " (share-threshold (car shares)))
 </pre>
 <h3>Reconstruction from K Shares</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 570 160" width="570" height="160" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">;;</text>
-<text x="30" y="10">Collect</text>
-<text x="110" y="10">any</text>
-<text x="150" y="10">3</text>
-<text x="170" y="10">shares</text>
-<text x="0" y="30">(define</text>
-<text x="80" y="30">collected</text>
-<text x="180" y="30">(list</text>
-<text x="240" y="30">share-1</text>
-<text x="320" y="30">share-3</text>
-<text x="400" y="30">share-5))</text>
-<text x="0" y="50">;;</text>
-<text x="30" y="50">Reconstruct</text>
-<text x="0" y="70">(define</text>
-<text x="80" y="70">reconstructed</text>
-<text x="220" y="70">(shamir-reconstruct</text>
-<text x="420" y="70">collected))</text>
-<text x="0" y="90">;;</text>
-<text x="30" y="90">Verify</text>
-<text x="0" y="110">(if</text>
-<text x="40" y="110">(equal?</text>
-<text x="120" y="110">(blob-&gt;hex</text>
-<text x="230" y="110">secret)</text>
-<text x="310" y="110">(blob-&gt;hex</text>
-<text x="420" y="110">reconstructed))</text>
-<text x="40" y="130">(print</text>
-<text x="110" y="130">"✓</text>
-<text x="150" y="130">Reconstruction</text>
-<text x="300" y="130">successful!")</text>
-<text x="40" y="150">(print</text>
-<text x="110" y="150">"✗</text>
-<text x="150" y="150">Reconstruction</text>
-<text x="300" y="150">failed"))</text>
-</svg>
-</div>
+<pre class="diagram">
+;; Collect any 3 shares
+(define collected (list share-1 share-3 share-5))
+
+;; Reconstruct
+(define reconstructed (shamir-reconstruct collected))
+
+;; Verify
+(if (equal? (blob-&gt;hex secret) (blob-&gt;hex reconstructed))
+    (print "✓ Reconstruction successful!")
+    (print "✗ Reconstruction failed"))
+</pre>
 <h3>Ed25519 Key Backup</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 680 300" width="680" height="300" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">;;</text>
-<text x="30" y="10">Generate</text>
-<text x="120" y="10">keypair</text>
-<text x="0" y="30">(define</text>
-<text x="80" y="30">keypair</text>
-<text x="160" y="30">(ed25519-keypair))</text>
-<text x="0" y="50">(define</text>
-<text x="80" y="50">public-key</text>
-<text x="190" y="50">(car</text>
-<text x="240" y="50">keypair))</text>
-<text x="0" y="70">(define</text>
-<text x="80" y="70">private-key</text>
-<text x="200" y="70">(cadr</text>
-<text x="260" y="70">keypair))</text>
-<text x="0" y="90">;;</text>
-<text x="30" y="90">Split</text>
-<text x="90" y="90">private</text>
-<text x="170" y="90">key</text>
-<text x="210" y="90">(5-of-7</text>
-<text x="290" y="90">for</text>
-<text x="330" y="90">production)</text>
-<text x="0" y="110">(define</text>
-<text x="80" y="110">key-shares</text>
-<text x="190" y="110">(shamir-split</text>
-<text x="330" y="110">private-key</text>
-<text x="450" y="110">threshold:</text>
-<text x="560" y="110">5</text>
-<text x="580" y="110">total:</text>
-<text x="650" y="110">7))</text>
-<text x="0" y="130">;;</text>
-<text x="30" y="130">Later:</text>
-<text x="100" y="130">reconstruct</text>
-<text x="220" y="130">and</text>
-<text x="260" y="130">verify</text>
-<text x="0" y="150">(define</text>
-<text x="80" y="150">recovered-key</text>
-<text x="220" y="150">(shamir-reconstruct</text>
-<text x="420" y="150">(take</text>
-<text x="480" y="150">key-shares</text>
-<text x="590" y="150">5)))</text>
-<text x="0" y="170">;;</text>
-<text x="30" y="170">Test:</text>
-<text x="90" y="170">sign</text>
-<text x="140" y="170">with</text>
-<text x="190" y="170">recovered</text>
-<text x="290" y="170">key</text>
-<text x="0" y="190">(define</text>
-<text x="80" y="190">message</text>
-<text x="160" y="190">"Test</text>
-<text x="220" y="190">message")</text>
-<text x="0" y="210">(define</text>
-<text x="80" y="210">signature</text>
-<text x="180" y="210">(ed25519-sign</text>
-<text x="320" y="210">recovered-key</text>
-<text x="460" y="210">message))</text>
-<text x="0" y="230">(define</text>
-<text x="80" y="230">valid?</text>
-<text x="150" y="230">(ed25519-verify</text>
-<text x="310" y="230">public-key</text>
-<text x="420" y="230">message</text>
-<text x="500" y="230">signature))</text>
-<text x="0" y="250">(if</text>
-<text x="40" y="250">valid?</text>
-<text x="40" y="270">(print</text>
-<text x="110" y="270">"✓</text>
-<text x="150" y="270">Recovered</text>
-<text x="250" y="270">key</text>
-<text x="290" y="270">produces</text>
-<text x="380" y="270">valid</text>
-<text x="440" y="270">signatures!")</text>
-<text x="40" y="290">(print</text>
-<text x="110" y="290">"✗</text>
-<text x="150" y="290">Key</text>
-<text x="190" y="290">recovery</text>
-<text x="280" y="290">failed"))</text>
-</svg>
-</div>
+<pre class="diagram">
+;; Generate keypair
+(define keypair (ed25519-keypair))
+(define public-key (car keypair))
+(define private-key (cadr keypair))
+
+;; Split private key (5-of-7 for production)
+(define key-shares (shamir-split private-key threshold: 5 total: 7))
+
+;; Later: reconstruct and verify
+(define recovered-key (shamir-reconstruct (take key-shares 5)))
+
+;; Test: sign with recovered key
+(define message "Test message")
+(define signature (ed25519-sign recovered-key message))
+(define valid? (ed25519-verify public-key message signature))
+
+(if valid?
+    (print "✓ Recovered key produces valid signatures!")
+    (print "✗ Key recovery failed"))
+</pre>
 </section>
 <section>
 <h2>Security Properties</h2>
@@ -330,47 +237,15 @@ Share 5: Tattoo (not recommended)
 <h2>Integration with Threshold Signatures</h2>
 <p>Two complementary approaches:</p>
 <h3>Shamir for Key Backup (This Memo)</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 420 40" width="420" height="40" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">Private</text>
-<text x="80" y="10">key</text>
-<text x="140" y="10">split</text>
-<text x="220" y="10">N</text>
-<text x="240" y="10">shares</text>
-<text x="0" y="30">Recovery:</text>
-<text x="100" y="30">K</text>
-<text x="120" y="30">shares</text>
-<text x="210" y="30">reconstruct</text>
-<text x="350" y="30">use</text>
-<text x="390" y="30">key</text>
-</svg>
-</div>
+<pre class="diagram">
+Private key → split → N shares
+Recovery: K shares → reconstruct → use key
+</pre>
 <h3>Multi-Signature for Governance (Memo-008)</h3>
-<div class="diagram-container">
-<svg class="diagram" viewBox="0 0 330 40" width="330" height="40" xmlns="http://www.w3.org/2000/svg">
-<style>
-  .diagram line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
-  .diagram rect { fill: currentColor; }
-  .diagram text { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: currentColor; dominant-baseline: central; }
-</style>
-<text x="0" y="10">N</text>
-<text x="20" y="10">parties</text>
-<text x="120" y="10">N</text>
-<text x="140" y="10">keys</text>
-<text x="210" y="10">N</text>
-<text x="230" y="10">signatures</text>
-<text x="0" y="30">Verification:</text>
-<text x="140" y="30">count</text>
-<text x="200" y="30">valid</text>
-<text x="260" y="30">≥</text>
-<text x="280" y="30">K</text>
-</svg>
-</div>
+<pre class="diagram">
+N parties → N keys → N signatures
+Verification: count valid ≥ K
+</pre>
 <p>Use Shamir when: - Backing up existing keys - Emergency recovery scenarios - Single key must be reconstructable</p>
 <p>Use Multi-Sig when: - Ongoing governance decisions - Need audit trail of who signed - Asynchronous authorization</p>
 </section>
