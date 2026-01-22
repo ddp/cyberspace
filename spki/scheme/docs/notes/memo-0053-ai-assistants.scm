@@ -1,7 +1,7 @@
 (memo
   (number 53)
   (title "AI Assistants")
-  (date "2026-01-13")
+  (date "January 2026 (2026-01-13T00:00:00Z)")
   (author "Derrell Piper" "ddp@eludom.net")
 
   (abstract

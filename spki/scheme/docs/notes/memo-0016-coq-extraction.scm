@@ -1,7 +1,7 @@
 (memo
   (number 16)
   (title "Coq Verification of the Authorization TCB")
-  (date "2026-01-22")
+  (date "January 2026 (2026-01-22T05:17:00Z)")
   (author "Derrell Piper" "ddp@eludom.net")
 
   (abstract
