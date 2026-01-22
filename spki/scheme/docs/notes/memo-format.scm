@@ -333,8 +333,8 @@
 
     ;; Build SVG string
     (let ((out (open-output-string)))
+      ;; viewBox only - CSS max-width:100% handles scaling
       (display (format "<svg class=\"diagram\" viewBox=\"0 0 ~a ~a\" " width height) out)
-      (display (format "width=\"~a\" height=\"~a\" " width height) out)
       (display "xmlns=\"http://www.w3.org/2000/svg\">\n" out)
       ;; Style for lines and text
       (display "<style>\n" out)
