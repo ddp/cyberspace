@@ -5,7 +5,7 @@
   (number 55)
   (title "Lazy Discovery")
   (status "Draft")
-  (date "2026-01-15T00:00:00Z (January 2026)")
+  (date "January 2026 (2026-01-15T00:00:00Z)")
   (author "Derrell Piper" "ddp@eludom.net")
 
   (section
