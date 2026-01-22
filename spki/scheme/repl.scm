@@ -29,6 +29,7 @@
         (chicken process-context)
         (chicken process-context posix)  ; hostname
         (chicken process)
+        (chicken platform)  ; machine-type, software-type, etc.
         (chicken blob)
         (chicken file posix)
         (chicken bitwise)
@@ -348,6 +349,42 @@
 (define (string-repeat s n)
   "Repeat string s n times (Unicode-safe)."
   (apply string-append (make-list n s)))
+
+(define (hex-dump vec #!optional (bytes-per-line 16))
+  "Display hex dump of u8vector with ASCII sidebar."
+  (define (hex2 n) ; 2-digit hex
+    (let ((s (number->string n 16)))
+      (if (< (string-length s) 2)
+          (string-append "0" s)
+          s)))
+  (define (hex8 n) ; 8-digit hex address
+    (let ((s (number->string n 16)))
+      (string-append (make-string (- 8 (string-length s)) #\0) s)))
+  (let ((len (u8vector-length vec)))
+    (let loop ((offset 0))
+      (when (< offset len)
+        ;; Address
+        (display (hex8 offset))
+        (display "  ")
+        ;; Hex bytes
+        (let ((line-end (min (+ offset bytes-per-line) len)))
+          (do ((i offset (+ i 1)))
+              ((>= i line-end))
+            (display (hex2 (u8vector-ref vec i)))
+            (display " "))
+          ;; Padding for short lines
+          (when (< (- line-end offset) bytes-per-line)
+            (display (make-string (* 3 (- bytes-per-line (- line-end offset))) #\space)))
+          ;; ASCII
+          (display " |")
+          (do ((i offset (+ i 1)))
+              ((>= i line-end))
+            (let ((b (u8vector-ref vec i)))
+              (display (if (and (>= b 32) (<= b 126))
+                           (integer->char b)
+                           #\.))))
+          (print "|"))
+        (loop (+ offset bytes-per-line))))))
 
 ;;; ============================================================
 ;;; Bootstrap: Mixed-Architecture Defense
@@ -5642,16 +5679,14 @@ Cyberspace REPL - Available Commands
            (print "  .  ?  bye   - status, help, exit"))
          ;; Schemer: comma commands (like Chicken CSI)
          (begin
-           (print "  ,soup             Browse the object store")
-           (print "  ,library          Enter the Library")
-           (print "  ,search TOPIC     Search everything")
-           (print "  ,kwic WORD        Keyword-in-context search")
-           (print "  ,s                Node status")
-           (print "  ,i OBJ            Inspect anything")
+           (print "  ,soup ,library ,search ,kwic    Cyberspace")
+           (print "  ,s ,i ,e ,q                     status, inspect, edit, quit")
+           (print "  ,p ,x ,t ,du ,r                 pp, expand, time, dump, sysinfo")
+           (print "  ,a ,l ,m ,d                     apropos, load, module, describe")
+           (print "  ,sh ,bt ,exn                    shell, backtrace, exception")
            (print "")
-           (printf "  ,? or ,help       All help topics (~a commands)~%"
-                   (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
-           (print "  ,q                Quit")))
+           (printf "  ,?                              Full help (~a commands)~%"
+                   (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))))
      (print "")))
   (void))
 
@@ -7117,9 +7152,13 @@ See: Memo-0000 Declaration of Cyberspace
         ((or (string=? line "bye") (string=? line "bye."))
          (goodbye repl-history-save *boot-verbosity*))
 
-        ;; Comma commands
+        ;; Comma commands - using comma asserts schemer mode
         ((char=? (string-ref line 0) #\,)
          (repl-history-add line)
+         ;; Comma usage = schemer assertion
+         (when (eq? *user-mode* 'novice)
+           (set! *user-mode* 'schemer)
+           (set! *prompt* "λ "))
          (let* ((cmd-line (substring line 1))
                 (parts (string-split cmd-line))
                 (cmd (if (null? parts) "" (car parts)))
@@ -7136,30 +7175,103 @@ See: Memo-0000 Declaration of Cyberspace
                   (string=? cmd "exit"))
               (goodbye repl-history-save *boot-verbosity*))
 
-             ;; Help - comma style (like Chicken CSI)
+             ;; Help - delegate to mode-aware (help)
              ((or (string=? cmd "h")
                   (string=? cmd "help")
                   (string=? cmd "?"))
+              (help)
+              (loop))
+
+             ;; Pretty print (CSI's ,p)
+             ((string=? cmd "p")
+              (if (null? args)
+                  (print "Usage: ,p <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (pp (eval (with-input-from-string expr-str read))))))
+              (loop))
+
+             ;; Expand macros (CSI's ,x)
+             ((string=? cmd "x")
+              (if (null? args)
+                  (print "Usage: ,x <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (pp (expand (with-input-from-string expr-str read))))))
+              (loop))
+
+             ;; Time expression (CSI's ,t)
+             ((string=? cmd "t")
+              (if (null? args)
+                  (print "Usage: ,t <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (let* ((start (current-milliseconds))
+                             (result (eval (with-input-from-string expr-str read)))
+                             (end (current-milliseconds)))
+                        (printf "~a ms~%" (- end start))
+                        result))))
+              (loop))
+
+             ;; Shell command (CSI's ,s - use ,sh to avoid conflict with status)
+             ((string=? cmd "sh")
+              (if (null? args)
+                  (print "Usage: ,sh <command>")
+                  (let ((cmd-str (string-intersperse args " ")))
+                    (system cmd-str)))
+              (loop))
+
+             ;; System info (CSI's ,r)
+             ((string=? cmd "r")
               (print "")
-              (print "Comma commands:")
+              (printf "Machine type:     ~a~%" (machine-type))
+              (printf "Software type:    ~a~%" (software-type))
+              (printf "Software version: ~a~%" (software-version))
+              (printf "Build platform:   ~a~%" (build-platform))
+              (printf "Chicken version:  ~a~%" (chicken-version))
+              (printf "Home:             ~a~%" (chicken-home))
               (print "")
-              (print "  ,?              This help")
-              (print "  ,soup           Browse the object store")
-              (print "  ,library        Enter the Library")
-              (print "  ,search TOPIC   Search everything")
-              (print "  ,kwic WORD      Keyword-in-context search")
-              (print "  ,s              Node status")
-              (print "  ,i OBJ          Inspect anything")
-              (print "  ,e FILE         Edit file")
-              (print "  ,teco           TECO editor")
-              (print "  ,pencil         Electric Pencil editor")
-              (print "  ,novice         Electric Pencil (novice mode)")
-              (print "  ,schemacs       Schemacs (Emacs-style)")
-              (print "  ,q              Quit")
-              (print "")
-              (printf "  ,help topics    All help topics (~a commands)~%"
-                      (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
-              (print "")
+              (loop))
+
+             ;; Call chain / backtrace (CSI's ,c - use ,bt to avoid conflict with clear)
+             ((string=? cmd "bt")
+              (print-call-chain)
+              (loop))
+
+             ;; Last exception (CSI's ,exn)
+             ((string=? cmd "exn")
+              (if *last-exception*
+                  (begin
+                    (print "Last exception:")
+                    (print-error-message *last-exception*)
+                    (print "")
+                    (print "Call chain at error:")
+                    (when *last-call-chain*
+                      (print-call-chain (current-error-port) 0 *last-call-chain*)))
+                  (print "No exception recorded"))
+              (loop))
+
+             ;; Dump (CSI's ,du) - hex dump of blob/string
+             ((string=? cmd "du")
+              (if (null? args)
+                  (print "Usage: ,du <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (let ((val (eval (with-input-from-string expr-str read))))
+                        (cond
+                          ((blob? val)
+                           (hex-dump (blob->u8vector val)))
+                          ((string? val)
+                           (hex-dump (blob->u8vector (string->blob val))))
+                          ((u8vector? val)
+                           (hex-dump val))
+                          (else
+                           (print "Value is not a blob, string, or u8vector:")
+                           (pp val)))))))
               (loop))
 
              ;; Apropos - search symbols
@@ -7505,7 +7617,7 @@ See: Memo-0000 Declaration of Cyberspace
              ;; Unknown comma command
              (else
               (print "Unknown command: ," cmd)
-              (print "Try ,? for help")
+              (print "Try ,? for help or ,csi for Chicken CSI reference")
               (loop)))))
 
         ;; Regular input - parse with command mode support
