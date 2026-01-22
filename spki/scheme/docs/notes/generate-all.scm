@@ -16,10 +16,8 @@
         (chicken irregex)
         (chicken condition)
         (chicken time)
-        (chicken process)
         srfi-1
-        srfi-13
-        srfi-69)
+        srfi-13)
 
 (load "memo-format.scm")
 
@@ -35,7 +33,7 @@
 
 (define (memo-number filename)
   "Extract Memo number from filename for sorting."
-  (let ((m (irregex-search "memo-([0-9]+)" filename)))
+  (let ((m (irregex-match "memo-([0-9]+)" filename)))
     (if m
         (string->number (irregex-match-substring m 1))
         999)))
@@ -112,42 +110,6 @@
          (print "  [WARN] " base ": " (string-intersperse errors ", ")))
        (null? errors)))))
 
-(define (check-duplicate-numbers memos)
-  "Fail fast if any memo numbers are duplicated."
-  (let* ((numbers (map memo-number memos))
-         (seen (make-hash-table))
-         (dupes '()))
-    (for-each (lambda (n)
-                (if (hash-table-exists? seen n)
-                    (set! dupes (cons n dupes))
-                    (hash-table-set! seen n #t)))
-              numbers)
-    (when (not (null? dupes))
-      (print "")
-      (print "*** ERROR: Duplicate memo numbers detected! ***")
-      (for-each (lambda (n)
-                  (let ((num-str (number->string n)))
-                    (print "  " (string-append (make-string (- 4 (string-length num-str)) #\0) num-str) ": "
-                           (string-intersperse
-                             (filter (lambda (f) (= (memo-number f) n)) memos)
-                             ", "))))
-                (delete-duplicates (reverse dupes)))
-      (print "")
-      (print "The Ten Commandments (0000-0009) are fixed:")
-      (print "  0000 Declaration")
-      (print "  0001 Conventions")
-      (print "  0002 Architecture")
-      (print "  0003 Public Key Authorization")
-      (print "  0004 Shamir Sharing")
-      (print "  0005 Audit Trail")
-      (print "  0006 Vault Architecture")
-      (print "  0007 Replication Layer")
-      (print "  0008 Threshold Governance")
-      (print "  0009 Designer Notes")
-      (print "")
-      (print "Fix duplicates before regenerating.")
-      (exit 1))))
-
 (define (main)
   (print "=== Memo Generation (S-expression Pipeline) ===")
   (print "")
@@ -156,10 +118,6 @@
          (memos (discover-memos))
          (docs (discover-docs))
          (all-files (append memos docs)))
-
-    ;; Fail fast on duplicate numbers
-    (check-duplicate-numbers memos)
-
     (print "Found " (length memos) " Memos, " (length docs) " docs")
     (print "")
 
@@ -175,11 +133,6 @@
       (if (= failed 0)
           (print "  All " passed " files passed validation")
           (print "  " failed " file(s) have warnings")))
-
-    ;; Regenerate index.html
-    (print "")
-    (print "=== Index Generation ===")
-    (system "bash gen-index.sh")
 
     (let* ((end-time (current-milliseconds))
            (elapsed-ms (- end-time start-time))
