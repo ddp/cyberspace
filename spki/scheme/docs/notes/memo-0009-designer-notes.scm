@@ -324,6 +324,15 @@
     (p "Two formal verification milestones gate Cyberspace releases:")
 
     (subsection
+      "10.0 Version Semantics"
+      (table
+        (header "Version" "Gate" "Requirement")
+        (row "v0.9.x" "pre-beta" "Development, unstable APIs")
+        (row "v1.0.0" "beta" "Coq proofs complete, extraction working")
+        (row "v2.0.0" "release" "TLA+ model checked, no safety violations"))
+      (p "Semantic versioning with verification gates. No version advances without passing its gate."))
+
+    (subsection
       "10.1 Beta Gate: Coq Extraction"
       (p "The TCB must be machine-verified before beta. SpkiTcb.v defines the security model; extraction produces spki_tcb.ml. Hand-written code that 'matches the spec' is not verified — it's aspirational.")
       (p "The critical property: capability attenuation (tag_intersect only shrinks permissions). The Coq proofs establish this mathematically. Without verified extraction, the trust anchor is unverified.")
@@ -563,6 +572,7 @@ Cyberspace soup:  Vault objects, content-addressed")
 
   (section
     "Changelog"
+    (p "- 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)")
     (p "- 2026-01-22 — Folded designer-notes.scm into memo (open kimono); added call/cc rationale")
     (p "- 2026-01-21 — Added Release Gates (section 10): Coq for beta, TLA+ for release")
     (p "- 2026-01-19 — Added Audit Trail Heritage (section 7.7), moved from Memo-0005")
