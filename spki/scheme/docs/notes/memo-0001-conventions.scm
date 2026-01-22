@@ -163,6 +163,24 @@
       (item "\"Request for comments\" - we're not requesting")
       (item "\"Submit an RFC\" - we pen memos, they become RFCs")))
   (section
+    "Typography"
+    (p "Memos use Unicode box-drawing characters (U+2500 range) for diagrams. Correct rendering requires a monospace font with proper box-drawing glyph alignment.")
+    (subsection
+      "Recommended Fonts"
+      (p "The following fonts are known to render box-drawing characters at exactly one cell width:")
+      (list
+        (item "Iosevka / Iosevka Fixed - designed for terminals, pixel-perfect boxes")
+        (item "Berkeley Mono - premium, excellent alignment")
+        (item "Hack - open source, designed for source code")
+        (item "DejaVu Sans Mono - wide Unicode coverage")
+        (item "Bitstream Vera Sans Mono - the original"))
+      (p "HTML output embeds Iosevka Fixed as a web font. Plain text and terminal output rely on the viewer's configured font."))
+    (subsection
+      "Box-Drawing Characters"
+      (p "Diagrams use these characters from the Box Drawing block (U+2500-U+257F):")
+      (code "┌ ┐ └ ┘  corners\n│ ─      lines\n├ ┤ ┬ ┴  T-junctions\n┼        cross")
+      (p "If these characters appear misaligned, configure your terminal or text editor to use a recommended font.")))
+  (section
     "Security Considerations"
     (subsection
       "Signed Memos"

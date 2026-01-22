@@ -22,12 +22,12 @@ domain, no central authority. The many remain autonomous; the one
 emerges from consensus.
 
 
-             +-------------------------------------+
-             |                                     |
-             |   Rough consensus, cryptography,    |
-             |   trusted systems, running code.    |
-             |                                     |
-             +-------------------------------------+
+             ┌─────────────────────────────────────┐
+             │                                     │
+             │   Rough consensus, cryptography,    │
+             │   trusted systems, running code.    │
+             │                                     │
+             └─────────────────────────────────────┘
 
 
 ------------------------------------------------------------------------
@@ -91,29 +91,29 @@ too complex to understand or too rigid to adapt.
     "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme."
 
 
-    +-------------------------------------------------------------+
-    |                                                             |
-    |   TRUSTED COMPUTING BASE (OCaml, ~1000 lines)              |
-    |                                                             |
-    |   +-------------+  +-------------+  +-------------+        |
-    |   |   Ed25519   |  |   SHA-512   |  |   Verify    |        |
-    |   |   Sign      |  |   Hash      |  |   Chain     |        |
-    |   +-------------+  +-------------+  +-------------+        |
-    |                                                             |
-    |   That's it. Everything else is policy.                    |
-    |                                                             |
-    +-------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                                                             │
+    │   TRUSTED COMPUTING BASE (OCaml, ~1000 lines)               │
+    │                                                             │
+    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+    │   │   Ed25519   │  │   SHA-512   │  │   Verify    │         │
+    │   │   Sign      │  │   Hash      │  │   Chain     │         │
+    │   └─────────────┘  └─────────────┘  └─────────────┘         │
+    │                                                             │
+    │   That's it. Everything else is policy.                     │
+    │                                                             │
+    └─────────────────────────────────────────────────────────────┘
                             FFI (tiny surface)
-    +-------------------------------------------------------------+
-    |                                                             |
-    |   EVERYTHING ELSE (Chicken Scheme, unlimited)              |
-    |                                                             |
-    |   Vault - Audit - Replication - Names - Discovery          |
-    |   CLI Tools - API Server - Library - Scripts               |
-    |                                                             |
-    |   Change it anytime. It's just policy.                     |
-    |                                                             |
-    +-------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                                                             │
+    │   EVERYTHING ELSE (Chicken Scheme, unlimited)               │
+    │                                                             │
+    │   Vault - Audit - Replication - Names - Discovery           │
+    │   CLI Tools - API Server - Library - Scripts                │
+    │                                                             │
+    │   Change it anytime. It's just policy.                      │
+    │                                                             │
+    └─────────────────────────────────────────────────────────────┘
 
 Rationale:
 
@@ -132,15 +132,15 @@ crypto in Coq. Everything else can evolve freely.
     "English on top, Scheme for everything else."
 
 
-    +-------------------------------------------------------------+
-    |  > status                    Command mode: English verbs    |
-    |  > commit "message"          No parens needed              |
-    |  > soup                      Explore, inspect, act          |
-    +-------------------------------------------------------------+
-    |  > (define x (keys))         Scheme mode: Full power       |
-    |  > (map publish (releases))  Compose, transform, compute   |
-    |  > (filter signed? certs)    Lambda is home                |
-    +-------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────┐
+    │  > status                    Command mode: English verbs    │
+    │  > commit "message"          No parens needed              │
+    │  > soup                      Explore, inspect, act          │
+    ├─────────────────────────────────────────────────────────────┤
+    │  > (define x (keys))         Scheme mode: Full power       │
+    │  > (map publish (releases))  Compose, transform, compute   │
+    │  > (filter signed? certs)    Lambda is home                │
+    └─────────────────────────────────────────────────────────────┘
 
 The command layer is syntactic sugar. The Scheme layer is substrate.
 Users start with English, graduate to Scheme when they need composition.
@@ -158,12 +158,12 @@ No mode switching—parens are the only delimiter.
 
 
            forge
-             v
+             ↓
            eggs
-             v
-           soup --+--> vault (persist)
-                  |
-                  +--> 0 (evaporate)
+             ↓
+           soup ──┬──→ vault (persist)
+                  │
+                  └──→ ∅ (evaporate)
 
 
   Stage   What          How                                                      
@@ -199,13 +199,13 @@ Cyberspace has one abstraction: the vault.
 
 
     VAXcluster          Cyberspace
-    ----------          ----------
-    Shared disk    >    Vault
-    MSCP           >    Gossip replication
-    DLM            >    Quorum consensus
-    SCS            >    CIP (secure channels)
-    Quorum disk    >    Vault
-    LAVC           >    Enrollment
+    ──────────          ──────────
+    Shared disk    →    Vault
+    MSCP           →    Gossip replication
+    DLM            →    Quorum consensus
+    SCS            →    CIP (secure channels)
+    Quorum disk    →    Vault
+    LAVC           →    Enrollment
 
 The vault is content-addressed storage, replicated across nodes via
 gossip, with quorum state for partition handling:
@@ -334,25 +334,25 @@ Federated distribution without central registry. See Memo-007.
 -----------------
 
 
-    +------------------------------------------------------------------+
-    |                        CYBERSPACE                                |
-    +------------------------------------------------------------------+
-    |  +------------+  +------------+  +------------+  +------------+ |
-    |  |   Vault    |  |   Audit    |  |   SPKI     |  |  Library   | |
-    |  +-----+------+  +-----+------+  +-----+------+  +-----+------+ |
-    |        +---------------+-------+-------+---------------+        |
-    |                    +-----------v-----------+                    |
-    |                    |    Chicken Scheme     |                    |
-    |                    |    (Policy Layer)     |                    |
-    |                    +-----------+-----------+                    |
-    |                    +-----------v-----------+                    |
-    |                    |    OCaml TCB          |                    |
-    |                    |    (Crypto Only)      |                    |
-    |                    +-----------+-----------+                    |
-    |                    +-----------v-----------+                    |
-    |                    |    libsodium          |                    |
-    |                    +-----------------------+                    |
-    +------------------------------------------------------------------+
+    ┌──────────────────────────────────────────────────────────────────┐
+    │                        CYBERSPACE                                │
+    ├──────────────────────────────────────────────────────────────────┤
+    │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
+    │  │   Vault    │  │   Audit    │  │   SPKI     │  │  Library   │ │
+    │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘ │
+    │        └───────────────┴───────┬───────┴───────────────┘        │
+    │                    ┌───────────▼───────────┐                    │
+    │                    │    Chicken Scheme     │                    │
+    │                    │    (Policy Layer)     │                    │
+    │                    └───────────┬───────────┘                    │
+    │                    ┌───────────▼───────────┐                    │
+    │                    │    OCaml TCB          │                    │
+    │                    │    (Crypto Only)      │                    │
+    │                    └───────────┬───────────┘                    │
+    │                    ┌───────────▼───────────┐                    │
+    │                    │    libsodium          │                    │
+    │                    └───────────────────────┘                    │
+    └──────────────────────────────────────────────────────────────────┘
 
 
 4.2 No Central Authority
@@ -360,20 +360,20 @@ Federated distribution without central registry. See Memo-007.
 
 
          Alice                    Bob                     Carol
-           |                       |                        |
-           |    +-------------+    |    +-------------+    |
-           +--->| Alice's     |<---+--->| Bob's       |<---+
-                | Namespace   |         | Namespace   |
-                |             |         |             |
-                | bob > key   |         | alice > key |
-                | carol > key |         | carol > key |
-                +-------------+         +-------------+
+           │                       │                        │
+           │    ┌─────────────┐    │    ┌─────────────┐    │
+           └───►│ Alice's     │◄───┴───►│ Bob's       │◄───┘
+                │ Namespace   │         │ Namespace   │
+                │             │         │             │
+                │ bob → key   │         │ alice → key │
+                │ carol → key │         │ carol → key │
+                └─────────────┘         └─────────────┘
              No DNS. No CA. No single point of failure.
              Just keys and local names.
 
 SPKI/SDSI gives you: - Local namespaces: "bob" means what you say it
 means - Authorization without identity: Grant permissions to keys, not
-people - Delegation chains: Alice > Bob > Carol, each step verified
+people - Delegation chains: Alice → Bob → Carol, each step verified
 
 
 ------------------------------------------------------------------------

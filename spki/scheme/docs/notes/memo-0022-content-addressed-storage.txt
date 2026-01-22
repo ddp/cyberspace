@@ -37,8 +37,8 @@ administration can fix a model where names and content are decoupled.
 Content-addressed storage inverts this:
 
 
-    Location-based:  address > content (many-to-one, mutable)
-    Content-based:   content > address (one-to-one, immutable)
+    Location-based:  address → content (many-to-one, mutable)
+    Content-based:   content → address (one-to-one, immutable)
 
 The address IS the content's cryptographic fingerprint. If the content
 changes, the address changes. If two files have the same address, they
@@ -113,16 +113,16 @@ Object Store
 
 
     .cas/
-    +-- objects/
-    |   +-- e3/
-    |   |   +-- b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-    |   +-- a7/
-    |   |   +-- ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a
-    |   +-- ...
-    +-- refs/
-    |   +-- HEAD
-    |   +-- tags/
-    +-- index
+    ├── objects/
+    │   ├── e3/
+    │   │   └── b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    │   ├── a7/
+    │   │   └── ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a
+    │   └── ...
+    ├── refs/
+    │   ├── HEAD
+    │   └── tags/
+    └── index
 
 Sharding: First two hex characters of hash form directory name (256
 buckets).
@@ -631,17 +631,17 @@ The Library Contains Itself
 ---------------------------
 
 
-    +-----------------------------------------+
-    |            LIBRARY OF CYBERSPACE        |
-    |  +-----------------------------------+  |
-    |  |     Content-Addressed Storage     |  |
-    |  |  +-----------------------------+  |  |
-    |  |  |    Memo-020 (this document)  |  |  |
-    |  |  |    describing CAS           |  |  |
-    |  |  |    stored in CAS            |  |  |
-    |  |  +-----------------------------+  |  |
-    |  +-----------------------------------+  |
-    +-----------------------------------------+
+    ╭─────────────────────────────────────────╮
+    │            LIBRARY OF CYBERSPACE        │
+    │  ╭───────────────────────────────────╮  │
+    │  │     Content-Addressed Storage     │  │
+    │  │  ╭─────────────────────────────╮  │  │
+    │  │  │    Memo-020 (this document)  │  │  │
+    │  │  │    describing CAS           │  │  │
+    │  │  │    stored in CAS            │  │  │
+    │  │  ╰─────────────────────────────╯  │  │
+    │  ╰───────────────────────────────────╯  │
+    ╰─────────────────────────────────────────╯
 
 Homoiconic storage: the description is the thing.
 
@@ -779,16 +779,16 @@ For the distributed soup, existence checks dominate replication
 overhead. A tiered approach minimizes latency:
 
 
-    +---------------------------------------------------------+
-    | L1: Hot Set Cache (1000 items, O(1), microseconds)     |
-    +---------------------------------------------------------+
-    | L2: Blocked Bloom Filter (100K items, O(k), cache-     |
-    |     friendly memory layout)                             |
-    +---------------------------------------------------------+
-    | L3: Quotient Filter (1M items, supports deletion)      |
-    +---------------------------------------------------------+
-    | L4: Disk/Network (authoritative, milliseconds)         |
-    +---------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────┐
+    │ L1: Hot Set Cache (1000 items, O(1), microseconds)     │
+    ├─────────────────────────────────────────────────────────┤
+    │ L2: Blocked Bloom Filter (100K items, O(k), cache-     │
+    │     friendly memory layout)                             │
+    ├─────────────────────────────────────────────────────────┤
+    │ L3: Quotient Filter (1M items, supports deletion)      │
+    ├─────────────────────────────────────────────────────────┤
+    │ L4: Disk/Network (authoritative, milliseconds)         │
+    └─────────────────────────────────────────────────────────┘
 
 
 Blocked Bloom Filters

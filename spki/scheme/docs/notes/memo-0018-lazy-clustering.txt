@@ -51,17 +51,17 @@ Cluster Model
 -------------
 
 
-         +---------+
-         |  Alice  |
-         | (lazy)  |
-         +----+----+
-              |
-              | sync when ready @ 10Gb/s
-              |
-         +----v----+         +---------+
-         |   Bob   |<------->|  Carol  |
-         | (lazy)  | 10Gb/s  | (lazy)  |
-         +---------+         +---------+
+         ┌─────────┐
+         │  Alice  │
+         │ (lazy)  │
+         └────┬────┘
+              │
+              │ sync when ready @ 10Gb/s
+              │
+         ┌────▼────┐         ┌─────────┐
+         │   Bob   │◄───────►│  Carol  │
+         │ (lazy)  │ 10Gb/s  │ (lazy)  │
+         └─────────┘         └─────────┘
     No heartbeats. No leader election. No quorum.
     Just friends sharing when they're ready.
     At line speed when they do.
@@ -112,7 +112,7 @@ Heartbeat and Timekeeping
 No mandatory heartbeat. That's the design.
 
 
-    Traditional cluster:  ping > pong > ping > pong > ...
+    Traditional cluster:  ping → pong → ping → pong → ...
     Lazy cluster:         ... silence ... (sync) ... silence ...
 
 Timekeeping: Lamport clocks (Memo-012), not wall clocks. - Causality
@@ -188,7 +188,7 @@ Each node tracks what it knows about others:
     (define-record-type <version-vector>
       (make-version-vector entries)
       version-vector?
-      (entries vv-entries))  ; Hash: node-id > latest-sequence
+      (entries vv-entries))  ; Hash: node-id → latest-sequence
     ;; Alice's view:
     ;; { alice: 42, bob: 37, carol: 29 }
 

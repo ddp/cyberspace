@@ -46,7 +46,7 @@ SPECIFICATION
 The Happened-Before Relation
 ----------------------------
 
-Definition: a > b (a happened before b) if:
+Definition: a → b (a happened before b) if:
 
   * a and b are in same process and a comes before b, or
   * a is sending a message and b is receiving it, or
@@ -70,9 +70,9 @@ Each process P maintains counter C(P):
 Clock Condition
 ---------------
 
-If a > b then C(a) < C(b).
+If a → b then C(a) < C(b).
 
-Note: Converse is not guaranteed. C(a) < C(b) does not imply a > b.
+Note: Converse is not guaranteed. C(a) < C(b) does not imply a → b.
 
 
 ------------------------------------------------------------------------
@@ -199,7 +199,7 @@ Receivers update their clocks, ensuring consistent view of causality.
 Conflict Detection
 ------------------
 
-If events are concurrent (neither a > b nor b > a):
+If events are concurrent (neither a → b nor b → a):
 
 
     (define (concurrent? a b)
@@ -223,8 +223,8 @@ For precise concurrency detection, use vector clocks:
     (define-record-type <vector-clock>
       (make-vector-clock entries)
       vector-clock?
-      (entries vc-entries))  ; Hash: node-id > counter
-    ;; a > b iff VC(a) < VC(b) (component-wise)
+      (entries vc-entries))  ; Hash: node-id → counter
+    ;; a → b iff VC(a) < VC(b) (component-wise)
     ;; a || b (concurrent) iff neither VC(a) < VC(b) nor VC(b) < VC(a)
 
 Trade-off: O(N) space vs O(1) for Lamport clocks.

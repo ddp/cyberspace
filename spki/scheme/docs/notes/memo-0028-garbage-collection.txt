@@ -91,24 +91,24 @@ States
 ------
 
 
-                        +---------+
-              write     |         |
-            --------->  |  LIVE   |
-                        |         |
-                        +----+----+
-                             |
-                  +----------+----------+
-                  |          |          |
-                  v          v          v
-             +--------+ +--------+ +--------+
-             |PINNED  | |TOMBSTONE| |ORPHANED|
-             +--------+ +--------+ +---+----+
-                                       |
-                                       | GC
-                                       v
-                                  +--------+
-                                  |COLLECTED|
-                                  +--------+
+                        ┌─────────┐
+              write     │         │
+            ─────────►  │  LIVE   │
+                        │         │
+                        └────┬────┘
+                             │
+                  ┌──────────┼──────────┐
+                  │          │          │
+                  ▼          ▼          ▼
+             ┌────────┐ ┌────────┐ ┌────────┐
+             │PINNED  │ │TOMBSTONE│ │ORPHANED│
+             └────────┘ └────────┘ └───┬────┘
+                                       │
+                                       │ GC
+                                       ▼
+                                  ┌────────┐
+                                  │COLLECTED│
+                                  └────────┘
 
 
 State Transitions
@@ -181,9 +181,9 @@ Implicit Roots
 Cycle Detection
 ---------------
 
-Reference counting alone cannot detect cycles (A>B>C>A). The soup uses
-mark-and-sweep as the authoritative reachability test, with reference
-counts as a fast path for common cases.
+Reference counting alone cannot detect cycles (A→B→C→A). The soup
+uses mark-and-sweep as the authoritative reachability test, with
+reference counts as a fast path for common cases.
 
 
     ;; Reference counting is advisory, not authoritative
@@ -984,21 +984,21 @@ INVARIANTS
 
 
     G1. Preservation default
-        default-mode = archival > no-automatic-collection
+        default-mode = archival → no-automatic-collection
     G2. Age increases protection
-        age(obj) > age(obj') > protection(obj) ≥ protection(obj')
+        age(obj) > age(obj') → protection(obj) ≥ protection(obj')
     G3. Evaporation requires consent
         evaporate(hash) requires signed-certificate(hash)
     G4. Quorum scales with age
-        generation = archival > quorum = governance-level
+        generation = archival → quorum = governance-level
     G5. Archival objects are sacred
-        age > 30-days > no-automatic-evaporation
+        age > 30-days → no-automatic-evaporation
     G6. Audit trail preserved
-        evaporate(hash) > audit-append(hash, certificate, reason, signers)
+        evaporate(hash) → audit-append(hash, certificate, reason, signers)
     G7. Mark-and-sweep authoritative
         truly-unreachable(hash) ↔ ¬member(hash, mark-reachable())
     G8. Cycles preserved
-        cycle(A, B, C) ∧ archival-mode > preserve(A, B, C)
+        cycle(A, B, C) ∧ archival-mode → preserve(A, B, C)
 
 
 ------------------------------------------------------------------------

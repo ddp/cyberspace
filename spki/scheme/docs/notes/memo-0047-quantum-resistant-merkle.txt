@@ -21,7 +21,7 @@ THE PROBLEM
 Current cyberspace object identity:
 
 
-    sha512(content) > 64 bytes > object address
+    sha512(content) → 64 bytes → object address
 
 Against a quantum computer with Grover's algorithm: - Classical
 security: 256 bits - Quantum security: 128 bits (square root)
@@ -38,23 +38,23 @@ THE SOLUTION: MERKLE TREES
 Instead of hashing content as a flat blob, structure it as a tree:
 
 
-                        +-----------------+
-                        |   Merkle Root   |  < Object identity
-                        |  shake256(...)  |
-                        +--------+--------+
-                                 |
-                  +--------------+--------------+
-                  |              |              |
-             +----v----+    +----v----+    +----v----+
-             | Node 0  |    | Node 1  |    | Node 2  |
-             +----+----+    +----+----+    +----+----+
-                  |              |              |
-            +-----+-----+  +-----+-----+  +-----+-----+
-            |           |  |           |  |           |
-        +---v---+ +---v---+ +---v---+ +---v---+ +---v---+ ...
-        |Chunk 0| |Chunk 1| |Chunk 2| |Chunk 3| |Chunk 4|
-        | 4 KB  | | 4 KB  | | 4 KB  | | 4 KB  | | 4 KB  |
-        +-------+ +-------+ +-------+ +-------+ +-------+
+                        ┌─────────────────┐
+                        │   Merkle Root   │  ← Object identity
+                        │  shake256(...)  │
+                        └────────┬────────┘
+                                 │
+                  ┌──────────────┼──────────────┐
+                  │              │              │
+             ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
+             │ Node 0  │    │ Node 1  │    │ Node 2  │
+             └────┬────┘    └────┬────┘    └────┬────┘
+                  │              │              │
+            ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
+            │           │  │           │  │           │
+        ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ...
+        │Chunk 0│ │Chunk 1│ │Chunk 2│ │Chunk 3│ │Chunk 4│
+        │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │ │ 4 KB  │
+        └───────┘ └───────┘ └───────┘ └───────┘ └───────┘
 
 Benefits:
 
@@ -228,7 +228,7 @@ Prove a chunk is part of an object without revealing other chunks:
 Verifier reconstructs path to root:
 
 
-    chunk_hash > combine with sibling > ... > must equal merkle-root
+    chunk_hash → combine with sibling → ... → must equal merkle-root
 
 
 Exclusion Proof
@@ -276,18 +276,18 @@ THE FOREST
 The soup becomes a forest of Merkle trees:
 
 
-    +-----------------------------------------------------------------+
-    |                   THE FOREST (formerly soup)                    |
-    |                                                                 |
-    |     🌲 obj    🌲 obj      +-----------------+     🌲 obj        |
-    |          🌲 obj           |░░░░░░░░░░░░░░░░░|         🌲 obj    |
-    |    🌲 obj          🌲 obj |░░░  REALM  ░░░░░|   🌲 obj          |
-    |         🌲 obj            |░░░ (island) ░░░░|        🌲 obj     |
-    |   🌲 obj       🌲 obj     |░░░░░░░░░░░░░░░░░| 🌲 obj            |
-    |        🌲 obj             +-----------------+      🌲 obj       |
-    |                                                                 |
-    |   Each object a tree. Each tree quantum-hardened.               |
-    +-----------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                   THE FOREST (formerly soup)                    │
+    │                                                                 │
+    │     🌲 obj    🌲 obj      ┌─────────────────┐     🌲 obj        │
+    │          🌲 obj           │░░░░░░░░░░░░░░░░░│         🌲 obj    │
+    │    🌲 obj          🌲 obj │░░░  REALM  ░░░░░│   🌲 obj          │
+    │         🌲 obj            │░░░ (island) ░░░░│        🌲 obj     │
+    │   🌲 obj       🌲 obj     │░░░░░░░░░░░░░░░░░│ 🌲 obj            │
+    │        🌲 obj             └─────────────────┘      🌲 obj       │
+    │                                                                 │
+    │   Each object a tree. Each tree quantum-hardened.               │
+    └─────────────────────────────────────────────────────────────────┘
 
 Objects are trees. The wilderness of mirrors becomes a forest. Agents
 navigate between trees, climbing branches, verifying paths. The
@@ -360,8 +360,8 @@ Grover's Algorithm
 ------------------
 
 Grover's algorithm provides quadratic speedup for searching: - SHA-512:
-2^256 > 2^128 quantum operations - SHAKE256-256: 2^256 > 2^128 quantum
-operations
+2^256 → 2^128 quantum operations - SHAKE256-256: 2^256 → 2^128
+quantum operations
 
 128-bit quantum security is considered sufficient for the foreseeable
 future.
@@ -404,7 +404,7 @@ INVARIANTS
     M1. Object identity is Merkle root
         id(o) = merkle-root(shake256, chunks(o))
     M2. Any chunk is provable
-        chunk(o,i) > ∃proof: verify(root(o), i, chunk, proof)
+        chunk(o,i) → ∃proof: verify(root(o), i, chunk, proof)
     M3. Tree structure is canonical
         tree(content, params) is deterministic
     M4. Dual hashes are consistent

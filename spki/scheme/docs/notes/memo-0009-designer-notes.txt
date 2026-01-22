@@ -233,8 +233,8 @@ Callas later became a principal author of OpenPGP (RFC 4880) and
 co-founded PGP Corporation and Silent Circle. He remains a planned beta
 tester for Cyberspace.
 
-The chain of custody: Gasser (Multics PL/1) > Piper/Callas (VMS 6.0
-BLISS/TPU) > Cyberspace (Scheme).
+The chain of custody: Gasser (Multics PL/1) → Piper/Callas (VMS 6.0
+BLISS/TPU) → Cyberspace (Scheme).
 
 
 7.2 Design
@@ -389,14 +389,14 @@ They don't want a distributed cryptographic vault. They want:
 
 
                         CYBERSPACE
-                            |
-               +------------+------------+
-               |                         |
-         +-----v-----+             +-----v-----+
-         | Terminal  |             | Friendly  |
-         |   (cs)    |             |   Door    |
-         +-----+-----+             +-----+-----+
-               |                         |
+                            │
+               ┌────────────┴────────────┐
+               │                         │
+         ┌─────▼─────┐             ┌─────▼─────┐
+         │ Terminal  │             │ Friendly  │
+         │   (cs)    │             │   Door    │
+         └─────┬─────┘             └─────┬─────┘
+               │                         │
            Operators                  Novices
             Hackers                   Family
             Admins                   Everyone
@@ -734,26 +734,27 @@ fluency for reading the layers beneath). Now it's Scheme.
 Access check pattern:
 
 
-    $CREATE_USER_PROFILE  >  builds encoded user security profile
-            v
-    $CHKPRO / $CHECK_ACCESS  >  evaluates access using profile + object protection
-            v
-    SS$_NORMAL / SS$_NOPRIV  >  grant or deny
+    $CREATE_USER_PROFILE  →  builds encoded user security profile
+            ↓
+    $CHKPRO / $CHECK_ACCESS  →  evaluates access using profile + object protection
+            ↓
+    SS$_NORMAL / SS$_NOPRIV  →  grant or deny
 
 Key item codes (CHP$_*):
 
-  * CHP$_ACCESS > access-mask (requested access type bitmask)
-  * CHP$_PROT > protection (SOGW protection mask)
-  * CHP$_OWNER > owner (object owner identifier)
-  * CHP$_UIC > principal (accessor's identity)
-  * CHP$_PRIV > privileges (privilege mask)
-  * CHP$_ACL > acl (access control list)
-  * CHP$_FLAGS > flags (check options: observe/alter)
+  * CHP$_ACCESS → access-mask (requested access type bitmask)
+  * CHP$_PROT → protection (SOGW protection mask)
+  * CHP$_OWNER → owner (object owner identifier)
+  * CHP$_UIC → principal (accessor's identity)
+  * CHP$_PRIV → privileges (privilege mask)
+  * CHP$_ACL → acl (access control list)
+  * CHP$_FLAGS → flags (check options: observe/alter)
 
-Flags: CHP$V_AUDIT > audit?, CHP$V_OBSERVE > read?, CHP$V_ALTER > write?
+Flags: CHP$V_AUDIT → audit?, CHP$V_OBSERVE → read?, CHP$V_ALTER →
+write?
 
-Return status: SS$_NORMAL > #t, SS$_NOPRIV > #f, SS$_ACCVIO > 'accvio,
-SS$_IVACL > 'invalid-acl
+Return status: SS$_NORMAL → #t, SS$_NOPRIV → #f, SS$_ACCVIO →
+'accvio, SS$_IVACL → 'invalid-acl
 
 Impersonation ($PERSONA_*): Used by DECdfs and distributed file services
 to act on behalf of remote clients without re-implementing access
@@ -841,8 +842,8 @@ and propagation. 'commit.' means commit and sync. 'fix.' means fix and
 make it so.
 
 
-    commit    > stage the intention
-    commit.   > stage, execute, propagate to the weave
+    commit    → stage the intention
+    commit.   → stage, execute, propagate to the weave
 
 The period is not punctuation. It's the imperative mood. Smalltalk
 understood that the moment of action deserves its own syntax.
@@ -856,7 +857,7 @@ isn't complete until it's self-contained and self-documenting in the
 weave.
 
 
-    thinga := commit > push > regen-all > publish
+    thinga := commit → push → regen-all → publish
 
 regen-all is the totality of sanity checking before publishing:
 recompile all modules, verify types, run tests, regenerate
@@ -1052,10 +1053,10 @@ libraries (srfi-1, srfi-18) - never in application code.
 
 This is deliberate. Understand the deep machinery, use the simple tool:
 
-  * Exceptions > guard, handle-exceptions (srfi-34)
-  * Generators > srfi-158 (coroutine-like without full continuations)
-  * Early exit > explicit returns, not escape continuations
-  * Backtracking > explicit state, not captured futures
+  * Exceptions → guard, handle-exceptions (srfi-34)
+  * Generators → srfi-158 (coroutine-like without full continuations)
+  * Early exit → explicit returns, not escape continuations
+  * Backtracking → explicit state, not captured futures
 
 Captured continuations create implicit control flow. Every call/cc is a
 potential goto to anywhere the continuation was captured. In a

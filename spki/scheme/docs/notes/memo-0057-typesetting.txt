@@ -19,8 +19,8 @@ THE ORIGINAL SIN
 ------------------------------------------------------------------------
 
 In the beginning, there was the teletype. Characters occupied fixed
-cells. Box-drawing characters (| - + + + +) aligned perfectly because
-geometry was enforced by hardware.
+cells. Box-drawing characters (│ ─ ┌ ┐ └ ┘) aligned
+perfectly because geometry was enforced by hardware.
 
 Then came HTML, and the browser vendors said: 'Let there be font
 substitution.' And there was chaos.
@@ -30,7 +30,7 @@ The problem:
   * Browsers substitute fonts freely, even within 'monospace'
   * Box-drawing glyphs often come from different fonts than text
   * Different fonts have different metrics
-  * A '|' from one font may be wider than '-' from another
+  * A '│' from one font may be wider than '─' from another
   * Vertical lines no longer align across rows
 
 The result: carefully composed ASCII diagrams render as visual garbage.
@@ -68,20 +68,20 @@ Each box-drawing codepoint maps to SVG elements:
 
 
   Glyph   Codepoint   SVG Primitives                         
-  -       U+2500      Horizontal line through cell center    
-  |       U+2502      Vertical line through cell center      
-  +       U+250C      Lines: center>right, center>down       
-  +       U+2510      Lines: center>left, center>down        
-  +       U+2514      Lines: center>right, center>up         
-  +       U+2518      Lines: center>left, center>up          
-  +       U+251C      Lines: up↔down, center>right         
-  +       U+2524      Lines: up↔down, center>left          
-  +       U+252C      Lines: left↔right, center>down       
-  +       U+2534      Lines: left↔right, center>up         
-  +       U+253C      Lines: full cross                      
+  ─     U+2500      Horizontal line through cell center    
+  │     U+2502      Vertical line through cell center      
+  ┌     U+250C      Lines: center→right, center→down   
+  ┐     U+2510      Lines: center→left, center→down    
+  └     U+2514      Lines: center→right, center→up     
+  ┘     U+2518      Lines: center→left, center→up      
+  ├     U+251C      Lines: up↔down, center→right       
+  ┤     U+2524      Lines: up↔down, center→left        
+  ┬     U+252C      Lines: left↔right, center→down     
+  ┴     U+2534      Lines: left↔right, center→up       
+  ┼     U+253C      Lines: full cross                      
 
-Double-line variants (- | + + + +) use the same geometry with doubled
-strokes.
+Double-line variants (═ ║ ╔ ╗ ╚ ╝) use the same geometry
+with doubled strokes.
 
 
 Text Grouping
@@ -109,7 +109,7 @@ corrects this automatically.
 The Algorithm
 -------------
 
-  * Identify lines ending with box right-edges (| + + + | + +)
+  * Identify lines ending with box right-edges (│ ┐ ┘ ┤ ║ ╗ ╝)
   * Find the most common width among these lines
   * Adjust each box-edge line to match the target width
   * Add spaces before the edge if too short
@@ -146,7 +146,7 @@ The pipeline:
 
   * Split text into lines
   * Auto-fix line widths for consistent box edges
-  * Process each character: box-drawing > geometry, text > grouped spans
+  * Process each character: box-drawing → geometry, text → grouped spans
   * Emit SVG with embedded styles for theme compatibility
 
 

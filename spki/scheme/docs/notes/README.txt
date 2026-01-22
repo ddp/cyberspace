@@ -39,10 +39,10 @@ THE SIMPLE IDEA
 What if preserving things worked like borrowing books from friends?
 
 
-        You <----> Friend <----> Friend
-         |           |             |
-         +-----------+-------------+
-                     |
+        You ←────→ Friend ←────→ Friend
+         │           │             │
+         └───────────┴─────────────┘
+                     │
           Everyone helps everyone.
           Like a neighborhood library,
           but for anything digital.

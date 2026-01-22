@@ -401,13 +401,8 @@
     (else #f)))  ; Return #f for non-box chars
 
 (define (text->ascii text)
-  "Convert box-drawing characters in text to ASCII."
-  (apply string-append
-    (map (lambda (char-pair)
-           (let ((cp (car char-pair))
-                 (char-str (cdr char-pair)))
-             (or (codepoint->ascii cp) char-str)))
-         (utf8-chars text))))
+  "Keep Unicode box-drawing characters (browsers render them fine now)."
+  text)
 
 ;; Memo namespace: 0000-9999 (4 digits)
 ;; This is the single source of truth for memo number formatting

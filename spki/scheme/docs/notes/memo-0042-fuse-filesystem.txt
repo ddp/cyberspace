@@ -218,38 +218,38 @@ Mount Topology
 --------------
 
 
-    ~/Cyberspace/                    < FUSE mount point
-    +-- documents/
-    |   +-- paper.pdf               < Virtual file (content in vault)
-    |   +-- notes.txt
-    +-- projects/
-    |   +-- cyberspace/
-    |       +-- ...
-    +-- .vault/                      < Hidden, actual storage
-        +-- objects/                 < Content-addressed blobs
-        |   +-- sha256:abc123...
-        |   +-- sha256:def456...
-        +-- manifests/               < Directory > file mappings
-        +-- metadata/                < Per-file metadata store
+    ~/Cyberspace/                    ← FUSE mount point
+    ├── documents/
+    │   ├── paper.pdf               ← Virtual file (content in vault)
+    │   └── notes.txt
+    ├── projects/
+    │   └── cyberspace/
+    │       └── ...
+    └── .vault/                      ← Hidden, actual storage
+        ├── objects/                 ← Content-addressed blobs
+        │   ├── sha256:abc123...
+        │   └── sha256:def456...
+        ├── manifests/               ← Directory → file mappings
+        └── metadata/                ← Per-file metadata store
 
 
 Component Stack
 ---------------
 
 
-    +-------------------------------------+
-    |         Applications                |
-    |    (Finder, cp, rsync, etc.)        |
-    +-------------------------------------+
-    |         VFS (kernel)                |
-    +-------------------------------------+
-    |      FUSE-T / macFUSE               |
-    +-------------------------------------+
-    |    cyberspace-fuse daemon           |  < Our code
-    +-------------------------------------+
-    |         Vault layer                 |
-    |   (content-address, metadata)       |
-    +-------------------------------------+
+    ┌─────────────────────────────────────┐
+    │         Applications                │
+    │    (Finder, cp, rsync, etc.)        │
+    ├─────────────────────────────────────┤
+    │         VFS (kernel)                │
+    ├─────────────────────────────────────┤
+    │      FUSE-T / macFUSE               │
+    ├─────────────────────────────────────┤
+    │    cyberspace-fuse daemon           │  ← Our code
+    ├─────────────────────────────────────┤
+    │         Vault layer                 │
+    │   (content-address, metadata)       │
+    └─────────────────────────────────────┘
 
 
 ------------------------------------------------------------------------
@@ -570,9 +570,9 @@ Bidirectional by Default
 
 Unless capabilities restrict it, data flows both ways through the
 wormhole. A read-only capability creates a one-way flow
-(vault>filesystem); a write-only capability creates the reverse
-(filesystem>vault, the dropbox pattern). The default read+write permits
-bidirectional flow.
+(vault→filesystem); a write-only capability creates the reverse
+(filesystem→vault, the dropbox pattern). The default read+write
+permits bidirectional flow.
 
 
 No Implicit Labels
@@ -636,8 +636,8 @@ Table 4: Capability and Information Flow
 
 
   Capabilities         Flow Direction            Pattern               
-  read without write   vault>filesystem only     Browse, export        
-  write without read   filesystem>vault only     Dropbox, ingest       
+  read without write   vault→filesystem only   Browse, export        
+  write without read   filesystem→vault only   Dropbox, ingest       
   read+write           bidirectional             Full sync             
   neither              no data flow              Metadata-only mount   
 

@@ -191,37 +191,37 @@ The Entropy Hierarchy
 ---------------------
 
 
-    +-----------------------------------------------------------+
-    |                   Entropy Quality Pyramid                   |
-    +-----------------------------------------------------------+
-    |                                                             |
-    |                    +---------------+                        |
-    |           ***      |  Quantum RNG  |  <- TRUE RANDOMNESS    |
-    |                    +---------------+     (required for      |
-    |                          ^               cryptographic      |
-    |                          |               security)          |
-    |                    ------+------                            |
-    |                    SECURITY BOUNDARY                        |
-    |                    -----------------                        |
-    |                          |                                  |
-    |                          v                                  |
-    |                  +-------------------+                      |
-    |                  |  Hardware TRNG    |  <- Best effort      |
-    |                  +-------------------+     (should feed     |
-    |                +-----------------------+   quantum source)  |
-    |                |  Environmental/Analog |                    |
-    |                +-----------------------+                    |
-    |              +---------------------------+                  |
-    |              |  Public Beacons (NIST)    |  <- Verifiable   |
-    |              +---------------------------+                  |
-    |            +-------------------------------+                |
-    |            |  OS Entropy Pool              |  <- Mixed      |
-    |            +-------------------------------+                |
-    |          +-----------------------------------+              |
-    |          |  CSPRNG (seeded from above)       |  <- Expand   |
-    |          +-----------------------------------+              |
-    |                                                             |
-    +-----------------------------------------------------------+
+    ┌───────────────────────────────────────────────────────────┐
+    │                   Entropy Quality Pyramid                   │
+    ├───────────────────────────────────────────────────────────┤
+    │                                                             │
+    │                    ┌───────────────┐                        │
+    │           ***      │  Quantum RNG  │  <- TRUE RANDOMNESS    │
+    │                    └───────────────┘     (required for      │
+    │                          ^               cryptographic      │
+    │                          │               security)          │
+    │                    ──────┴──────                            │
+    │                    SECURITY BOUNDARY                        │
+    │                    ─────────────────                        │
+    │                          │                                  │
+    │                          v                                  │
+    │                  ┌───────────────────┐                      │
+    │                  │  Hardware TRNG    │  <- Best effort      │
+    │                  └───────────────────┘     (should feed     │
+    │                ┌───────────────────────┐   quantum source)  │
+    │                │  Environmental/Analog │                    │
+    │                └───────────────────────┘                    │
+    │              ┌───────────────────────────┐                  │
+    │              │  Public Beacons (NIST)    │  <- Verifiable   │
+    │              └───────────────────────────┘                  │
+    │            ┌───────────────────────────────┐                │
+    │            │  OS Entropy Pool              │  <- Mixed      │
+    │            └───────────────────────────────┘                │
+    │          ┌───────────────────────────────────┐              │
+    │          │  CSPRNG (seeded from above)       │  <- Expand   │
+    │          └───────────────────────────────────┘              │
+    │                                                             │
+    └───────────────────────────────────────────────────────────┘
        *** = Cryptographic operations MUST trace to quantum sources
 
 Critical distinction: Everything below the security boundary is
@@ -340,23 +340,23 @@ the modern successor.
 #### How It Works
 
 
-    +-------------------------------------------------------------+
-    |                     LAVARAND SYSTEM                          |
-    +-------------------------------------------------------------+
-    |                                                              |
-    |   +---------+    +---------+    +---------------------+     |
-    |   |  Lava   |    | Camera  |    |  Image > Hash       |     |
-    |   |  Lamp   |--->|  Feed   |--->|  SHA-256 per frame  |     |
-    |   |  Wall   |    |         |    |                     |     |
-    |   +---------+    +---------+    +----------+----------+     |
-    |                                            |                 |
-    |                                            v                 |
-    |                                  +---------------------+     |
-    |                                  |  Entropy Pool       |     |
-    |                                  |  (mix with CSPRNG)  |     |
-    |                                  +---------------------+     |
-    |                                                              |
-    +-------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                     LAVARAND SYSTEM                          │
+    ├─────────────────────────────────────────────────────────────┤
+    │                                                              │
+    │   ┌─────────┐    ┌─────────┐    ┌─────────────────────┐     │
+    │   │  Lava   │    │ Camera  │    │  Image → Hash       │     │
+    │   │  Lamp   │───▶│  Feed   │───▶│  SHA-256 per frame  │     │
+    │   │  Wall   │    │         │    │                     │     │
+    │   └─────────┘    └─────────┘    └──────────┬──────────┘     │
+    │                                            │                 │
+    │                                            ▼                 │
+    │                                  ┌─────────────────────┐     │
+    │                                  │  Entropy Pool       │     │
+    │                                  │  (mix with CSPRNG)  │     │
+    │                                  └─────────────────────┘     │
+    │                                                              │
+    └─────────────────────────────────────────────────────────────┘
 
 #### Why Lava Lamps?
 
@@ -398,25 +398,25 @@ randomness beacon since 2013.
 Architecture:
 
 
-    +-------------------------------------------------------------+
-    |                   NIST BEACON 2.0                            |
-    +-------------------------------------------------------------+
-    |                                                              |
-    |  Sources:           Processing:         Output:              |
-    |  +---------+       +-----------+      +--------------+      |
-    |  | Quantum |--+    |           |      | Pulse Record |      |
-    |  |   RNG   |  |    |  SHA-512  |      +--------------+      |
-    |  +---------+  |    |  mixing   |      | timestamp    |      |
-    |  +---------+  +--->|     +     |----->| localRandom  |      |
-    |  |Photonic |  |    |  signing  |      | outputValue  |      |
-    |  |  Noise  |--+    |           |      | signatureVal |      |
-    |  +---------+       +-----------+      +--------------+      |
-    |                                                              |
-    |  Pulse interval: 60 seconds                                  |
-    |  Hash chain: Each pulse includes hash of previous            |
-    |  Signature: RSA-2048 (Beacon 2.0)                           |
-    |                                                              |
-    +-------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                   NIST BEACON 2.0                            │
+    ├─────────────────────────────────────────────────────────────┤
+    │                                                              │
+    │  Sources:           Processing:         Output:              │
+    │  ┌─────────┐       ┌───────────┐      ┌──────────────┐      │
+    │  │ Quantum │──┐    │           │      │ Pulse Record │      │
+    │  │   RNG   │  │    │  SHA-512  │      ├──────────────┤      │
+    │  └─────────┘  │    │  mixing   │      │ timestamp    │      │
+    │  ┌─────────┐  ├───▶│     +     │─────▶│ localRandom  │      │
+    │  │Photonic │  │    │  signing  │      │ outputValue  │      │
+    │  │  Noise  │──┘    │           │      │ signatureVal │      │
+    │  └─────────┘       └───────────┘      └──────────────┘      │
+    │                                                              │
+    │  Pulse interval: 60 seconds                                  │
+    │  Hash chain: Each pulse includes hash of previous            │
+    │  Signature: RSA-2048 (Beacon 2.0)                           │
+    │                                                              │
+    └─────────────────────────────────────────────────────────────┘
 
 Pulse Record Contents: - uri - Unique pulse identifier - version -
 Beacon protocol version - timeStamp - Unix timestamp - localRandomValue
@@ -452,23 +452,23 @@ Use in Cyberspace:
 Distributed randomness beacon - no single party controls the output:
 
 
-    +-------------------------------------------------------------+
-    |              DRAND DISTRIBUTED BEACON                        |
-    +-------------------------------------------------------------+
-    |                                                              |
-    |   Cloudflare --+                                            |
-    |                |                                             |
-    |   EPFL --------+--- Threshold ---> Public Random           |
-    |                |    BLS Sig          (t-of-n nodes          |
-    |   Protocol ----+    (t-of-n)          must participate)     |
-    |   Labs         |                                             |
-    |                |                                             |
-    |   Kudelski ----+                                            |
-    |                                                              |
-    |   Endpoint: https://api.drand.sh/public/latest              |
-    |   Chain: 8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce |
-    |                                                              |
-    +-------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────┐
+    │              DRAND DISTRIBUTED BEACON                        │
+    ├─────────────────────────────────────────────────────────────┤
+    │                                                              │
+    │   Cloudflare ──┐                                            │
+    │                │                                             │
+    │   EPFL ────────┼─── Threshold ───▶ Public Random           │
+    │                │    BLS Sig          (t-of-n nodes          │
+    │   Protocol ────┤    (t-of-n)          must participate)     │
+    │   Labs         │                                             │
+    │                │                                             │
+    │   Kudelski ────┘                                            │
+    │                                                              │
+    │   Endpoint: https://api.drand.sh/public/latest              │
+    │   Chain: 8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce │
+    │                                                              │
+    └─────────────────────────────────────────────────────────────┘
 
 
 Entropy Mixing

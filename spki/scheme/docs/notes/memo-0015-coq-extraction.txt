@@ -42,34 +42,34 @@ ARCHITECTURE
 ------------------------------------------------------------------------
 
 
-    +-----------------------------------------------------------+
-    |                      CYBERSPACE TCB                       |
-    |                                                           |
-    |  +-----------------------------------------------------+  |
-    |  |              SpkiTcb.v (Coq Proofs)                 |  |
-    |  |                                                     |  |
-    |  |  Types: principal, tag, cert, auth_request          |  |
-    |  |  Algorithms: tag_intersect, verify_chain, authorize |  |
-    |  |  Theorems: authorize_requester_match, etc.          |  |
-    |  +----------------------+------------------------------+  |
-    |                         | Extraction                      |
-    |  +----------------------v------------------------------+  |
-    |  |         spki_tcb_extracted.ml (generated)           |  |
-    |  +----------------------+------------------------------+  |
-    |                         | Bridge                          |
-    |  +----------------------v------------------------------+  |
-    |  |              spki_tcb.ml + tcb_stubs.c              |  |
-    |  |         (bytes conversion, libsodium FFI)           |  |
-    |  +----------------------+------------------------------+  |
-    |                         |                                 |
-    |                  +------v------+                          |
-    |                  |  libsodium  |                          |
-    |                  |  (trusted)  |                          |
-    |                  +-------------+                          |
-    +-----------------------------------------------------------+
+    ┌───────────────────────────────────────────────────────────┐
+    │                      CYBERSPACE TCB                       │
+    │                                                           │
+    │  ┌─────────────────────────────────────────────────────┐  │
+    │  │              SpkiTcb.v (Coq Proofs)                 │  │
+    │  │                                                     │  │
+    │  │  Types: principal, tag, cert, auth_request          │  │
+    │  │  Algorithms: tag_intersect, verify_chain, authorize │  │
+    │  │  Theorems: authorize_requester_match, etc.          │  │
+    │  └──────────────────────┬──────────────────────────────┘  │
+    │                         │ Extraction                      │
+    │  ┌──────────────────────v──────────────────────────────┐  │
+    │  │         spki_tcb_extracted.ml (generated)           │  │
+    │  └──────────────────────┬──────────────────────────────┘  │
+    │                         │ Bridge                          │
+    │  ┌──────────────────────v──────────────────────────────┐  │
+    │  │              spki_tcb.ml + tcb_stubs.c              │  │
+    │  │         (bytes conversion, libsodium FFI)           │  │
+    │  └──────────────────────┬──────────────────────────────┘  │
+    │                         │                                 │
+    │                  ┌──────v──────┐                          │
+    │                  │  libsodium  │                          │
+    │                  │  (trusted)  │                          │
+    │                  └─────────────┘                          │
+    └───────────────────────────────────────────────────────────┘
 
-The extraction pipeline: SpkiTcb.v > spki_tcb_extracted.ml > OCaml
-library > Scheme FFI.
+The extraction pipeline: SpkiTcb.v → spki_tcb_extracted.ml → OCaml
+library → Scheme FFI.
 
 
 ------------------------------------------------------------------------
@@ -85,10 +85,10 @@ Security-critical theorems with complete proofs (no admits):
 
   Theorem                    Property                                                
   principal_equal_refl       Reflexivity: p = p                                      
-  principal_equal_sym        Symmetry: p = q > q = p                                 
-  principal_equal_trans      Transitivity: p = q ∧ q = r > p = r                   
+  principal_equal_sym        Symmetry: p = q → q = p                               
+  principal_equal_trans      Transitivity: p = q ∧ q = r → p = r                 
   authorize_requester_match  If authorized, requester is named by leaf cert          
-  authorize_complete         All preconditions satisfied > authorization succeeds    
+  authorize_complete         All preconditions satisfied → authorization succeeds  
 
 The authorize_requester_match theorem is the key security property: it
 guarantees that authorization only succeeds when the requester is
