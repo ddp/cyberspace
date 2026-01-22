@@ -23,9 +23,7 @@
         (row "1994 " "SDSI " "Self-certifying keys, local names (Rivest, IETF 29) ")
         (row "1999 " "SPKI " "Authorization certificates, capability delegation ")
         (row "2026 " "Cyberspace " "Synthesis: SPKI + audit + IPv6 mesh + no central authority "))
-      (p "DECnet Phase IV had 24-bit addressing, but that wasn't the fatal flaw. The flaw was architectural: shared namespaces imply shared trust.")
-      (p "This holds at every scale. The MIT AI Lab's ITS worked because everyone trusted everyone—a shared namespace among peers. Smalltalk's live image works because you trust everything in the heap. But neither model scales to adversarial networks. When names are global, so is the attack surface.")
-      (p "Cyberspace's answer: no shared namespace. Keys ARE identity. There is no global name registry to compromise, no authority to subvert. Trust flows through certificate chains you choose to follow. Two realms can use the same human-readable name for different principals—that's not a collision, it's local naming.")))
+      (p "DECnet Phase IV had 24-bit addressing—fatal for internet scale. Cyberspace is designed for IPv6: 128-bit addresses, global mesh, same security principles.")))
   (section
     "Security Object Types"
     (p "Every first-class object in cyberspace. Names as defined.")
@@ -413,6 +411,6 @@
   (section
     "Changelog"
     (list
-      (item "2026-01-20: Added namespace/trust insight to Design Lineage - shared namespaces imply shared trust")
-      (item "2026-01-08: Initial draft"))))
+      (item "2026-01-08")
+      (item "Initial draft"))))
 

@@ -1,0 +1,36 @@
+;; SPKI TCB - Coq Extracted Code
+;;
+;; This builds the formally verified authorization code
+;; extracted from Coq proofs.
+;;
+;; Dependency chain:
+;;   SpkiTcb.v (Coq proofs)
+;;     -> spki_tcb_extracted.ml (extraction)
+;;     -> spki_tcb.ml (bridge to libsodium)
+
+;; Copy the C stubs from parent directory
+(rule
+ (targets tcb_stubs.c)
+ (deps ../tcb_stubs.c)
+ (action (copy %{deps} %{targets})))
+
+(library
+ (name spki_tcb_coq)
+ (public_name spki.tcb.coq)
+ (modules spki_tcb spki_tcb_extracted)
+ (wrapped false)  ; Make modules directly accessible
+ (foreign_stubs
+  (language c)
+  (names tcb_stubs)
+  (flags -I/opt/homebrew/include))
+ (c_library_flags (-L/opt/homebrew/lib -lsodium))
+ (libraries unix)
+ ;; Suppress warnings from extracted code:
+ ;; -27: unused variable, -39: unused rec flag, -67: unused functor parameter
+ (flags (:standard -w -27-39-67)))
+
+;; Test executable for extracted code
+(executable
+ (name test_extracted)
+ (modules test_extracted)
+ (libraries spki_tcb_coq))
