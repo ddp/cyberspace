@@ -5,7 +5,7 @@
   (number 9)
   (title "Designer Notes")
   (status "Draft")
-  (date "2026-01-22T04:31:00Z")
+  (date "2026-01-22T04:31:00Z (January 2026)")
   (author "Derrell Piper" "ddp@eludom.net")
 
   (section

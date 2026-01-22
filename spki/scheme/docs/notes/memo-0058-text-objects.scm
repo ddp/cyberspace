@@ -2,7 +2,7 @@
   (number 58)
   (title "Text Objects")
   (status "Draft")
-  (date "2026-01-20T00:00:00Z")
+  (date "2026-01-20T00:00:00Z (January 2026)")
   (section
     "Abstract"
     (p "Text in Cyberspace is not files. This Memo specifies the native text object representation: gap buffers for editing, merkle chunks for storage, and how editors like Electric Pencil, TECO, and Schemacs share a common substrate."))
