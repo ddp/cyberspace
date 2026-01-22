@@ -3,7 +3,7 @@
 
 (memo
   (number 0)
-  (title "Declaration")
+  (title "Declaration of Cyberspace")
   (status "Ratified")
   (date "January 2026")
 

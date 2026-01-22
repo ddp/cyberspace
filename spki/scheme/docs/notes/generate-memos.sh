@@ -261,11 +261,14 @@ FOOTER
 }
 
 # Redundant words in titles - implied by project context
+# Exception: memo-0000 "Declaration of Cyberspace" (founding document)
 REDUNDANT_TITLE_WORDS="Cyberspace Cryptographic"
 
 check_redundant_title() {
   local title="$1"
   local memo="$2"
+  # Exception: Declaration of Cyberspace is the founding document
+  [[ "$memo" == "memo-0000-declaration" ]] && return 0
   for word in ${=REDUNDANT_TITLE_WORDS}; do
     if [[ "$title" == *"$word"* ]]; then
       echo "  [WARN] $memo: '$word' is redundant in title"
