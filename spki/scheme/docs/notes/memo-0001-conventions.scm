@@ -6,7 +6,7 @@
   (title "Conventions")
   (section
     "Abstract"
-    (p "This memo establishes naming conventions, metadata requirements, and scope rules for documentation in the Library of Cyberspace. We adopt Internet Engineering Task Force (IETF) RFC format for technical compatibility while using \"memo\" as our vernacular. The IETF and its associated organizations serve as the normative model for our standards processes, though unlike the IETF, membership is restricted to citizens of The United States of America."))
+    (p "This memo establishes naming conventions, metadata requirements, and scope rules for documentation in the Library of Cyberspace. We adopt Internet Engineering Task Force (IETF) RFC format for technical compatibility while using \"memo\" as our vernacular. The IETF and its associated organizations serve as the normative model for our standards processes, though unlike the IETF, membership is restricted to United States citizens."))
   (section
     "Status of This Memo"
     (p "This document is an Informational memo for the Library of Cyberspace community. It establishes conventions for penning memos and normative references to external standards bodies.")
