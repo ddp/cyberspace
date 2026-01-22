@@ -1158,6 +1158,214 @@
           (display "%%EOF\n" out))))))
 
 ;;; ============================================================
+;;; LaTeX Output
+;;; ============================================================
+;;; Proper typesetting with TikZ diagrams, xelatex compilation.
+
+(define (latex-escape str)
+  "Escape special LaTeX characters in string."
+  (let ((out (open-output-string)))
+    (string-for-each
+     (lambda (c)
+       (case c
+         ((#\\) (display "\\textbackslash{}" out))
+         ((#\{) (display "\\{" out))
+         ((#\}) (display "\\}" out))
+         ((#\$) (display "\\$" out))
+         ((#\&) (display "\\&" out))
+         ((#\%) (display "\\%" out))
+         ((#\#) (display "\\#" out))
+         ((#\_) (display "\\_" out))
+         ((#\^) (display "\\textasciicircum{}" out))
+         ((#\~) (display "\\textasciitilde{}" out))
+         (else (display c out))))
+     str)
+    (get-output-string out)))
+
+(define (latex-emit-element elem port)
+  (cond
+    ((string? elem)
+     (display (latex-escape elem) port)
+     (newline port)
+     (newline port))
+    ((not (pair? elem)) #f)
+    (else
+     (case (car elem)
+       ((p)
+        (for-each (lambda (e)
+                    (if (string? e)
+                        (display (latex-escape e) port)
+                        (latex-emit-element e port)))
+                  (cdr elem))
+        (newline port)
+        (newline port))
+
+       ((section)
+        (display "\\section{" port)
+        (display (latex-escape (cadr elem)) port)
+        (display "}\n\n" port)
+        (for-each (lambda (e) (latex-emit-element e port)) (cddr elem)))
+
+       ((subsection)
+        (display "\\subsection{" port)
+        (display (latex-escape (cadr elem)) port)
+        (display "}\n\n" port)
+        (for-each (lambda (e) (latex-emit-element e port)) (cddr elem)))
+
+       ((list)
+        (display "\\begin{itemize}\n" port)
+        (for-each (lambda (item)
+                    (cond
+                      ((and (pair? item) (eq? (car item) 'item))
+                       (display "  \\item " port)
+                       (let ((content (cdr item)))
+                         (for-each (lambda (e)
+                                     (if (string? e)
+                                         (display (latex-escape e) port)
+                                         (latex-emit-element e port)))
+                                   content))
+                       (newline port))
+                      (else (latex-emit-element item port))))
+                  (cdr elem))
+        (display "\\end{itemize}\n\n" port))
+
+       ((code)
+        (let* ((has-lang (and (pair? (cdr elem)) (symbol? (cadr elem))))
+               (lang (if has-lang (symbol->string (cadr elem)) ""))
+               (content (if has-lang (caddr elem) (cadr elem))))
+          (if (string-has-box-chars? content)
+              ;; Box-drawing diagram - use verbatim
+              (begin
+                (display "\\begin{diagram}\n" port)
+                (display content port)
+                (display "\n\\end{diagram}\n\n" port))
+              ;; Regular code
+              (begin
+                (display (format "\\begin{lstlisting}[language=~a]\n"
+                                 (if (string-null? lang) "Scheme" lang)) port)
+                (display content port)
+                (display "\n\\end{lstlisting}\n\n" port)))))
+
+       ((table)
+        (let* ((header (find (lambda (e) (and (pair? e) (eq? (car e) 'header))) (cdr elem)))
+               (rows (filter (lambda (e) (and (pair? e) (eq? (car e) 'row))) (cdr elem)))
+               (ncols (if header (length (cdr header)) (if (pair? rows) (length (cdr (car rows))) 3))))
+          (display (format "\\begin{tabular}{~a}\n" (make-string ncols #\l)) port)
+          (display "\\hline\n" port)
+          (when header
+            (display (string-join (map latex-escape (map ->string (cdr header))) " & ") port)
+            (display " \\\\\n\\hline\n" port))
+          (for-each (lambda (row)
+                      (display (string-join (map latex-escape (map ->string (cdr row))) " & ") port)
+                      (display " \\\\\n" port))
+                    rows)
+          (display "\\hline\n\\end{tabular}\n\n" port)))
+
+       ((link)
+        (let ((url (cadr elem))
+              (text (if (> (length elem) 2) (caddr elem) (cadr elem))))
+          (display "\\href{" port)
+          (display url port)
+          (display "}{" port)
+          (display (latex-escape text) port)
+          (display "}" port)))
+
+       ((bold b strong)
+        (display "\\textbf{" port)
+        (for-each (lambda (e)
+                    (if (string? e)
+                        (display (latex-escape e) port)
+                        (latex-emit-element e port)))
+                  (cdr elem))
+        (display "}" port))
+
+       ((em i italic)
+        (display "\\textit{" port)
+        (for-each (lambda (e)
+                    (if (string? e)
+                        (display (latex-escape e) port)
+                        (latex-emit-element e port)))
+                  (cdr elem))
+        (display "}" port))
+
+       ((tt code-inline)
+        (display "\\texttt{" port)
+        (for-each (lambda (e)
+                    (if (string? e)
+                        (display (latex-escape e) port)
+                        (latex-emit-element e port)))
+                  (cdr elem))
+        (display "}" port))
+
+       ((footer)
+        (display "\n\\vfill\n\\hrule\n\\vspace{0.5em}\n\\begin{center}\n" port)
+        (for-each (lambda (e) (latex-emit-element e port)) (cdr elem))
+        (display "\\end{center}\n" port))
+
+       (else
+        ;; Unknown element - try to recurse
+        (for-each (lambda (e) (latex-emit-element e port)) (cdr elem)))))))
+
+(define (memo->latex doc filename)
+  "Convert Memo S-expression to LaTeX."
+  (call-with-output-file filename
+    (lambda (port)
+      (let ((num (get-field doc 'number 0))
+            (title (get-field doc 'title "Untitled"))
+            (date (get-field doc 'date ""))
+            (author-info (assq 'author (cdr doc)))
+            (abstract (assq 'abstract (cdr doc)))
+            (sections (filter (lambda (e) (and (pair? e) (eq? (car e) 'section))) (cdr doc)))
+            (footer (assq 'footer (cdr doc))))
+
+        (let ((author-name (if author-info (cadr author-info) "Unknown"))
+              (author-email (if (and author-info (> (length author-info) 2))
+                                (caddr author-info)
+                                "")))
+
+          ;; Document preamble
+          (display "\\documentclass{memo}\n\n" port)
+
+          ;; Metadata
+          (display (format "\\memonumber{~a}\n" (memo-number->string num)) port)
+          (display (format "\\memotitle{~a}\n" (latex-escape title)) port)
+          (display (format "\\memodate{~a}\n" (latex-escape date)) port)
+          (display (format "\\memoauthor{~a}{~a}\n\n"
+                           (latex-escape author-name)
+                           (latex-escape author-email)) port)
+
+          ;; Abstract
+          (when abstract
+            (display "\\memoabstract{" port)
+            (for-each (lambda (e)
+                        (if (string? e)
+                            (display (latex-escape e) port)
+                            (when (and (pair? e) (eq? (car e) 'p))
+                              (for-each (lambda (x)
+                                          (if (string? x)
+                                              (display (latex-escape x) port)
+                                              (latex-emit-element x port)))
+                                        (cdr e)))))
+                      (cdr abstract))
+            (display "}\n\n" port))
+
+          ;; Begin document
+          (display "\\begin{document}\n" port)
+          (display "\\maketitle\n\n" port)
+
+          ;; Sections
+          (for-each (lambda (section)
+                      (latex-emit-element section port))
+                    sections)
+
+          ;; Footer
+          (when footer
+            (latex-emit-element footer port))
+
+          ;; End document
+          (display "\\end{document}\n" port))))))
+
+;;; ============================================================
 ;;; Markdown Output (local scratch only)
 ;;; ============================================================
 ;;; For local previewing with native markdown viewers.

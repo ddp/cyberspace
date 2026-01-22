@@ -3,7 +3,7 @@
 ;;;
 ;;; Usage: csi -q generate-all.scm
 ;;;
-;;; Processes all memo-*.scm files and generates .txt, .html, .ps
+;;; Processes all memo-*.scm files and generates .txt, .html, .ps, .tex
 
 (import scheme
         (chicken base)
@@ -49,12 +49,14 @@
   (let* ((base (pathname-strip-extension memo-file))
          (txt-file (string-append base ".txt"))
          (html-file (string-append base ".html"))
-         (ps-file (string-append base ".ps")))
+         (ps-file (string-append base ".ps"))
+         (tex-file (string-append base ".tex")))
 
     ;; Check if regeneration needed (also check formatter itself)
     (when (or (file-newer? memo-file txt-file)
               (file-newer? memo-file html-file)
               (file-newer? memo-file ps-file)
+              (file-newer? memo-file tex-file)
               (file-newer? "memo-format.scm" txt-file))
 
       (condition-case
@@ -67,7 +69,8 @@
                 (memo->txt doc txt-file)
                 (memo->html doc html-file)
                 (memo->ps doc ps-file)
-                (print "  " base ": txt html ps"))))
+                (memo->latex doc tex-file)
+                (print "  " base ": txt html ps tex"))))
         (e ()
           (print "  " base ": FAILED - " (get-condition-property e 'exn 'message "")))))))
 
@@ -143,6 +146,7 @@
                             (string-append (number->string elapsed-sec) "s")))
       (print "  TXT:  " (length (glob "memo-*.txt")))
       (print "  HTML: " (length (glob "memo-*.html")))
-      (print "  PS:   " (length (glob "memo-*.ps"))))))
+      (print "  PS:   " (length (glob "memo-*.ps")))
+      (print "  TEX:  " (length (glob "memo-*.tex"))))))
 
 (main)
