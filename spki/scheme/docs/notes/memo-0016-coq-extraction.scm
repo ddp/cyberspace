@@ -1,7 +1,7 @@
 (memo
   (number 16)
   (title "Coq Verification of the Authorization TCB")
-  (status "Working Draft")
+  (status "Complete")
   (date "2026-01-22")
   (author "Derrell Piper" "ddp@eludom.net")
 
