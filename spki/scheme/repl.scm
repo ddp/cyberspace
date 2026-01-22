@@ -6419,9 +6419,11 @@ See: Memo-0000 Declaration of Cyberspace
       (handle-exceptions exn
         (begin
           (close-output-pipe port)
+          (tty-flush-input)  ; Clear any input left by pager
           (void))
         (with-output-to-port port thunk)
-        (close-output-pipe port)))))
+        (close-output-pipe port)
+        (tty-flush-input)))))
 
 ;; General page command - pipe any output through pager
 ;; Usage: (page (soup)) or (page (help 'topics))

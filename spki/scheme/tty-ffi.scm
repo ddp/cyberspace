@@ -69,6 +69,11 @@ int tty_char_ready(int timeout_ms) {
     tv.tv_usec = (timeout_ms % 1000) * 1000;
     return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0;
 }
+
+/* Flush pending input (discard anything queued) */
+int tty_flush_input_buffer(void) {
+    return tcflush(STDIN_FILENO, TCIFLUSH);
+}
 <#
 
 (module tty-ffi
@@ -76,6 +81,7 @@ int tty_char_ready(int timeout_ms) {
    tty-char-ready?
    tty-set-raw
    tty-set-cooked
+   tty-flush-input
    tty-rows
    tty-cols
    tty?)
@@ -110,5 +116,9 @@ int tty_char_ready(int timeout_ms) {
   ;; Check if stdin is a tty
   (define tty?
     (foreign-lambda int "tty_is_tty"))
+
+  ;; Flush pending input (clear buffer after pager exits)
+  (define tty-flush-input
+    (foreign-lambda int "tty_flush_input_buffer"))
 
 ) ;; end module
