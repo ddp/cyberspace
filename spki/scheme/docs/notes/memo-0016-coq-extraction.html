@@ -689,10 +689,19 @@
 <tr><td>tag_intersect_subset_left</td><td>Most combinations</td><td>TagPrefix recursive, TagThreshold</td></tr>
 </table>
 <p>The admitted cases stem from design limitations documented below.</p>
+<h3>Partially Proven: tag_intersect_comm</h3>
+<table>
+<tr><th>Case</th><th>Status</th></tr>
+<tr><td>TagAll</td><td>Proven</td></tr>
+<tr><td>TagSet</td><td>Proven (via filter_intersect_comm lemma)</td></tr>
+<tr><td>TagRange</td><td>Proven</td></tr>
+<tr><td>TagPrefix</td><td>Admitted (recursive structure)</td></tr>
+<tr><td>TagThreshold</td><td>Admitted (Cartesian product ordering)</td></tr>
+</table>
+<p>The TagSet case required proving that filter intersection produces the same elements regardless of operand order, then applying canonicalize_strings to ensure structural equality.</p>
 <h3>Admitted Theorems</h3>
 <table>
 <tr><th>Theorem</th><th>Reason</th></tr>
-<tr><td>tag_intersect_comm</td><td>Structural - needs semantic equality</td></tr>
 <tr><td>verify_chain_sound</td><td>Complex induction over chain structure</td></tr>
 <tr><td>verify_chain_attenuates</td><td>Depends on verify_chain_sound</td></tr>
 </table>
@@ -780,17 +789,27 @@ Extraction "spki_tcb_extracted.ml"
 <h2>Test Coverage</h2>
 <table>
 <tr><th>Suite</th><th>Tests</th><th>Coverage</th></tr>
-<tr><td>test_extracted.ml</td><td>16</td><td>Extracted code: principals, tags, chains</td></tr>
+<tr><td>test_extracted.ml</td><td>16</td><td>Unit tests: principals, tags, chains</td></tr>
+<tr><td>test_properties.ml</td><td>11</td><td>Property-based: QCheck random testing</td></tr>
 <tr><td>test_tcb.exe</td><td>62</td><td>Full TCB: crypto, cookies, audit, FIPS-181</td></tr>
 </table>
-<p>All tests pass. The extracted code tests exercise the Coq-verified authorization logic.</p>
+<p>All tests pass. The property-based tests validate Coq theorems at runtime:</p>
+<table>
+<tr><th>Property</th><th>Generator Constraints</th></tr>
+<tr><td>principal_equal reflexive/symmetric/transitive</td><td>Random principals</td></tr>
+<tr><td>tag_intersect commutative</td><td>Non-threshold tags only</td></tr>
+<tr><td>tag_intersect idempotent</td><td>Non-threshold, non-empty TagSets</td></tr>
+<tr><td>tag_intersect TagAll identity</td><td>All tag types</td></tr>
+<tr><td>tag_subset reflexive</td><td>Non-threshold tags only</td></tr>
+<tr><td>TagRange subset containment</td><td>Random ranges</td></tr>
+</table>
+<p>TagThreshold is excluded from commutativity/idempotence tests due to documented structural limitations (Cartesian product ordering).</p>
 </section>
 <section>
 <h2>Future Work</h2>
 <ul>
-<li>Complete tag_intersect_comm proof with canonical ordering</li>
+<li>Complete tag_intersect_comm for TagPrefix (recursive induction)</li>
 <li>Prove verify_chain_sound with custom induction principle</li>
-<li>Property-based testing from Coq test vectors</li>
 <li>Consider CompCert or Fiat-Crypto for deeper verification</li>
 </ul>
 <p>Current proof coverage is sufficient for beta. The admitted theorems are proof obligations, not security vulnerabilities.</p>
