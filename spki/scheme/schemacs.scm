@@ -1028,7 +1028,7 @@
             (if (and (sm-modified? ed)
                      (not (sm-minibuf-ask ed "Buffer modified; kill anyway?")))
                 (loop)
-                'quit))
+                (void)))
            ((equal? key2 '(ctrl . #\S))  ; C-x C-s = save
             (sm-save-file! ed) (loop))
            ((equal? key2 '(ctrl . #\F))  ; C-x C-f = find file
@@ -1134,7 +1134,7 @@
   (screen-main-buffer)
   (screen-reset)
   (tty-set-cooked)
-  (print ""))
+  (void))
 
 ;;; ============================================================
 ;;; Entry Point
@@ -1154,4 +1154,5 @@
            (not (string-prefix? "-" (car (command-line-arguments)))))
   (schemacs (car (command-line-arguments))))
 
-(print "Schemacs loaded. (schemacs) to edit, C-x C-c to quit.")
+(when (condition-case *verbose-load* ((exn) #f))
+  (print "Schemacs loaded. (schemacs) to edit, C-x C-c to quit."))

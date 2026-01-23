@@ -19,7 +19,7 @@ int tty_set_raw_mode(void) {
     if (!isatty(STDIN_FILENO)) return -1;
     if (tcgetattr(STDIN_FILENO, &orig_termios) < 0) return -1;
     raw = orig_termios;
-    raw.c_lflag &= ~(ICANON | ECHO);  /* disable canonical mode and echo */
+    raw.c_lflag &= ~(ICANON | ECHO | ISIG);  /* disable canonical mode, echo, and signals */
     raw.c_cc[VMIN] = 1;   /* read returns after 1 char */
     raw.c_cc[VTIME] = 0;  /* no timeout */
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) < 0) return -1;
@@ -74,6 +74,12 @@ int tty_char_ready(int timeout_ms) {
 int tty_flush_input_buffer(void) {
     return tcflush(STDIN_FILENO, TCIFLUSH);
 }
+
+/* Push a character back onto stdin (TIOCSTI) */
+int tty_unread_char(int c) {
+    unsigned char ch = (unsigned char)c;
+    return ioctl(STDIN_FILENO, TIOCSTI, &ch);
+}
 <#
 
 (module tty-ffi
@@ -82,6 +88,7 @@ int tty_flush_input_buffer(void) {
    tty-set-raw
    tty-set-cooked
    tty-flush-input
+   tty-unread-char
    tty-rows
    tty-cols
    tty?)
@@ -120,5 +127,9 @@ int tty_flush_input_buffer(void) {
   ;; Flush pending input (clear buffer after pager exits)
   (define tty-flush-input
     (foreign-lambda int "tty_flush_input_buffer"))
+
+  ;; Push char back onto stdin (TIOCSTI) so next read sees it
+  (define tty-unread-char
+    (foreign-lambda int "tty_unread_char" int))
 
 ) ;; end module

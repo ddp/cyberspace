@@ -44,7 +44,7 @@
         srfi-69   ; hash tables
         (chicken tcp)
         tty-ffi   ; raw char input for immediate keypress
-        linenoise) ; line editing with history
+        lineage)  ; line editing with history (BSD)
 
 ;;; ============================================================
 ;;; Command Line Interface
@@ -242,6 +242,10 @@
   (set! *boot-verbosity*
     (if (number? level) level
         (cdr (assq level *boot-levels*)))))
+
+;; Verbose loading - shows resident editor messages at oracle level
+;; Must be defined before loading teco.scm, pencil.scm, schemacs.scm
+(define *verbose-load* (>= *boot-verbosity* 3))
 
 (define (module-start! name)
   "Mark start of module loading."
@@ -3847,7 +3851,7 @@ Cyberspace REPL - Available Commands
         (os#box-print b (sprintf "Type: ~a" kind)))
 
       ;; Error message
-      (os#box-print b msg)
+      (os#box-print b (or msg "(no message)"))
 
       ;; Location if available
       (when loc
@@ -3981,7 +3985,7 @@ Cyberspace REPL - Available Commands
     (print "│  (pending)  (accept 'name)  (reject 'name)                       │")
     (print "└──────────────────────────────────────────────────────────────────┘")
     (print "")
-    (display ": ")  ; re-display prompt
+    (display *prompt*)  ; re-display prompt
     (flush-output)
     (void)))
 
@@ -5421,7 +5425,9 @@ Cyberspace REPL - Available Commands
            ;; Also allow some common Scheme functions
            (memq cmd '(+ - * / define let if cond lambda quote
                        car cdr cons list first second third
-                       print display newline
+                       print display newline load begin
+                       ;; Debugging
+                       bt backtrace frame exception-info
                        ;; Resident editors
                        schemacs pencil pencil-novice teco)))))
 
@@ -5724,11 +5730,9 @@ Cyberspace REPL - Available Commands
 (define security security-summary)
 (define announce announce-presence)
 
-;; Easter egg: TECO tribute
-(define (teco)
-  "TECO - the editor that Emacs was written in"
-  (print "
-TECO - Text Editor and COrrector (1962)
+;; Describe resident things - editors, modules, etc.
+(define *resident-descriptions*
+  '((teco . "TECO - Text Editor and COrrector (1962)
 Dan Murphy, MIT
 
   The gap buffer's ancestor. Every keystroke a command.
@@ -5749,9 +5753,47 @@ Dan Murphy, MIT
   \"Real programmers can write FORTRAN in any language.
    TECO programmers write in line noise.\"
 
-  See also: (pencil) - our tribute to Michael Shrayer's 1976 editor
-")
-  (void))
+  Usage: (teco) or (teco \"file.txt\")
+         (teco-novice) for banner and help")
+
+    (pencil . "Electric Pencil - Word Processor (1976)
+Michael Shrayer
+
+  The first word processor for microcomputers.
+  Written for the MITS Altair 8800, later ported to CP/M.
+  Predates WordStar by two years.
+
+  Electric Pencil proved that personal computers could be
+  tools for writers, not just hobbyists and engineers.
+
+  Our implementation: gap buffer, WYSIWYG editing, novice mode.
+
+  Usage: (pencil) or (pencil \"file.txt\")
+         (pencil-novice) for extra guidance")
+
+    (schemacs . "Schemacs - Emacs-style Editor (2026)
+Cyberspace Project
+
+  A minimal Emacs implementation in Scheme.
+  Gap buffer, kill ring, mark, incremental search.
+
+  Key bindings:
+    C-x C-f  Find file       C-x C-s  Save
+    C-x C-c  Quit            C-s      Search
+    C-space  Set mark        C-w      Kill region
+    M-w      Copy region     C-y      Yank
+
+  Usage: (schemacs) or (schemacs \"file.txt\")")))
+
+(define (describe thing)
+  "Describe a resident thing (teco, pencil, schemacs, etc.)"
+  (let* ((sym (if (string? thing) (string->symbol thing) thing))
+         (desc (assq sym *resident-descriptions*)))
+    (if desc
+        (print (cdr desc))
+        (print "Unknown: " sym ". Try: teco, pencil, schemacs"))))
+
+(define info describe)
 
 ;; Easter egg for schemers: the Ten Commandments
 (define (commandments)
@@ -6884,7 +6926,7 @@ See: Memo-0000 Declaration of Cyberspace
         (map car failed))))
 
 ;; Settable prompt
-(define *prompt* ": ")
+(define *prompt* "% ")
 
 ;; Help invocation tracking - second ? shows more detail
 (define *help-call-count* 0)
@@ -6899,7 +6941,7 @@ See: Memo-0000 Declaration of Cyberspace
 (define (novice)
   "Switch to novice mode - guardrails on, confirmations required"
   (set! *user-mode* 'novice)
-  (set! *prompt* ": ")
+  (set! *prompt* "% ")
   (print "Novice mode. Guardrails on.")
   (print "Destructive ops require confirmation. Type ? for help."))
 
@@ -7031,21 +7073,21 @@ See: Memo-0000 Declaration of Cyberspace
   "Load history from file"
   (unless *history-loaded*
     (when (file-exists? *history-file*)
-      (linenoise#load-history-from-file *history-file*))
+      (lineage#load-history-from-file *history-file*))
     (set! *history-loaded* #t)))
 
 (define (repl-history-add line)
   "Add line to history"
   (when (and (string? line) (> (string-length line) 0))
-    (linenoise#history-add line)))
+    (lineage#history-add line)))
 
 (define (repl-history-save)
   "Save history to file"
-  (linenoise#save-history-to-file *history-file*))
+  (lineage#save-history-to-file *history-file*))
 
 (define (repl-read-line prompt)
-  "Read line with immediate shortcuts and linenoise history.
-   . and ? respond immediately. ESC (arrows) defers to linenoise for history."
+  "Read line with immediate shortcuts and lineage history.
+   . and ? respond immediately. ESC (arrows) defers to lineage for history."
   (repl-history-load)
   ;; Ensure clean terminal state before prompting
   (tty-ffi#tty-set-cooked)
@@ -7066,19 +7108,15 @@ See: Memo-0000 Declaration of Cyberspace
       ((= c 63)  ; ?
        (display "?\n")
        "?")
-      ;; Comma - include in linenoise prompt like regular chars
+      ;; Comma - pass to lineage with initial ","
       ((= c 44)  ; ,
-       (let* ((first-char ",")
-              (rest (linenoise#linenoise (string-append prompt first-char))))
-         (if rest
-             (let ((full (string-append first-char rest)))
-               (repl-history-add full)
-               (strip-ansi full))
-             #f)))
+       (let ((line (lineage#lineage-with-initial prompt ",")))
+         (when line (repl-history-add line))
+         (and line (strip-ansi line))))
       ;; ESC = arrow key or other escape sequence
-      ;; Defer entirely to linenoise (user pressed up/down for history)
+      ;; Defer entirely to lineage (user pressed up/down for history)
       ((= c 27)
-       (let ((line (linenoise#linenoise prompt)))
+       (let ((line (lineage#lineage prompt)))
          (when line (repl-history-add line))
          (and line (strip-ansi line))))
       ;; Ctrl-D = EOF
@@ -7087,27 +7125,12 @@ See: Memo-0000 Declaration of Cyberspace
       ((= c 3)
        (newline)
        "")
-      ;; Comma - start command mode, echo and continue
-      ((= c 44)
-       (display ",")
-       (flush-output)
-       (let ((rest (linenoise#linenoise "")))
-         (if rest
-             (let ((full (string-append "," rest)))
-               (repl-history-add full)
-               (strip-ansi full))
-             ",")))
-      ;; Regular char - include in linenoise prompt so backspace is safe
+      ;; Regular char - pass to lineage with initial content
       (else
-       (let* ((first-char (string (integer->char c)))
-              ;; Show prompt + first char as linenoise's "prompt"
-              ;; User can't backspace into it, but display stays clean
-              (rest (linenoise#linenoise (string-append prompt first-char))))
-         (if rest
-             (let ((full (string-append first-char rest)))
-               (repl-history-add full)
-               (strip-ansi full))
-             #f))))))
+       (let* ((initial (string (integer->char c)))
+              (line (lineage#lineage-with-initial prompt initial)))
+         (when line (repl-history-add line))
+         (and line (strip-ansi line)))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
@@ -7115,7 +7138,7 @@ See: Memo-0000 Declaration of Cyberspace
   (let loop ()
     (let ((line (repl-read-line *prompt*)))
       (cond
-        ;; EOF (linenoise returns #f, read-line returns eof-object)
+        ;; EOF (lineage returns #f, read-line returns eof-object)
         ((or (not line) (eof-object? line))
          (newline)
          (goodbye repl-history-save *boot-verbosity*))
@@ -7669,8 +7692,10 @@ See: Memo-0000 Declaration of Cyberspace
                         ((equal? expr '(introspect-system)) (status))
                         ((and (pair? expr) (eq? (car expr) 'soup))
                          (apply soup (cdr expr)))
-                        ;; Novice mode guard - catch unrecognized commands
+                        ;; Novice mode guard - catch unrecognized COMMANDS (not Scheme)
+                        ;; If they typed parens, they know what they're doing
                         ((and (eq? *user-mode* 'novice)
+                              (not is-scheme?)  ; command mode, not (expr)
                               (pair? expr)
                               (symbol? (car expr))
                               (not (novice-command? (car expr))))
