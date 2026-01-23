@@ -5578,13 +5578,15 @@ Cyberspace REPL - Available Commands
      ("(pager! CMD)" "Set pager (e.g. \"less\")")
      (",e [file]" "Edit with configured editor")
      (",pencil [file]" "Electric Pencil (built-in)")
+     (",novice [file]" "Pencil with on-screen hints")
      (",teco [file]" "TECO (Dan Murphy heritage)")
      (",schemacs [file]" "Schemacs (Emacs-style)")
      (",hd file" "Hex dump (xxd | less)")
      (",hext file" "HexEdit (GUI)")
      ("$EDITOR/$PAGER" "Environment fallbacks")
      ("Pencil:" "Gap buffer, WASD, Ctrl-Q quit")
-     ("TECO:" "PDP-style, * prompt, ERfile$/EX"))
+     ("TECO:" "PDP-style, * prompt, ERfile$/EX")
+     ("Schemacs:" "C-x C-s save, C-x C-c quit"))
 
     (forge "Build & Metrics"
      ("(sicp)" "SICP metrics for all modules")
@@ -7732,4 +7734,6 @@ See: Memo-0000 Declaration of Cyberspace
         (exit 0)))))
 
 ;; Start custom REPL
+;; Flush any input that accumulated during boot (editor loads, etc.)
+(tty-flush-input)
 (command-repl)
