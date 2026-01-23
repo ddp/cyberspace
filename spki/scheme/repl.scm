@@ -6936,7 +6936,7 @@ See: Memo-0000 Declaration of Cyberspace
 (define *user-mode* 'novice)
 (define *paren-count* 0)      ; track Scheme expression usage
 (define *command-count* 0)    ; track bare command usage
-(define *mode-threshold* 5)   ; expressions before auto-switch
+(define *mode-threshold* 1)   ; switch on first paren expression
 
 (define (novice)
   "Switch to novice mode - guardrails on, confirmations required"
@@ -7136,6 +7136,7 @@ See: Memo-0000 Declaration of Cyberspace
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
+    (set! *last-call-chain* #f)  ; clear stale backtrace each iteration
     (let ((line (repl-read-line *prompt*)))
       (cond
         ;; EOF (lineage returns #f, read-line returns eof-object)
