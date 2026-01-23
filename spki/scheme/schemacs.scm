@@ -126,56 +126,56 @@
   (display (screen-escape "?1049l")))
 
 ;;; ============================================================
-;;; Gap Buffer (same as pencil.scm)
+;;; Gap Buffer (sgb- prefix to avoid conflict with pencil/text)
 ;;; ============================================================
 
-(define-record-type <gap-buffer>
+(define-record-type <sgb>
   (make-gap-buffer-internal vec gap-start gap-end size)
-  gap-buffer?
-  (vec gb-vec set-gb-vec!)
-  (gap-start gb-gap-start set-gb-gap-start!)
-  (gap-end gb-gap-end set-gb-gap-end!)
-  (size gb-size set-gb-size!))
+  sgb?
+  (vec sgb-vec set-sgb-vec!)
+  (gap-start sgb-gap-start set-sgb-gap-start!)
+  (gap-end sgb-gap-end set-sgb-gap-end!)
+  (size sgb-size set-sgb-size!))
 
 (define *default-gap-size* 256)
 (define *initial-size* 1024)
 
-(define (gb-new #!optional (initial-size *initial-size*))
+(define (sgb-new #!optional (initial-size *initial-size*))
   (make-gap-buffer-internal
    (make-vector initial-size #\space)
    0 initial-size initial-size))
 
-(define (gb-length buf)
-  (- (gb-size buf) (- (gb-gap-end buf) (gb-gap-start buf))))
+(define (sgb-length buf)
+  (- (sgb-size buf) (- (sgb-gap-end buf) (sgb-gap-start buf))))
 
-(define (gb-gap-size buf)
-  (- (gb-gap-end buf) (gb-gap-start buf)))
+(define (sgb-gap-size buf)
+  (- (sgb-gap-end buf) (sgb-gap-start buf)))
 
-(define (gb-cursor buf)
-  (gb-gap-start buf))
+(define (sgb-cursor buf)
+  (sgb-gap-start buf))
 
-(define (gb-grow! buf #!optional (min-gap *default-gap-size*))
-  (when (< (gb-gap-size buf) min-gap)
-    (let* ((old-vec (gb-vec buf))
-           (old-size (gb-size buf))
+(define (sgb-grow! buf #!optional (min-gap *default-gap-size*))
+  (when (< (sgb-gap-size buf) min-gap)
+    (let* ((old-vec (sgb-vec buf))
+           (old-size (sgb-size buf))
            (new-size (* 2 (+ old-size min-gap)))
            (new-vec (make-vector new-size #\space))
-           (gap-start (gb-gap-start buf))
-           (gap-end (gb-gap-end buf))
+           (gap-start (sgb-gap-start buf))
+           (gap-end (sgb-gap-end buf))
            (after-gap (- old-size gap-end))
            (new-gap-end (- new-size after-gap)))
       (do ((i 0 (+ i 1))) ((>= i gap-start))
         (vector-set! new-vec i (vector-ref old-vec i)))
       (do ((i 0 (+ i 1))) ((>= i after-gap))
         (vector-set! new-vec (+ new-gap-end i) (vector-ref old-vec (+ gap-end i))))
-      (set-gb-vec! buf new-vec)
-      (set-gb-gap-end! buf new-gap-end)
-      (set-gb-size! buf new-size))))
+      (set-sgb-vec! buf new-vec)
+      (set-sgb-gap-end! buf new-gap-end)
+      (set-sgb-size! buf new-size))))
 
-(define (gb-move-gap! buf pos)
-  (let ((gap-start (gb-gap-start buf))
-        (gap-end (gb-gap-end buf))
-        (vec (gb-vec buf)))
+(define (sgb-move-gap! buf pos)
+  (let ((gap-start (sgb-gap-start buf))
+        (gap-end (sgb-gap-end buf))
+        (vec (sgb-vec buf)))
     (cond
      ((= pos gap-start) #t)
      ((< pos gap-start)
@@ -184,111 +184,111 @@
              (j (- gap-end 1) (- j 1)))
             ((< i pos))
           (vector-set! vec j (vector-ref vec i)))
-        (set-gb-gap-start! buf pos)
-        (set-gb-gap-end! buf (- gap-end shift))))
+        (set-sgb-gap-start! buf pos)
+        (set-sgb-gap-end! buf (- gap-end shift))))
      (else
       (let ((delta (- pos gap-start)))
         (do ((i 0 (+ i 1))) ((>= i delta))
           (vector-set! vec (+ gap-start i) (vector-ref vec (+ gap-end i))))
-        (set-gb-gap-start! buf pos)
-        (set-gb-gap-end! buf (+ gap-end delta)))))))
+        (set-sgb-gap-start! buf pos)
+        (set-sgb-gap-end! buf (+ gap-end delta)))))))
 
-(define (gb-insert! buf char)
-  (gb-grow! buf 1)
-  (let ((gap-start (gb-gap-start buf)))
-    (vector-set! (gb-vec buf) gap-start char)
-    (set-gb-gap-start! buf (+ gap-start 1))))
+(define (sgb-insert! buf char)
+  (sgb-grow! buf 1)
+  (let ((gap-start (sgb-gap-start buf)))
+    (vector-set! (sgb-vec buf) gap-start char)
+    (set-sgb-gap-start! buf (+ gap-start 1))))
 
-(define (gb-insert-string! buf str)
-  (for-each (lambda (c) (gb-insert! buf c)) (string->list str)))
+(define (sgb-insert-string! buf str)
+  (for-each (lambda (c) (sgb-insert! buf c)) (string->list str)))
 
-(define (gb-delete-forward! buf #!optional (n 1))
-  (let ((gap-end (gb-gap-end buf))
-        (size (gb-size buf)))
+(define (sgb-delete-forward! buf #!optional (n 1))
+  (let ((gap-end (sgb-gap-end buf))
+        (size (sgb-size buf)))
     (let ((actual (min n (- size gap-end))))
-      (set-gb-gap-end! buf (+ gap-end actual))
+      (set-sgb-gap-end! buf (+ gap-end actual))
       actual)))
 
-(define (gb-delete-backward! buf #!optional (n 1))
-  (let ((gap-start (gb-gap-start buf)))
+(define (sgb-delete-backward! buf #!optional (n 1))
+  (let ((gap-start (sgb-gap-start buf)))
     (let ((actual (min n gap-start)))
-      (set-gb-gap-start! buf (- gap-start actual))
+      (set-sgb-gap-start! buf (- gap-start actual))
       actual)))
 
-(define (gb-char-at buf pos)
-  (let ((gap-start (gb-gap-start buf))
-        (gap-end (gb-gap-end buf))
-        (vec (gb-vec buf)))
+(define (sgb-char-at buf pos)
+  (let ((gap-start (sgb-gap-start buf))
+        (gap-end (sgb-gap-end buf))
+        (vec (sgb-vec buf)))
     (cond
      ((< pos gap-start) (vector-ref vec pos))
      (else (vector-ref vec (+ gap-end (- pos gap-start)))))))
 
-(define (gb->string buf)
-  (let ((len (gb-length buf)))
+(define (sgb->string buf)
+  (let ((len (sgb-length buf)))
     (let ((result (make-string len)))
       (do ((i 0 (+ i 1))) ((>= i len) result)
-        (string-set! result i (gb-char-at buf i))))))
+        (string-set! result i (sgb-char-at buf i))))))
 
-(define (string->gb str)
+(define (string->sgb str)
   (let* ((len (string-length str))
-         (buf (gb-new (max *initial-size* (* 2 len)))))
-    (gb-insert-string! buf str)
+         (buf (sgb-new (max *initial-size* (* 2 len)))))
+    (sgb-insert-string! buf str)
     buf))
 
-(define (gb-goto! buf pos)
-  (let ((len (gb-length buf)))
-    (gb-move-gap! buf (max 0 (min pos len)))))
+(define (sgb-goto! buf pos)
+  (let ((len (sgb-length buf)))
+    (sgb-move-gap! buf (max 0 (min pos len)))))
 
-(define (gb-forward! buf #!optional (n 1))
-  (gb-goto! buf (+ (gb-cursor buf) n)))
+(define (sgb-forward! buf #!optional (n 1))
+  (sgb-goto! buf (+ (sgb-cursor buf) n)))
 
-(define (gb-backward! buf #!optional (n 1))
-  (gb-goto! buf (- (gb-cursor buf) n)))
+(define (sgb-backward! buf #!optional (n 1))
+  (sgb-goto! buf (- (sgb-cursor buf) n)))
 
 ;;; Line operations
 
-(define (gb-line-start buf pos)
+(define (sgb-line-start buf pos)
   (let loop ((p pos))
     (cond
      ((<= p 0) 0)
-     ((char=? (gb-char-at buf (- p 1)) #\newline) p)
+     ((char=? (sgb-char-at buf (- p 1)) #\newline) p)
      (else (loop (- p 1))))))
 
-(define (gb-line-end buf pos)
-  (let ((len (gb-length buf)))
+(define (sgb-line-end buf pos)
+  (let ((len (sgb-length buf)))
     (let loop ((p pos))
       (cond
        ((>= p len) len)
-       ((char=? (gb-char-at buf p) #\newline) p)
+       ((char=? (sgb-char-at buf p) #\newline) p)
        (else (loop (+ p 1)))))))
 
-(define (gb-line-number buf pos)
+(define (sgb-line-number buf pos)
   (let loop ((i 0) (line 1))
     (cond
      ((>= i pos) line)
-     ((char=? (gb-char-at buf i) #\newline) (loop (+ i 1) (+ line 1)))
+     ((char=? (sgb-char-at buf i) #\newline) (loop (+ i 1) (+ line 1)))
      (else (loop (+ i 1) line)))))
 
-(define (gb-column buf pos)
-  (+ 1 (- pos (gb-line-start buf pos))))
+(define (sgb-column buf pos)
+  (+ 1 (- pos (sgb-line-start buf pos))))
 
-(define (gb-line-at buf line-num)
-  (let ((len (gb-length buf)))
+(define (sgb-line-at buf line-num)
+  (let ((len (sgb-length buf)))
     (let loop ((i 0) (line 1))
       (cond
        ((>= line line-num) i)
        ((>= i len) len)
-       ((char=? (gb-char-at buf i) #\newline) (loop (+ i 1) (+ line 1)))
+       ((char=? (sgb-char-at buf i) #\newline) (loop (+ i 1) (+ line 1)))
        (else (loop (+ i 1) line))))))
 
-(define (gb-extract buf start end)
+(define (sgb-extract buf start end)
   "Extract text from start to end as string"
   (let* ((len (- end start))
          (result (make-string len)))
     (do ((i start (+ i 1))
          (j 0 (+ j 1)))
         ((>= i end) result)
-      (string-set! result j (gb-char-at buf i)))))
+      (string-set! result j (sgb-char-at buf i)))))
 
 ;;; ============================================================
 ;;; Kill Ring - Emacs-style clipboard with history
@@ -344,7 +344,7 @@
 
 (define (schemacs-new)
   (make-schemacs-internal
-   (gb-new)                             ; buffer
+   (sgb-new)                             ; buffer
    #f                                   ; filename
    #f                                   ; modified
    #f                                   ; mark
@@ -362,102 +362,102 @@
 
 (define (sm-forward-char! ed #!optional (n 1))
   "C-f: Move forward n characters"
-  (gb-forward! (sm-buf ed) n)
-  (set-sm-goal-col! ed (gb-column (sm-buf ed) (gb-cursor (sm-buf ed)))))
+  (sgb-forward! (sm-buf ed) n)
+  (set-sm-goal-col! ed (sgb-column (sm-buf ed) (sgb-cursor (sm-buf ed)))))
 
 (define (sm-backward-char! ed #!optional (n 1))
   "C-b: Move backward n characters"
-  (gb-backward! (sm-buf ed) n)
-  (set-sm-goal-col! ed (gb-column (sm-buf ed) (gb-cursor (sm-buf ed)))))
+  (sgb-backward! (sm-buf ed) n)
+  (set-sm-goal-col! ed (sgb-column (sm-buf ed) (sgb-cursor (sm-buf ed)))))
 
 (define (sm-next-line! ed)
   "C-n: Move to next line, preserving column"
   (let* ((buf (sm-buf ed))
-         (pos (gb-cursor buf))
+         (pos (sgb-cursor buf))
          (goal (sm-goal-col ed))
-         (line-end (gb-line-end buf pos))
-         (len (gb-length buf)))
+         (line-end (sgb-line-end buf pos))
+         (len (sgb-length buf)))
     (when (< line-end len)
       (let* ((next-start (+ line-end 1))
-             (next-end (gb-line-end buf next-start))
+             (next-end (sgb-line-end buf next-start))
              (next-len (- next-end next-start))
              (new-col (min (- goal 1) next-len)))
-        (gb-goto! buf (+ next-start new-col))))))
+        (sgb-goto! buf (+ next-start new-col))))))
 
 (define (sm-previous-line! ed)
   "C-p: Move to previous line, preserving column"
   (let* ((buf (sm-buf ed))
-         (pos (gb-cursor buf))
+         (pos (sgb-cursor buf))
          (goal (sm-goal-col ed))
-         (line-start (gb-line-start buf pos)))
+         (line-start (sgb-line-start buf pos)))
     (when (> line-start 0)
       (let* ((prev-end (- line-start 1))
-             (prev-start (gb-line-start buf prev-end))
+             (prev-start (sgb-line-start buf prev-end))
              (prev-len (- prev-end prev-start))
              (new-col (min (- goal 1) prev-len)))
-        (gb-goto! buf (+ prev-start new-col))))))
+        (sgb-goto! buf (+ prev-start new-col))))))
 
 (define (sm-beginning-of-line! ed)
   "C-a: Move to beginning of line"
   (let ((buf (sm-buf ed)))
-    (gb-goto! buf (gb-line-start buf (gb-cursor buf)))
+    (sgb-goto! buf (sgb-line-start buf (sgb-cursor buf)))
     (set-sm-goal-col! ed 1)))
 
 (define (sm-end-of-line! ed)
   "C-e: Move to end of line"
   (let ((buf (sm-buf ed)))
-    (gb-goto! buf (gb-line-end buf (gb-cursor buf)))
-    (set-sm-goal-col! ed (gb-column buf (gb-cursor buf)))))
+    (sgb-goto! buf (sgb-line-end buf (sgb-cursor buf)))
+    (set-sm-goal-col! ed (sgb-column buf (sgb-cursor buf)))))
 
 (define (sm-forward-word! ed)
   "M-f: Move forward one word"
   (let* ((buf (sm-buf ed))
-         (len (gb-length buf))
-         (pos (gb-cursor buf)))
+         (len (sgb-length buf))
+         (pos (sgb-cursor buf)))
     ;; Skip non-word chars, then word chars
     (let loop ((p pos))
       (cond
-       ((>= p len) (gb-goto! buf len))
-       ((char-alphabetic? (gb-char-at buf p))
+       ((>= p len) (sgb-goto! buf len))
+       ((char-alphabetic? (sgb-char-at buf p))
         ;; In word, find end
         (let word ((q p))
           (cond
-           ((>= q len) (gb-goto! buf len))
-           ((not (char-alphabetic? (gb-char-at buf q)))
-            (gb-goto! buf q))
+           ((>= q len) (sgb-goto! buf len))
+           ((not (char-alphabetic? (sgb-char-at buf q)))
+            (sgb-goto! buf q))
            (else (word (+ q 1))))))
        (else (loop (+ p 1)))))
-    (set-sm-goal-col! ed (gb-column buf (gb-cursor buf)))))
+    (set-sm-goal-col! ed (sgb-column buf (sgb-cursor buf)))))
 
 (define (sm-backward-word! ed)
   "M-b: Move backward one word"
   (let* ((buf (sm-buf ed))
-         (pos (gb-cursor buf)))
+         (pos (sgb-cursor buf)))
     (when (> pos 0)
       (let loop ((p (- pos 1)))
         (cond
-         ((<= p 0) (gb-goto! buf 0))
-         ((char-alphabetic? (gb-char-at buf p))
+         ((<= p 0) (sgb-goto! buf 0))
+         ((char-alphabetic? (sgb-char-at buf p))
           ;; In word, find start
           (let word ((q p))
             (cond
-             ((<= q 0) (gb-goto! buf 0))
-             ((not (char-alphabetic? (gb-char-at buf (- q 1))))
-              (gb-goto! buf q))
+             ((<= q 0) (sgb-goto! buf 0))
+             ((not (char-alphabetic? (sgb-char-at buf (- q 1))))
+              (sgb-goto! buf q))
              (else (word (- q 1))))))
          (else (loop (- p 1))))))
-    (set-sm-goal-col! ed (gb-column buf (gb-cursor buf)))))
+    (set-sm-goal-col! ed (sgb-column buf (sgb-cursor buf)))))
 
 (define (sm-beginning-of-buffer! ed)
   "M-<: Move to beginning of buffer"
-  (gb-goto! (sm-buf ed) 0)
+  (sgb-goto! (sm-buf ed) 0)
   (set-sm-goal-col! ed 1))
 
 (define (sm-end-of-buffer! ed)
   "M->: Move to end of buffer"
   (let ((buf (sm-buf ed)))
-    (gb-goto! buf (gb-length buf))
-    (set-sm-goal-col! ed (gb-column buf (gb-cursor buf)))))
+    (sgb-goto! buf (sgb-length buf))
+    (set-sm-goal-col! ed (sgb-column buf (sgb-cursor buf)))))
 
 (define (sm-scroll-up! ed)
   "C-v: Scroll down (move forward) one page"
@@ -478,32 +478,32 @@
 (define (sm-delete-char! ed)
   "C-d: Delete character at point"
   (let ((buf (sm-buf ed)))
-    (when (< (gb-cursor buf) (gb-length buf))
-      (gb-delete-forward! buf)
+    (when (< (sgb-cursor buf) (sgb-length buf))
+      (sgb-delete-forward! buf)
       (set-sm-modified! ed #t))))
 
 (define (sm-delete-backward-char! ed)
   "DEL: Delete character before point"
   (let ((buf (sm-buf ed)))
-    (when (> (gb-cursor buf) 0)
-      (gb-delete-backward! buf)
+    (when (> (sgb-cursor buf) 0)
+      (sgb-delete-backward! buf)
       (set-sm-modified! ed #t))))
 
 (define (sm-kill-line! ed)
   "C-k: Kill to end of line"
   (let* ((buf (sm-buf ed))
-         (pos (gb-cursor buf))
-         (eol (gb-line-end buf pos)))
+         (pos (sgb-cursor buf))
+         (eol (sgb-line-end buf pos)))
     (if (= pos eol)
         ;; At end of line, kill the newline
-        (when (< pos (gb-length buf))
+        (when (< pos (sgb-length buf))
           (kill-ring-push "\n")
-          (gb-delete-forward! buf)
+          (sgb-delete-forward! buf)
           (set-sm-modified! ed #t))
         ;; Kill to end of line
-        (let ((text (gb-extract buf pos eol)))
+        (let ((text (sgb-extract buf pos eol)))
           (kill-ring-push text)
-          (gb-delete-forward! buf (- eol pos))
+          (sgb-delete-forward! buf (- eol pos))
           (set-sm-modified! ed #t)))))
 
 (define (sm-kill-region! ed)
@@ -511,13 +511,13 @@
   (let ((mark (sm-mark ed))
         (buf (sm-buf ed)))
     (when mark
-      (let* ((pos (gb-cursor buf))
+      (let* ((pos (sgb-cursor buf))
              (start (min mark pos))
              (end (max mark pos))
-             (text (gb-extract buf start end)))
+             (text (sgb-extract buf start end)))
         (kill-ring-push text)
-        (gb-goto! buf start)
-        (gb-delete-forward! buf (- end start))
+        (sgb-goto! buf start)
+        (sgb-delete-forward! buf (- end start))
         (set-sm-mark! ed #f)
         (set-sm-modified! ed #t)))))
 
@@ -526,10 +526,10 @@
   (let ((mark (sm-mark ed))
         (buf (sm-buf ed)))
     (when mark
-      (let* ((pos (gb-cursor buf))
+      (let* ((pos (sgb-cursor buf))
              (start (min mark pos))
              (end (max mark pos))
-             (text (gb-extract buf start end)))
+             (text (sgb-extract buf start end)))
         (kill-ring-push text)
         (set-sm-mark! ed #f)
         (set-sm-minibuf! ed "Region copied")))))
@@ -539,7 +539,7 @@
   (let ((text (kill-ring-top))
         (buf (sm-buf ed)))
     (when (> (string-length text) 0)
-      (gb-insert-string! buf text)
+      (sgb-insert-string! buf text)
       (set-sm-modified! ed #t)
       (set-sm-yank-size! ed (string-length text)))))
 
@@ -549,16 +549,16 @@
     (let* ((buf (sm-buf ed))
            (old-size (sm-yank-size ed)))
       ;; Delete what we just yanked
-      (gb-backward! buf old-size)
-      (gb-delete-forward! buf old-size)
+      (sgb-backward! buf old-size)
+      (sgb-delete-forward! buf old-size)
       ;; Yank next item
       (let ((text (kill-ring-pop)))
-        (gb-insert-string! buf text)
+        (sgb-insert-string! buf text)
         (set-sm-yank-size! ed (string-length text))))))
 
 (define (sm-set-mark! ed)
   "C-space: Set mark at point"
-  (set-sm-mark! ed (gb-cursor (sm-buf ed)))
+  (set-sm-mark! ed (sgb-cursor (sm-buf ed)))
   (set-sm-minibuf! ed "Mark set"))
 
 (define (sm-exchange-point-and-mark! ed)
@@ -566,60 +566,60 @@
   (let ((mark (sm-mark ed))
         (buf (sm-buf ed)))
     (when mark
-      (let ((pos (gb-cursor buf)))
+      (let ((pos (sgb-cursor buf)))
         (set-sm-mark! ed pos)
-        (gb-goto! buf mark)
-        (set-sm-goal-col! ed (gb-column buf (gb-cursor buf)))))))
+        (sgb-goto! buf mark)
+        (set-sm-goal-col! ed (sgb-column buf (sgb-cursor buf)))))))
 
 (define (sm-insert-char! ed char)
   "Self-insert character"
-  (gb-insert! (sm-buf ed) char)
+  (sgb-insert! (sm-buf ed) char)
   (set-sm-modified! ed #t))
 
 (define (sm-newline! ed)
   "RET: Insert newline"
-  (gb-insert! (sm-buf ed) #\newline)
+  (sgb-insert! (sm-buf ed) #\newline)
   (set-sm-modified! ed #t))
 
 (define (sm-kill-word! ed)
   "M-d: Kill word forward"
   (let* ((buf (sm-buf ed))
-         (start (gb-cursor buf))
-         (len (gb-length buf)))
+         (start (sgb-cursor buf))
+         (len (sgb-length buf)))
     ;; Find word end
     (let loop ((p start))
       (cond
        ((>= p len)
-        (let ((text (gb-extract buf start len)))
+        (let ((text (sgb-extract buf start len)))
           (kill-ring-push text)
-          (gb-delete-forward! buf (- len start))
+          (sgb-delete-forward! buf (- len start))
           (set-sm-modified! ed #t)))
-       ((and (> p start) (not (char-alphabetic? (gb-char-at buf p))))
-        (let ((text (gb-extract buf start p)))
+       ((and (> p start) (not (char-alphabetic? (sgb-char-at buf p))))
+        (let ((text (sgb-extract buf start p)))
           (kill-ring-push text)
-          (gb-delete-forward! buf (- p start))
+          (sgb-delete-forward! buf (- p start))
           (set-sm-modified! ed #t)))
        (else (loop (+ p 1)))))))
 
 (define (sm-backward-kill-word! ed)
   "M-DEL: Kill word backward"
   (let* ((buf (sm-buf ed))
-         (end (gb-cursor buf)))
+         (end (sgb-cursor buf)))
     (when (> end 0)
       (let loop ((p (- end 1)))
         (cond
          ((<= p 0)
-          (let ((text (gb-extract buf 0 end)))
+          (let ((text (sgb-extract buf 0 end)))
             (kill-ring-push text)
-            (gb-goto! buf 0)
-            (gb-delete-forward! buf end)
+            (sgb-goto! buf 0)
+            (sgb-delete-forward! buf end)
             (set-sm-modified! ed #t)))
-         ((and (< p (- end 1)) (not (char-alphabetic? (gb-char-at buf p))))
+         ((and (< p (- end 1)) (not (char-alphabetic? (sgb-char-at buf p))))
           (let* ((start (+ p 1))
-                 (text (gb-extract buf start end)))
+                 (text (sgb-extract buf start end)))
             (kill-ring-push text)
-            (gb-goto! buf start)
-            (gb-delete-forward! buf (- end start))
+            (sgb-goto! buf start)
+            (sgb-delete-forward! buf (- end start))
             (set-sm-modified! ed #t)))
          (else (loop (- p 1))))))))
 
@@ -630,7 +630,7 @@
 (define (sm-ensure-visible! ed)
   "Scroll if cursor is outside visible area"
   (let* ((buf (sm-buf ed))
-         (line (gb-line-number buf (gb-cursor buf)))
+         (line (sgb-line-number buf (sgb-cursor buf)))
          (top (sm-screen-top ed))
          (visible (- (sm-rows ed) 2)))
     (cond
@@ -642,7 +642,7 @@
 (define (sm-recenter! ed)
   "C-l: Recenter display around cursor"
   (let* ((buf (sm-buf ed))
-         (line (gb-line-number buf (gb-cursor buf)))
+         (line (sgb-line-number buf (sgb-cursor buf)))
          (visible (- (sm-rows ed) 2))
          (center (quotient visible 2)))
     (set-sm-screen-top! ed (max 0 (- line center)))))
@@ -656,7 +656,7 @@
          (top (sm-screen-top ed))
          (visible (- rows 2))
          (mark (sm-mark ed))
-         (pos (gb-cursor buf)))
+         (pos (sgb-cursor buf)))
 
     (screen-cursor-hide)
     (screen-home)
@@ -669,9 +669,9 @@
         ((> screen-row visible))
       (screen-goto screen-row 1)
       (screen-clear-eol)
-      (let ((line-start (gb-line-at buf line)))
-        (when (< line-start (gb-length buf))
-          (let* ((line-end (gb-line-end buf line-start))
+      (let ((line-start (sgb-line-at buf line)))
+        (when (< line-start (sgb-length buf))
+          (let* ((line-end (sgb-line-end buf line-start))
                  (line-len (- line-end line-start))
                  (display-len (min line-len (- cols 1))))
             ;; Check for region highlight
@@ -682,26 +682,26 @@
                     (let ((char-pos (+ line-start i)))
                       (if (and (>= char-pos region-start) (< char-pos region-end))
                           (begin (screen-reverse)
-                                 (display (gb-char-at buf char-pos))
+                                 (display (sgb-char-at buf char-pos))
                                  (screen-reset)
                                  (screen-green))
-                          (display (gb-char-at buf char-pos))))))
+                          (display (sgb-char-at buf char-pos))))))
                 ;; No region
                 (do ((i 0 (+ i 1))) ((>= i display-len))
-                  (display (gb-char-at buf (+ line-start i)))))))))
+                  (display (sgb-char-at buf (+ line-start i)))))))))
 
     ;; Mode line
     (screen-goto (- rows 1) 1)
     (screen-reverse)
     (let* ((filename (or (sm-filename ed) "*scratch*"))
            (modified (if (sm-modified? ed) "**" "--"))
-           (line-num (gb-line-number buf pos))
-           (col-num (gb-column buf pos))
-           (percent (if (= (gb-length buf) 0)
+           (line-num (sgb-line-number buf pos))
+           (col-num (sgb-column buf pos))
+           (percent (if (= (sgb-length buf) 0)
                         "All"
-                        (let ((p (quotient (* 100 pos) (gb-length buf))))
+                        (let ((p (quotient (* 100 pos) (sgb-length buf))))
                           (cond ((= pos 0) "Top")
-                                ((= pos (gb-length buf)) "Bot")
+                                ((= pos (sgb-length buf)) "Bot")
                                 (else (format #f "~a%" p))))))
            (mode-str (format #f "-~a- ~a   (~a,~a)  ~a"
                             modified filename line-num col-num percent)))
@@ -716,8 +716,8 @@
     (display (sm-minibuf ed))
 
     ;; Position cursor
-    (let ((line (gb-line-number buf pos))
-          (col (gb-column buf pos)))
+    (let ((line (sgb-line-number buf pos))
+          (col (sgb-column buf pos)))
       (screen-goto (- line (sm-screen-top ed)) col))
     (screen-cursor-show)
     (flush-output)))
@@ -730,10 +730,10 @@
   "C-x C-f: Find (open) file"
   (if (file-exists? filename)
       (let ((content (with-input-from-file filename read-string)))
-        (set-sm-buf! ed (string->gb content))
+        (set-sm-buf! ed (string->sgb content))
         (set-sm-filename! ed filename)
         (set-sm-modified! ed #f)
-        (gb-goto! (sm-buf ed) 0)
+        (sgb-goto! (sm-buf ed) 0)
         (set-sm-screen-top! ed 0)
         (set-sm-minibuf! ed (format #f "Loaded ~a" filename)))
       (begin
@@ -746,7 +746,7 @@
     (if fname
         (begin
           (with-output-to-file fname
-            (lambda () (display (gb->string (sm-buf ed)))))
+            (lambda () (display (sgb->string (sm-buf ed)))))
           (set-sm-modified! ed #f)
           (set-sm-minibuf! ed (format #f "Wrote ~a" fname)))
         (set-sm-minibuf! ed "No file name"))))
@@ -754,7 +754,7 @@
 (define (sm-write-file! ed filename)
   "C-x C-w: Write file (save as)"
   (with-output-to-file filename
-    (lambda () (display (gb->string (sm-buf ed)))))
+    (lambda () (display (sgb->string (sm-buf ed)))))
   (set-sm-filename! ed filename)
   (set-sm-modified! ed #f)
   (set-sm-minibuf! ed (format #f "Wrote ~a" filename)))
@@ -850,8 +850,8 @@
 (define (sm-search-forward! ed pattern)
   "Search forward for pattern"
   (let* ((buf (sm-buf ed))
-         (len (gb-length buf))
-         (start (+ (gb-cursor buf) 1))
+         (len (sgb-length buf))
+         (start (+ (sgb-cursor buf) 1))
          (plen (string-length pattern)))
     (let search ((pos start))
       (cond
@@ -862,24 +862,24 @@
            ((>= pos start)
             (set-sm-minibuf! ed "Failing I-search"))
            ((string-match-at-gb? buf pos pattern plen)
-            (gb-goto! buf pos)
-            (set-sm-goal-col! ed (gb-column buf pos))
+            (sgb-goto! buf pos)
+            (set-sm-goal-col! ed (sgb-column buf pos))
             (set-sm-minibuf! ed pattern))
            (else (wrap (+ pos 1))))))
        ((string-match-at-gb? buf pos pattern plen)
-        (gb-goto! buf pos)
-        (set-sm-goal-col! ed (gb-column buf pos))
+        (sgb-goto! buf pos)
+        (set-sm-goal-col! ed (sgb-column buf pos))
         (set-sm-minibuf! ed pattern))
        (else (search (+ pos 1)))))))
 
 (define (string-match-at-gb? buf pos pattern plen)
   "Check if pattern matches at position"
-  (let ((len (gb-length buf)))
+  (let ((len (sgb-length buf)))
     (and (<= (+ pos plen) len)
          (let loop ((i 0))
            (cond
             ((>= i plen) #t)
-            ((char=? (gb-char-at buf (+ pos i)) (string-ref pattern i))
+            ((char=? (sgb-char-at buf (+ pos i)) (string-ref pattern i))
              (loop (+ i 1)))
             (else #f))))))
 
@@ -893,15 +893,15 @@
 (define (sm-search-backward! ed pattern)
   "Search backward for pattern"
   (let* ((buf (sm-buf ed))
-         (start (- (gb-cursor buf) 1))
+         (start (- (sgb-cursor buf) 1))
          (plen (string-length pattern)))
     (let search ((pos start))
       (cond
        ((< pos 0)
         (set-sm-minibuf! ed "Failing I-search backward"))
        ((string-match-at-gb? buf pos pattern plen)
-        (gb-goto! buf pos)
-        (set-sm-goal-col! ed (gb-column buf pos))
+        (sgb-goto! buf pos)
+        (set-sm-goal-col! ed (sgb-column buf pos))
         (set-sm-minibuf! ed pattern))
        (else (search (- pos 1)))))))
 
@@ -931,16 +931,16 @@
       (let ((line (string->number line-str)))
         (when line
           (let ((buf (sm-buf ed)))
-            (gb-goto! buf (gb-line-at buf line))
+            (sgb-goto! buf (sgb-line-at buf line))
             (set-sm-goal-col! ed 1)))))))
 
 (define (sm-mx-what-cursor ed)
   "M-x what-cursor-position"
   (let* ((buf (sm-buf ed))
-         (pos (gb-cursor buf))
-         (len (gb-length buf)))
+         (pos (sgb-cursor buf))
+         (len (sgb-length buf)))
     (if (< pos len)
-        (let ((c (gb-char-at buf pos)))
+        (let ((c (sgb-char-at buf pos)))
           (set-sm-minibuf! ed
                            (format #f "Char: ~a (0~o, ~a, 0x~x) point=~a of ~a"
                                    (if (char-graphic? c) (string c) "^?")
@@ -953,11 +953,11 @@
 (define (sm-mx-count-words ed)
   "M-x count-words"
   (let* ((buf (sm-buf ed))
-         (len (gb-length buf)))
+         (len (sgb-length buf)))
     (let loop ((i 0) (words 0) (in-word #f))
       (if (>= i len)
           (set-sm-minibuf! ed (format #f "~a words" words))
-          (let ((c (gb-char-at buf i)))
+          (let ((c (sgb-char-at buf i)))
             (if (char-alphabetic? c)
                 (loop (+ i 1) (if in-word words (+ words 1)) #t)
                 (loop (+ i 1) words #f)))))))
