@@ -19,6 +19,7 @@ int tty_set_raw_mode(void) {
     if (!isatty(STDIN_FILENO)) return -1;
     if (tcgetattr(STDIN_FILENO, &orig_termios) < 0) return -1;
     raw = orig_termios;
+    raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);  /* disable flow control, etc. */
     raw.c_lflag &= ~(ICANON | ECHO | ISIG);  /* disable canonical mode, echo, and signals */
     raw.c_cc[VMIN] = 1;   /* read returns after 1 char */
     raw.c_cc[VTIME] = 0;  /* no timeout */
