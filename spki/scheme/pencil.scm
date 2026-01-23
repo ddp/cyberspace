@@ -754,6 +754,7 @@
 
 (define (editor-run ed)
   "Main editor loop"
+  (tty-flush-input)  ; Clear any buffered garbage
   (tty-set-raw)
   (screen-alt-buffer)
   (screen-clear)

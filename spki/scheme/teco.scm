@@ -751,6 +751,7 @@
    ESC echoes as $, double-ESC executes command string."
   (display "*")
   (flush-output)
+  (tty-flush-input)  ; Clear any buffered garbage
   (tty-set-raw)
   (let loop ((chars '()) (last-was-esc #f))
     (let ((c (tty-raw-char)))

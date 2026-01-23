@@ -5421,7 +5421,9 @@ Cyberspace REPL - Available Commands
            ;; Also allow some common Scheme functions
            (memq cmd '(+ - * / define let if cond lambda quote
                        car cdr cons list first second third
-                       print display newline)))))
+                       print display newline
+                       ;; Resident editors
+                       schemacs pencil pencil-novice teco)))))
 
 (define (parse-command-line line)
   "Parse command line into S-expression"
@@ -7043,6 +7045,9 @@ See: Memo-0000 Declaration of Cyberspace
   "Read line with immediate shortcuts and linenoise history.
    . and ? respond immediately. ESC (arrows) defers to linenoise for history."
   (repl-history-load)
+  ;; Ensure clean terminal state before prompting
+  (tty-ffi#tty-set-cooked)
+  (tty-ffi#tty-flush-input)
   (display prompt)
   (flush-output)
   ;; Peek first char in raw mode
