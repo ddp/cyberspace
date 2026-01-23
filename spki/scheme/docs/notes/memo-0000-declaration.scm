@@ -77,7 +77,12 @@ THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND.")
       (item "John Perry Barlow, Dead lyricist and cyberspace prophet, whose 1996 Declaration of Independence lit the way")
       (item "Thomas Jefferson, who wrote the declaration of human liberty in language that still echoes")
       (item "Alexander Hamilton, who designed federation—sovereignty with union—in the Federalist Papers")
-      (item "Hal Abelson and Gerald Jay Sussman, who showed in Structure and Interpretation of Computer Programs that from a few primitives, you can build everything"))
+      (item "Hal Abelson and Gerald Jay Sussman, who showed in Structure and Interpretation of Computer Programs that from a few primitives, you can build everything")
+      (item "Whitfield Diffie and Martin Hellman, who gave us public key cryptography and proved that strangers could share secrets")
+      (item "Ralph Merkle, who gave us trees of hashes and showed that authentication could scale")
+      (item "Ron Rivest, who gave us RSA, SDSI, and the insight that names should be self-certifying")
+      (item "Hugo Krawczyk, who gave us HKDF and proved that key derivation could be rigorous")
+      (item "Ran Canetti, who gave us Universal Composability and showed how to reason about security under composition"))
     (p "The language is incidental. The shape is inevitable."))
 
   (footer
