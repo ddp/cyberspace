@@ -44,8 +44,8 @@ if [[ -o interactive ]]; then
     export EGG_FRECKELS=T
 
     # Ollama local LLM (Anthropic-compatible API)
-    export ANTHROPIC_AUTH_TOKEN=ollama
-    export ANTHROPIC_BASE_URL=http://localhost:11434
+#    export ANTHROPIC_AUTH_TOKEN=ollama
+#    export ANTHROPIC_BASE_URL=http://localhost:11434
     
     # OS PATH detection
     path=(
@@ -294,7 +294,6 @@ test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell
 if [[ "$PWD" == "$HOME/cyberspace" && -d .git ]]; then
     git pull --quiet 2>/dev/null || true
 fi
-
 
 # Cyberspace SICP metrics
 alias lscs='cd ~/cyberspace/spki/scheme && ./sicp'
