@@ -7117,11 +7117,16 @@ See: Memo-0000 Declaration of Cyberspace
             ((= c 63)  ; ?
              (display "?\n")
              "?")
-            ;; Comma - pass to lineage with initial ","
+            ;; Comma - echo it and read rest without re-prompting
             ((= c 44)  ; ,
-             (let ((line (lineage#lineage-with-initial prompt ",")))
-               (when line (repl-history-add line))
-               (and line (strip-ansi line))))
+             (display ",")
+             (flush-output)
+             (let ((rest (lineage#lineage "")))  ; Empty prompt - continue on same line
+               (if rest
+                   (let ((line (string-append "," rest)))
+                     (repl-history-add line)
+                     (strip-ansi line))
+                   ",")))
             ;; ESC = arrow key or other escape sequence
             ;; Defer entirely to lineage (user pressed up/down for history)
             ((= c 27)
@@ -7134,12 +7139,17 @@ See: Memo-0000 Declaration of Cyberspace
             ((= c 3)
              (newline)
              "")
-            ;; Regular char - pass to lineage with initial content
+            ;; Regular char - echo it and read rest without re-prompting
             (else
-             (let* ((initial (string (integer->char c)))
-                    (line (lineage#lineage-with-initial prompt initial)))
-               (when line (repl-history-add line))
-               (and line (strip-ansi line)))))))))
+             (let ((initial (string (integer->char c))))
+               (display initial)
+               (flush-output)
+               (let ((rest (lineage#lineage "")))  ; Empty prompt - continue on same line
+                 (if rest
+                     (let ((line (string-append initial rest)))
+                       (repl-history-add line)
+                       (strip-ansi line))
+                     initial)))))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
