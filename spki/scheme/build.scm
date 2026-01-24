@@ -20,7 +20,7 @@
 
 (define *library-modules*
   '(;; Core
-    "sexp" "crypto-ffi" "fips" "wordlist" "tty-ffi"
+    "sexp" "crypto-ffi" "fips" "wordlist" "tty-ffi" "lineage"
     ;; SPKI
     "cert" "capability" "security" "keyring"
     ;; Storage
