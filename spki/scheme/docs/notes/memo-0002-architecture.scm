@@ -135,14 +135,14 @@
   (section
     "6. Implementation Status"
     (blockquote "We reject kings, presidents and voting. We believe in rough consensus and running code. — Dave Clark, IETF")
-    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory")
+    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory ✓ Federation        ✓ Lamport Clocks\n✓ TLA+ Specs        ✓ Coq Proofs        ✓ AEAD Encryption")
     (p "Each traces to original research. Each runs. Each is tested."))
   (section
     "7. Security Considerations"
     (blockquote "You can't trust code that you did not totally create yourself. — Ken Thompson, Reflections on Trusting Trust")
     (subsection
       "7.1 TCB Minimization"
-      (p "The attack surface is limited to ~1000 lines of OCaml calling libsodium. This code is:")
+      (p "The attack surface is limited to ~1000 lines of Scheme calling libsodium. This code is:")
       (list
         (item "Formally specified")
         (item "Proven in Coq")
@@ -170,18 +170,10 @@
     "9. Future Work"
     (blockquote "A journey of a thousand miles begins with a single step. — Lao Tzu")
     (list
-      (item "ChaCha20-Poly1305 AEAD")
-      (item "Authenticated encryption")
-      (item "Lamport Logical Clocks")
-      (item "Distributed ordering")
-      (item "TLA+ Specifications")
-      (item "Model-checked protocols")
-      (item "Coq Extraction")
-      (item "Verified OCaml from proofs")
-      (item "Federation Protocol")
-      (item "Cross-instance sync")
-      (item "Byzantine Paxos")
-      (item "Fault-tolerant consensus")))
+      (item "Post-quantum signatures (Memo-048)")
+      (item "Quantum-resistant Merkle trees (Memo-047)")
+      (item "Mobile agents (Memo-037)")
+      (item "FUSE filesystem portal (Memo-042)")))
   (section
     "10. References"
     (list
@@ -195,6 +187,10 @@
   (section
     "Changelog"
     (list
+      (item "2026-01-24")
+      (item "Update implementation status: add Federation, Lamport Clocks, TLA+, Coq, AEAD")
+      (item "Update future work: remove implemented items, add post-quantum and mobile agents")
+      (item "Fix TCB description: OCaml → Scheme")
       (item "2026-01-06")
       (item "Initial specification"))))
 
