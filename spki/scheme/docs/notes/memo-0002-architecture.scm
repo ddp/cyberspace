@@ -135,7 +135,7 @@
   (section
     "6. Implementation Status"
     (blockquote "We reject kings, presidents and voting. We believe in rough consensus and running code. — Dave Clark, IETF")
-    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory ✓ Federation        ✓ Lamport Clocks\n✓ TLA+ Specs        ◐ Coq Proofs        ✓ AEAD Encryption\n✓ QR Merkle Trees   ✓ FUSE Wormholes")
+    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory ✓ Federation        ✓ Lamport Clocks\n✓ TLA+ Specs        ◐ Coq Proofs        ✓ AEAD Encryption\n✓ QR Merkle Trees   ✓ FUSE Wormholes    ✓ PQ Signatures")
     (p "Each traces to original research. Each runs. Each is tested."))
   (section
     "7. Security Considerations"
@@ -169,11 +169,9 @@
   (section
     "9. Future Work"
     (blockquote "A journey of a thousand miles begins with a single step. — Lao Tzu")
+    (p "Most planned features are now implemented. Remaining work:")
     (list
-      (item "Post-quantum signatures (Memo-048)")
-      (item "Quantum-resistant Merkle trees (Memo-047)")
-      (item "Mobile agents (Memo-037)")
-      (item "FUSE filesystem portal (Memo-042)")))
+      (item "Mobile agents (Memo-037)")))
   (section
     "10. References"
     (list
@@ -187,6 +185,9 @@
   (section
     "Changelog"
     (list
+      (item "2026-01-24 (2)")
+      (item "Add PQ Signatures to implementation status (pq-crypto.scm complete)")
+      (item "Update future work: only mobile agents remain")
       (item "2026-01-24")
       (item "Update implementation status: add Federation, Lamport Clocks, TLA+, Coq, AEAD")
       (item "Update future work: remove implemented items, add post-quantum and mobile agents")
