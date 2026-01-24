@@ -804,14 +804,18 @@ Proof.
   - (* TagPrefix, TagAll: r = TagPrefix s t1, need subset reflexivity *)
     inversion H; subst; clear H.
     apply tag_subset_refl. exact Hwf.
-  - (* TagPrefix, TagPrefix: recursive case needs stronger induction *)
+  - (* TagPrefix, TagPrefix: recursive case *)
     destruct (String.eqb s s0) eqn:Heqs; try discriminate.
-    destruct (tag_intersect t1 t2) eqn:Hsub; try discriminate.
+    destruct (tag_intersect t1 t2) as [sub|] eqn:Hsub; try discriminate.
     inversion H; subst; clear H.
-    (* Result TagPrefix s t is subset of TagPrefix s t1 *)
-    (* Requires proving tag_intersect t t1 gives back t (or equivalent) *)
-    (* This needs the IH from proper induction, not destruct *)
-    admit.
+    (* Result TagPrefix s sub is subset of TagPrefix s t1 *)
+    (* Need: tag_intersect (TagPrefix s sub) (TagPrefix s t1) = Some r'
+             with tag_eq r' (TagPrefix s sub) = true *)
+    simpl. rewrite String.eqb_refl.
+    (* Now need: tag_intersect sub t1 = Some r' with tag_eq (TagPrefix s r') (TagPrefix s sub) = true *)
+    (* This requires the recursive property: sub came from t1∩t2, so sub∩t1 ≈ sub *)
+    (* Axiomatize this recursive subset property *)
+    admit. (* Requires mutual induction scheme for nested inductive type *)
   - (* TagRange, TagAll: r = TagRange z z0, wf says z <= z0 *)
     inversion H; subst; clear H.
     (* tag_subset (TagRange z z0) (TagRange z z0) - need Z.max/min with self *)
