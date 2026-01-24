@@ -3,7 +3,7 @@
 
 (memo
   (number 49)
-  (title "Access Control and Audit Co-Design")
+  (title "TCB Access Control and Audit Integration")
   (section
     "Abstract"
     (p "This Memo establishes the principle that access control and auditing must be designed together, not separately. Every access control decision point produces three outputs: a decision, an effect, and a record. Audit policy is per-realm, with lean defaults."))
