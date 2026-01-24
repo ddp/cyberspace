@@ -20,7 +20,7 @@
 
 (define *library-modules*
   '(;; Core
-    "sexp" "crypto-ffi" "fips" "wordlist" "tty-ffi"
+    "sexp" "crypto-ffi" "pq-crypto" "fips" "wordlist" "tty-ffi"
     ;; SPKI
     "cert" "capability" "security" "keyring"
     ;; Storage
@@ -57,9 +57,14 @@
             (set! built (+ built 1))
             (printf "~a.so~n" mod)
             ;; crypto-ffi needs libsodium flags
-            (if (string=? mod "crypto-ffi")
-                (run "csc -s -J -O2 crypto-ffi.scm -C \"`pkg-config --cflags libsodium`\" -L \"`pkg-config --libs libsodium`\"")
-                (run (sprintf "csc -s -J -O2 ~a" src))))))
+            ;; pq-crypto needs liboqs flags
+            (cond
+              ((string=? mod "crypto-ffi")
+               (run "csc -s -J -O2 crypto-ffi.scm -C \"`pkg-config --cflags libsodium`\" -L \"`pkg-config --libs libsodium`\""))
+              ((string=? mod "pq-crypto")
+               (run "csc -s -J -O2 pq-crypto.scm -C \"-I/opt/homebrew/include\" -L \"-L/opt/homebrew/lib -loqs -lcrypto\""))
+              (else
+               (run (sprintf "csc -s -J -O2 ~a" src)))))))
       *library-modules*)
     (when (zero? built)
       (print "  (all modules current)"))))
