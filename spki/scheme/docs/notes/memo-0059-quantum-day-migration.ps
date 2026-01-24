@@ -1,0 +1,605 @@
+%!PS-Adobe-3.0
+%%Title: memo-0059-quantum-day-migration
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0059: Quantum Day Migration Plan) show newline
+() show newline
+(Date: January 2026 \(2026-01-24T00:00:00Z\)) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ABSTRACT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The TCB now has post-quantum signatures. ML-DSA-65 and) show newline
+(SLH-DSA-SHAKE-256s are implemented, tested, and deployed. This Memo) show newline
+(specifies the operational migration plan: how to transition existing) show newline
+(Ed25519 keys, certificates, and vaults to quantum-resistant cryptography) show newline
+(before Q-Day renders them forgeable.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(STATUS: IMPLEMENTATION COMPLETE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(As of 2026-01-24, the SPKI TCB includes:) show newline
+() show newline
+(  * ML-DSA-65 \(FIPS 204\): Lattice-based signatures, 3.3KB signatures) show newline
+(  * SLH-DSA-SHAKE-256s \(FIPS 205\): Hash-based signatures, 29KB signatures) show newline
+(  * Hybrid signature support: Ed25519 + PQ for transition period) show newline
+(  * liboqs integration: Built WITHOUT OpenSSL dependency) show newline
+(  * Comprehensive test suite: All tests passing) show newline
+() show newline
+(The theory is in Memo-048. This memo is about execution.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(THE MIGRATION PROBLEM) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Every existing Cyberspace installation has:) show newline
+() show newline
+(  * Ed25519 realm keys in ~/.cyberspace/vault/keystore) show newline
+(  * Ed25519-signed capability certificates) show newline
+(  * Ed25519-signed audit trail entries) show newline
+(  * Ed25519-signed sealed releases) show newline
+() show newline
+(After Q-Day, all of these become forgeable. Migration is not optional.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MIGRATION PHASES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Phase 1: Hybrid Keys \(Now - Q-Day minus 3 years\)) show newline
+(------------------------------------------------) show newline
+() show newline
+(Generate hybrid keys that sign with BOTH Ed25519 and post-quantum) show newline
+(algorithms:) show newline
+() show newline
+() show newline
+(    ;; In keystore initialization) show newline
+(    \(define \(generate-hybrid-keypair\)) show newline
+(      \(let \(\(ed25519-pair \(ed25519-keypair\)\)) show newline
+(            \(mldsa-pair \(mldsa-keypair\)\)\)) show newline
+(        \(keystore-add-key! 'ed25519 ed25519-pair\)) show newline
+(        \(keystore-add-key! 'ml-dsa-65 mldsa-pair\)) show newline
+(        \(keystore-set-mode! 'hybrid-sign\)\)\)) show newline
+() show newline
+(Hybrid signatures verify if EITHER signature is valid during transition,) show newline
+(but BOTH signatures are created. This allows:) show newline
+() show newline
+(  * Legacy verifiers \(Ed25519-only\) still work) show newline
+(  * Future verifiers \(PQ-capable\) get quantum resistance) show newline
+(  * No flag day: gradual deployment) show newline
+() show newline
+(Action items:) show newline
+() show newline
+(  * Run: cyberspace-vault upgrade-to-hybrid) show newline
+(  * Verify: cyberspace-vault list-keys shows both key types) show newline
+(  * Test: Sign and verify a test capability) show newline
+() show newline
+(Existing Ed25519 keys remain functional. New signatures include both) show newline
+(algorithms.) show newline
+() show newline
+() show newline
+(Phase 2: PQ Certificate Chains \(Q-Day minus 2 years\)) show newline
+(----------------------------------------------------) show newline
+() show newline
+(Start issuing PQ-only certificates for NEW delegations:) show newline
+() show newline
+() show newline
+(    ;; When delegating capability) show newline
+(    \(cert-create) show newline
+(      \(issuer-key \(keystore-get-key 'ml-dsa-65\)\)  ; Use PQ key) show newline
+(      \(subject-key subject-mldsa-pubkey\)) show newline
+(      \(tag capability-tag\)) show newline
+(      \(signature-algorithm 'ml-dsa-65\)\)) show newline
+() show newline
+(Legacy certificates remain valid. Capability chains can mix:) show newline
+() show newline
+() show newline
+(    [Ed25519 cert] -> [Hybrid cert] -> [ML-DSA cert]) show newline
+() show newline
+(Each link verified independently. The chain gains quantum resistance as) show newline
+(PQ links are added.) show newline
+() show newline
+() show newline
+(Phase 3: Mandatory PQ \(Q-Day minus 1 year\)) show newline
+(------------------------------------------) show newline
+() show newline
+(Require at least ONE post-quantum signature in every capability chain:) show newline
+() show newline
+() show newline
+(    ;; Verification policy update) show newline
+(    \(define \(verify-cert-chain chain\)) show newline
+(      \(let \(\(has-pq? \(any \(lambda \(cert\)) show newline
+(                            \(memq \(cert-algorithm cert\)) show newline
+(                                  '\(ml-dsa-65 slh-dsa-shake-256s hybrid\)\)\)) show newline
+(                          chain\)\)\)) show newline
+(        \(unless has-pq?) show newline
+(          \(error "Capability chain requires post-quantum signature"\)\)\)\)) show newline
+() show newline
+(This forces migration of critical paths while maintaining backwards) show newline
+(compatibility for leaf nodes.) show newline
+() show newline
+(Action items:) show newline
+() show newline
+(  * Audit all capability chains: cyberspace-audit check-pq-coverage) show newline
+(  * Re-sign pure-Ed25519 chains with hybrid mode) show newline
+(  * Update delegation policies to prefer PQ recipients) show newline
+() show newline
+() show newline
+(Phase 4: Ed25519 Sunset \(Q-Day\)) show newline
+(-------------------------------) show newline
+() show newline
+(When quantum computers threaten Ed25519 \(estimated 2030-2035\):) show newline
+() show newline
+(  * Ed25519 verification disabled for NEW operations) show newline
+(  * Hybrid signatures verify ONLY the PQ component) show newline
+(  * Pure Ed25519 certificates rejected) show newline
+(  * Historical audit trail remains \(for forensics, not trust\)) show newline
+() show newline
+() show newline
+(    ;; Q-Day configuration) show newline
+(    \(keystore-set-verification-policy!) show newline
+(      '\(ml-dsa-65 slh-dsa-shake-256s\)  ; Only PQ algorithms trusted) show newline
+(      '\(ed25519\)\)                      ; Ed25519 rejected) show newline
+() show newline
+(Realms that failed to migrate become read-only. Their capabilities) show newline
+(cannot be verified for new operations, but historical records persist.) show newline
+() show newline
+() show newline
+(Phase 5: Pure PQ \(Q-Day + 1 year\)) show newline
+(---------------------------------) show newline
+() show newline
+(Complete transition to post-quantum-only:) show newline
+() show newline
+(  * Remove Ed25519 from keystore except archival keys) show newline
+(  * All new certificates use ML-DSA-65 or SLH-DSA) show newline
+(  * Hybrid mode deprecated) show newline
+(  * Ed25519 support removed from TCB in next major version) show newline
+() show newline
+(Cyberspace survives. The capability chain is quantum-resistant.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ALGORITHM SELECTION GUIDE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(ML-DSA-65 \(Default Choice\)) show newline
+(--------------------------) show newline
+() show newline
+(Use for:) show newline
+() show newline
+(  * Capability certificates \(frequent issuance\)) show newline
+(  * Agent delegation \(short-lived\)) show newline
+(  * Audit entries \(high volume\)) show newline
+(  * Any certificate with < 10 year lifetime) show newline
+() show newline
+(Properties:) show newline
+() show newline
+() show newline
+(  Metric      Value                          ) show newline
+(  Public key  1,952 bytes                    ) show newline
+(  Signature   3,309 bytes                    ) show newline
+(  Security    NIST Level 3 \(128-bit PQ\)      ) show newline
+(  Speed       Fast signing & verification    ) show newline
+(  Basis       Lattice problems \(Module-LWE\)  ) show newline
+() show newline
+() show newline
+(SLH-DSA-SHAKE-256s \(Conservative Choice\)) show newline
+(----------------------------------------) show newline
+() show newline
+(Use for:) show newline
+() show newline
+(  * Realm identity keys \(root of trust\)) show newline
+(  * Sealed releases \(archival\)) show newline
+(  * Long-term commitments \(> 10 years\)) show newline
+(  * Maximum security requirement) show newline
+() show newline
+(Properties:) show newline
+() show newline
+() show newline
+(  Metric      Value                               ) show newline
+(  Public key  64 bytes                            ) show newline
+(  Signature   29,792 bytes                        ) show newline
+(  Security    NIST Level 5 \(128-bit PQ\)           ) show newline
+(  Speed       Slow signing, fast verification     ) show newline
+(  Basis       SHAKE-256 hash only \(conservative\)  ) show newline
+() show newline
+(When in doubt, use ML-DSA-65. Only use SLH-DSA when you need maximum) show newline
+(conservatism or archival guarantees.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(OPERATIONAL PROCEDURES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Generate New Hybrid Keystore) show newline
+(----------------------------) show newline
+() show newline
+() show newline
+(    # Backup existing keystore) show newline
+(    cp -r ~/.cyberspace/vault ~/.cyberspace/vault.ed25519.backup) show newline
+(    # Generate hybrid keys \(Ed25519 + ML-DSA-65\)) show newline
+(    cyberspace-vault init-hybrid) show newline
+(    # Verify keys present) show newline
+(    cyberspace-vault list-keys) show newline
+(    # Expected output:) show newline
+(    #   realm-ed25519: ed25519:7f3a2b4c...) show newline
+(    #   realm-ml-dsa-65: ml-dsa-65:8a9b0c1d...) show newline
+(    #   mode: hybrid-sign) show newline
+() show newline
+() show newline
+(Migrate Existing Vault) show newline
+(----------------------) show newline
+() show newline
+() show newline
+(    # Add PQ key to existing vault) show newline
+(    cyberspace-vault add-pq-key --algorithm ml-dsa-65) show newline
+(    # Enable hybrid signing) show newline
+(    cyberspace-vault set-mode hybrid) show newline
+(    # Test hybrid signature) show newline
+(    echo 'test message' | cyberspace-vault sign --hybrid) show newline
+(    # Should produce signature with both Ed25519 and ML-DSA components) show newline
+() show newline
+() show newline
+(Re-sign Critical Certificates) show newline
+(-----------------------------) show newline
+() show newline
+() show newline
+(    # List pure-Ed25519 certificates) show newline
+(    cyberspace-cert list --algorithm ed25519 --critical-path) show newline
+(    # Re-sign with hybrid) show newline
+(    for cert in $\(cyberspace-cert list --algorithm ed25519 --format ids\); do) show newline
+(      cyberspace-cert resign --id $cert --algorithm hybrid) show newline
+(    done) show newline
+(    # Verify PQ coverage) show newline
+(    cyberspace-audit check-pq-coverage) show newline
+() show newline
+() show newline
+(Verify PQ Implementation) show newline
+(------------------------) show newline
+() show newline
+() show newline
+(    # Run TCB test suite) show newline
+(    cd ~/cyberspace/spki/tcb) show newline
+(    dune runtest) show newline
+(    # Expected output:) show newline
+(    #   test_tcb.exe: ✓ ALL TESTS PASSED) show newline
+(    #   test_signature.exe: ✓ ALL TESTS PASSED) show newline
+(    #   test_pq.exe: ✓ ALL TESTS PASSED) show newline
+(    #     - ML-DSA-65: keygen, sign, verify: OK) show newline
+(    #     - SLH-DSA: keygen, sign, verify: OK) show newline
+(    #     - Invalid signature rejection: OK) show newline
+() show newline
+() show newline
+(Monitor Migration Progress) show newline
+(--------------------------) show newline
+() show newline
+() show newline
+(    # Capability chain coverage report) show newline
+(    cyberspace-audit pq-coverage-report) show newline
+(    # Example output:) show newline
+(    #   Total capability chains: 1,247) show newline
+(    #   Pure Ed25519: 89 \(7.1%\) ⚠️) show newline
+(    #   Hybrid: 342 \(27.4%\)) show newline
+(    #   Pure PQ: 816 \(65.5%\) ✓) show newline
+(    #) show newline
+(    #   Action required: 89 chains need PQ signatures) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ROLLBACK STRATEGY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(If post-quantum implementation has issues:) show newline
+() show newline
+() show newline
+(Immediate Rollback) show newline
+(------------------) show newline
+() show newline
+() show newline
+(    # Disable PQ signing \(keep Ed25519 only\)) show newline
+(    cyberspace-vault set-mode ed25519-only) show newline
+(    # This maintains compatibility but loses quantum resistance) show newline
+(    # Use only in emergency) show newline
+() show newline
+() show newline
+(Partial Rollback) show newline
+(----------------) show newline
+() show newline
+() show newline
+(    # Keep hybrid mode but prefer Ed25519) show newline
+(    cyberspace-vault set-mode hybrid --prefer ed25519) show newline
+(    # Both signatures still created, but Ed25519 is primary for verification) show newline
+(    # Provides fallback while keeping PQ signatures for future) show newline
+() show newline
+(Rollback preserves existing PQ signatures. You can re-enable PQ) show newline
+(verification later without re-signing.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TESTING STRATEGY) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Unit Tests) show newline
+(----------) show newline
+() show newline
+(TCB test suite \(test_pq.ml\) validates:) show newline
+() show newline
+(  * ML-DSA-65 keypair generation from system randomness) show newline
+(  * SLH-DSA keypair generation) show newline
+(  * Signature creation and verification) show newline
+(  * Invalid signature rejection) show newline
+(  * Backward compatibility with Ed25519) show newline
+() show newline
+() show newline
+(    # Run continuously during development) show newline
+(    cd ~/cyberspace/spki/tcb && dune runtest) show newline
+() show newline
+() show newline
+(Integration Tests) show newline
+(-----------------) show newline
+() show newline
+(Test capability delegation across algorithm boundaries:) show newline
+() show newline
+() show newline
+(    ;; Create mixed chain: Ed25519 -> Hybrid -> ML-DSA) show newline
+(    \(define chain) show newline
+(      \(list) show newline
+(        \(cert-create issuer-ed25519 subject-hybrid \(read-tag\)\)) show newline
+(        \(cert-create issuer-hybrid subject-mldsa \(read-tag\)\)\)\)) show newline
+(    ;; Verify chain validates) show newline
+(    \(verify-cert-chain chain\)) show newline
+() show newline
+() show newline
+(Interoperability Tests) show newline
+(----------------------) show newline
+() show newline
+(Test against other SPKI implementations:) show newline
+() show newline
+(  * Can legacy Ed25519-only verifiers handle hybrid certs? \(YES - they verify Ed25519 component\)) show newline
+(  * Can PQ-only verifiers handle hybrid certs? \(YES - they verify PQ component\)) show newline
+(  * Do certificate chains mix algorithms correctly? \(YES - each link verified independently\)) show newline
+() show newline
+() show newline
+(Performance Tests) show newline
+(-----------------) show newline
+() show newline
+(Measure signing/verification latency:) show newline
+() show newline
+() show newline
+(    ;; Benchmark signing operations) show newline
+(    \(time) show newline
+(      \(let loop \(\(i 0\)\)) show newline
+(        \(when \(< i 1000\)) show newline
+(          \(mldsa-sign test-message test-key\)) show newline
+(          \(loop \(+ i 1\)\)\)\)\)) show newline
+(    ;; Expected: ~0.5ms per ML-DSA signature on modern hardware) show newline
+(    ;; SLH-DSA: ~50ms per signature \(acceptable for infrequent operations\)) show newline
+() show newline
+() show newline
+(Stress Tests) show newline
+(------------) show newline
+() show newline
+(Verify scaling with large certificate chains:) show newline
+() show newline
+() show newline
+(    # Generate chain with 100 links, all PQ signatures) show newline
+(    cyberspace-test generate-chain --length 100 --algorithm ml-dsa-65) show newline
+(    # Verify chain validates in reasonable time) show newline
+(    # Expected: < 100ms for 100-link ML-DSA chain) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(SECURITY CONSIDERATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Harvest-Now-Forge-Later Defense) show newline
+(-------------------------------) show newline
+() show newline
+(Hybrid signatures defend against harvest attacks:) show newline
+() show newline
+(  * Attacker records Ed25519 signature today) show newline
+(  * Attacker breaks Ed25519 with quantum computer on Q-Day) show newline
+(  * Attacker CANNOT forge because ML-DSA signature still secure) show newline
+(  * Defense works even if Ed25519 is broken retroactively) show newline
+() show newline
+(This is why hybrid mode is critical during transition: it provides) show newline
+(quantum resistance even for signatures created before migration.) show newline
+() show newline
+() show newline
+(Algorithm Agility Risks) show newline
+(-----------------------) show newline
+() show newline
+(Supporting multiple algorithms increases attack surface:) show newline
+() show newline
+(  * More code paths = more bugs) show newline
+(  * Downgrade attacks if implementation allows algorithm negotiation) show newline
+(  * Version confusion if different nodes support different algorithms) show newline
+() show newline
+(Mitigations:) show newline
+() show newline
+(  * No algorithm negotiation: verifiers accept listed algorithms, signers choose based on policy) show newline
+(  * Explicit algorithm in certificate: \(signature-algorithm 'ml-dsa-65\)) show newline
+(  * Conservative verification: if ANY supported algorithm validates, accept) show newline
+() show newline
+() show newline
+(Key Management) show newline
+(--------------) show newline
+() show newline
+(PQ keys are larger than Ed25519:) show newline
+() show newline
+() show newline
+(  Key Type   Private Key Size  Backup Impact  ) show newline
+(  Ed25519    64 bytes          trivial        ) show newline
+(  ML-DSA-65  4,032 bytes       63x larger     ) show newline
+(  SLH-DSA    128 bytes         2x larger      ) show newline
+() show newline
+(Implications:) show newline
+() show newline
+(  * Paper backups harder \(4KB vs 64B seed\)) show newline
+(  * Hardware security modules may need firmware updates) show newline
+(  * Key splitting schemes need larger shares) show newline
+() show newline
+(Solution: Derive ML-DSA keys from 32-byte seed, store seed instead of) show newline
+(full key. This maintains small backup size.) show newline
+() show newline
+() show newline
+(Timing Side Channels) show newline
+(--------------------) show newline
+() show newline
+(Post-quantum algorithms are timing-sensitive:) show newline
+() show newline
+(  * Lattice operations \(ML-DSA\) use rejection sampling) show newline
+(  * Hash operations \(SLH-DSA\) are constant-time by construction) show newline
+(  * liboqs claims constant-time implementations) show newline
+() show newline
+(Testing: Profile signing operations for variance. Large variance) show newline
+(suggests timing leaks. ML-DSA rejection sampling should be bounded, not) show newline
+(unbounded.) show newline
+() show newline
+() show newline
+(Dependency Trust) show newline
+(----------------) show newline
+() show newline
+(TCB now depends on two crypto libraries:) show newline
+() show newline
+() show newline
+(  Library    LOC \(approx\)  Audit Status      Concerns         ) show newline
+(  libsodium  50K           Well-audited      Trusted          ) show newline
+(  liboqs     200K          Research-quality  Newer, evolving  ) show newline
+() show newline
+(Risk mitigation:) show newline
+() show newline
+(  * liboqs built WITHOUT OpenSSL \(no transitive dependency\)) show newline
+(  * Only use NIST-standardized algorithms \(ML-DSA, SLH-DSA\)) show newline
+(  * Pin liboqs version, audit before upgrades) show newline
+(  * Hybrid signatures provide defense-in-depth: even if liboqs has bug, Ed25519 component still validates during transition) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TIMELINE RECOMMENDATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Immediate \(2026\)) show newline
+(----------------) show newline
+() show newline
+(  * Enable hybrid signing for all new vaults) show newline
+(  * Add PQ keys to existing high-value vaults) show newline
+(  * Begin re-signing critical capability chains) show newline
+() show newline
+() show newline
+(Near-term \(2027\)) show newline
+(----------------) show newline
+() show newline
+(  * Require hybrid or pure-PQ for root realm keys) show newline
+(  * Mandate at least one PQ signature per capability chain) show newline
+(  * Deprecate pure-Ed25519 for new certificates) show newline
+() show newline
+() show newline
+(Medium-term \(2028-2030\)) show newline
+(-----------------------) show newline
+() show newline
+(  * Pure-PQ becomes default for new vaults) show newline
+(  * Ed25519 verification only for historical audit) show newline
+(  * Monitor NIST PQC standardization updates) show newline
+() show newline
+() show newline
+(Q-Day Response) show newline
+(--------------) show newline
+() show newline
+(  * If quantum threat emerges: immediately disable Ed25519 verification) show newline
+(  * Hybrid signatures fall back to PQ component only) show newline
+(  * Unmigrated vaults freeze \(read-only\)) show newline
+(  * Post-migration vaults continue operating) show newline
+() show newline
+(The migration MUST complete before Q-Day. Reacting after the break is) show newline
+(too late: attackers already harvested your signatures.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(VERIFICATION CHECKLIST) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Before declaring migration complete:) show newline
+() show newline
+() show newline
+(    ☐ TCB tests passing \(dune runtest\)) show newline
+(    ☐ Vault has hybrid or pure-PQ keys) show newline
+(    ☐ All critical capability chains have ≥1 PQ signature) show newline
+(    ☐ Signing operations succeed with PQ algorithms) show newline
+(    ☐ Verification accepts PQ signatures) show newline
+(    ☐ Backup includes PQ keys \(encrypted\)) show newline
+(    ☐ Audit trail shows PQ signature usage) show newline
+(    ☐ Interoperability tested with legacy verifiers) show newline
+(    ☐ Performance acceptable \(< 1ms for ML-DSA signing\)) show newline
+(    ☐ Rollback procedure tested and documented) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * Memo-048: Post-Quantum Signatures \(theory and design\)) show newline
+(  * FIPS 204: Module-Lattice-Based Digital Signature Standard) show newline
+(  * FIPS 205: Stateless Hash-Based Digital Signature Standard) show newline
+(  * PQ-IMPLEMENTATION.md: TCB implementation details) show newline
+(  * liboqs documentation: https://github.com/open-quantum-safe/liboqs) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(CONCLUSION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Post-quantum cryptography is not a future problem. It's a migration) show newline
+(problem happening now. Every Ed25519 signature created today is a) show newline
+(potential forgery after Q-Day.) show newline
+() show newline
+(The implementation is complete. The tools exist. The question is not) show newline
+('can we migrate' but 'will we migrate in time.') show newline
+() show newline
+(Harvest-now-forge-later is not theoretical. Adversaries are already) show newline
+(recording traffic. The clock is ticking.) show newline
+() show newline
+(Migrate before Q-Day. Not after.) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF
