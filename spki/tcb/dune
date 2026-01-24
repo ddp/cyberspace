@@ -3,12 +3,14 @@
 ;; Builds the minimal security-critical code:
 ;; - spki_tcb.ml (unified TCB: principals, tags, certificates, authorization)
 ;; - tcb_stubs.c (C FFI to libsodium)
+;; - pq_stubs.c (C FFI to liboqs for post-quantum signatures)
 ;;
 ;; TCB Properties:
-;; - Approximately 400 lines of OCaml, 200 lines of C
-;; - Single dependency: libsodium (audited cryptographic library)
+;; - Approximately 400 lines of OCaml, 500 lines of C
+;; - Dependencies: libsodium (classical) + liboqs (post-quantum)
 ;; - Coq extractable (see coq/ directory for formal specifications)
 ;; - All comparisons are constant-time (timing attack resistant)
+;; - Post-quantum secure: ML-DSA-65 (FIPS 204), SLH-DSA (FIPS 205)
 
 (library
  (name spki_tcb)
@@ -16,9 +18,9 @@
  (modules spki_tcb)
  (foreign_stubs
   (language c)
-  (names tcb_stubs)
+  (names tcb_stubs pq_stubs)
   (flags -I/opt/homebrew/include))
- (c_library_flags (-L/opt/homebrew/lib -lsodium))
+ (c_library_flags (-L/opt/homebrew/lib -lsodium -loqs))
  (libraries unix)
  (flags (:standard -w -27)))
 
@@ -46,9 +48,16 @@
  (modules test_signature)
  (libraries spki_signature))
 
+;; Test executable for post-quantum signatures
+(executable
+ (name test_pq)
+ (modules test_pq)
+ (libraries spki_tcb))
+
 (rule
  (alias runtest)
- (deps test_tcb.exe test_signature.exe)
+ (deps test_tcb.exe test_signature.exe test_pq.exe)
  (action (progn
           (run ./test_tcb.exe)
-          (run ./test_signature.exe))))
+          (run ./test_signature.exe)
+          (run ./test_pq.exe))))

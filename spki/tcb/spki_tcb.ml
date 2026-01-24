@@ -46,9 +46,38 @@ external hmac_sha256 : bytes -> bytes -> bytes = "caml_hmac_sha256"
 external randombytes : int -> bytes = "caml_randombytes"
 external constant_time_compare : bytes -> bytes -> bool = "caml_constant_time_compare"
 
+(* ============================================================
+   Post-Quantum Signatures (liboqs)
+
+   @metadata
+   - library: liboqs (built with OQS_USE_OPENSSL=OFF)
+   - algorithms: ML-DSA-65 (FIPS 204), SLH-DSA-SHAKE-256s (FIPS 205)
+   - security: NIST Level 3-5 (128-bit post-quantum security)
+
+   TCB Dependencies: libsodium (classical) + liboqs (post-quantum)
+   Both libraries are minimal, audited, and timing-safe.
+   ============================================================ *)
+
+external pq_init : unit -> int = "caml_pq_init"
+external pq_cleanup : unit -> unit = "caml_pq_cleanup"
+
+(* ML-DSA-65 (lattice-based, FIPS 204) *)
+external mldsa_sizes : unit -> (int * int * int) = "caml_mldsa_sizes"
+external mldsa_keypair : unit -> (bytes * bytes) = "caml_mldsa_keypair"
+external mldsa_sign : bytes -> bytes -> bytes = "caml_mldsa_sign"
+external mldsa_verify : bytes -> bytes -> bytes -> bool = "caml_mldsa_verify"
+
+(* SLH-DSA-SHAKE-256s (hash-based, FIPS 205, formerly SPHINCS+) *)
+external slhdsa_sizes : unit -> (int * int * int) = "caml_slhdsa_sizes"
+external slhdsa_keypair : unit -> (bytes * bytes) = "caml_slhdsa_keypair"
+external slhdsa_sign : bytes -> bytes -> bytes = "caml_slhdsa_sign"
+external slhdsa_verify : bytes -> bytes -> bytes -> bool = "caml_slhdsa_verify"
+
 let init () =
   if sodium_init () < 0 then
-    failwith "libsodium init failed"
+    failwith "libsodium init failed";
+  if pq_init () < 0 then
+    failwith "liboqs init failed (check algorithm availability)"
 
 (* ============================================================
    Principal - Identity is a public key hash
@@ -971,18 +1000,24 @@ let fips181_valid_syllable s =
   not (String.contains fips181_vowels s.[2])
 
 (* ============================================================
-   Post-Quantum Signatures (PLANNED)
+   Post-Quantum Signatures (IMPLEMENTED)
 
    @metadata
-   - status: PLANNED (awaiting liboqs without OpenSSL dependency)
-   - algorithms: ML-DSA-65 (FIPS 204), SPHINCS+ (FIPS 205)
+   - status: IMPLEMENTED (liboqs built with OQS_USE_OPENSSL=OFF)
+   - algorithms: ML-DSA-65 (FIPS 204), SLH-DSA-SHAKE-256s (FIPS 205)
    - security: NIST Level 3-5 (128-bit post-quantum)
 
    @note
-   Post-quantum signatures will be added when liboqs can be built
-   without OpenSSL dependency. Prime directive: TCB depends only
-   on libsodium (audited, minimal).
+   Post-quantum signatures implemented via liboqs with no OpenSSL
+   dependency. TCB now has two minimal crypto dependencies:
+   - libsodium (classical crypto: Ed25519, SHA-2, BLAKE2b)
+   - liboqs (post-quantum: ML-DSA, SLH-DSA)
 
-   Current mitigation: SHA-256/512 provide 128-bit quantum security
-   against Grover's algorithm for hashing operations.
+   Both libraries are audited and timing-safe.
+
+   Migration strategy:
+   - Hybrid signatures (Ed25519 + PQ) during transition period
+   - Pure PQ signatures available for harvest-now-forge-later defense
+   - SLH-DSA: conservative (hash-only assumptions, larger sigs)
+   - ML-DSA: efficient (lattice-based, smaller sigs)
    ============================================================ *)
