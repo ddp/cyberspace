@@ -7101,32 +7101,28 @@ See: Memo-0000 Declaration of Cyberspace
         (when line (repl-history-add line))
         (and line (strip-ansi line)))
       ;; Interactive tty: peek first char for immediate shortcuts
+      ;; Don't display prompt yet - lineage-with-initial will handle it
       (begin
-        (display prompt)
-        (flush-output)
         (tty-set-raw)
         (let ((c (tty-raw-char)))
           (tty-set-cooked)
           (cond
             ;; EOF
             ((< c 0) #f)
-            ;; Immediate shortcuts (no Enter needed)
+            ;; Immediate shortcuts (no Enter needed) - show prompt + char + newline
             ((= c 46)  ; .
+             (display prompt)
              (display ".\n")
              ".")
             ((= c 63)  ; ?
+             (display prompt)
              (display "?\n")
              "?")
-            ;; Comma - echo it and read rest without re-prompting
+            ;; Comma - use lineage-with-initial (displays prompt + comma)
             ((= c 44)  ; ,
-             (display ",")
-             (flush-output)
-             (let ((rest (lineage#lineage "")))  ; Empty prompt - continue on same line
-               (if rest
-                   (let ((line (string-append "," rest)))
-                     (repl-history-add line)
-                     (strip-ansi line))
-                   ",")))
+             (let ((line (lineage#lineage-with-initial prompt ",")))
+               (when line (repl-history-add line))
+               (and line (strip-ansi line))))
             ;; ESC = arrow key or other escape sequence
             ;; Defer entirely to lineage (user pressed up/down for history)
             ((= c 27)
@@ -7137,19 +7133,15 @@ See: Memo-0000 Declaration of Cyberspace
             ((= c 4) #f)
             ;; Ctrl-C = cancel
             ((= c 3)
+             (display prompt)
              (newline)
              "")
-            ;; Regular char - echo it and read rest without re-prompting
+            ;; Regular char - use lineage-with-initial (displays prompt + char)
             (else
-             (let ((initial (string (integer->char c))))
-               (display initial)
-               (flush-output)
-               (let ((rest (lineage#lineage "")))  ; Empty prompt - continue on same line
-                 (if rest
-                     (let ((line (string-append initial rest)))
-                       (repl-history-add line)
-                       (strip-ansi line))
-                     initial)))))))))
+             (let* ((initial (string (integer->char c)))
+                    (line (lineage#lineage-with-initial prompt initial)))
+               (when line (repl-history-add line))
+               (and line (strip-ansi line)))))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
