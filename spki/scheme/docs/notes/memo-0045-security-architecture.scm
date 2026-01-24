@@ -477,10 +477,29 @@
     (code "I1. No access without valid capability\n    access(s,o,r) → ∃c: valid_chain(s,o,r,c)\n\nI2. Delegation cannot amplify\n    delegated(c₂,c₁) → rights(c₂) ⊆ rights(c₁)\n\nI3. Object identity is content hash\n    id(o) = sha512(content(o))\n\nI4. Audit is ordered\n    sequence(e₁) < sequence(e₂) → time(e₁) ≤ time(e₂)\n\nI5. Revocation is permanent\n    revoked(c,t) → ∀t' > t: ¬valid(c,t')\n\nI6. No ambient authority\n    ¬∃c: grants(c,,)"))
   (section
     "References"
-    (p "1. Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999 2. Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, 1966 3. Miller, M., Robust Composition, 2006 4. Lampson, B., A Note on the Confinement Problem, 1973 5. DoD 5200.28-STD (Orange Book), 1985 - for the covert channel lens 6. Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, 1973 - confidentiality model 7. Biba, K.J., Integrity Considerations for Secure Computer Systems, 1977 - integrity model 8. Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982 9. Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985 10. NSA, Zero Trust Implementation Guidelines: Primer and Discovery Phase, January 2026 - https://media.defense.gov/2026/Jan/08/2003852320/-1/-1/0/CTR_ZERO_TRUST_IMPLEMENTATION_GUIDELINE_PRIMER.PDF"))
+    (p "Design Lineage:")
+    (list
+      (item "Kronenberg, N. et al., VAXclusters: A Closely-Coupled Distributed System, ACM TOCS 4(2), 1986 - \"behave as one\" cluster architecture")
+      (item "NCSC, Final Evaluation Report: VAX/VMS Version 4.3, CSC-EPL-85/001, 1985 - C2 security evaluation")
+      (item "Chaum, D., Blind Signatures for Untraceable Payments, Crypto 1982")
+      (item "Chaum, D., Security Without Identification: Transaction Systems to Make Big Brother Obsolete, CACM 1985")
+      (item "Digital Equipment Corporation, VAX/VMS Version 6.0 Release Notes, 1993 - cluster-wide intrusion detection")
+      (item "Rivest, R. & Lampson, B., SDSI - A Simple Distributed Security Infrastructure, presented at IETF 29 Seattle, 1994")
+      (item "Ellison, C. et al., SPKI Certificate Theory, RFC 2693, 1999")
+      (item "NSA, Zero Trust Implementation Guidelines: Primer and Discovery Phase, January 2026"))
+    (p "Foundational Theory:")
+    (list
+      (item "Dennis, J. & Van Horn, E., Programming Semantics for Multiprogrammed Computations, CACM 1966 - capability model")
+      (item "Lampson, B., A Note on the Confinement Problem, CACM 1973 - covert channels")
+      (item "Bell, D.E. & LaPadula, L.J., Secure Computer Systems: Mathematical Foundations, MITRE 1973 - confidentiality lattice")
+      (item "Biba, K.J., Integrity Considerations for Secure Computer Systems, MITRE 1977 - integrity model")
+      (item "DoD 5200.28-STD (Orange Book), NCSC 1985 - TCSEC evaluation criteria")
+      (item "Miller, M., Robust Composition: Towards a Unified Approach to Access Control and Concurrency Control, PhD thesis, Johns Hopkins 2006"))))
   (section
     "Changelog"
     (list
+      (item "2026-01-23")
+      (item "Expand References with full citations for Design Lineage (VAXcluster, VMS C2, DigiCash, SDSI)")
       (item "2026-01-22")
       (item "Add NSA Zero Trust Implementation Guidelines (January 2026) to design lineage and references")
       (item "2026-01-20")
