@@ -24,9 +24,11 @@
     ;; SPKI
     "cert" "capability" "security" "keyring"
     ;; Storage
-    "vault" "catalog" "bloom" "audit"
+    "vault" "catalog" "bloom" "audit" "merkle"
     ;; Network
     "gossip" "mdns" "portal"
+    ;; Wormhole (FUSE)
+    "fuse-ffi" "wormhole"
     ;; Enrollment
     "enroll" "auto-enroll"
     ;; UI
