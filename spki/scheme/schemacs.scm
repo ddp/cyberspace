@@ -1009,6 +1009,7 @@
   (tty-set-raw)
   (screen-alt-buffer)
   (screen-clear)
+  (edt-register! ed)  ; Register EDT keypad handlers if available
 
   (let loop ()
     (sm-draw! ed)
@@ -1131,10 +1132,64 @@
         (loop)))))
 
   ;; Cleanup
+  (edt-unregister!)  ; Clear EDT handlers
   (screen-main-buffer)
   (screen-reset)
   (tty-set-cooked)
   (void))
+
+;;; ============================================================
+;;; EDT Keypad Integration (optional, when loaded from REPL)
+;;; ============================================================
+
+;; Check if EDT module is available
+(define (edt-available?)
+  (condition-case
+    (begin (eval 'edt#*edt-editor*) #t)
+    ((exn) #f)))
+
+;; Register Schemacs' EDT handlers
+(define (edt-register! ed)
+  (when (edt-available?)
+    (eval
+      `(set! edt#*edt-editor*
+         '((page-down . ,(lambda () (sm-edt-page-down ed)))
+           (page-up . ,(lambda () (sm-edt-page-up ed)))
+           (forward-char . ,(lambda () (sm-forward-char! ed) (sm-draw! ed)))
+           (backward-char . ,(lambda () (sm-backward-char! ed) (sm-draw! ed)))
+           (forward-word . ,(lambda () (sm-forward-word! ed) (sm-draw! ed)))
+           (backward-word . ,(lambda () (sm-backward-word! ed) (sm-draw! ed)))
+           (up . ,(lambda () (sm-previous-line! ed) (sm-draw! ed)))
+           (down . ,(lambda () (sm-next-line! ed) (sm-draw! ed)))
+           (beginning-of-line . ,(lambda () (sm-beginning-of-line! ed) (sm-draw! ed)))
+           (end-of-line . ,(lambda () (sm-end-of-line! ed) (sm-draw! ed)))
+           (beginning-of-buffer . ,(lambda () (sm-beginning-of-buffer! ed) (sm-draw! ed)))
+           (end-of-buffer . ,(lambda () (sm-end-of-buffer! ed) (sm-draw! ed)))
+           (delete-char . ,(lambda () (sm-delete-char! ed) (sm-draw! ed)))
+           (delete-word . ,(lambda () (sm-kill-word! ed) (sm-draw! ed)))
+           (delete-line . ,(lambda () (sm-kill-line! ed) (sm-draw! ed)))
+           (select . ,(lambda () (sm-set-mark! ed) (sm-draw! ed)))
+           (cut . ,(lambda () (sm-kill-region! ed) (sm-draw! ed)))
+           (paste . ,(lambda () (sm-yank! ed) (sm-draw! ed)))
+           (find . ,(lambda () (set-sm-minibuf! ed "C-s for search") (sm-draw! ed)))
+           (find-next . ,(lambda () (sm-search-forward! ed (sm-search-string ed)) (sm-draw! ed)))
+           (help . ,(lambda () (set-sm-minibuf! ed "C-x C-c quit | C-x C-s save | C-s search") (sm-draw! ed))))))))
+
+;; Unregister EDT handlers
+(define (edt-unregister!)
+  (when (edt-available?)
+    (eval '(set! edt#*edt-editor* #f))))
+
+;; EDT page navigation (Emacs style)
+(define (sm-edt-page-down ed)
+  (let ((lines (- (sm-rows ed) 2)))
+    (do ((i 0 (+ i 1))) ((>= i lines)) (sm-next-line! ed)))
+  (sm-draw! ed))
+
+(define (sm-edt-page-up ed)
+  (let ((lines (- (sm-rows ed) 2)))
+    (do ((i 0 (+ i 1))) ((>= i lines)) (sm-previous-line! ed)))
+  (sm-draw! ed))
 
 ;;; ============================================================
 ;;; Entry Point

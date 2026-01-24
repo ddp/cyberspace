@@ -758,6 +758,7 @@
   (tty-set-raw)
   (screen-alt-buffer)
   (screen-clear)
+  (edt-register! ed)  ; Register EDT keypad handlers if available
 
   (let loop ()
     (editor-draw! ed)
@@ -768,7 +769,7 @@
         (if (and (editor-modified? ed)
                  (not (editor-confirm ed "Unsaved changes. Quit anyway?")))
             (loop)
-            'quit))
+            (void)))
 
        ;; Movement - WASDZX diamond
        ((or (equal? key '(ctrl . #\W)) (eq? key 'up))
@@ -881,10 +882,78 @@
        (else (loop)))))
 
   ;; Cleanup
+  (edt-unregister!)  ; Clear EDT handlers
   (screen-main-buffer)
   (screen-reset)
   (tty-set-cooked)
   (print "Goodbye."))
+
+;;; ============================================================
+;;; EDT Keypad Integration (optional, when loaded from REPL)
+;;; ============================================================
+
+;; Check if EDT module is available
+(define (edt-available?)
+  (condition-case
+    (begin (eval 'edt#*edt-editor*) #t)
+    ((exn) #f)))
+
+;; Register Pencil's EDT handlers
+(define (edt-register! ed)
+  (when (edt-available?)
+    (eval
+      `(set! edt#*edt-editor*
+         '((page-down . ,(lambda () (pencil-page-down ed)))
+           (page-up . ,(lambda () (pencil-page-up ed)))
+           (forward-char . ,(lambda () (editor-move-right! ed)))
+           (backward-char . ,(lambda () (editor-move-left! ed)))
+           (forward-word . ,(lambda () (editor-move-word-forward! ed)))
+           (backward-word . ,(lambda () (editor-move-word-backward! ed)))
+           (up . ,(lambda () (editor-move-up! ed)))
+           (down . ,(lambda () (editor-move-down! ed)))
+           (beginning-of-line . ,(lambda () (editor-move-line-start! ed)))
+           (end-of-line . ,(lambda () (editor-move-line-end! ed)))
+           (delete-char . ,(lambda () (editor-delete-char! ed)))
+           (delete-word . ,(lambda () (editor-delete-word! ed)))
+           (delete-line . ,(lambda () (editor-delete-line! ed)))
+           (select . ,(lambda () (editor-mark-begin! ed)))
+           (cut . ,(lambda () (editor-mark-end! ed)))
+           (paste . ,(lambda () (editor-paste! ed)))
+           (find . ,(lambda () (pencil-find ed)))
+           (find-next . ,(lambda () (pencil-find-next ed)))
+           (help . ,(lambda () (pencil-help ed))))))))
+
+;; Unregister EDT handlers
+(define (edt-unregister!)
+  (when (edt-available?)
+    (eval '(set! edt#*edt-editor* #f))))
+
+;; EDT helper functions (need refresh after)
+(define (pencil-page-down ed)
+  (let ((visible (- (editor-rows ed) 3)))
+    (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-down! ed)))
+  (editor-draw! ed))
+
+(define (pencil-page-up ed)
+  (let ((visible (- (editor-rows ed) 3)))
+    (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-up! ed)))
+  (editor-draw! ed))
+
+(define (pencil-find ed)
+  ;; Would need to handle prompt in EDT context
+  (set-editor-status! ed "Use Ctrl-F to find")
+  (editor-draw! ed))
+
+(define (pencil-find-next ed)
+  (let ((pattern (editor-search-string ed)))
+    (if (> (string-length pattern) 0)
+        (editor-find! ed pattern)
+        (set-editor-status! ed "No search pattern")))
+  (editor-draw! ed))
+
+(define (pencil-help ed)
+  (set-editor-status! ed "Ctrl-Q quit | WASD move | Ctrl-F find")
+  (editor-draw! ed))
 
 ;;; ============================================================
 ;;; Entry Point
@@ -922,4 +991,5 @@
            (not (string-prefix? "-" (car (command-line-arguments)))))
   (pencil (car (command-line-arguments))))
 
-(print "Electric Pencil loaded. (pencil) or (pencil-novice) to edit.")
+(when (condition-case *verbose-load* ((exn) #f))
+  (print "Electric Pencil loaded. (pencil) or (pencil-novice) to edit."))
