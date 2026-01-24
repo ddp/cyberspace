@@ -686,10 +686,48 @@
 ;;; Input Handling
 ;;; ============================================================
 
+;; Buffer for QMK command reading
+(define *qmk-buffer* (make-string 64))
+
+;; Read rest of QMK line after #; prefix (returns string without #;)
+(define (read-qmk-line)
+  (let loop ((i 0))
+    (if (>= i 63)
+        #f  ; overflow, not QMK
+        (let ((c (tty-raw-char)))
+          (cond
+           ((or (= c 10) (= c 13))  ; newline
+            (substring *qmk-buffer* 0 i))
+           ((< c 0) #f)  ; EOF
+           (else
+            (string-set! *qmk-buffer* i (integer->char c))
+            (loop (+ i 1))))))))
+
+;; Handle QMK command (payload after "QMK ")
+(define (handle-qmk-command payload)
+  (condition-case
+    (let ((sexp (with-input-from-string payload read)))
+      (when (edt-available?)
+        (eval `(edt#qmk-eval ',sexp))))
+    ((exn) #f)))  ; silently ignore errors during editing
+
 (define (read-key)
-  "Read a key, handling escape sequences"
+  "Read a key, handling escape sequences and QMK commands"
   (let ((c (tty-raw-char)))
     (cond
+     ;; QMK command prefix detection: # followed quickly by ;QMK
+     ((= c 35)  ; #
+      (if (tty-char-ready? 5)  ; QMK sends fast, typing is slow
+          (let ((c2 (tty-raw-char)))
+            (if (= c2 59)  ; ;
+                (let ((buf (read-qmk-line)))
+                  (if (and buf (string-prefix? "QMK " buf))
+                      (begin
+                        (handle-qmk-command (substring buf 4))
+                        'qmk-handled)
+                      #\#))  ; wasn't QMK, return #
+                #\#))  ; wasn't ;, return #
+          #\#))  ; no quick follow-up, return #
      ((= c 27)  ; ESC
       ;; Check if more input within 50ms (escape sequence) or bare ESC
       (if (tty-char-ready? 50)

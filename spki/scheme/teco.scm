@@ -746,6 +746,52 @@
   (print "  $$ = execute (ESC ESC)    ^G = cancel    ^U = kill line")
   (print ""))
 
+;; Buffer for QMK command reading
+(define *qmk-buffer* (make-string 64))
+
+;; Read rest of QMK line after #; prefix
+(define (read-qmk-line)
+  (let loop ((i 0))
+    (if (>= i 63)
+        #f
+        (let ((c (tty-raw-char)))
+          (cond
+           ((or (= c 10) (= c 13)) (substring *qmk-buffer* 0 i))
+           ((< c 0) #f)
+           (else
+            (string-set! *qmk-buffer* i (integer->char c))
+            (loop (+ i 1))))))))
+
+;; Handle QMK command - map EDT keys to TECO commands
+(define (handle-qmk-command payload)
+  (condition-case
+    (let ((sexp (with-input-from-string payload read)))
+      (when (and (pair? sexp) (eq? (car sexp) 'edt))
+        (let ((key (if (and (pair? (cdr sexp))
+                            (pair? (cadr sexp))
+                            (eq? (car (cadr sexp)) 'quote))
+                       (cadr (cadr sexp))
+                       (cadr sexp))))
+          ;; Map EDT keys to TECO commands
+          (case key
+            ((page page-down) (teco-execute "16L"))      ; 16 lines down
+            ((page-up)        (teco-execute "-16L"))     ; 16 lines up
+            ((forward-char kp4 advance) (teco-execute "C"))
+            ((backward-char kp5 backup) (teco-execute "R"))
+            ((forward-word kp1 word)    (teco-execute "FWC$$")) ; find word boundary
+            ((up)             (teco-execute "-L"))
+            ((down)           (teco-execute "L"))
+            ((beginning-of-line kp0 line) (teco-execute "0L"))
+            ((end-of-line kp2 eol)      (teco-execute "L-C"))
+            ((beginning-of-buffer)      (teco-execute "J"))
+            ((end-of-buffer)            (teco-execute "ZJ"))
+            ((delete-char kp3 char)     (teco-execute "D"))
+            ((delete-word kp-minus)     (teco-execute "FWK$$"))
+            ((delete-line pf4)          (teco-execute "K"))
+            ((help pf2)                 (teco-banner))
+            (else #f)))))
+    ((exn) #f)))
+
 (define (teco-prompt)
   "VMS TECO style prompt: accumulate commands, $$ executes.
    ESC echoes as $, double-ESC executes command string."
@@ -756,6 +802,23 @@
   (let loop ((chars '()) (last-was-esc #f))
     (let ((c (tty-raw-char)))
       (cond
+        ;; QMK command prefix detection
+        ((= c 35)  ; #
+         (if (tty-char-ready? 5)
+             (let ((c2 (tty-raw-char)))
+               (if (= c2 59)  ; ;
+                   (let ((buf (read-qmk-line)))
+                     (if (and buf (string-prefix? "QMK " buf))
+                         (begin
+                           (handle-qmk-command (substring buf 4))
+                           (loop chars last-was-esc))
+                         (loop (cons #\# chars) #f)))
+                   (loop (cons #\# chars) #f)))
+             (begin
+               (display "#")
+               (flush-output)
+               (loop (cons #\# chars) #f))))
+
         ;; EOF or error
         ((< c 0)
          (tty-set-cooked)
@@ -824,13 +887,14 @@
            (flush-output)
            (loop (cons ch chars) #f)))))))
 
-(define (teco #!optional filename)
-  "TECO main entry point"
+(define (teco-internal filename novice)
+  "TECO internal entry point"
   (set! *text* (text-new))
   (set! *dot* 0)
   (set! *filename* #f)
 
-  (teco-banner)
+  (when novice
+    (teco-banner))
 
   ;; Load initial file if specified
   (when filename
@@ -871,7 +935,16 @@
               (void))
              (else (loop)))))))))
 
-(print "TECO loaded. (teco) or (teco \"file.txt\") to edit.")
+(define (teco #!optional filename)
+  "TECO - for users who know the commands. ? for help."
+  (teco-internal filename #f))
+
+(define (teco-novice #!optional filename)
+  "TECO with banner and help - for learning."
+  (teco-internal filename #t))
+
+(when (condition-case *verbose-load* ((exn) #f))
+  (print "TECO loaded. (teco) or (teco-novice) to edit."))
 
 ;; If run as script
 (when (or (member "-s" (command-line-arguments))
