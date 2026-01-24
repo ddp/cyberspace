@@ -44,7 +44,8 @@
         srfi-69   ; hash tables
         (chicken tcp)
         tty-ffi   ; raw char input for immediate keypress
-        lineage)  ; line editing with history (BSD)
+        lineage   ; line editing with history (BSD)
+        edt)      ; LK201/EDT keypad bindings for QMK
 
 ;;; ============================================================
 ;;; Command Line Interface
@@ -7155,6 +7156,15 @@ See: Memo-0000 Declaration of Cyberspace
 
         ;; Empty line
         ((string=? line "")
+         (loop))
+
+        ;; QMK keyboard commands: #;QMK (edt 'key) etc
+        ;; Dispatched to edt module for LK201 keypad emulation
+        ((and (>= (string-length line) 6)
+              (string=? (substring line 0 6) "#;QMK "))
+         (handle-exceptions exn
+           (printf "QMK error: ~a~n" (get-condition-property exn 'exn 'message ""))
+           (edt#qmk-dispatch line))
          (loop))
 
         ;; Single-char shortcuts (bare ? and . invoke help/status)

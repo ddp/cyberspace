@@ -30,7 +30,7 @@
     ;; Enrollment
     "enroll" "auto-enroll"
     ;; UI
-    "os" "ui" "display" "inspector" "info"
+    "os" "ui" "display" "inspector" "info" "edt"
     ;; High-level
     "forum" "seal" "script" "cyberspace"))
 
