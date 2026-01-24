@@ -7088,56 +7088,64 @@ See: Memo-0000 Declaration of Cyberspace
 
 (define (repl-read-line prompt)
   "Read line with immediate shortcuts and lineage history.
-   . and ? respond immediately. ESC (arrows) defers to lineage for history."
+   . and ? respond immediately. ESC (arrows) defers to lineage for history.
+   For non-tty (piped input), bypasses shortcuts and uses lineage directly."
   (repl-history-load)
   ;; Ensure clean terminal state before prompting
   (tty-ffi#tty-set-cooked)
   (tty-ffi#tty-flush-input)
-  (display prompt)
-  (flush-output)
-  ;; Peek first char in raw mode
-  (tty-set-raw)
-  (let ((c (tty-raw-char)))
-    (tty-set-cooked)
-    (cond
-      ;; EOF
-      ((< c 0) #f)
-      ;; Immediate shortcuts (no Enter needed)
-      ((= c 46)  ; .
-       (display ".\n")
-       ".")
-      ((= c 63)  ; ?
-       (display "?\n")
-       "?")
-      ;; Comma - pass to lineage with initial ","
-      ((= c 44)  ; ,
-       (let ((line (lineage#lineage-with-initial prompt ",")))
-         (when line (repl-history-add line))
-         (and line (strip-ansi line))))
-      ;; ESC = arrow key or other escape sequence
-      ;; Defer entirely to lineage (user pressed up/down for history)
-      ((= c 27)
-       (let ((line (lineage#lineage prompt)))
-         (when line (repl-history-add line))
-         (and line (strip-ansi line))))
-      ;; Ctrl-D = EOF
-      ((= c 4) #f)
-      ;; Ctrl-C = cancel
-      ((= c 3)
-       (newline)
-       "")
-      ;; Regular char - pass to lineage with initial content
-      (else
-       (let* ((initial (string (integer->char c)))
-              (line (lineage#lineage-with-initial prompt initial)))
-         (when line (repl-history-add line))
-         (and line (strip-ansi line)))))))
+  ;; Non-tty input: bypass raw char shortcuts, let lineage use fgets
+  (if (zero? (tty?))
+      (let ((line (lineage#lineage prompt)))
+        (when line (repl-history-add line))
+        (and line (strip-ansi line)))
+      ;; Interactive tty: peek first char for immediate shortcuts
+      (begin
+        (display prompt)
+        (flush-output)
+        (tty-set-raw)
+        (let ((c (tty-raw-char)))
+          (tty-set-cooked)
+          (cond
+            ;; EOF
+            ((< c 0) #f)
+            ;; Immediate shortcuts (no Enter needed)
+            ((= c 46)  ; .
+             (display ".\n")
+             ".")
+            ((= c 63)  ; ?
+             (display "?\n")
+             "?")
+            ;; Comma - pass to lineage with initial ","
+            ((= c 44)  ; ,
+             (let ((line (lineage#lineage-with-initial prompt ",")))
+               (when line (repl-history-add line))
+               (and line (strip-ansi line))))
+            ;; ESC = arrow key or other escape sequence
+            ;; Defer entirely to lineage (user pressed up/down for history)
+            ((= c 27)
+             (let ((line (lineage#lineage prompt)))
+               (when line (repl-history-add line))
+               (and line (strip-ansi line))))
+            ;; Ctrl-D = EOF
+            ((= c 4) #f)
+            ;; Ctrl-C = cancel
+            ((= c 3)
+             (newline)
+             "")
+            ;; Regular char - pass to lineage with initial content
+            (else
+             (let* ((initial (string (integer->char c)))
+                    (line (lineage#lineage-with-initial prompt initial)))
+               (when line (repl-history-add line))
+               (and line (strip-ansi line)))))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
-    (set! *last-call-chain* #f)  ; clear stale backtrace each iteration
+    ;; Don't clear *last-call-chain* here - it should persist until next exception
+    ;; capture-exception will overwrite it when a new exception occurs
     (let ((line (repl-read-line *prompt*)))
       (cond
         ;; EOF (lineage returns #f, read-line returns eof-object)
