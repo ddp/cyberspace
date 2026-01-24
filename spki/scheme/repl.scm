@@ -3776,7 +3776,8 @@ Cyberspace REPL - Available Commands
 (define (capture-exception exn)
   "Capture exception and call chain for inspection"
   (set! *last-exception* exn)
-  (set! *last-call-chain* (get-call-chain)))
+  ;; Extract throw-site call chain from condition object - Chicken stores it there
+  (set! *last-call-chain* (get-condition-property exn 'exn 'call-chain #f)))
 
 (define (backtrace #!optional (limit 20))
   "Display call stack (backtrace)"
@@ -3831,7 +3832,7 @@ Cyberspace REPL - Available Commands
 
 (define (rich-exception-display exn #!key (frames 5))
   "Display exception with rich formatting and mini-traceback"
-  (capture-exception exn)
+  ;; Note: caller should have already called capture-exception
   (let ((b (os#make-box 66)))
     (print "")
     (print (os#box-top b "Exception"))
@@ -7668,11 +7669,13 @@ See: Memo-0000 Declaration of Cyberspace
 
            (when expr
              (handle-exceptions exn
-               (if *inspector-enabled*
-                   (begin
-                     (inspector-repl exn)
-                     (loop))
-                   (rich-exception-display exn))
+               (begin
+                 (capture-exception exn)  ; grab chain NOW, before display code pollutes it
+                 (if *inspector-enabled*
+                     (begin
+                       (inspector-repl exn)
+                       (loop))
+                     (rich-exception-display exn)))
                ;; Handle special commands that can't be injected into eval's environment
                (let ((result
                       (cond
