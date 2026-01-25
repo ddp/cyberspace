@@ -36,13 +36,21 @@
 \definecolor{codebg}{HTML}{f5f5f5}
 \definecolor{linkblue}{HTML}{0000cc}
 
-% Hyperlinks
+% Hyperlinks - base setup, metadata added per-document
 \hypersetup{
   colorlinks=true,
   linkcolor=linkblue,
   urlcolor=linkblue,
-  citecolor=linkblue
+  citecolor=linkblue,
+  pdfcreator={Cyberspace Memo Pipeline},
+  pdfproducer={XeLaTeX with hyperref}
 }
+
+% Command to set PDF metadata (called from document)
+\newcommand{\memopdftitle}[1]{\hypersetup{pdftitle={#1}}}
+\newcommand{\memopdfauthor}[1]{\hypersetup{pdfauthor={#1}}}
+\newcommand{\memopdfsubject}[1]{\hypersetup{pdfsubject={#1}}}
+\newcommand{\memopdfkeywords}[1]{\hypersetup{pdfkeywords={#1}}}
 
 % Section formatting - simple, clean
 \titleformat{\section}

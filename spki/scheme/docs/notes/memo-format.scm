@@ -1329,6 +1329,15 @@
                            (latex-escape author-name)
                            (latex-escape author-email)) port)
 
+          ;; PDF metadata
+          (display (format "\\memopdftitle{Memo ~a: ~a}\n"
+                           (memo-number->string num)
+                           (latex-escape title)) port)
+          (display (format "\\memopdfauthor{~a}\n" (latex-escape author-name)) port)
+          (display (format "\\memopdfsubject{Cyberspace Technical Memo}\n") port)
+          (display (format "\\memopdfkeywords{cyberspace, spki, ~a}\n\n"
+                           (latex-escape (string-downcase title))) port)
+
           ;; Abstract
           (when abstract
             (display "\\memoabstract{" port)
