@@ -174,6 +174,30 @@
         (item "Breakin attempts detected across all nodes as one")
         (item "TLV-encoded object store")
         (item "The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records"))
+      (p "The SECURITY_POLICY system parameter controlled C2/B1 security behavior:")
+      (pre "
+  Bit  Definition
+  ---  ----------------------------------------------------------
+   0   Obsolete (was DECwindows PostScript extensions)
+   1   Allow multiple usernames to connect to DECW$SERVER
+   2   Allow unevaluated DECwindows transports (TCP/IP)
+   3   Allow $SIGPRC and $PRCTERM to span job trees
+   4   Permit security profile mods when object server unavailable
+   5   Permit protected object creation when cluster DB unreachable
+   6   Allow SPAWN/LIB$SPAWN in CAPTIVE accounts
+   7   Reserved (VMS 6.0: cluster-wide security propagation)
+   8   Reserved for SEVMS
+   9   Disable password sync among ACME agents
+  10   Allow privileged apps to authenticate expired/restricted
+  11   Allow any SYSUAF record to use external authentication
+  12   Intrusion logging scope (0=cluster-wide, 1=local only)
+  13   Reserved
+  14   Enable internal file/dir name reading with X access (POSIX)
+
+  Default: 7 (bits 0-2 set) - preserves DECwindows compatibility
+  C2 mode: 0 - disables all unevaluated configurations
+")
+      (p "Bit 7 in VMS 6.0 was cluster-wide security state propagation. When set, breakin detection and intrusion state replicated across all cluster nodes so N nodes behaved as one security domain.")
       (p "The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.")
       (p "Cyberspace audit trails apply the same principle at IPv6 scale.")))
 
