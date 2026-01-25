@@ -325,20 +325,6 @@
     "Merge items from remote into local catalog"
     (for-each (lambda (item) (catalog-add! catalog item)) missing-items))
 
-  ;; ============================================================
-  ;; Helpers
-  ;; ============================================================
-
-  (define (blob=? a b)
-    "Compare two blobs for equality"
-    (let ((av (blob->u8vector a))
-          (bv (blob->u8vector b)))
-      (and (= (u8vector-length av) (u8vector-length bv))
-           (let loop ((i 0))
-             (or (= i (u8vector-length av))
-                 (and (= (u8vector-ref av i) (u8vector-ref bv i))
-                      (loop (+ i 1))))))))
-
 ) ;; end module
 
 ;;;

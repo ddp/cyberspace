@@ -17,7 +17,7 @@
 (import scheme
         (chicken base)
         (chicken format)
-        (chicken repl)
+        (except (chicken repl) quit)
         (chicken csi)      ; toplevel-command
         (chicken file)
         (chicken pathname)
@@ -956,7 +956,7 @@
 ;; Note: os already imported at top for early hostname access
 (import crypto-ffi)
 (import fips)
-(import vault)
+(import (except vault lamport-send))
 (import audit)
 (import cert)
 (import sexp)
@@ -964,18 +964,18 @@
 (import mdns)
 (import bloom)
 (import catalog)
-(import enroll)
+(import (except enroll enroll-listen))
 (import gossip)
 (import security)
 (import keyring)
 (import capability)
-(import auto-enroll)
+(import (except auto-enroll enrollment-status))
 (import ui)
-(import inspector)
-(import portal)
+(import (except inspector describe *inspector-enabled*))
+(import (except portal count-vault-items))
 (import forum)
-(import display)
-(import info)      ; hypertext doc browser with pager
+(import (except display clear terminal-height vt100-reverse vt100-normal vt100-clear-line))
+(import (except info info))  ; hypertext doc browser with pager
 
 ;; Resident editors - load once, always ready (like LSE, VAX Emacs)
 (load "teco.scm")     ; Dan Murphy's TECO (1962)

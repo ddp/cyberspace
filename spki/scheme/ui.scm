@@ -61,11 +61,13 @@
             (begin
               (printf "~nPeer Scaling (normalized to ~a)~n"
                       (cdr (assq 'reference scaling)))
-              (printf "~n  %-20s %10s~n" "Node" "Scale")
-              (printf "  %-20s %10s~n" "----" "-----")
+              (printf "~%  ~a~a~a~%" "Node" (make-string 16 #\space) "Scale")
+              (printf "  ~a~a~a~%" "----" (make-string 16 #\space) "-----")
               (for-each
                 (lambda (m)
-                  (printf "  %-20s %10.3f~n" (car m) (cdr m)))
+                  (let* ((name (->string (car m)))
+                         (pad (make-string (max 1 (- 20 (string-length name))) #\space)))
+                    (printf "  ~a~a~a~%" name pad (cdr m))))
                 (cdr (assq 'members scaling))))
             (printf "~nNo peers. Run 'enroll <name>' first.~n")))))
 
@@ -107,12 +109,12 @@
 
   (define (parse-command line)
     "Parse command line into (cmd . args)"
-    (let ((parts (string-split line)))
+    (let ((parts (split-whitespace line)))
       (if (null? parts)
           '(empty)
           (cons (string->symbol (car parts)) (cdr parts)))))
 
-  (define (string-split str)
+  (define (split-whitespace str)
     "Split string on whitespace"
     (let loop ((chars (string->list str))
                (current '())
