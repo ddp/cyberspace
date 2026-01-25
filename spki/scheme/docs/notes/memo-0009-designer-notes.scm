@@ -564,17 +564,18 @@ Cyberspace soup:  Vault objects, content-addressed")
       (p "Cyberspace is built on discoveries: happens-before for distributed time, continuations for control flow, SPKI for authorization. The derivations are implementation details."))
 
     (subsection
-      "16.5 Why We Don't Use It"
-      (p "Search the Cyberspace codebase for call/cc. You'll find it only in SRFI libraries (srfi-1, srfi-18) - never in application code.")
-      (p "This is deliberate. Understand the deep machinery, use the simple tool:")
+      "16.5 Why We (Mostly) Don't Use It"
+      (p "Search the Cyberspace codebase for call/cc. You'll find it in SRFI libraries (srfi-1, srfi-18) and one deliberate exception: the debug inspector's (bt) command uses call/cc to capture the call chain at throw-site.")
+      (p "That exception proves the rule. Understand the deep machinery, use the simple tool:")
       (list
         (item "Exceptions → guard, handle-exceptions (srfi-34)")
         (item "Generators → srfi-158 (coroutine-like without full continuations)")
         (item "Early exit → explicit returns, not escape continuations")
-        (item "Backtracking → explicit state, not captured futures"))
+        (item "Backtracking → explicit state, not captured futures")
+        (item "Debug introspection → call/cc (the one legitimate use)"))
       (p "Captured continuations create implicit control flow. Every call/cc is a potential goto to anywhere the continuation was captured. In a security-critical codebase, implicit is the enemy.")
-      (p "The condition system covers what most people use call/cc for. The rest is showing off.")
-      (p "Appreciate the ontology. Deploy the mundane.")))
+      (p "The condition system covers what most people use call/cc for. The debug inspector needs actual continuations to show where the exception occurred. That's the rare case where the ontology matters.")
+      (p "Appreciate the ontology. Deploy the mundane. Know when to break the rule.")))
 
   (section
     "17. Timeline"

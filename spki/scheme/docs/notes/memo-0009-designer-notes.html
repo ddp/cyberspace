@@ -527,18 +527,19 @@ Cyberspace soup:  Vault objects, content-addressed
 <p>Derivation: The Y combinator. Recursion falling out of self-application. True but not illuminating.</p>
 <p>Discovery: Lamport clocks. call/cc. Seeing structure that was always there, giving it a name, making it usable.</p>
 <p>Cyberspace is built on discoveries: happens-before for distributed time, continuations for control flow, SPKI for authorization. The derivations are implementation details.</p>
-<h3>16.5 Why We Don't Use It</h3>
-<p>Search the Cyberspace codebase for call/cc. You'll find it only in SRFI libraries (srfi-1, srfi-18) - never in application code.</p>
-<p>This is deliberate. Understand the deep machinery, use the simple tool:</p>
+<h3>16.5 Why We (Mostly) Don't Use It</h3>
+<p>Search the Cyberspace codebase for call/cc. You'll find it in SRFI libraries (srfi-1, srfi-18) and one deliberate exception: the debug inspector's (bt) command uses call/cc to capture the call chain at throw-site.</p>
+<p>That exception proves the rule. Understand the deep machinery, use the simple tool:</p>
 <ul>
 <li>Exceptions → guard, handle-exceptions (srfi-34)</li>
 <li>Generators → srfi-158 (coroutine-like without full continuations)</li>
 <li>Early exit → explicit returns, not escape continuations</li>
 <li>Backtracking → explicit state, not captured futures</li>
+<li>Debug introspection → call/cc (the one legitimate use)</li>
 </ul>
 <p>Captured continuations create implicit control flow. Every call/cc is a potential goto to anywhere the continuation was captured. In a security-critical codebase, implicit is the enemy.</p>
-<p>The condition system covers what most people use call/cc for. The rest is showing off.</p>
-<p>Appreciate the ontology. Deploy the mundane.</p>
+<p>The condition system covers what most people use call/cc for. The debug inspector needs actual continuations to show where the exception occurred. That's the rare case where the ontology matters.</p>
+<p>Appreciate the ontology. Deploy the mundane. Know when to break the rule.</p>
 </section>
 <section>
 <h2>17. Timeline</h2>
