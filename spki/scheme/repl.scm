@@ -537,7 +537,7 @@
                (compile-ms (cdr (assq 'compile-time-ms meta)))
                (ts (cdr (assq 'timestamp meta))))
           (printf "~a.scm~%" module-name)
-          (printf "  forged: ~a~%" (seconds->string (seconds->local-time ts)))
+          (printf "  forged: ~a~%" (time->string (seconds->local-time ts)))
           (printf "  output: ~aK + ~aB import in ~ams~%"
                   (quotient so-size 1024) import-size compile-ms)
           (printf "  structure: ~a LOC · ~a λ · ~a LOC/λ~%"
@@ -2201,7 +2201,7 @@
   (let ((w (find (lambda (w) (equal? (alist-ref 'fs w) fs-path)) *wormholes*)))
     (if w
         (begin
-          (set-car! (alist-ref 'status w #f #f) 'locked)
+          (set-cdr! (assq 'status w) 'locked)
           (wormhole-audit 'wormhole-lock fs-path)
           (print "Wormhole locked: " fs-path)
           `(locked ,fs-path))
@@ -6839,15 +6839,7 @@ See: Memo-0000 Declaration of Cyberspace
 
 ;; Note: blob->hex defined earlier in file (line ~994)
 
-;; Helper: blob equality
-(define (blob=? a b)
-  (let ((av (blob->u8vector a))
-        (bv (blob->u8vector b)))
-    (and (= (u8vector-length av) (u8vector-length bv))
-         (let loop ((i 0))
-           (or (= i (u8vector-length av))
-               (and (= (u8vector-ref av i) (u8vector-ref bv i))
-                    (loop (+ i 1))))))))
+;; Note: blob=? is provided by (chicken blob)
 
 (define *regression-tests* '())  ; alist of (name . thunk)
 
@@ -7314,7 +7306,8 @@ See: Memo-0000 Declaration of Cyberspace
            (if (string=? cmd "")
                (print "Usage: !command")
                (let ((shell (or (get-environment-variable "SHELL") "/bin/sh")))
-                 (process-wait (process-run shell (list "-i" "-c" cmd))))))
+                 (receive (_ _ _) (process-wait (process-run shell (list "-i" "-c" cmd)))
+                   (void)))))
          (loop))
 
         ;; Reserved single-character graphics (UI reserved, not Scheme)
@@ -7384,9 +7377,9 @@ See: Memo-0000 Declaration of Cyberspace
                   (let ((expr-str (string-intersperse args " ")))
                     (handle-exceptions exn
                       (print "Error: " ((condition-property-accessor 'exn 'message) exn))
-                      (let* ((start (current-milliseconds))
+                      (let* ((start (current-process-milliseconds))
                              (result (eval (with-input-from-string expr-str read)))
-                             (end (current-milliseconds)))
+                             (end (current-process-milliseconds)))
                         (printf "~a ms~%" (- end start))
                         result))))
               (loop))
@@ -7407,7 +7400,7 @@ See: Memo-0000 Declaration of Cyberspace
               (printf "Software version: ~a~%" (software-version))
               (printf "Build platform:   ~a~%" (build-platform))
               (printf "Chicken version:  ~a~%" (chicken-version))
-              (printf "Home:             ~a~%" (chicken-home))
+              (printf "Repository:       ~a~%" (repository-path))
               (print "")
               (loop))
 
@@ -7576,7 +7569,7 @@ See: Memo-0000 Declaration of Cyberspace
                    (let* ((num-str (car args))
                           (num (string->number num-str))
                           (format (if (> (length args) 1) (cadr args) "txt"))
-                          (padded (if num (sprintf "~4,'0d" num) num-str))
+                          (padded (if num (string-pad (number->string num) 4 #\0) num-str))
                           (pattern (make-pathname memo-dir (string-append "memo-" padded "-*")))
                           (matches (glob pattern)))
                      (if (null? matches)
@@ -7754,7 +7747,7 @@ See: Memo-0000 Declaration of Cyberspace
               (let ((hist (reverse *repl-history*)))
                 (let lp ((h hist) (i 1))
                   (when (pair? h)
-                    (printf "~3d: ~a~%" i (car h))
+                    (printf "~a: ~a~%" (string-pad (number->string i) 3) (car h))
                     (lp (cdr h) (+ i 1)))))
               (loop))
 
