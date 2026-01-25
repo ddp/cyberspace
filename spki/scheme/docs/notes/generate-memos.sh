@@ -344,6 +344,18 @@ sanity_check() {
     echo "  [OK] No redundant title prefixes"
   fi
 
+  # Check for stale "(planned)" markers that may have been implemented
+  # This is a reminder - manual review required
+  local planned_count
+  planned_count=$(grep -l '(planned)' *.scm 2>/dev/null | wc -l | tr -d ' ')
+  if [[ $planned_count -gt 0 ]]; then
+    echo "  [INFO] $planned_count memo(s) contain '(planned)' markers - review for staleness:"
+    grep -l '(planned)' *.scm 2>/dev/null | while read f; do
+      echo "         - $f"
+    done
+    warnings=$((warnings + 1))
+  fi
+
   if [[ $errors -gt 0 ]]; then
     echo ""
     echo "  $errors error(s) found - aborting publish"

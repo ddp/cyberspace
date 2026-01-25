@@ -267,10 +267,10 @@
       (table
         (header "Algorithm" "Use" "Selection Rationale")
         (row "Ed25519" "Primary signatures" "Small keys (32B), fast, constant-time, no RNG needed for signing")
-        (row "SPHINCS+" "Post-quantum (planned)" "Hash-based, conservative security, stateless")
-        (row "Dilithium" "Post-quantum (planned)" "Lattice-based, smaller signatures than SPHINCS+, NIST selected")
+        (row "SLH-DSA (SPHINCS+)" "Post-quantum" "Hash-based, conservative security, stateless, FIPS 205")
+        (row "ML-DSA (Dilithium)" "Post-quantum" "Lattice-based, smaller signatures than SLH-DSA, FIPS 204")
         (row "Lamport" "Reference implementation" "Educational, hash-only security, foundation for SPHINCS+"))
-      (p "Ed25519 is the current standard. Post-quantum migration uses hybrid signatures (Ed25519 + SPHINCS+ or Dilithium) to preserve security if either scheme breaks."))
+      (p "Ed25519 is the current standard. Post-quantum migration uses hybrid signatures (Ed25519 + SLH-DSA or ML-DSA) to preserve security if either scheme breaks. See pq-crypto.scm for implementation."))
 
     (subsection
       "9.2 Hash Functions"
