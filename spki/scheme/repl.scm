@@ -6693,6 +6693,135 @@ See: Memo-0000 Declaration of Cyberspace
 (define (monitor) (open-monitor))     ; Activity Monitor / htop
 (define (finder) (open-finder))       ; Reveal cwd in file manager
 
+;;; ============================================================
+;;; Key Ceremony (Memo-0024)
+;;; ============================================================
+;;
+;; Ritualized key generation with witnessed verification.
+;; Uses Shamir secret sharing for threshold key distribution.
+
+(define (ceremony #!optional (type 'help))
+  "Key ceremony commands (Memo-0024).
+   (ceremony)           - show help
+   (ceremony 'generate) - generate new keypair with ceremony
+   (ceremony 'split K N) - split key into N shares, K required
+   (ceremony 'reconstruct) - reconstruct from shares
+   (ceremony 'verify)   - verify share integrity"
+  (case type
+    ((help)
+     (print "")
+     (print "┌─ Key Ceremony ──────────────────────────────────────────────────┐")
+     (print "│ (ceremony 'generate)      Generate witnessed keypair           │")
+     (print "│ (ceremony 'split K N)     Split into N shares, K to recover    │")
+     (print "│ (ceremony 'reconstruct)   Reconstruct key from shares          │")
+     (print "│ (ceremony 'verify SHARE)  Verify share integrity               │")
+     (print "│                                                                 │")
+     (print "│ Shamir primitives:                                              │")
+     (print "│ (shamir-split SECRET #:threshold K #:total N)                   │")
+     (print "│ (shamir-reconstruct SHARES)                                     │")
+     (print "└─────────────────────────────────────────────────────────────────┘")
+     (void))
+    ((generate)
+     (ceremony-generate))
+    ((split)
+     (print "Usage: (ceremony-split KEY threshold: K total: N)")
+     (void))
+    ((reconstruct)
+     (ceremony-reconstruct-interactive))
+    ((verify)
+     (print "Usage: (ceremony-verify SHARE)")
+     (void))
+    (else
+     (printf "Unknown ceremony type: ~a~n" type))))
+
+(define (ceremony-generate)
+  "Interactive key generation ceremony"
+  (print "")
+  (print "┌─ Key Generation Ceremony ───────────────────────────────────────┐")
+  (print "│ This will generate a new Ed25519 keypair with witnessed entropy │")
+  (print "└─────────────────────────────────────────────────────────────────┘")
+  (print "")
+  ;; Generate keypair using system entropy
+  (print "Collecting entropy from system RNG...")
+  (let ((keypair (crypto-ffi#ed25519-keypair)))
+    (print "")
+    (print "✓ Keypair generated")
+    (print "")
+    (print "Generated keypair:")
+    (printf "  Public:  ~a...~n" (substring (blob->hex (car keypair)) 0 16))
+    (printf "  Secret:  [protected, ~a bytes]~n" (blob-size (cadr keypair)))
+    (print "")
+    (print "Store this keypair securely. Consider (ceremony-split KEY K N)")
+    (print "for threshold distribution of the secret key.")
+    (print "")
+    keypair))
+
+(define (ceremony-split key #!key (threshold 3) (total 5))
+  "Split secret key into shares using Shamir secret sharing.
+   Returns list of shares; threshold shares needed to reconstruct."
+  (unless (blob? key)
+    (error "ceremony-split: key must be a blob"))
+  (unless (and (integer? threshold) (> threshold 1))
+    (error "ceremony-split: threshold must be > 1"))
+  (unless (and (integer? total) (>= total threshold))
+    (error "ceremony-split: total must be >= threshold"))
+  (print "")
+  (printf "┌─ Splitting Key (~a-of-~a) ─────────────────────────────────────────┐~n"
+          threshold total)
+  (print "│ Each share should be given to a different custodian.             │")
+  (print "└─────────────────────────────────────────────────────────────────┘")
+  (print "")
+  (let ((shares (crypto-ffi#shamir-split key threshold: threshold total: total)))
+    (let loop ((i 1) (remaining shares))
+      (when (pair? remaining)
+        (let ((share (car remaining)))
+          (printf "Share ~a/~a: ~a...~n" i total
+                  (substring (blob->hex (crypto-ffi#share-y share)) 0 16)))
+        (loop (+ i 1) (cdr remaining))))
+    (print "")
+    (printf "✓ Generated ~a shares. ~a required to reconstruct.~n" total threshold)
+    (print "")
+    (print "IMPORTANT: Distribute shares to separate custodians.")
+    (print "           Never store multiple shares together.")
+    (print "           Test reconstruction before destroying original.")
+    shares))
+
+(define (ceremony-reconstruct shares)
+  "Reconstruct secret from Shamir shares"
+  (unless (and (list? shares) (>= (length shares) 2))
+    (error "ceremony-reconstruct: need at least 2 shares"))
+  (print "")
+  (printf "Reconstructing from ~a shares...~n" (length shares))
+  (let ((secret (crypto-ffi#shamir-reconstruct shares)))
+    (print "✓ Secret reconstructed successfully")
+    (printf "  Length: ~a bytes~n" (blob-size secret))
+    secret))
+
+(define (ceremony-reconstruct-interactive)
+  "Interactive share collection and reconstruction"
+  (print "")
+  (print "┌─ Key Reconstruction ────────────────────────────────────────────┐")
+  (print "│ Collect shares from custodians to reconstruct the secret key.  │")
+  (print "└─────────────────────────────────────────────────────────────────┘")
+  (print "")
+  (print "Enter shares as a list: (ceremony-reconstruct (list share1 share2 ...))")
+  (void))
+
+(define (ceremony-verify share)
+  "Verify a Shamir share is valid"
+  (if (crypto-ffi#shamir-share? share)
+      (begin
+        (print "")
+        (print "✓ Valid Shamir share")
+        (printf "  Share ID:   ~a~n" (crypto-ffi#share-id share))
+        (printf "  Threshold:  ~a~n" (crypto-ffi#share-threshold share))
+        (printf "  X value:    ~a~n" (crypto-ffi#share-x share))
+        (printf "  Y length:   ~a bytes~n" (blob-size (crypto-ffi#share-y share)))
+        #t)
+      (begin
+        (print "✗ Not a valid Shamir share")
+        #f)))
+
 ;; Hot reload REPL definitions (for development)
 (define (reload!)
   "Hot reload REPL definitions without restart.
@@ -6708,15 +6837,7 @@ See: Memo-0000 Declaration of Cyberspace
 ;; Take the lambdas out for a spin. Exercise every stratum of the weave.
 ;; Run with (regression) to verify the system is working.
 
-;; Helper: blob to hex string
-(define (blob->hex blob)
-  (let* ((vec (blob->u8vector blob))
-         (len (u8vector-length vec)))
-    (let loop ((i 0) (acc '()))
-      (if (= i len)
-          (apply string-append (reverse acc))
-          (loop (+ i 1)
-                (cons (sprintf "~2,'0x" (u8vector-ref vec i)) acc))))))
+;; Note: blob->hex defined earlier in file (line ~994)
 
 ;; Helper: blob equality
 (define (blob=? a b)
