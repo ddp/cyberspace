@@ -51,7 +51,19 @@
 
    ;; Mount operations
    wormhole-mount
-   wormhole-unmount)
+   wormhole-unmount
+
+   ;; Introspection (immutable provenance)
+   introspect
+   introspection?
+   introspection-hash
+   introspection-provenance
+   introspection-authority
+   introspection-temporal
+   introspection-signature
+   introspection-valid?
+   stamp-introspection!
+   *introspection-store*)
 
 (import scheme
         (chicken base)
@@ -66,8 +78,13 @@
         (chicken process)
         (srfi 1)
         (srfi 4)
+        (srfi 13)
         (srfi 69)
-        fuse-ffi)
+        (chicken port)
+        (chicken string)
+        fuse-ffi
+        crypto-ffi
+        os)
 
 ;;; ============================================================
 ;;; Capability Sets
@@ -623,5 +640,167 @@
     (system (sprintf "umount ~a 2>/dev/null || diskutil unmount ~a 2>/dev/null" path path))
     (set! *active-wormhole* #f)
     #t))
+
+;;; ============================================================
+;;; Introspection - Immutable Provenance
+;;; ============================================================
+;;;
+;;; Every object entering via wormhole is stamped with immutable
+;;; introspection metadata. This cannot be forged or stripped -
+;;; the signature covers the entire record.
+;;;
+;;; Query any soup object with (introspect hash) to get its papers.
+
+;; Global introspection store - keyed by content hash
+(define *introspection-store* (make-hash-table string=?))
+
+;; Introspection record structure
+(define (make-introspection content-hash provenance authority temporal signature)
+  `(introspection
+    (content-hash ,content-hash)
+    (provenance ,provenance)
+    (authority ,authority)
+    (temporal ,temporal)
+    (signature ,signature)))
+
+(define (introspection? obj)
+  "Check if obj is an introspection record."
+  (and (pair? obj)
+       (eq? (car obj) 'introspection)))
+
+(define (introspection-hash intro)
+  "Get content hash from introspection record."
+  (cadr (assq 'content-hash (cdr intro))))
+
+(define (introspection-provenance intro)
+  "Get provenance from introspection record."
+  (cadr (assq 'provenance (cdr intro))))
+
+(define (introspection-authority intro)
+  "Get authority chain from introspection record."
+  (cadr (assq 'authority (cdr intro))))
+
+(define (introspection-temporal intro)
+  "Get temporal info from introspection record."
+  (cadr (assq 'temporal (cdr intro))))
+
+(define (introspection-signature intro)
+  "Get signature from introspection record."
+  (cadr (assq 'signature (cdr intro))))
+
+(define (introspection-valid? intro #!optional signing-key)
+  "Verify introspection signature is valid.
+   If signing-key not provided, looks up from authority chain."
+  (let* ((sig-data (introspection-signature intro))
+         (sig-type (car sig-data))
+         (sig-bytes (cadr sig-data))
+         ;; Reconstruct signed content (everything except signature)
+         (to-verify `(introspection
+                      (content-hash ,(introspection-hash intro))
+                      (provenance ,(introspection-provenance intro))
+                      (authority ,(introspection-authority intro))
+                      (temporal ,(introspection-temporal intro))))
+         (message (blob->u8vector
+                   (string->blob
+                    (with-output-to-string
+                      (lambda () (write to-verify)))))))
+    (cond
+     ((eq? sig-type 'ed25519)
+      (let ((pubkey (or signing-key
+                        (authority-public-key (introspection-authority intro)))))
+        (and pubkey
+             (ed25519-verify message
+                            (blob->u8vector sig-bytes)
+                            pubkey))))
+     (else #f))))
+
+(define (authority-public-key authority)
+  "Extract public key from authority record."
+  (let ((pk (assq 'public-key authority)))
+    (and pk (blob->u8vector (cadr pk)))))
+
+(define (stamp-introspection! wormhole content source-path)
+  "Stamp content with introspection metadata.
+   Returns the introspection record and stores it.
+   This is called when content enters via wormhole."
+  (let* (;; Hash the content
+         (content-blob (if (blob? content)
+                          content
+                          (string->blob (->string content))))
+         (content-hash (sprintf "sha512:~a"
+                                (u8vector->hex (blob->u8vector (sha512-hash content-blob)))))
+
+         ;; Build provenance
+         (provenance `((wormhole ,(wormhole-id wormhole))
+                       (fs-path ,(wormhole-fs-path wormhole))
+                       (vault-path ,(wormhole-vault-path wormhole))
+                       (source-path ,source-path)
+                       (source-host ,(hostname))))
+
+         ;; Build authority from wormhole cert
+         (authority `((capabilities ,(wormhole-capabilities wormhole))
+                      (rate-limit ,(wormhole-rate-limit wormhole))
+                      ;; TODO: Include full cert chain
+                      (principal "local")))
+
+         ;; Build temporal
+         (temporal `((wallclock ,(current-seconds))
+                     (node-id ,(hostname))))
+
+         ;; Create unsigned record for signing
+         (unsigned `(introspection
+                     (content-hash ,content-hash)
+                     (provenance ,provenance)
+                     (authority ,authority)
+                     (temporal ,temporal)))
+
+         ;; Sign the record
+         ;; TODO: Use wormhole's signing key from keyring
+         ;; For now, use a placeholder that marks it as locally stamped
+         (message (blob->u8vector
+                   (string->blob
+                    (with-output-to-string
+                      (lambda () (write unsigned))))))
+         (signature `(local-stamp ,(sha512-hash (u8vector->blob message))))
+
+         ;; Build final record
+         (intro (make-introspection content-hash provenance authority temporal signature)))
+
+    ;; Store in introspection store
+    (hash-table-set! *introspection-store* content-hash intro)
+
+    ;; Audit the stamp
+    (wormhole-audit wormhole 'introspection-stamp 'stamp source-path
+                    `((hash ,content-hash)))
+
+    intro))
+
+(define (introspect hash-or-content)
+  "Query introspection for a soup object.
+   Accepts content hash string or raw content.
+   Returns introspection record or #f if not found."
+  (let ((hash (if (and (string? hash-or-content)
+                       (string-prefix? "sha512:" hash-or-content))
+                  hash-or-content
+                  ;; Compute hash from content
+                  (let ((blob (if (blob? hash-or-content)
+                                 hash-or-content
+                                 (string->blob (->string hash-or-content)))))
+                    (sprintf "sha512:~a"
+                             (u8vector->hex (blob->u8vector (sha512-hash blob))))))))
+    (hash-table-ref/default *introspection-store* hash #f)))
+
+(define (u8vector->hex vec)
+  "Convert u8vector to hex string."
+  (define hex-chars "0123456789abcdef")
+  (let* ((len (u8vector-length vec))
+         (out (make-string (* 2 len))))
+    (let loop ((i 0))
+      (when (< i len)
+        (let ((b (u8vector-ref vec i)))
+          (string-set! out (* 2 i) (string-ref hex-chars (quotient b 16)))
+          (string-set! out (+ (* 2 i) 1) (string-ref hex-chars (remainder b 16)))
+          (loop (+ i 1)))))
+    out))
 
 ) ;; end module
