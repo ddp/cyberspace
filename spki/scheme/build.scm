@@ -101,8 +101,8 @@
     ;; Security
     "security" "keyring"
     ;; Network
-    "gossip" "mdns" "portal"
-    ;; Wormhole (FUSE - optional)
+    "gossip" "mdns" "portal" "http"
+    ;; Wormhole (FUSE)
     "fuse-ffi" "wormhole"
     ;; Enrollment
     "enroll" "auto-enroll"

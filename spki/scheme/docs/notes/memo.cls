@@ -7,8 +7,6 @@
 \LoadClass[11pt,a4paper]{article}
 
 % Required packages
-\RequirePackage[utf8]{inputenc}
-\RequirePackage[T1]{fontenc}
 \RequirePackage{fontspec}
 \RequirePackage{geometry}
 \RequirePackage{fancyhdr}
@@ -16,11 +14,8 @@
 \RequirePackage{enumitem}
 \RequirePackage{listings}
 \RequirePackage{xcolor}
-\RequirePackage{tikz}
 \RequirePackage{hyperref}
 \RequirePackage{fancyvrb}
-\RequirePackage{tcolorbox}
-\tcbuselibrary{listings}
 
 % Page geometry - generous margins like RFCs
 \geometry{
@@ -30,10 +25,9 @@
   right=1in
 }
 
-% Fonts - monospace for code, serif for body
-% Use TeX Gyre fonts (bundled with TeX Live)
-\setmainfont{TeX Gyre Termes}
-\setmonofont{TeX Gyre Cursor}[Scale=0.9]
+% Fonts - use macOS system fonts
+\setmainfont{Times New Roman}
+\setmonofont{Menlo}[Scale=0.9]
 
 % Colors
 \definecolor{codeblue}{HTML}{0066cc}
@@ -113,24 +107,8 @@
   stringstyle=\color{codegray}
 }
 
-% Box diagram environment - simple verbatim with frame
-\newtcblisting{diagram}{
-  colback=codebg,
-  colframe=codegray,
-  boxrule=0.5pt,
-  arc=0pt,
-  left=0.5em,
-  right=0.5em,
-  top=0.5em,
-  bottom=0.5em,
-  listing only,
-  listing options={
-    basicstyle=\ttfamily\small,
-    columns=fixed,
-    keepspaces=true,
-    breaklines=false
-  }
-}
+% Box diagram environment - simple framed verbatim
+\DefineVerbatimEnvironment{diagram}{Verbatim}{frame=single,fontsize=\small,xleftmargin=1em,xrightmargin=1em}
 
 % Memo metadata
 \newcommand{\memonumber}[1]{\def\@memonumber{#1}}

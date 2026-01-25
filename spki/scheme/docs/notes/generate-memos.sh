@@ -193,7 +193,7 @@ HEADER
     if is_reserved "$memo"; then
       formats=""
     else
-      formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.pdf">Portable Document Format</a> <a href="'"${memo}"'.html">Hypertext</a>'
+      formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.html">Hypertext</a>'
     fi
 
     cat >> index.html << EOF
