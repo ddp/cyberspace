@@ -3,9 +3,18 @@
 ;;; Integrated inspector that makes the REPL a debugger.
 ;;; When errors occur, drop into inspection context with:
 ;;;   - Clean stack traces (not CPS noise)
-;;;   - Object browser
+;;;   - Object browser with navigation
 ;;;   - Frame navigation
 ;;;   - Restarts
+;;;
+;;; Object Inspector (Memo-052 Section 8.2):
+;;;   :i obj  - Enter inspector mode for object
+;;;   :s      - Show current object
+;;;   :d N    - Descend into slot N
+;;;   :u      - Go up to parent object
+;;;   :h      - Show navigation history
+;;;   :b      - Bookmark current object
+;;;   :t      - Show object type info
 ;;;
 ;;; Heritage: Symbolics, LispWorks, Dylan, CCL, Mach ddb, NT kd
 
@@ -33,6 +42,17 @@
    slots
    slot-ref
 
+   ;; Object inspector navigation (Memo-052 8.2)
+   inspector-show          ; :s - show current object
+   inspector-descend       ; :d N - descend into slot
+   inspector-up            ; :u - go up
+   inspector-history       ; :h - show history
+   inspector-bookmark      ; :b - bookmark current
+   inspector-type          ; :t - show type info
+   *inspector-current*     ; current object
+   *inspector-stack*       ; navigation history
+   *inspector-bookmarks*   ; bookmarked objects
+
    ;; Restarts
    define-restart
    invoke-restart
@@ -58,9 +78,11 @@
           (chicken syntax)
           (chicken time)
           (chicken repl)
-          (only srfi-1 filter iota)
+          (only srfi-1 filter iota take)
+          srfi-4             ; u8vector for blob inspection
           srfi-13
           srfi-69
+          os                 ; box-drawing utilities
           tty-ffi)
 
   ;; ============================================================
@@ -77,6 +99,11 @@
   ;; Our own call stack - maintained explicitly
   (define *call-stack* '())
   (define *call-stack-max* 100)
+
+  ;; Object inspector state (Memo-052 Section 8.2)
+  (define *inspector-current* #f)       ; current object being inspected
+  (define *inspector-stack* '())        ; navigation history (list of previous objects)
+  (define *inspector-bookmarks* '())    ; bookmarked objects
 
   ;; ============================================================
   ;; Explicit Call Tracking
@@ -174,110 +201,386 @@
                 (assq 'source props)))))
 
   ;; ============================================================
-  ;; Object Inspection
+  ;; Object Inspection - Type-Specific Display (Memo-052 8.2)
   ;; ============================================================
 
-  (define (describe obj)
-    "Describe an object's type and contents"
+  ;; Helper: get type name for display
+  (define (insp-type-name obj)
+    "Get human-readable type name for object."
     (cond
-      ((null? obj) (print "  null list"))
-      ((pair? obj)
-       (printf "  pair (list of ~a elements)~n" (safe-length obj))
-       (describe-list obj))
-      ((vector? obj)
-       (printf "  vector of ~a elements~n" (vector-length obj))
-       (describe-vector obj))
-      ((string? obj)
-       (printf "  string (~a chars): ~s~n" (string-length obj)
-               (if (> (string-length obj) 60)
-                   (string-append (substring obj 0 60) "...")
-                   obj)))
-      ((number? obj)
-       (printf "  ~a: ~a~n" (number-type obj) obj))
-      ((symbol? obj)
-       (printf "  symbol: ~a~n" obj))
-      ((procedure? obj)
-       (printf "  procedure~n")
-       (describe-procedure obj))
-      ((hash-table? obj)
-       (printf "  hash-table (~a entries)~n" (hash-table-size obj))
-       (describe-hash-table obj))
-      ((blob? obj)
-       (printf "  blob (~a bytes)~n" (blob-size obj)))
-      ((port? obj)
-       (printf "  port: ~a~n" obj))
-      ((boolean? obj)
-       (printf "  boolean: ~a~n" obj))
-      (else
-       (printf "  ~a~n" obj))))
+      ((null? obj) "null")
+      ((pair? obj) "pair")
+      ((vector? obj) "vector")
+      ((u8vector? obj) "u8vector")
+      ((string? obj) "string")
+      ((symbol? obj) "symbol")
+      ((number? obj) (insp-number-type obj))
+      ((procedure? obj) "procedure")
+      ((hash-table? obj) "hash-table")
+      ((blob? obj) "blob")
+      ((port? obj) "port")
+      ((boolean? obj) "boolean")
+      ((char? obj) "char")
+      ((eof-object? obj) "eof-object")
+      ;; Check for SPKI structures (s-expression based)
+      ((and (pair? obj) (memq (car obj) '(cert signed-cert signature
+                                          principal tag validity
+                                          audit-entry)))
+       (symbol->string (car obj)))
+      (else "object")))
 
-  (define (safe-length lst)
-    "Length that handles improper lists"
+  (define (insp-number-type n)
+    "Get specific number type."
+    (cond
+      ((exact-integer? n) "integer")
+      ((flonum? n) "flonum")
+      ((ratnum? n) "rational")
+      (else "number")))
+
+  (define (insp-safe-length lst)
+    "Length that handles improper lists."
     (let loop ((l lst) (n 0))
       (cond
         ((null? l) n)
         ((pair? l) (loop (cdr l) (+ n 1)))
         (else (sprintf "~a + dotted" n)))))
 
-  (define (number-type n)
-    (cond
-      ((exact-integer? n) "exact integer")
-      ((flonum? n) "flonum")
-      ((ratnum? n) "rational")
-      (else "number")))
+  ;; Helper: format value for display (truncated)
+  (define (insp-format-value val #!optional (max-len 40))
+    "Format value for display, truncating if needed."
+    (let ((s (with-output-to-string (lambda () (write val)))))
+      (if (> (string-length s) max-len)
+          (string-append (substring s 0 (- max-len 3)) "...")
+          s)))
 
-  (define (describe-list lst)
-    (let loop ((l lst) (i 0))
-      (when (and (pair? l) (< i 10))
-        (printf "    [~a] ~s~n" i (car l))
-        (loop (cdr l) (+ i 1)))
-      (when (and (pair? l) (>= i 10))
-        (printf "    ... (~a more)~n" (- (length lst) 10)))))
+  ;; Helper: hex byte display
+  (define (insp-hex-byte b)
+    "Format byte as 2-digit hex."
+    (let ((s (number->string b 16)))
+      (if (< (string-length s) 2)
+          (string-append "0" s)
+          s)))
 
-  (define (describe-vector vec)
-    (let ((len (vector-length vec)))
-      (do ((i 0 (+ i 1)))
-          ((or (>= i len) (>= i 10)))
-        (printf "    [~a] ~s~n" i (vector-ref vec i)))
-      (when (> len 10)
-        (printf "    ... (~a more)~n" (- len 10)))))
-
-  (define (describe-procedure proc)
-    ;; Limited info available for procedures
-    (printf "    ~a~n" proc))
-
-  (define (describe-hash-table ht)
-    (let ((keys (hash-table-keys ht))
-          (shown 0))
-      (for-each
-        (lambda (k)
-          (when (< shown 10)
-            (printf "    ~s => ~s~n" k (hash-table-ref ht k))
-            (set! shown (+ shown 1))))
-        keys)
-      (when (> (length keys) 10)
-        (printf "    ... (~a more)~n" (- (length keys) 10)))))
-
-  (define (slots obj)
-    "Return alist of slot names and values"
+  ;; Helper: get slots for an object (returns list of (index . value) or (name . value))
+  (define (insp-get-slots obj)
+    "Get inspectable slots for object."
     (cond
       ((pair? obj)
-       `((car . ,(car obj)) (cdr . ,(cdr obj))))
+       (list (cons 0 (car obj)) (cons 1 (cdr obj))))
       ((vector? obj)
        (map (lambda (i) (cons i (vector-ref obj i)))
-            (iota (vector-length obj))))
+            (iota (min (vector-length obj) 20))))  ; limit to 20 slots
+      ((u8vector? obj)
+       (map (lambda (i) (cons i (u8vector-ref obj i)))
+            (iota (min (u8vector-length obj) 32))))
       ((hash-table? obj)
-       (hash-table->alist obj))
+       (take (hash-table->alist obj) (min (hash-table-size obj) 20)))
+      ((string? obj)
+       (map (lambda (i) (cons i (string-ref obj i)))
+            (iota (min (string-length obj) 20))))
+      ;; SPKI s-expression structures
+      ((and (pair? obj) (symbol? (car obj)))
+       (map (lambda (item i)
+              (cons i item))
+            (cdr obj)
+            (iota (length (cdr obj)))))
       (else '())))
 
+  ;; Display function for pairs
+  (define (insp-display-pair obj box)
+    (box-print box (sprintf "Type: pair"))
+    (let ((len (insp-safe-length obj)))
+      (if (number? len)
+          (box-print box (sprintf "Length: ~a elements" len))
+          (box-print box (sprintf "Length: ~a" len))))
+    (print (box-separator box))
+    (box-print box (sprintf "[0] car: ~a ~a"
+                            (insp-type-name (car obj))
+                            (insp-format-value (car obj) 30)))
+    (box-print box (sprintf "[1] cdr: ~a ~a"
+                            (insp-type-name (cdr obj))
+                            (insp-format-value (cdr obj) 30))))
+
+  ;; Display function for vectors
+  (define (insp-display-vector obj box)
+    (let ((len (vector-length obj)))
+      (box-print box (sprintf "Type: vector"))
+      (box-print box (sprintf "Length: ~a elements" len))
+      (print (box-separator box))
+      (let ((show-count (min len 10)))
+        (do ((i 0 (+ i 1)))
+            ((>= i show-count))
+          (box-print box (sprintf "[~a] ~a ~a"
+                                  i
+                                  (insp-type-name (vector-ref obj i))
+                                  (insp-format-value (vector-ref obj i) 30))))
+        (when (> len 10)
+          (box-print box (sprintf "... (~a more)" (- len 10)))))))
+
+  ;; Display function for hash-tables
+  (define (insp-display-hash-table obj box)
+    (let ((size (hash-table-size obj))
+          (keys (hash-table-keys obj)))
+      (box-print box (sprintf "Type: hash-table"))
+      (box-print box (sprintf "Size: ~a entries" size))
+      (print (box-separator box))
+      (let loop ((ks keys) (i 0))
+        (when (and (pair? ks) (< i 10))
+          (let ((k (car ks)))
+            (box-print box (sprintf "[~a] ~a => ~a"
+                                    i
+                                    (insp-format-value k 15)
+                                    (insp-format-value (hash-table-ref obj k) 25))))
+          (loop (cdr ks) (+ i 1))))
+      (when (> size 10)
+        (box-print box (sprintf "... (~a more)" (- size 10))))))
+
+  ;; Display function for procedures
+  (define (insp-display-procedure obj box)
+    (box-print box (sprintf "Type: procedure"))
+    ;; Try to get procedure info
+    (let ((info (procedure-information obj)))
+      (if info
+          (begin
+            (when (and (pair? info) (symbol? (car info)))
+              (box-print box (sprintf "Name: ~a" (car info))))
+            (when (and (pair? info) (pair? (cdr info)))
+              (box-print box (sprintf "Arity: ~a"
+                                      (if (list? (cdr info))
+                                          (length (cdr info))
+                                          "variable")))))
+          (box-print box (sprintf "Info: ~a" obj)))))
+
+  ;; Display function for blobs
+  (define (insp-display-blob obj box)
+    (let* ((size (blob-size obj))
+           (preview-size (min size 32))
+           (bytes (blob->u8vector/shared obj)))
+      (box-print box (sprintf "Type: blob"))
+      (box-print box (sprintf "Size: ~a bytes" size))
+      (print (box-separator box))
+      ;; Hex preview
+      (box-print box "Hex preview (first 32 bytes):")
+      (let loop ((i 0) (line ""))
+        (cond
+          ((>= i preview-size)
+           (when (> (string-length line) 0)
+             (box-print box (sprintf "  ~a" line))))
+          ((and (> i 0) (= (modulo i 16) 0))
+           (box-print box (sprintf "  ~a" line))
+           (loop i ""))
+          (else
+           (loop (+ i 1)
+                 (string-append line
+                                (if (> (string-length line) 0) " " "")
+                                (insp-hex-byte (u8vector-ref bytes i)))))))))
+
+  ;; Display function for strings
+  (define (insp-display-string obj box)
+    (let ((len (string-length obj)))
+      (box-print box (sprintf "Type: string"))
+      (box-print box (sprintf "Length: ~a characters" len))
+      (print (box-separator box))
+      (if (<= len 60)
+          (box-print box (sprintf "Value: ~s" obj))
+          (begin
+            (box-print box (sprintf "Preview: ~s" (substring obj 0 60)))
+            (box-print box (sprintf "... (~a more chars)" (- len 60)))))))
+
+  ;; Display function for SPKI certificates
+  (define (insp-display-spki obj box)
+    (let ((type (car obj)))
+      (box-print box (sprintf "Type: ~a" type))
+      (print (box-separator box))
+      (let loop ((fields (cdr obj)) (i 0))
+        (when (pair? fields)
+          (let ((field (car fields)))
+            (if (and (pair? field) (symbol? (car field)))
+                (box-print box (sprintf "[~a] ~a: ~a"
+                                        i
+                                        (car field)
+                                        (insp-format-value (cdr field) 30)))
+                (box-print box (sprintf "[~a] ~a"
+                                        i
+                                        (insp-format-value field 35)))))
+          (loop (cdr fields) (+ i 1))))))
+
+  ;; Main describe function with box display
+  (define (describe obj)
+    "Describe an object with type-specific display in a box."
+    (let* ((type-name (insp-type-name obj))
+           (box (make-box 42)))
+      (print (box-top box (sprintf "Inspecting: ~a" type-name)))
+      (cond
+        ((null? obj)
+         (box-print box "Type: null (empty list)"))
+        ((pair? obj)
+         (if (and (symbol? (car obj))
+                  (memq (car obj) '(cert signed-cert signature
+                                   principal tag validity audit-entry)))
+             (insp-display-spki obj box)
+             (insp-display-pair obj box)))
+        ((vector? obj)
+         (insp-display-vector obj box))
+        ((hash-table? obj)
+         (insp-display-hash-table obj box))
+        ((procedure? obj)
+         (insp-display-procedure obj box))
+        ((blob? obj)
+         (insp-display-blob obj box))
+        ((string? obj)
+         (insp-display-string obj box))
+        ((symbol? obj)
+         (box-print box (sprintf "Type: symbol"))
+         (box-print box (sprintf "Value: ~a" obj)))
+        ((number? obj)
+         (box-print box (sprintf "Type: ~a" (insp-number-type obj)))
+         (box-print box (sprintf "Value: ~a" obj)))
+        ((boolean? obj)
+         (box-print box (sprintf "Type: boolean"))
+         (box-print box (sprintf "Value: ~a" obj)))
+        ((char? obj)
+         (box-print box (sprintf "Type: char"))
+         (box-print box (sprintf "Value: ~s (~a)" obj (char->integer obj))))
+        ((port? obj)
+         (box-print box (sprintf "Type: port"))
+         (box-print box (sprintf "Value: ~a" obj)))
+        (else
+         (box-print box (sprintf "Type: ~a" type-name))
+         (box-print box (sprintf "Value: ~a" obj))))
+
+      ;; Show navigation hints if slots available
+      (let ((slot-list (insp-get-slots obj)))
+        (when (pair? slot-list)
+          (print (box-separator box))
+          (let ((max-slots (min (length slot-list) 5)))
+            (do ((i 0 (+ i 1)))
+                ((>= i max-slots))
+              (box-print box (sprintf ":d ~a  - inspect slot ~a" i i))))
+          (when (> (length slot-list) 5)
+            (box-print box (sprintf "... (~a more slots)" (- (length slot-list) 5))))
+          (box-print box ":u    - go back")))
+      (print (box-bottom box))
+      obj))
+
+  ;; Slots access (for navigation)
+  (define (slots obj)
+    "Return alist of slot names and values."
+    (insp-get-slots obj))
+
   (define (slot-ref obj slot)
-    "Get slot value from object"
+    "Get slot value from object by index."
     (cond
-      ((and (pair? obj) (eq? slot 'car)) (car obj))
-      ((and (pair? obj) (eq? slot 'cdr)) (cdr obj))
-      ((and (vector? obj) (number? slot)) (vector-ref obj slot))
-      ((hash-table? obj) (hash-table-ref/default obj slot #f))
+      ((and (pair? obj) (= slot 0)) (car obj))
+      ((and (pair? obj) (= slot 1)) (cdr obj))
+      ((and (vector? obj) (number? slot) (< slot (vector-length obj)))
+       (vector-ref obj slot))
+      ((and (u8vector? obj) (number? slot) (< slot (u8vector-length obj)))
+       (u8vector-ref obj slot))
+      ((and (string? obj) (number? slot) (< slot (string-length obj)))
+       (string-ref obj slot))
+      ((hash-table? obj)
+       (let ((keys (hash-table-keys obj)))
+         (if (< slot (length keys))
+             (hash-table-ref obj (list-ref keys slot))
+             #f)))
+      ;; SPKI s-expression structures
+      ((and (pair? obj) (symbol? (car obj)) (< slot (length (cdr obj))))
+       (list-ref (cdr obj) slot))
       (else #f)))
+
+  ;; ============================================================
+  ;; Object Inspector Navigation (Memo-052 Section 8.2)
+  ;; ============================================================
+
+  (define (inspector-show)
+    "Show current inspected object (:s command)."
+    (if *inspector-current*
+        (describe *inspector-current*)
+        (print "No object being inspected. Use (inspect OBJ) or :i OBJ to start.")))
+
+  (define (inspector-descend n)
+    "Descend into slot N of current object (:d N command)."
+    (if (not *inspector-current*)
+        (print "No object being inspected. Use (inspect OBJ) first.")
+        (let ((val (slot-ref *inspector-current* n)))
+          (if val
+              (begin
+                ;; Push current onto stack
+                (set! *inspector-stack* (cons *inspector-current* *inspector-stack*))
+                ;; Descend into slot
+                (set! *inspector-current* val)
+                (describe *inspector-current*))
+              (printf "Slot ~a not found or empty.~n" n)))))
+
+  (define (inspector-up)
+    "Go up to parent object (:u command)."
+    (if (null? *inspector-stack*)
+        (print "At top level - no parent object.")
+        (begin
+          (set! *inspector-current* (car *inspector-stack*))
+          (set! *inspector-stack* (cdr *inspector-stack*))
+          (describe *inspector-current*))))
+
+  (define (inspector-history)
+    "Show navigation history (:h command)."
+    (print "")
+    (print "Inspector Navigation History:")
+    (print "")
+    (if (null? *inspector-stack*)
+        (print "  (empty)")
+        (let loop ((stack (reverse *inspector-stack*)) (i 0))
+          (when (pair? stack)
+            (printf "  [~a] ~a: ~a~n"
+                    i
+                    (insp-type-name (car stack))
+                    (insp-format-value (car stack) 40))
+            (loop (cdr stack) (+ i 1)))))
+    (when *inspector-current*
+      (printf "  --> ~a: ~a (current)~n"
+              (insp-type-name *inspector-current*)
+              (insp-format-value *inspector-current* 40)))
+    (print ""))
+
+  (define (inspector-bookmark)
+    "Bookmark current object (:b command)."
+    (if (not *inspector-current*)
+        (print "No object to bookmark.")
+        (let ((n (length *inspector-bookmarks*)))
+          (set! *inspector-bookmarks*
+                (cons (cons n *inspector-current*) *inspector-bookmarks*))
+          (printf "Bookmarked as #~a: ~a~n"
+                  n
+                  (insp-format-value *inspector-current* 40)))))
+
+  (define (inspector-type)
+    "Show detailed type info for current object (:t command)."
+    (if (not *inspector-current*)
+        (print "No object being inspected.")
+        (let* ((obj *inspector-current*)
+               (box (make-box 42)))
+          (print (box-top box "Type Information"))
+          (box-print box (sprintf "Type: ~a" (insp-type-name obj)))
+          (cond
+            ((pair? obj)
+             (box-print box (sprintf "Proper list: ~a" (list? obj)))
+             (box-print box (sprintf "Length: ~a" (insp-safe-length obj))))
+            ((vector? obj)
+             (box-print box (sprintf "Length: ~a" (vector-length obj))))
+            ((string? obj)
+             (box-print box (sprintf "Length: ~a chars" (string-length obj))))
+            ((procedure? obj)
+             (let ((info (procedure-information obj)))
+               (when info
+                 (box-print box (sprintf "Info: ~a" info)))))
+            ((hash-table? obj)
+             (box-print box (sprintf "Size: ~a entries" (hash-table-size obj))))
+            ((blob? obj)
+             (box-print box (sprintf "Size: ~a bytes" (blob-size obj))))
+            ((number? obj)
+             (box-print box (sprintf "Exact: ~a" (exact? obj)))
+             (box-print box (sprintf "Integer: ~a" (integer? obj)))))
+          (print (box-bottom box)))))
 
   ;; ============================================================
   ;; Pretty Printing
@@ -496,11 +799,19 @@
     (print "Inspector installed. Errors will drop into debug REPL."))
 
   (define (inspect obj)
-    "Interactively inspect any object"
+    "Interactively inspect any object. Sets inspector state for navigation."
+    ;; Clear previous navigation
+    (set! *inspector-stack* '())
+    ;; Set current object
+    (set! *inspector-current* obj)
+    ;; Add to history
+    (set! *inspect-history* (cons obj *inspect-history*))
+    ;; Display
     (print "")
     (describe obj)
     (print "")
-    (set! *inspect-history* (cons obj *inspect-history*))
+    (print "Navigation: :s show  :d N descend  :u up  :h history  :b bookmark  :t type")
+    (print "")
     obj)
 
 ) ;; end module

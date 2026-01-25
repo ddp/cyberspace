@@ -5573,8 +5573,15 @@ Cyberspace REPL - Available Commands
      ("Visual:" "flatline=quiet, rhythm=normal, chaos=hostile"))
 
     (inspector "Debugger & Inspector"
-     ("(inspect OBJ)" "Inspect any object")
-     ("(describe OBJ)" "Describe type/contents")
+     ("(inspect OBJ)" "Inspect any object, enter navigation mode")
+     ("(describe OBJ)" "Describe type/contents with box display")
+     (":i OBJ" "Inspect object (colon command)")
+     (":s" "Show current object")
+     (":d N" "Descend into slot N")
+     (":u" "Go up to parent object")
+     (":h" "Show navigation history")
+     (":b" "Bookmark current object")
+     (":t" "Show object type info")
      ("(bt)" "Show backtrace")
      ("(frame N)" "Examine stack frame")
      ("(enable-inspector!)" "Turn on debug> prompt")
@@ -7310,9 +7317,69 @@ See: Memo-0000 Declaration of Cyberspace
                    (void)))))
          (loop))
 
+        ;; Inspector colon commands (Memo-052 Section 8.2)
+        ((and (> (string-length line) 0)
+              (char=? (string-ref line 0) #\:))
+         (repl-history-add line)
+         (let* ((cmd-line (substring line 1))
+                (parts (string-split cmd-line))
+                (cmd (if (null? parts) "" (car parts)))
+                (args (if (null? parts) '() (cdr parts))))
+           (cond
+             ;; :i obj - inspect object
+             ((string=? cmd "i")
+              (if (null? args)
+                  (print "Usage: :i <expression>")
+                  (let ((expr-str (string-intersperse args " ")))
+                    (handle-exceptions exn
+                      (print "Error: " ((condition-property-accessor 'exn 'message) exn))
+                      (inspect (eval (with-input-from-string expr-str read)))))))
+
+             ;; :s - show current object
+             ((string=? cmd "s")
+              (inspector#inspector-show))
+
+             ;; :d N - descend into slot N
+             ((string=? cmd "d")
+              (if (null? args)
+                  (print "Usage: :d N (descend into slot N)")
+                  (let ((n (string->number (car args))))
+                    (if n
+                        (inspector#inspector-descend n)
+                        (print "Error: N must be a number")))))
+
+             ;; :u - go up
+             ((string=? cmd "u")
+              (inspector#inspector-up))
+
+             ;; :h - show history
+             ((string=? cmd "h")
+              (inspector#inspector-history))
+
+             ;; :b - bookmark current
+             ((string=? cmd "b")
+              (inspector#inspector-bookmark))
+
+             ;; :t - show type info
+             ((string=? cmd "t")
+              (inspector#inspector-type))
+
+             ;; Unknown colon command
+             (else
+              (print "Unknown inspector command: :" cmd)
+              (print "  :i OBJ  - inspect object")
+              (print "  :s      - show current object")
+              (print "  :d N    - descend into slot N")
+              (print "  :u      - go up to parent")
+              (print "  :h      - show navigation history")
+              (print "  :b      - bookmark current object")
+              (print "  :t      - show type info"))))
+         (loop))
+
         ;; Reserved single-character graphics (UI reserved, not Scheme)
+        ;; Note: colon is now handled above for inspector commands
         ((and (= (string-length line) 1)
-              (string-contains "<>/;:\"[]{}\\|-=_+@#$%^&*" line))
+              (string-contains "<>/;\"[]{}\\|-=_+@#$%^&*" line))
          (print "Reserved for future use")
          (loop))
 

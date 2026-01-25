@@ -458,18 +458,17 @@ foo -> 8"))
         "MODIFY CAREFULLY: Live patching with safety checks"
         "HISTORY MATTERS: Navigation history, bookmarks"))
     (subsection
-      "8.2 Inspector Commands (Planned)"
+      "8.2 Inspector Commands"
+      (p "Implemented in inspector.scm and repl.scm. The :m (modify) and :r (references) commands are deferred as too complex.")
       (table
         (header "Command" "Action")
-        (row ":i obj" "Inspect object")
+        (row ":i obj" "Inspect object, enter navigation mode")
         (row ":s" "Show current object")
         (row ":d N" "Descend into slot N")
         (row ":u" "Up to parent object")
         (row ":h" "Show inspection history")
         (row ":b" "Bookmark current object")
-        (row ":m slot val" "Modify slot value")
-        (row ":t" "Show object type info")
-        (row ":r" "Show references to object")))
+        (row ":t" "Show object type info")))
     (subsection
       "8.3 Object Display Format"
       (code "┌────────── Inspecting: pair ─────────────┐
