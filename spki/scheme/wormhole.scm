@@ -53,6 +53,10 @@
    wormhole-mount
    wormhole-unmount
 
+   ;; Object ingestion with provenance
+   wormhole-ingest
+   make-object-provenance
+
    ;; Introspection (immutable provenance)
    introspect
    introspection?
@@ -94,6 +98,7 @@
         (chicken port)
         (chicken string)
         fuse-ffi
+        filetype
         crypto-ffi
         os)
 
@@ -343,6 +348,87 @@
   ;; - chflags
   ;; - acl_set_file
   #t)
+
+;;; ============================================================
+;;; Utility: Blob to Hex
+;;; ============================================================
+
+(define (blob->hex b)
+  "Convert blob to hexadecimal string."
+  (let ((vec (blob->u8vector b)))
+    (apply string-append
+           (map (lambda (byte)
+                  (let ((s (number->string byte 16)))
+                    (if (< byte 16)
+                        (string-append "0" s)
+                        s)))
+                (u8vector->list vec)))))
+
+;;; ============================================================
+;;; Object Ingestion with Immutable Provenance
+;;; ============================================================
+;;;
+;;; When objects enter Cyberspace through a wormhole, their metadata
+;;; becomes introspectively and immutably attached in the soup.
+;;;
+;;; Provenance is permanent:
+;;;   - Origin path (where it came from)
+;;;   - Ingestion timestamp
+;;;   - File type (magic byte detection)
+;;;   - MIME type
+;;;   - Size at ingestion
+;;;   - Content hash (identity)
+;;;   - Ingesting principal
+;;;   - Wormhole certificate used
+;;;
+;;; Once sealed, provenance travels with the object forever.
+;;; This enables audit trails, origin verification, and type safety.
+
+(define (make-object-provenance path content principal certificate)
+  "Create immutable provenance record for an object entering via wormhole.
+   This metadata is permanently attached to the object in the soup."
+  (let* ((content-blob (if (string? content)
+                           (string->blob content)
+                           content))
+         (content-hash (sha512-hash content-blob))
+         (detected-type (file-type path))
+         (detected-mime (file-mime path)))
+    `(provenance
+      (origin-path ,path)
+      (ingestion-time ,(current-seconds))
+      (file-type ,detected-type)
+      (mime-type ,detected-mime)
+      (size ,(blob-size content-blob))
+      (content-hash ,(blob->hex content-hash))
+      (principal ,principal)
+      (certificate-hash ,(if certificate
+                             (blob->hex (sha512-hash (string->blob
+                                                       (format "~s" certificate))))
+                             #f))
+      (immutable #t))))
+
+(define (wormhole-ingest path content wormhole)
+  "Ingest an object through a wormhole into the soup.
+   Returns the object with immutable provenance attached.
+
+   The provenance becomes part of the object's identity:
+   - Introspectable: query origin, type, timestamp
+   - Immutable: cannot be modified after sealing
+   - Audited: ingestion is logged
+
+   This is the canonical entry point for external data."
+  (let* ((fs-path (wormhole-fs-path wormhole))
+         (vault-path (wormhole-vault-path wormhole))
+         (principal (wormhole-principal fs-path vault-path))
+         (provenance (make-object-provenance path content principal #f))
+         (metadata (capture-metadata path)))
+    ;; Audit the ingestion
+    (wormhole-audit wormhole 'ingest 'ingest path)
+    ;; Return object structure ready for soup
+    `(object
+      (content ,content)
+      (provenance ,provenance)
+      (metadata ,metadata))))
 
 ;;; ============================================================
 ;;; Wormhole Lifecycle
