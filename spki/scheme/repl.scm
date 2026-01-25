@@ -189,9 +189,25 @@
 (define *module-times* '())
 (define *module-start* 0)
 
-;; Beta build mode: enables strict type checking and additional warnings
-;; Set to #f for release builds once beta is complete
-(define *beta-build* #t)
+;; Build level: controls warning/error behavior
+;; Levels (strictest to most permissive):
+;;   'engineering  - warnings are errors, strict types, all checks
+;;   'qa           - warnings are errors, internal testing
+;;   'beta         - warnings shown prominently but don't fail
+;;   'production   - minimal output, warnings suppressed
+(define *build-level* 'engineering)
+
+;; Convenience predicates
+(define (build-level-at-least? level)
+  (let ((levels '(production beta qa engineering)))
+    (>= (length (memq *build-level* levels))
+        (length (memq level levels)))))
+
+(define (warnings-are-errors?)
+  (memq *build-level* '(engineering qa)))
+
+;; Legacy compatibility
+(define (warnings-are-errors?) (warnings-are-errors?))
 
 ;;; When the tala beats and the flute plays om,
 ;;; the lambda rests in stillness.
@@ -755,7 +771,7 @@
     ;; the crypto dependency chain (Memo-056: covert channel awareness).
     ;; vault uses set! in lambda closures which -strict-types breaks
     (let* ((strict-exempt '("vault"))
-           (beta-flags (if (and *beta-build* (not (member module strict-exempt)))
+           (beta-flags (if (and (warnings-are-errors?) (not (member module strict-exempt)))
                            " -strict-types" ""))
            ;; crypto-ffi needs includes for header files, others just need lib path
            (needs-includes? (string=? module "crypto-ffi"))
@@ -889,13 +905,18 @@
                   (if (> (cdr totals) 0)
                       (quotient (car totals) (cdr totals))
                       0))
-          ;; Show warning count if any
+          ;; Show warning count if any - fail in beta mode
           (when (not (null? *forge-warnings*))
             (let ((count (length *forge-warnings*))
                   (modules (length (delete-duplicates (map car *forge-warnings*)))))
               (printf "  ⚠ ~a warning~a across ~a module~a (forge-warnings)~%"
                       count (if (= count 1) "" "s")
-                      modules (if (= modules 1) "" "s"))))))
+                      modules (if (= modules 1) "" "s"))
+              (when (warnings-are-errors?)
+                (print "")
+                (print "Beta build: warnings are errors. Fix before continuing.")
+                (forge-warnings)
+                (exit 1))))))
       (when (and (= total-rebuilt 0) (>= *boot-verbosity* 1))
         (print "All tomes current for " stamp))
       ;; Show metrics at chronicle level (3+) even if nothing rebuilt
@@ -921,7 +942,12 @@
                   (modules (length (delete-duplicates (map car *forge-warnings*)))))
               (printf "  ⚠ ~a warning~a across ~a module~a (forge-warnings)~%"
                       count (if (= count 1) "" "s")
-                      modules (if (= modules 1) "" "s")))))))))
+                      modules (if (= modules 1) "" "s"))
+              (when (warnings-are-errors?)
+                (print "")
+                (print "Beta build: warnings are errors. Fix before continuing.")
+                (forge-warnings)
+                (exit 1)))))))))
 
 ;; Run bootstrap before loading modules
 (bootstrap-modules!)

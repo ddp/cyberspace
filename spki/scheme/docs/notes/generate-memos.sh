@@ -164,6 +164,7 @@ generate_index() {
   </script>
 </head>
 <body>
+  <nav><a href="../../../../">Cyberspace</a> / Memos</nav>
   <span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
   <h1>Library of Cyberspace - Memos</h1>
   <p>Request for Comments documents for the Library of Cyberspace preservation architecture.</p>
@@ -171,7 +172,6 @@ generate_index() {
   <p>
     <a href="README.html">About the Library</a>
     [<a href="README.txt">txt</a>]
-    [<a href="README.ps">ps</a>]
   </p>
 
   <h2>Memos</h2>
@@ -396,39 +396,46 @@ if [[ $GEN_STATUS -ne 0 ]]; then
   exit 1
 fi
 
-# Compile LaTeX to PDF (if xelatex available)
-# Disabled: too slow for routine generation. Run manually with: xelatex memo-*.tex
+# Compile LaTeX to PDF, then PDF to PS (if xelatex available)
 # MacTeX installs to /Library/TeX/texbin
 [[ -d /Library/TeX/texbin ]] && export PATH="/Library/TeX/texbin:$PATH"
-if false && command -v xelatex &> /dev/null; then
+if command -v xelatex &> /dev/null; then
   echo ""
-  echo "Compiling LaTeX to PDF..."
+  echo "Compiling LaTeX..."
   PDF_COUNT=0
   PDF_FAIL=0
-  for tex in memo-*.tex; do
+  PS_COUNT=0
+  for tex in memo-*.tex README.tex; do
     [[ ! -f "$tex" ]] && continue
     base="${tex%.tex}"
     pdf="${base}.pdf"
+    ps="${base}.ps"
     # Only compile if tex is newer than pdf
     if [[ ! -f "$pdf" ]] || [[ "$tex" -nt "$pdf" ]]; then
       if xelatex -interaction=nonstopmode "$tex" > /dev/null 2>&1; then
         PDF_COUNT=$((PDF_COUNT + 1))
+        # Convert PDF to PS
+        if command -v pdf2ps &> /dev/null; then
+          pdf2ps "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
+        fi
       else
         echo "  [FAIL] $tex"
         PDF_FAIL=$((PDF_FAIL + 1))
       fi
+    elif [[ ! -f "$ps" ]] || [[ "$pdf" -nt "$ps" ]]; then
+      # PDF exists but PS is stale
+      if command -v pdf2ps &> /dev/null; then
+        pdf2ps "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
+      fi
     fi
   done
   # Cleanup aux files
-  rm -f memo-*.aux memo-*.log memo-*.out 2>/dev/null
-  if [[ $PDF_COUNT -gt 0 ]]; then
-    echo "  Compiled $PDF_COUNT PDFs"
-  fi
-  if [[ $PDF_FAIL -gt 0 ]]; then
-    echo "  Failed: $PDF_FAIL"
-  fi
+  rm -f memo-*.aux memo-*.log memo-*.out README.aux README.log README.out 2>/dev/null
+  [[ $PDF_COUNT -gt 0 ]] && echo "  Compiled $PDF_COUNT PDFs"
+  [[ $PS_COUNT -gt 0 ]] && echo "  Generated $PS_COUNT PS files"
+  [[ $PDF_FAIL -gt 0 ]] && echo "  Failed: $PDF_FAIL"
 else
-  echo "  [SKIP] xelatex not found - PDF generation disabled"
+  echo "  [SKIP] xelatex not found - LaTeX generation disabled"
 fi
 
 # Generate index
