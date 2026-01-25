@@ -6,6 +6,77 @@
 ;;;   ./build.scm library   # just library modules
 ;;;   ./build.scm repl      # just cyberspace-repl
 ;;;   ./build.scm app       # just Cyberspace.app
+;;;
+;;; ============================================================
+;;; Build Dependency Graph
+;;; ============================================================
+;;;
+;;; External Dependencies (Homebrew):
+;;;   libsodium     - Ed25519, X25519, ChaCha20-Poly1305, SHA-512
+;;;   liboqs        - ML-DSA (post-quantum signatures)
+;;;   macfuse       - FUSE filesystem support (optional)
+;;;
+;;; Module Dependency DAG:
+;;;
+;;;   Level 0 (no deps):
+;;;     sexp           S-expression parsing/printing
+;;;     tty-ffi        Terminal raw mode, cursor control
+;;;     wordlist       BIP-39 mnemonic wordlists
+;;;     fips           FIPS mode detection
+;;;     filetype       File type detection (magic bytes)
+;;;
+;;;   Level 1 (core crypto):
+;;;     crypto-ffi     libsodium FFI (depends: libsodium)
+;;;     pq-crypto      liboqs FFI (depends: liboqs)
+;;;
+;;;   Level 2 (SPKI primitives):
+;;;     cert           SPKI certificates (depends: sexp, crypto-ffi)
+;;;     capability     Object capabilities (depends: sexp)
+;;;     bloom          Bloom filters (depends: crypto-ffi)
+;;;
+;;;   Level 3 (storage):
+;;;     vault          Encrypted vault (depends: crypto-ffi, sexp, bloom)
+;;;     audit          Audit trail (depends: crypto-ffi, sexp)
+;;;     merkle         Merkle trees (depends: crypto-ffi)
+;;;     catalog        Content catalog (depends: vault, sexp)
+;;;
+;;;   Level 4 (security):
+;;;     security       Security policy (depends: cert, capability)
+;;;     keyring        Key management (depends: crypto-ffi, vault)
+;;;
+;;;   Level 5 (network):
+;;;     gossip         Gossip protocol (depends: crypto-ffi, sexp)
+;;;     mdns           mDNS discovery (depends: sexp)
+;;;     portal         NAT traversal (depends: crypto-ffi)
+;;;
+;;;   Level 6 (filesystem):
+;;;     fuse-ffi       FUSE FFI (depends: macfuse, optional)
+;;;     wormhole       FUSE filesystem (depends: fuse-ffi, vault)
+;;;
+;;;   Level 7 (enrollment):
+;;;     enroll         Device enrollment (depends: crypto-ffi, keyring)
+;;;     auto-enroll    Auto-enrollment (depends: enroll, mdns)
+;;;
+;;;   Level 8 (UI):
+;;;     os             Platform detection
+;;;     ui             User interface (depends: os)
+;;;     display        Terminal display (depends: tty-ffi)
+;;;     edt            EDT keypad bindings
+;;;     inspector      Object inspector (depends: sexp)
+;;;     info           System info display (depends: os)
+;;;
+;;;   Level 9 (applications):
+;;;     forum          Message board (depends: vault, gossip)
+;;;     seal           Archival sealing (depends: vault, crypto-ffi)
+;;;     script         Scripting (depends: sexp)
+;;;     forge          Password generation (depends: crypto-ffi)
+;;;     cyberspace     Top-level API (depends: everything)
+;;;
+;;; Build Order:
+;;;   Modules are listed in *library-modules* in dependency order.
+;;;   A module may only depend on modules listed before it.
+;;;
+;;; ============================================================
 
 (import scheme
         (chicken base)
@@ -19,22 +90,26 @@
         (chicken string))
 
 (define *library-modules*
-  '(;; Core
-    "sexp" "crypto-ffi" "pq-crypto" "fips" "wordlist" "tty-ffi"
-    ;; SPKI
-    "cert" "capability" "security" "keyring"
+  '(;; Core (no deps)
+    "sexp" "fips" "wordlist" "tty-ffi" "filetype"
+    ;; Crypto (external: libsodium, liboqs)
+    "crypto-ffi" "pq-crypto"
+    ;; SPKI primitives
+    "cert" "capability" "bloom"
     ;; Storage
-    "vault" "catalog" "bloom" "audit" "merkle"
+    "vault" "catalog" "audit" "merkle"
+    ;; Security
+    "security" "keyring"
     ;; Network
     "gossip" "mdns" "portal"
-    ;; Wormhole (FUSE)
+    ;; Wormhole (FUSE - optional)
     "fuse-ffi" "wormhole"
     ;; Enrollment
     "enroll" "auto-enroll"
     ;; UI
     "os" "ui" "display" "inspector" "info" "edt"
-    ;; High-level
-    "forum" "seal" "script" "cyberspace"))
+    ;; Applications
+    "forum" "seal" "script" "forge" "cyberspace"))
 
 (define (run cmd)
   (printf "  ~a~n" cmd)
