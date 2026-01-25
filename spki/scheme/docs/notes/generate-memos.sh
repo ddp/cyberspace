@@ -193,7 +193,7 @@ HEADER
     if is_reserved "$memo"; then
       formats=""
     else
-      formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.pdf">Portable Document Format</a> <a href="'"${memo}"'.html">Hypertext</a>'
+      formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.html">Hypertext</a>'
     fi
 
     cat >> index.html << EOF
@@ -396,51 +396,9 @@ if [[ $GEN_STATUS -ne 0 ]]; then
   exit 1
 fi
 
-# Compile LaTeX to PDF, then PDF to PS (if xelatex available)
-# MacTeX installs to /Library/TeX/texbin
-[[ -d /Library/TeX/texbin ]] && export PATH="/Library/TeX/texbin:$PATH"
-if command -v xelatex &> /dev/null; then
-  echo ""
-  echo "Compiling LaTeX..."
-  PDF_COUNT=0
-  PDF_FAIL=0
-  PS_COUNT=0
-  for tex in memo-*.tex README.tex; do
-    [[ ! -f "$tex" ]] && continue
-    base="${tex%.tex}"
-    pdf="${base}.pdf"
-    ps="${base}.ps"
-    # Only compile if tex is newer than pdf
-    if [[ ! -f "$pdf" ]] || [[ "$tex" -nt "$pdf" ]]; then
-      if xelatex -interaction=nonstopmode "$tex" > /dev/null 2>&1; then
-        PDF_COUNT=$((PDF_COUNT + 1))
-        # Convert PDF to PS (prefer pdftops from poppler for better font handling)
-        if command -v pdftops &> /dev/null; then
-          pdftops "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
-        elif command -v pdf2ps &> /dev/null; then
-          pdf2ps "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
-        fi
-      else
-        echo "  [FAIL] $tex"
-        PDF_FAIL=$((PDF_FAIL + 1))
-      fi
-    elif [[ ! -f "$ps" ]] || [[ "$pdf" -nt "$ps" ]]; then
-      # PDF exists but PS is stale (prefer pdftops from poppler)
-      if command -v pdftops &> /dev/null; then
-        pdftops "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
-      elif command -v pdf2ps &> /dev/null; then
-        pdf2ps "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
-      fi
-    fi
-  done
-  # Cleanup aux files
-  rm -f memo-*.aux memo-*.log memo-*.out README.aux README.log README.out 2>/dev/null
-  [[ $PDF_COUNT -gt 0 ]] && echo "  Compiled $PDF_COUNT PDFs"
-  [[ $PS_COUNT -gt 0 ]] && echo "  Generated $PS_COUNT PS files"
-  [[ $PDF_FAIL -gt 0 ]] && echo "  Failed: $PDF_FAIL"
-else
-  echo "  [SKIP] xelatex not found - LaTeX generation disabled"
-fi
+# PostScript generated directly by memo-format.scm
+# No LaTeX/PDF dependency - PostScript is the canonical print format
+# groff -ms available as optional enhancement (not required)
 
 # Generate index
 generate_index
@@ -448,10 +406,8 @@ generate_index
 echo ""
 echo "Done."
 echo "  HTML: $(ls memo-*.html 2>/dev/null | wc -l | tr -d ' ')"
-echo "  PDF:  $(ls memo-*.pdf 2>/dev/null | wc -l | tr -d ' ')"
 echo "  PS:   $(ls memo-*.ps 2>/dev/null | wc -l | tr -d ' ')"
 echo "  TXT:  $(ls memo-*.txt 2>/dev/null | wc -l | tr -d ' ')"
-echo "  TEX:  $(ls memo-*.tex 2>/dev/null | wc -l | tr -d ' ')"
 echo "  SCM:  ${#MEMOS[@]}"
 
 # Sanity check before publish
@@ -472,7 +428,7 @@ YOYODYNE_MEMO_PATH="$YOYODYNE_BASE/spki/scheme/docs/memo/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_MEMO_PATH"
-  rsync -av --delete --chmod=F644,D755 *.html *.pdf *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_MEMO_PATH"
+  rsync -av --delete --chmod=F644,D755 *.html *.ps *.txt *.css *.woff2 *.svg "$YOYODYNE_HOST:$YOYODYNE_MEMO_PATH"
   echo "  -> $YOYODYNE_MEMO_PATH"
   # Ensure web-readable permissions (rsync --chmod sometimes ignored by server umask)
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type f -exec chmod 644 {} \; && find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
