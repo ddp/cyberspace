@@ -2018,7 +2018,7 @@
   "Collapse superposition to definite state"
   (if (and (pair? superposition) (eq? (car superposition) 'superposition))
       (let ((states (cdr superposition)))
-        (list-ref states (random (length states))))
+        (list-ref states (random-uniform (length states))))
       superposition))
 
 ;;; ============================================================

@@ -37,7 +37,9 @@
           (chicken file)
           srfi-1
           srfi-13
-          srfi-69)
+          srfi-69
+          (only crypto-ffi random-uniform)
+          (only fips test-randomness))
 
   ;; ============================================================
   ;; Configuration
@@ -82,64 +84,25 @@
   ;; Cryptographic Random Number Generator
   ;; ============================================================
   ;;
-  ;; Uses /dev/urandom for cryptographically secure randomness.
-  ;; Boot-time verification ensures the entropy source is sane.
-
-  (define *urandom-path* "/dev/urandom")
-
-  (define (read-random-bytes n)
-    "Read n bytes from /dev/urandom"
-    (call-with-input-file *urandom-path*
-      (lambda (port)
-        (let ((buf (make-string n)))
-          (read-string! n buf port)
-          buf))))
-
-  (define (bytes->integer bytes)
-    "Convert byte string to unsigned integer (big-endian)"
-    (let loop ((i 0) (acc 0))
-      (if (>= i (string-length bytes))
-          acc
-          (loop (+ i 1)
-                (+ (* acc 256) (char->integer (string-ref bytes i)))))))
+  ;; All randomness flows through libsodium's randombytes_buf():
+  ;;   Linux: getrandom(2) syscall
+  ;;   macOS: SecRandomCopyBytes
+  ;;   OpenBSD: getentropy(2)
+  ;; Hardware entropy (RDRAND/RDSEED) feeds the OS pool.
 
   (define (crypto-random-integer limit)
-    "Generate cryptographically secure random integer in [0, limit)"
+    "Generate cryptographically secure random integer in [0, limit).
+     Uses libsodium's rejection sampling to avoid modulo bias."
     (if (<= limit 0)
         0
-        (let* ((bytes-needed (max 1 (inexact->exact (ceiling (/ (log (+ limit 1)) (log 256))))))
-               (raw (bytes->integer (read-random-bytes bytes-needed))))
-          (modulo raw limit))))
+        (random-uniform limit)))
 
   (define (verify-entropy-source)
-    "Boot-time verification of cryptographic entropy source.
-     Returns #t if source passes sanity checks, signals error otherwise."
-    (unless (file-exists? *urandom-path*)
-      (error "Cryptographic entropy source not available" *urandom-path*))
-
-    ;; Read test bytes and verify basic properties
-    (let* ((test-bytes (read-random-bytes 256))
-           (byte-counts (make-vector 256 0)))
-
-      ;; Count byte frequencies
-      (string-for-each
-        (lambda (c)
-          (let ((b (char->integer c)))
-            (vector-set! byte-counts b (+ 1 (vector-ref byte-counts b)))))
-        test-bytes)
-
-      ;; Sanity check: no single byte should appear more than ~10% of the time
-      ;; For 256 bytes, expected is 1 per value, max reasonable is ~25
-      (let ((max-count (apply max (vector->list byte-counts))))
-        (when (> max-count 25)
-          (error "Entropy source failed distribution check - possible bias")))
-
-      ;; Sanity check: should have at least 100 distinct byte values
-      (let ((distinct (count positive? (vector->list byte-counts))))
-        (when (< distinct 100)
-          (error "Entropy source failed diversity check" distinct)))
-
-      #t))
+    "Boot-time FIPS 140-2 verification of cryptographic entropy source.
+     Tests: Monobit, Poker, Runs, Long Run on 20,000 bits.
+     Signals error if any test fails."
+    (unless (test-randomness)
+      (error "Entropy source failed FIPS 140-2 statistical tests")))
 
   ;; Verify entropy source on module load
   (verify-entropy-source)

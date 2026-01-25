@@ -20,11 +20,17 @@
    test-sha512
    test-ed25519
    test-randomness
+   ;; FIPS 140-2 randomness tests (20,000 bits)
+   fips-monobit-test
+   fips-poker-test
+   fips-runs-test
+   fips-long-run-test
    ;; Results
    fips-status)
 
   (import scheme
           (chicken base)
+          (chicken bitwise)
           (chicken format)
           (chicken blob)
           srfi-4
@@ -162,26 +168,132 @@
              (ed25519-verify expected-pk message sig)))))
 
   ;;; ============================================================
-  ;;; Randomness Sanity Check
+  ;;; FIPS 140-2 Randomness Tests
   ;;; ============================================================
+  ;;
+  ;; Per FIPS 140-2 Section 4.9.1, continuous RNG tests on 20,000 bits.
+  ;; These are the statistical tests required for RNG validation.
+
+  (define *fips-sample-bits* 20000)
+  (define *fips-sample-bytes* 2500)  ; 20000 / 8
+
+  (define (count-bits bytes)
+    "Count number of 1 bits in u8vector"
+    (let ((len (u8vector-length bytes)))
+      (let loop ((i 0) (count 0))
+        (if (>= i len)
+            count
+            (let ((byte (u8vector-ref bytes i)))
+              (loop (+ i 1)
+                    (+ count
+                       ;; Population count via lookup would be faster
+                       (let bloop ((b byte) (c 0))
+                         (if (= b 0) c
+                             (bloop (arithmetic-shift b -1)
+                                    (+ c (bitwise-and b 1))))))))))))
+
+  (define (fips-monobit-test bytes)
+    "FIPS 140-2 Monobit Test: count of 1s must be 9654 < n < 10346"
+    (let ((ones (count-bits bytes)))
+      (and (> ones 9654) (< ones 10346))))
+
+  (define (fips-poker-test bytes)
+    "FIPS 140-2 Poker Test: 4-bit nibble distribution.
+     X = (16/5000) * sum(f_i^2) - 5000, must be 1.03 < X < 57.4"
+    (let ((nibble-counts (make-vector 16 0))
+          (len (u8vector-length bytes)))
+      ;; Count 4-bit nibbles (2 per byte = 5000 nibbles)
+      (let loop ((i 0))
+        (when (< i len)
+          (let* ((byte (u8vector-ref bytes i))
+                 (hi (arithmetic-shift byte -4))
+                 (lo (bitwise-and byte #xf)))
+            (vector-set! nibble-counts hi (+ 1 (vector-ref nibble-counts hi)))
+            (vector-set! nibble-counts lo (+ 1 (vector-ref nibble-counts lo)))
+            (loop (+ i 1)))))
+      ;; Calculate X statistic
+      (let ((sum-sq (let loop ((i 0) (sum 0))
+                      (if (>= i 16)
+                          sum
+                          (let ((f (vector-ref nibble-counts i)))
+                            (loop (+ i 1) (+ sum (* f f))))))))
+        (let ((x (- (* (/ 16.0 5000.0) sum-sq) 5000.0)))
+          (and (> x 1.03) (< x 57.4))))))
+
+  (define (fips-runs-test bytes)
+    "FIPS 140-2 Runs Test: count runs of 0s and 1s, verify within bounds."
+    (let ((run-counts-0 (make-vector 7 0))  ; runs of 0s, length 1-6+
+          (run-counts-1 (make-vector 7 0))  ; runs of 1s, length 1-6+
+          (len (u8vector-length bytes)))
+      ;; Count runs
+      (let loop ((byte-idx 0) (bit-idx 0) (current-bit #f) (run-len 0))
+        (if (>= byte-idx len)
+            ;; End final run
+            (when (and current-bit (> run-len 0))
+              (let ((idx (min run-len 6))
+                    (counts (if (= current-bit 1) run-counts-1 run-counts-0)))
+                (vector-set! counts idx (+ 1 (vector-ref counts idx)))))
+            (let* ((byte (u8vector-ref bytes byte-idx))
+                   (bit (bitwise-and 1 (arithmetic-shift byte (- bit-idx)))))
+              (if (or (not current-bit) (= bit current-bit))
+                  ;; Continue run
+                  (let ((new-byte-idx (if (= bit-idx 7) (+ byte-idx 1) byte-idx))
+                        (new-bit-idx (if (= bit-idx 7) 0 (+ bit-idx 1))))
+                    (loop new-byte-idx new-bit-idx bit (+ run-len 1)))
+                  ;; End run, start new
+                  (begin
+                    (let ((idx (min run-len 6))
+                          (counts (if (= current-bit 1) run-counts-1 run-counts-0)))
+                      (vector-set! counts idx (+ 1 (vector-ref counts idx))))
+                    (let ((new-byte-idx (if (= bit-idx 7) (+ byte-idx 1) byte-idx))
+                          (new-bit-idx (if (= bit-idx 7) 0 (+ bit-idx 1))))
+                      (loop new-byte-idx new-bit-idx bit 1)))))))
+      ;; Check bounds (indices 1-6 for run lengths 1-6+)
+      (let ((bounds '((1 2267 2733)
+                      (2 1079 1421)
+                      (3 502 748)
+                      (4 223 402)
+                      (5 90 223)
+                      (6 90 223))))
+        (let check ((b bounds))
+          (if (null? b)
+              #t
+              (let* ((spec (car b))
+                     (idx (car spec))
+                     (lo (cadr spec))
+                     (hi (caddr spec))
+                     (c0 (vector-ref run-counts-0 idx))
+                     (c1 (vector-ref run-counts-1 idx)))
+                (if (and (>= c0 lo) (<= c0 hi) (>= c1 lo) (<= c1 hi))
+                    (check (cdr b))
+                    #f)))))))
+
+  (define (fips-long-run-test bytes)
+    "FIPS 140-2 Long Run Test: no run of 26+ consecutive identical bits."
+    (let ((len (u8vector-length bytes)))
+      (let loop ((byte-idx 0) (bit-idx 0) (current-bit #f) (run-len 0))
+        (cond
+          ((>= run-len 26) #f)  ; Failed
+          ((>= byte-idx len) #t)  ; Passed
+          (else
+            (let* ((byte (u8vector-ref bytes byte-idx))
+                   (bit (bitwise-and 1 (arithmetic-shift byte (- bit-idx))))
+                   (new-run (if (eqv? bit current-bit) (+ run-len 1) 1))
+                   (new-byte-idx (if (= bit-idx 7) (+ byte-idx 1) byte-idx))
+                   (new-bit-idx (if (= bit-idx 7) 0 (+ bit-idx 1))))
+              (loop new-byte-idx new-bit-idx bit new-run)))))))
 
   (define (test-randomness)
-    "Basic randomness sanity check. Returns #t on pass, #f on fail.
-     Verifies:
-     1. random-bytes returns correct length
-     2. Two 32-byte samples are different (overwhelmingly likely)
-     3. Bytes are not all zeros"
-    (let ((r1 (random-bytes 32))
-          (r2 (random-bytes 32)))
-      (and (= (blob-size r1) 32)
-           (= (blob-size r2) 32)
-           (not (blobs-equal? r1 r2))
-           ;; Check not all zeros
-           (let ((v1 (blob->u8vector r1)))
-             (let loop ((i 0) (sum 0))
-               (if (= i 32)
-                   (> sum 0)
-                   (loop (+ i 1) (+ sum (u8vector-ref v1 i)))))))))
+    "FIPS 140-2 randomness tests on 20,000 bits from entropy source.
+     Tests: Monobit, Poker, Runs, Long Run.
+     Returns #t if all pass, #f if any fail."
+    (let* ((sample (random-bytes *fips-sample-bytes*))
+           (bytes (blob->u8vector sample)))
+      (and (= (u8vector-length bytes) *fips-sample-bytes*)
+           (fips-monobit-test bytes)
+           (fips-poker-test bytes)
+           (fips-runs-test bytes)
+           (fips-long-run-test bytes))))
 
   ;;; ============================================================
   ;;; FIPS Self-Test Entry Point
