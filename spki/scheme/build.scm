@@ -138,6 +138,8 @@
                (run "csc -s -J -O2 crypto-ffi.scm -C \"`pkg-config --cflags libsodium`\" -L \"`pkg-config --libs libsodium`\""))
               ((string=? mod "pq-crypto")
                (run "csc -s -J -O2 pq-crypto.scm -C \"-I/opt/homebrew/include\" -L \"-L/opt/homebrew/lib -loqs\""))
+              ((string=? mod "fuse-ffi")
+               (run "csc -s -J -O2 fuse-ffi.scm -C \"-D_FILE_OFFSET_BITS=64 -I/usr/local/include/fuse\" -L \"-L/usr/local/lib -lfuse\""))
               (else
                (run (sprintf "csc -s -J -O2 ~a" src)))))))
       *library-modules*)
