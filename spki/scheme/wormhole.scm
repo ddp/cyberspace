@@ -63,7 +63,15 @@
    introspection-signature
    introspection-valid?
    stamp-introspection!
-   *introspection-store*)
+   *introspection-store*
+
+   ;; Config export (host configuration deployment)
+   *config-manifest*
+   config-register!
+   config-export!
+   config-export-all!
+   config-status
+   config-diff)
 
 (import scheme
         (chicken base)
@@ -76,6 +84,9 @@
         (chicken file posix)
         (chicken pathname)
         (chicken process)
+        (chicken process-context)
+        (chicken condition)
+        (chicken io)
         (srfi 1)
         (srfi 4)
         (srfi 13)
@@ -802,5 +813,175 @@
           (string-set! out (+ (* 2 i) 1) (string-ref hex-chars (remainder b 16)))
           (loop (+ i 1)))))
     out))
+
+;;; ============================================================
+;;; Config Export - Host Configuration Deployment
+;;; ============================================================
+;;;
+;;; Manages deployment of configuration files from the toolbag
+;;; to their expected locations on the host system.
+;;;
+;;; Deployment modes:
+;;;   symlink  - Create symlink to source (default, updates live)
+;;;   copy     - Copy file to destination (snapshot)
+;;;   wormhole - Mount via FUSE (read-only, audited)
+;;;
+;;; Config manifest maps source paths (relative to scheme/)
+;;; to target paths (absolute, with ~ expansion).
+
+;; Config manifest: alist of (name source target mode)
+(define *config-manifest* '())
+
+(define (expand-tilde path)
+  "Expand ~ to home directory."
+  (if (and (> (string-length path) 0)
+           (char=? (string-ref path 0) #\~))
+      (string-append (get-environment-variable "HOME")
+                     (substring path 1))
+      path))
+
+(define (config-register! name source target #!key (mode 'symlink))
+  "Register a config file for export.
+   name   - symbolic name (e.g., 'kitty)
+   source - path relative to scheme/ directory
+   target - absolute path with ~ expansion
+   mode   - 'symlink | 'copy | 'wormhole"
+  (set! *config-manifest*
+        (cons `(,name ,source ,(expand-tilde target) ,mode)
+              (filter (lambda (e) (not (eq? (car e) name)))
+                      *config-manifest*))))
+
+(define (config-source-path name)
+  "Get absolute source path for config."
+  (let ((entry (assq name *config-manifest*)))
+    (and entry
+         (let ((rel-path (cadr entry)))
+           ;; Find scheme/ directory from current or known location
+           (let ((base (or (get-environment-variable "CYBERSPACE_SCHEME")
+                          "/Users/ddp/cyberspace/spki/scheme")))
+             (make-pathname base rel-path))))))
+
+(define (config-export! name #!key (force #f))
+  "Export a registered config to its target location.
+   Returns: 'created | 'updated | 'unchanged | 'error"
+  (let ((entry (assq name *config-manifest*)))
+    (unless entry
+      (error 'config-not-found (sprintf "Unknown config: ~a" name)))
+    (let* ((source (config-source-path name))
+           (target (caddr entry))
+           (mode (cadddr entry))
+           (target-dir (pathname-directory target)))
+
+      ;; Ensure source exists
+      (unless (file-exists? source)
+        (error 'source-not-found (sprintf "Config source missing: ~a" source)))
+
+      ;; Create target directory if needed
+      (unless (directory-exists? target-dir)
+        (create-directory target-dir #t))
+
+      ;; Handle existing target
+      (cond
+       ;; Target is already correct symlink
+       ((and (symbolic-link? target)
+             (string=? (read-symbolic-link target) source))
+        'unchanged)
+
+       ;; Target exists but differs
+       ((file-exists? target)
+        (if force
+            (begin
+              (delete-file target)
+              (config-deploy! source target mode)
+              'updated)
+            'exists))
+
+       ;; Target doesn't exist
+       (else
+        (config-deploy! source target mode)
+        'created)))))
+
+(define (config-deploy! source target mode)
+  "Deploy config file using specified mode."
+  (case mode
+    ((symlink)
+     (create-symbolic-link source target))
+    ((copy)
+     (copy-file source target))
+    ((wormhole)
+     ;; TODO: Mount via wormhole for read-only audited access
+     ;; For now, fall back to symlink
+     (create-symbolic-link source target))
+    (else
+     (error 'unknown-mode (sprintf "Unknown deploy mode: ~a" mode)))))
+
+(define (config-export-all! #!key (force #f))
+  "Export all registered configs.
+   Returns: alist of (name . status)"
+  (map (lambda (entry)
+         (let ((name (car entry)))
+           (cons name
+                 (condition-case
+                  (config-export! name force: force)
+                  ((exn) 'error)))))
+       *config-manifest*))
+
+(define (config-status #!optional name)
+  "Check status of config(s).
+   Returns status for one config or all if name not specified."
+  (define (check-one entry)
+    (let* ((name (car entry))
+           (source (config-source-path name))
+           (target (caddr entry))
+           (mode (cadddr entry)))
+      `((name . ,name)
+        (source . ,source)
+        (target . ,target)
+        (mode . ,mode)
+        (source-exists . ,(and source (file-exists? source)))
+        (target-exists . ,(file-exists? target))
+        (is-symlink . ,(symbolic-link? target))
+        (synced . ,(and (file-exists? target)
+                        (symbolic-link? target)
+                        source
+                        (file-exists? source)
+                        (string=? (read-symbolic-link target) source))))))
+
+  (if name
+      (let ((entry (assq name *config-manifest*)))
+        (if entry (check-one entry) #f))
+      (map check-one *config-manifest*)))
+
+(define (config-diff name)
+  "Show diff between source and target for a config.
+   Returns #f if identical, diff output otherwise."
+  (let* ((entry (assq name *config-manifest*))
+         (source (and entry (config-source-path name)))
+         (target (and entry (caddr entry))))
+    (cond
+     ((not entry) (error 'config-not-found name))
+     ((not (file-exists? source)) `(source-missing ,source))
+     ((not (file-exists? target)) `(target-missing ,target))
+     ((symbolic-link? target)
+      (if (string=? (read-symbolic-link target) source)
+          #f  ; Symlinked to source, no diff
+          `(symlink-differs ,(read-symbolic-link target))))
+     (else
+      ;; Compare file contents
+      (let ((src-content (with-input-from-file source read-string))
+            (tgt-content (with-input-from-file target read-string)))
+        (if (string=? src-content tgt-content)
+            #f
+            `(content-differs)))))))
+
+;;; ============================================================
+;;; Default Config Manifest
+;;; ============================================================
+;;;
+;;; Register known Cyberspace configs.
+;;; Additional configs can be added via (config-register! ...)
+
+;; Terminal emulator
+(config-register! 'kitty "config/kitty.conf" "~/.config/kitty/kitty.conf")
 
 ) ;; end module

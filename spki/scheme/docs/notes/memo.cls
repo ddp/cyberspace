@@ -107,6 +107,34 @@
   stringstyle=\color{codegray}
 }
 
+% Markdown language (minimal - for code blocks showing markdown)
+\lstdefinelanguage{markdown}{
+  morekeywords={},
+  sensitive=false,
+  morecomment=[l]{},
+  morestring=[b]",
+  keywordstyle=\color{codeblue}\bfseries,
+  stringstyle=\color{codegray}
+}
+
+% TLA+ language
+\lstdefinelanguage{tla}{
+  morekeywords={VARIABLES,CONSTANTS,ASSUME,MODULE,EXTENDS,INSTANCE,
+    LOCAL,THEOREM,PROOF,BY,OBVIOUS,QED,HAVE,TAKE,WITNESS,PICK,
+    SUFFICES,NEW,CONSTANT,VARIABLE,STATE,ACTION,TEMPORAL,
+    IF,THEN,ELSE,CASE,OTHER,LET,IN,EXCEPT,UNCHANGED,ENABLED,
+    TRUE,FALSE,UNION,SUBSET,DOMAIN},
+  sensitive=true,
+  morecomment=[s]{(*}{*)},
+  morestring=[b]",
+  keywordstyle=\color{codeblue}\bfseries,
+  commentstyle=\color{codegreen}\itshape,
+  stringstyle=\color{codegray}
+}
+
+% Alias lowercase 'scheme' to 'Scheme'
+\lstalias{scheme}{Scheme}
+
 % Box diagram environment - simple framed verbatim
 \DefineVerbatimEnvironment{diagram}{Verbatim}{frame=single,fontsize=\small,xleftmargin=1em,xrightmargin=1em}
 
