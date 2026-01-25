@@ -35,7 +35,7 @@
     (p "All randomness in Cyberspace flows through libsodium's randombytes_buf(), which uses:")
     (list
       (item "Linux: getrandom(2) syscall")
-      (item "macOS: SecRandomCopyBytes")
+      (item "macOS: arc4random_buf()")
       (item "OpenBSD: getentropy(2)")
       (item "Windows: RtlGenRandom"))
     (p "Hardware entropy (RDRAND/RDSEED) feeds the OS pool. Quantum RNG (ID Quantique, drand beacons) planned for Phase 3+.")
@@ -98,7 +98,7 @@
       "Canonical Source: libsodium"
       (p "All Cyberspace implementations MUST use libsodium's randombytes_buf() as the primary entropy source:")
       (code "randombytes_buf(buffer, size)")
-      (p "libsodium automatically selects the best available source: - Linux: getrandom(2) syscall, falls back to /dev/urandom - macOS/iOS: arc4randombuf() - Windows: RtlGenRandom() - OpenBSD: arc4randombuf() (ChaCha20-based)"))
+      (p "libsodium automatically selects the best available source: - Linux: getrandom(2) syscall, falls back to /dev/urandom - macOS/iOS: arc4random_buf() - Windows: RtlGenRandom() - OpenBSD: arc4random_buf() (ChaCha20-based)"))
     (subsection
       "Why libsodium?"
       (list

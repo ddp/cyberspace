@@ -86,7 +86,7 @@
   ;;
   ;; All randomness flows through libsodium's randombytes_buf():
   ;;   Linux: getrandom(2) syscall
-  ;;   macOS: SecRandomCopyBytes
+  ;;   macOS: arc4random_buf()
   ;;   OpenBSD: getentropy(2)
   ;; Hardware entropy (RDRAND/RDSEED) feeds the OS pool.
 

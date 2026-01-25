@@ -414,8 +414,10 @@ if command -v xelatex &> /dev/null; then
     if [[ ! -f "$pdf" ]] || [[ "$tex" -nt "$pdf" ]]; then
       if xelatex -interaction=nonstopmode "$tex" > /dev/null 2>&1; then
         PDF_COUNT=$((PDF_COUNT + 1))
-        # Convert PDF to PS
-        if command -v pdf2ps &> /dev/null; then
+        # Convert PDF to PS (prefer pdftops from poppler for better font handling)
+        if command -v pdftops &> /dev/null; then
+          pdftops "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
+        elif command -v pdf2ps &> /dev/null; then
           pdf2ps "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
         fi
       else
@@ -423,8 +425,10 @@ if command -v xelatex &> /dev/null; then
         PDF_FAIL=$((PDF_FAIL + 1))
       fi
     elif [[ ! -f "$ps" ]] || [[ "$pdf" -nt "$ps" ]]; then
-      # PDF exists but PS is stale
-      if command -v pdf2ps &> /dev/null; then
+      # PDF exists but PS is stale (prefer pdftops from poppler)
+      if command -v pdftops &> /dev/null; then
+        pdftops "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
+      elif command -v pdf2ps &> /dev/null; then
         pdf2ps "$pdf" "$ps" 2>/dev/null && PS_COUNT=$((PS_COUNT + 1))
       fi
     fi
