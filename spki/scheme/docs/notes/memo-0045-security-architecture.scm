@@ -290,7 +290,9 @@
     (p "What must work correctly for security to hold:")
     (table
       (header "Component " "What It Does " "What We Trust ")
-      (row "Ed25519 " "Signatures " "libsodium, math ")
+      (row "Ed25519 " "Classical signatures " "libsodium, math ")
+      (row "ML-DSA-65 " "Post-quantum signatures " "liboqs, FIPS 204 ")
+      (row "SLH-DSA " "Post-quantum signatures (stateless) " "liboqs, FIPS 205 ")
       (row "SHA-512 " "Object identity " "libsodium, math ")
       (row "Capability verifier " "Chain validation " "Our code ")
       (row "Vault storage " "Object integrity " "Local filesystem ")
@@ -469,7 +471,7 @@
         (row "Physical access " "Out of scope for software. ")
         (row "Covert channels > 1 bit/sec " "Residual risk, documented above. ")
         (row "Availability attacks " "Focus on integrity/confidentiality. ")
-        (row "Quantum computing " "Ed25519 vulnerable. Migration path planned. ")
+        (row "Quantum computing " "Ed25519 vulnerable. Hybrid Ed25519+ML-DSA/SLH-DSA implemented (pq-crypto.scm). ")
         (row "Coercion " "Math doesn't help if you're forced to sign. "))))
   (section
     "The Invariants"

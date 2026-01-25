@@ -356,6 +356,14 @@ sanity_check() {
     warnings=$((warnings + 1))
   fi
 
+  # Remind to keep critical memos current
+  # These define the system and must reflect implementation reality
+  echo "  [REMIND] Critical memos must reflect current implementation:"
+  echo "           - memo-0002-architecture.scm (system architecture)"
+  echo "           - memo-0009-designer-notes.scm (design decisions, TCB, algorithms)"
+  echo "           - memo-0043-cryptographic-entropy.scm (entropy requirements)"
+  echo "           - memo-0045-security-architecture.scm (security model)"
+
   if [[ $errors -gt 0 ]]; then
     echo ""
     echo "  $errors error(s) found - aborting publish"

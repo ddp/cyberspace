@@ -337,10 +337,12 @@
       "9.9 The TCB Principle"
       (p "The Trusted Computing Base holds only:")
       (list
-        (item "Ed25519 sign/verify")
+        (item "Ed25519 sign/verify (classical)")
+        (item "ML-DSA-65 sign/verify (post-quantum, FIPS 204)")
+        (item "SLH-DSA-SHAKE-256s sign/verify (post-quantum, FIPS 205)")
         (item "SHA-512 hash")
         (item "Certificate chain verification"))
-      (p "Everything else is policy. The TCB is ~1000 lines of OCaml calling libsodium, proven in Coq, frozen. This minimizes the attack surface: prove the crypto, evolve the rest freely.")))
+      (p "Everything else is policy. The TCB is ~3000 lines of OCaml calling libsodium and liboqs, with Coq extraction for core properties. This minimizes the attack surface: prove the crypto, evolve the rest freely.")))
 
   (section
     "10. Release Gates"
