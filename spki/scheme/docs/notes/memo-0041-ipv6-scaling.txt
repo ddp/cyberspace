@@ -106,17 +106,55 @@ Chunking Strategy
 -----------------
 
 Large objects split at content-defined boundaries (Rabin
-fingerprinting):
+fingerprinting). Chunk size adapts to link characteristics:
 
 
-    Target chunk: 64 KB (Starlink-optimized)
-    Min chunk:    16 KB
-    Max chunk:   256 KB
-    Benefits:
-      - Deduplication across objects
+    Link Profile          RTT        Bandwidth    Target Chunk
+    ─────────────────────────────────────────────────────────────
+    Fiber/Datacenter     1-5ms      1Gbps+       256KB-1MB
+    Cable/DSL            10-30ms    50-500Mbps   128KB
+    Starlink             20-40ms    100-300Mbps  64KB
+    LTE/5G               10-50ms    variable     32-128KB
+    LoRa/Mesh            100ms+     kbps         4-16KB
+    Sneakernet           ∞          ∞            no chunking
+    Rabin parameters (content-defined):
+      Min chunk:    4 KB   (floor for all links)
+      Max chunk:    1 MB   (ceiling for all links)
+      Target:       link-adaptive (see above)
+
+Chunk size continuously adapts as links come and go. Mobile nodes may
+switch from WiFi to LTE to Starlink - the transfer strategy adjusts in
+real-time. Deduplication works across chunk sizes - same content, same
+hash.
+
+
+    (define (optimal-chunk-size link)
+      "Calculate target chunk size for link characteristics."
+      (let ((rtt-ms (link-rtt link))
+            (bandwidth-mbps (link-bandwidth link)))
+        (cond
+          ((< rtt-ms 10)   (* 256 1024))   ; Datacenter
+          ((< rtt-ms 30)   (* 128 1024))   ; Cable/DSL
+          ((< rtt-ms 50)   (* 64 1024))    ; Starlink/LTE
+          ((< rtt-ms 100)  (* 32 1024))    ; Slow mobile
+          (else            (* 8 1024)))))  ; Constrained
+    ;; Auto-tune from observed performance
+    (define (auto-tune-chunk-size! link)
+      "Adjust chunk size based on transfer performance."
+      (let* ((samples (link-transfer-samples link))
+             (avg-throughput (mean (map sample-throughput samples)))
+             (avg-rtt (mean (map sample-rtt samples))))
+        (link-chunk-size-set! link (optimal-chunk-size-for avg-rtt avg-throughput))))
+
+Benefits:
+
+
+      - Deduplication across objects (hash-based)
       - Partial sync (fetch only missing chunks)
       - Resumable transfers
       - Efficient diff
+      - Link-optimal transfer sizes
+      - Graceful degradation on constrained links
 
 
 Hash Function
@@ -416,283 +454,36 @@ Transport Bindings
     Export:     Git bundle (GitHub compatibility)
 
 
-Starlink Optimization
----------------------
+Link-Adaptive Transport
+-----------------------
+
+Transport parameters adapt to detected link type:
 
 
     (transport-config
-      (mode satellite)
-      (batch-window-ms 500)        ; Aggregate small messages
-      (chunk-size-kb 64)           ; Match MTU
+      (link-detection auto)          ; Probe RTT/bandwidth
+      (chunk-size adaptive)          ; See Chunking Strategy
+      (batch-window-ms               ; Aggregate small messages
+        (fiber 50)
+        (starlink 500)
+        (lte 200)
+        (lora 2000))
       (retry-strategy exponential)
-      (max-in-flight 10)           ; Parallelism
-      (keepalive-sec 300))         ; 5 min, not 30 sec
-
-
-------------------------------------------------------------------------
-SYNCHRONIZATION PROTOCOL
-------------------------------------------------------------------------
-
-
-Lazy Sync (Default)
--------------------
-
-
-    Node A                              Node B
-       |                                   |
-       |----(have? [h1, h2, h3])---------->|
-       |<---(have [h1, h3] missing [h2])---|
-       |----(fetch h2)-------------------->|
-       |<---(object h2 ...)----------------|
-       |                                   |
-    No coordination. No locks. No leader.
-
-
-Crdt-Style Convergence
-----------------------
-
-Objects are immutable and content-addressed. No conflicts possible at
-object level.
-
-Manifests (collections of objects) use: - Lamport timestamps for
-ordering - Last-writer-wins with principal tiebreaker - Or: union
-(add-only sets)
-
-
-    (manifest
-      (name "library")
-      (version (lamport 42) (principal "ed25519:..."))
-      (entries
-        ("memo-001" "sha512:...")
-        ("memo-002" "sha512:...")
-        ...))
-
-
-Merkle Sync
------------
-
-Efficient diff for large manifests:
-
-
-             root
-            /    \
-          h1      h2
-         /  \    /  \
-        a    b  c    d
-    Exchange root hash.
-    If different, recurse on children.
-    O(log n) round trips to find diff.
-
-
-------------------------------------------------------------------------
-FEDERATION AT SCALE
-------------------------------------------------------------------------
-
-
-Cluster Topology
-----------------
-
-
-                        ┌─────────────────────────────────────┐
-                        │         COORDINATOR CLUSTER         │
-                        │  (3-7 nodes, Byzantine consensus)   │
-                        └────────────────┬────────────────────┘
-                                         │
-              ┌──────────────────────────┼──────────────────────────┐
-              │                          │                          │
-        ┌─────▼─────┐             ┌──────▼─────┐             ┌──────▼─────┐
-        │   FULL    │             │   FULL     │             │    FULL    │
-        │  NODES    │             │   NODES    │             │   NODES    │
-        └─────┬─────┘             └─────┬──────┘             └─────┬──────┘
-              │                         │                          │
-        ┌─────▼─────┐             ┌─────▼──────┐             ┌─────▼──────┐
-        │ WITNESSES │             │ WITNESSES  │             │ WITNESSES  │
-        │ ARCHIVERS │             │ ARCHIVERS  │             │ ARCHIVERS  │
-        │   EDGES   │             │   EDGES    │             │   EDGES    │
-        └───────────┘             └────────────┘             └────────────┘
-    Coordinators: Rare, high-capability realms, run consensus
-    Full: Common realms, replicate everything, serve content
-    Witnesses: Abundant realms, verify and store, passive sync
-    Archivers: Cold storage realms, batch sync
-    Edges: Read-only realms, intermittent, mobile
-
-
-Partition Tolerance
--------------------
-
-
-    Network splits → clusters diverge → clusters converge on reconnect
-    No data loss (content-addressed)
-    No conflicts (immutable objects)
-    Audit trails merge (union of entries, Lamport ordering)
-    Manifests resolve (LWW or union based on type)
-
-
-------------------------------------------------------------------------
-GIT AS EXPORT FORMAT
-------------------------------------------------------------------------
-
-
-The Transition
---------------
-
-
-    Phase 1 (Now):      Git is source of truth, vault is cache
-    Phase 2 (Next):     Vault is source of truth, git is export
-    Phase 3 (Future):   Git optional, purely for GitHub presence
-
-
-Export Process
---------------
-
-
-    (git-export
-      from: ".vault"
-      to: "/tmp/cyberspace-export"
-      format: 'git-repo)
-    ;; Creates standard git repo from vault contents
-    ;; For publishing to GitHub, GitLab, etc.
-
-
-Import Process
---------------
-
-
-    (git-import
-      from: "https://github.com/ddp/cyberspace.git"
-      to: ".vault")
-    ;; Extracts objects from git, stores in vault
-    ;; Discards git history, keeps content
-
-
-------------------------------------------------------------------------
-SECURITY AT SCALE
-------------------------------------------------------------------------
-
-
-Sybil Resistance
-----------------
-
-Problem: Attacker creates many fake nodes to dominate network.
-
-Mitigations:
-
-  * Stake-weighted voting (not proof-of-work, just reputation)
-  * Web of trust - new nodes introduced by existing trusted nodes
-  * Rate limiting - bound resources per principal
-  * Coordinator consensus - Byzantine-resistant core
-
-
-Eclipse Attack Resistance
--------------------------
-
-Problem: Attacker isolates a node by controlling all its peers.
-
-Mitigations:
-
-  * Diverse bootstrap - multiple independent entry points
-  * Random peer selection - can't predict who you'll connect to
-  * Peer rotation - periodically reconnect to new peers
-  * Out-of-band verification - publish peer lists via DNS, blockchain, etc.
-
-
-Denial of Service
------------------
-
-Problem: Attacker floods network with junk.
-
-Mitigations:
-
-  * Proof of work on announcements (small, CPU cost)
-  * Rate limiting per principal
-  * Reputation scoring - misbehaving peers deprioritized
-  * Content validation - reject malformed objects immediately
-
-
-------------------------------------------------------------------------
-IMPLEMENTATION PHASES
-------------------------------------------------------------------------
-
-
-Phase 1: Native Object Store
-----------------------------
-
-  * Implement .vault/objects/ storage
-  * Soup catalog and query
-  * Keep git for development workflow
-
-
-Phase 2: Local-First Sync
--------------------------
-
-  * Direct node-to-node protocol - have?/fetch message types
-  * UDP transport with TCP fallback
-
-
-Phase 3: Discovery
-------------------
-
-  * Gossip peer exchange
-  * Bootstrap nodes
-  * Bloom filters for content location
-
-
-Phase 4: Scale Testing
-----------------------
-
-  * 100 nodes - 1000 nodes - 10000 nodes
-  * Measure: latency, convergence time, bandwidth
-
-Implementation proceeds from working local storage to network protocols
-to discovery to scale testing. Each phase validates assumptions before
-the next builds on them. Git deprecation comes last—the proven system
-remains as fallback until the native system earns trust.
-
-
-Phase 5: Git Deprecation
-------------------------
-
-  * Vault as source of truth
-  * Git export for compatibility
-  * Remove git dependency from core operations
-
-
-------------------------------------------------------------------------
-METRICS AND MONITORING
-------------------------------------------------------------------------
-
-
-    (node-metrics)
-    ;; Returns:
-    ((objects-stored 150000)
-     (objects-size-gb 50)
-     (peers-known 500)
-     (peers-connected 20)
-     (sync-lag-seconds 30)
-     (bandwidth-in-mbps 10)
-     (bandwidth-out-mbps 5)
-     (requests-per-second 100)
-     (errors-per-second 0.1))
-
-
-------------------------------------------------------------------------
-REFERENCES
-------------------------------------------------------------------------
-
-  * Memo-010: Federation Protocol
-  * Memo-016: Lazy Clustering
-  * Memo-037: Node Roles and Capabilities
-  * Maymounkov, P. (2002). Kademlia: A Peer-to-peer Information System
-  * Rabin, M. (1981). Fingerprinting by Random Polynomials
-  * IPFS Whitepaper (2014)
-  * Shapiro, M. (2011). Conflict-Free Replicated Data Types
-
-
-------------------------------------------------------------------------
-CHANGELOG
-------------------------------------------------------------------------
-
-  * 2026-01-07
-  * Initial draft
+      (max-in-flight                 ; Parallelism based on BDP
+        (fiber 100)
+        (starlink 10)
+        (lte 5)
+        (lora 1))
+      (keepalive-sec                 ; Idle timeout
+        (fiber 60)
+        (starlink 300)
+        (lte 120)
+        (lora 600)))
+    ;; Re-evaluate on link change
+    (define (on-link-change! old-link new-link)
+      "Adjust transport when connectivity changes."
+      (let ((config (detect-link-profile new-link)))
+        (transport-reconfigure! config)
+        (log-link-transition old-link new-link)))
 
 ------------------------------------------------------------------------

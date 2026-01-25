@@ -31,8 +31,46 @@
       (code scheme "(cyberspace-object\n  (version 1)\n  (type blob|tree|manifest|cert|audit)\n  (size 1048576)\n  (compression zstd|none)\n  (hash \"sha512:a1b2c3...\")\n  (chunks (\"sha512:...\" \"sha512:...\" ...))  ; If chunked\n  (signature \"ed25519:...\")\n  (timestamp 1736300000))"))
     (subsection
       "Chunking Strategy"
-      (p "Large objects split at content-defined boundaries (Rabin fingerprinting):")
-      (code "Target chunk: 64 KB (Starlink-optimized)\nMin chunk:    16 KB\nMax chunk:   256 KB\n\nBenefits:\n  - Deduplication across objects\n  - Partial sync (fetch only missing chunks)\n  - Resumable transfers\n  - Efficient diff"))
+      (p "Large objects split at content-defined boundaries (Rabin fingerprinting). Chunk size adapts to link characteristics:")
+      (code "Link Profile          RTT        Bandwidth    Target Chunk
+─────────────────────────────────────────────────────────────
+Fiber/Datacenter     1-5ms      1Gbps+       256KB-1MB
+Cable/DSL            10-30ms    50-500Mbps   128KB
+Starlink             20-40ms    100-300Mbps  64KB
+LTE/5G               10-50ms    variable     32-128KB
+LoRa/Mesh            100ms+     kbps         4-16KB
+Sneakernet           ∞          ∞            no chunking
+
+Rabin parameters (content-defined):
+  Min chunk:    4 KB   (floor for all links)
+  Max chunk:    1 MB   (ceiling for all links)
+  Target:       link-adaptive (see above)")
+      (p "Chunk size continuously adapts as links come and go. Mobile nodes may switch from WiFi to LTE to Starlink - the transfer strategy adjusts in real-time. Deduplication works across chunk sizes - same content, same hash.")
+      (code scheme "(define (optimal-chunk-size link)
+  \"Calculate target chunk size for link characteristics.\"
+  (let ((rtt-ms (link-rtt link))
+        (bandwidth-mbps (link-bandwidth link)))
+    (cond
+      ((< rtt-ms 10)   (* 256 1024))   ; Datacenter
+      ((< rtt-ms 30)   (* 128 1024))   ; Cable/DSL
+      ((< rtt-ms 50)   (* 64 1024))    ; Starlink/LTE
+      ((< rtt-ms 100)  (* 32 1024))    ; Slow mobile
+      (else            (* 8 1024)))))  ; Constrained
+
+;; Auto-tune from observed performance
+(define (auto-tune-chunk-size! link)
+  \"Adjust chunk size based on transfer performance.\"
+  (let* ((samples (link-transfer-samples link))
+         (avg-throughput (mean (map sample-throughput samples)))
+         (avg-rtt (mean (map sample-rtt samples))))
+    (link-chunk-size-set! link (optimal-chunk-size-for avg-rtt avg-throughput))))")
+      (p "Benefits:")
+      (code "  - Deduplication across objects (hash-based)
+  - Partial sync (fetch only missing chunks)
+  - Resumable transfers
+  - Efficient diff
+  - Link-optimal transfer sizes
+  - Graceful degradation on constrained links"))
     (subsection
       "Hash Function"
       (code "SHA-512 everywhere.\n\nNot SHA-256: We have the bits, use them.\nNot SHA-1: Broken.\nNot BLAKE3: Less analyzed, marginal speed gain irrelevant at network latency.\n\nSHA-512 is:\n  - FIPS certified (GovCloud path)\n  - 50 years of cryptanalysis\n  - Hardware accelerated\n  - Already in use (audit trail, signatures)")))
@@ -96,8 +134,34 @@
       "Transport Bindings"
       (code "Native:     UDP/IPv6, port 7777 (primary)\nFallback:   TCP/IPv6, port 7777 (firewalls)\nLegacy:     TCP/IPv4, port 7777 (transition)\nStealth:    Tor onion service (censorship resistance)\nOffline:    USB drive, file copy (sneakernet)\nExport:     Git bundle (GitHub compatibility)"))
     (subsection
-      "Starlink Optimization"
-      (code scheme "(transport-config\n  (mode satellite)\n  (batch-window-ms 500)        ; Aggregate small messages\n  (chunk-size-kb 64)           ; Match MTU\n  (retry-strategy exponential)\n  (max-in-flight 10)           ; Parallelism\n  (keepalive-sec 300))         ; 5 min, not 30 sec")))
+      "Link-Adaptive Transport"
+      (p "Transport parameters adapt to detected link type:")
+      (code scheme "(transport-config
+  (link-detection auto)          ; Probe RTT/bandwidth
+  (chunk-size adaptive)          ; See Chunking Strategy
+  (batch-window-ms               ; Aggregate small messages
+    (fiber 50)
+    (starlink 500)
+    (lte 200)
+    (lora 2000))
+  (retry-strategy exponential)
+  (max-in-flight                 ; Parallelism based on BDP
+    (fiber 100)
+    (starlink 10)
+    (lte 5)
+    (lora 1))
+  (keepalive-sec                 ; Idle timeout
+    (fiber 60)
+    (starlink 300)
+    (lte 120)
+    (lora 600)))
+
+;; Re-evaluate on link change
+(define (on-link-change! old-link new-link)
+  \"Adjust transport when connectivity changes.\"
+  (let ((config (detect-link-profile new-link)))
+    (transport-reconfigure! config)
+    (log-link-transition old-link new-link)))"))))
   (section
     "Synchronization Protocol"
     (subsection
