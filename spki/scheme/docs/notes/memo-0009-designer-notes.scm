@@ -191,7 +191,7 @@
   10   Allow privileged apps to authenticate expired/restricted
   11   Allow any SYSUAF record to use external authentication
   12   Intrusion logging scope (0=cluster-wide, 1=local only)
-  13   Reserved
+  13   Reserved (possibly SEVMS)
   14   Enable internal file/dir name reading with X access (POSIX)
 
   Default: 7 (bits 0-2 set) - preserves DECwindows compatibility
