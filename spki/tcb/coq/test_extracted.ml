@@ -1,4 +1,4 @@
-(** Test harness for Coq-extracted TCB code *)
+(** Test harness for Rocq-extracted TCB code *)
 
 open Spki_tcb_extracted
 
@@ -30,7 +30,7 @@ let assert_false msg b =
    Helper functions to work with extracted types
    ============================================================== *)
 
-(* Convert OCaml string to char list (Coq string) *)
+(* Convert OCaml string to char list (Rocq string) *)
 let char_list_of_string s =
   let len = String.length s in
   let rec loop i acc =
@@ -214,7 +214,7 @@ let test_chain_validation () =
 let () =
   Printf.printf "SPKI TCB Extracted Code Tests\n";
   Printf.printf "==============================\n";
-  Printf.printf "(Testing Coq-extracted authorization logic)\n";
+  Printf.printf "(Testing Rocq-extracted authorization logic)\n";
 
   (* Run tests *)
   test_principal ();

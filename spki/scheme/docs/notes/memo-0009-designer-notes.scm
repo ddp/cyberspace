@@ -342,7 +342,7 @@
         (item "SLH-DSA-SHAKE-256s sign/verify (post-quantum, FIPS 205)")
         (item "SHA-512 hash")
         (item "Certificate chain verification"))
-      (p "Everything else is policy. The TCB is ~3000 lines of OCaml calling libsodium and liboqs, with Coq extraction for core properties. This minimizes the attack surface: prove the crypto, evolve the rest freely.")))
+      (p "Everything else is policy. The TCB is ~3000 lines of OCaml calling libsodium and liboqs, with Rocq extraction for core properties. This minimizes the attack surface: prove the crypto, evolve the rest freely.")))
 
   (section
     "10. Release Gates"
@@ -353,18 +353,18 @@
       (table
         (header "Version" "Gate" "Requirement")
         (row "v0.9.x" "pre-beta" "Development, unstable APIs")
-        (row "v1.0.0" "beta" "Coq proofs complete, extraction working")
+        (row "v1.0.0" "beta" "Rocq proofs complete, extraction working")
         (row "v2.0.0" "release" "TLA+ model checked, no safety violations"))
       (p "Semantic versioning with verification gates. No version advances without passing its gate."))
 
     (subsection
-      "10.1 Beta Gate: Coq Extraction"
+      "10.1 Beta Gate: Rocq Extraction"
       (p "The TCB must be machine-verified before beta. SpkiTcb.v defines the security model; extraction produces spki_tcb.ml. Hand-written code that 'matches the spec' is not verified — it's aspirational.")
-      (p "The critical property: capability attenuation (tag_intersect only shrinks permissions). The Coq proofs establish this mathematically. Without verified extraction, the trust anchor is unverified.")
+      (p "The critical property: capability attenuation (tag_intersect only shrinks permissions). The Rocq proofs establish this mathematically. Without verified extraction, the trust anchor is unverified.")
       (p "Beta ships when:")
       (list
         (item "All Admitted proofs in SpkiTcb.v are complete")
-        (item "Coq extraction produces working OCaml")
+        (item "Rocq extraction produces working OCaml")
         (item "Extracted code passes test_tcb.ml")))
 
     (subsection
@@ -600,7 +600,7 @@ Cyberspace soup:  Vault objects, content-addressed")
     "Changelog"
     (p "- 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)")
     (p "- 2026-01-22 — Folded designer-notes.scm into memo (open kimono); added call/cc rationale")
-    (p "- 2026-01-21 — Added Release Gates (section 10): Coq for beta, TLA+ for release")
+    (p "- 2026-01-21 — Added Release Gates (section 10): Rocq for beta, TLA+ for release")
     (p "- 2026-01-19 — Added Audit Trail Heritage (section 7.7), moved from Memo-0005")
     (p "- 2026-01-18 — Expanded Why Scheme with homoiconicity rationale (section 1.2)")
     (p "- 2026-01-18 — Added The Koan (section 8.6): complexity serves simplicity")

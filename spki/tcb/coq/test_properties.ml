@@ -1,4 +1,4 @@
-(** Property-based tests for Coq-extracted TCB code
+(** Property-based tests for Rocq-extracted TCB code
 
     Tests algebraic properties that should hold for the verified code:
     - tag_intersect commutativity
@@ -18,7 +18,7 @@ open QCheck2
 let gen_small_bytes : bytes Gen.t =
   Gen.(list_size (int_range 1 8) (int_range 0 255))
 
-(** Generate a char list (Coq string) from OCaml string *)
+(** Generate a char list (Rocq string) from OCaml string *)
 let char_list_of_string s =
   let len = String.length s in
   let rec loop i acc =

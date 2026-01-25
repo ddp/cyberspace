@@ -75,7 +75,7 @@ let hash_public_key public_key =
   sha512_hash public_key
 
 (**
-   TCB Properties (provable in Coq):
+   TCB Properties (provable in Rocq):
 
    1. Signature correctness:
       ∀ keypair message, verify(keypair.public_key, message, sign(keypair.secret_key, message)) = true

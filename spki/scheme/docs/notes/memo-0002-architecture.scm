@@ -39,10 +39,10 @@
     (code "┌─────────────────────────────────────────────────────────────┐\n│                                                             │\n│   TRUSTED COMPUTING BASE (OCaml, ~1000 lines)               │\n│                                                             │\n│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │\n│   │   Ed25519   │  │   SHA-512   │  │   Verify    │         │\n│   │   Sign      │  │   Hash      │  │   Chain     │         │\n│   └─────────────┘  └─────────────┘  └─────────────┘         │\n│                                                             │\n│   That's it. Everything else is policy.                     │\n│                                                             │\n└─────────────────────────────────────────────────────────────┘\n\n                        FFI (tiny surface)\n\n┌─────────────────────────────────────────────────────────────┐\n│                                                             │\n│   EVERYTHING ELSE (Chicken Scheme, unlimited)               │\n│                                                             │\n│   Vault - Audit - Replication - Names - Discovery           │\n│   CLI Tools - API Server - Library - Scripts                │\n│                                                             │\n│   Change it anytime. It's just policy.                      │\n│                                                             │\n└─────────────────────────────────────────────────────────────┘")
     (p "Rationale:")
     (list
-      (item "OCaml: Strong types, formal verification with Coq, compile-time safety")
+      (item "OCaml: Strong types, formal verification with Rocq, compile-time safety")
       (item "Chicken Scheme: Interactive development, S-expressions everywhere, rapid evolution")
       (item "The boundary: Tiny, frozen, proven. The TCB does crypto and nothing else."))
-    (p "A smaller TCB means fewer bugs that can break security. We prove the crypto in Coq. Everything else can evolve freely.")
+    (p "A smaller TCB means fewer bugs that can break security. We prove the crypto in Rocq. Everything else can evolve freely.")
     (subsection
       "2.1 Interface Philosophy"
       (blockquote "English on top, Scheme for everything else.")
@@ -135,7 +135,7 @@
   (section
     "6. Implementation Status"
     (blockquote "We reject kings, presidents and voting. We believe in rough consensus and running code. — Dave Clark, IETF")
-    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory ✓ Federation        ✓ Lamport Clocks\n✓ TLA+ Specs        ◐ Coq Proofs        ✓ AEAD Encryption\n✓ QR Merkle Trees   ✓ FUSE Wormholes    ✓ PQ Signatures")
+    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory ✓ Federation        ✓ Lamport Clocks\n✓ TLA+ Specs        ◐ Rocq Proofs        ✓ AEAD Encryption\n✓ QR Merkle Trees   ✓ FUSE Wormholes    ✓ PQ Signatures")
     (p "Each traces to original research. Each runs. Each is tested."))
   (section
     "7. Security Considerations"
@@ -145,7 +145,7 @@
       (p "The attack surface is limited to ~1000 lines of Scheme calling libsodium. This code is:")
       (list
         (item "Formally specified")
-        (item "Proven in Coq")
+        (item "Proven in Rocq")
         (item "Frozen (rarely changes)"))
       (p "Minimizing the TCB reduces the attack surface to code that can be exhaustively verified, leaving everything else free to evolve without security implications."))
     (subsection
@@ -189,7 +189,7 @@
       (item "Add PQ Signatures to implementation status (pq-crypto.scm complete)")
       (item "Update future work: only mobile agents remain")
       (item "2026-01-24")
-      (item "Update implementation status: add Federation, Lamport Clocks, TLA+, Coq, AEAD")
+      (item "Update implementation status: add Federation, Lamport Clocks, TLA+, Rocq, AEAD")
       (item "Update future work: remove implemented items, add post-quantum and mobile agents")
       (item "Fix TCB description: OCaml → Scheme")
       (item "2026-01-06")

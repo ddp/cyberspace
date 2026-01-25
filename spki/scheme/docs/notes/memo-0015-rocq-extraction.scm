@@ -1,18 +1,18 @@
 (memo
   (number 15)
-  (title "Coq Verification of the Authorization TCB")
+  (title "Rocq Verification of the Authorization TCB")
   (date "January 2026 (2026-01-22T05:17:00Z)")
   (author "Derrell Piper" "ddp@eludom.net")
 
   (abstract
-    (p "This memo specifies the formal verification approach for the SPKI authorization Trusted Computing Base using the Coq proof assistant. We prove authorization correctness, not cryptographic hardness - libsodium handles the latter. The extraction pipeline generates OCaml code that is called from Scheme via FFI."))
+    (p "This memo specifies the formal verification approach for the SPKI authorization Trusted Computing Base using the Rocq proof assistant. We prove authorization correctness, not cryptographic hardness - libsodium handles the latter. The extraction pipeline generates OCaml code that is called from Scheme via FFI."))
 
   (section
     "Motivation"
     (p "The Prime Directive (Memo-0001):")
     (blockquote "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.")
     (p "But even OCaml can have bugs. The TCB handles signature chain verification and authorization decisions. A single bug breaks everything.")
-    (p "Coq provides:")
+    (p "Rocq provides:")
     (list
       (item "Machine-checked proofs: Theorems verified by computer")
       (item "Extraction: Generate OCaml from proofs")
@@ -25,7 +25,7 @@
 │                      CYBERSPACE TCB                       │
 │                                                           │
 │  ┌─────────────────────────────────────────────────────┐  │
-│  │              SpkiTcb.v (Coq Proofs)                 │  │
+│  │              SpkiTcb.v (Rocq Proofs)                 │  │
 │  │                                                     │  │
 │  │  Types: principal, tag, cert, auth_request          │  │
 │  │  Algorithms: tag_intersect, verify_chain, authorize │  │
@@ -130,7 +130,7 @@ dune build                   # Compile extracted + bridge code")
     (code "Extraction Language OCaml.
 Extraction \"spki_tcb_extracted.ml\"
   authorize verify_chain tag_intersect principal_equal ...")
-    (p "The bridge module (spki_tcb.ml) converts between Coq's int list representation and OCaml's native bytes, calling libsodium for cryptographic operations."))
+    (p "The bridge module (spki_tcb.ml) converts between Rocq's int list representation and OCaml's native bytes, calling libsodium for cryptographic operations."))
 
   (section
     "Test Coverage"
@@ -139,7 +139,7 @@ Extraction \"spki_tcb_extracted.ml\"
       (row "test_extracted.ml" "16" "Unit tests: principals, tags, chains")
       (row "test_properties.ml" "11" "Property-based: QCheck random testing")
       (row "test_tcb.exe" "62" "Full TCB: crypto, cookies, audit, FIPS-181"))
-    (p "All tests pass. The property-based tests validate Coq theorems at runtime:")
+    (p "All tests pass. The property-based tests validate Rocq theorems at runtime:")
     (table
       (header "Property" "Generator Constraints")
       (row "principal_equal reflexive/symmetric/transitive" "Random principals")
@@ -161,7 +161,7 @@ Extraction \"spki_tcb_extracted.ml\"
   (section
     "References"
     (references
-      (ref "Coq" 2024 "The Coq Proof Assistant. https://coq.inria.fr/")
+      (ref "Rocq" 2024 "The Rocq Proof Assistant. https://coq.inria.fr/")
       (ref "SPKI" 1999 "RFC 2693: SPKI Certificate Theory")
       (ref "Memo-045" 2026 "Security Architecture")
       (ref "libsodium" 2024 "https://libsodium.org/")))

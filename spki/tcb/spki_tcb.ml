@@ -11,7 +11,7 @@
 
     Everything else (serialization, networking, UI) is in Scheme.
 
-    TCB Guarantees (provable in Coq):
+    TCB Guarantees (provable in Rocq):
     1. Signatures cannot be forged
     2. Certificate chains validate only if all signatures valid
     3. Capability intersection is monotonically decreasing (attenuation only)
@@ -604,7 +604,7 @@ let authorize request root_keys now =
    verify_chain         ↔   verify_chain_correct
    authorize            ↔   authorize_sound
 
-   Theorems proven in Coq (see coq/ directory):
+   Theorems proven in Rocq (see coq/ directory):
 
    1. tag_intersect_comm: tag_intersect t1 t2 = tag_intersect t2 t1
    2. tag_intersect_assoc: associativity

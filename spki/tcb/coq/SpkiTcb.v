@@ -1,4 +1,4 @@
-(** * SPKI Trusted Computing Base - Coq Specification
+(** * SPKI Trusted Computing Base - Rocq Specification
 
     Formal specification and verification of the SPKI TCB.
 

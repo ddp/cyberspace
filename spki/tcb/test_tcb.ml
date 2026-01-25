@@ -1,6 +1,6 @@
 (** TCB Verification Tests
 
-    Empirical tests complementing Coq proofs.
+    Empirical tests complementing Rocq proofs.
     These tests verify:
     1. FFI bindings work correctly
     2. Tag intersection is monotonic

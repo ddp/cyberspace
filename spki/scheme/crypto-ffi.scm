@@ -7,7 +7,7 @@
 ;;; Architecture:
 ;;;   Chicken Scheme → crypto-ffi.scm → libsodium (same as OCaml TCB)
 ;;;
-;;; The OCaml TCB exists for Coq verification.
+;;; The OCaml TCB exists for Rocq verification.
 ;;; The Scheme FFI exists for policy/tools/human-readable code.
 ;;; Both use the same underlying cryptography: libsodium Ed25519.
 
