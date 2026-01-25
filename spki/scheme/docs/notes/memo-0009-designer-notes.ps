@@ -489,15 +489,15 @@ margin topmargin moveto
 (--------------) show newline
 () show newline
 () show newline
-(  Algorithm  Use                       Selection Rationale                                               ) show newline
-(  Ed25519    Primary signatures        Small keys \(32B\), fast, constant-time, no RNG needed for signing  ) show newline
-(  SPHINCS+   Post-quantum \(planned\)    Hash-based, conservative security, stateless                      ) show newline
-(  Dilithium  Post-quantum \(planned\)    Lattice-based, smaller signatures than SPHINCS+, NIST selected    ) show newline
-(  Lamport    Reference implementation  Educational, hash-only security, foundation for SPHINCS+          ) show newline
+(  Algorithm           Use                       Selection Rationale                                               ) show newline
+(  Ed25519             Primary signatures        Small keys \(32B\), fast, constant-time, no RNG needed for signing  ) show newline
+(  SLH-DSA \(SPHINCS+\)  Post-quantum              Hash-based, conservative security, stateless, FIPS 205            ) show newline
+(  ML-DSA \(Dilithium\)  Post-quantum              Lattice-based, smaller signatures than SLH-DSA, FIPS 204          ) show newline
+(  Lamport             Reference implementation  Educational, hash-only security, foundation for SPHINCS+          ) show newline
 () show newline
 (Ed25519 is the current standard. Post-quantum migration uses hybrid) show newline
-(signatures \(Ed25519 + SPHINCS+ or Dilithium\) to preserve security if) show newline
-(either scheme breaks.) show newline
+(signatures \(Ed25519 + SLH-DSA or ML-DSA\) to preserve security if either) show newline
+(scheme breaks. See pq-crypto.scm for implementation.) show newline
 () show newline
 () show newline
 (9.2 Hash Functions) show newline
@@ -612,13 +612,15 @@ margin topmargin moveto
 () show newline
 (The Trusted Computing Base holds only:) show newline
 () show newline
-(  * Ed25519 sign/verify) show newline
+(  * Ed25519 sign/verify \(classical\)) show newline
+(  * ML-DSA-65 sign/verify \(post-quantum, FIPS 204\)) show newline
+(  * SLH-DSA-SHAKE-256s sign/verify \(post-quantum, FIPS 205\)) show newline
 (  * SHA-512 hash) show newline
 (  * Certificate chain verification) show newline
 () show newline
-(Everything else is policy. The TCB is ~1000 lines of OCaml calling) show newline
-(libsodium, proven in Coq, frozen. This minimizes the attack surface:) show newline
-(prove the crypto, evolve the rest freely.) show newline
+(Everything else is policy. The TCB is ~3000 lines of OCaml calling) show newline
+(libsodium and liboqs, with Rocq extraction for core properties. This) show newline
+(minimizes the attack surface: prove the crypto, evolve the rest freely.) show newline
 () show newline
 () show newline
 (------------------------------------------------------------------------) show newline
@@ -634,28 +636,28 @@ margin topmargin moveto
 () show newline
 (  Version  Gate      Requirement                               ) show newline
 (  v0.9.x   pre-beta  Development, unstable APIs                ) show newline
-(  v1.0.0   beta      Coq proofs complete, extraction working   ) show newline
+(  v1.0.0   beta      Rocq proofs complete, extraction working  ) show newline
 (  v2.0.0   release   TLA+ model checked, no safety violations  ) show newline
 () show newline
 (Semantic versioning with verification gates. No version advances without) show newline
 (passing its gate.) show newline
 () show newline
 () show newline
-(10.1 Beta Gate: Coq Extraction) show newline
-(------------------------------) show newline
+(10.1 Beta Gate: Rocq Extraction) show newline
+(-------------------------------) show newline
 () show newline
 (The TCB must be machine-verified before beta. SpkiTcb.v defines the) show newline
 (security model; extraction produces spki_tcb.ml. Hand-written code that) show newline
 ('matches the spec' is not verified — it's aspirational.) show newline
 () show newline
 (The critical property: capability attenuation \(tag_intersect only) show newline
-(shrinks permissions\). The Coq proofs establish this mathematically.) show newline
+(shrinks permissions\). The Rocq proofs establish this mathematically.) show newline
 (Without verified extraction, the trust anchor is unverified.) show newline
 () show newline
 (Beta ships when:) show newline
 () show newline
 (  * All Admitted proofs in SpkiTcb.v are complete) show newline
-(  * Coq extraction produces working OCaml) show newline
+(  * Rocq extraction produces working OCaml) show newline
 (  * Extracted code passes test_tcb.ml) show newline
 () show newline
 () show newline
@@ -1144,7 +1146,7 @@ margin topmargin moveto
 (- 2026-01-22 — Folded designer-notes.scm into memo \(open kimono\);) show newline
 (added call/cc rationale) show newline
 () show newline
-(- 2026-01-21 — Added Release Gates \(section 10\): Coq for beta, TLA+) show newline
+(- 2026-01-21 — Added Release Gates \(section 10\): Rocq for beta, TLA+) show newline
 (for release) show newline
 () show newline
 (- 2026-01-19 — Added Audit Trail Heritage \(section 7.7\), moved from) show newline

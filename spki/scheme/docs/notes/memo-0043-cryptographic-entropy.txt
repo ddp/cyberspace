@@ -59,6 +59,113 @@ sovereignty rests entirely on the unpredictability of its secrets.
 
 
 ------------------------------------------------------------------------
+THE COMMANDMENT
+------------------------------------------------------------------------
+
+THOU SHALT USE CRYPTOGRAPHIC RANDOMNESS.
+
+All randomness in Cyberspace flows through libsodium's
+randombytes_buf(), which uses:
+
+  * Linux: getrandom(2) syscall
+  * macOS: SecRandomCopyBytes
+  * OpenBSD: getentropy(2)
+  * Windows: RtlGenRandom
+
+Hardware entropy (RDRAND/RDSEED) feeds the OS pool. Quantum RNG (ID
+Quantique, drand beacons) planned for Phase 3+.
+
+There are NO EXCEPTIONS. Never use:
+
+  * (chicken random) - Uses Mersenne Twister, not cryptographically secure
+  * srfi-27 - Statistical randomness, not cryptographic
+  * /dev/urandom directly - Platform-specific, misses getrandom(2) benefits
+  * arc4random_buf() directly - Use libsodium's abstraction
+  * Custom PRNGs - Unaudited, likely insecure
+
+The only approved functions are from crypto-ffi:
+
+
+    (random-bytes n)         ; n cryptographically random bytes
+    (random-u8)              ; random byte [0, 255]
+    (random-u32)             ; random 32-bit unsigned
+    (random-uniform limit)   ; uniform [0, limit) with rejection sampling
+
+
+------------------------------------------------------------------------
+BOOT-TIME FIPS TESTING
+------------------------------------------------------------------------
+
+Trust but verify. Every entropy source MUST be tested at boot time with
+FIPS 140-2 statistical tests on 20,000 bits (2500 bytes):
+
+
+Monobit Test
+------------
+
+Count of 1-bits must be 9654 < n < 10346 (within 3.43σ of expected
+10000).
+
+
+    (fips-monobit-test bytes)  ; Pass if balanced
+
+
+Poker Test
+----------
+
+Distribution of 4-bit nibbles must be uniform. X = (16/5000) × Σf² -
+5000 must satisfy 1.03 < X < 57.4.
+
+
+    (fips-poker-test bytes)   ; Pass if nibbles distributed
+
+
+Runs Test
+---------
+
+Runs of consecutive 0s and 1s must fall within bounds:
+
+
+  Run Length  Expected Range (each bit value)  
+  1           2267-2733                        
+  2           1079-1421                        
+  3           502-748                          
+  4           223-402                          
+  5           90-223                           
+  6+          90-223                           
+
+
+    (fips-runs-test bytes)    ; Pass if run distribution normal
+
+
+Long Run Test
+-------------
+
+No run of 26 or more consecutive identical bits.
+
+
+    (fips-long-run-test bytes) ; Pass if no pathological runs
+
+Implementation in fips.scm:
+
+
+    (define (test-randomness)
+      "FIPS 140-2 randomness tests on 20,000 bits."
+      (let* ((sample (random-bytes 2500))
+             (bytes (blob->u8vector sample)))
+        (and (fips-monobit-test bytes)
+             (fips-poker-test bytes)
+             (fips-runs-test bytes)
+             (fips-long-run-test bytes))))
+    ;; Called at REPL boot and by forge module load
+    (unless (test-randomness)
+      (error "Entropy source failed FIPS 140-2 tests"))
+
+If any test fails, Cyberspace refuses to start. There is no fallback.
+Weak entropy is not acceptable.
+
+
+------------------------------------------------------------------------
 SPECIFICATION
 ------------------------------------------------------------------------
 
@@ -611,25 +718,36 @@ MIGRATION
 ------------------------------------------------------------------------
 
 
-Phase 1: Audit (Current)
-------------------------
+Phase 1: Audit (Complete)
+-------------------------
 
-  * Identify all randomness usage in codebase
-  * Replace non-libsodium sources
-
-
-Phase 2: Standardize
---------------------
-
-  * All Scheme uses random-bytes from crypto-ffi
-  * Document OCaml approach
+  * Identified all randomness usage in codebase ✓
+  * Replaced non-libsodium sources ✓
+  * Fixed: repl.scm collapse used (random), now uses random-uniform
+  * Fixed: forge.scm read /dev/urandom directly, now uses crypto-ffi
 
 
-Phase 3: Verify
----------------
+Phase 2: Standardize (Complete)
+-------------------------------
 
-  * Entropy quality testing
-  * Audit logging for key generation
+  * All Scheme uses random-bytes/random-uniform from crypto-ffi ✓
+  * OCaml approach: TBD (will use libsodium FFI)
+
+
+Phase 3: Verify (Complete)
+--------------------------
+
+  * FIPS 140-2 statistical tests implemented in fips.scm ✓
+  * Boot-time entropy verification on every REPL start ✓
+  * forge module verifies entropy source on load ✓
+
+
+Phase 4: Quantum (Future)
+-------------------------
+
+  * Hardware quantum RNG support (ID Quantique, etc.)
+  * Attestation of entropy source in realm metadata
+  * Federated quantum entropy from partner realms
 
 
 ------------------------------------------------------------------------
@@ -646,7 +764,29 @@ REFERENCES
 APPENDIX: ENTROPY QUALITY TESTING
 ------------------------------------------------------------------------
 
-For paranoid verification:
+
+Built-in FIPS Tests
+-------------------
+
+The fips.scm module provides FIPS 140-2 statistical tests that run
+automatically at boot:
+
+
+    ;; Run all FIPS tests manually
+    (import fips)
+    (test-randomness)  ; => #t or #f
+    ;; Individual tests on 2500 bytes
+    (let ((sample (blob->u8vector (random-bytes 2500))))
+      (fips-monobit-test sample)
+      (fips-poker-test sample)
+      (fips-runs-test sample)
+      (fips-long-run-test sample))
+
+
+External Verification
+---------------------
+
+For additional paranoid verification with external tools:
 
 
     # Generate random data

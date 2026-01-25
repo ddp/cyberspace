@@ -257,11 +257,11 @@
 <table>
 <tr><th>Algorithm</th><th>Use</th><th>Selection Rationale</th></tr>
 <tr><td>Ed25519</td><td>Primary signatures</td><td>Small keys (32B), fast, constant-time, no RNG needed for signing</td></tr>
-<tr><td>SPHINCS+</td><td>Post-quantum (planned)</td><td>Hash-based, conservative security, stateless</td></tr>
-<tr><td>Dilithium</td><td>Post-quantum (planned)</td><td>Lattice-based, smaller signatures than SPHINCS+, NIST selected</td></tr>
+<tr><td>SLH-DSA (SPHINCS+)</td><td>Post-quantum</td><td>Hash-based, conservative security, stateless, FIPS 205</td></tr>
+<tr><td>ML-DSA (Dilithium)</td><td>Post-quantum</td><td>Lattice-based, smaller signatures than SLH-DSA, FIPS 204</td></tr>
 <tr><td>Lamport</td><td>Reference implementation</td><td>Educational, hash-only security, foundation for SPHINCS+</td></tr>
 </table>
-<p>Ed25519 is the current standard. Post-quantum migration uses hybrid signatures (Ed25519 + SPHINCS+ or Dilithium) to preserve security if either scheme breaks.</p>
+<p>Ed25519 is the current standard. Post-quantum migration uses hybrid signatures (Ed25519 + SLH-DSA or ML-DSA) to preserve security if either scheme breaks. See pq-crypto.scm for implementation.</p>
 <h3>9.2 Hash Functions</h3>
 <table>
 <tr><th>Algorithm</th><th>Use</th><th>Selection Rationale</th></tr>
@@ -318,11 +318,13 @@
 <h3>9.9 The TCB Principle</h3>
 <p>The Trusted Computing Base holds only:</p>
 <ul>
-<li>Ed25519 sign/verify</li>
+<li>Ed25519 sign/verify (classical)</li>
+<li>ML-DSA-65 sign/verify (post-quantum, FIPS 204)</li>
+<li>SLH-DSA-SHAKE-256s sign/verify (post-quantum, FIPS 205)</li>
 <li>SHA-512 hash</li>
 <li>Certificate chain verification</li>
 </ul>
-<p>Everything else is policy. The TCB is ~1000 lines of OCaml calling libsodium, proven in Coq, frozen. This minimizes the attack surface: prove the crypto, evolve the rest freely.</p>
+<p>Everything else is policy. The TCB is ~3000 lines of OCaml calling libsodium and liboqs, with Rocq extraction for core properties. This minimizes the attack surface: prove the crypto, evolve the rest freely.</p>
 </section>
 <section>
 <h2>10. Release Gates</h2>
@@ -331,17 +333,17 @@
 <table>
 <tr><th>Version</th><th>Gate</th><th>Requirement</th></tr>
 <tr><td>v0.9.x</td><td>pre-beta</td><td>Development, unstable APIs</td></tr>
-<tr><td>v1.0.0</td><td>beta</td><td>Coq proofs complete, extraction working</td></tr>
+<tr><td>v1.0.0</td><td>beta</td><td>Rocq proofs complete, extraction working</td></tr>
 <tr><td>v2.0.0</td><td>release</td><td>TLA+ model checked, no safety violations</td></tr>
 </table>
 <p>Semantic versioning with verification gates. No version advances without passing its gate.</p>
-<h3>10.1 Beta Gate: Coq Extraction</h3>
+<h3>10.1 Beta Gate: Rocq Extraction</h3>
 <p>The TCB must be machine-verified before beta. SpkiTcb.v defines the security model; extraction produces spki_tcb.ml. Hand-written code that 'matches the spec' is not verified — it's aspirational.</p>
-<p>The critical property: capability attenuation (tag_intersect only shrinks permissions). The Coq proofs establish this mathematically. Without verified extraction, the trust anchor is unverified.</p>
+<p>The critical property: capability attenuation (tag_intersect only shrinks permissions). The Rocq proofs establish this mathematically. Without verified extraction, the trust anchor is unverified.</p>
 <p>Beta ships when:</p>
 <ul>
 <li>All Admitted proofs in SpkiTcb.v are complete</li>
-<li>Coq extraction produces working OCaml</li>
+<li>Rocq extraction produces working OCaml</li>
 <li>Extracted code passes test_tcb.ml</li>
 </ul>
 <h3>10.2 Release Gate: TLA+ Specification</h3>
@@ -564,7 +566,7 @@ Cyberspace soup:  Vault objects, content-addressed
 <h2>Changelog</h2>
 <p>- 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)</p>
 <p>- 2026-01-22 — Folded designer-notes.scm into memo (open kimono); added call/cc rationale</p>
-<p>- 2026-01-21 — Added Release Gates (section 10): Coq for beta, TLA+ for release</p>
+<p>- 2026-01-21 — Added Release Gates (section 10): Rocq for beta, TLA+ for release</p>
 <p>- 2026-01-19 — Added Audit Trail Heritage (section 7.7), moved from Memo-0005</p>
 <p>- 2026-01-18 — Expanded Why Scheme with homoiconicity rationale (section 1.2)</p>
 <p>- 2026-01-18 — Added The Koan (section 8.6): complexity serves simplicity</p>

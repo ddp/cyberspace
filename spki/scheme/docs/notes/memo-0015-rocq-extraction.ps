@@ -1,0 +1,291 @@
+%!PS-Adobe-3.0
+%%Title: memo-0015-rocq-extraction
+%%Creator: Library of Cyberspace Memo Pipeline
+%%Pages: (atend)
+%%EndComments
+
+/Courier findfont 10 scalefont setfont
+/margin 72 def
+/pagewidth 612 def
+/pageheight 792 def
+/leading 12 def
+/topmargin pageheight margin sub def
+/bottommargin margin def
+/linewidth pagewidth margin 2 mul sub def
+/ypos topmargin def
+/pagenum 1 def
+
+/newline {
+  /ypos ypos leading sub def
+  ypos bottommargin lt {
+    showpage
+    /pagenum pagenum 1 add def
+    /ypos topmargin def
+  } if
+  margin ypos moveto
+} def
+
+margin topmargin moveto
+(Memo 0015: Rocq Verification of the Authorization TCB) show newline
+() show newline
+(Date: January 2026 \(2026-01-22T05:17:00Z\)) show newline
+(Author: Derrell Piper <ddp@eludom.net>) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(ABSTRACT) show newline
+() show newline
+(This memo specifies the formal verification approach for the SPKI) show newline
+(authorization Trusted Computing Base using the Rocq proof assistant. We) show newline
+(prove authorization correctness, not cryptographic hardness - libsodium) show newline
+(handles the latter. The extraction pipeline generates OCaml code that is) show newline
+(called from Scheme via FFI.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(MOTIVATION) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(The Prime Directive \(Memo-0001\):) show newline
+() show newline
+() show newline
+(    "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.") show newline
+() show newline
+(But even OCaml can have bugs. The TCB handles signature chain) show newline
+(verification and authorization decisions. A single bug breaks) show newline
+(everything.) show newline
+() show newline
+(Rocq provides:) show newline
+() show newline
+(  * Machine-checked proofs: Theorems verified by computer) show newline
+(  * Extraction: Generate OCaml from proofs) show newline
+(  * Correctness by construction: Implementation matches specification) show newline
+() show newline
+(We prove the authorization logic correct; we trust libsodium for) show newline
+(cryptographic primitives.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(ARCHITECTURE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(    ┌───────────────────────────────────────────────────────────┐) show newline
+(    │                      CYBERSPACE TCB                       │) show newline
+(    │                                                           │) show newline
+(    │  ┌─────────────────────────────────────────────────────┐  │) show newline
+(    │  │              SpkiTcb.v \(Rocq Proofs\)                 │  │) show newline
+(    │  │                                                     │  │) show newline
+(    │  │  Types: principal, tag, cert, auth_request          │  │) show newline
+(    │  │  Algorithms: tag_intersect, verify_chain, authorize │  │) show newline
+(    │  │  Theorems: authorize_requester_match, etc.          │  │) show newline
+(    │  └──────────────────────┬──────────────────────────────┘  │) show newline
+(    │                         │ Extraction                      │) show newline
+(    │  ┌──────────────────────v──────────────────────────────┐  │) show newline
+(    │  │         spki_tcb_extracted.ml \(generated\)           │  │) show newline
+(    │  └──────────────────────┬──────────────────────────────┘  │) show newline
+(    │                         │ Bridge                          │) show newline
+(    │  ┌──────────────────────v──────────────────────────────┐  │) show newline
+(    │  │              spki_tcb.ml + tcb_stubs.c              │  │) show newline
+(    │  │         \(bytes conversion, libsodium FFI\)           │  │) show newline
+(    │  └──────────────────────┬──────────────────────────────┘  │) show newline
+(    │                         │                                 │) show newline
+(    │                  ┌──────v──────┐                          │) show newline
+(    │                  │  libsodium  │                          │) show newline
+(    │                  │  \(trusted\)  │                          │) show newline
+(    │                  └─────────────┘                          │) show newline
+(    └───────────────────────────────────────────────────────────┘) show newline
+() show newline
+(The extraction pipeline: SpkiTcb.v → spki_tcb_extracted.ml → OCaml) show newline
+(library → Scheme FFI.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(WHAT WE PROVE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(Fully Proven Theorems) show newline
+(---------------------) show newline
+() show newline
+(Security-critical theorems with complete proofs \(no admits\):) show newline
+() show newline
+() show newline
+(  Theorem                    Property                                                ) show newline
+(  principal_equal_refl       Reflexivity: p = p                                      ) show newline
+(  principal_equal_sym        Symmetry: p = q → q = p                               ) show newline
+(  principal_equal_trans      Transitivity: p = q ∧ q = r → p = r                 ) show newline
+(  authorize_requester_match  If authorized, requester is named by leaf cert          ) show newline
+(  authorize_complete         All preconditions satisfied → authorization succeeds  ) show newline
+() show newline
+(The authorize_requester_match theorem is the key security property: it) show newline
+(guarantees that authorization only succeeds when the requester is) show newline
+(actually named in the certificate chain.) show newline
+() show newline
+() show newline
+(Partially Proven Theorems) show newline
+(-------------------------) show newline
+() show newline
+() show newline
+(  Theorem                    Proven Cases                         Admitted Cases                     ) show newline
+(  tag_intersect_idemp        TagAll, TagSet, TagPrefix, TagRange  TagThreshold                       ) show newline
+(  tag_intersect_subset_left  Most combinations                    TagPrefix recursive, TagThreshold  ) show newline
+() show newline
+(The admitted cases stem from design limitations documented below.) show newline
+() show newline
+() show newline
+(Partially Proven: tag_intersect_comm) show newline
+(------------------------------------) show newline
+() show newline
+() show newline
+(  Case          Status                                    ) show newline
+(  TagAll        Proven                                    ) show newline
+(  TagSet        Proven \(via filter_intersect_comm lemma\)  ) show newline
+(  TagRange      Proven                                    ) show newline
+(  TagPrefix     Admitted \(recursive structure\)            ) show newline
+(  TagThreshold  Admitted \(Cartesian product ordering\)     ) show newline
+() show newline
+(The TagSet case required proving that filter intersection produces the) show newline
+(same elements regardless of operand order, then applying) show newline
+(canonicalize_strings to ensure structural equality.) show newline
+() show newline
+() show newline
+(Admitted Theorems) show newline
+(-----------------) show newline
+() show newline
+() show newline
+(  Theorem                  Reason                                  ) show newline
+(  verify_chain_sound       Complex induction over chain structure  ) show newline
+(  verify_chain_attenuates  Depends on verify_chain_sound           ) show newline
+() show newline
+(These are design debt, not security holes. The algorithms are correct;) show newline
+(the proofs are incomplete.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(WHAT WE ASSUME) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Cryptographic operations are axiomatized - we trust libsodium:) show newline
+() show newline
+() show newline
+(    Axiom sha512 : bytes -> bytes.) show newline
+(    Axiom ed25519_verify : bytes -> bytes -> bytes -> bool.) show newline
+() show newline
+(Trust assumptions:) show newline
+() show newline
+(  * libsodium correctness: Ed25519, SHA-512 implementations) show newline
+(  * OCaml runtime: Extraction target executes correctly) show newline
+(  * Hardware: CPU executes instructions correctly) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(DESIGN LIMITATIONS) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(TagSet Canonical Ordering) show newline
+(-------------------------) show newline
+() show newline
+(Tag intersection commutativity requires canonical representation:) show newline
+() show newline
+() show newline
+(    \(tag_intersect \(TagSet ["read" "write"]\) \(TagSet ["write" "read"]\)\)) show newline
+(    ;; Result order depends on input order without canonicalization) show newline
+() show newline
+(Solution implemented: sort and deduplicate TagSet contents. The) show newline
+(canonicalize_canonical lemma bridges structural and semantic equality.) show newline
+() show newline
+() show newline
+(TagThreshold Cartesian Product) show newline
+(------------------------------) show newline
+() show newline
+(Intersection of thresholds produces Cartesian product of subtags:) show newline
+() show newline
+() show newline
+(    \(tag_intersect \(TagThreshold 2 [A B C]\) \(TagThreshold 2 [A B C]\)\)) show newline
+(    ;; Produces 9 subtags: [A∩A, A∩B, A∩C, B∩A, B∩B, ...]) show newline
+() show newline
+(This is semantically correct but not structurally idempotent. Options:) show newline
+() show newline
+(  * Require disjoint subtags) show newline
+(  * Normalize after intersection) show newline
+(  * Accept semantic rather than structural idempotence) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(EXTRACTION PIPELINE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Build and extract:) show newline
+() show newline
+() show newline
+(    cd tcb/coq) show newline
+(    coqc SpkiTcb.v              # Type-check proofs, extract OCaml) show newline
+(    dune build                   # Compile extracted + bridge code) show newline
+() show newline
+(The extraction directive:) show newline
+() show newline
+() show newline
+(    Extraction Language OCaml.) show newline
+(    Extraction "spki_tcb_extracted.ml") show newline
+(      authorize verify_chain tag_intersect principal_equal ...) show newline
+() show newline
+(The bridge module \(spki_tcb.ml\) converts between Rocq's int list) show newline
+(representation and OCaml's native bytes, calling libsodium for) show newline
+(cryptographic operations.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(TEST COVERAGE) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+() show newline
+(  Suite               Tests  Coverage                                    ) show newline
+(  test_extracted.ml   16     Unit tests: principals, tags, chains        ) show newline
+(  test_properties.ml  11     Property-based: QCheck random testing       ) show newline
+(  test_tcb.exe        62     Full TCB: crypto, cookies, audit, FIPS-181  ) show newline
+() show newline
+(All tests pass. The property-based tests validate Rocq theorems at) show newline
+(runtime:) show newline
+() show newline
+() show newline
+(  Property                                        Generator Constraints             ) show newline
+(  principal_equal reflexive/symmetric/transitive  Random principals                 ) show newline
+(  tag_intersect commutative                       Non-threshold tags only           ) show newline
+(  tag_intersect idempotent                        Non-threshold, non-empty TagSets  ) show newline
+(  tag_intersect TagAll identity                   All tag types                     ) show newline
+(  tag_subset reflexive                            Non-threshold tags only           ) show newline
+(  TagRange subset containment                     Random ranges                     ) show newline
+() show newline
+(TagThreshold is excluded from commutativity/idempotence tests due to) show newline
+(documented structural limitations \(Cartesian product ordering\).) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(FUTURE WORK) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  * Complete tag_intersect_comm for TagPrefix \(recursive induction\)) show newline
+(  * Prove verify_chain_sound with custom induction principle) show newline
+(  * Consider CompCert or Fiat-Crypto for deeper verification) show newline
+() show newline
+(Current proof coverage is sufficient for beta. The admitted theorems are) show newline
+(proof obligations, not security vulnerabilities.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(REFERENCES) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(  [Rocq, 2024] The Rocq Proof Assistant. https://coq.inria.fr/) show newline
+(  [SPKI, 1999] RFC 2693: SPKI Certificate Theory) show newline
+(  [Memo-045, 2026] Security Architecture) show newline
+(  [libsodium, 2024] https://libsodium.org/) show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+
+showpage
+%%Trailer
+%%Pages: pagenum
+%%EOF

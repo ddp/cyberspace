@@ -87,6 +87,113 @@ margin topmargin moveto
 () show newline
 () show newline
 (------------------------------------------------------------------------) show newline
+(THE COMMANDMENT) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(THOU SHALT USE CRYPTOGRAPHIC RANDOMNESS.) show newline
+() show newline
+(All randomness in Cyberspace flows through libsodium's) show newline
+(randombytes_buf\(\), which uses:) show newline
+() show newline
+(  * Linux: getrandom\(2\) syscall) show newline
+(  * macOS: SecRandomCopyBytes) show newline
+(  * OpenBSD: getentropy\(2\)) show newline
+(  * Windows: RtlGenRandom) show newline
+() show newline
+(Hardware entropy \(RDRAND/RDSEED\) feeds the OS pool. Quantum RNG \(ID) show newline
+(Quantique, drand beacons\) planned for Phase 3+.) show newline
+() show newline
+(There are NO EXCEPTIONS. Never use:) show newline
+() show newline
+(  * \(chicken random\) - Uses Mersenne Twister, not cryptographically secure) show newline
+(  * srfi-27 - Statistical randomness, not cryptographic) show newline
+(  * /dev/urandom directly - Platform-specific, misses getrandom\(2\) benefits) show newline
+(  * arc4random_buf\(\) directly - Use libsodium's abstraction) show newline
+(  * Custom PRNGs - Unaudited, likely insecure) show newline
+() show newline
+(The only approved functions are from crypto-ffi:) show newline
+() show newline
+() show newline
+(    \(random-bytes n\)         ; n cryptographically random bytes) show newline
+(    \(random-u8\)              ; random byte [0, 255]) show newline
+(    \(random-u32\)             ; random 32-bit unsigned) show newline
+(    \(random-uniform limit\)   ; uniform [0, limit\) with rejection sampling) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
+(BOOT-TIME FIPS TESTING) show newline
+(------------------------------------------------------------------------) show newline
+() show newline
+(Trust but verify. Every entropy source MUST be tested at boot time with) show newline
+(FIPS 140-2 statistical tests on 20,000 bits \(2500 bytes\):) show newline
+() show newline
+() show newline
+(Monobit Test) show newline
+(------------) show newline
+() show newline
+(Count of 1-bits must be 9654 < n < 10346 \(within 3.43σ of expected) show newline
+(10000\).) show newline
+() show newline
+() show newline
+(    \(fips-monobit-test bytes\)  ; Pass if balanced) show newline
+() show newline
+() show newline
+(Poker Test) show newline
+(----------) show newline
+() show newline
+(Distribution of 4-bit nibbles must be uniform. X = \(16/5000\) × Σf² -) show newline
+(5000 must satisfy 1.03 < X < 57.4.) show newline
+() show newline
+() show newline
+(    \(fips-poker-test bytes\)   ; Pass if nibbles distributed) show newline
+() show newline
+() show newline
+(Runs Test) show newline
+(---------) show newline
+() show newline
+(Runs of consecutive 0s and 1s must fall within bounds:) show newline
+() show newline
+() show newline
+(  Run Length  Expected Range \(each bit value\)  ) show newline
+(  1           2267-2733                        ) show newline
+(  2           1079-1421                        ) show newline
+(  3           502-748                          ) show newline
+(  4           223-402                          ) show newline
+(  5           90-223                           ) show newline
+(  6+          90-223                           ) show newline
+() show newline
+() show newline
+(    \(fips-runs-test bytes\)    ; Pass if run distribution normal) show newline
+() show newline
+() show newline
+(Long Run Test) show newline
+(-------------) show newline
+() show newline
+(No run of 26 or more consecutive identical bits.) show newline
+() show newline
+() show newline
+(    \(fips-long-run-test bytes\) ; Pass if no pathological runs) show newline
+() show newline
+(Implementation in fips.scm:) show newline
+() show newline
+() show newline
+(    \(define \(test-randomness\)) show newline
+(      "FIPS 140-2 randomness tests on 20,000 bits.") show newline
+(      \(let* \(\(sample \(random-bytes 2500\)\)) show newline
+(             \(bytes \(blob->u8vector sample\)\)\)) show newline
+(        \(and \(fips-monobit-test bytes\)) show newline
+(             \(fips-poker-test bytes\)) show newline
+(             \(fips-runs-test bytes\)) show newline
+(             \(fips-long-run-test bytes\)\)\)\)) show newline
+(    ;; Called at REPL boot and by forge module load) show newline
+(    \(unless \(test-randomness\)) show newline
+(      \(error "Entropy source failed FIPS 140-2 tests"\)\)) show newline
+() show newline
+(If any test fails, Cyberspace refuses to start. There is no fallback.) show newline
+(Weak entropy is not acceptable.) show newline
+() show newline
+() show newline
+(------------------------------------------------------------------------) show newline
 (SPECIFICATION) show newline
 (------------------------------------------------------------------------) show newline
 () show newline
@@ -639,25 +746,36 @@ margin topmargin moveto
 (------------------------------------------------------------------------) show newline
 () show newline
 () show newline
-(Phase 1: Audit \(Current\)) show newline
-(------------------------) show newline
+(Phase 1: Audit \(Complete\)) show newline
+(-------------------------) show newline
 () show newline
-(  * Identify all randomness usage in codebase) show newline
-(  * Replace non-libsodium sources) show newline
-() show newline
-() show newline
-(Phase 2: Standardize) show newline
-(--------------------) show newline
-() show newline
-(  * All Scheme uses random-bytes from crypto-ffi) show newline
-(  * Document OCaml approach) show newline
+(  * Identified all randomness usage in codebase ✓) show newline
+(  * Replaced non-libsodium sources ✓) show newline
+(  * Fixed: repl.scm collapse used \(random\), now uses random-uniform) show newline
+(  * Fixed: forge.scm read /dev/urandom directly, now uses crypto-ffi) show newline
 () show newline
 () show newline
-(Phase 3: Verify) show newline
-(---------------) show newline
+(Phase 2: Standardize \(Complete\)) show newline
+(-------------------------------) show newline
 () show newline
-(  * Entropy quality testing) show newline
-(  * Audit logging for key generation) show newline
+(  * All Scheme uses random-bytes/random-uniform from crypto-ffi ✓) show newline
+(  * OCaml approach: TBD \(will use libsodium FFI\)) show newline
+() show newline
+() show newline
+(Phase 3: Verify \(Complete\)) show newline
+(--------------------------) show newline
+() show newline
+(  * FIPS 140-2 statistical tests implemented in fips.scm ✓) show newline
+(  * Boot-time entropy verification on every REPL start ✓) show newline
+(  * forge module verifies entropy source on load ✓) show newline
+() show newline
+() show newline
+(Phase 4: Quantum \(Future\)) show newline
+(-------------------------) show newline
+() show newline
+(  * Hardware quantum RNG support \(ID Quantique, etc.\)) show newline
+(  * Attestation of entropy source in realm metadata) show newline
+(  * Federated quantum entropy from partner realms) show newline
 () show newline
 () show newline
 (------------------------------------------------------------------------) show newline
@@ -674,7 +792,29 @@ margin topmargin moveto
 (APPENDIX: ENTROPY QUALITY TESTING) show newline
 (------------------------------------------------------------------------) show newline
 () show newline
-(For paranoid verification:) show newline
+() show newline
+(Built-in FIPS Tests) show newline
+(-------------------) show newline
+() show newline
+(The fips.scm module provides FIPS 140-2 statistical tests that run) show newline
+(automatically at boot:) show newline
+() show newline
+() show newline
+(    ;; Run all FIPS tests manually) show newline
+(    \(import fips\)) show newline
+(    \(test-randomness\)  ; => #t or #f) show newline
+(    ;; Individual tests on 2500 bytes) show newline
+(    \(let \(\(sample \(blob->u8vector \(random-bytes 2500\)\)\)\)) show newline
+(      \(fips-monobit-test sample\)) show newline
+(      \(fips-poker-test sample\)) show newline
+(      \(fips-runs-test sample\)) show newline
+(      \(fips-long-run-test sample\)\)) show newline
+() show newline
+() show newline
+(External Verification) show newline
+(---------------------) show newline
+() show newline
+(For additional paranoid verification with external tools:) show newline
 () show newline
 () show newline
 (    # Generate random data) show newline

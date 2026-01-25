@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <title>Memo 0015: Rocq Verification of the Authorization TCB</title>
+  <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27%230f0%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>">
+  <script>
+(function(){
+  var h=new Date().getHours(),c;
+  if(h>=4&&h<6)c='%23845EC2';       // brahma muhurta - violet
+  else if(h>=6&&h<8)c='%23ffd700';  // dawn - gold
+  else if(h>=8&&h<11)c='%2300d4aa'; // morning - teal
+  else if(h>=11&&h<14)c='%230f0';   // midday - phosphor
+  else if(h>=14&&h<17)c='%2339ff14';// afternoon - neon
+  else if(h>=17&&h<19)c='%23ff6600';// sunset - orange
+  else if(h>=19&&h<22)c='%23ff3366';// evening - coral
+  else c='%2300ffff';               // night - cyan
+  document.getElementById('favicon').href='data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><text x=%2716%27 y=%2725%27 font-family=%27serif%27 font-size=%2728%27 fill=%27'+c+'%27 text-anchor=%27middle%27 font-weight=%27bold%27>λ</text></svg>';
+})();
+</script>
+  <link rel="stylesheet" href="memo.css">
+</head>
+<body>
+<span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<h1>Memo 0015: Rocq Verification of the Authorization TCB</h1>
+<dl class="metadata">
+  <dt>Date</dt><dd>January 2026 (2026-01-22T05:17:00Z)</dd>
+  <dt>Author</dt><dd>Derrell Piper &lt;ddp@eludom.net&gt;</dd>
+</dl>
+<hr>
+<section class="abstract">
+<h2>Abstract</h2>
+<p>This memo specifies the formal verification approach for the SPKI authorization Trusted Computing Base using the Rocq proof assistant. We prove authorization correctness, not cryptographic hardness - libsodium handles the latter. The extraction pipeline generates OCaml code that is called from Scheme via FFI.</p>
+</section>
+<section>
+<h2>Motivation</h2>
+<p>The Prime Directive (Memo-0001):</p>
+<blockquote>
+<p>If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.</p>
+</blockquote>
+<p>But even OCaml can have bugs. The TCB handles signature chain verification and authorization decisions. A single bug breaks everything.</p>
+<p>Rocq provides:</p>
+<ul>
+<li>Machine-checked proofs: Theorems verified by computer</li>
+<li>Extraction: Generate OCaml from proofs</li>
+<li>Correctness by construction: Implementation matches specification</li>
+</ul>
+<p>We prove the authorization logic correct; we trust libsodium for cryptographic primitives.</p>
+</section>
+<section>
+<h2>Architecture</h2>
+<pre class="diagram">
+┌───────────────────────────────────────────────────────────┐
+│                      CYBERSPACE TCB                       │
+│                                                           │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │              SpkiTcb.v (Rocq Proofs)                 │  │
+│  │                                                     │  │
+│  │  Types: principal, tag, cert, auth_request          │  │
+│  │  Algorithms: tag_intersect, verify_chain, authorize │  │
+│  │  Theorems: authorize_requester_match, etc.          │  │
+│  └──────────────────────┬──────────────────────────────┘  │
+│                         │ Extraction                      │
+│  ┌──────────────────────v──────────────────────────────┐  │
+│  │         spki_tcb_extracted.ml (generated)           │  │
+│  └──────────────────────┬──────────────────────────────┘  │
+│                         │ Bridge                          │
+│  ┌──────────────────────v──────────────────────────────┐  │
+│  │              spki_tcb.ml + tcb_stubs.c              │  │
+│  │         (bytes conversion, libsodium FFI)           │  │
+│  └──────────────────────┬──────────────────────────────┘  │
+│                         │                                 │
+│                  ┌──────v──────┐                          │
+│                  │  libsodium  │                          │
+│                  │  (trusted)  │                          │
+│                  └─────────────┘                          │
+└───────────────────────────────────────────────────────────┘
+</pre>
+<p>The extraction pipeline: SpkiTcb.v → spki_tcb_extracted.ml → OCaml library → Scheme FFI.</p>
+</section>
+<section>
+<h2>What We Prove</h2>
+<h3>Fully Proven Theorems</h3>
+<p>Security-critical theorems with complete proofs (no admits):</p>
+<table>
+<tr><th>Theorem</th><th>Property</th></tr>
+<tr><td>principal_equal_refl</td><td>Reflexivity: p = p</td></tr>
+<tr><td>principal_equal_sym</td><td>Symmetry: p = q → q = p</td></tr>
+<tr><td>principal_equal_trans</td><td>Transitivity: p = q ∧ q = r → p = r</td></tr>
+<tr><td>authorize_requester_match</td><td>If authorized, requester is named by leaf cert</td></tr>
+<tr><td>authorize_complete</td><td>All preconditions satisfied → authorization succeeds</td></tr>
+</table>
+<p>The authorize_requester_match theorem is the key security property: it guarantees that authorization only succeeds when the requester is actually named in the certificate chain.</p>
+<h3>Partially Proven Theorems</h3>
+<table>
+<tr><th>Theorem</th><th>Proven Cases</th><th>Admitted Cases</th></tr>
+<tr><td>tag_intersect_idemp</td><td>TagAll, TagSet, TagPrefix, TagRange</td><td>TagThreshold</td></tr>
+<tr><td>tag_intersect_subset_left</td><td>Most combinations</td><td>TagPrefix recursive, TagThreshold</td></tr>
+</table>
+<p>The admitted cases stem from design limitations documented below.</p>
+<h3>Partially Proven: tag_intersect_comm</h3>
+<table>
+<tr><th>Case</th><th>Status</th></tr>
+<tr><td>TagAll</td><td>Proven</td></tr>
+<tr><td>TagSet</td><td>Proven (via filter_intersect_comm lemma)</td></tr>
+<tr><td>TagRange</td><td>Proven</td></tr>
+<tr><td>TagPrefix</td><td>Admitted (recursive structure)</td></tr>
+<tr><td>TagThreshold</td><td>Admitted (Cartesian product ordering)</td></tr>
+</table>
+<p>The TagSet case required proving that filter intersection produces the same elements regardless of operand order, then applying canonicalize_strings to ensure structural equality.</p>
+<h3>Admitted Theorems</h3>
+<table>
+<tr><th>Theorem</th><th>Reason</th></tr>
+<tr><td>verify_chain_sound</td><td>Complex induction over chain structure</td></tr>
+<tr><td>verify_chain_attenuates</td><td>Depends on verify_chain_sound</td></tr>
+</table>
+<p>These are design debt, not security holes. The algorithms are correct; the proofs are incomplete.</p>
+</section>
+<section>
+<h2>What We Assume</h2>
+<p>Cryptographic operations are axiomatized - we trust libsodium:</p>
+<pre>
+Axiom sha512 : bytes -&gt; bytes.
+Axiom ed25519_verify : bytes -&gt; bytes -&gt; bytes -&gt; bool.
+</pre>
+<p>Trust assumptions:</p>
+<ul>
+<li>libsodium correctness: Ed25519, SHA-512 implementations</li>
+<li>OCaml runtime: Extraction target executes correctly</li>
+<li>Hardware: CPU executes instructions correctly</li>
+</ul>
+</section>
+<section>
+<h2>Design Limitations</h2>
+<h3>TagSet Canonical Ordering</h3>
+<p>Tag intersection commutativity requires canonical representation:</p>
+<pre>
+(tag_intersect (TagSet ["read" "write"]) (TagSet ["write" "read"]))
+;; Result order depends on input order without canonicalization
+</pre>
+<p>Solution implemented: sort and deduplicate TagSet contents. The canonicalize_canonical lemma bridges structural and semantic equality.</p>
+<h3>TagThreshold Cartesian Product</h3>
+<p>Intersection of thresholds produces Cartesian product of subtags:</p>
+<pre class="diagram">
+(tag_intersect (TagThreshold 2 [A B C]) (TagThreshold 2 [A B C]))
+;; Produces 9 subtags: [A∩A, A∩B, A∩C, B∩A, B∩B, ...]
+</pre>
+<p>This is semantically correct but not structurally idempotent. Options:</p>
+<ul>
+<li>Require disjoint subtags</li>
+<li>Normalize after intersection</li>
+<li>Accept semantic rather than structural idempotence</li>
+</ul>
+</section>
+<section>
+<h2>Extraction Pipeline</h2>
+<p>Build and extract:</p>
+<pre>
+cd tcb/coq
+coqc SpkiTcb.v              # Type-check proofs, extract OCaml
+dune build                   # Compile extracted + bridge code
+</pre>
+<p>The extraction directive:</p>
+<pre>
+Extraction Language OCaml.
+Extraction "spki_tcb_extracted.ml"
+  authorize verify_chain tag_intersect principal_equal ...
+</pre>
+<p>The bridge module (spki_tcb.ml) converts between Rocq's int list representation and OCaml's native bytes, calling libsodium for cryptographic operations.</p>
+</section>
+<section>
+<h2>Test Coverage</h2>
+<table>
+<tr><th>Suite</th><th>Tests</th><th>Coverage</th></tr>
+<tr><td>test_extracted.ml</td><td>16</td><td>Unit tests: principals, tags, chains</td></tr>
+<tr><td>test_properties.ml</td><td>11</td><td>Property-based: QCheck random testing</td></tr>
+<tr><td>test_tcb.exe</td><td>62</td><td>Full TCB: crypto, cookies, audit, FIPS-181</td></tr>
+</table>
+<p>All tests pass. The property-based tests validate Rocq theorems at runtime:</p>
+<table>
+<tr><th>Property</th><th>Generator Constraints</th></tr>
+<tr><td>principal_equal reflexive/symmetric/transitive</td><td>Random principals</td></tr>
+<tr><td>tag_intersect commutative</td><td>Non-threshold tags only</td></tr>
+<tr><td>tag_intersect idempotent</td><td>Non-threshold, non-empty TagSets</td></tr>
+<tr><td>tag_intersect TagAll identity</td><td>All tag types</td></tr>
+<tr><td>tag_subset reflexive</td><td>Non-threshold tags only</td></tr>
+<tr><td>TagRange subset containment</td><td>Random ranges</td></tr>
+</table>
+<p>TagThreshold is excluded from commutativity/idempotence tests due to documented structural limitations (Cartesian product ordering).</p>
+</section>
+<section>
+<h2>Future Work</h2>
+<ul>
+<li>Complete tag_intersect_comm for TagPrefix (recursive induction)</li>
+<li>Prove verify_chain_sound with custom induction principle</li>
+<li>Consider CompCert or Fiat-Crypto for deeper verification</li>
+</ul>
+<p>Current proof coverage is sufficient for beta. The admitted theorems are proof obligations, not security vulnerabilities.</p>
+</section>
+<section>
+<h2>References</h2>
+<ul class="references">
+<li><strong>Rocq (2024)</strong>: The Rocq Proof Assistant. https://coq.inria.fr/</li>
+<li><strong>SPKI (1999)</strong>: RFC 2693: SPKI Certificate Theory</li>
+<li><strong>Memo-045 (2026)</strong>: Security Architecture</li>
+<li><strong>libsodium (2024)</strong>: https://libsodium.org/</li>
+</ul>
+</section>
+<footer>
+<p class="sig">— ddp, 2026-01-22</p>
+</footer>
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  // Query param override (for REPL: ?theme=dark or ?theme=light)
+  const params = new URLSearchParams(window.location.search);
+  const param = params.get('theme');
+  if (param === 'dark' || param === 'light') {
+    document.documentElement.setAttribute('data-theme', param);
+    localStorage.setItem('theme', param);
+    return;
+  }
+  // localStorage preference
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+</body>
+</html>

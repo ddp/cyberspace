@@ -461,15 +461,15 @@ properties. This section documents the selections and their rationale.
 --------------
 
 
-  Algorithm  Use                       Selection Rationale                                               
-  Ed25519    Primary signatures        Small keys (32B), fast, constant-time, no RNG needed for signing  
-  SPHINCS+   Post-quantum (planned)    Hash-based, conservative security, stateless                      
-  Dilithium  Post-quantum (planned)    Lattice-based, smaller signatures than SPHINCS+, NIST selected    
-  Lamport    Reference implementation  Educational, hash-only security, foundation for SPHINCS+          
+  Algorithm           Use                       Selection Rationale                                               
+  Ed25519             Primary signatures        Small keys (32B), fast, constant-time, no RNG needed for signing  
+  SLH-DSA (SPHINCS+)  Post-quantum              Hash-based, conservative security, stateless, FIPS 205            
+  ML-DSA (Dilithium)  Post-quantum              Lattice-based, smaller signatures than SLH-DSA, FIPS 204          
+  Lamport             Reference implementation  Educational, hash-only security, foundation for SPHINCS+          
 
 Ed25519 is the current standard. Post-quantum migration uses hybrid
-signatures (Ed25519 + SPHINCS+ or Dilithium) to preserve security if
-either scheme breaks.
+signatures (Ed25519 + SLH-DSA or ML-DSA) to preserve security if either
+scheme breaks. See pq-crypto.scm for implementation.
 
 
 9.2 Hash Functions
@@ -584,13 +584,15 @@ Quantique, drand beacons) planned for Phase 3+.
 
 The Trusted Computing Base holds only:
 
-  * Ed25519 sign/verify
+  * Ed25519 sign/verify (classical)
+  * ML-DSA-65 sign/verify (post-quantum, FIPS 204)
+  * SLH-DSA-SHAKE-256s sign/verify (post-quantum, FIPS 205)
   * SHA-512 hash
   * Certificate chain verification
 
-Everything else is policy. The TCB is ~1000 lines of OCaml calling
-libsodium, proven in Coq, frozen. This minimizes the attack surface:
-prove the crypto, evolve the rest freely.
+Everything else is policy. The TCB is ~3000 lines of OCaml calling
+libsodium and liboqs, with Rocq extraction for core properties. This
+minimizes the attack surface: prove the crypto, evolve the rest freely.
 
 
 ------------------------------------------------------------------------
@@ -606,28 +608,28 @@ Two formal verification milestones gate Cyberspace releases:
 
   Version  Gate      Requirement                               
   v0.9.x   pre-beta  Development, unstable APIs                
-  v1.0.0   beta      Coq proofs complete, extraction working   
+  v1.0.0   beta      Rocq proofs complete, extraction working  
   v2.0.0   release   TLA+ model checked, no safety violations  
 
 Semantic versioning with verification gates. No version advances without
 passing its gate.
 
 
-10.1 Beta Gate: Coq Extraction
-------------------------------
+10.1 Beta Gate: Rocq Extraction
+-------------------------------
 
 The TCB must be machine-verified before beta. SpkiTcb.v defines the
 security model; extraction produces spki_tcb.ml. Hand-written code that
 'matches the spec' is not verified — it's aspirational.
 
 The critical property: capability attenuation (tag_intersect only
-shrinks permissions). The Coq proofs establish this mathematically.
+shrinks permissions). The Rocq proofs establish this mathematically.
 Without verified extraction, the trust anchor is unverified.
 
 Beta ships when:
 
   * All Admitted proofs in SpkiTcb.v are complete
-  * Coq extraction produces working OCaml
+  * Rocq extraction produces working OCaml
   * Extracted code passes test_tcb.ml
 
 
@@ -1116,7 +1118,7 @@ CHANGELOG
 - 2026-01-22 — Folded designer-notes.scm into memo (open kimono);
 added call/cc rationale
 
-- 2026-01-21 — Added Release Gates (section 10): Coq for beta, TLA+
+- 2026-01-21 — Added Release Gates (section 10): Rocq for beta, TLA+
 for release
 
 - 2026-01-19 — Added Audit Trail Heritage (section 7.7), moved from
