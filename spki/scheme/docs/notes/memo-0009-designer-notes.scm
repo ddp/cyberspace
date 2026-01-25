@@ -169,7 +169,7 @@
       "7.7 Audit Trail Heritage"
       (p "The cryptographic audit trail (Memo-0005) descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:")
       (list
-        (item "SECURITYPOLICY bit 7 propagation")
+        (item "SECURITY_POLICY bit 7 propagation")
         (item "Intrusion detection state replicated cluster-wide")
         (item "Breakin attempts detected across all nodes as one")
         (item "TLV-encoded object store")
