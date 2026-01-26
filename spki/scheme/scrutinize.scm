@@ -141,27 +141,31 @@
         (missing-imports '()))
     (for-each
       (lambda (f)
-        (let* ((content (with-input-from-file f read-string))
-               ;; Find all (import ...) blocks and extract module names
-               (imports (irregex-fold
-                          "\\(import ([^)]+)\\)"
-                          (lambda (i m acc)
-                            (cons (irregex-match-substring m 1) acc))
-                          '() content)))
-          ;; Check for custom module imports that don't exist
+        (let* ((lines (with-input-from-file f read-lines))
+               (line-num 0))
+          ;; Scan line by line for simple import patterns
           (for-each
-            (lambda (imp-block)
-              (irregex-fold
-                "\\b([a-z]+-[a-z0-9-]+)\\b"
-                (lambda (i m acc)
-                  (let ((mod (irregex-match-substring m 1)))
-                    (when (and (not (string-prefix? "chicken" mod))
-                               (not (string-prefix? "srfi-" mod))
-                               (not (file-exists? (string-append mod ".scm")))
-                               (not (member mod '("scheme"))))
-                      (set! missing-imports (cons (cons f mod) missing-imports)))))
-                #f imp-block))
-            imports)))
+            (lambda (line)
+              (set! line-num (+ line-num 1))
+              ;; Look for direct module imports: (import mod-name or (import mod-name)
+              ;; Skip lines with (except, (chicken, (only - those have different semantics
+              (when (and (irregex-search "^\\(import\\s" line)
+                         (not (irregex-search "\\(except\\s" line))
+                         (not (irregex-search "\\(chicken\\s" line))
+                         (not (irregex-search "\\(only\\s" line)))
+                ;; Strip comments before scanning for module names
+                (let ((code-only (car (string-split line ";"))))
+                  (irregex-fold
+                    "\\b([a-z]+-[a-z0-9-]+)\\b"
+                    (lambda (i m acc)
+                      (let ((mod (irregex-match-substring m 1)))
+                        (when (and (not (string-prefix? "chicken" mod))
+                                   (not (string-prefix? "srfi-" mod))
+                                   (not (file-exists? (string-append mod ".scm")))
+                                   (not (member mod '("scheme"))))
+                          (set! missing-imports (cons (cons f mod) missing-imports)))))
+                    #f code-only))))
+            lines)))
       modules)
     (if (null? missing-imports)
         (ok! "All imports resolve to existing modules")
@@ -399,7 +403,9 @@
             (lambda (line)
               (set! line-num (+ line-num 1))
               ;; Match (define (name ...) or (define name
-              (let ((m (irregex-search "^\\s*\\(define\\s+\\(?([a-zA-Z][a-zA-Z0-9*+/<=>!?-]*)" line)))
+              ;; Only top-level (no leading whitespace) to avoid flagging local defines
+              ;; Include : and _ for namespaced identifiers like cap:read, O_RDONLY
+              (let ((m (irregex-search "^\\(define\\s+\\(?([a-zA-Z][a-zA-Z0-9*+/<=>!?:_-]*)" line)))
                 (when m
                   (let ((name (irregex-match-substring m 1)))
                     (if (hash-table-exists? defines name)

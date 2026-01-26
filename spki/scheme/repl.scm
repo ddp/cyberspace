@@ -60,8 +60,6 @@
 ;;; cs --version            - version info
 ;;; cs --help               - usage
 
-(define *cli-options* '())  ; parsed options alist
-
 (define (parse-cli-option arg)
   "Parse a --option or --option=value argument. Returns (option . value) or #f."
   (cond
@@ -76,6 +74,9 @@
   "Parse command line arguments into options alist."
   (filter-map parse-cli-option args))
 
+;; Parse arguments at load time
+(define *cli-options* (parse-cli-args (command-line-arguments)))
+
 (define (cli-option name)
   "Get CLI option value, or #f if not present."
   (let ((opt (assoc name *cli-options*)))
@@ -84,9 +85,6 @@
 (define (cli-option? name)
   "Check if CLI option is present."
   (and (cli-option name) #t))
-
-;; Parse arguments immediately
-(set! *cli-options* (parse-cli-args (command-line-arguments)))
 
 ;;; --help
 (when (cli-option? "help")
@@ -1038,11 +1036,6 @@
              (byte-val (string->number hex-byte 16)))
         (u8vector-set! vec i byte-val)))))
 
-(define (clear)
-  "Clear screen (ANSI escape)"
-  (display "\x1b[2J\x1b[H")
-  (banner))
-
 (module-end! "core")
 (module-start! "memos")
 
@@ -1712,7 +1705,6 @@
 ;; Synonyms for the uninitiated
 (define (huh?) (about))
 (define (what?) (about))
-(define (describe) (about))
 
 ;;; ============================================================
 ;;; Memo-011: Byzantine Consensus
@@ -3315,313 +3307,9 @@
   (print "  Cache size:   " (hash-table-size *opt-memo*)))
 
 ;;; ============================================================
-;;; Help
+;;; Cluster Status (banner helper)
 ;;; ============================================================
-
-(define (help)
-  "Show available commands"
-  (print "
-Cyberspace REPL - Available Commands
-
-  Command Mode (no parens needed):
-    status                         Vault status
-    commit \"message\"               Commit changes
-    release \"1.0\"                  Create release
-    keys                           List keys
-    keygen                         Generate keypair
-    soup                           List objects
-    peers                          List nodes
-    help                           This help
-    clear                          Clear screen
-    quit                           Exit
-
-  Comma Commands:
-    ,e [file]                      Edit (Emacs or Electric Pencil)
-    ,pencil [file]                 Electric Pencil (built-in)
-    ,teco [file]                   TECO (DEC heritage)
-    ,schemacs [file]               Schemacs (Emacs-style)
-    ,hd file                       Hex dump (xxd, terminal)
-    ,hext file                     Hex edit (HexEdit, GUI)
-    ,l file                        Load Scheme file
-    ,q                             Quit
-
-  Scheme Mode (full power):
-    (define x 42)                  Define variables
-    (map f list)                   Full Scheme available
-    (+ 1 2)                        Expressions
-
-  Object State (Memo-040):
-    (chaotic thing)              Mark thing as chaotic (in flux)
-    (commit-thing thing)         Commit: chaotic → quiescent
-    (chaotic? thing)             Is thing chaotic?
-    (quiescent? thing)           Is thing quiescent?
-    (thing-state thing)          Get state (chaotic|quiescent)
-    (thing-status thing)         Full status display
-
-  Persistence (Memo-040):
-    (persist thing)              Mark thing persistent (vault-bound)
-    (ephemeral thing)            Mark thing ephemeral (no promise)
-    (persistent? thing)          Is thing persistent?
-    (ephemeral? thing)           Is thing ephemeral?
-    (thing-durability thing)     Get durability
-    (flush-persistence!)         Migrate queued things to vault
-
-  Memos (Memo-043):
-    (memo-create title)          Create local memo
-    (memo-create t scope: 'federation)  Federation scope
-    (memo-create t category: 'experimental)
-    (memo-commit memo-id)        Commit memo (chaotic → quiescent)
-    (memo-persist memo-id)       Mark memo persistent
-    (memo-promote id 'federation) Promote scope
-    (memo-list)                  List all memos
-    (memo-list 'local)           Filter by scope
-    (memo-show memo-id)          Show memo details
-
-  Vault Operations:
-    (seal-commit \"message\")         Commit staged changes
-    (seal-release \"1.0.0\")          Create a release
-    (seal-archive \"1.0.0\")          Archive a release
-    (seal-archive \"1.0.0\" format: 'zstd-age)
-    (seal-restore \"file.archive\")   Restore from archive
-    (seal-history)                   Show commit history
-    (seal-update)                    Pull latest changes
-    (vault-config 'key)              Get config value
-    (vault-config 'key value)        Set config value
-    (vault-init signing-key: key)    Initialize vault
-
-  Inspection:
-    (seal-inspect \"file.archive\")   Show security/migration properties
-    (seal-inspect \"1.0.0\")          Inspect a release version
-    (seal-inspect obj verify-key: k) Verify signatures during inspection
-
-  Debugging (Dylan-style):
-    (inspect obj)                    Tree-view of any object
-    (i obj)                          Short alias for inspect
-    (bt)                             Show backtrace after error
-    (backtrace)                      Full backtrace with limit
-    (frame N)                        Inspect stack frame N
-    (exception-info)                 Last exception details
-
-  Object Soup (NewtonOS-style):
-    (soup)                         List all objects
-    (soup 'archives)               Filter by type
-    (soup \"*.pub\")                 Glob pattern (* = any, ? = single)
-    (soup #/regex/)                Regular expression
-    (soup 'keys \"alice*\")          Type + pattern
-    (soup?)                        Show query syntax help
-    (complete \"gen\")               Complete partial name
-
-  Cryptography:
-    (ed25519-keypair)                Generate keypair (pub priv)
-    (sha512-hash blob)               Hash data
-    (ed25519-sign key msg)           Sign message
-    (ed25519-verify pub msg sig)     Verify signature
-
-  Post-Quantum Migration (Memo-059):
-    (pq-status)                      Show PQ migration status
-    (pq-upgrade \"keyname\")           Upgrade Ed25519 key to hybrid
-    (pq-add-key \"name\" 'ml-dsa-65)   Add PQ key (ml-dsa-65|sphincs+|hybrid)
-    (pq-set-mode 'hybrid)            Set mode (ed25519|hybrid|pq-only)
-    (pq-coverage)                    Audit trail PQ signature coverage
-    (keyring-generate \"n\" 'hybrid)   Generate hybrid key directly
-    (supported-algorithms)           List supported algorithms
-
-  Audit Trail:
-    (audit-append actor: k action: a) Add audit entry
-    (audit-read)                      Read audit trail
-
-  Certificates:
-    (create-cert issuer subject tag) Create SPKI cert
-    (sign-cert cert key)             Sign certificate
-    (verify-signed-cert cert key)    Verify certificate
-
-  Node Roles (Memo-037):
-    (node-probe)                     Probe system capabilities
-    (node-role)                      Show current role
-    (node-role 'witness)             Set role (coordinator/full/witness/archiver/edge)
-    (node-can? 'seal-commit)         Check if operation permitted
-    (node-announce)                  Announce role to peers
-
-  Lazy Clustering (Memo-016):
-    (lazy-join peer uri: u key: k) Join cluster
-    (lazy-leave peer)              Leave cluster
-    (lazy-push peer)               Push to peer
-    (lazy-pull peer)               Pull from peer
-    (lazy-sync peer)               Bidirectional sync
-    (lazy-status)                  Show cluster status
-    (lazy-queue)                   Show pending sync
-    (lazy-resolve ver prefer: p)   Resolve conflict
-
-  Federation (Memo-010):
-    (federate \"peer-url\")            Establish federation
-    (federate-status)                Show federation peers
-    (federate-replicate \"url\")       Replicate with peer
-
-  Byzantine Consensus (Memo-011):
-    (consensus-propose value)        Propose for consensus
-    (consensus-vote id 'accept)      Vote on proposal
-    (consensus-status)               Show proposals
-
-  Lamport Clocks (Memo-012):
-    (lamport-tick)                   Increment clock
-    (lamport-send)                   Get send timestamp
-    (lamport-receive ts)             Update on receive
-    (lamport-clock)                  Get current value
-
-  Content-Addressed Storage (Memo-020):
-    (content-address data)           Compute hash address
-    (content-put data)               Store by hash
-    (content-get addr)               Retrieve by hash
-
-  Capability Delegation (Memo-021):
-    (delegate cap principal)         Delegate capability
-    (delegate-chain delegations)     Verify chain
-    (delegate-verify d p action)     Check authorization
-
-  Agent Sandboxing (Memo-023):
-    (sandbox \"name\" capabilities: c) Create sandbox
-    (sandbox-run \"name\" code)        Execute in sandbox
-    (sandbox-destroy \"name\")         Remove sandbox
-
-  Mobile Agents (Memo-035):
-    (tunnel destination)             Move agent to realm
-    (observe resource)               Observe (collapse state)
-    (entangle a1 a2)                 Correlate agents
-    (teleport state from to)         Transfer state
-    (decohere agent)                 Cleanup/terminate
-    (superpose states)               Create superposition
-    (collapse superposition)         Resolve to one state
-
-  Quorum Voting (Memo-036):
-    (quorum-propose q options)       Start vote
-    (quorum-vote id choice)          Cast vote (HE encrypted)
-    (quorum-tally id)                Tally results
-    (quorum-status)                  Show proposals
-
-  Local Inference (Memo-038):
-    (inference-server)               Get/set Ollama URL
-    (inference-models)               List available models
-    (inference prompt model: m)      Run LLM inference
-    (inference-embed text)           Generate embeddings
-
-  Wormholes (Memo-041):
-    (wormhole-open \"~/Space\")        Open wormhole fs <-> vault
-    (wormhole-open p capabilities: capability:read-only)
-    (wormhole-open p locked: #t)     Open locked (requires unlock)
-    (wormhole-open p auth-required: '(delete))  Step-up auth
-    (wormhole-close path)            Close wormhole
-    (wormhole-lock path)             Lock (pause operations)
-    (wormhole-unlock path auth: tok) Unlock with authentication
-    (wormhole-caps path)             Show capabilities
-    (wormhole-delegate path capabilities recipient)
-    (wormholes)                      List active wormholes
-    (wormhole-security)              Display security properties
-    (wormhole-verify wormhole)       Verify security requirements
-    (make-network-wormhole h p id)   Create network wormhole
-    (fs-import path)                 Import with full metadata
-    (fs-export hash path)            Export, restore metadata
-    (fs-sync vault-path fs-path)     Bidirectional sync
-    (manifest-list)                  Show manifest entries
-
-  Secure Erasure (Memo-040):
-    (secure-clear! buffer)           Zeroize buffer (blobs only)
-    (key-destroy! key-id)            Destroy key material
-    (object-erase! hash)             Overwrite + delete object
-    (secure-erase-encrypted hash)    Destroy via key destruction
-    (session-key-destroy! id)        Destroy session key
-    (erase-audit)                    Show erasure audit trail
-
-  Node Enrollment (Memo-044):
-    (enroll-request 'name)           Request enrollment (FIPS-181)
-    (enroll-listen)                  Listen for enrollment requests
-    (enroll-approve req key)         Approve enrollment
-    (introspect-system)              Full system introspection
-    (introspect-hardware)            Hardware config
-    (introspect-network)             Network interfaces
-    (introspect-storage)             Storage info
-
-  mDNS Discovery (Memo-044):
-    (mdns-announce name pubkey)      Broadcast enrollment request
-    (mdns-listen handler)            Listen for mDNS announcements
-    (mdns-query service)             Query for service
-    (announce-presence n k)          Start mDNS presence
-    (discover-peers)                 Find peers on network
-
-  Bloom Filters (Memo-020):
-    (make-blocked-bloom n fpp)       Create blocked Bloom filter
-    (blocked-bloom-add! bf item)     Add item to filter
-    (blocked-bloom-contains? bf i)   Test membership
-    (blocked-bloom-merge bf1 bf2)    Merge two filters
-    (blocked-bloom-serialize bf)     Serialize for network
-    (blocked-bloom-deserialize b)    Deserialize from network
-
-  Merkle Catalog (Memo-020):
-    (catalog-build hashes)           Build Merkle tree of hashes
-    (catalog-root cat)               Get root hash
-    (catalog-diff local remote)      Find differing subtrees
-    (catalog-proof cat hash)         Generate inclusion proof
-    (catalog-verify-proof proof)     Verify inclusion proof
-
-  Anti-Entropy Gossip (Memo-010):
-    (gossip-round peers)             One round of gossip
-    (gossip-start interval peers)    Start gossip daemon
-    (gossip-stop)                    Stop gossip daemon
-    (gossip-status)                  Show gossip statistics
-    (gossip-sync peer)               Full sync with peer
-
-  Compilation & Replication:
-    (compile-source source)          Full compilation pipeline
-    (source->optimized source)       Optimize only
-    (optimized->compiled opt)        Compile optimized form
-    (define-lazy name hash)          Register lazy compilation
-    (force-compile name)             Force compile lazy def
-    (fetch-strategy latency-ms)      Choose fetch strategy
-    (fetch-with-strategy hash ms)    Fetch with latency awareness
-    (replicate-compiled hash peer)   Push compiled to peer
-    (compile-status)                 Show compilation stats
-    (hot-code threshold)             List frequently accessed
-
-  Code Optimization:
-    (optimize expr)                  Full optimization pipeline
-    (normalize expr)                 Alpha-normalize only
-    (const-fold expr)                Constant folding
-    (eliminate-dead expr)            Dead code elimination
-    (code-hash expr)                 Hash of optimized form
-    (code-equivalent? a b)           Semantic equivalence test
-
-  Capability Sets:
-    capability:read-only             Read, stat, readdir, xattr-read
-    capability:read-write            Read, write, create, chmod, mkdir
-    capability:full                  All capabilities including admin
-    capability:backup                Minimal for backup (read-only)
-    capability:synchronize           For bidirectional sync
-
-  Requirements:
-    brew install fuse-t              FUSE-T (recommended, no kext)
-    brew install macfuse             macFUSE (requires kext)
-    brew install ollama              Local LLM inference
-
-  Utilities:
-    (clear)                          Clear screen (or ^L)
-    (blob->hex blob)                 Convert blob to hex
-    (hex->blob \"deadbeef\")           Convert hex to blob
-    (help)                           Show this help
-
-  Library Documentation:
-    ,memo                            Show memo catalog
-    ,memo N                          View memo N as text
-    ,memo N html                     Open memo N in browser
-    ,memo N ps                       Open memo N in Preview
-    ,memo N all                      Open all formats
-    ,memo build                      Regenerate all memos
-    ,memo N build                    Regenerate memo N
-
-  Config Keys:
-    'signing-key      Ed25519 private key (64 bytes)
-    'archive-format   'tarball | 'bundle | 'cryptographic | 'zstd-age
-    'age-recipients   List of age public keys
-    'age-identity     Path to age identity file
-"))
+;; Note: (help) with topic system is defined later in the file
 
 ;; Banner with status: nodes, cluster, replication
 (define *cluster-nodes* '())      ; known nodes
