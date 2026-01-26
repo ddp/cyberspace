@@ -7393,45 +7393,54 @@ See: Memo-0000 Declaration of Cyberspace
       (begin
         (display prompt)
         (flush-output)
-        (tty-set-raw)
-        (let ((c (tty-raw-char)))
-          (tty-set-cooked)
-          (cond
-            ;; EOF
-            ((< c 0) #f)
-            ;; Immediate shortcuts (no Enter needed) - prompt already shown, just echo char
-            ((= c 46)  ; .
-             (display ".\n")
-             ".")
-            ((= c 63)  ; ?
-             (display "?\n")
-             "?")
-            ;; Comma - clear line, let lineage redraw with initial
-            ((= c 44)  ; ,
-             (display "\x1b[2K\r")  ; ANSI clear line + carriage return
-             (let ((line (lineage#lineage-with-initial prompt ",")))
-               (when line (repl-history-add line))
-               (and line (strip-ansi line))))
-            ;; ESC = arrow key or other escape sequence
-            ;; Clear line, defer to lineage for history navigation
-            ((= c 27)
-             (display "\x1b[2K\r")
-             (let ((line (lineage#lineage prompt)))
-               (when line (repl-history-add line))
-               (and line (strip-ansi line))))
-            ;; Ctrl-D = EOF
-            ((= c 4) #f)
-            ;; Ctrl-C = cancel
-            ((= c 3)
-             (newline)
-             "")
-            ;; Regular char - clear line, let lineage redraw with initial
-            (else
-             (display "\x1b[2K\r")
-             (let* ((initial (string (integer->char c)))
-                    (line (lineage#lineage-with-initial prompt initial)))
-               (when line (repl-history-add line))
-               (and line (strip-ansi line)))))))))
+        ;; Loop in raw mode to handle DEL/BS at empty prompt (ignore and wait)
+        (let read-char ()
+          (tty-set-raw)
+          (let ((c (tty-raw-char)))
+            (tty-set-cooked)
+            (cond
+              ;; EOF
+              ((< c 0) #f)
+              ;; DEL/BS at prompt start - ignore, stay on line, wait for real input
+              ((or (= c 127) (= c 8))
+               (read-char))
+              ;; Immediate shortcuts (no Enter needed) - prompt already shown
+              ((= c 46)  ; .
+               (display ".\n")
+               ".")
+              ((= c 63)  ; ?
+               (display "?\n")
+               "?")
+              ;; Comma - newline, lineage on fresh line with initial
+              ((= c 44)  ; ,
+               (newline)
+               (let ((line (lineage#lineage-with-initial prompt ",")))
+                 (when line (repl-history-add line))
+                 (and line (strip-ansi line))))
+              ;; ESC = arrow key or other escape sequence
+              ;; Newline, lineage on fresh line for history navigation
+              ((= c 27)
+               (newline)
+               (let ((line (lineage#lineage prompt)))
+                 (when line (repl-history-add line))
+                 (and line (strip-ansi line))))
+              ;; Ctrl-D = EOF
+              ((= c 4) #f)
+              ;; Ctrl-C = cancel
+              ((= c 3)
+               (newline)
+               "")
+              ;; Enter on empty line - newline, return empty (loop shows next prompt)
+              ((or (= c 10) (= c 13))
+               (newline)
+               "")
+              ;; Regular char - newline, lineage on fresh line with initial
+              (else
+               (newline)
+               (let* ((initial (string (integer->char c)))
+                      (line (lineage#lineage-with-initial prompt initial)))
+                 (when line (repl-history-add line))
+                 (and line (strip-ansi line))))))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
