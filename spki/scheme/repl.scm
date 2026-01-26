@@ -968,7 +968,7 @@
 (import capability)
 (import (except auto-enroll enrollment-status))
 (import ui)
-(import (except inspector describe *inspector-enabled*))
+(import (except inspector describe))
 (import (except portal count-vault-items))
 (import forum)
 (import (except display clear terminal-height vt100-reverse vt100-normal vt100-clear-line))
@@ -7410,14 +7410,14 @@ See: Memo-0000 Declaration of Cyberspace
              "?")
             ;; Comma - clear line, let lineage redraw with initial
             ((= c 44)  ; ,
-             (display "\r")  ; return to line start
+             (display "\x1b[2K\r")  ; ANSI clear line + carriage return
              (let ((line (lineage#lineage-with-initial prompt ",")))
                (when line (repl-history-add line))
                (and line (strip-ansi line))))
             ;; ESC = arrow key or other escape sequence
             ;; Clear line, defer to lineage for history navigation
             ((= c 27)
-             (display "\r")
+             (display "\x1b[2K\r")
              (let ((line (lineage#lineage prompt)))
                (when line (repl-history-add line))
                (and line (strip-ansi line))))
@@ -7429,7 +7429,7 @@ See: Memo-0000 Declaration of Cyberspace
              "")
             ;; Regular char - clear line, let lineage redraw with initial
             (else
-             (display "\r")
+             (display "\x1b[2K\r")
              (let* ((initial (string (integer->char c)))
                     (line (lineage#lineage-with-initial prompt initial)))
                (when line (repl-history-add line))
