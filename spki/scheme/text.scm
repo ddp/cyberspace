@@ -58,6 +58,14 @@
    content-exists?   ; check if hash exists in vault
    load-content      ; low-level: load by hash (any format)
 
+   ;; Named refs with versioning
+   seal-as           ; seal with friendly name
+   unseal-named      ; unseal by name (optional @version)
+   ref-list          ; list all named refs
+   ref-history       ; version history for a name
+   ref-current       ; current hash for a name
+   ref-delete!       ; delete a named ref
+
    ;; For editors
    text-gap-buffer  ; expose internal for low-level access
    text-clear-modified!  ; mark as saved (for file operations)
@@ -773,5 +781,131 @@
       (error "Content integrity failure" hash computed-hash))
     (set-text-source-hash! t hash)
     t))
+
+;;; ============================================================
+;;; Named Refs - Human-friendly names with versioning
+;;; ============================================================
+;;;
+;;; Refs provide human-readable names that point to content hashes.
+;;; History is stored directly in ref files as s-expressions.
+;;;
+;;; Storage: .vault/refs/<name> contains (hash1 hash2 ...) newest first
+;;;
+;;; Examples:
+;;;   (seal-as t "notes")       ; seal with name
+;;;   (unseal-named "notes")    ; load current
+;;;   (unseal-named "notes@2")  ; load version 2
+;;;   (unseal-named "notes@-1") ; load previous
+
+(define (refs-path)
+  "Path to refs directory"
+  (make-pathname *vault-path* "refs"))
+
+(define (ref-file name)
+  "Path to a specific ref file"
+  (make-pathname (refs-path) name))
+
+(define (ensure-refs-dir!)
+  "Create refs directory if needed"
+  (let ((path (refs-path)))
+    (unless (directory-exists? path)
+      (create-directory path #t))))
+
+(define (ref-load name)
+  "Load ref history list, or empty list if not found"
+  (let ((path (ref-file name)))
+    (if (file-exists? path)
+        (let ((data (with-input-from-file path read)))
+          ;; Ensure it's a proper list
+          (if (and (list? data) (every string? data))
+              data
+              '()))
+        '())))
+
+(define (every pred lst)
+  "Check if predicate holds for all elements"
+  (or (null? lst)
+      (and (pred (car lst)) (every pred (cdr lst)))))
+
+(define (ref-save! name history)
+  "Save ref history list"
+  (ensure-refs-dir!)
+  (with-output-to-file (ref-file name)
+    (lambda () (write history) (newline))))
+
+(define (ref-current name)
+  "Get current hash for a named ref, or #f if not found"
+  (let ((history (ref-load name)))
+    (and (pair? history) (car history))))
+
+(define (ref-delete! name)
+  "Delete a named ref"
+  (let ((path (ref-file name)))
+    (when (file-exists? path)
+      (delete-file path))))
+
+(define (ref-list)
+  "List all named refs as ((name . hash) ...)"
+  (let ((path (refs-path)))
+    (if (directory-exists? path)
+        (let loop ((names (directory path)) (result '()))
+          (if (null? names)
+              (reverse result)
+              (let* ((name (car names))
+                     (hash (ref-current name)))
+                (loop (cdr names)
+                      (if hash (cons (cons name hash) result) result)))))
+        '())))
+
+(define (ref-history name)
+  "Get version history for a name. Returns list of hashes, newest first."
+  (ref-load name))
+
+(define (parse-ref-spec spec)
+  "Parse 'name' or 'name@version' into (name . version).
+   version can be number (1, 2, ...) or negative (-1 = previous)"
+  (let ((at-pos (string-index spec #\@)))
+    (if at-pos
+        (cons (substring spec 0 at-pos)
+              (string->number (substring spec (+ at-pos 1))))
+        (cons spec #f))))
+
+(define (seal-as t name)
+  "Seal text with a friendly name. Returns hash.
+   Prepends new hash to ref history."
+  (let* ((hash (text-seal t))
+         (history (ref-load name))
+         ;; Don't add duplicate if content unchanged
+         (new-history (if (and (pair? history) (string=? hash (car history)))
+                          history
+                          (cons hash history))))
+    (ref-save! name new-history)
+    hash))
+
+(define (unseal-named spec)
+  "Unseal by name, optionally with version.
+   spec: 'name' for current, 'name@N' for version N, 'name@-1' for previous"
+  (let* ((parsed (parse-ref-spec spec))
+         (name (car parsed))
+         (version (cdr parsed))
+         (history (ref-history name)))
+    (cond
+     ((null? history)
+      (error "Ref not found" name))
+     ((not version)
+      ;; No version - get current (index 0)
+      (text-unseal (car history)))
+     ((< version 0)
+      ;; Negative: relative to current (-1 = index 1, -2 = index 2, etc)
+      (let ((idx (abs version)))
+        (if (< idx (length history))
+            (text-unseal (list-ref history idx))
+            (error "Version not found" spec))))
+     (else
+      ;; Positive: version N (1 = oldest, 2 = second oldest, etc)
+      (let ((idx (- (length history) version)))
+        (if (and (>= idx 0) (< idx (length history)))
+            (text-unseal (list-ref history idx))
+            (error "Version not found" spec)))))))
 
 ) ; end module

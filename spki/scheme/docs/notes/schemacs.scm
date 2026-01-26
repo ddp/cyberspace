@@ -332,26 +332,42 @@
           (set-schemacs-status! ed (format #f "Saved: ~a" filename)))
         (set-schemacs-status! ed "No filename"))))
 
-(define (em-seal! ed)
-  "Seal buffer to vault using smart storage. Returns hash."
+(define (em-seal! ed #!optional name)
+  "Seal buffer to vault. If name given, use named ref. Returns hash."
   (let* ((buf (schemacs-buf ed))
-         (hash (text-seal buf))
+         (hash (if name (seal-as buf name) (text-seal buf)))
          (short-hash (substring hash 7 (min 19 (string-length hash)))))
-    (set-schemacs-status! ed (format #f "Sealed: ~a..." short-hash))
+    (when name (set-schemacs-filename! ed name))
+    (set-schemacs-status! ed (format #f "Sealed: ~a~a"
+                                     (if name (string-append name " ") "")
+                                     short-hash))
     hash))
 
-(define (em-unseal! ed hash)
-  "Load buffer from vault by hash."
+(define (em-unseal! ed spec)
+  "Load buffer from vault by hash or name (with optional @version)"
   (condition-case
-    (let ((buf (text-unseal hash)))
+    (let* ((is-hash (string-prefix? "blake2b:" spec))
+           (buf (if is-hash (text-unseal spec) (unseal-named spec)))
+           (name (and (not is-hash) (car (em-parse-name-spec spec)))))
       (set-schemacs-buf! ed buf)
       (text-goto! buf 0)
       (set-schemacs-screen-top! ed 0)
-      (set-schemacs-filename! ed #f)
-      (let ((short-hash (substring hash 7 (min 19 (string-length hash)))))
-        (set-schemacs-status! ed (format #f "Loaded: ~a..." short-hash))))
+      (set-schemacs-filename! ed name)
+      (let* ((hash (text-source-hash buf))
+             (short-hash (substring hash 7 (min 19 (string-length hash)))))
+        (set-schemacs-status! ed (format #f "Loaded: ~a~a"
+                                         (if name (string-append name " ") "")
+                                         short-hash))))
     ((exn)
-     (set-schemacs-status! ed (format #f "Failed: ~a" hash)))))
+     (set-schemacs-status! ed (format #f "Failed: ~a" spec)))))
+
+(define (em-parse-name-spec spec)
+  "Parse 'name' or 'name@version' into (name . version)"
+  (let ((at-pos (string-index spec #\@)))
+    (if at-pos
+        (cons (substring spec 0 at-pos)
+              (string->number (substring spec (+ at-pos 1))))
+        (cons spec #f))))
 
 ;;; ============================================================
 ;;; Display
@@ -512,21 +528,32 @@
                 (loop)
                 'quit))
            ((equal? next '(ctrl . #\S))
-            (em-seal! ed) (loop))  ; seal to vault
+            ;; Seal to vault with name
+            (let ((name (or (schemacs-filename ed)
+                            (em-prompt ed "Save as: "))))
+              (when (and name (> (string-length name) 0))
+                (em-seal! ed name)))
+            (loop))
            ((equal? next '(ctrl . #\F))
-            (let ((input (em-prompt ed "Find file/hash: ")))
+            (let ((input (em-prompt ed "Find (name, file, or hash): ")))
               (when (and input (> (string-length input) 0))
-                ;; Hash format: blake2b:xxxx (71 chars) or just 64 hex
-                (if (or (string-prefix? "blake2b:" input)
-                        (and (= (string-length input) 64)
-                             (string-every (lambda (c)
-                                             (or (char-numeric? c)
-                                                 (and (char>=? c #\a) (char<=? c #\f))))
-                                           input)))
-                    (em-unseal! ed (if (string-prefix? "blake2b:" input)
-                                       input
-                                       (string-append "blake2b:" input)))
-                    (em-find-file! ed input))))
+                (cond
+                 ;; Full hash
+                 ((string-prefix? "blake2b:" input)
+                  (em-unseal! ed input))
+                 ;; Bare 64 hex chars
+                 ((and (= (string-length input) 64)
+                       (string-every (lambda (c)
+                                       (or (char-numeric? c)
+                                           (and (char>=? c #\a) (char<=? c #\f))))
+                                     input))
+                  (em-unseal! ed (string-append "blake2b:" input)))
+                 ;; Named ref (possibly with @version)
+                 ((ref-current (car (em-parse-name-spec input)))
+                  (em-unseal! ed input))
+                 ;; Fallback: filesystem
+                 (else
+                  (em-find-file! ed input)))))
             (loop))
            (else (loop)))))
 

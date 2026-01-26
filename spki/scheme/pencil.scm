@@ -687,27 +687,43 @@
           (set-editor-status! ed (format #f "Saved ~a" fname)))
         (set-editor-status! ed "No filename"))))
 
-(define (editor-seal! ed)
-  "Seal editor content to vault using smart storage.
-   Returns content hash. This is the primary save mechanism."
+(define (editor-seal! ed #!optional name)
+  "Seal editor content to vault. If name given, use named ref.
+   Returns content hash."
   (let* ((txt (editor-text ed))
-         (hash (text-seal txt))
-         (short-hash (substring hash 0 (min 12 (string-length hash)))))
-    (set-editor-status! ed (format #f "Sealed: ~a..." short-hash))
+         (hash (if name (seal-as txt name) (text-seal txt)))
+         (short-hash (substring hash 7 (min 19 (string-length hash)))))
+    (when name (set-editor-filename! ed name))  ; use name as pseudo-filename
+    (set-editor-status! ed (format #f "Sealed: ~a~a"
+                                   (if name (string-append name " ") "")
+                                   short-hash))
     hash))
 
-(define (editor-unseal! ed hash)
-  "Load content from vault by hash"
+(define (editor-unseal! ed spec)
+  "Load content from vault by hash or name (with optional @version)"
   (condition-case
-    (let ((txt (text-unseal hash)))
+    (let* ((is-hash (string-prefix? "blake2b:" spec))
+           (txt (if is-hash (text-unseal spec) (unseal-named spec)))
+           (name (and (not is-hash) (car (parse-name-spec spec)))))
       (set-editor-text! ed txt)
       (text-goto! txt 0)
       (set-editor-screen-top! ed 0)
-      (set-editor-filename! ed #f)  ; vault content has no filename
-      (let ((short-hash (substring hash 0 (min 12 (string-length hash)))))
-        (set-editor-status! ed (format #f "Loaded: ~a..." short-hash))))
+      (set-editor-filename! ed name)  ; use name as pseudo-filename
+      (let* ((hash (text-source-hash txt))
+             (short-hash (substring hash 7 (min 19 (string-length hash)))))
+        (set-editor-status! ed (format #f "Loaded: ~a~a"
+                                       (if name (string-append name " ") "")
+                                       short-hash))))
     ((exn)
-     (set-editor-status! ed (format #f "Failed to load ~a" hash)))))
+     (set-editor-status! ed (format #f "Failed: ~a" spec)))))
+
+(define (parse-name-spec spec)
+  "Parse 'name' or 'name@version' into (name . version)"
+  (let ((at-pos (string-index spec #\@)))
+    (if at-pos
+        (cons (substring spec 0 at-pos)
+              (string->number (substring spec (+ at-pos 1))))
+        (cons spec #f))))
 
 ;;; ============================================================
 ;;; Input Handling
@@ -904,20 +920,32 @@
 
        ;; File operations
        ((equal? key '(ctrl . #\O))
-        (let ((input (editor-prompt ed "Open (file or hash): ")))
+        (let ((input (editor-prompt ed "Open (name, file, or hash): ")))
           (when (and input (> (string-length input) 0))
-            ;; If it looks like a hash (64 hex chars), unseal from vault
-            (if (and (= (string-length input) 64)
-                     (string-every (lambda (c)
-                                     (or (char-numeric? c)
-                                         (and (char>=? c #\a) (char<=? c #\f))))
-                                   input))
-                (editor-unseal! ed input)
-                (editor-load! ed input))))
+            (cond
+             ;; Full hash: blake2b:xxxx
+             ((string-prefix? "blake2b:" input)
+              (editor-unseal! ed input))
+             ;; Bare 64 hex chars = hash
+             ((and (= (string-length input) 64)
+                   (string-every (lambda (c)
+                                   (or (char-numeric? c)
+                                       (and (char>=? c #\a) (char<=? c #\f))))
+                                 input))
+              (editor-unseal! ed (string-append "blake2b:" input)))
+             ;; Named ref (possibly with @version)
+             ((ref-current (car (parse-name-spec input)))
+              (editor-unseal! ed input))
+             ;; Fallback: filesystem file
+             (else
+              (editor-load! ed input)))))
         (loop))
        ((equal? key '(ctrl . #\P))
-        ;; Always seal to vault - content-addressed is the way
-        (editor-seal! ed)
+        ;; Seal to vault with name
+        (let ((name (or (editor-filename ed)
+                        (editor-prompt ed "Save as: "))))
+          (when (and name (> (string-length name) 0))
+            (editor-seal! ed name)))
         (loop))
 
        ;; Display
