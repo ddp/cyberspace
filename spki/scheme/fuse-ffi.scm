@@ -183,12 +183,54 @@ static int add_dir_entry(const char *name) {
     return -1;
 }
 
-/* FUSE operation wrappers that call Scheme callbacks */
-/* These are simplified - full implementation would use CHICKEN callback mechanism */
+/* FUSE operation wrappers */
 
-static struct fuse_operations cyberspace_ops;
+static int cs_getattr(const char *path, struct stat *stbuf) {
+    memset(stbuf, 0, sizeof(struct stat));
+    if (strcmp(path, "/") == 0) {
+        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_nlink = 2;
+        return 0;
+    }
+    return -ENOENT;
+}
+
+static int cs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+                      off_t offset, struct fuse_file_info *fi) {
+    (void) offset;
+    (void) fi;
+    if (strcmp(path, "/") != 0)
+        return -ENOENT;
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
+    return 0;
+}
+
+static struct fuse_operations cyberspace_ops = {
+    .getattr = cs_getattr,
+    .readdir = cs_readdir,
+};
+
 static struct fuse *fuse_instance = NULL;
 static char *mount_point = NULL;
+static volatile int fuse_running = 0;
+
+/* Run FUSE - call from Scheme, blocks until unmount */
+static int run_fuse(const char *mountpoint) {
+    char *argv[] = {"cyberspace", (char*)mountpoint, "-f", NULL};
+    int argc = 3;
+    mount_point = strdup(mountpoint);
+    fuse_running = 1;
+    int ret = fuse_main(argc, argv, &cyberspace_ops, NULL);
+    fuse_running = 0;
+    free(mount_point);
+    mount_point = NULL;
+    return ret;
+}
+
+static int is_fuse_running(void) {
+    return fuse_running;
+}
 
 #endif /* HAVE_FUSE */
 <#
@@ -331,40 +373,33 @@ static char *mount_point = NULL;
 ;; thread and using CHICKEN's callback mechanism for the operation
 ;; dispatch. This is a simplified interface that documents the API.
 
+;; FFI bindings for run_fuse
+(define %run-fuse
+  (foreign-lambda int "run_fuse" c-string))
+
+(define %fuse-running?
+  (foreign-lambda int "is_fuse_running"))
+
 (define (fuse-mount mountpoint #!key
-                    (foreground #f)
+                    (foreground #t)
                     (debug #f)
                     (allow-other #f))
   "Mount FUSE filesystem at mountpoint.
-   Returns #t on success, raises error on failure.
-
-   Options:
-     foreground: Run in foreground (default: background daemon)
-     debug: Enable FUSE debug output
-     allow-other: Allow other users to access mount"
+   WARNING: This blocks until unmounted! Run in separate process for production.
+   Returns exit code (0 = success)."
   (unless *fuse-initialized*
     (unless (fuse-init)
       (error 'fuse-mount "FUSE not available. Install with: brew install fuse-t")))
 
-  (unless *fuse-getattr-callback*
-    (error 'fuse-mount "No getattr callback set"))
-  (unless *fuse-readdir-callback*
-    (error 'fuse-mount "No readdir callback set"))
+  ;; Create mountpoint if needed
+  (unless (file-exists? mountpoint)
+    (create-directory mountpoint #t))
 
-  ;; Build FUSE argv
-  (let ((args (list "cyberspace-fuse" mountpoint)))
-    (when foreground (set! args (append args '("-f"))))
-    (when debug (set! args (append args '("-d"))))
-    (when allow-other (set! args (append args '("-o" "allow_other"))))
+  (printf "Mounting FUSE filesystem at ~a~n" mountpoint)
+  (printf "  (Ctrl-C to unmount, or `umount ~a` from another terminal)~n" mountpoint)
 
-    ;; Note: Actual mount requires calling fuse_main() which blocks.
-    ;; Full implementation would fork or use threading.
-    (printf "FUSE mount: ~a~n" mountpoint)
-    (printf "  Options: foreground=~a debug=~a allow-other=~a~n"
-            foreground debug allow-other)
-
-    ;; For now, return success - actual mount needs fuse_main integration
-    #t))
+  ;; This blocks!
+  (%run-fuse mountpoint))
 
 (define (fuse-unmount mountpoint)
   "Unmount FUSE filesystem."
