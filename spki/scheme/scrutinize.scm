@@ -106,24 +106,30 @@
         (let* ((content (with-input-from-file f read-string))
                (is-script (irregex-search "^#!" content))
                (has-module (irregex-search "\\(module [a-z0-9-]+" content))
-               (has-exports (irregex-search "\\(module [a-z0-9-]+ \\(" content)))
+               ;; Export list can be on same line or next line
+               ;; Match: (module name\n  (exports or (module name (exports
+               (has-exports (irregex-search "\\(module [a-z0-9-]+\\s+\\(" content))
+               ;; Check for * export (export all) - this is what we want to flag
+               (exports-all (irregex-search "\\(module [a-z0-9-]+\\s+\\*\\)" content)))
           (cond
             ;; Scripts don't need exports
             (is-script
              (set! scripts (cons f scripts)))
-            ;; Has module but no export list
-            ((and has-module (not has-exports))
+            ;; Uses * (export all) - should have explicit exports
+            (exports-all
              (set! no-exports (cons f no-exports)))
+            ;; Has module with explicit export list - good
+            ((and has-module has-exports) #f)
             ;; No module declaration - already flagged in check 1
             ((not has-module) #f)
-            ;; Has exports - good
+            ;; Has module but unclear exports
             (else #f))))
       modules)
     (when (pair? scripts)
       (ok! (sprintf "~a scripts (no exports needed)" (length scripts))))
     (if (null? no-exports)
-        (ok! "All library modules have export declarations")
-        (for-each (lambda (f) (warn! f #f "module without explicit exports")) no-exports))))
+        (ok! "All library modules have explicit export declarations")
+        (for-each (lambda (f) (warn! f #f "uses * (export all) - add explicit exports")) no-exports))))
 
 ;;; ============================================================
 ;;; 3. Import Patterns
