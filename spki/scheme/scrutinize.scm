@@ -568,6 +568,84 @@
           violations))))
 
 ;;; ============================================================
+;;; 16. Special Variables Catalog
+;;; ============================================================
+
+(define (catalog-special-variables)
+  (print "\n=== 16. Special Variables Catalog ===")
+  (let ((modules (library-modules))
+        (specials '())
+        (by-domain (make-hash-table)))
+    ;; Collect all *special* variables
+    (for-each
+      (lambda (f)
+        (let* ((lines (with-input-from-file f read-lines))
+               (line-num 0))
+          (for-each
+            (lambda (line)
+              (set! line-num (+ line-num 1))
+              ;; Match (define *name* ...) with optional docstring on next line
+              (let ((m (irregex-search "^\\(define\\s+(\\*[a-zA-Z0-9-]+\\*)" line)))
+                (when m
+                  (let* ((name (irregex-match-substring m 1))
+                         ;; Check for inline value hint
+                         (value-hint
+                           (cond
+                             ((irregex-search "'\\(\\)" line) "empty list")
+                             ((irregex-search "#f\\)" line) "false")
+                             ((irregex-search "#t\\)" line) "true")
+                             ((irregex-search "0\\)" line) "zero")
+                             ((irregex-search "\"\"\\)" line) "empty string")
+                             ((irregex-search "\\(make-hash-table\\)" line) "hash-table")
+                             ((irregex-search "\\(make-parameter" line) "parameter")
+                             (else #f))))
+                    (set! specials
+                      (cons (list name f line-num value-hint) specials))))))
+            lines)))
+      modules)
+
+    ;; Categorize by prefix pattern
+    (for-each
+      (lambda (s)
+        (let* ((name (car s))
+               (domain (cond
+                         ((irregex-search "^\\*ed25519|^\\*sha256|^\\*sha512|^\\*crypto|^\\*pq-|^\\*keystore|^\\*capability" name) 'crypto)
+                         ((irregex-search "^\\*chunk|^\\*content|^\\*vault|^\\*catalog|^\\*merkle|^\\*bloom" name) 'storage)
+                         ((irregex-search "^\\*gossip|^\\*federation|^\\*node-|^\\*wormhole|^\\*discovery|^\\*lamport|^\\*peer" name) 'network)
+                         ((irregex-search "^\\*prompt|^\\*user-mode|^\\*help|^\\*theme|^\\*spinner|^\\*pager|^\\*result|^\\*inspector" name) 'repl)
+                         ((irregex-search "^\\*edt|^\\*kill-ring|^\\*text\\*|^\\*filename" name) 'editor)
+                         ((irregex-search "^\\*boot|^\\*cli|^\\*forge|^\\*compile|^\\*build" name) 'build)
+                         ((irregex-search "^\\*test|^\\*verbose|^\\*error|^\\*warn|^\\*debug" name) 'debug)
+                         ((irregex-search "^\\*fuse" name) 'fuse)
+                         ((irregex-search "^\\*server|^\\*listener|^\\*port" name) 'server)
+                         ((irregex-search "^\\*audit|^\\*security" name) 'audit)
+                         (else 'misc))))
+          (hash-table-update!/default by-domain domain
+                                      (lambda (lst) (cons s lst)) '())))
+      specials)
+
+    ;; Report by domain
+    (let ((domains '(crypto storage network repl editor build debug fuse server audit misc)))
+      (for-each
+        (lambda (domain)
+          (let ((vars (hash-table-ref/default by-domain domain '())))
+            (when (pair? vars)
+              (printf "~n  ~a (~a):~n" domain (length vars))
+              (for-each
+                (lambda (v)
+                  (let ((name (car v))
+                        (file (cadr v))
+                        (line (caddr v))
+                        (hint (cadddr v)))
+                    (if hint
+                        (printf "    ~a  (~a:~a) [~a]~n" name file line hint)
+                        (printf "    ~a  (~a:~a)~n" name file line))))
+                (sort vars (lambda (a b) (string<? (car a) (car b))))))))
+        domains))
+
+    (printf "~n  Total: ~a special variables~n" (length specials))))
+
+;;; ============================================================
 ;;; Main
 ;;; ============================================================
 
@@ -595,6 +673,7 @@
   (check-import-except-violations)
   (check-large-functions)
   (check-global-mutation)
+  (catalog-special-variables)
 
   (print "\n=== Summary ===")
   (printf "  Errors:   ~a~n" *errors*)
