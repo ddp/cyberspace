@@ -271,6 +271,41 @@ let test_crypto () =
     let m2 = hmac_sha256 key2 data in
     assert_false "different keys -> different macs"
       (constant_time_compare m1 m2)
+  );
+
+  test "shake256 deterministic" (fun () ->
+    let data = Bytes.of_string "test data" in
+    let h1 = shake256_hash data 32 in
+    let h2 = shake256_hash data 32 in
+    assert_true "shake256 deterministic" (constant_time_compare h1 h2)
+  );
+
+  test "shake256 variable output length" (fun () ->
+    let data = Bytes.of_string "test data" in
+    let h32 = shake256_hash data 32 in
+    let h64 = shake256_hash data 64 in
+    assert_true "32-byte output" (Bytes.length h32 = 32);
+    assert_true "64-byte output" (Bytes.length h64 = 64);
+    (* First 32 bytes of 64-byte output should match 32-byte output *)
+    assert_true "prefix matches"
+      (constant_time_compare h32 (Bytes.sub h64 0 32))
+  );
+
+  test "shake256_hash_32 convenience function" (fun () ->
+    let data = Bytes.of_string "test data" in
+    let h1 = shake256_hash_32 data in
+    let h2 = shake256_hash data 32 in
+    assert_true "32-byte output" (Bytes.length h1 = 32);
+    assert_true "matches full function" (constant_time_compare h1 h2)
+  );
+
+  test "shake256 different data differ" (fun () ->
+    let d1 = Bytes.of_string "data one" in
+    let d2 = Bytes.of_string "data two" in
+    let h1 = shake256_hash_32 d1 in
+    let h2 = shake256_hash_32 d2 in
+    assert_false "different data -> different hashes"
+      (constant_time_compare h1 h2)
   )
 
 (* ============================================================

@@ -14,6 +14,7 @@
 #include <caml/alloc.h>
 #include <caml/fail.h>
 #include <sodium.h>
+#include <libkeccak.h>
 #include <string.h>
 
 /* ============================================================
@@ -251,15 +252,113 @@ CAMLprim value caml_randombytes(value n) {
     CAMLreturn(buf);
 }
 
+/* ============================================================
+   SHAKE256 (Extendable Output Function)
+   ============================================================ */
+
+/* Compute SHAKE256 hash with variable output length
+ * @param data: input bytes
+ * @param outlen: desired output length in bytes (OCaml int)
+ * @return hash: outlen bytes
+ *
+ * SHAKE256 is an XOF (extendable output function) from SHA-3 family.
+ * Used for quantum-resistant Merkle trees (Memo-047).
+ *
+ * Security:
+ * - 256-bit pre-image resistance
+ * - 128-bit collision resistance
+ * - 128-bit post-quantum security (Grover's algorithm)
+ */
+CAMLprim value caml_shake256_hash(value data, value outlen) {
+    CAMLparam2(data, outlen);
+    CAMLlocal1(hash);
+
+    size_t out_bytes = Long_val(outlen);
+    hash = caml_alloc_string(out_bytes);
+
+    /* SHAKE256: semicapacity=256, output=out_bytes*8 bits */
+    struct libkeccak_spec spec;
+    libkeccak_spec_shake(&spec, 256, (long)(out_bytes * 8));
+
+    struct libkeccak_state state;
+    if (libkeccak_state_initialise(&state, &spec) != 0) {
+        caml_failwith("SHAKE256 state init failed");
+    }
+
+    /* Absorb input data */
+    if (libkeccak_digest(&state,
+                         Bytes_val(data),
+                         caml_string_length(data),
+                         0,                          /* No additional bits */
+                         LIBKECCAK_SHAKE_SUFFIX,     /* SHAKE padding */
+                         NULL) != 0) {               /* Don't squeeze yet */
+        libkeccak_state_wipe(&state);
+        caml_failwith("SHAKE256 absorb failed");
+    }
+
+    /* Squeeze output */
+    libkeccak_squeeze(&state, Bytes_val(hash));
+
+    /* Wipe sensitive state */
+    libkeccak_state_wipe(&state);
+
+    CAMLreturn(hash);
+}
+
+/* Compute SHAKE256 with default 32-byte (256-bit) output
+ * @param data: input bytes
+ * @return hash: 32 bytes
+ *
+ * Convenience function for common case.
+ * Uses same digest+squeeze pattern as caml_shake256_hash for consistency.
+ */
+CAMLprim value caml_shake256_hash_32(value data) {
+    CAMLparam1(data);
+    CAMLlocal1(hash);
+
+    hash = caml_alloc_string(32);
+
+    struct libkeccak_spec spec;
+    libkeccak_spec_shake(&spec, 256, 256);  /* 256-bit output */
+
+    struct libkeccak_state state;
+    if (libkeccak_state_initialise(&state, &spec) != 0) {
+        caml_failwith("SHAKE256 state init failed");
+    }
+
+    /* Absorb input data (same as general function) */
+    if (libkeccak_digest(&state,
+                         Bytes_val(data),
+                         caml_string_length(data),
+                         0,
+                         LIBKECCAK_SHAKE_SUFFIX,
+                         NULL) != 0) {
+        libkeccak_state_wipe(&state);
+        caml_failwith("SHAKE256 absorb failed");
+    }
+
+    /* Squeeze output */
+    libkeccak_squeeze(&state, Bytes_val(hash));
+
+    libkeccak_state_wipe(&state);
+
+    CAMLreturn(hash);
+}
+
 /*
  * TCB Statistics (Classical Crypto):
- * - Lines of C: ~260
- * - Dependencies: libsodium (audited)
+ * - Lines of C: ~350
+ * - Dependencies: libsodium (audited), libkeccak (SHAKE256)
  * - All operations constant-time (libsodium guarantees)
  * - No malloc/free (OCaml GC handles allocation)
  * - No global mutable state
  *
+ * Hash Functions:
+ * - SHA-256, SHA-512: FIPS 180-4 (libsodium)
+ * - BLAKE2b: Fast general hashing (libsodium)
+ * - SHAKE256: XOF for Merkle trees (libkeccak, SHA-3 family)
+ *
  * Post-Quantum Extension:
  * See pq_stubs.c for ML-DSA-65 and SLH-DSA-SHAKE-256s support.
- * Total TCB dependencies: libsodium + liboqs (both minimal, audited).
+ * Total TCB dependencies: libsodium + liboqs + libkeccak (all minimal, audited).
  */

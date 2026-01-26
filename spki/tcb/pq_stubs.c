@@ -22,7 +22,7 @@
 
 /* Algorithm names - must match liboqs exactly */
 #define ALG_MLDSA "ML-DSA-65"
-#define ALG_SLHDSA "SLH_DSA_PURE_SHAKE_256S"  /* FIPS 205, pure mode (no prehash) */
+#define ALG_SLHDSA "SPHINCS+-SHAKE-256s-simple"  /* FIPS 205 / SPHINCS+ */
 
 /* Cached signature objects for performance */
 static OQS_SIG *mldsa_sig = NULL;
