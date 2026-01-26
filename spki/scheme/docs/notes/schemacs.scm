@@ -332,6 +332,27 @@
           (set-schemacs-status! ed (format #f "Saved: ~a" filename)))
         (set-schemacs-status! ed "No filename"))))
 
+(define (em-seal! ed)
+  "Seal buffer to vault using smart storage. Returns hash."
+  (let* ((buf (schemacs-buf ed))
+         (hash (text-seal buf))
+         (short-hash (substring hash 7 (min 19 (string-length hash)))))
+    (set-schemacs-status! ed (format #f "Sealed: ~a..." short-hash))
+    hash))
+
+(define (em-unseal! ed hash)
+  "Load buffer from vault by hash."
+  (condition-case
+    (let ((buf (text-unseal hash)))
+      (set-schemacs-buf! ed buf)
+      (text-goto! buf 0)
+      (set-schemacs-screen-top! ed 0)
+      (set-schemacs-filename! ed #f)
+      (let ((short-hash (substring hash 7 (min 19 (string-length hash)))))
+        (set-schemacs-status! ed (format #f "Loaded: ~a..." short-hash))))
+    ((exn)
+     (set-schemacs-status! ed (format #f "Failed: ~a" hash)))))
+
 ;;; ============================================================
 ;;; Display
 ;;; ============================================================
@@ -383,7 +404,12 @@
     (let* ((filename (or (schemacs-filename ed) "*scratch*"))
            (modified (if (text-modified? (schemacs-buf ed)) "**" "--"))
            (pos-info (format #f "(~a,~a)" cursor-line cursor-col))
-           (mode-line (format #f "~a ~a  ~a  Schemacs" modified filename pos-info)))
+           ;; Vault status: show short hash if sealed
+           (source-hash (text-source-hash (schemacs-buf ed)))
+           (vault-status (if source-hash
+                             (format #f " [~a]" (substring source-hash 7 (min 19 (string-length source-hash))))
+                             ""))
+           (mode-line (format #f "~a ~a  ~a~a  Schemacs" modified filename pos-info vault-status)))
       (display (string-take mode-line (min (string-length mode-line) cols)))
       (display (make-string (max 0 (- cols (string-length mode-line))) #\space)))
     (screen-reset)
@@ -486,11 +512,21 @@
                 (loop)
                 'quit))
            ((equal? next '(ctrl . #\S))
-            (em-save-file! ed) (loop))
+            (em-seal! ed) (loop))  ; seal to vault
            ((equal? next '(ctrl . #\F))
-            (let ((fname (em-prompt ed "Find file: ")))
-              (when (and fname (> (string-length fname) 0))
-                (em-find-file! ed fname)))
+            (let ((input (em-prompt ed "Find file/hash: ")))
+              (when (and input (> (string-length input) 0))
+                ;; Hash format: blake2b:xxxx (71 chars) or just 64 hex
+                (if (or (string-prefix? "blake2b:" input)
+                        (and (= (string-length input) 64)
+                             (string-every (lambda (c)
+                                             (or (char-numeric? c)
+                                                 (and (char>=? c #\a) (char<=? c #\f))))
+                                           input)))
+                    (em-unseal! ed (if (string-prefix? "blake2b:" input)
+                                       input
+                                       (string-append "blake2b:" input)))
+                    (em-find-file! ed input))))
             (loop))
            (else (loop)))))
 

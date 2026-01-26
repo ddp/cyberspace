@@ -621,8 +621,13 @@
            (modified (if (editor-modified? ed) " [+]" ""))
            (mode (if (editor-insert-mode? ed) "INS" "OVR"))
            (pos-info (format #f "L~a C~a" (editor-cursor-row ed) (editor-cursor-col ed)))
-           (status (format #f " ~a~a  ~a  ~a  ~a"
-                           filename modified mode pos-info
+           ;; Vault status: show short hash if sealed
+           (source-hash (text-source-hash (editor-text ed)))
+           (vault-status (if source-hash
+                             (format #f "[~a]" (substring source-hash 7 (min 19 (string-length source-hash))))
+                             ""))
+           (status (format #f " ~a~a  ~a  ~a  ~a  ~a"
+                           filename modified mode pos-info vault-status
                            (editor-status ed))))
       (display (string-take status (min (string-length status) cols)))
       (display (make-string (max 0 (- cols (string-length status))) #\space)))
@@ -681,6 +686,28 @@
           (text-clear-modified! (editor-text ed))
           (set-editor-status! ed (format #f "Saved ~a" fname)))
         (set-editor-status! ed "No filename"))))
+
+(define (editor-seal! ed)
+  "Seal editor content to vault using smart storage.
+   Returns content hash. This is the primary save mechanism."
+  (let* ((txt (editor-text ed))
+         (hash (text-seal txt))
+         (short-hash (substring hash 0 (min 12 (string-length hash)))))
+    (set-editor-status! ed (format #f "Sealed: ~a..." short-hash))
+    hash))
+
+(define (editor-unseal! ed hash)
+  "Load content from vault by hash"
+  (condition-case
+    (let ((txt (text-unseal hash)))
+      (set-editor-text! ed txt)
+      (text-goto! txt 0)
+      (set-editor-screen-top! ed 0)
+      (set-editor-filename! ed #f)  ; vault content has no filename
+      (let ((short-hash (substring hash 0 (min 12 (string-length hash)))))
+        (set-editor-status! ed (format #f "Loaded: ~a..." short-hash))))
+    ((exn)
+     (set-editor-status! ed (format #f "Failed to load ~a" hash)))))
 
 ;;; ============================================================
 ;;; Input Handling
@@ -877,16 +904,20 @@
 
        ;; File operations
        ((equal? key '(ctrl . #\O))
-        (let ((fname (editor-prompt ed "Open: ")))
-          (when (and fname (> (string-length fname) 0))
-            (editor-load! ed fname)))
+        (let ((input (editor-prompt ed "Open (file or hash): ")))
+          (when (and input (> (string-length input) 0))
+            ;; If it looks like a hash (64 hex chars), unseal from vault
+            (if (and (= (string-length input) 64)
+                     (string-every (lambda (c)
+                                     (or (char-numeric? c)
+                                         (and (char>=? c #\a) (char<=? c #\f))))
+                                   input))
+                (editor-unseal! ed input)
+                (editor-load! ed input))))
         (loop))
        ((equal? key '(ctrl . #\P))
-        (if (editor-filename ed)
-            (editor-save! ed)
-            (let ((fname (editor-prompt ed "Save as: ")))
-              (when (and fname (> (string-length fname) 0))
-                (editor-save! ed fname))))
+        ;; Always seal to vault - content-addressed is the way
+        (editor-seal! ed)
         (loop))
 
        ;; Display

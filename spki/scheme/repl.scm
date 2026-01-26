@@ -3420,6 +3420,15 @@ Cyberspace REPL - Available Commands
     (ed25519-sign key msg)           Sign message
     (ed25519-verify pub msg sig)     Verify signature
 
+  Post-Quantum Migration (Memo-059):
+    (pq-status)                      Show PQ migration status
+    (pq-upgrade \"keyname\")           Upgrade Ed25519 key to hybrid
+    (pq-add-key \"name\" 'ml-dsa-65)   Add PQ key (ml-dsa-65|sphincs+|hybrid)
+    (pq-set-mode 'hybrid)            Set mode (ed25519|hybrid|pq-only)
+    (pq-coverage)                    Audit trail PQ signature coverage
+    (keyring-generate \"n\" 'hybrid)   Generate hybrid key directly
+    (supported-algorithms)           List supported algorithms
+
   Audit Trail:
     (audit-append actor: k action: a) Add audit entry
     (audit-read)                      Read audit trail
@@ -5393,6 +5402,145 @@ Cyberspace REPL - Available Commands
   (let ((result (apply enroll-approve args)))
     (session-stat! 'federation-changes)
     result))
+
+;;; ============================================================
+;;; Post-Quantum Vault Operations (Memo-059)
+;;; ============================================================
+;;; Commands for Q-Day migration: upgrade to hybrid, add PQ keys,
+;;; check coverage, set signing mode.
+
+(define *pq-signing-mode* 'ed25519)  ; ed25519 | hybrid | pq-only
+
+(define (pq-status)
+  "Show post-quantum migration status"
+  (print "\n=== Post-Quantum Migration Status ===\n")
+
+  ;; Check keyring for PQ keys
+  (let* ((keys (keyring-list))
+         (ed-keys (filter (lambda (k) (eq? (key-algorithm k) 'ed25519)) keys))
+         (pq-keys (filter (lambda (k) (memq (key-algorithm k) '(ml-dsa-65 sphincs+ hybrid))) keys))
+         (hybrid-keys (filter (lambda (k) (eq? (key-algorithm k) 'hybrid)) keys)))
+
+    (print "Signing Mode: " *pq-signing-mode*)
+    (print "")
+    (print "Keys in Keyring:")
+    (print "  Ed25519:    " (length ed-keys))
+    (print "  ML-DSA-65:  " (length (filter (lambda (k) (eq? (key-algorithm k) 'ml-dsa-65)) keys)))
+    (print "  SPHINCS+:   " (length (filter (lambda (k) (eq? (key-algorithm k) 'sphincs+)) keys)))
+    (print "  Hybrid:     " (length hybrid-keys))
+    (print "")
+
+    ;; Migration status
+    (cond
+     ((null? keys)
+      (print "Status: NO KEYS - run (keyring-generate \"name\")"))
+     ((and (null? pq-keys) (not (null? ed-keys)))
+      (print "Status: VULNERABLE - only Ed25519 keys")
+      (print "Action: Run (pq-upgrade \"keyname\") to add PQ protection"))
+     ((not (null? hybrid-keys))
+      (print "Status: TRANSITION - hybrid keys available")
+      (print "Action: Set (pq-set-mode 'hybrid) to enable hybrid signing"))
+     ((and (null? ed-keys) (not (null? pq-keys)))
+      (print "Status: PQ-READY - post-quantum keys only"))
+     (else
+      (print "Status: MIXED - multiple key types")))
+
+    (print "")
+    (print "Supported algorithms: " (supported-algorithms))
+    (print "")))
+
+(define (pq-upgrade key-name)
+  "Upgrade an Ed25519 key to hybrid by generating companion ML-DSA key"
+  (let ((existing (key-by-name key-name)))
+    (if (not existing)
+        (print "Error: Key '" key-name "' not found")
+        (let ((alg (key-algorithm existing)))
+          (if (not (eq? alg 'ed25519))
+              (print "Error: Key '" key-name "' is already " alg ", not Ed25519")
+              (let ((hybrid-name (string-append key-name "-hybrid")))
+                (print "Generating hybrid key: " hybrid-name)
+                (keyring-generate hybrid-name 'hybrid)
+                (print "")
+                (print "Hybrid key created. Original Ed25519 key preserved.")
+                (print "Set (pq-set-mode 'hybrid) to use hybrid signing.")
+                hybrid-name))))))
+
+(define (pq-add-key name #!optional (algorithm 'ml-dsa-65))
+  "Add a post-quantum key to the keyring"
+  (if (not (memq algorithm '(ml-dsa-65 sphincs+ hybrid)))
+      (print "Error: Algorithm must be ml-dsa-65, sphincs+, or hybrid")
+      (begin
+        (print "Generating " algorithm " key: " name)
+        (keyring-generate name algorithm)
+        (print "Key generated successfully.")
+        (display-key name))))
+
+(define (pq-set-mode mode)
+  "Set the signing mode: ed25519 | hybrid | pq-only"
+  (if (not (memq mode '(ed25519 hybrid pq-only)))
+      (print "Error: Mode must be ed25519, hybrid, or pq-only")
+      (begin
+        (set! *pq-signing-mode* mode)
+        (print "Signing mode set to: " mode)
+        (case mode
+          ((ed25519) (print "  Signatures: Ed25519 only (classical)"))
+          ((hybrid)  (print "  Signatures: Ed25519 + ML-DSA (transition)"))
+          ((pq-only) (print "  Signatures: ML-DSA only (post-quantum)"))))))
+
+(define (pq-coverage)
+  "Analyze audit trail for post-quantum signature coverage"
+  (print "\n=== Post-Quantum Audit Coverage ===\n")
+  (let* ((entries (audit-read))
+         (total (length entries))
+         (ed-count 0)
+         (pq-count 0)
+         (hybrid-count 0)
+         (unknown-count 0))
+
+    ;; Count by algorithm
+    (for-each
+     (lambda (entry)
+       (let ((seal (and (pair? entry) (assq 'seal (cdr entry)))))
+         (if seal
+             (let ((alg (and (pair? (cdr seal))
+                            (assq 'algorithm (cdr (cdr seal))))))
+               (cond
+                ((not alg) (set! unknown-count (+ unknown-count 1)))
+                ((string-contains (->string (cdr alg)) "hybrid")
+                 (set! hybrid-count (+ hybrid-count 1)))
+                ((string-contains (->string (cdr alg)) "ml-dsa")
+                 (set! pq-count (+ pq-count 1)))
+                ((string-contains (->string (cdr alg)) "ed25519")
+                 (set! ed-count (+ ed-count 1)))
+                (else (set! unknown-count (+ unknown-count 1)))))
+             (set! unknown-count (+ unknown-count 1)))))
+     entries)
+
+    (print "Total audit entries: " total)
+    (print "")
+    (print "Signature Distribution:")
+    (print "  Ed25519 (classical):  " ed-count
+           " (" (if (> total 0) (round (* 100 (/ ed-count total))) 0) "%)")
+    (print "  ML-DSA (PQ):          " pq-count
+           " (" (if (> total 0) (round (* 100 (/ pq-count total))) 0) "%)")
+    (print "  Hybrid (both):        " hybrid-count
+           " (" (if (> total 0) (round (* 100 (/ hybrid-count total))) 0) "%)")
+    (print "  Unknown/Legacy:       " unknown-count
+           " (" (if (> total 0) (round (* 100 (/ unknown-count total))) 0) "%)")
+    (print "")
+
+    (let ((pq-protected (+ pq-count hybrid-count)))
+      (if (= total 0)
+          (print "Status: No audit entries yet")
+          (cond
+           ((= pq-protected 0)
+            (print "Status: VULNERABLE - no PQ signatures in audit trail")
+            (print "Action: Enable hybrid signing and re-seal critical entries"))
+           ((< pq-protected total)
+            (print "Status: PARTIAL - " (round (* 100 (/ pq-protected total))) "% PQ coverage")
+            (print "Action: Continue migration, re-sign legacy entries"))
+           (else
+            (print "Status: PROTECTED - 100% PQ coverage")))))))
 
 (define *command-aliases*
   '((status    . status)
