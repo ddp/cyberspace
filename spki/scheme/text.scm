@@ -55,6 +55,8 @@
    text-unseal
    text-hash
    set-vault-path!
+   content-exists?   ; check if hash exists in vault
+   load-content      ; low-level: load by hash (any format)
 
    ;; For editors
    text-gap-buffer  ; expose internal for low-level access
@@ -66,9 +68,12 @@
           (chicken format)
           (chicken string)
           (chicken io)
+          (chicken port)
           (chicken file)
           (chicken pathname)
           (chicken blob)
+          (chicken bitwise)
+          (chicken condition)
           srfi-4   ; u8vectors
           srfi-13
           crypto-ffi)
@@ -374,9 +379,20 @@
 ;;; Soup Integration - seal/unseal to content-addressed storage
 ;;; ============================================================
 ;;;
-;;; Content-addressed storage using blake2b.
-;;; Objects stored in .vault/objects/{hash}
-;;; For now, simple single-chunk. Future: merkle tree of chunks.
+;;; Three storage strategies for space efficiency:
+;;;
+;;; 1. CHUNKED - Content-defined chunking with rolling hash
+;;;    Splits text at natural boundaries, deduplicates chunks.
+;;;    Good for large files with localized edits.
+;;;
+;;; 2. DELTA - Stores diff from parent version
+;;;    Good for small edits to any size file.
+;;;    Chain depth limited to prevent reconstruction explosion.
+;;;
+;;; 3. FULL - Complete content (current default)
+;;;    Simple, fast, always works. Used as base for deltas.
+;;;
+;;; text-seal auto-selects based on content and parent availability.
 
 ;; Configurable vault path (default: .vault in current directory)
 (define *vault-path* ".vault")
@@ -389,11 +405,22 @@
   "Path to objects directory"
   (make-pathname *vault-path* "objects"))
 
-(define (ensure-objects-dir!)
-  "Create objects directory if needed"
-  (let ((dir (vault-objects-path)))
-    (unless (directory-exists? dir)
-      (create-directory dir #t))))
+(define (vault-chunks-path)
+  "Path to chunks directory"
+  (make-pathname *vault-path* "chunks"))
+
+(define (vault-deltas-path)
+  "Path to deltas directory"
+  (make-pathname *vault-path* "deltas"))
+
+(define (ensure-vault-dirs!)
+  "Create vault directories if needed"
+  (for-each (lambda (dir)
+              (unless (directory-exists? dir)
+                (create-directory dir #t)))
+            (list (vault-objects-path)
+                  (vault-chunks-path)
+                  (vault-deltas-path))))
 
 (define (blob->hex b)
   "Convert blob to hex string"
@@ -407,47 +434,344 @@
     (do ((i 0 (+ i 1))) ((>= i len) (apply string-append (reverse parts)))
       (set! parts (cons (byte->hex (u8vector-ref (blob->u8vector b) i)) parts)))))
 
+(define (content-hash str)
+  "Blake2b hash of string content"
+  (string-append "blake2b:" (blob->hex (blake2b-hash str))))
+
 (define (text-hash t)
   "Content hash of text using blake2b (32 bytes = 64 hex chars)"
-  (let* ((content (text->string t))
-         (hash-blob (blake2b-hash content)))
-    (string-append "blake2b:" (blob->hex hash-blob))))
+  (content-hash (text->string t)))
 
 (define (hash->path hash)
-  "Convert hash to storage path"
+  "Convert hash to storage path (objects)"
   (make-pathname (vault-objects-path) hash))
 
-(define (text-seal t)
-  "Seal text to vault, return hash. Captures parent for undo chain.
-   Stores content at .vault/objects/{hash}"
-  (ensure-objects-dir!)
-  (let* ((old-hash (text-source-hash t))
-         (content (text->string t))
-         (new-hash (text-hash t))
-         (path (hash->path new-hash)))
-    ;; Store content (idempotent - same content = same hash = same file)
+(define (chunk-hash->path hash)
+  "Convert hash to chunk storage path"
+  (make-pathname (vault-chunks-path) hash))
+
+(define (delta-hash->path hash)
+  "Convert hash to delta storage path"
+  (make-pathname (vault-deltas-path) hash))
+
+;;; ============================================================
+;;; Chunked Storage - Content-Defined Chunking
+;;; ============================================================
+;;;
+;;; Rolling hash (Rabin-style) splits at natural boundaries.
+;;; Average chunk ~4KB, min 1KB, max 16KB.
+;;; Only new chunks are stored; existing chunks deduplicated.
+
+(define *chunk-min* 1024)      ; minimum chunk size
+(define *chunk-avg* 4096)      ; target average (mask determines this)
+(define *chunk-max* 16384)     ; maximum chunk size
+(define *chunk-mask* #xFFF)    ; split when (hash & mask) == 0 (~4KB avg)
+
+(define (rolling-hash-init)
+  "Initialize rolling hash state"
+  0)
+
+(define (rolling-hash-update h byte)
+  "Update rolling hash with new byte (simple polynomial)"
+  ;; h = h * 31 + byte, keeping low 32 bits
+  (bitwise-and (+ (* h 31) byte) #xFFFFFFFF))
+
+(define (chunk-boundary? hash pos)
+  "Check if this is a chunk boundary"
+  (and (>= pos *chunk-min*)
+       (or (>= pos *chunk-max*)
+           (= (bitwise-and hash *chunk-mask*) 0))))
+
+(define (string->chunks str)
+  "Split string into content-defined chunks. Returns list of strings."
+  (let ((len (string-length str)))
+    (if (<= len *chunk-min*)
+        (list str)  ; too small to chunk
+        (let loop ((pos 0) (chunk-start 0) (h (rolling-hash-init)) (chunks '()))
+          (cond
+           ((>= pos len)
+            ;; Final chunk
+            (reverse (cons (substring str chunk-start len) chunks)))
+           (else
+            (let* ((byte (char->integer (string-ref str pos)))
+                   (new-h (rolling-hash-update h byte))
+                   (chunk-len (- pos chunk-start)))
+              (if (chunk-boundary? new-h chunk-len)
+                  ;; Split here
+                  (loop (+ pos 1) (+ pos 1) (rolling-hash-init)
+                        (cons (substring str chunk-start (+ pos 1)) chunks))
+                  ;; Continue
+                  (loop (+ pos 1) chunk-start new-h chunks)))))))))
+
+(define (store-chunk! chunk)
+  "Store chunk, return its hash. Idempotent."
+  (let* ((hash (content-hash chunk))
+         (path (chunk-hash->path hash)))
     (unless (file-exists? path)
       (with-output-to-file path
-        (lambda () (display content))))
+        (lambda () (display chunk))))
+    hash))
+
+(define (load-chunk hash)
+  "Load chunk by hash"
+  (let ((path (chunk-hash->path hash)))
+    (if (file-exists? path)
+        (with-input-from-file path read-string)
+        (error "Chunk not found" hash))))
+
+(define (store-chunked! content)
+  "Store content as chunks, return content hash.
+   Manifest stored at content hash path.
+   Manifest format: (chunked (chunks hash1 hash2 ...))"
+  (let* ((content-h (content-hash content))
+         (chunks (string->chunks content))
+         (chunk-hashes (map store-chunk! chunks))
+         (manifest `(chunked (chunks ,@chunk-hashes)
+                            (content-hash ,content-h)
+                            (total-size ,(string-length content))
+                            (chunk-count ,(length chunks))))
+         (manifest-str (format #f "~s" manifest))
+         (manifest-path (hash->path content-h)))
+    (unless (file-exists? manifest-path)
+      (with-output-to-file manifest-path
+        (lambda () (display manifest-str))))
+    content-h))
+
+(define (load-chunked manifest-hash)
+  "Load content from chunked manifest"
+  (let* ((path (hash->path manifest-hash))
+         (manifest-str (with-input-from-file path read-string))
+         (manifest (with-input-from-string manifest-str read)))
+    (if (and (pair? manifest) (eq? (car manifest) 'chunked))
+        (let ((chunk-hashes (cdr (assq 'chunks (cdr manifest)))))
+          (apply string-append (map load-chunk chunk-hashes)))
+        (error "Invalid chunked manifest" manifest-hash))))
+
+;;; ============================================================
+;;; Delta Storage - Edit Script Compression
+;;; ============================================================
+;;;
+;;; Stores difference from parent version.
+;;; Simple edit script: (delta base-hash ops...)
+;;; ops: (copy start len) | (insert "text")
+;;;
+;;; Chain depth limited to 10 to bound reconstruction time.
+
+(define *max-delta-depth* 10)
+
+(define (compute-delta old-str new-str)
+  "Compute edit script from old to new. Returns list of ops.
+   Simple algorithm: find common prefix/suffix, insert middle."
+  (let* ((old-len (string-length old-str))
+         (new-len (string-length new-str))
+         ;; Common prefix
+         (prefix-len
+          (let loop ((i 0))
+            (if (and (< i old-len) (< i new-len)
+                     (char=? (string-ref old-str i) (string-ref new-str i)))
+                (loop (+ i 1))
+                i)))
+         ;; Common suffix (after prefix)
+         (suffix-len
+          (let loop ((i 0))
+            (let ((old-pos (- old-len 1 i))
+                  (new-pos (- new-len 1 i)))
+              (if (and (>= old-pos prefix-len) (>= new-pos prefix-len)
+                       (char=? (string-ref old-str old-pos)
+                               (string-ref new-str new-pos)))
+                  (loop (+ i 1))
+                  i))))
+         (old-middle-end (- old-len suffix-len))
+         (new-middle-start prefix-len)
+         (new-middle-end (- new-len suffix-len)))
+    ;; Build ops
+    (let ((ops '()))
+      ;; Copy prefix from old
+      (when (> prefix-len 0)
+        (set! ops (cons `(copy 0 ,prefix-len) ops)))
+      ;; Insert new middle (if any)
+      (when (> new-middle-end new-middle-start)
+        (set! ops (cons `(insert ,(substring new-str new-middle-start new-middle-end)) ops)))
+      ;; Copy suffix from old
+      (when (> suffix-len 0)
+        (set! ops (cons `(copy ,old-middle-end ,suffix-len) ops)))
+      (reverse ops))))
+
+(define (apply-delta base-str ops)
+  "Apply edit script to base string"
+  (apply string-append
+         (map (lambda (op)
+                (case (car op)
+                  ((copy)
+                   (let ((start (cadr op))
+                         (len (caddr op)))
+                     (substring base-str start (+ start len))))
+                  ((insert)
+                   (cadr op))
+                  (else (error "Unknown delta op" op))))
+              ops)))
+
+(define (delta-size ops)
+  "Estimate serialized size of delta ops"
+  (let loop ((ops ops) (size 20))  ; base overhead
+    (if (null? ops)
+        size
+        (loop (cdr ops)
+              (+ size
+                 (case (caar ops)
+                   ((copy) 20)  ; (copy N N) ~20 chars
+                   ((insert) (+ 12 (string-length (cadar ops))))
+                   (else 10)))))))
+
+(define (get-delta-depth hash)
+  "Get depth of delta chain (0 for full content).
+   Recursively follows base-hash to count chain length."
+  (let ((delta-path (delta-hash->path hash)))
+    (if (file-exists? delta-path)
+        (let* ((delta-str (with-input-from-file delta-path read-string))
+               (delta (with-input-from-string delta-str read)))
+          (if (and (pair? delta) (eq? (car delta) 'delta))
+              (+ 1 (get-delta-depth (cadr delta)))  ; recurse on base-hash
+              0))
+        0)))
+
+(define (store-delta! base-hash ops target-hash)
+  "Store delta at target-hash path in deltas/.
+   Format: (delta base-hash target-hash ops...)"
+  (let* ((delta `(delta ,base-hash ,target-hash ,@ops))
+         (delta-str (format #f "~s" delta))
+         (path (delta-hash->path target-hash)))  ; Store at content hash
+    (unless (file-exists? path)
+      (with-output-to-file path
+        (lambda () (display delta-str))))
+    target-hash))
+
+(define (load-via-delta target-hash)
+  "Reconstruct content from delta chain.
+   target-hash is the content hash, delta stored at deltas/target-hash"
+  (let* ((path (delta-hash->path target-hash))
+         (delta-str (with-input-from-file path read-string))
+         (delta (with-input-from-string delta-str read)))
+    (if (and (pair? delta) (eq? (car delta) 'delta))
+        (let ((base-hash (cadr delta))
+              (expected-hash (caddr delta))
+              (ops (cdddr delta)))
+          ;; Load base (might be another delta, or full content)
+          (let* ((base-content (load-content base-hash))
+                 (result (apply-delta base-content ops)))
+            ;; Verify
+            (unless (string=? (content-hash result) expected-hash)
+              (error "Delta reconstruction failed" target-hash))
+            result))
+        (error "Invalid delta format" target-hash))))
+
+;;; ============================================================
+;;; Unified Storage - Smart Selection
+;;; ============================================================
+
+(define (content-exists? hash)
+  "Check if content exists in any form"
+  (or (file-exists? (hash->path hash))
+      (file-exists? (delta-hash->path hash))))
+
+(define (load-content hash)
+  "Load content by hash, handling full/chunked/delta formats"
+  (let ((obj-path (hash->path hash))
+        (delta-path (delta-hash->path hash)))
+    (cond
+     ;; Full or chunked object
+     ((file-exists? obj-path)
+      (let* ((content (with-input-from-file obj-path read-string))
+             (parsed (condition-case
+                      (with-input-from-string content read)
+                      ((exn) #f))))
+        (if (and (pair? parsed) (eq? (car parsed) 'chunked))
+            ;; Chunked manifest
+            (load-chunked hash)
+            ;; Full content
+            content)))
+     ;; Delta reference
+     ((file-exists? delta-path)
+      (load-via-delta hash))
+     (else
+      (error "Content not found" hash)))))
+
+(define (store-smart! content parent-hash)
+  "Store content using best strategy. Returns (type . hash).
+   Strategies:
+   - If small (< 4KB): always store full
+   - If parent available and delta < 50% size: store delta
+   - If large (> 16KB): store chunked
+   - Otherwise: store full"
+  (ensure-vault-dirs!)
+  (let* ((size (string-length content))
+         (content-h (content-hash content))
+         (path (hash->path content-h)))
+    (cond
+     ;; Already exists
+     ((content-exists? content-h)
+      (cons 'existing content-h))
+
+     ;; Small content: always full
+     ((< size *chunk-min*)
+      (with-output-to-file path (lambda () (display content)))
+      (cons 'full content-h))
+
+     ;; Has parent: try delta
+     ((and parent-hash
+           (content-exists? parent-hash)
+           (< (get-delta-depth parent-hash) *max-delta-depth*))
+      (let* ((parent-content (load-content parent-hash))
+             (ops (compute-delta parent-content content))
+             (delta-sz (delta-size ops)))
+        (if (< delta-sz (quotient size 2))
+            ;; Delta is worth it
+            (let ((delta-h (store-delta! parent-hash ops content-h)))
+              (cons 'delta content-h))
+            ;; Delta too big, try chunked or full
+            (if (> size *chunk-max*)
+                (cons 'chunked (store-chunked! content))
+                (begin
+                  (with-output-to-file path (lambda () (display content)))
+                  (cons 'full content-h))))))
+
+     ;; Large content: chunked
+     ((> size *chunk-max*)
+      (cons 'chunked (store-chunked! content)))
+
+     ;; Default: full
+     (else
+      (with-output-to-file path (lambda () (display content)))
+      (cons 'full content-h)))))
+
+;;; ============================================================
+;;; Public API
+;;; ============================================================
+
+(define (text-seal t)
+  "Seal text to vault using smart storage strategy.
+   Returns content hash. Updates provenance chain."
+  (let* ((old-hash (text-source-hash t))
+         (content (text->string t))
+         (result (store-smart! content old-hash))
+         (storage-type (car result))
+         (new-hash (cdr result)))
     ;; Update provenance
-    (set-text-parent-hash! t old-hash)  ; previous version
-    (set-text-source-hash! t new-hash)  ; now points to self
+    (set-text-parent-hash! t old-hash)
+    (set-text-source-hash! t new-hash)
     (set-text-modified! t #f)
     new-hash))
 
 (define (text-unseal hash)
-  "Load text from vault by hash. Sets source-hash for provenance.
-   Verifies content integrity against hash."
-  (let ((path (hash->path hash)))
-    (unless (file-exists? path)
-      (error "Object not found in vault" hash))
-    (let* ((content (with-input-from-file path read-string))
-           (t (text-from-string content))
-           ;; Verify integrity
-           (computed-hash (text-hash t)))
-      (unless (string=? hash computed-hash)
-        (error "Content integrity failure" hash computed-hash))
-      (set-text-source-hash! t hash)
-      t)))
+  "Load text from vault by hash. Handles full/chunked/delta.
+   Verifies integrity. Sets source-hash for provenance."
+  (let* ((content (load-content hash))
+         (t (text-from-string content))
+         (computed-hash (text-hash t)))
+    ;; Verify integrity
+    (unless (string=? hash computed-hash)
+      (error "Content integrity failure" hash computed-hash))
+    (set-text-source-hash! t hash)
+    t))
 
 ) ; end module
