@@ -206,9 +206,6 @@
 (define (warnings-are-errors?)
   (memq *build-level* '(engineering qa)))
 
-;; Legacy compatibility
-(define (warnings-are-errors?) (warnings-are-errors?))
-
 ;;; When the tala beats and the flute plays om,
 ;;; the lambda rests in stillness.
 (define *stillness* 'quiescent)
