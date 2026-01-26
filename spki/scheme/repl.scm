@@ -7411,16 +7411,9 @@ See: Memo-0000 Declaration of Cyberspace
               ((= c 63)  ; ?
                (display "?\n")
                "?")
-              ;; Comma - newline, lineage on fresh line with initial
-              ((= c 44)  ; ,
-               (newline)
-               (let ((line (lineage#lineage-with-initial prompt ",")))
-                 (when line (repl-history-add line))
-                 (and line (strip-ansi line))))
               ;; ESC = arrow key or other escape sequence
-              ;; Newline, lineage on fresh line for history navigation
+              ;; Let lineage handle history navigation
               ((= c 27)
-               (newline)
                (let ((line (lineage#lineage prompt)))
                  (when line (repl-history-add line))
                  (and line (strip-ansi line))))
@@ -7434,9 +7427,8 @@ See: Memo-0000 Declaration of Cyberspace
               ((or (= c 10) (= c 13))
                (newline)
                "")
-              ;; Regular char - newline, lineage on fresh line with initial
+              ;; Regular char - let lineage redraw with initial (no newline)
               (else
-               (newline)
                (let* ((initial (string (integer->char c)))
                       (line (lineage#lineage-with-initial prompt initial)))
                  (when line (repl-history-add line))
