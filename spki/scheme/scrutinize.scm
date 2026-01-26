@@ -327,6 +327,41 @@
     (ok! (sprintf "~a .so files checked" (length so-files)))))
 
 ;;; ============================================================
+;;; 10. Infinite Recursion Detection
+;;; ============================================================
+
+(define (check-infinite-recursion)
+  (print "\n=== 10. Infinite Recursion Detection ===")
+  (let ((modules (library-modules))
+        (violations '()))
+    (for-each
+      (lambda (f)
+        (let* ((lines (with-input-from-file f read-lines))
+               (line-num 0))
+          ;; Pattern: (define (name) (name)) - no args, calls itself
+          (for-each
+            (lambda (line)
+              (set! line-num (+ line-num 1))
+              ;; Simple pattern: (define (name) (name)) with no body
+              (let ((m (irregex-search
+                         "\\(define\\s+\\(([a-zA-Z][a-zA-Z0-9*+/<=>!?-]*)\\)\\s*\\(\\1\\)\\)"
+                         line)))
+                (when m
+                  (set! violations
+                    (cons (list f line-num (irregex-match-substring m 1))
+                          violations)))))
+            lines)))
+      modules)
+    (if (null? violations)
+        (ok! "No degenerate infinite recursion detected")
+        (for-each
+          (lambda (v)
+            (error! (car v) (cadr v)
+                    (sprintf "infinite recursion: (~a) calls itself with no state change"
+                             (caddr v))))
+          violations))))
+
+;;; ============================================================
 ;;; Main
 ;;; ============================================================
 
@@ -348,6 +383,7 @@
   (check-dead-code)
   (check-cross-references)
   (check-build-artifacts)
+  (check-infinite-recursion)
 
   (print "\n=== Summary ===")
   (printf "  Errors:   ~a~n" *errors*)
