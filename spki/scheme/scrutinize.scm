@@ -443,21 +443,31 @@
     (for-each
       (lambda (f)
         (let ((content (with-input-from-file f read-string)))
-          ;; Find all (except module name1 name2 ...) patterns
+          ;; Find all (import (except module name1 name2 ...)) patterns
+          ;; Must follow (import to avoid matching "except" in comments/strings
           (irregex-fold
-            "\\(except\\s+[a-zA-Z0-9-]+\\s+([^)]+)\\)"
+            "\\(import\\s+\\(except\\s+([a-zA-Z0-9-]+)\\s+([^)]+)\\)"
             (lambda (i m acc)
-              (let* ((excluded-str (irregex-match-substring m 1))
+              (let* ((module-name (irregex-match-substring m 1))
+                     (excluded-str (irregex-match-substring m 2))
                      (excluded (map string->symbol (string-split excluded-str))))
-                ;; Check if any excluded name is used later in the file
+                ;; Check if any excluded name is used BUT NOT defined locally
                 (for-each
                   (lambda (name)
-                    (let ((name-str (symbol->string name)))
-                      ;; Look for usage (not in comments, rough check)
-                      (when (irregex-search
-                              (sprintf "\\b~a\\b" (irregex-quote name-str))
-                              (substring content (irregex-match-end-index m 0)))
-                        (set! violations (cons (list f name) violations)))))
+                    (let* ((name-str (symbol->string name))
+                           (rest-of-file (substring content (irregex-match-end-index m 0)))
+                           ;; Check for local definition: (define name or (define (name
+                           (has-local-def (irregex-search
+                                            (sprintf "\\(define\\s+\\(?~a[\\s)]"
+                                                     (irregex-quote name-str))
+                                            rest-of-file))
+                           ;; Check for usage
+                           (has-usage (irregex-search
+                                        (sprintf "\\b~a\\b" (irregex-quote name-str))
+                                        rest-of-file)))
+                      ;; Only flag if used but NOT defined locally
+                      (when (and has-usage (not has-local-def))
+                        (set! violations (cons (list f name module-name) violations)))))
                   excluded)))
             #f content)))
       modules)
@@ -466,7 +476,8 @@
         (for-each
           (lambda (v)
             (warn! (car v) #f
-                   (sprintf "excluded '~a' from import but appears to use it" (cadr v))))
+                   (sprintf "excluded '~a' from ~a but uses it without local definition"
+                            (cadr v) (caddr v))))
           violations))))
 
 ;;; ============================================================
