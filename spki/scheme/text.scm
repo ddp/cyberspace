@@ -54,6 +54,7 @@
    text-seal
    text-unseal
    text-hash
+   set-vault-path!
 
    ;; For editors
    text-gap-buffer  ; expose internal for low-level access
@@ -66,7 +67,11 @@
           (chicken string)
           (chicken io)
           (chicken file)
-          srfi-13)
+          (chicken pathname)
+          (chicken blob)
+          srfi-4   ; u8vectors
+          srfi-13
+          crypto-ffi)
 
 ;;; ============================================================
 ;;; Gap Buffer - efficient editing data structure
@@ -369,28 +374,80 @@
 ;;; Soup Integration - seal/unseal to content-addressed storage
 ;;; ============================================================
 ;;;
+;;; Content-addressed storage using blake2b.
+;;; Objects stored in .vault/objects/{hash}
 ;;; For now, simple single-chunk. Future: merkle tree of chunks.
 
+;; Configurable vault path (default: .vault in current directory)
+(define *vault-path* ".vault")
+
+(define (set-vault-path! path)
+  "Set the vault directory path"
+  (set! *vault-path* path))
+
+(define (vault-objects-path)
+  "Path to objects directory"
+  (make-pathname *vault-path* "objects"))
+
+(define (ensure-objects-dir!)
+  "Create objects directory if needed"
+  (let ((dir (vault-objects-path)))
+    (unless (directory-exists? dir)
+      (create-directory dir #t))))
+
+(define (blob->hex b)
+  "Convert blob to hex string"
+  (define (byte->hex n)
+    (let ((s (number->string n 16)))
+      (if (= (string-length s) 1)
+          (string-append "0" s)
+          s)))
+  (let* ((len (blob-size b))
+         (parts '()))
+    (do ((i 0 (+ i 1))) ((>= i len) (apply string-append (reverse parts)))
+      (set! parts (cons (byte->hex (u8vector-ref (blob->u8vector b) i)) parts)))))
+
 (define (text-hash t)
-  "Content hash of text (placeholder - needs crypto-ffi)"
-  ;; TODO: Use blake2b from crypto-ffi
-  (let ((content (text->string t)))
-    (string-append "text:" (number->string (string-length content)))))
+  "Content hash of text using blake2b (32 bytes = 64 hex chars)"
+  (let* ((content (text->string t))
+         (hash-blob (blake2b-hash content)))
+    (string-append "blake2b:" (blob->hex hash-blob))))
+
+(define (hash->path hash)
+  "Convert hash to storage path"
+  (make-pathname (vault-objects-path) hash))
 
 (define (text-seal t)
-  "Seal text to soup, return hash. Captures parent for undo chain."
-  ;; TODO: Actually store in vault
-  (let ((old-hash (text-source-hash t))
-        (new-hash (text-hash t)))
+  "Seal text to vault, return hash. Captures parent for undo chain.
+   Stores content at .vault/objects/{hash}"
+  (ensure-objects-dir!)
+  (let* ((old-hash (text-source-hash t))
+         (content (text->string t))
+         (new-hash (text-hash t))
+         (path (hash->path new-hash)))
+    ;; Store content (idempotent - same content = same hash = same file)
+    (unless (file-exists? path)
+      (with-output-to-file path
+        (lambda () (display content))))
+    ;; Update provenance
     (set-text-parent-hash! t old-hash)  ; previous version
     (set-text-source-hash! t new-hash)  ; now points to self
     (set-text-modified! t #f)
     new-hash))
 
 (define (text-unseal hash)
-  "Load text from soup by hash. Sets source-hash for provenance."
-  ;; TODO: Actually load from vault
-  ;; When implemented: load content, create text, set source-hash to hash
-  (error "text-unseal not yet implemented"))
+  "Load text from vault by hash. Sets source-hash for provenance.
+   Verifies content integrity against hash."
+  (let ((path (hash->path hash)))
+    (unless (file-exists? path)
+      (error "Object not found in vault" hash))
+    (let* ((content (with-input-from-file path read-string))
+           (t (text-from-string content))
+           ;; Verify integrity
+           (computed-hash (text-hash t)))
+      (unless (string=? hash computed-hash)
+        (error "Content integrity failure" hash computed-hash))
+      (set-text-source-hash! t hash)
+      t)))
 
 ) ; end module
