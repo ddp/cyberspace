@@ -500,6 +500,12 @@
 
 (define *large-function-threshold* 100)  ; lines
 
+;; Known large functions that are intentional:
+;; - index-html: heredoc HTML template, not procedural code
+;; - execute-commands: TECO command interpreter, inherently a big case dispatch
+(define *large-function-exceptions*
+  '("index-html" "execute-commands"))
+
 (define (check-large-functions)
   (print "\n=== 14. Large Functions ===")
   (let ((modules (library-modules))
@@ -528,7 +534,8 @@
               ;; When we return to depth 0, function ended
               (when (and current-fn (<= paren-depth 0))
                 (let ((fn-size (- line-num fn-start -1)))
-                  (when (> fn-size *large-function-threshold*)
+                  (when (and (> fn-size *large-function-threshold*)
+                             (not (member current-fn *large-function-exceptions*)))
                     (set! large-fns
                       (cons (list f fn-start current-fn fn-size) large-fns))))
                 (set! current-fn #f)
