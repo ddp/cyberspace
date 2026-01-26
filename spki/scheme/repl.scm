@@ -5633,17 +5633,15 @@ Cyberspace REPL - Available Commands
 ;;;
 ;;; Dylan/CCL-style debugger infused into the REPL.
 ;;; When errors occur, drop into debug> prompt with clean stack.
-;;; Uses inspector module's *inspector-enabled* parameter.
+;;; Uses inspector module's install-inspector! function.
 
 (define (enable-inspector!)
   "Enable integrated debugger"
-  (set! *inspector-enabled* #t)
-  (print "Inspector enabled. Errors drop into debug> prompt."))
+  (inspector#install-inspector!))
 
 (define (disable-inspector!)
-  "Disable integrated debugger"
-  (set! *inspector-enabled* #f)
-  (print "Inspector disabled. Errors show stack trace."))
+  "Disable integrated debugger - note: inspector module has no uninstall"
+  (print "Note: inspector cannot be disabled once installed"))
 
 ;; Domain-aware inspect - handles high-level Cyberspace objects
 ;; before falling back to generic inspector
