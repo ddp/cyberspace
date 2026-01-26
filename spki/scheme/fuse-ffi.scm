@@ -21,8 +21,9 @@
    fuse-unmount
    fuse-loop
    fuse-exit
+   fuse-set-source!
 
-   ;; Operation callbacks (set these before fuse-mount)
+   ;; Operation callbacks (legacy, not used in passthrough mode)
    fuse-set-getattr!
    fuse-set-readdir!
    fuse-set-open!
@@ -120,6 +121,8 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -183,32 +186,134 @@ static int add_dir_entry(const char *name) {
     return -1;
 }
 
-/* FUSE operation wrappers */
+/*
+ * Passthrough filesystem: mirrors a source directory.
+ * Scheme sets the source path before mount.
+ */
+static char source_path[4096] = "";
+
+static void set_source_path(const char *path) {
+    strncpy(source_path, path, sizeof(source_path) - 1);
+    source_path[sizeof(source_path) - 1] = '\0';
+}
+
+static void full_path(char *dest, const char *path, size_t size) {
+    snprintf(dest, size, "%s%s", source_path, path);
+}
+
+/* FUSE operations - passthrough to source directory */
 
 static int cs_getattr(const char *path, struct stat *stbuf) {
-    memset(stbuf, 0, sizeof(struct stat));
-    if (strcmp(path, "/") == 0) {
-        stbuf->st_mode = S_IFDIR | 0755;
-        stbuf->st_nlink = 2;
-        return 0;
-    }
-    return -ENOENT;
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    int res = lstat(fpath, stbuf);
+    return res == -1 ? -errno : 0;
 }
 
 static int cs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                       off_t offset, struct fuse_file_info *fi) {
     (void) offset;
     (void) fi;
-    if (strcmp(path, "/") != 0)
-        return -ENOENT;
-    filler(buf, ".", NULL, 0);
-    filler(buf, "..", NULL, 0);
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+
+    DIR *dp = opendir(fpath);
+    if (dp == NULL) return -errno;
+
+    struct dirent *de;
+    while ((de = readdir(dp)) != NULL) {
+        filler(buf, de->d_name, NULL, 0);
+    }
+    closedir(dp);
     return 0;
 }
 
+static int cs_open(const char *path, struct fuse_file_info *fi) {
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    int fd = open(fpath, fi->flags);
+    if (fd == -1) return -errno;
+    close(fd);
+    return 0;
+}
+
+static int cs_read(const char *path, char *buf, size_t size, off_t offset,
+                   struct fuse_file_info *fi) {
+    (void) fi;
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    int fd = open(fpath, O_RDONLY);
+    if (fd == -1) return -errno;
+    int res = pread(fd, buf, size, offset);
+    close(fd);
+    return res == -1 ? -errno : res;
+}
+
+static int cs_write(const char *path, const char *buf, size_t size, off_t offset,
+                    struct fuse_file_info *fi) {
+    (void) fi;
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    int fd = open(fpath, O_WRONLY);
+    if (fd == -1) return -errno;
+    int res = pwrite(fd, buf, size, offset);
+    close(fd);
+    return res == -1 ? -errno : res;
+}
+
+static int cs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+    (void) fi;
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    int fd = creat(fpath, mode);
+    if (fd == -1) return -errno;
+    close(fd);
+    return 0;
+}
+
+static int cs_unlink(const char *path) {
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    return unlink(fpath) == -1 ? -errno : 0;
+}
+
+static int cs_mkdir(const char *path, mode_t mode) {
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    return mkdir(fpath, mode) == -1 ? -errno : 0;
+}
+
+static int cs_rmdir(const char *path) {
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    return rmdir(fpath) == -1 ? -errno : 0;
+}
+
+static int cs_truncate(const char *path, off_t size) {
+    char fpath[4096];
+    full_path(fpath, path, sizeof(fpath));
+    return truncate(fpath, size) == -1 ? -errno : 0;
+}
+
+static int cs_rename(const char *from, const char *to) {
+    char ffrom[4096], fto[4096];
+    full_path(ffrom, from, sizeof(ffrom));
+    full_path(fto, to, sizeof(fto));
+    return rename(ffrom, fto) == -1 ? -errno : 0;
+}
+
 static struct fuse_operations cyberspace_ops = {
-    .getattr = cs_getattr,
-    .readdir = cs_readdir,
+    .getattr  = cs_getattr,
+    .readdir  = cs_readdir,
+    .open     = cs_open,
+    .read     = cs_read,
+    .write    = cs_write,
+    .create   = cs_create,
+    .unlink   = cs_unlink,
+    .mkdir    = cs_mkdir,
+    .rmdir    = cs_rmdir,
+    .truncate = cs_truncate,
+    .rename   = cs_rename,
 };
 
 static struct fuse *fuse_instance = NULL;
@@ -277,8 +382,10 @@ static int is_fuse_running(void) {
 ;; Scheme-side callback storage
 (define *fuse-getattr-callback* #f)
 (define *fuse-readdir-callback* #f)
+(define *fuse-readdir-entries* '())
 (define *fuse-open-callback* #f)
 (define *fuse-read-callback* #f)
+(define *fuse-read-buffer* #f)
 (define *fuse-write-callback* #f)
 (define *fuse-create-callback* #f)
 (define *fuse-unlink-callback* #f)
@@ -290,6 +397,17 @@ static int is_fuse_running(void) {
 (define *fuse-getxattr-callback* #f)
 (define *fuse-listxattr-callback* #f)
 (define *fuse-removexattr-callback* #f)
+
+;;; ============================================================
+;;; Passthrough Source Path
+;;; ============================================================
+
+(define %set-source-path
+  (foreign-lambda void "set_source_path" c-string))
+
+(define (fuse-set-source! path)
+  "Set the source directory for passthrough filesystem."
+  (%set-source-path path))
 
 (define (fuse-set-getattr! proc)
   "Set getattr callback. proc: (path) -> stat-alist or #f"
@@ -380,22 +498,24 @@ static int is_fuse_running(void) {
 (define %fuse-running?
   (foreign-lambda int "is_fuse_running"))
 
-(define (fuse-mount mountpoint #!key
-                    (foreground #t)
-                    (debug #f)
-                    (allow-other #f))
-  "Mount FUSE filesystem at mountpoint.
+(define (fuse-mount mountpoint source-path)
+  "Mount FUSE passthrough filesystem.
+   mountpoint: where to mount (e.g., /tmp/mywormhole)
+   source-path: directory to mirror (e.g., /path/to/vault)
    WARNING: This blocks until unmounted! Run in separate process for production.
    Returns exit code (0 = success)."
   (unless *fuse-initialized*
     (unless (fuse-init)
       (error 'fuse-mount "FUSE not available. Install with: brew install fuse-t")))
 
+  ;; Set source directory
+  (fuse-set-source! source-path)
+
   ;; Create mountpoint if needed
   (unless (file-exists? mountpoint)
     (create-directory mountpoint #t))
 
-  (printf "Mounting FUSE filesystem at ~a~n" mountpoint)
+  (printf "Mounting FUSE passthrough: ~a -> ~a~n" mountpoint source-path)
   (printf "  (Ctrl-C to unmount, or `umount ~a` from another terminal)~n" mountpoint)
 
   ;; This blocks!
