@@ -27,7 +27,8 @@
         (chicken process-context)
         (chicken irregex)
         srfi-1
-        srfi-13)
+        srfi-13
+        srfi-69)
 
 (define *errors* 0)
 (define *warnings* 0)
@@ -362,6 +363,211 @@
           violations))))
 
 ;;; ============================================================
+;;; 11. Duplicate Definitions
+;;; ============================================================
+
+(define (check-duplicate-definitions)
+  (print "\n=== 11. Duplicate Definitions ===")
+  (let ((modules (library-modules))
+        (violations '()))
+    (for-each
+      (lambda (f)
+        (let* ((lines (with-input-from-file f read-lines))
+               (defines (make-hash-table))
+               (line-num 0))
+          (for-each
+            (lambda (line)
+              (set! line-num (+ line-num 1))
+              ;; Match (define (name ...) or (define name
+              (let ((m (irregex-search "^\\s*\\(define\\s+\\(?([a-zA-Z][a-zA-Z0-9*+/<=>!?-]*)" line)))
+                (when m
+                  (let ((name (irregex-match-substring m 1)))
+                    (if (hash-table-exists? defines name)
+                        (set! violations
+                          (cons (list f line-num name (hash-table-ref defines name))
+                                violations))
+                        (hash-table-set! defines name line-num))))))
+            lines)))
+      modules)
+    (if (null? violations)
+        (ok! "No duplicate definitions found")
+        (for-each
+          (lambda (v)
+            (warn! (car v) (cadr v)
+                   (sprintf "duplicate definition: ~a (first at line ~a)"
+                            (caddr v) (cadddr v))))
+          violations))))
+
+;;; ============================================================
+;;; 12. Tech Debt Markers (TODO/FIXME/HACK/XXX)
+;;; ============================================================
+
+(define (check-tech-debt)
+  (print "\n=== 12. Tech Debt Markers ===")
+  (let ((modules (library-modules))
+        (markers '())
+        (total 0))
+    (for-each
+      (lambda (f)
+        (let* ((lines (with-input-from-file f read-lines))
+               (line-num 0))
+          (for-each
+            (lambda (line)
+              (set! line-num (+ line-num 1))
+              (when (irregex-search "\\b(TODO|FIXME|HACK|XXX)\\b" line)
+                (set! total (+ total 1))
+                (set! markers (cons (list f line-num line) markers))))
+            lines)))
+      modules)
+    (if (null? markers)
+        (ok! "No tech debt markers found")
+        (begin
+          (for-each
+            (lambda (m)
+              (note! (sprintf "~a:~a: ~a"
+                             (car m) (cadr m)
+                             (string-trim-both (caddr m)))))
+            (take (reverse markers) (min 10 (length markers))))
+          (when (> total 10)
+            (note! (sprintf "... and ~a more" (- total 10))))
+          (note! (sprintf "Total tech debt markers: ~a" total))))))
+
+;;; ============================================================
+;;; 13. Import-Except Then Use
+;;; ============================================================
+
+(define (check-import-except-violations)
+  (print "\n=== 13. Import-Except Violations ===")
+  (let ((modules (library-modules))
+        (violations '()))
+    (for-each
+      (lambda (f)
+        (let ((content (with-input-from-file f read-string)))
+          ;; Find all (except module name1 name2 ...) patterns
+          (irregex-fold
+            "\\(except\\s+[a-zA-Z0-9-]+\\s+([^)]+)\\)"
+            (lambda (i m acc)
+              (let* ((excluded-str (irregex-match-substring m 1))
+                     (excluded (map string->symbol (string-split excluded-str))))
+                ;; Check if any excluded name is used later in the file
+                (for-each
+                  (lambda (name)
+                    (let ((name-str (symbol->string name)))
+                      ;; Look for usage (not in comments, rough check)
+                      (when (irregex-search
+                              (sprintf "\\b~a\\b" (irregex-quote name-str))
+                              (substring content (irregex-match-end-index m 0)))
+                        (set! violations (cons (list f name) violations)))))
+                  excluded)))
+            #f content)))
+      modules)
+    (if (null? violations)
+        (ok! "No import-except violations found")
+        (for-each
+          (lambda (v)
+            (warn! (car v) #f
+                   (sprintf "excluded '~a' from import but appears to use it" (cadr v))))
+          violations))))
+
+;;; ============================================================
+;;; 14. Large Functions
+;;; ============================================================
+
+(define *large-function-threshold* 100)  ; lines
+
+(define (check-large-functions)
+  (print "\n=== 14. Large Functions ===")
+  (let ((modules (library-modules))
+        (large-fns '()))
+    (for-each
+      (lambda (f)
+        (let* ((lines (with-input-from-file f read-lines))
+               (line-num 0)
+               (current-fn #f)
+               (fn-start 0)
+               (paren-depth 0))
+          (for-each
+            (lambda (line)
+              (set! line-num (+ line-num 1))
+              ;; Track start of top-level define
+              (when (and (zero? paren-depth)
+                         (irregex-search "^\\(define\\s+\\(?([a-zA-Z][a-zA-Z0-9*+/<=>!?-]*)" line))
+                (let ((m (irregex-search "^\\(define\\s+\\(?([a-zA-Z][a-zA-Z0-9*+/<=>!?-]*)" line)))
+                  (set! current-fn (irregex-match-substring m 1))
+                  (set! fn-start line-num)))
+              ;; Count parens (rough depth tracking)
+              (set! paren-depth
+                (+ paren-depth
+                   (- (string-count line #\()
+                      (string-count line #\)))))
+              ;; When we return to depth 0, function ended
+              (when (and current-fn (<= paren-depth 0))
+                (let ((fn-size (- line-num fn-start -1)))
+                  (when (> fn-size *large-function-threshold*)
+                    (set! large-fns
+                      (cons (list f fn-start current-fn fn-size) large-fns))))
+                (set! current-fn #f)
+                (set! paren-depth 0)))
+            lines)))
+      modules)
+    (if (null? large-fns)
+        (ok! (sprintf "No functions over ~a lines" *large-function-threshold*))
+        (begin
+          (for-each
+            (lambda (fn)
+              (warn! (car fn) (cadr fn)
+                     (sprintf "~a is ~a lines (threshold: ~a)"
+                              (caddr fn) (cadddr fn) *large-function-threshold*)))
+            (sort large-fns (lambda (a b) (> (cadddr a) (cadddr b)))))
+          (note! (sprintf "~a large functions found" (length large-fns)))))))
+
+;;; ============================================================
+;;; 15. Global Mutation at Load Time
+;;; ============================================================
+
+(define (check-global-mutation)
+  (print "\n=== 15. Global Mutation at Load Time ===")
+  (let ((modules (library-modules))
+        (violations '()))
+    (for-each
+      (lambda (f)
+        (let* ((lines (with-input-from-file f read-lines))
+               (line-num 0)
+               (in-define #f)
+               (paren-depth 0))
+          (for-each
+            (lambda (line)
+              (set! line-num (+ line-num 1))
+              ;; Track if we're inside a define
+              (when (irregex-search "^\\(define\\s" line)
+                (set! in-define #t))
+              ;; Update paren depth
+              (set! paren-depth
+                (+ paren-depth
+                   (- (string-count line #\()
+                      (string-count line #\)))))
+              (when (<= paren-depth 0)
+                (set! in-define #f)
+                (set! paren-depth 0))
+              ;; Check for top-level set! (not inside define)
+              (when (and (not in-define)
+                         (irregex-search "^\\(set!\\s" line))
+                (let ((m (irregex-search "^\\(set!\\s+([a-zA-Z*][a-zA-Z0-9*+/<=>!?-]*)" line)))
+                  (when m
+                    (set! violations
+                      (cons (list f line-num (irregex-match-substring m 1))
+                            violations))))))
+            lines)))
+      modules)
+    (if (null? violations)
+        (ok! "No top-level set! at load time")
+        (for-each
+          (lambda (v)
+            (warn! (car v) (cadr v)
+                   (sprintf "top-level set! of ~a at load time" (caddr v))))
+          violations))))
+
+;;; ============================================================
 ;;; Main
 ;;; ============================================================
 
@@ -384,6 +590,11 @@
   (check-cross-references)
   (check-build-artifacts)
   (check-infinite-recursion)
+  (check-duplicate-definitions)
+  (check-tech-debt)
+  (check-import-except-violations)
+  (check-large-functions)
+  (check-global-mutation)
 
   (print "\n=== Summary ===")
   (printf "  Errors:   ~a~n" *errors*)
