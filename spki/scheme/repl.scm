@@ -7391,32 +7391,33 @@ See: Memo-0000 Declaration of Cyberspace
       (let ((line (lineage#lineage prompt)))
         (when line (repl-history-add line))
         (and line (strip-ansi line)))
-      ;; Interactive tty: peek first char for immediate shortcuts
-      ;; Don't display prompt yet - lineage-with-initial will handle it
+      ;; Interactive tty: show prompt, peek first char for immediate shortcuts
       (begin
+        (display prompt)
+        (flush-output)
         (tty-set-raw)
         (let ((c (tty-raw-char)))
           (tty-set-cooked)
           (cond
             ;; EOF
             ((< c 0) #f)
-            ;; Immediate shortcuts (no Enter needed) - show prompt + char + newline
+            ;; Immediate shortcuts (no Enter needed) - prompt already shown, just echo char
             ((= c 46)  ; .
-             (display prompt)
              (display ".\n")
              ".")
             ((= c 63)  ; ?
-             (display prompt)
              (display "?\n")
              "?")
-            ;; Comma - use lineage-with-initial (displays prompt + comma)
+            ;; Comma - clear line, let lineage redraw with initial
             ((= c 44)  ; ,
+             (display "\r")  ; return to line start
              (let ((line (lineage#lineage-with-initial prompt ",")))
                (when line (repl-history-add line))
                (and line (strip-ansi line))))
             ;; ESC = arrow key or other escape sequence
-            ;; Defer entirely to lineage (user pressed up/down for history)
+            ;; Clear line, defer to lineage for history navigation
             ((= c 27)
+             (display "\r")
              (let ((line (lineage#lineage prompt)))
                (when line (repl-history-add line))
                (and line (strip-ansi line))))
@@ -7424,11 +7425,11 @@ See: Memo-0000 Declaration of Cyberspace
             ((= c 4) #f)
             ;; Ctrl-C = cancel
             ((= c 3)
-             (display prompt)
              (newline)
              "")
-            ;; Regular char - use lineage-with-initial (displays prompt + char)
+            ;; Regular char - clear line, let lineage redraw with initial
             (else
+             (display "\r")
              (let* ((initial (string (integer->char c)))
                     (line (lineage#lineage-with-initial prompt initial)))
                (when line (repl-history-add line))
