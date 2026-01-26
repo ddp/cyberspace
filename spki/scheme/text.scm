@@ -793,9 +793,9 @@
 ;;;
 ;;; Examples:
 ;;;   (seal-as t "notes")       ; seal with name
-;;;   (unseal-named "notes")    ; load current
-;;;   (unseal-named "notes@2")  ; load version 2
-;;;   (unseal-named "notes@-1") ; load previous
+;;;   (unseal-named "notes")    ; load current (same as notes;)
+;;;   (unseal-named "notes;3")  ; load version 3
+;;;   (unseal-named "notes;-1") ; load previous
 
 (define (refs-path)
   "Path to refs directory"
@@ -862,12 +862,16 @@
   (ref-load name))
 
 (define (parse-ref-spec spec)
-  "Parse 'name' or 'name@version' into (name . version).
-   version can be number (1, 2, ...) or negative (-1 = previous)"
-  (let ((at-pos (string-index spec #\@)))
-    (if at-pos
-        (cons (substring spec 0 at-pos)
-              (string->number (substring spec (+ at-pos 1))))
+  "Parse 'name' or 'name;version' into (name . version).
+   version can be number (1, 2, ...) or negative (-1 = previous)
+   Bare 'name;' is same as 'name' (current version, VMS style)"
+  (let ((semi-pos (string-index spec #\;)))
+    (if semi-pos
+        (let ((ver-str (substring spec (+ semi-pos 1))))
+          (cons (substring spec 0 semi-pos)
+                (if (string=? ver-str "")
+                    #f  ; bare ; means current
+                    (string->number ver-str))))
         (cons spec #f))))
 
 (define (seal-as t name)

@@ -362,11 +362,14 @@
      (set-schemacs-status! ed (format #f "Failed: ~a" spec)))))
 
 (define (em-parse-name-spec spec)
-  "Parse 'name' or 'name@version' into (name . version)"
-  (let ((at-pos (string-index spec #\@)))
-    (if at-pos
-        (cons (substring spec 0 at-pos)
-              (string->number (substring spec (+ at-pos 1))))
+  "Parse 'name' or 'name;version' into (name . version) (VMS style)"
+  (let ((semi-pos (string-index spec #\;)))
+    (if semi-pos
+        (let ((ver-str (substring spec (+ semi-pos 1))))
+          (cons (substring spec 0 semi-pos)
+                (if (string=? ver-str "")
+                    #f
+                    (string->number ver-str))))
         (cons spec #f))))
 
 ;;; ============================================================
