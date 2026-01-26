@@ -99,17 +99,31 @@
 (define (check-export-patterns)
   (print "\n=== 2. Export Patterns ===")
   (let ((modules (library-modules))
-        (no-exports '()))
+        (no-exports '())
+        (scripts '()))
     (for-each
       (lambda (f)
         (let* ((content (with-input-from-file f read-string))
+               (is-script (irregex-search "^#!" content))
+               (has-module (irregex-search "\\(module [a-z0-9-]+" content))
                (has-exports (irregex-search "\\(module [a-z0-9-]+ \\(" content)))
-          (unless has-exports
-            (set! no-exports (cons f no-exports)))))
+          (cond
+            ;; Scripts don't need exports
+            (is-script
+             (set! scripts (cons f scripts)))
+            ;; Has module but no export list
+            ((and has-module (not has-exports))
+             (set! no-exports (cons f no-exports)))
+            ;; No module declaration - already flagged in check 1
+            ((not has-module) #f)
+            ;; Has exports - good
+            (else #f))))
       modules)
+    (when (pair? scripts)
+      (ok! (sprintf "~a scripts (no exports needed)" (length scripts))))
     (if (null? no-exports)
-        (ok! "All modules have export declarations")
-        (for-each (lambda (f) (warn! f #f "no exports")) no-exports))))
+        (ok! "All library modules have export declarations")
+        (for-each (lambda (f) (warn! f #f "module without explicit exports")) no-exports))))
 
 ;;; ============================================================
 ;;; 3. Import Patterns
