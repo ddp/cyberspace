@@ -5,7 +5,7 @@
 ;;; - Chained structure (append-only log)
 ;;; - SPKI authorization (who had permission)
 ;;; - Dual context (human + machine readable)
-;;; - Cryptographic seals (Ed25519 signatures)
+;;; - Cryptographic seals (Ed25519, ML-DSA, SPHINCS+, or hybrid signatures)
 
 (module audit
   (;; Core operations
@@ -64,7 +64,8 @@
           srfi-4   ; u8vectors
           srfi-13  ; string utilities
           srfi-69  ; hash tables
-          crypto-ffi)
+          crypto-ffi
+          pq-crypto)
 
   ;;; ============================================================================
   ;;; Audit Entry Structure
@@ -143,14 +144,17 @@
   ;;; Audit Entry Creation
   ;;; ============================================================================
 
-  (define (audit-append #!key actor action motivation relates-to signing-key)
+  (define (audit-append #!key actor action motivation relates-to signing-key
+                              (algorithm 'ed25519) pq-signing-key)
     "Append entry to audit trail
 
      actor: SPKI principal (public key blob)
      action: (verb object . parameters) e.g., (seal-commit \"file.scm\" ...)
      motivation: Human-readable explanation
      relates-to: Related entries or concepts
-     signing-key: Private key for signing (blob)"
+     signing-key: Private key for signing (blob)
+     algorithm: ed25519 (default), ml-dsa-65, sphincs+, hybrid
+     pq-signing-key: For hybrid, the ML-DSA private key"
 
     (unless action
       (error "Action required for audit entry"))
@@ -197,11 +201,34 @@
                  (hash-hex (blob->hex content-hash))
                  (id (string-append "sha512:" (substring hash-hex 0 32)))
 
-                 ;; Sign the content hash
-                 (signature (ed25519-sign key content-hash))
+                 ;; Sign the content hash (algorithm-aware)
+                 (signature
+                  (case algorithm
+                    ((ed25519)
+                     (ed25519-sign key content-hash))
+                    ((ml-dsa-65 ml-dsa)
+                     (ml-dsa-sign content-hash key))
+                    ((sphincs+ sphincs+-shake-256s)
+                     (sphincs+-sign content-hash key))
+                    ((hybrid)
+                     (unless pq-signing-key
+                       (error 'audit-append "Hybrid requires pq-signing-key"))
+                     `(hybrid-signature
+                       (ed25519 ,(ed25519-sign key content-hash))
+                       (ml-dsa ,(ml-dsa-sign content-hash pq-signing-key))))
+                    (else
+                     (error 'audit-append "Unknown algorithm" algorithm))))
 
-                 ;; Create seal
-                 (seal-obj (make-audit-seal "ed25519-sha512"
+                 ;; Create seal with algorithm info
+                 (seal-alg-name
+                  (case algorithm
+                    ((ed25519) "ed25519-sha512")
+                    ((ml-dsa-65 ml-dsa) "ml-dsa-65-sha512")
+                    ((sphincs+ sphincs+-shake-256s) "sphincs+-sha512")
+                    ((hybrid) "hybrid-sha512")
+                    (else "unknown")))
+
+                 (seal-obj (make-audit-seal seal-alg-name
                                            content-hash
                                            signature))
 
@@ -369,8 +396,9 @@
   ;;; Verification
   ;;; ============================================================================
 
-  (define (audit-verify entry #!key public-key)
-    "Verify cryptographic seal on audit entry"
+  (define (audit-verify entry #!key public-key pq-public-key)
+    "Verify cryptographic seal on audit entry.
+     For hybrid seals: provide both public-key (ed25519) and pq-public-key (ml-dsa)"
     (let ((key (or public-key
                    ;; Extract key from actor
                    (actor-principal (entry-actor entry)))))
@@ -393,6 +421,7 @@
                              (lambda () (write unsealed-entry))))
                (computed-hash (sha512-hash content-str))
                (seal (entry-seal entry))
+               (seal-alg (seal-algorithm seal))
                (stored-hash (seal-content-hash seal))
                (signature (seal-signature seal)))
 
@@ -401,14 +430,40 @@
               (begin
                 (print "✗ Hash mismatch")
                 #f)
-              ;; Verify signature
-              (if (ed25519-verify key computed-hash signature)
-                  (begin
-                    (print "✓ Audit entry verified: " (entry-id entry))
-                    #t)
-                  (begin
-                    (print "✗ Signature invalid")
-                    #f)))))))
+              ;; Verify signature based on algorithm
+              (let ((verified
+                     (cond
+                      ((string=? seal-alg "ed25519-sha512")
+                       (ed25519-verify key computed-hash signature))
+
+                      ((string=? seal-alg "ml-dsa-65-sha512")
+                       (ml-dsa-verify computed-hash signature key))
+
+                      ((string=? seal-alg "sphincs+-sha512")
+                       (sphincs+-verify computed-hash signature key))
+
+                      ((string=? seal-alg "hybrid-sha512")
+                       (unless pq-public-key
+                         (error 'audit-verify "Hybrid requires pq-public-key"))
+                       (and (pair? signature)
+                            (eq? (car signature) 'hybrid-signature)
+                            (let ((ed-sig (cadr (assq 'ed25519 (cdr signature))))
+                                  (pq-sig (cadr (assq 'ml-dsa (cdr signature)))))
+                              (and ed-sig pq-sig
+                                   (ed25519-verify key computed-hash ed-sig)
+                                   (ml-dsa-verify computed-hash pq-sig pq-public-key)))))
+
+                      (else
+                       (print "✗ Unknown seal algorithm: " seal-alg)
+                       #f))))
+                (if verified
+                    (begin
+                      (print "✓ Audit entry verified: " (entry-id entry)
+                             " (" seal-alg ")")
+                      #t)
+                    (begin
+                      (print "✗ Signature invalid")
+                      #f))))))))
 
   (define (audit-chain #!key verify-key)
     "Verify entire audit chain"

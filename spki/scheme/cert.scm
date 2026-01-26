@@ -57,12 +57,14 @@
           (chicken base)
           (chicken string)
           (chicken format)
+          (chicken blob)
           srfi-1   ; list utilities
           srfi-4   ; u8vectors
           srfi-13  ; string utilities
           srfi-14  ; character sets
           sexp
-          crypto-ffi)
+          crypto-ffi
+          pq-crypto)
 
   ;;; Hash algorithms
   (define hash-alg-sha512 'sha512)
@@ -135,13 +137,20 @@
     (propagate cert-propagate))
 
   ;;; Signature
+  ;;; Now supports multiple signature algorithms:
+  ;;;   ed25519, ml-dsa-65, sphincs+, hybrid
 
   (define-record-type <signature>
-    (make-signature hash-alg cert-hash sig-bytes)
+    (make-signature-internal hash-alg cert-hash sig-bytes sig-alg)
     signature?
     (hash-alg signature-hash-alg)
     (cert-hash signature-cert-hash)
-    (sig-bytes signature-sig-bytes))
+    (sig-bytes signature-sig-bytes)
+    (sig-alg signature-sig-alg))  ; ed25519, ml-dsa-65, sphincs+, hybrid
+
+  ;; Backward-compatible constructor (defaults to ed25519)
+  (define (make-signature hash-alg cert-hash sig-bytes #!optional (sig-alg 'ed25519))
+    (make-signature-internal hash-alg cert-hash sig-bytes sig-alg))
 
   ;;; Signed certificate
 
@@ -375,8 +384,10 @@
     "Create a new certificate"
     (make-cert issuer subject tag validity (or propagate #f)))
 
-  (define (sign-cert cert private-key)
-    "Sign a certificate with a private key"
+  (define (sign-cert cert private-key #!optional (algorithm 'ed25519) pq-private-key)
+    "Sign a certificate with a private key.
+     algorithm: ed25519 (default), ml-dsa-65, sphincs+, hybrid
+     For hybrid: provide both private-key (ed25519) and pq-private-key (ml-dsa)"
     ;; Convert cert to canonical s-expression
     (let* ((cert-sexp (cert->sexp cert))
            (canonical (sexp->string cert-sexp)))
@@ -384,27 +395,73 @@
       ;; Hash the certificate using SHA-512
       (let ((cert-hash (sha512-hash canonical)))
 
-        ;; Sign the hash
-        (let ((sig-bytes (ed25519-sign private-key cert-hash)))
+        ;; Sign based on algorithm
+        (let ((sig-bytes
+               (case algorithm
+                 ((ed25519)
+                  (ed25519-sign private-key cert-hash))
+
+                 ((ml-dsa-65 ml-dsa)
+                  (ml-dsa-sign cert-hash private-key))
+
+                 ((sphincs+ sphincs+-shake-256s)
+                  (sphincs+-sign cert-hash private-key))
+
+                 ((hybrid)
+                  (unless pq-private-key
+                    (error 'sign-cert "Hybrid requires both ed25519 and ml-dsa private keys"))
+                  `(hybrid-signature
+                    (ed25519 ,(ed25519-sign private-key cert-hash))
+                    (ml-dsa ,(ml-dsa-sign cert-hash pq-private-key))))
+
+                 (else
+                  (error 'sign-cert "Unknown algorithm" algorithm)))))
 
           ;; Create signed certificate
           (make-signed-cert
            cert
-           (make-signature hash-alg-sha512 cert-hash sig-bytes))))))
+           (make-signature hash-alg-sha512 cert-hash sig-bytes algorithm))))))
 
-  (define (verify-signed-cert sc public-key)
-    "Verify a signed certificate"
+  (define (verify-signed-cert sc public-key #!optional pq-public-key)
+    "Verify a signed certificate.
+     For hybrid signatures: provide both public-key (ed25519) and pq-public-key (ml-dsa)
+     Dispatches verification based on signature algorithm."
     ;; Recompute certificate hash
     (let* ((cert-sexp (cert->sexp (signed-cert-cert sc)))
            (canonical (sexp->string cert-sexp))
            (computed-hash (sha512-hash canonical)))
 
       ;; Check hash matches
-      (let ((sig (signed-cert-signature sc)))
+      (let* ((sig (signed-cert-signature sc))
+             (sig-alg (or (signature-sig-alg sig) 'ed25519)))
         (if (not (equal? computed-hash (signature-cert-hash sig)))
             #f
-            ;; Verify signature
-            (ed25519-verify public-key computed-hash (signature-sig-bytes sig))))))
+            ;; Verify signature based on algorithm
+            (case sig-alg
+              ((ed25519)
+               (ed25519-verify public-key computed-hash (signature-sig-bytes sig)))
+
+              ((ml-dsa-65 ml-dsa)
+               (ml-dsa-verify computed-hash (signature-sig-bytes sig) public-key))
+
+              ((sphincs+ sphincs+-shake-256s)
+               (sphincs+-verify computed-hash (signature-sig-bytes sig) public-key))
+
+              ((hybrid)
+               ;; Both signatures must verify
+               (let ((hybrid-sig (signature-sig-bytes sig)))
+                 (unless pq-public-key
+                   (error 'verify-signed-cert "Hybrid requires both ed25519 and ml-dsa public keys"))
+                 (and (pair? hybrid-sig)
+                      (eq? (car hybrid-sig) 'hybrid-signature)
+                      (let ((ed-sig (cadr (assq 'ed25519 (cdr hybrid-sig))))
+                            (pq-sig (cadr (assq 'ml-dsa (cdr hybrid-sig)))))
+                        (and ed-sig pq-sig
+                             (ed25519-verify public-key computed-hash ed-sig)
+                             (ml-dsa-verify computed-hash pq-sig pq-public-key))))))
+
+              (else
+               (error 'verify-signed-cert "Unknown signature algorithm" sig-alg)))))))
 
   (define (tag-implies tag1 tag2)
     "Check if tag1 implies tag2 (tag1 >= tag2)"
