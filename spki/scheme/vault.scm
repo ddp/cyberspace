@@ -55,6 +55,10 @@
    complete
    ask
 
+   ;; Cross-module reflection
+   global-search          ; Search hash across soup, audit, wormhole
+   dashboard              ; Unified status view
+
    ;; Node Roles (Memo-037)
    node-probe
    node-role
@@ -2708,6 +2712,182 @@ Object Types:
 
                 (else
                  (printf "Unknown command: ~a (try 'help)~%" cmd))))))))
+
+  ;;; ============================================================================
+  ;;; Cross-Module Reflection
+  ;;; ============================================================================
+
+  (define (global-search query)
+    "Search for a hash or identifier across soup, audit, and wormhole stores.
+     Returns alist of matches: ((soup . results) (audit . results) (wormhole . results))
+
+     (global-search \"sha512:abc123\")  - search by hash prefix
+     (global-search \"2.0.0\")          - search by name/version"
+    (let ((soup-results '())
+          (audit-results '())
+          (wormhole-results '()))
+
+      ;; Search soup objects
+      (for-each
+       (lambda (obj)
+         (let* ((name (cadr obj))
+                (path (case (car obj)
+                        ((archives keys) name)
+                        ((releases) (sprintf ".vault/releases/~a.sig" name))
+                        ((audit) (sprintf ".vault/audit/~a" name))
+                        (else name)))
+                (hash (and (file-exists? path)
+                           (handle-exceptions exn #f
+                             (soup-hash-file path)))))
+           ;; Match by name or hash prefix
+           (when (or (string-contains name query)
+                     (and hash (string-prefix? query hash))
+                     (and hash (string-prefix? (string-append "sha512:" query) hash)))
+             (set! soup-results (cons `(soup ,(car obj) ,name ,hash) soup-results)))))
+       (soup-collect-objects))
+
+      ;; Search audit entries
+      (let ((dir (audit-config 'audit-dir)))
+        (when (directory-exists? dir)
+          (for-each
+           (lambda (file)
+             (when (string-suffix? ".sexp" file)
+               (let ((entry (handle-exceptions exn #f
+                              (audit-read sequence: (string->number
+                                                      (car (string-split file ".")))))))
+                 (when entry
+                   (let* ((id (entry-id entry))
+                          (action (entry-action entry))
+                          (obj (and action (action-object action))))
+                     (when (or (and id (string-contains id query))
+                               (and obj (string? obj) (string-contains obj query)))
+                       (set! audit-results
+                             (cons `(audit ,(entry-sequence entry) ,id ,obj)
+                                   audit-results))))))))
+           (directory dir))))
+
+      ;; Search wormhole introspection store (handle module not loaded)
+      (handle-exceptions exn #f
+        (hash-table-for-each
+         wormhole#*introspection-store*
+         (lambda (hash intro)
+           (when (string-contains hash query)
+             (set! wormhole-results
+                   (cons `(introspection ,hash
+                                         ,(wormhole#introspection-provenance intro))
+                         wormhole-results))))))
+
+      ;; Return categorized results
+      `((soup . ,(reverse soup-results))
+        (audit . ,(reverse audit-results))
+        (wormhole . ,(reverse wormhole-results)))))
+
+  (define (dashboard)
+    "Unified status dashboard across soup, audit, wormhole, and session.
+     The 'what's going on?' view."
+    (let* ((w 72)
+           (b (make-box w *box-rounded*)))
+
+      ;; Header
+      (print "")
+      (print (box-top b "Dashboard"))
+
+      ;; Session stats
+      (box-print b "Session")
+      (let ((stats (session-stats)))
+        (if (null? stats)
+            (box-print b "  (no activity)")
+            (begin
+              (for-each
+               (lambda (stat)
+                 (let* ((key (car stat))
+                        (val (cdr stat))
+                        (key-str (symbol->string key))
+                        (val-str (if (number? val)
+                                     (if (> val 1000000)
+                                         (format-size val)
+                                         (number->string val))
+                                     (sprintf "~a" val))))
+                   (box-print b (sprintf "  ~a~a~a"
+                                         key-str
+                                         (make-string (max 1 (- 24 (string-length key-str))) #\space)
+                                         val-str))))
+               (take stats (min 8 (length stats))))
+              (when (> (length stats) 8)
+                (box-print b (sprintf "  ... and ~a more" (- (length stats) 8)))))))
+
+      (print (box-separator b))
+
+      ;; Soup summary
+      (box-print b "Soup")
+      (let* ((objects (soup-collect-objects))
+             (by-type (make-hash-table)))
+        (for-each
+         (lambda (obj) (hash-table-set! by-type (car obj)
+                                         (+ 1 (hash-table-ref/default by-type (car obj) 0))))
+         objects)
+        (if (null? objects)
+            (box-print b "  (empty)")
+            (for-each
+             (lambda (type)
+               (let ((count (hash-table-ref/default by-type type 0)))
+                 (when (> count 0)
+                   (box-print b (sprintf "  ~a~a~a"
+                                         (symbol->string type)
+                                         (make-string (max 1 (- 16 (string-length (symbol->string type)))) #\space)
+                                         count)))))
+             '(archives releases keys audit metadata certs forge))))
+
+      (print (box-separator b))
+
+      ;; Audit summary
+      (box-print b "Audit")
+      (let ((dir (audit-config 'audit-dir)))
+        (if (and dir (directory-exists? dir))
+            (let* ((files (filter (lambda (f) (string-suffix? ".sexp" f)) (directory dir)))
+                   (count (length files)))
+              (box-print b (sprintf "  entries~a~a" (make-string 8 #\space) count))
+              (box-print b (sprintf "  directory~a~a" (make-string 6 #\space) dir)))
+            (box-print b "  (not initialized)")))
+
+      (print (box-separator b))
+
+      ;; Wormhole summary (gracefully handle module not loaded)
+      (box-print b "Wormholes")
+      (handle-exceptions exn
+        (box-print b "  (module not loaded)")
+        (let ((paths (hash-table-keys wormhole#*active-wormholes*)))
+          (if (null? paths)
+              (box-print b "  (none active)")
+              (for-each
+               (lambda (path)
+                 (let* ((wh (hash-table-ref wormhole#*active-wormholes* path))
+                        (audit-count (length (wormhole#wormhole-audit-log wh))))
+                   (box-print b (sprintf "  ~a  (~a events)"
+                                         (wormhole#wormhole-id wh)
+                                         audit-count))))
+               paths))
+          (let ((intro-count (hash-table-size wormhole#*introspection-store*)))
+            (when (> intro-count 0)
+              (box-print b (sprintf "  introspections~a~a" (make-string 1 #\space) intro-count))))))
+
+      (print (box-separator b))
+
+      ;; Keystore status
+      (box-print b "Keystore")
+      (if (keystore-exists?)
+          (box-print b (sprintf "  status~a~a"
+                                (make-string 9 #\space)
+                                (if (vault-config 'signing-key) "unlocked" "locked")))
+          (box-print b "  (not created)"))
+
+      ;; Lamport clock
+      (let ((lt (lamport-time)))
+        (when (> lt 0)
+          (box-print b (sprintf "  lamport~a~a" (make-string 8 #\space) lt))))
+
+      (print (box-bottom b))
+      (print "")))
 
   ;;; ============================================================================
   ;;; Node Roles - Memo-037 Implementation

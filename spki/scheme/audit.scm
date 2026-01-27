@@ -14,6 +14,7 @@
    audit-verify
    audit-read
    audit-chain
+   audit-config          ; Get/set audit configuration
 
    ;; Query interface (VMS ANALYZE/AUDIT style)
    audit-query            ; (audit-query entries criteria)

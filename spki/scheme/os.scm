@@ -56,6 +56,8 @@
    *session-stats*
    session-stat!
    session-stat
+   session-stats        ; return all stats as alist
+   session-stats-reset! ; clear all stats
 
    ;; Box drawing (centralized terminal formatting)
    make-box              ; create a box builder for given width/style
@@ -81,6 +83,7 @@
           (chicken process)
           (chicken process-context)
           (chicken condition)
+          (chicken sort)
           srfi-1
           srfi-13
           srfi-69)
@@ -408,6 +411,17 @@
   (define (session-stat key)
     "Get a session statistic."
     (hash-table-ref/default *session-stats* key 0))
+
+  (define (session-stats)
+    "Get all session statistics as an alist, sorted by key."
+    (let ((keys (sort (hash-table-keys *session-stats*)
+                      (lambda (a b)
+                        (string<? (symbol->string a) (symbol->string b))))))
+      (map (lambda (k) (cons k (hash-table-ref *session-stats* k))) keys)))
+
+  (define (session-stats-reset!)
+    "Clear all session statistics."
+    (set! *session-stats* (make-hash-table)))
 
   ;; ============================================================
   ;; Box Drawing

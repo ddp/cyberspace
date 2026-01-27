@@ -34,6 +34,12 @@
    wormhole-audit
    wormhole-audit-trail
 
+   ;; Query interface (mirrors soup-query/soup-find)
+   wormhole-query          ; (wormhole-query wh criteria...) - filter audit trail
+   wormhole-find           ; (wormhole-find wh ...) - find by named criteria
+   wormhole-all-audit      ; All audit entries across all wormholes
+   *active-wormholes*      ; Hash table of active wormholes
+
    ;; Rate limiting
    wormhole-rate-limit
    wormhole-rate-ok?
@@ -291,6 +297,149 @@
   "Retrieve recent audit entries for wormhole."
   (take (wormhole-audit-log wormhole)
         (min limit (length (wormhole-audit-log wormhole)))))
+
+;;; ============================================================
+;;; Query Interface
+;;; ============================================================
+
+(define (wormhole-all-audit)
+  "Collect all audit entries across all active wormholes.
+   Returns list of (wormhole-id . entry) pairs."
+  (apply append
+         (map (lambda (path)
+                (let ((wh (hash-table-ref *active-wormholes* path)))
+                  (map (lambda (entry)
+                         (cons (wormhole-id wh) entry))
+                       (wormhole-audit-log wh))))
+              (hash-table-keys *active-wormholes*))))
+
+(define (audit-entry-timestamp entry)
+  "Extract timestamp from audit entry."
+  (let ((ts (assq 'timestamp (cdr entry))))
+    (if ts (cadr ts) 0)))
+
+(define (audit-entry-event entry)
+  "Extract event type from audit entry."
+  (let ((ev (assq 'event (cdr entry))))
+    (if ev (cadr ev) #f)))
+
+(define (audit-entry-operation entry)
+  "Extract operation from audit entry."
+  (let ((op (assq 'operation (cdr entry))))
+    (if op (cadr op) #f)))
+
+(define (audit-entry-object entry)
+  "Extract object from audit entry."
+  (let ((obj (assq 'object (cdr entry))))
+    (if obj (cadr obj) #f)))
+
+(define (audit-entry-wormhole entry)
+  "Extract wormhole id from audit entry."
+  (let ((wh (assq 'wormhole (cdr entry))))
+    (if wh (cadr wh) #f)))
+
+(define (wormhole-match-criterion entry criterion)
+  "Match single audit entry against one criterion.
+   Criteria: (event permitted) (operation read) (since '1h') (object \"path*\")"
+  (let ((key (car criterion))
+        (val (cadr criterion)))
+    (case key
+      ;; Event type
+      ((event type)
+       (eq? (audit-entry-event entry) val))
+
+      ;; Operation
+      ((operation op)
+       (eq? (audit-entry-operation entry) val))
+
+      ;; Object path (with glob support)
+      ((object path)
+       (let ((obj (audit-entry-object entry)))
+         (cond
+          ((not obj) #f)
+          ((string? val)
+           (if (string-suffix? "*" val)
+               (string-prefix? (string-drop-right val 1) obj)
+               (string=? obj val)))
+          (else (equal? obj val)))))
+
+      ;; Time - since
+      ((since after)
+       (let* ((ts (audit-entry-timestamp entry))
+              (now (current-seconds))
+              (threshold (wormhole-parse-time-spec val now)))
+         (>= ts threshold)))
+
+      ;; Time - before
+      ((before until)
+       (let* ((ts (audit-entry-timestamp entry))
+              (now (current-seconds))
+              (threshold (wormhole-parse-time-spec val now)))
+         (<= ts threshold)))
+
+      ;; Wormhole id
+      ((wormhole wh)
+       (let ((wh-id (audit-entry-wormhole entry)))
+         (and wh-id (string-prefix? val wh-id))))
+
+      ;; Boolean combinators
+      ((and)
+       (every (lambda (c) (wormhole-match-criterion entry c)) (cdr criterion)))
+
+      ((or)
+       (any (lambda (c) (wormhole-match-criterion entry c)) (cdr criterion)))
+
+      ((not)
+       (not (wormhole-match-criterion entry (cadr criterion))))
+
+      (else #f))))
+
+(define (wormhole-parse-time-spec spec now)
+  "Parse time spec like '1h' '24h' '7d' to epoch."
+  (cond
+   ((number? spec) spec)
+   ((and (string? spec) (> (string-length spec) 1))
+    (let ((n (string->number (substring spec 0 (- (string-length spec) 1))))
+          (unit (string-ref spec (- (string-length spec) 1))))
+      (if n
+          (- now (* n (case unit
+                        ((#\h) 3600)
+                        ((#\d) 86400)
+                        ((#\m) 60)
+                        ((#\w) 604800)
+                        (else 3600))))
+          now)))
+   (else now)))
+
+(define (wormhole-query wormhole . criteria)
+  "Filter wormhole audit trail by criteria.
+   (wormhole-query wh '(event permitted) '(since \"1h\"))
+   (wormhole-query wh '(and (operation read) (since \"24h\")))"
+  (let ((entries (wormhole-audit-log wormhole)))
+    (if (null? criteria)
+        entries
+        (filter
+         (lambda (entry)
+           (every (lambda (c) (wormhole-match-criterion entry c)) criteria))
+         entries))))
+
+(define (wormhole-find wormhole #!key event operation object since before)
+  "Find audit entries by named criteria.
+   (wormhole-find wh event: 'permitted)
+   (wormhole-find wh operation: 'read since: \"1h\")
+   (wormhole-find wh object: \"/path/*\")"
+  (let ((criteria '()))
+    (when event
+      (set! criteria (cons `(event ,event) criteria)))
+    (when operation
+      (set! criteria (cons `(operation ,operation) criteria)))
+    (when object
+      (set! criteria (cons `(object ,object) criteria)))
+    (when since
+      (set! criteria (cons `(since ,since) criteria)))
+    (when before
+      (set! criteria (cons `(before ,before) criteria)))
+    (apply wormhole-query wormhole criteria)))
 
 ;;; ============================================================
 ;;; Flow Guard (Reference Monitor)
