@@ -18,58 +18,61 @@
 ;;;
 ;;; Module Dependency DAG:
 ;;;
-;;;   Level 0 (no deps):
+;;;   Level 0 (no cyberspace deps):
 ;;;     sexp           S-expression parsing/printing
 ;;;     tty-ffi        Terminal raw mode, cursor control
-;;;     wordlist       BIP-39 mnemonic wordlists
-;;;     fips           FIPS mode detection
 ;;;     filetype       File type detection (magic bytes)
+;;;     os             Platform detection (chicken modules only)
 ;;;
 ;;;   Level 1 (core crypto):
 ;;;     crypto-ffi     libsodium FFI (depends: libsodium)
 ;;;     pq-crypto      liboqs FFI (depends: liboqs)
 ;;;
-;;;   Level 2 (SPKI primitives):
+;;;   Level 2 (crypto-dependent utilities):
+;;;     fips           FIPS self-test (depends: crypto-ffi)
+;;;     wordlist       BIP-39 mnemonic wordlists (depends: crypto-ffi)
+;;;
+;;;   Level 3 (SPKI primitives + audit):
 ;;;     cert           SPKI certificates (depends: sexp, crypto-ffi)
 ;;;     capability     Object capabilities (depends: sexp)
 ;;;     bloom          Bloom filters (depends: crypto-ffi)
+;;;     audit          Audit trail (depends: crypto-ffi, pq-crypto)
 ;;;
-;;;   Level 3 (storage):
-;;;     vault          Encrypted vault (depends: crypto-ffi, sexp, bloom)
-;;;     audit          Audit trail (depends: crypto-ffi, sexp)
-;;;     merkle         Merkle trees (depends: crypto-ffi)
+;;;   Level 4 (storage):
+;;;     vault          Encrypted vault (depends: crypto-ffi, cert, audit, os)
 ;;;     catalog        Content catalog (depends: vault, sexp)
+;;;     merkle         Merkle trees (depends: crypto-ffi)
 ;;;
-;;;   Level 4 (security):
+;;;   Level 5 (security):
 ;;;     security       Security policy (depends: cert, capability)
 ;;;     keyring        Key management (depends: crypto-ffi, vault)
 ;;;
-;;;   Level 5 (network):
+;;;   Level 6 (network):
 ;;;     gossip         Gossip protocol (depends: crypto-ffi, sexp)
 ;;;     mdns           mDNS discovery (depends: sexp)
 ;;;     portal         NAT traversal (depends: crypto-ffi)
 ;;;
-;;;   Level 6 (filesystem):
+;;;   Level 7 (filesystem):
+;;;     metadata-ffi   macOS metadata FFI
 ;;;     fuse-ffi       FUSE FFI (depends: macfuse, optional)
 ;;;     wormhole       FUSE filesystem (depends: fuse-ffi, vault)
 ;;;
-;;;   Level 7 (enrollment):
-;;;     enroll         Device enrollment (depends: crypto-ffi, keyring)
+;;;   Level 8 (enrollment):
+;;;     enroll         Device enrollment (depends: crypto-ffi, keyring, wordlist)
 ;;;     auto-enroll    Auto-enrollment (depends: enroll, mdns)
 ;;;
-;;;   Level 8 (UI):
-;;;     os             Platform detection
-;;;     ui             User interface (depends: os)
+;;;   Level 9 (UI):
+;;;     ui             User interface (depends: os, enroll)
 ;;;     display        Terminal display (depends: tty-ffi)
-;;;     edt            EDT keypad bindings
 ;;;     inspector      Object inspector (depends: sexp)
 ;;;     info           System info display (depends: os)
+;;;     edt            EDT keypad bindings
 ;;;
-;;;   Level 9 (applications):
+;;;   Level 10 (applications):
 ;;;     forum          Message board (depends: vault, gossip)
 ;;;     seal           Archival sealing (depends: vault, crypto-ffi)
 ;;;     script         Scripting (depends: sexp)
-;;;     forge          Password generation (depends: crypto-ffi)
+;;;     forge          Password generation (depends: crypto-ffi, fips)
 ;;;     cyberspace     Top-level API (depends: everything)
 ;;;
 ;;; Build Order:
@@ -90,25 +93,27 @@
         (chicken string))
 
 (define *library-modules*
-  '(;; Core (no deps)
-    "sexp" "fips" "wordlist" "tty-ffi" "filetype"
-    ;; Crypto (external: libsodium, liboqs)
+  '(;; Level 0: Core (no cyberspace deps)
+    "sexp" "tty-ffi" "filetype" "os"
+    ;; Level 1: Crypto (external: libsodium, liboqs)
     "crypto-ffi" "pq-crypto"
-    ;; SPKI primitives
-    "cert" "capability" "bloom"
-    ;; Storage
-    "vault" "catalog" "audit" "merkle"
-    ;; Security
+    ;; Level 2: Crypto-dependent utilities
+    "fips" "wordlist"
+    ;; Level 3: SPKI primitives + audit
+    "cert" "capability" "bloom" "audit"
+    ;; Level 4: Storage (depends on audit, os)
+    "vault" "catalog" "merkle"
+    ;; Level 5: Security
     "security" "keyring"
-    ;; Network
+    ;; Level 6: Network
     "gossip" "mdns" "portal" "http" "osc" "rnbo"
-    ;; Wormhole (FUSE)
+    ;; Level 7: Wormhole (FUSE)
     "metadata-ffi" "fuse-ffi" "wormhole"
-    ;; Enrollment
+    ;; Level 8: Enrollment
     "enroll" "auto-enroll"
-    ;; UI
-    "os" "ui" "display" "inspector" "info" "edt"
-    ;; Applications
+    ;; Level 9: UI
+    "ui" "display" "inspector" "info" "edt"
+    ;; Level 10: Applications
     "forum" "seal" "script" "forge" "cyberspace"))
 
 (define (run cmd)
