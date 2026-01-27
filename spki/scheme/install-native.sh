@@ -36,20 +36,20 @@ fi
 
 echo "1. Compiling modules..."
 
-# Detect libsodium location
+# Detect libsodium and libkeccak location
 if [ -d /opt/homebrew/lib ]; then
-    SODIUM_FLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib -L -lsodium"
+    CRYPTO_FLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib -L -lsodium -L -lkeccak"
 elif [ -d /usr/local/lib ]; then
-    SODIUM_FLAGS="-I/usr/local/include -L/usr/local/lib -L -lsodium"
+    CRYPTO_FLAGS="-I/usr/local/include -L/usr/local/lib -L -lsodium -L -lkeccak"
 else
-    SODIUM_FLAGS="-L -lsodium"
+    CRYPTO_FLAGS="-L -lsodium -L -lkeccak"
 fi
 
-# Build crypto-ffi first (needs libsodium)
+# Build crypto-ffi first (needs libsodium + libkeccak for SHAKE256)
 echo "  crypto-ffi..."
-csc -shared -J crypto-ffi.scm $SODIUM_FLAGS 2>/dev/null || {
+csc -shared -J crypto-ffi.scm $CRYPTO_FLAGS 2>/dev/null || {
     echo "  Warning: crypto-ffi failed, trying alternate flags..."
-    csc -shared -J crypto-ffi.scm -L -lsodium
+    csc -shared -J crypto-ffi.scm -L -lsodium -L -lkeccak
 }
 
 # Build remaining modules in dependency order

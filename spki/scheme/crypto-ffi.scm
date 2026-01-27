@@ -21,6 +21,14 @@
    sha256-hash
    sha512-hash
    blake2b-hash
+   ;; SHAKE256 and Merkle trees (Memo-047)
+   shake256-hash
+   merkle-root
+   merkle-chunk-size
+   merkle-fanout
+   merkle-hash-leaf
+   merkle-hash-node
+   dual-hash
    crypto-sign-publickeybytes
    crypto-generichash-bytes
    crypto-sign-secretkeybytes
@@ -68,14 +76,16 @@
           (chicken foreign)
           (chicken format)
           (chicken blob)
+          (chicken memory)
           (chicken memory representation)
           (chicken bitwise)
           srfi-1   ; list utilities (take)
           srfi-4)
           ;; NOTE: Do NOT import (chicken random) - use libsodium for all cryptographic randomness
 
-  ;; Include libsodium header
+  ;; Include libsodium and libkeccak headers
   (foreign-declare "#include <sodium.h>")
+  (foreign-declare "#include <libkeccak.h>")
 
   ;; Constants from libsodium
   (define crypto-sign-publickeybytes 32)
@@ -217,6 +227,162 @@
        data-bytes (blob-size data-bytes)
        #f 0)  ;; No key
       hash))
+
+  ;;; ============================================================================
+  ;;; SHAKE256 and Merkle Trees (Memo-047)
+  ;;;
+  ;;; Quantum-resistant object identity using SHAKE256-based Merkle trees.
+  ;;; - 256-bit classical security (pre-image)
+  ;;; - 128-bit quantum security (Grover's algorithm)
+  ;;; - Domain separation prevents leaf/node confusion attacks
+  ;;; ============================================================================
+
+  ;; Canonical Merkle tree parameters
+  (define merkle-chunk-size 4096)   ; 4 KB chunks
+  (define merkle-fanout 16)         ; Children per internal node
+  (define merkle-hash-len 32)       ; 256-bit output
+
+  ;; Domain separation prefixes
+  (define merkle-leaf-prefix (string->blob "\x00"))
+  (define merkle-node-prefix (string->blob "\x01"))
+
+  ;; SHAKE256 via libkeccak (low-level C helper)
+  (foreign-declare "
+#include <stdlib.h>
+#include <string.h>
+
+/* SHAKE256 hash with specified output length */
+static int shake256_hash_c(unsigned char *out, size_t outlen,
+                           const unsigned char *in, size_t inlen) {
+    struct libkeccak_spec spec;
+    struct libkeccak_state state;
+
+    libkeccak_spec_shake(&spec, 256, (long)(outlen * 8));
+
+    if (libkeccak_state_initialise(&state, &spec) != 0)
+        return -1;
+
+    if (libkeccak_digest(&state, (const char*)in, inlen, 0,
+                         LIBKECCAK_SHAKE_SUFFIX, NULL) != 0) {
+        libkeccak_state_wipe(&state);
+        return -1;
+    }
+
+    libkeccak_squeeze(&state, (char*)out);
+    libkeccak_state_wipe(&state);
+    return 0;
+}
+")
+
+  ;; Compute SHAKE256 hash
+  ;; @param data: data to hash (blob or string)
+  ;; @param outlen: output length in bytes (default 32)
+  ;; @return hash: outlen-byte hash (blob)
+  ;;
+  ;; SHAKE256 is a FIPS 202 XOF (extendable output function) used for:
+  ;; - Quantum-resistant Merkle trees
+  ;; - Post-quantum signature schemes (SLH-DSA)
+  (define (shake256-hash data #!optional (outlen 32))
+    (let* ((data-bytes (if (string? data)
+                           (string->blob data)
+                           data))
+           (hash (make-blob outlen)))
+      (if (= 0 ((foreign-lambda int "shake256_hash_c"
+                                scheme-pointer unsigned-integer
+                                scheme-pointer unsigned-integer)
+                hash outlen
+                data-bytes (blob-size data-bytes)))
+          hash
+          (error "SHAKE256 hash failed"))))
+
+  ;; Hash a leaf chunk with domain separation
+  ;; @param chunk: raw chunk data (blob)
+  ;; @return: 32-byte SHAKE256 hash with leaf domain prefix
+  (define (merkle-hash-leaf chunk)
+    (let ((prefixed (blob-append merkle-leaf-prefix chunk)))
+      (shake256-hash prefixed)))
+
+  ;; Hash internal node with domain separation
+  ;; @param children: list of child hashes (each 32-byte blob)
+  ;; @return: 32-byte SHAKE256 hash with node domain prefix
+  (define (merkle-hash-node children)
+    (let ((concat (apply blob-append (cons merkle-node-prefix children))))
+      (shake256-hash concat)))
+
+  ;; Append blobs together
+  (define (blob-append . blobs)
+    (let* ((total-size (apply + (map blob-size blobs)))
+           (result (make-blob total-size)))
+      (let loop ((blobs blobs) (offset 0))
+        (if (null? blobs)
+            result
+            (let* ((b (car blobs))
+                   (len (blob-size b)))
+              (move-memory! b result len 0 offset)
+              (loop (cdr blobs) (+ offset len)))))))
+
+  ;; Split content into chunks
+  ;; @param content: raw content (blob)
+  ;; @return: list of chunks (each up to merkle-chunk-size bytes)
+  (define (merkle-chunk content)
+    (let ((len (blob-size content)))
+      (if (= len 0)
+          (list (make-blob 0))  ; Empty content = single empty chunk
+          (let loop ((offset 0) (acc '()))
+            (if (>= offset len)
+                (reverse acc)
+                (let* ((chunk-len (min merkle-chunk-size (- len offset)))
+                       (chunk (make-blob chunk-len)))
+                  (move-memory! content chunk chunk-len offset 0)
+                  (loop (+ offset merkle-chunk-size) (cons chunk acc))))))))
+
+  ;; Build Merkle tree from leaves, return root
+  ;; @param leaves: list of leaf hashes
+  ;; @return: root hash (32-byte blob)
+  (define (merkle-build-tree leaves)
+    (cond
+      ((null? leaves) (merkle-hash-leaf (make-blob 0)))
+      ((null? (cdr leaves)) (car leaves))  ; Single node is root
+      (else
+       ;; Group into chunks of fanout size
+       (let loop ((nodes leaves) (groups '()) (current '()) (count 0))
+         (cond
+           ((null? nodes)
+            (let ((final-groups (if (null? current)
+                                    (reverse groups)
+                                    (reverse (cons (reverse current) groups)))))
+              ;; Hash each group to create parent level
+              (let ((parents (map merkle-hash-node final-groups)))
+                (merkle-build-tree parents))))
+           ((>= count merkle-fanout)
+            (loop nodes (cons (reverse current) groups) '() 0))
+           (else
+            (loop (cdr nodes) groups (cons (car nodes) current) (+ count 1))))))))
+
+  ;; Compute Merkle root of content
+  ;; @param content: raw content (blob or string)
+  ;; @return: 32-byte Merkle root hash
+  ;;
+  ;; This is THE quantum-resistant object identity function (Memo-047).
+  (define (merkle-root content)
+    (let* ((data (if (string? content)
+                     (string->blob content)
+                     content))
+           (chunks (merkle-chunk data))
+           (leaves (map merkle-hash-leaf chunks)))
+      (merkle-build-tree leaves)))
+
+  ;; Compute both legacy SHA-512 and Merkle root (dual-hash transition)
+  ;; @param content: raw content (blob or string)
+  ;; @return: (sha512-hash . merkle-root) pair
+  ;;
+  ;; During transition period (Memo-047 Phase 1), objects carry both hashes.
+  ;; Old clients use SHA-512, new clients use Merkle root.
+  (define (dual-hash content)
+    (let ((data (if (string? content)
+                    (string->blob content)
+                    content)))
+      (cons (sha512-hash data) (merkle-root data))))
 
   ;;; ============================================================================
   ;;; Vault Cryptography (Memo-041)

@@ -41,6 +41,8 @@
    soup?
    soup-stat
    soup-hash
+   soup-merkle-hash-file
+   soup-dual-hash-file
    soup-releases
    soup-du
    soup-find
@@ -2042,11 +2044,27 @@ Object Types:
             (print "")))))
 
   (define (soup-hash-file path)
-    "Compute SHA-512 hash of file"
+    "Compute SHA-512 hash of file (legacy)"
     (handle-exceptions exn
       "error"
       (let ((content (with-input-from-file path (lambda () (read-string)))))
         (blob->hex (sha512-hash (string->blob content))))))
+
+  (define (soup-merkle-hash-file path)
+    "Compute Merkle root hash of file (quantum-resistant, Memo-047)"
+    (handle-exceptions exn
+      "error"
+      (let ((content (with-input-from-file path (lambda () (read-string)))))
+        (blob->hex (merkle-root (string->blob content))))))
+
+  (define (soup-dual-hash-file path)
+    "Compute both SHA-512 and Merkle root hashes (transition period, Memo-047)"
+    (handle-exceptions exn
+      (cons "error" "error")
+      (let* ((content (with-input-from-file path (lambda () (read-string))))
+             (hashes (dual-hash (string->blob content))))
+        (cons (blob->hex (car hashes))
+              (blob->hex (cdr hashes))))))
 
   (define (blob->hex b)
     "Convert blob to hex string"
@@ -2102,7 +2120,7 @@ Object Types:
           (if (pair? data) (cdr data) #f)))))
 
   (define (soup-hash name)
-    "Compute and display SHA-512 hash of an object"
+    "Compute and display hashes of an object (SHA-512 + Merkle root)"
     (session-stat! 'hashes)
     (let* ((all-objects (soup-collect-objects))
            (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
@@ -2115,12 +2133,13 @@ Object Types:
                         ((audit) (sprintf ".vault/audit/~a" name))
                         (else name))))
             (if (file-exists? path)
-                (let ((hash (soup-hash-file path)))
+                (let ((hashes (soup-dual-hash-file path)))
                   (print "")
-                  (printf "sha512:~a~%" hash)
+                  (printf "sha512:~a~%" (car hashes))   ; Legacy
+                  (printf "shake256:~a~%" (cdr hashes)) ; Quantum-resistant (Memo-047)
                   (printf "  ~a (~a)~%" name (format-size (caddr obj)))
                   (print "")
-                  hash)
+                  (car hashes))  ; Return legacy hash for compatibility
                 (print "File not found: " path))))))
 
   (define (soup-releases)

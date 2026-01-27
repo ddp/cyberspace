@@ -154,6 +154,6 @@
   (section
     "Changelog"
     (list
-      (item "2026-01-08")
-      (item "Initial draft"))))
+      (item "2026-01-27: TCB implementation complete (spki_tcb.ml), Scheme FFI wired up (crypto-ffi.scm, vault.scm)")
+      (item "2026-01-08: Initial draft"))))
 
