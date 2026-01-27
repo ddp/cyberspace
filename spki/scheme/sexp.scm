@@ -29,6 +29,7 @@
           (chicken condition)
           (chicken blob)
           (chicken memory representation)
+          (prefix base64 b64:)
           srfi-1   ; list utilities
           srfi-4   ; u8vectors
           srfi-13  ; string utilities
@@ -55,41 +56,17 @@
   (define (sexp-list xs) (make-sexp-list xs))
   (define (sexp-bytes b) (make-bytes b))
 
-  ;;; Base64 encoding/decoding (simplified - will use library later)
-
-  (define base64-alphabet
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+  ;;; Base64 encoding/decoding (using base64 egg)
 
   (define (base64-encode bytes)
-    ;; Simple base64 encoder for blobs
-    ;; TODO: Replace with proper library (base64 egg)
-    ;; For now, use hex encoding as a placeholder
+    "Encode blob to base64 string."
     (if (blob? bytes)
-        (let* ((vec (blob->u8vector/shared bytes))
-               (len (u8vector-length vec)))
-          (let loop ((i 0) (acc ""))
-            (if (>= i len)
-                acc
-                (let ((byte (u8vector-ref vec i)))
-                  (loop (+ i 1)
-                        (string-append acc
-                                       (if (< byte 16)
-                                           (string-append "0" (number->string byte 16))
-                                           (number->string byte 16))))))))
+        (b64:base64-encode (blob->string bytes))
         ""))
 
   (define (base64-decode str)
-    ;; Simple base64 decoder (currently decodes hex)
-    ;; TODO: Replace with proper library (base64 egg)
-    (let* ((len (string-length str))
-           (blob (make-blob (quotient len 2)))
-           (vec (blob->u8vector/shared blob)))
-      (let loop ((i 0))
-        (if (>= i (quotient len 2))
-            blob
-            (let ((hex-str (substring str (* i 2) (+ (* i 2) 2))))
-              (u8vector-set! vec i (string->number hex-str 16))
-              (loop (+ i 1)))))))
+    "Decode base64 string to blob."
+    (string->blob (b64:base64-decode str)))
 
   ;;; Tokenizer
 

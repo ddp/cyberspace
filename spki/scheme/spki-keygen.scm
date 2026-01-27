@@ -65,10 +65,8 @@
   (define public-key (car keypair))
   (define private-key (cadr keypair))
 
-  ;; Compute key hash for display
+  ;; Compute key hash for display (first 16 bytes in hex)
   (define key-hash (sha512-hash public-key))
-  ;; TODO: Use proper base64 encoding when available
-  ;; For now, show first 16 bytes in hex
   (define hash-vec (blob->u8vector/shared key-hash))
   (define hash-preview
     (let loop ((i 0) (acc ""))
