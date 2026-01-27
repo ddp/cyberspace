@@ -20,8 +20,9 @@
    UF_NODUMP UF_IMMUTABLE UF_APPEND UF_OPAQUE UF_HIDDEN
    SF_ARCHIVED SF_IMMUTABLE SF_APPEND
 
-   ;; ACL (simplified)
+   ;; ACL
    acl-get
+   acl-set
    acl-text
 
    ;; Availability
@@ -133,6 +134,15 @@ static char* get_acl_text(const char* path) {
     acl_free(text);
     return result;
 }
+
+/* Set ACL from text */
+static int set_acl_from_text(const char* path, const char* text) {
+    acl_t acl = acl_from_text(text);
+    if (!acl) return -1;
+    int result = acl_set_file(path, ACL_TYPE_EXTENDED, acl);
+    acl_free(acl);
+    return result;
+}
 <#
 
 ;;; ============================================================
@@ -229,6 +239,14 @@ static char* get_acl_text(const char* path) {
 
 (define c-get-acl-text
   (foreign-lambda c-pointer "get_acl_text" c-string))
+
+(define c-set-acl
+  (foreign-lambda int "set_acl_from_text" c-string c-string))
+
+(define (acl-set path text)
+  "Set ACL from text representation.
+   Returns #t on success, #f on failure."
+  (zero? (c-set-acl path text)))
 
 (define (acl-get path)
   "Get ACL entries for a file.

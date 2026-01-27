@@ -347,10 +347,11 @@
 
 (define (restore-metadata path metadata)
   "Restore metadata to a file.
-   Restores xattrs and BSD flags (ACLs not yet implemented).
+   Restores xattrs, BSD flags, and ACLs.
    Note: Some operations require appropriate permissions."
   (let ((xattr-data (alist-ref 'xattr metadata eq? '()))
-        (flags (alist-ref 'flags metadata eq? 0)))
+        (flags (alist-ref 'flags metadata eq? 0))
+        (acl-entries (alist-ref 'acl metadata eq? '())))
     ;; Restore extended attributes
     (for-each (lambda (entry)
                 (when (and (pair? entry) (cdr entry))
@@ -359,7 +360,9 @@
     ;; Restore BSD flags (may require root for SF_* flags)
     (when (> flags 0)
       (file-flags-set! path flags))
-    ;; TODO: ACL restoration via acl_set_file
+    ;; Restore ACL from text entries
+    (when (pair? acl-entries)
+      (acl-set path (string-join acl-entries "\n")))
     #t))
 
 ;;; ============================================================
