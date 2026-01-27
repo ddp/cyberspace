@@ -58,6 +58,7 @@
           srfi-4      ; u8vectors
           srfi-13     ; string utilities
           srfi-18     ; threads
+          (prefix base64 b64:)
           crypto-ffi
           wordlist
           (only vault lamport-time))
@@ -590,37 +591,53 @@
            (pubkey-b64 (cadr (caddr subject)))
            (role (cadr (assq 'role cert-body)))
            (now (current-seconds))
-           (not-after (+ now (* validity-days 24 60 60))))
+           (not-after (+ now (* validity-days 24 60 60)))
+           ;; Build new cert body
+           (new-cert-body
+            `(spki-cert
+              (issuer ,(cadr (assq 'issuer cert-body)))
+              (subject ,subject)
+              (name ,name)
+              (role ,role)
+              (capabilities ,(cadr (assq 'capabilities cert-body)))
+              (validity
+               (not-before ,now)
+               (not-after ,not-after))
+              (issued ,now)
+              (renewed-from ,(cadr (assq 'issued cert-body)))))
+           ;; Serialize and sign
+           (cert-bytes (string->blob (with-output-to-string
+                                       (lambda () (write new-cert-body)))))
+           (signature (ed25519-sign master-key cert-bytes)))
 
-      ;; Create new certificate with extended validity
+      ;; Return signed certificate
       `(signed-enrollment-cert
-        (spki-cert
-         (issuer ,(cadr (assq 'issuer cert-body)))
-         (subject ,subject)
-         (name ,name)
-         (role ,role)
-         (capabilities ,(cadr (assq 'capabilities cert-body)))
-         (validity
-          (not-before ,now)
-          (not-after ,not-after))
-         (issued ,now)
-         (renewed-from ,(cadr (assq 'issued cert-body))))
-        (signature (ed25519 "SIGNATURE_PLACEHOLDER")))))
+        ,new-cert-body
+        (signature (ed25519 ,(blob->base64 signature))))))
 
   (define (revoke-certificate cert master-key #!key (reason 'unspecified))
     "Revoke a certificate.
      Returns: revocation record for distribution"
     (let* ((cert-body (cadr cert))
            (name (cadr (assq 'name cert-body)))
-           (subject (cadr (assq 'subject cert-body))))
+           (subject (cadr (assq 'subject cert-body)))
+           ;; Build revocation body (unsigned portion)
+           (revocation-body
+            `(revocation-data
+              (certificate-name ,name)
+              (certificate-subject ,subject)
+              (revoked-at ,(current-seconds))
+              (reason ,reason)
+              (issuer ,(cadr (assq 'issuer cert-body)))))
+           ;; Serialize and sign
+           (rev-bytes (string->blob (with-output-to-string
+                                      (lambda () (write revocation-body)))))
+           (signature (ed25519-sign master-key rev-bytes)))
 
+      ;; Return signed revocation
       `(revocation
-        (certificate-name ,name)
-        (certificate-subject ,subject)
-        (revoked-at ,(current-seconds))
-        (reason ,reason)
-        (issuer ,(cadr (assq 'issuer cert-body)))
-        (signature (ed25519 "SIGNATURE_PLACEHOLDER")))))
+        ,@(cdr revocation-body)  ; expand inner fields
+        (signature (ed25519 ,(blob->base64 signature))))))
 
   ;; ============================================================
   ;; Presence Announcement (_cyberspace._tcp service)
@@ -725,14 +742,8 @@
             (string-ref hex-chars (modulo byte 16))))
 
   (define (blob->base64 blob)
-    "Convert blob to hex string (placeholder for base64)"
-    ;; Using hex encoding for now; proper base64 can be added later
-    (let ((vec (blob->u8vector blob)))
-      (let loop ((i 0) (acc '()))
-        (if (= i (u8vector-length vec))
-            (apply string-append (reverse acc))
-            (loop (+ i 1)
-                  (cons (byte->hex (u8vector-ref vec i)) acc))))))
+    "Convert blob to base64 string"
+    (b64:base64-encode (blob->string blob)))
 
 ) ;; end module
 
