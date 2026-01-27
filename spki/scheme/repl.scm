@@ -7128,45 +7128,55 @@ See: Memo-0000 Declaration of Cyberspace
         (display prompt)
         (flush-output)
         ;; Loop in raw mode to handle DEL/BS at empty prompt (ignore and wait)
+        ;; Use polling to prevent runaway processes when terminal disconnects
         (let read-char ()
           (tty-set-raw)
-          (let ((c (tty-raw-char)))
-            (tty-set-cooked)
-            (cond
-              ;; EOF
-              ((< c 0) #f)
-              ;; DEL/BS at prompt start - ignore, stay on line, wait for real input
-              ((or (= c 127) (= c 8))
-               (read-char))
-              ;; Immediate shortcuts (no Enter needed) - prompt already shown
-              ((= c 46)  ; .
-               (display ".\n")
-               ".")
-              ((= c 63)  ; ?
-               (display "?\n")
-               "?")
-              ;; ESC = arrow key or other escape sequence
-              ;; Let lineage handle history navigation
-              ((= c 27)
-               (let ((line (lineage#lineage prompt)))
-                 (when line (repl-history-add line))
-                 (and line (strip-ansi line))))
-              ;; Ctrl-D = EOF
-              ((= c 4) #f)
-              ;; Ctrl-C = cancel
-              ((= c 3)
-               (newline)
-               "")
-              ;; Enter on empty line - newline, return empty (loop shows next prompt)
-              ((or (= c 10) (= c 13))
-               (newline)
-               "")
-              ;; Regular char - let lineage redraw with initial (no newline)
-              (else
-               (let* ((initial (string (integer->char c)))
-                      (line (lineage#lineage-with-initial prompt initial)))
-                 (when line (repl-history-add line))
-                 (and line (strip-ansi line))))))))))
+          ;; Poll with 500ms timeout - allows signal handling
+          (if (not (tty-char-ready? 500))
+              ;; No input ready - check if still a tty, then retry
+              (begin
+                (tty-set-cooked)
+                (if (zero? (tty?))
+                    #f  ; Terminal gone, exit
+                    (read-char)))  ; Still have tty, keep waiting
+              ;; Input ready - read it
+              (let ((c (tty-raw-char)))
+                (tty-set-cooked)
+                (cond
+                  ;; EOF
+                  ((< c 0) #f)
+                  ;; DEL/BS at prompt start - ignore, stay on line, wait for real input
+                  ((or (= c 127) (= c 8))
+                   (read-char))
+                  ;; Immediate shortcuts (no Enter needed) - prompt already shown
+                  ((= c 46)  ; .
+                   (display ".\n")
+                   ".")
+                  ((= c 63)  ; ?
+                   (display "?\n")
+                   "?")
+                  ;; ESC = arrow key or other escape sequence
+                  ;; Let lineage handle history navigation
+                  ((= c 27)
+                   (let ((line (lineage#lineage prompt)))
+                     (when line (repl-history-add line))
+                     (and line (strip-ansi line))))
+                  ;; Ctrl-D = EOF
+                  ((= c 4) #f)
+                  ;; Ctrl-C = cancel
+                  ((= c 3)
+                   (newline)
+                   "")
+                  ;; Enter on empty line - newline, return empty (loop shows next prompt)
+                  ((or (= c 10) (= c 13))
+                   (newline)
+                   "")
+                  ;; Regular char - let lineage redraw with initial (no newline)
+                  (else
+                   (let* ((initial (string (integer->char c)))
+                          (line (lineage#lineage-with-initial prompt initial)))
+                     (when line (repl-history-add line))
+                     (and line (strip-ansi line)))))))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
