@@ -987,13 +987,10 @@
 (module-start! "core")
 
 ;;; ============================================================
-;;; BLAKE2b Hash (placeholder using SHA-256)
+;;; BLAKE2b Hash (via libsodium)
 ;;; ============================================================
-;;; BLAKE2b hashing via libsodium's crypto_generichash
-;;; Re-exported from crypto-ffi for convenience
-
-;; blake2b-hash is now imported from crypto-ffi
-;; It uses libsodium's crypto_generichash (BLAKE2b-256)
+;;; blake2b-hash imported from crypto-ffi
+;;; Uses libsodium's crypto_generichash (BLAKE2b-256, 32 bytes)
 
 (define (blob-append . blobs)
   "Concatenate multiple blobs into one"
