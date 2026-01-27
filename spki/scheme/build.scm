@@ -135,7 +135,8 @@
             ;; pq-crypto needs liboqs flags
             (cond
               ((string=? mod "crypto-ffi")
-               (run "csc -s -J -O2 crypto-ffi.scm -C \"`pkg-config --cflags libsodium`\" -L \"`pkg-config --libs libsodium`\""))
+               ;; libsodium via pkg-config, libkeccak from homebrew
+               (run "csc -s -J -O2 crypto-ffi.scm -C \"`pkg-config --cflags libsodium` -I/opt/homebrew/include\" -L \"`pkg-config --libs libsodium` -L/opt/homebrew/lib -lkeccak\""))
               ((string=? mod "pq-crypto")
                (run "csc -s -J -O2 pq-crypto.scm -C \"-I/opt/homebrew/include\" -L \"-L/opt/homebrew/lib -loqs -L/opt/homebrew/opt/openssl@3/lib -lcrypto\""))
               ((string=? mod "fuse-ffi")
