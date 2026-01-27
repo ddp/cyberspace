@@ -462,18 +462,28 @@
 ;; --rebuild flag forces all modules to rebuild
 (define *force-rebuild* (cli-option? "rebuild"))
 
+(define (any-import-newer? so-time)
+  "Check if any .import.scm file is newer than the given timestamp.
+   When module exports change, downstream modules must rebuild."
+  (let ((import-files (glob "*.import.scm")))
+    (any (lambda (f) (> (file-mtime f) so-time)) import-files)))
+
 (define (needs-rebuild? module arch)
-  "Check if module needs rebuilding: missing, arch mismatch, source newer, or --rebuild flag"
+  "Check if module needs rebuilding: missing, arch mismatch, source newer,
+   dependency imports newer, or --rebuild flag"
   (or *force-rebuild*
       (let* ((src (string-append module ".scm"))
              (so  (string-append module ".so"))
              (import-scm (string-append module ".import.scm"))
-             (stored-arch (read-arch-stamp module)))
+             (stored-arch (read-arch-stamp module))
+             (so-time (file-mtime so)))
         (or (not (file-exists? so))
             (not (file-exists? import-scm))
             (not stored-arch)
             (not (string=? stored-arch arch))
-            (> (file-mtime src) (file-mtime so))))))
+            (> (file-mtime src) so-time)
+            ;; Rebuild if any import file is newer (exports changed)
+            (any-import-newer? so-time)))))
 
 ;;; ============================================================
 ;;; SICP Metrics - Structure analysis for forged modules
