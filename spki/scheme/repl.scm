@@ -4322,6 +4322,56 @@
 (define CIP-CLOSE    #xff)
 
 ;;; ============================================================
+;;; SPKI Capability Helpers for CIP
+;;; ============================================================
+
+(define (make-offer-capabilities . caps)
+  "Build SPKI tag for capability offer.
+   Usage: (make-offer-capabilities 'read 'write 'replicate)"
+  (let ((tag-sexp (sexp-list
+                   (cons (sexp-atom "tag")
+                         (list (sexp-list
+                                (cons (sexp-atom "*")
+                                      (cons (sexp-atom "set")
+                                            (map (lambda (c) (sexp-atom (symbol->string c))) caps)))))))))
+    (sexp->string tag-sexp)))
+
+(define (parse-offer-capabilities str)
+  "Parse SPKI tag from capability offer string.
+   Returns list of capability symbols, or #f on parse failure."
+  (condition-case
+      (let* ((sexp (parse-sexp str))
+             (items (and (sexp-list? sexp) (list-items sexp))))
+        (if (and items
+                 (>= (length items) 2)
+                 (sexp-atom? (car items))
+                 (string=? (atom-value (car items)) "tag"))
+            ;; Extract capabilities from (tag (* set cap1 cap2 ...))
+            (let* ((inner (cadr items))
+                   (inner-items (and (sexp-list? inner) (list-items inner))))
+              (if (and inner-items
+                       (>= (length inner-items) 2)
+                       (sexp-atom? (car inner-items))
+                       (string=? (atom-value (car inner-items)) "*")
+                       (sexp-atom? (cadr inner-items))
+                       (string=? (atom-value (cadr inner-items)) "set"))
+                  ;; Return capability symbols
+                  (map (lambda (item)
+                         (if (sexp-atom? item)
+                             (string->symbol (atom-value item))
+                             'unknown))
+                       (cddr inner-items))
+                  ;; Wildcard case: (* set ...) not found, check for just (*)
+                  (if (and inner-items
+                           (= (length inner-items) 1)
+                           (sexp-atom? (car inner-items))
+                           (string=? (atom-value (car inner-items)) "*"))
+                      '(*)  ; All permissions
+                      #f)))
+            #f))
+    (exn () #f)))
+
+;;; ============================================================
 ;;; Algorithm Agility via Version-Locked Suites
 ;;; ============================================================
 ;;;
@@ -4687,18 +4737,17 @@
                       (set! ch (alist-update 'their-principal their-principal ch))
 
                       ;; Phase 5: OFFER - exchange capabilities
-                      ;; TODO: Should be SPKI auth-certs, not strings
-                      ;; Format: (tag (set read write replicate))
                       (print "  [Offer] Sending capabilities...")
-                      (let ((our-caps "(tag (* set read write replicate))"))
+                      (let ((our-caps (make-offer-capabilities 'read 'write 'replicate)))
                         (channel-write-msg ch CIP-OFFER (string->blob our-caps)))
 
                       ;; Receive their OFFER
                       (let-values (((type payload) (channel-read-msg ch)))
                         (unless (= type CIP-OFFER)
                           (error "Expected OFFER, got" type))
-                        ;; TODO: Parse SPKI tag s-expression properly
-                        (let ((their-caps (blob->string payload)))
+                        (let* ((their-caps-str (blob->string payload))
+                               (their-caps-parsed (parse-offer-capabilities their-caps-str))
+                               (their-caps (or their-caps-parsed their-caps-str)))
                           (print "  [Offer] Received: " their-caps)
                           (set! ch (alist-update 'their-capabilities their-caps ch))
 
@@ -4824,15 +4873,15 @@
                         (let-values (((type payload) (channel-read-msg ch)))
                           (unless (= type CIP-OFFER)
                             (error "Expected OFFER, got" type))
-                          ;; TODO: Parse SPKI tag s-expression properly
-                          (let ((their-caps (blob->string payload)))
+                          (let* ((their-caps-str (blob->string payload))
+                                 (their-caps-parsed (parse-offer-capabilities their-caps-str))
+                                 (their-caps (or their-caps-parsed their-caps-str)))
                             (print "  [Offer] Received: " their-caps)
                             (set! ch (alist-update 'their-capabilities their-caps ch))
 
                             ;; Send our OFFER
-                            ;; TODO: Should be SPKI auth-certs
                             (print "  [Offer] Sending capabilities...")
-                            (let ((our-caps "(tag (* set read write replicate))"))
+                            (let ((our-caps (make-offer-capabilities 'read 'write 'replicate)))
                               (channel-write-msg ch CIP-OFFER (string->blob our-caps)))
 
                             ;; Phase 6: Receive CONFIRM
