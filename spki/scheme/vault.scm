@@ -43,6 +43,8 @@
    soup-hash
    soup-merkle-hash-file
    soup-dual-hash-file
+   soup-prove-chunk
+   soup-verify-chunk
    soup-releases
    soup-du
    soup-find
@@ -2065,6 +2067,22 @@ Object Types:
              (hashes (dual-hash (string->blob content))))
         (cons (blob->hex (car hashes))
               (blob->hex (cdr hashes))))))
+
+  (define (soup-prove-chunk path chunk-index)
+    "Generate inclusion proof for a chunk of a file (Memo-047)
+     Returns merkle-proof or #f if index invalid"
+    (handle-exceptions exn #f
+      (let ((content (with-input-from-file path (lambda () (read-string)))))
+        (merkle-prove (string->blob content) chunk-index))))
+
+  (define (soup-verify-chunk path chunk-index proof)
+    "Verify inclusion proof against a file's Merkle root (Memo-047)
+     Returns #t if chunk is proven to be part of the file"
+    (handle-exceptions exn #f
+      (let* ((content (with-input-from-file path (lambda () (read-string))))
+             (root (merkle-root (string->blob content))))
+        (and (= chunk-index (merkle-proof-chunk-index proof))
+             (merkle-verify-proof root proof)))))
 
   (define (blob->hex b)
     "Convert blob to hex string"

@@ -29,6 +29,13 @@
    merkle-hash-leaf
    merkle-hash-node
    dual-hash
+   ;; Merkle inclusion proofs (selective disclosure)
+   merkle-prove
+   merkle-verify-proof
+   merkle-proof?
+   merkle-proof-chunk-index
+   merkle-proof-chunk-hash
+   merkle-proof-path
    crypto-sign-publickeybytes
    crypto-generichash-bytes
    crypto-sign-secretkeybytes
@@ -383,6 +390,147 @@ static int shake256_hash_c(unsigned char *out, size_t outlen,
                     (string->blob content)
                     content)))
       (cons (sha512-hash data) (merkle-root data))))
+
+  ;;; ============================================================================
+  ;;; Merkle Inclusion Proofs (Selective Disclosure)
+  ;;;
+  ;;; Prove a chunk exists in an object without revealing other chunks.
+  ;;; Used for streaming verification and privacy-preserving data sharing.
+  ;;; ============================================================================
+
+  ;; Merkle proof structure: (chunk-index chunk-hash path)
+  ;; where path is list of (sibling-hash . position) pairs
+  ;; position is 'left or 'right
+
+  (define (make-merkle-proof chunk-index chunk-hash path)
+    (list 'merkle-proof chunk-index chunk-hash path))
+
+  (define (merkle-proof? x)
+    (and (pair? x) (eq? 'merkle-proof (car x))))
+
+  (define (merkle-proof-chunk-index proof)
+    (list-ref proof 1))
+
+  (define (merkle-proof-chunk-hash proof)
+    (list-ref proof 2))
+
+  (define (merkle-proof-path proof)
+    (list-ref proof 3))
+
+  ;; Build full Merkle tree with all intermediate nodes
+  ;; @param leaves: list of leaf hashes
+  ;; @return: list of levels, from leaves (level 0) to root
+  (define (merkle-build-full-tree leaves)
+    (let loop ((levels '()) (current leaves))
+      (cond
+        ((null? current) (reverse levels))
+        ((null? (cdr current)) (reverse (cons current levels)))
+        (else
+         (let ((groups (group-by-n current merkle-fanout)))
+           (let ((parents (map merkle-hash-node groups)))
+             (loop (cons current levels) parents)))))))
+
+  ;; Helper: group list into sublists of size n
+  (define (group-by-n lst n)
+    (if (null? lst)
+        '()
+        (let loop ((lst lst) (current '()) (count 0) (acc '()))
+          (cond
+            ((null? lst)
+             (reverse (if (null? current) acc (cons (reverse current) acc))))
+            ((>= count n)
+             (loop lst '() 0 (cons (reverse current) acc)))
+            (else
+             (loop (cdr lst) (cons (car lst) current) (+ count 1) acc))))))
+
+  ;; Generate inclusion proof for a chunk
+  ;; @param content: full content (blob or string)
+  ;; @param chunk-index: index of chunk to prove (0-based)
+  ;; @return: merkle-proof or #f if index out of bounds
+  ;;
+  ;; The proof contains siblings along the path from leaf to root.
+  ;; Verifier can reconstruct path to root without seeing other chunks.
+  (define (merkle-prove content chunk-index)
+    (let* ((data (if (string? content) (string->blob content) content))
+           (chunks (merkle-chunk data))
+           (num-chunks (length chunks)))
+      (if (or (< chunk-index 0) (>= chunk-index num-chunks))
+          #f  ; Invalid index
+          (let* ((leaves (map merkle-hash-leaf chunks))
+                 (levels (merkle-build-full-tree leaves))
+                 (chunk-hash (list-ref leaves chunk-index)))
+            ;; Walk up tree, collecting siblings
+            (let loop ((idx chunk-index) (level-idx 0) (path '()))
+              (if (>= level-idx (- (length levels) 1))
+                  (make-merkle-proof chunk-index chunk-hash (reverse path))
+                  (let* ((level (list-ref levels level-idx))
+                         (group-idx (quotient idx merkle-fanout))
+                         (pos-in-group (remainder idx merkle-fanout))
+                         (group-start (* group-idx merkle-fanout))
+                         (group-end (min (+ group-start merkle-fanout) (length level))))
+                    ;; Collect siblings in this group
+                    (let sibling-loop ((i group-start) (siblings '()))
+                      (if (>= i group-end)
+                          (loop group-idx (+ level-idx 1)
+                                (append (reverse siblings) path))
+                          (if (= i idx)
+                              (sibling-loop (+ i 1) siblings)
+                              (let ((pos (if (< i idx) 'left 'right)))
+                                (sibling-loop (+ i 1)
+                                              (cons (cons (list-ref level i) pos)
+                                                    siblings)))))))))))))
+
+  ;; Verify inclusion proof
+  ;; @param root: expected Merkle root (32-byte blob)
+  ;; @param proof: merkle-proof from merkle-prove
+  ;; @return: #t if proof is valid, #f otherwise
+  ;;
+  ;; Reconstructs path from leaf to root using siblings in proof.
+  (define (merkle-verify-proof root proof)
+    (if (not (merkle-proof? proof))
+        #f
+        (let ((chunk-hash (merkle-proof-chunk-hash proof))
+              (path (merkle-proof-path proof)))
+          ;; Group siblings by level and verify path to root
+          (let loop ((current-hash chunk-hash) (remaining-path path))
+            (if (null? remaining-path)
+                ;; Reached end - check against root
+                (or (merkle-blob=? current-hash root)
+                    (merkle-blob=? (merkle-hash-node (list current-hash)) root))
+                ;; Collect siblings for this level, hash together
+                (let collect ((path remaining-path)
+                              (left-siblings '())
+                              (right-siblings '())
+                              (count 0))
+                  (if (or (null? path) (>= count (- merkle-fanout 1)))
+                      ;; Hash this level
+                      (let* ((all-left (reverse left-siblings))
+                             (all-right right-siblings)
+                             (children (append all-left
+                                               (list current-hash)
+                                               all-right))
+                             (parent (merkle-hash-node children)))
+                        (loop parent path))
+                      ;; Accumulate sibling
+                      (let* ((sibling (car path))
+                             (hash (car sibling))
+                             (pos (cdr sibling)))
+                        (if (eq? pos 'left)
+                            (collect (cdr path) (cons hash left-siblings)
+                                     right-siblings (+ count 1))
+                            (collect (cdr path) left-siblings
+                                     (cons hash right-siblings) (+ count 1)))))))))))
+
+  ;; Compare two blobs for equality
+  (define (merkle-blob=? a b)
+    (and (= (blob-size a) (blob-size b))
+         (let ((va (blob->u8vector a))
+               (vb (blob->u8vector b)))
+           (let loop ((i 0))
+             (if (>= i (u8vector-length va))
+                 #t
+                 (and (= (u8vector-ref va i) (u8vector-ref vb i))
+                      (loop (+ i 1))))))))
 
   ;;; ============================================================================
   ;;; Vault Cryptography (Memo-041)
