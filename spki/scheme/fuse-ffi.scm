@@ -64,7 +64,8 @@
         (chicken format)
         (chicken file)
         (chicken process)
-        (srfi 4))
+        (srfi 4)
+        (srfi 13))
 
 ;;; ============================================================
 ;;; Library Detection
@@ -73,15 +74,31 @@
 (define (fuse-library-path)
   "Find the FUSE library path. Prefers FUSE-T over macFUSE."
   (cond
+    ;; FUSE-T standard install location (versioned)
+    ((find-fuse-t-lib "/Library/Application Support/fuse-t/lib/"))
+    ;; Homebrew locations
     ((file-exists? "/usr/local/lib/libfuse-t.dylib")
      "/usr/local/lib/libfuse-t.dylib")
     ((file-exists? "/opt/homebrew/lib/libfuse-t.dylib")
      "/opt/homebrew/lib/libfuse-t.dylib")
+    ;; macFUSE fallback
     ((file-exists? "/usr/local/lib/libfuse.dylib")
      "/usr/local/lib/libfuse.dylib")
     ((file-exists? "/opt/homebrew/lib/libfuse.dylib")
      "/opt/homebrew/lib/libfuse.dylib")
     (else #f)))
+
+(define (find-fuse-t-lib dir)
+  "Find versioned libfuse-t dylib in directory."
+  (and (directory-exists? dir)
+       (let ((files (directory dir)))
+         (let loop ((fs files))
+           (cond
+             ((null? fs) #f)
+             ((and (string-prefix? "libfuse-t-" (car fs))
+                   (string-suffix? ".dylib" (car fs)))
+              (string-append dir (car fs)))
+             (else (loop (cdr fs))))))))
 
 (define (fuse-available?)
   "Check if FUSE library is available."
