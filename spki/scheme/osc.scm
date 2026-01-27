@@ -17,10 +17,11 @@
 (import (chicken blob))
 (import (chicken bitwise))
 (import (chicken io))
-(import (chicken tcp))
 (import (chicken port))
 (import srfi-1)
 (import srfi-4)  ; u8vector
+(import srfi-18) ; threads
+(import udp)
 
 ;; OSC packet encoding
 ;; Address: null-terminated, padded to 4 bytes
@@ -93,23 +94,35 @@
 (define *osc-host* "127.0.0.1")
 (define *osc-port* 9000)  ; TouchOSC default
 (define *osc-socket* #f)
+(define *osc-listener* #f)
+(define *osc-running* #f)
 
 (define (osc-connect #!optional (host "127.0.0.1") (port 9000))
   "Connect to OSC destination (Max, TouchOSC, etc.)"
   (set! *osc-host* host)
   (set! *osc-port* port)
+  (unless *osc-socket*
+    (set! *osc-socket* (udp-open-socket)))
   (printf "OSC connected to ~a:~a~%" host port))
 
 (define (osc-send address . args)
-  "Send OSC message"
+  "Send OSC message via UDP"
   (let ((packet (apply osc-encode address args)))
-    ;; Use UDP - for now just print (actual UDP needs socket egg)
-    (printf "OSC: ~a ~a~%" address args)
+    (unless *osc-socket*
+      (set! *osc-socket* (udp-open-socket)))
+    (udp-sendto *osc-socket* *osc-host* *osc-port*
+                (blob->string (u8vector->blob/shared packet)))
     packet))
 
 (define (osc-close)
   "Close OSC connection"
-  (set! *osc-socket* #f)
+  (set! *osc-running* #f)
+  (when *osc-socket*
+    (udp-close-socket *osc-socket*)
+    (set! *osc-socket* #f))
+  (when *osc-listener*
+    (udp-close-socket *osc-listener*)
+    (set! *osc-listener* #f))
   (print "OSC closed"))
 
 ;; Convenience addresses for Cyberspace
@@ -133,13 +146,56 @@
   "Send key count"
   (osc-send "/cyberspace/keys" count))
 
-;; Receiver (placeholder - needs UDP socket)
+;; OSC packet decoding
+(define (osc-decode packet)
+  "Decode OSC packet, return (address type-tag . args)"
+  (let* ((data (if (blob? packet) (blob->u8vector/shared packet) packet))
+         (len (u8vector-length data)))
+    (if (< len 4)
+        #f
+        (let loop ((i 0) (chars '()))
+          (if (or (>= i len) (= (u8vector-ref data i) 0))
+              (let* ((address (list->string (reverse chars)))
+                     (addr-end (pad-to-4 (+ (string-length address) 1))))
+                (if (>= addr-end len)
+                    (list address "")
+                    (let type-loop ((j addr-end) (types '()))
+                      (if (or (>= j len) (= (u8vector-ref data j) 0))
+                          (list address (list->string (reverse types)))
+                          (type-loop (+ j 1)
+                                     (cons (integer->char (u8vector-ref data j))
+                                           types))))))
+              (loop (+ i 1)
+                    (cons (integer->char (u8vector-ref data i)) chars)))))))
+
+;; Receiver
 (define (osc-listen port handler)
-  "Listen for incoming OSC on port, call handler for each message"
-  (printf "OSC listening on port ~a (not yet implemented)~%" port))
+  "Listen for incoming OSC on port, call handler for each message.
+   Handler receives: (address type-tag . args)"
+  (set! *osc-listener* (udp-open-socket))
+  (udp-bind! *osc-listener* port "0.0.0.0")
+  (set! *osc-running* #t)
+  (printf "OSC listening on port ~a~%" port)
+  (thread-start!
+   (make-thread
+    (lambda ()
+      (let loop ()
+        (when *osc-running*
+          (let-values (((n data host port) (udp-recvfrom *osc-listener* 1024)))
+            (when (> n 0)
+              (let ((msg (osc-decode data)))
+                (when msg
+                  (handler msg)))))
+          (loop))))
+    'osc-listener)))
 
 (define (osc-server port)
-  "Start OSC server (bidirectional)"
-  (printf "OSC server on port ~a (not yet implemented)~%" port))
+  "Start OSC server (bidirectional) - listen and respond"
+  (osc-listen port
+    (lambda (msg)
+      (let ((address (car msg)))
+        (printf "OSC recv: ~a~%" address)
+        ;; Echo back acknowledgment
+        (osc-send (string-append address "/ack") 1)))))
 
 ) ; end module
