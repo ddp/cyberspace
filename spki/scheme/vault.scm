@@ -2782,11 +2782,24 @@ Object Types:
         (audit . ,(reverse audit-results))
         (wormhole . ,(reverse wormhole-results)))))
 
-  (define (dashboard)
+  (define (dashboard . args)
     "Unified status dashboard across soup, audit, wormhole, and session.
-     The 'what's going on?' view."
-    (let* ((w 72)
-           (b (make-box w *box-rounded*)))
+     The 'what's going on?' view. Use (dashboard 'full) to show all session stats."
+    (let* ((show-all? (and (pair? args) (eq? (car args) 'full)))
+           (w 72)
+           (col 20)  ; consistent column width for all sections
+           (b (make-box w *box-rounded*))
+           (fmt-row (lambda (key val)
+                      (let* ((key-str (if (symbol? key) (symbol->string key) key))
+                             (val-str (cond ((number? val)
+                                             (if (> val 1000000)
+                                                 (format-size val)
+                                                 (number->string val)))
+                                            (else (sprintf "~a" val)))))
+                        (box-print b (sprintf "  ~a~a~a"
+                                              key-str
+                                              (make-string (max 1 (- col (string-length key-str))) #\space)
+                                              val-str))))))
 
       ;; Header
       (print "")
@@ -2799,22 +2812,10 @@ Object Types:
             (box-print b "  (no activity)")
             (begin
               (for-each
-               (lambda (stat)
-                 (let* ((key (car stat))
-                        (val (cdr stat))
-                        (key-str (symbol->string key))
-                        (val-str (if (number? val)
-                                     (if (> val 1000000)
-                                         (format-size val)
-                                         (number->string val))
-                                     (sprintf "~a" val))))
-                   (box-print b (sprintf "  ~a~a~a"
-                                         key-str
-                                         (make-string (max 1 (- 24 (string-length key-str))) #\space)
-                                         val-str))))
-               (take stats (min 8 (length stats))))
-              (when (> (length stats) 8)
-                (box-print b (sprintf "  ... and ~a more" (- (length stats) 8)))))))
+               (lambda (stat) (fmt-row (car stat) (cdr stat)))
+               (if show-all? stats (take stats (min 8 (length stats)))))
+              (when (and (not show-all?) (> (length stats) 8))
+                (box-print b (sprintf "  ... and ~a more (use 'full)" (- (length stats) 8)))))))
 
       (print (box-separator b))
 
@@ -2832,10 +2833,7 @@ Object Types:
              (lambda (type)
                (let ((count (hash-table-ref/default by-type type 0)))
                  (when (> count 0)
-                   (box-print b (sprintf "  ~a~a~a"
-                                         (symbol->string type)
-                                         (make-string (max 1 (- 16 (string-length (symbol->string type)))) #\space)
-                                         count)))))
+                   (fmt-row type count))))
              '(archives releases keys audit metadata certs forge))))
 
       (print (box-separator b))
@@ -2846,8 +2844,8 @@ Object Types:
         (if (and dir (directory-exists? dir))
             (let* ((files (filter (lambda (f) (string-suffix? ".sexp" f)) (directory dir)))
                    (count (length files)))
-              (box-print b (sprintf "  entries~a~a" (make-string 8 #\space) count))
-              (box-print b (sprintf "  directory~a~a" (make-string 6 #\space) dir)))
+              (fmt-row "entries" count)
+              (fmt-row "directory" dir))
             (box-print b "  (not initialized)")))
 
       (print (box-separator b))
@@ -2863,22 +2861,18 @@ Object Types:
                (lambda (path)
                  (let* ((wh (hash-table-ref wormhole#*active-wormholes* path))
                         (audit-count (length (wormhole#wormhole-audit-log wh))))
-                   (box-print b (sprintf "  ~a  (~a events)"
-                                         (wormhole#wormhole-id wh)
-                                         audit-count))))
+                   (fmt-row (wormhole#wormhole-id wh) (sprintf "~a events" audit-count))))
                paths))
           (let ((intro-count (hash-table-size wormhole#*introspection-store*)))
             (when (> intro-count 0)
-              (box-print b (sprintf "  introspections~a~a" (make-string 1 #\space) intro-count))))))
+              (fmt-row "introspections" intro-count)))))
 
       (print (box-separator b))
 
       ;; Keystore status
       (box-print b "Keystore")
       (if (keystore-exists?)
-          (box-print b (sprintf "  status~a~a"
-                                (make-string 9 #\space)
-                                (if (vault-config 'signing-key) "unlocked" "locked")))
+          (fmt-row "status" (if (vault-config 'signing-key) "unlocked" "locked"))
           (box-print b "  (not created)"))
 
       ;; Lamport clock

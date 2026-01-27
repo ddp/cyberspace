@@ -439,9 +439,10 @@
   ;;     (print (box-bottom b)))
 
   ;; Box character sets: (tl horiz tr vert bl br t-left t-right)
-  (define *box-square*  '(#\┌ #\─ #\┐ #\│ #\└ #\┘ #\├ #\┤))
-  (define *box-rounded* '(#\╭ #\─ #\╮ #\│ #\╰ #\╯ #\├ #\┤))
-  (define *box-double*  '(#\╔ #\═ #\╗ #\║ #\╚ #\╝ #\╠ #\╣))
+  ;; Use strings instead of chars - Chicken's char handling corrupts multi-byte UTF-8
+  (define *box-square*  '("┌" "─" "┐" "│" "└" "┘" "├" "┤"))
+  (define *box-rounded* '("╭" "─" "╮" "│" "╰" "╯" "├" "┤"))
+  (define *box-double*  '("╔" "═" "╗" "║" "╚" "╝" "╠" "╣"))
 
   ;; String utilities for box formatting
   ;; Note: srfi-13 provides string-pad (left) and string-pad-right
@@ -512,6 +513,11 @@
   (define (box-tee-l s) (list-ref s 6))
   (define (box-tee-r s) (list-ref s 7))
 
+  (define (string-repeat str n)
+    "Repeat a string n times."
+    (let loop ((i n) (acc ""))
+      (if (<= i 0) acc (loop (- i 1) (string-append acc str)))))
+
   (define (box-top builder #!optional title)
     "Generate top border, optionally with title."
     (let* ((w (box-width builder))
@@ -523,33 +529,33 @@
                  (left-pad 1)
                  (right-pad (- w left-pad tlen)))
             (string-append
-              (string (box-tl s))
-              (make-string left-pad h)
+              (box-tl s)
+              (string-repeat h left-pad)
               t
-              (make-string (max 0 right-pad) h)
-              (string (box-tr s))))
+              (string-repeat h (max 0 right-pad))
+              (box-tr s)))
           (string-append
-            (string (box-tl s))
-            (make-string w h)
-            (string (box-tr s))))))
+            (box-tl s)
+            (string-repeat h w)
+            (box-tr s)))))
 
   (define (box-bottom builder)
     "Generate bottom border."
     (let ((w (box-width builder))
           (s (box-style builder)))
       (string-append
-        (string (box-bl s))
-        (make-string w (box-h s))
-        (string (box-br s)))))
+        (box-bl s)
+        (string-repeat (box-h s) w)
+        (box-br s))))
 
   (define (box-separator builder)
     "Generate horizontal separator."
     (let ((w (box-width builder))
           (s (box-style builder)))
       (string-append
-        (string (box-tee-l s))
-        (make-string w (box-h s))
-        (string (box-tee-r s)))))
+        (box-tee-l s)
+        (string-repeat (box-h s) w)
+        (box-tee-r s))))
 
   (define (box-line builder content)
     "Generate content line with proper padding.
@@ -561,12 +567,12 @@
            (display-w (string-display-width truncated))
            (pad (max 0 (- inner-w display-w))))
       (string-append
-        (string (box-v s))
+        (box-v s)
         " "
         truncated
         (make-string pad #\space)
         " "
-        (string (box-v s)))))
+        (box-v s))))
 
   (define (box-print builder content)
     "Print a content line (convenience wrapper)."
