@@ -170,8 +170,11 @@ EOF
   (osc-send "/cyberspace/keys" count))
 
 ;; OSC packet decoding
+;; TODO: Decode argument values (int32, float32, string) based on type-tag.
+;;       Currently only extracts address and type-tag, not actual args.
+;;       Float decoding needs IEEE 754 FFI (bytes_to_float inverse).
 (define (osc-decode packet)
-  "Decode OSC packet, return (address type-tag . args)"
+  "Decode OSC packet, return (address type-tag). Args not yet decoded."
   (let* ((data (if (blob? packet) (blob->u8vector/shared packet) packet))
          (len (u8vector-length data)))
     (if (< len 4)
