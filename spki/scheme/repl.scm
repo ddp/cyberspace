@@ -5589,16 +5589,21 @@
      (if (eq? *user-mode* 'novice)
          ;; Novice: plain English, no acronyms
          (begin
-           (print "  soup        - Browse the object store")
-           (print "  library     - Browse the Library of memos")
-           (print "  search 'x   - Search for anything")
-           (print "  kwic 'word  - See word in context across memos")
-           (print "  status      - Show what's happening")
-           (print "  inspect x   - Look inside any object")
+           (print "  soup            - Browse the object store")
+           (print "  library         - Browse the Library of memos")
+           (print "  search 'x       - Search for anything")
+           (print "  global-search s - Search across soup, audit, wormhole")
            (print "")
-           (printf "  help topics - All help topics (~a commands)~%"
+           (print "  status          - Quick system status")
+           (print "  (dashboard)     - Full status: session, soup, audit, wormholes")
+           (print "  (session-stats) - View session activity counters")
+           (print "")
+           (print "  inspect x       - Look inside any object")
+           (print "  kwic 'word      - See word in context across memos")
+           (print "")
+           (printf "  help topics     - All help topics (~a commands)~%"
                    (apply + (map (lambda (t) (length (cddr t))) *help-topics*)))
-           (print "  .  ?  bye   - status, help, exit"))
+           (print "  .  ?  bye       - status, help, exit"))
          ;; Schemer: comma commands (like Chicken CSI)
          (begin
            (print "  ,soup ,library ,search ,kwic    Cyberspace")
