@@ -101,7 +101,7 @@
     ;; Security
     "security" "keyring"
     ;; Network
-    "gossip" "mdns" "portal" "http"
+    "gossip" "mdns" "portal" "http" "osc" "rnbo"
     ;; Wormhole (FUSE)
     "metadata-ffi" "fuse-ffi" "wormhole"
     ;; Enrollment
