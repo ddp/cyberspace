@@ -103,7 +103,7 @@
     ;; Network
     "gossip" "mdns" "portal" "http"
     ;; Wormhole (FUSE)
-    "fuse-ffi" "wormhole"
+    "metadata-ffi" "fuse-ffi" "wormhole"
     ;; Enrollment
     "enroll" "auto-enroll"
     ;; UI
@@ -139,7 +139,10 @@
               ((string=? mod "pq-crypto")
                (run "csc -s -J -O2 pq-crypto.scm -C \"-I/opt/homebrew/include\" -L \"-L/opt/homebrew/lib -loqs -L/opt/homebrew/opt/openssl@3/lib -lcrypto\""))
               ((string=? mod "fuse-ffi")
-               (run "csc -s -J -O2 fuse-ffi.scm -C \"-D_FILE_OFFSET_BITS=64 -I/usr/local/include/fuse\" -L \"-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lfuse-t\""))
+               ;; Try fuse-t first, fall back to macfuse (libfuse)
+               (if (file-exists? "/usr/local/lib/libfuse-t.dylib")
+                   (run "csc -s -J -O2 fuse-ffi.scm -C \"-D_FILE_OFFSET_BITS=64 -I/usr/local/include/fuse\" -L \"-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lfuse-t\"")
+                   (run "csc -s -J -O2 fuse-ffi.scm -C \"-D_FILE_OFFSET_BITS=64 -I/usr/local/include/fuse\" -L \"-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lfuse\"")))
               (else
                (run (sprintf "csc -s -J -O2 ~a" src)))))))
       *library-modules*)

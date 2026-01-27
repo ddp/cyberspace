@@ -100,6 +100,7 @@
         fuse-ffi
         filetype
         crypto-ffi
+        metadata-ffi
         os)
 
 ;;; ============================================================
@@ -327,27 +328,39 @@
 
 (define (capture-metadata path)
   "Capture all macOS metadata for a file.
-   Returns alist of metadata categories."
-  ;; Note: Full implementation requires FFI to stat(), listxattr(), etc.
+   Returns alist with xattrs, BSD flags, and ACLs."
   (if (file-exists? path)
-      `((posix
-         (exists #t)
-         (size ,(file-size path))
-         (mtime ,(file-modification-time path)))
-        (xattr ())   ; TODO: FFI to listxattr/getxattr
-        (flags ())   ; TODO: FFI to chflags
-        (acl ()))    ; TODO: FFI to acl_get_file
+      (let* ((xattrs (xattr-list path))
+             (xattr-data (map (lambda (name)
+                                (cons name (xattr-get path name)))
+                              xattrs))
+             (flags (file-flags path))
+             (acl-entries (acl-get path)))
+        `((posix
+           (exists #t)
+           (size ,(file-size path))
+           (mtime ,(file-modification-time path)))
+          (xattr ,xattr-data)
+          (flags ,flags)
+          (acl ,acl-entries)))
       `((posix (exists #f)))))
 
 (define (restore-metadata path metadata)
   "Restore metadata to a file.
-   Note: Requires appropriate permissions."
-  ;; TODO: FFI implementations for:
-  ;; - chmod, chown
-  ;; - setxattr
-  ;; - chflags
-  ;; - acl_set_file
-  #t)
+   Restores xattrs and BSD flags (ACLs not yet implemented).
+   Note: Some operations require appropriate permissions."
+  (let ((xattr-data (alist-ref 'xattr metadata eq? '()))
+        (flags (alist-ref 'flags metadata eq? 0)))
+    ;; Restore extended attributes
+    (for-each (lambda (entry)
+                (when (and (pair? entry) (cdr entry))
+                  (xattr-set path (car entry) (cdr entry))))
+              xattr-data)
+    ;; Restore BSD flags (may require root for SF_* flags)
+    (when (> flags 0)
+      (file-flags-set! path flags))
+    ;; TODO: ACL restoration via acl_set_file
+    #t))
 
 ;;; ============================================================
 ;;; Utility: Blob to Hex
