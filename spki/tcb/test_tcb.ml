@@ -736,6 +736,121 @@ let test_authorization () =
   )
 
 (* ============================================================
+   Merkle Tree Tests - Quantum-Resistant Object Identity
+   ============================================================ *)
+
+let test_merkle () =
+  Printf.printf "\n=== Merkle Tree Tests ===\n";
+
+  test "merkle_root deterministic" (fun () ->
+    let content = Bytes.of_string "test content for merkle tree" in
+    let r1 = merkle_root content in
+    let r2 = merkle_root content in
+    assert_true "same content -> same root" (constant_time_compare r1 r2)
+  );
+
+  test "merkle_root different content differs" (fun () ->
+    let c1 = Bytes.of_string "content one" in
+    let c2 = Bytes.of_string "content two" in
+    let r1 = merkle_root c1 in
+    let r2 = merkle_root c2 in
+    assert_false "different content -> different root"
+      (constant_time_compare r1 r2)
+  );
+
+  test "merkle_root is 32 bytes" (fun () ->
+    let content = Bytes.of_string "some content" in
+    let root = merkle_root content in
+    assert_true "root is 32 bytes" (Bytes.length root = 32)
+  );
+
+  test "merkle_root handles empty content" (fun () ->
+    let empty = Bytes.empty in
+    let root = merkle_root empty in
+    assert_true "root is 32 bytes" (Bytes.length root = 32)
+  );
+
+  test "merkle_chunk splits correctly" (fun () ->
+    (* Create content larger than one chunk *)
+    let chunk_size = 4096 in
+    let content = Bytes.create (chunk_size * 2 + 100) in
+    Bytes.fill content 0 (Bytes.length content) 'x';
+    let chunks = merkle_chunk content in
+    assert_true "3 chunks" (List.length chunks = 3);
+    assert_true "first chunk full" (Bytes.length (List.nth chunks 0) = chunk_size);
+    assert_true "second chunk full" (Bytes.length (List.nth chunks 1) = chunk_size);
+    assert_true "third chunk partial" (Bytes.length (List.nth chunks 2) = 100)
+  );
+
+  test "merkle_hash_leaf uses domain separation" (fun () ->
+    let chunk = Bytes.of_string "test chunk" in
+    let h1 = merkle_hash_leaf chunk in
+    let h2 = shake256_hash_32 chunk in  (* No domain separation *)
+    assert_false "leaf hash differs from raw hash"
+      (constant_time_compare h1 h2)
+  );
+
+  test "merkle_hash_node uses domain separation" (fun () ->
+    let children = [Bytes.make 32 '\x00'; Bytes.make 32 '\xff'] in
+    let h1 = merkle_hash_node children in
+    let concat = Bytes.concat Bytes.empty children in
+    let h2 = shake256_hash_32 concat in
+    assert_false "node hash differs from raw hash"
+      (constant_time_compare h1 h2)
+  );
+
+  test "merkle_prove generates valid proof" (fun () ->
+    let content = Bytes.of_string "small content for proof test" in
+    match merkle_prove content 0 with
+    | None -> failwith "should generate proof"
+    | Some proof ->
+      assert_true "chunk_index is 0" (proof.chunk_index = 0);
+      assert_true "chunk_hash is 32 bytes" (Bytes.length proof.chunk_hash = 32)
+  );
+
+  test "merkle_prove returns None for invalid index" (fun () ->
+    let content = Bytes.of_string "test" in
+    match merkle_prove content 999 with
+    | None -> ()
+    | Some _ -> failwith "should return None for invalid index"
+  );
+
+  test "dual_hash returns both hashes" (fun () ->
+    let content = Bytes.of_string "content for dual hash" in
+    let (legacy, quantum) = dual_hash content in
+    assert_true "legacy is 64 bytes (SHA-512)" (Bytes.length legacy = 64);
+    assert_true "quantum is 32 bytes (Merkle)" (Bytes.length quantum = 32)
+  );
+
+  test "dual_hash legacy matches sha512" (fun () ->
+    let content = Bytes.of_string "content" in
+    let (legacy, _) = dual_hash content in
+    let direct = sha512_hash content in
+    assert_true "legacy equals sha512" (constant_time_compare legacy direct)
+  );
+
+  test "dual_hash quantum matches merkle_root" (fun () ->
+    let content = Bytes.of_string "content" in
+    let (_, quantum) = dual_hash content in
+    let direct = merkle_root content in
+    assert_true "quantum equals merkle_root" (constant_time_compare quantum direct)
+  );
+
+  test "merkle tree handles multi-chunk content" (fun () ->
+    (* Create content spanning multiple chunks *)
+    let size = 4096 * 5 + 1000 in  (* 6 chunks *)
+    let content = Bytes.create size in
+    for i = 0 to size - 1 do
+      Bytes.set content i (Char.chr (i mod 256))
+    done;
+    let root = merkle_root content in
+    assert_true "root is 32 bytes" (Bytes.length root = 32);
+    (* Verify deterministic *)
+    let root2 = merkle_root content in
+    assert_true "deterministic" (constant_time_compare root root2)
+  )
+
+(* ============================================================
    Main
    ============================================================ *)
 
@@ -754,9 +869,9 @@ let () =
   test_cookies ();
   test_audit_trail ();
   test_fips181 ();
-  (* PQ tests planned when liboqs builds without OpenSSL *)
   test_certificates ();
   test_authorization ();
+  test_merkle ();
 
   (* Summary *)
   Printf.printf "\n============================\n";
