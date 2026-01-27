@@ -145,7 +145,8 @@
   ;;; ============================================================================
 
   (define (audit-append #!key actor action motivation relates-to signing-key
-                              (algorithm 'ed25519) pq-signing-key)
+                              (algorithm 'ed25519) pq-signing-key
+                              (auth-chain '()))
     "Append entry to audit trail
 
      actor: SPKI principal (public key blob)
@@ -154,7 +155,8 @@
      relates-to: Related entries or concepts
      signing-key: Private key for signing (blob)
      algorithm: ed25519 (default), ml-dsa-65, sphincs+, hybrid
-     pq-signing-key: For hybrid, the ML-DSA private key"
+     pq-signing-key: For hybrid, the ML-DSA private key
+     auth-chain: Authorization chain (list of cert references)"
 
     (unless action
       (error "Action required for audit entry"))
@@ -169,7 +171,7 @@
         (error "No signing key configured"))
 
       ;; Build entry components
-      (let ((actor-obj (make-audit-actor actor '()))  ; TODO: auth chain
+      (let ((actor-obj (make-audit-actor actor auth-chain))
             (action-obj (make-audit-action
                          (car action)
                          (if (pair? (cdr action)) (cadr action) #f)
@@ -489,10 +491,27 @@
        (sequence
         (read-audit-file (sprintf "~a/~a.sexp" dir sequence)))
        (id
-        ;; TODO: Search by ID
-        (error "Search by ID not yet implemented"))
+        ;; Search all audit files for matching ID
+        (audit-search-by-id dir id))
        (else
         (error "Must specify sequence or id")))))
+
+  (define (audit-search-by-id dir id)
+    "Search audit files for entry with given ID (sha512:... prefix)."
+    (let ((files (glob (string-append dir "/*.sexp"))))
+      (let loop ((files files))
+        (if (null? files)
+            #f  ; Not found
+            (let ((entry (read-audit-file (car files))))
+              (if (and entry
+                       (list? entry)
+                       (let ((seal (assq 'seal entry)))
+                         (and seal
+                              (let ((entry-id (assq 'id (cdr seal))))
+                                (and entry-id
+                                     (string-prefix? id (cadr entry-id)))))))
+                  entry
+                  (loop (cdr files))))))))
 
   ;;; ============================================================================
   ;;; Time Parsing (VMS /SINCE and /BEFORE style)
