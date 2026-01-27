@@ -1038,139 +1038,125 @@
    (else "self-insert-command")))
 
 ;;; ============================================================
+;;; Key Bindings
+;;; ============================================================
+
+;; C-x prefix commands
+(define *schemacs-cx-bindings*
+  `(((ctrl . #\C) quit     ,(lambda (ed) (if (and (sm-modified? ed)
+                                                   (not (sm-minibuf-ask ed "Buffer modified; kill anyway?")))
+                                              #t #f)))
+    ((ctrl . #\S) save     ,(lambda (ed) (sm-save-file! ed) #t))
+    ((ctrl . #\F) find     ,(lambda (ed)
+                              (let ((f (sm-minibuf-read ed "Find file: ")))
+                                (when (and f (> (string-length f) 0))
+                                  (sm-find-file! ed f))) #t))
+    ((ctrl . #\W) write    ,(lambda (ed)
+                              (let ((f (sm-minibuf-read ed "Write file: ")))
+                                (when (and f (> (string-length f) 0))
+                                  (sm-write-file! ed f))) #t))
+    ((ctrl . #\X) exchange ,(lambda (ed) (sm-exchange-point-and-mark! ed) #t))))
+
+;; Main bindings: (keys last-cmd handler)
+(define *schemacs-bindings*
+  `(;; Movement
+    (((ctrl . #\F) right)           move   ,(lambda (ed) (sm-forward-char! ed) #t))
+    (((ctrl . #\B) left)            move   ,(lambda (ed) (sm-backward-char! ed) #t))
+    (((ctrl . #\N) down)            move   ,(lambda (ed) (sm-next-line! ed) #t))
+    (((ctrl . #\P) up)              move   ,(lambda (ed) (sm-previous-line! ed) #t))
+    (((ctrl . #\A) home)            move   ,(lambda (ed) (sm-beginning-of-line! ed) #t))
+    (((ctrl . #\E) end)             move   ,(lambda (ed) (sm-end-of-line! ed) #t))
+    (((meta . #\f))                 move   ,(lambda (ed) (sm-forward-word! ed) #t))
+    (((meta . #\b))                 move   ,(lambda (ed) (sm-backward-word! ed) #t))
+    (((meta . #\<))                 move   ,(lambda (ed) (sm-beginning-of-buffer! ed) #t))
+    (((meta . #\>))                 move   ,(lambda (ed) (sm-end-of-buffer! ed) #t))
+    (((ctrl . #\V) page-down)       move   ,(lambda (ed) (sm-scroll-up! ed) #t))
+    (((meta . #\v) page-up)         move   ,(lambda (ed) (sm-scroll-down! ed) #t))
+    ;; Editing
+    (((ctrl . #\D))                 delete ,(lambda (ed) (sm-delete-char! ed) #t))
+    ((backspace delete)             delete ,(lambda (ed) (sm-delete-backward-char! ed) #t))
+    (((ctrl . #\K))                 kill   ,(lambda (ed) (sm-kill-line! ed) #t))
+    (((ctrl . #\W))                 kill   ,(lambda (ed) (sm-kill-region! ed) #t))
+    (((meta . #\w))                 copy   ,(lambda (ed) (sm-copy-region! ed) #t))
+    (((ctrl . #\Y))                 yank   ,(lambda (ed) (sm-yank! ed) #t))
+    (((meta . #\y))                 yank   ,(lambda (ed) (sm-yank-pop! ed) #t))
+    (((meta . #\d))                 kill   ,(lambda (ed) (sm-kill-word! ed) #t))
+    (((meta . backspace))           kill   ,(lambda (ed) (sm-backward-kill-word! ed) #t))
+    ((enter)                        insert ,(lambda (ed) (sm-newline! ed) #t))
+    ;; Mark
+    (((ctrl . #\space))             mark   ,(lambda (ed) (sm-set-mark! ed) #t))
+    ;; Search
+    (((ctrl . #\S))                 search ,(lambda (ed) (sm-isearch! ed) #t))
+    (((ctrl . #\R))                 search ,(lambda (ed) (sm-isearch-backward! ed) #t))
+    ;; Display
+    (((ctrl . #\L))                 display ,(lambda (ed) (sm-recenter! ed) (screen-clear) #t))
+    ;; Extended
+    (((meta . #\x))                 mx     ,(lambda (ed) (sm-execute-extended-command! ed) #t))
+    ;; Cancel
+    (((ctrl . #\G))                 cancel ,(lambda (ed) (set-sm-mark! ed #f)
+                                                         (set-sm-minibuf! ed "Quit") #t))))
+
+(define (sm-key-match? key specs)
+  (any (lambda (s) (equal? key s)) specs))
+
+(define (sm-find-binding key bindings)
+  (let loop ((b bindings))
+    (if (null? b) #f
+        (if (sm-key-match? key (caar b))
+            (cdr (car b))
+            (loop (cdr b))))))
+
+(define (sm-find-cx-binding key)
+  (let loop ((b *schemacs-cx-bindings*))
+    (if (null? b) #f
+        (if (equal? key (caar b))
+            (cddar b)
+            (loop (cdr b))))))
+
+;;; ============================================================
 ;;; Main Loop
 ;;; ============================================================
 
 (define (schemacs-run ed)
   "Main editor loop"
-  (tty-flush-input)  ; Clear any buffered garbage
+  (tty-flush-input)
   (tty-set-raw)
   (screen-alt-buffer)
   (screen-clear)
-  (edt-register! ed)  ; Register EDT keypad handlers if available
+  (edt-register! ed)
 
   (let loop ()
     (sm-draw! ed)
     (let ((key (sm-read-key)))
-      ;; Clear minibuffer message unless it's an error
       (unless (string-prefix? "[" (sm-minibuf ed))
         (set-sm-minibuf! ed ""))
-
       (cond
        ;; C-x prefix
        ((equal? key '(ctrl . #\X))
         (set-sm-minibuf! ed "C-x-")
         (sm-draw! ed)
-        (let ((key2 (sm-read-key)))
-          (cond
-           ((equal? key2 '(ctrl . #\C))  ; C-x C-c = quit
-            (if (and (sm-modified? ed)
-                     (not (sm-minibuf-ask ed "Buffer modified; kill anyway?")))
-                (loop)
-                (void)))
-           ((equal? key2 '(ctrl . #\S))  ; C-x C-s = save
-            (sm-save-file! ed) (loop))
-           ((equal? key2 '(ctrl . #\F))  ; C-x C-f = find file
-            (let ((fname (sm-minibuf-read ed "Find file: ")))
-              (when (and fname (> (string-length fname) 0))
-                (sm-find-file! ed fname)))
-            (loop))
-           ((equal? key2 '(ctrl . #\W))  ; C-x C-w = write file
-            (let ((fname (sm-minibuf-read ed "Write file: ")))
-              (when (and fname (> (string-length fname) 0))
-                (sm-write-file! ed fname)))
-            (loop))
-           ((equal? key2 '(ctrl . #\X))  ; C-x C-x = exchange point and mark
-            (sm-exchange-point-and-mark! ed) (loop))
-           (else
-            (set-sm-minibuf! ed (format #f "C-x ~a is undefined" key2))
-            (loop)))))
-
-       ;; Cancel
-       ((equal? key '(ctrl . #\G))
-        (set-sm-mark! ed #f)
-        (set-sm-minibuf! ed "Quit")
-        (loop))
-
-       ;; Movement
-       ((or (equal? key '(ctrl . #\F)) (eq? key 'right))
-        (sm-forward-char! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((or (equal? key '(ctrl . #\B)) (eq? key 'left))
-        (sm-backward-char! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((or (equal? key '(ctrl . #\N)) (eq? key 'down))
-        (sm-next-line! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((or (equal? key '(ctrl . #\P)) (eq? key 'up))
-        (sm-previous-line! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((or (equal? key '(ctrl . #\A)) (eq? key 'home))
-        (sm-beginning-of-line! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((equal? key '(ctrl . #\E))
-        (sm-end-of-line! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((eq? key 'end)
-        (sm-end-of-line! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((equal? key '(meta . #\f))
-        (sm-forward-word! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((equal? key '(meta . #\b))
-        (sm-backward-word! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((equal? key '(meta . #\<))
-        (sm-beginning-of-buffer! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((equal? key '(meta . #\>))
-        (sm-end-of-buffer! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((or (equal? key '(ctrl . #\V)) (eq? key 'page-down))
-        (sm-scroll-up! ed) (set-sm-last-cmd! ed 'move) (loop))
-       ((or (equal? key '(meta . #\v)) (eq? key 'page-up))
-        (sm-scroll-down! ed) (set-sm-last-cmd! ed 'move) (loop))
-
-       ;; Editing
-       ((equal? key '(ctrl . #\D))
-        (sm-delete-char! ed) (set-sm-last-cmd! ed 'delete) (loop))
-       ((or (eq? key 'backspace) (eq? key 'delete))
-        (sm-delete-backward-char! ed) (set-sm-last-cmd! ed 'delete) (loop))
-       ((equal? key '(ctrl . #\K))
-        (sm-kill-line! ed) (set-sm-last-cmd! ed 'kill) (loop))
-       ((equal? key '(ctrl . #\W))
-        (sm-kill-region! ed) (set-sm-last-cmd! ed 'kill) (loop))
-       ((equal? key '(meta . #\w))
-        (sm-copy-region! ed) (set-sm-last-cmd! ed 'copy) (loop))
-       ((equal? key '(ctrl . #\Y))
-        (sm-yank! ed) (set-sm-last-cmd! ed 'yank) (loop))
-       ((equal? key '(meta . #\y))
-        (sm-yank-pop! ed) (set-sm-last-cmd! ed 'yank) (loop))
-       ((equal? key '(meta . #\d))
-        (sm-kill-word! ed) (set-sm-last-cmd! ed 'kill) (loop))
-       ((equal? key '(meta . backspace))
-        (sm-backward-kill-word! ed) (set-sm-last-cmd! ed 'kill) (loop))
-       ((eq? key 'enter)
-        (sm-newline! ed) (set-sm-last-cmd! ed 'insert) (loop))
-
-       ;; Mark
-       ((equal? key '(ctrl . #\space))
-        (sm-set-mark! ed) (set-sm-last-cmd! ed 'mark) (loop))
-
-       ;; Search
-       ((equal? key '(ctrl . #\S))
-        (sm-isearch! ed) (set-sm-last-cmd! ed 'search) (loop))
-       ((equal? key '(ctrl . #\R))
-        (sm-isearch-backward! ed) (set-sm-last-cmd! ed 'search) (loop))
-
-       ;; Display
-       ((equal? key '(ctrl . #\L))
-        (sm-recenter! ed) (screen-clear) (set-sm-last-cmd! ed 'display) (loop))
-
-       ;; Extended commands
-       ((equal? key '(meta . #\x))
-        (sm-execute-extended-command! ed) (set-sm-last-cmd! ed 'mx) (loop))
-
-       ;; Self-insert
-       ((char? key)
-        (sm-insert-char! ed key) (set-sm-last-cmd! ed 'insert) (loop))
-
-       ;; Unknown
+        (let* ((key2 (sm-read-key))
+               (handler (sm-find-cx-binding key2)))
+          (if handler
+              (if (handler ed) (loop) (void))
+              (begin (set-sm-minibuf! ed (format #f "C-x ~a is undefined" key2))
+                     (loop)))))
+       ;; Regular bindings
        (else
-        (set-sm-minibuf! ed (format #f "~a is undefined" key))
-        (loop)))))
+        (let ((binding (sm-find-binding key *schemacs-bindings*)))
+          (cond
+           (binding
+            (set-sm-last-cmd! ed (car binding))
+            (if ((cadr binding) ed) (loop) (void)))
+           ((char? key)
+            (sm-insert-char! ed key)
+            (set-sm-last-cmd! ed 'insert)
+            (loop))
+           (else
+            (set-sm-minibuf! ed (format #f "~a is undefined" key))
+            (loop))))))))
 
-  ;; Cleanup
-  (edt-unregister!)  ; Clear EDT handlers
+  (edt-unregister!)
   (screen-main-buffer)
   (screen-reset)
   (tty-set-cooked)

@@ -98,136 +98,115 @@
   (let ((pair (assq key options)))
     (if pair (cdr pair) default)))
 
+;;; ============================================================
+;;; Command Handlers
+;;; ============================================================
+
+(define (cmd-commit positional options)
+  (when (null? positional)
+    (print "Error: commit message required") (exit 1))
+  (seal-commit (car positional)
+               files: (if (null? (cdr positional)) #f (cdr positional))
+               catalog: (get-option options 'catalog)
+               subjects: (let ((s (get-option options 'subjects)))
+                           (and s (string-split s ",")))
+               keywords: (let ((k (get-option options 'keywords)))
+                           (and k (string-split k ",")))
+               description: (get-option options 'description)
+               preserve: (get-option options 'preserve)))
+
+(define (cmd-update positional options)
+  (seal-update))
+
+(define (cmd-undo positional options)
+  (seal-undo file: (and (pair? positional) (car positional))
+             hard: (get-option options 'hard)))
+
+(define (cmd-history positional options)
+  (let ((c (get-option options 'count)))
+    (seal-history count: (and c (string->number c)))))
+
+(define (cmd-branch positional options)
+  (when (null? positional)
+    (print "Error: branch name required") (exit 1))
+  (seal-branch (car positional) from: (get-option options 'from)))
+
+(define (cmd-merge positional options)
+  (when (null? positional)
+    (print "Error: source branch required") (exit 1))
+  (seal-merge (car positional) strategy: (get-option options 'strategy)))
+
+(define (cmd-release positional options)
+  (when (null? positional)
+    (print "Error: version required") (exit 1))
+  (seal-release (car positional)
+                message: (get-option options 'message)
+                migrate-from: (get-option options 'migrate-from)))
+
+(define (cmd-verify positional options)
+  (when (null? positional)
+    (print "Error: version required") (exit 1))
+  (seal-verify (car positional) verify-key: (get-option options 'verify-key)))
+
+(define (cmd-archive positional options)
+  (when (null? positional)
+    (print "Error: version required") (exit 1))
+  (let ((fmt (get-option options 'format)))
+    (seal-archive (car positional)
+                  format: (and fmt (string->symbol fmt))
+                  output: (get-option options 'output))))
+
+(define (cmd-restore positional options)
+  (when (null? positional)
+    (print "Error: archive file required") (exit 1))
+  (seal-restore (car positional)
+                verify-key: (get-option options 'verify-key)
+                target: (get-option options 'target)))
+
+(define (cmd-migrate positional options)
+  (when (< (length positional) 2)
+    (print "Error: from and to versions required") (exit 1))
+  (seal-migrate (car positional) (cadr positional)
+                script: (get-option options 'script)
+                dry-run: (get-option options 'dry-run)))
+
+(define (cmd-check positional options)
+  (seal-check deep: (get-option options 'deep)))
+
+(define (cmd-init positional options)
+  (vault-init signing-key: (get-option options 'signing-key)))
+
+;; Command dispatch table
+(define *seal-commands*
+  `((commit   . ,cmd-commit)
+    (update   . ,cmd-update)
+    (undo     . ,cmd-undo)
+    (history  . ,cmd-history)
+    (branch   . ,cmd-branch)
+    (merge    . ,cmd-merge)
+    (release  . ,cmd-release)
+    (verify   . ,cmd-verify)
+    (archive  . ,cmd-archive)
+    (restore  . ,cmd-restore)
+    (migrate  . ,cmd-migrate)
+    (check    . ,cmd-check)
+    (init     . ,cmd-init)))
+
+;;; ============================================================
+;;; Main
+;;; ============================================================
+
 (define (main args)
-  (when (null? args)
-    (usage))
-
+  (when (null? args) (usage))
   (let* ((parsed (parse-args args))
-         (command (car parsed))
+         (command (string->symbol (car parsed)))
          (options (cadr parsed))
-         (positional (cddr parsed)))
-
-    (case (string->symbol command)
-      ;; Core operations
-      ((commit)
-       (when (null? positional)
-         (print "Error: commit message required")
-         (exit 1))
-       (let ((message (car positional))
-             (files (cdr positional))
-             (catalog (get-option options 'catalog))
-             (subjects-str (get-option options 'subjects))
-             (keywords-str (get-option options 'keywords))
-             (description (get-option options 'description))
-             (preserve (get-option options 'preserve)))
-         (seal-commit message
-                     files: (if (null? files) #f files)
-                     catalog: catalog
-                     subjects: (if subjects-str
-                                  (string-split subjects-str ",")
-                                  #f)
-                     keywords: (if keywords-str
-                                  (string-split keywords-str ",")
-                                  #f)
-                     description: description
-                     preserve: preserve)))
-
-      ((update)
-       (seal-update))
-
-      ((undo)
-       (let ((file (if (null? positional) #f (car positional)))
-             (hard (get-option options 'hard)))
-         (seal-undo file: file hard: hard)))
-
-      ((history)
-       (let ((count (get-option options 'count)))
-         (seal-history count: (if count (string->number count) #f))))
-
-      ((branch)
-       (when (null? positional)
-         (print "Error: branch name required")
-         (exit 1))
-       (let ((name (car positional))
-             (from (get-option options 'from)))
-         (seal-branch name from: from)))
-
-      ((merge)
-       (when (null? positional)
-         (print "Error: source branch required")
-         (exit 1))
-       (let ((from (car positional))
-             (strategy (get-option options 'strategy)))
-         (seal-merge from strategy: strategy)))
-
-      ;; Version management
-      ((release)
-       (when (null? positional)
-         (print "Error: version required")
-         (exit 1))
-       (let ((version (car positional))
-             (message (get-option options 'message))
-             (migrate-from (get-option options 'migrate-from)))
-         (seal-release version
-                      message: message
-                      migrate-from: migrate-from)))
-
-      ((verify)
-       (when (null? positional)
-         (print "Error: version required")
-         (exit 1))
-       (let ((version (car positional))
-             (verify-key (get-option options 'verify-key)))
-         (seal-verify version verify-key: verify-key)))
-
-      ((archive)
-       (when (null? positional)
-         (print "Error: version required")
-         (exit 1))
-       (let ((version (car positional))
-             (format-str (get-option options 'format))
-             (output (get-option options 'output)))
-         (seal-archive version
-                      format: (if format-str
-                                 (string->symbol format-str)
-                                 #f)
-                      output: output)))
-
-      ((restore)
-       (when (null? positional)
-         (print "Error: archive file required")
-         (exit 1))
-       (let ((archive (car positional))
-             (verify-key (get-option options 'verify-key))
-             (target (get-option options 'target)))
-         (seal-restore archive
-                      verify-key: verify-key
-                      target: target)))
-
-      ((migrate)
-       (when (< (length positional) 2)
-         (print "Error: from and to versions required")
-         (exit 1))
-       (let ((from (car positional))
-             (to (cadr positional))
-             (script (get-option options 'script))
-             (dry-run (get-option options 'dry-run)))
-         (seal-migrate from to
-                      script: script
-                      dry-run: dry-run)))
-
-      ((check)
-       (let ((deep (get-option options 'deep)))
-         (seal-check deep: deep)))
-
-      ;; Configuration
-      ((init)
-       (let ((signing-key (get-option options 'signing-key)))
-         (vault-init signing-key: signing-key)))
-
-      (else
-       (print "Error: unknown command: " command)
-       (usage)))))
+         (positional (cddr parsed))
+         (handler (assq command *seal-commands*)))
+    (if handler
+        ((cdr handler) positional options)
+        (begin (print "Error: unknown command: " (car parsed))
+               (usage)))))
 
 ;; Run main
 (main (command-line-arguments))

@@ -60,142 +60,114 @@
             (print "Error: Invalid key file format: " filename)
             (exit 1))))))
 
-(define (main args)
-  ;; Initialize libsodium
-  (sodium-init)
+;;; ============================================================
+;;; Argument Parsing
+;;; ============================================================
 
-  ;; Parse arguments
-  (define issuer-file #f)
-  (define subject-file #f)
-  (define tag-str #f)
-  (define propagate #f)
-  (define not-before #f)
-  (define not-after #f)
-  (define output-file #f)
-
-  (let loop ((args args))
+(define (parse-option args name has-value?)
+  "Parse --name [value] from args. Returns (value . remaining-args) or #f."
+  (let loop ((args args) (acc '()))
     (cond
-     ((null? args) #t)
+     ((null? args) #f)
+     ((string=? (car args) name)
+      (if has-value?
+          (if (null? (cdr args))
+              (begin (print "Error: " name " requires an argument") (exit 1))
+              (cons (cadr args) (append (reverse acc) (cddr args))))
+          (cons #t (append (reverse acc) (cdr args)))))
+     (else (loop (cdr args) (cons (car args) acc))))))
 
-     ((string=? (car args) "--help")
+(define (parse-args args)
+  "Parse all arguments into an alist."
+  (let ((opts '())
+        (remaining args))
+    ;; Extract each option
+    (let ((r (parse-option remaining "--help" #f)))
+      (when r (usage)))
+    (let ((r (parse-option remaining "--issuer" #t)))
+      (when r (set! opts (cons (cons 'issuer (car r)) opts))
+                   (set! remaining (cdr r))))
+    (let ((r (parse-option remaining "--subject" #t)))
+      (when r (set! opts (cons (cons 'subject (car r)) opts))
+                   (set! remaining (cdr r))))
+    (let ((r (parse-option remaining "--tag" #t)))
+      (when r (set! opts (cons (cons 'tag (car r)) opts))
+                   (set! remaining (cdr r))))
+    (let ((r (parse-option remaining "--propagate" #f)))
+      (when r (set! opts (cons (cons 'propagate #t) opts))
+                   (set! remaining (cdr r))))
+    (let ((r (parse-option remaining "--not-before" #t)))
+      (when r (set! opts (cons (cons 'not-before (car r)) opts))
+                   (set! remaining (cdr r))))
+    (let ((r (parse-option remaining "--not-after" #t)))
+      (when r (set! opts (cons (cons 'not-after (car r)) opts))
+                   (set! remaining (cdr r))))
+    (let ((r (parse-option remaining "--output" #t)))
+      (when r (set! opts (cons (cons 'output (car r)) opts))
+                   (set! remaining (cdr r))))
+    ;; Check for unknown args
+    (unless (null? remaining)
+      (print "Error: Unknown argument: " (car remaining))
       (usage))
+    opts))
 
-     ((string=? (car args) "--issuer")
-      (if (null? (cdr args))
-          (begin
-            (print "Error: --issuer requires an argument")
-            (exit 1))
-          (begin
-            (set! issuer-file (cadr args))
-            (loop (cddr args)))))
+(define (opt key opts)
+  "Get option value from alist."
+  (let ((pair (assq key opts)))
+    (and pair (cdr pair))))
 
-     ((string=? (car args) "--subject")
-      (if (null? (cdr args))
-          (begin
-            (print "Error: --subject requires an argument")
-            (exit 1))
-          (begin
-            (set! subject-file (cadr args))
-            (loop (cddr args)))))
+;;; ============================================================
+;;; Certificate Creation
+;;; ============================================================
 
-     ((string=? (car args) "--tag")
-      (if (null? (cdr args))
-          (begin
-            (print "Error: --tag requires an argument")
-            (exit 1))
-          (begin
-            (set! tag-str (cadr args))
-            (loop (cddr args)))))
-
-     ((string=? (car args) "--propagate")
-      (set! propagate #t)
-      (loop (cdr args)))
-
-     ((string=? (car args) "--not-before")
-      (if (null? (cdr args))
-          (begin
-            (print "Error: --not-before requires an argument")
-            (exit 1))
-          (begin
-            (set! not-before (cadr args))
-            (loop (cddr args)))))
-
-     ((string=? (car args) "--not-after")
-      (if (null? (cdr args))
-          (begin
-            (print "Error: --not-after requires an argument")
-            (exit 1))
-          (begin
-            (set! not-after (cadr args))
-            (loop (cddr args)))))
-
-     ((string=? (car args) "--output")
-      (if (null? (cdr args))
-          (begin
-            (print "Error: --output requires an argument")
-            (exit 1))
-          (begin
-            (set! output-file (cadr args))
-            (loop (cddr args)))))
-
-     (else
-      (print "Error: Unknown argument: " (car args))
-      (usage))))
-
-  ;; Validate required arguments
-  (unless (and issuer-file subject-file tag-str)
-    (print "Error: --issuer, --subject, and --tag are required")
-    (usage))
-
-  ;; Read keys
+(define (create-signed-cert issuer-file subject-file tag-str propagate not-before not-after)
+  "Create and sign a certificate. Returns signed cert."
   (let ((issuer-key-pair (read-key-file issuer-file))
         (subject-key-pair (read-key-file subject-file)))
-
     (let ((issuer-key (car issuer-key-pair))
           (issuer-is-private? (cdr issuer-key-pair))
           (subject-key (car subject-key-pair)))
-
       (unless issuer-is-private?
         (print "Error: issuer key must be a private key")
         (exit 1))
-
-      ;; Parse tag
-      (let ((tag-sexp (parse-sexp tag-str)))
-        (let ((tag (make-tag tag-sexp)))
-
-          ;; Create principals
-          ;; Note: For private key, we need to derive public key
-          ;; For now, assume private key file also contains or implies the public key
-          ;; In ed25519, the public key is derivable from private key
-          ;; But libsodium stores both together in the 64-byte "secret key"
-          ;; The first 32 bytes are the seed, last 32 are the public key
-
-          ;; Extract public key from 64-byte secret key
-          (let ((issuer-public-key (ed25519-secret-to-public issuer-key)))
-            (let ((issuer-principal (make-key-principal issuer-public-key))
-                  (subject-principal (make-key-principal subject-key)))
-
-              ;; Create certificate
-              (let ((the-cert
-                     (if (and not-before not-after)
-                         (let ((validity (make-validity not-before not-after)))
+      (let* ((tag-sexp (parse-sexp tag-str))
+             (tag (make-tag tag-sexp))
+             (issuer-public-key (ed25519-secret-to-public issuer-key))
+             (issuer-principal (make-key-principal issuer-public-key))
+             (subject-principal (make-key-principal subject-key))
+             (the-cert (if (and not-before not-after)
                            (create-cert issuer-principal subject-principal tag
-                                       validity: validity
-                                       propagate: propagate))
-                         (create-cert issuer-principal subject-principal tag
-                                     propagate: propagate))))
+                                       validity: (make-validity not-before not-after)
+                                       propagate: propagate)
+                           (create-cert issuer-principal subject-principal tag
+                                       propagate: propagate))))
+        (sign-cert the-cert issuer-key)))))
 
-                ;; Sign certificate with issuer's private key
-                (let ((signed-cert (sign-cert the-cert issuer-key)))
+;;; ============================================================
+;;; Main
+;;; ============================================================
 
-                  ;; Output certificate
-                  (let ((cert-str (signed-cert->string signed-cert)))
-                    (if output-file
-                        (begin
-                          (with-output-to-file output-file
-                            (lambda ()
-                              (print cert-str)))
-                          (print "Certificate saved to: " output-file))
-                        (print cert-str))))))))))))
+(define (main args)
+  (sodium-init)
+  (let ((opts (parse-args args)))
+    ;; Validate required
+    (unless (and (opt 'issuer opts) (opt 'subject opts) (opt 'tag opts))
+      (print "Error: --issuer, --subject, and --tag are required")
+      (usage))
+    ;; Create certificate
+    (let* ((signed-cert (create-signed-cert
+                         (opt 'issuer opts)
+                         (opt 'subject opts)
+                         (opt 'tag opts)
+                         (opt 'propagate opts)
+                         (opt 'not-before opts)
+                         (opt 'not-after opts)))
+           (cert-str (signed-cert->string signed-cert))
+           (output-file (opt 'output opts)))
+      (if output-file
+          (begin
+            (with-output-to-file output-file (lambda () (print cert-str)))
+            (print "Certificate saved to: " output-file))
+          (print cert-str)))))
 
 (main (command-line-arguments))
