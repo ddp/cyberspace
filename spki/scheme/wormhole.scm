@@ -476,10 +476,7 @@
     ;; Register in active table
     (hash-table-set! *active-wormholes* fs-path wh)
 
-    ;; Mount FUSE filesystem
-    ;; TODO: Actual FUSE mount when FFI bindings available
-    ;; (fuse-mount wh)
-
+    ;; Return wormhole handle - call (wormhole-mount wh) to mount
     wh))
 
 (define (wormhole-close wormhole)
@@ -564,8 +561,15 @@
                                        parent-entry))))))
 
 ;;; ============================================================
-;;; FUSE Callback Implementations
+;;; FUSE Callback Implementations (Reference/Future Use)
 ;;; ============================================================
+;;;
+;;; Note: These callback implementations are not currently used.
+;;; The passthrough FUSE model (fuse-ffi.scm) handles file operations
+;;; directly in C for performance and thread safety.
+;;;
+;;; These remain as reference for a future in-Scheme implementation
+;;; that would enable per-operation SPKI authorization and rate limiting.
 
 (define *active-wormhole* #f)  ; Currently mounted wormhole
 
@@ -705,30 +709,19 @@
 ;;; ============================================================
 
 (define (wormhole-mount wormhole)
-  "Mount FUSE filesystem for wormhole."
+  "Mount FUSE passthrough filesystem for wormhole.
+   SPKI authorization was verified at wormhole-open time.
+   File operations pass through to the vault directory."
   (set! *active-wormhole* wormhole)
 
-  ;; Initialize manifest
-  (manifest-init! wormhole)
+  ;; Audit the mount
+  (wormhole-audit wormhole 'mount 'fuse-mount
+                   (wormhole-fs-path wormhole)
+                   `((vault ,(wormhole-vault-path wormhole))))
 
-  ;; Register FUSE callbacks
-  (fuse-set-getattr! wormhole-fuse-getattr)
-  (fuse-set-readdir! wormhole-fuse-readdir)
-  (fuse-set-open! wormhole-fuse-open)
-  (fuse-set-read! wormhole-fuse-read)
-  (fuse-set-write! wormhole-fuse-write)
-  (fuse-set-create! wormhole-fuse-create)
-  (fuse-set-unlink! wormhole-fuse-unlink)
-  (fuse-set-mkdir! wormhole-fuse-mkdir)
-  (fuse-set-rmdir! wormhole-fuse-rmdir)
-  (fuse-set-rename! wormhole-fuse-rename)
-
-  ;; Create mount point if needed
-  (unless (directory-exists? (wormhole-fs-path wormhole))
-    (create-directory (wormhole-fs-path wormhole) #t))
-
-  ;; Mount via fuse-ffi
-  (fuse-mount (wormhole-fs-path wormhole)))
+  ;; Mount passthrough filesystem: fs-path -> vault-path
+  (fuse-mount (wormhole-fs-path wormhole)
+              (wormhole-vault-path wormhole)))
 
 (define (wormhole-unmount wormhole)
   "Unmount FUSE filesystem."
