@@ -833,156 +833,192 @@
       (or (= c 121) (= c 89)))))  ; y or Y
 
 ;;; ============================================================
+;;; Key Bindings
+;;; ============================================================
+;;; Each binding is (keys . handler) where keys is a list of key specs
+;;; and handler is (lambda (ed) ...) returning #t to continue, #f to quit.
+
+(define (cmd-quit ed)
+  "Quit editor, prompting if unsaved"
+  (if (and (editor-modified? ed)
+           (not (editor-confirm ed "Unsaved changes. Quit anyway?")))
+      #t   ; Don't quit, continue
+      #f)) ; Quit
+
+(define (cmd-find ed)
+  "Find text"
+  (let ((pattern (editor-prompt ed "Find: ")))
+    (when (and pattern (> (string-length pattern) 0))
+      (set-editor-search-string! ed pattern)
+      (editor-find! ed pattern)))
+  #t)
+
+(define (cmd-find-next ed)
+  "Find next occurrence"
+  (let ((pattern (editor-search-string ed)))
+    (if (> (string-length pattern) 0)
+        (editor-find! ed pattern)
+        (set-editor-status! ed "No search pattern")))
+  #t)
+
+(define (cmd-replace ed)
+  "Find and replace"
+  (let ((old (editor-prompt ed "Replace: ")))
+    (when (and old (> (string-length old) 0))
+      (let ((new (editor-prompt ed "With: ")))
+        (when new
+          (editor-replace! ed old new)))))
+  #t)
+
+(define (cmd-open ed)
+  "Open file, vault ref, or hash"
+  (let ((input (editor-prompt ed "Open (name, file, or hash): ")))
+    (when (and input (> (string-length input) 0))
+      (cond
+       ;; Full hash: blake2b:xxxx
+       ((string-prefix? "blake2b:" input)
+        (editor-unseal! ed input))
+       ;; Bare 64 hex chars = hash
+       ((and (= (string-length input) 64)
+             (string-every (lambda (c)
+                             (or (char-numeric? c)
+                                 (and (char>=? c #\a) (char<=? c #\f))))
+                           input))
+        (editor-unseal! ed (string-append "blake2b:" input)))
+       ;; Named ref (possibly with @version)
+       ((ref-current (car (parse-name-spec input)))
+        (editor-unseal! ed input))
+       ;; Fallback: filesystem file
+       (else
+        (editor-load! ed input)))))
+  #t)
+
+(define (cmd-save ed)
+  "Save to vault"
+  (let ((name (or (editor-filename ed)
+                  (editor-prompt ed "Save as: "))))
+    (when (and name (> (string-length name) 0))
+      (editor-seal! ed name)))
+  #t)
+
+(define (cmd-page-up ed)
+  "Page up"
+  (let ((visible (- (editor-rows ed) 3)))
+    (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-up! ed)))
+  #t)
+
+(define (cmd-page-down ed)
+  "Page down"
+  (let ((visible (- (editor-rows ed) 3)))
+    (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-down! ed)))
+  #t)
+
+(define (cmd-escape ed)
+  "Cancel/clear selection"
+  (editor-unmark! ed)
+  (set-editor-status! ed "")
+  #t)
+
+(define (cmd-toggle-insert ed)
+  "Toggle insert/overwrite mode"
+  (set-editor-insert-mode! ed (not (editor-insert-mode? ed)))
+  #t)
+
+(define (cmd-toggle-wrap ed)
+  "Toggle word wrap"
+  (set-editor-wrap-mode! ed (not (editor-wrap-mode? ed)))
+  #t)
+
+(define (cmd-refresh ed)
+  "Refresh screen"
+  (screen-clear)
+  #t)
+
+;; Key bindings table: ((key-specs . handler) ...)
+;; Simple handlers return #t (continue), quit returns #f
+(define *pencil-bindings*
+  `(;; Quit
+    (((ctrl . #\Q))                    . ,cmd-quit)
+    ;; Movement (WASDZX diamond + arrows)
+    (((ctrl . #\W) up)                 . ,(lambda (ed) (editor-move-up! ed) #t))
+    (((ctrl . #\S) down)               . ,(lambda (ed) (editor-move-down! ed) #t))
+    (((ctrl . #\A) left)               . ,(lambda (ed) (editor-move-left! ed) #t))
+    (((ctrl . #\D) right)              . ,(lambda (ed) (editor-move-right! ed) #t))
+    (((ctrl . #\Z) home)               . ,(lambda (ed) (editor-move-line-start! ed) #t))
+    (((ctrl . #\X) end)                . ,(lambda (ed) (editor-move-line-end! ed) #t))
+    ;; Word movement
+    (((ctrl . #\[))                    . ,(lambda (ed) (editor-move-word-backward! ed) #t))
+    (((ctrl . #\]))                    . ,(lambda (ed) (editor-move-word-forward! ed) #t))
+    ;; Editing
+    (((ctrl . #\I))                    . ,cmd-toggle-insert)
+    (((ctrl . #\G) delete)             . ,(lambda (ed) (editor-delete-char! ed) #t))
+    ((backspace)                       . ,(lambda (ed) (editor-backspace! ed) #t))
+    (((ctrl . #\T))                    . ,(lambda (ed) (editor-delete-word! ed) #t))
+    (((ctrl . #\Y))                    . ,(lambda (ed) (editor-delete-line! ed) #t))
+    ((enter)                           . ,(lambda (ed) (editor-insert-newline! ed) #t))
+    ;; Block operations
+    (((ctrl . #\B))                    . ,(lambda (ed) (editor-mark-begin! ed) #t))
+    (((ctrl . #\K))                    . ,(lambda (ed) (editor-mark-end! ed) #t))
+    (((ctrl . #\V))                    . ,(lambda (ed) (editor-paste! ed) #t))
+    (((ctrl . #\U))                    . ,(lambda (ed) (editor-unmark! ed) #t))
+    ;; Search
+    (((ctrl . #\F))                    . ,cmd-find)
+    (((ctrl . #\N))                    . ,cmd-find-next)
+    (((ctrl . #\R))                    . ,cmd-replace)
+    ;; File operations
+    (((ctrl . #\O))                    . ,cmd-open)
+    (((ctrl . #\P))                    . ,cmd-save)
+    ;; Display
+    (((ctrl . #\L))                    . ,cmd-refresh)
+    (((ctrl . #\E))                    . ,cmd-toggle-wrap)
+    ;; Navigation
+    ((escape)                          . ,cmd-escape)
+    ((page-up)                         . ,cmd-page-up)
+    ((page-down)                       . ,cmd-page-down)))
+
+(define (key-matches? key specs)
+  "Check if key matches any of the specs"
+  (any (lambda (spec) (equal? key spec)) specs))
+
+(define (find-binding key)
+  "Find handler for key, or #f"
+  (let loop ((bindings *pencil-bindings*))
+    (if (null? bindings)
+        #f
+        (let ((entry (car bindings)))
+          (if (key-matches? key (car entry))
+              (cdr entry)
+              (loop (cdr bindings)))))))
+
+;;; ============================================================
 ;;; Main Loop
 ;;; ============================================================
 
 (define (editor-run ed)
   "Main editor loop"
-  (tty-flush-input)  ; Clear any buffered garbage
+  (tty-flush-input)
   (tty-set-raw)
   (screen-alt-buffer)
   (screen-clear)
-  (edt-register! ed)  ; Register EDT keypad handlers if available
+  (edt-register! ed)
 
   (let loop ()
     (editor-draw! ed)
-    (let ((key (read-key)))
+    (let* ((key (read-key))
+           (handler (find-binding key)))
       (cond
-       ;; Quit
-       ((equal? key '(ctrl . #\Q))
-        (if (and (editor-modified? ed)
-                 (not (editor-confirm ed "Unsaved changes. Quit anyway?")))
-            (loop)
-            (void)))
-
-       ;; Movement - WASDZX diamond
-       ((or (equal? key '(ctrl . #\W)) (eq? key 'up))
-        (editor-move-up! ed) (loop))
-       ((or (equal? key '(ctrl . #\S)) (eq? key 'down))
-        (editor-move-down! ed) (loop))
-       ((or (equal? key '(ctrl . #\A)) (eq? key 'left))
-        (editor-move-left! ed) (loop))
-       ((or (equal? key '(ctrl . #\D)) (eq? key 'right))
-        (editor-move-right! ed) (loop))
-       ((or (equal? key '(ctrl . #\Z)) (eq? key 'home))
-        (editor-move-line-start! ed) (loop))
-       ((or (equal? key '(ctrl . #\X)) (eq? key 'end))
-        (editor-move-line-end! ed) (loop))
-
-       ;; Word movement
-       ((equal? key '(ctrl . #\[))  ; Ctrl-[ = word left
-        (editor-move-word-backward! ed) (loop))
-       ((equal? key '(ctrl . #\]))  ; Ctrl-] = word right
-        (editor-move-word-forward! ed) (loop))
-
-       ;; Editing
-       ((equal? key '(ctrl . #\I))  ; Toggle insert/overwrite
-        (set-editor-insert-mode! ed (not (editor-insert-mode? ed)))
-        (loop))
-       ((or (equal? key '(ctrl . #\G)) (eq? key 'delete))
-        (editor-delete-char! ed) (loop))
-       ((eq? key 'backspace)
-        (editor-backspace! ed) (loop))
-       ((equal? key '(ctrl . #\T))
-        (editor-delete-word! ed) (loop))
-       ((equal? key '(ctrl . #\Y))
-        (editor-delete-line! ed) (loop))
-       ((eq? key 'enter)
-        (editor-insert-newline! ed) (loop))
-
-       ;; Block operations
-       ((equal? key '(ctrl . #\B))
-        (editor-mark-begin! ed) (loop))
-       ((equal? key '(ctrl . #\K))
-        (editor-mark-end! ed) (loop))
-       ((equal? key '(ctrl . #\V))
-        (editor-paste! ed) (loop))
-       ((equal? key '(ctrl . #\U))
-        (editor-unmark! ed) (loop))
-
-       ;; Search
-       ((equal? key '(ctrl . #\F))
-        (let ((pattern (editor-prompt ed "Find: ")))
-          (when (and pattern (> (string-length pattern) 0))
-            (set-editor-search-string! ed pattern)
-            (editor-find! ed pattern)))
-        (loop))
-       ((equal? key '(ctrl . #\N))
-        (let ((pattern (editor-search-string ed)))
-          (if (> (string-length pattern) 0)
-              (editor-find! ed pattern)
-              (set-editor-status! ed "No search pattern")))
-        (loop))
-       ((equal? key '(ctrl . #\R))
-        (let ((old (editor-prompt ed "Replace: ")))
-          (when (and old (> (string-length old) 0))
-            (let ((new (editor-prompt ed "With: ")))
-              (when new
-                (editor-replace! ed old new)))))
-        (loop))
-
-       ;; File operations
-       ((equal? key '(ctrl . #\O))
-        (let ((input (editor-prompt ed "Open (name, file, or hash): ")))
-          (when (and input (> (string-length input) 0))
-            (cond
-             ;; Full hash: blake2b:xxxx
-             ((string-prefix? "blake2b:" input)
-              (editor-unseal! ed input))
-             ;; Bare 64 hex chars = hash
-             ((and (= (string-length input) 64)
-                   (string-every (lambda (c)
-                                   (or (char-numeric? c)
-                                       (and (char>=? c #\a) (char<=? c #\f))))
-                                 input))
-              (editor-unseal! ed (string-append "blake2b:" input)))
-             ;; Named ref (possibly with @version)
-             ((ref-current (car (parse-name-spec input)))
-              (editor-unseal! ed input))
-             ;; Fallback: filesystem file
-             (else
-              (editor-load! ed input)))))
-        (loop))
-       ((equal? key '(ctrl . #\P))
-        ;; Seal to vault with name
-        (let ((name (or (editor-filename ed)
-                        (editor-prompt ed "Save as: "))))
-          (when (and name (> (string-length name) 0))
-            (editor-seal! ed name)))
-        (loop))
-
-       ;; Display
-       ((equal? key '(ctrl . #\L))
-        (screen-clear) (loop))
-       ((equal? key '(ctrl . #\E))
-        (set-editor-wrap-mode! ed (not (editor-wrap-mode? ed)))
-        (loop))
-
-       ;; ESC - cancel/clear
-       ((eq? key 'escape)
-        (editor-unmark! ed)
-        (set-editor-status! ed "")
-        (loop))
-
-       ;; Page up/down
-       ((eq? key 'page-up)
-        (let ((visible (- (editor-rows ed) 3)))
-          (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-up! ed)))
-        (loop))
-       ((eq? key 'page-down)
-        (let ((visible (- (editor-rows ed) 3)))
-          (do ((i 0 (+ i 1))) ((>= i visible)) (editor-move-down! ed)))
-        (loop))
-
-       ;; Regular character
+       ;; Found a binding
+       (handler
+        (if (handler ed) (loop) (void)))
+       ;; Regular character - insert it
        ((char? key)
-        (editor-insert-char! ed key) (loop))
-
-       ;; Unknown
+        (editor-insert-char! ed key)
+        (loop))
+       ;; Unknown key - ignore
        (else (loop)))))
 
   ;; Cleanup
-  (edt-unregister!)  ; Clear EDT handlers
+  (edt-unregister!)
   (screen-main-buffer)
   (screen-reset)
   (tty-set-cooked)
