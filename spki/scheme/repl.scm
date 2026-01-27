@@ -94,7 +94,7 @@
   (print "")
   (print "Options:")
   (print "  --sync               Sync vault with remote, then start REPL")
-  (print "  --clean              Remove compiled artifacts (.so, .import.scm, .forge/*.meta)")
+  (print "  --clean              Remove artifacts and rebuild repl (then run cs again)")
   (print "  --rebuild            Force rebuild all modules")
   (print "  --verbose            Show verbose output (e.g., rm during --clean)")
   (print "  --boot=<level>       Boot verbosity: shadow|whisper|portal|oracle")
@@ -170,11 +170,32 @@
               (when *verbose* (print "  rm " f))
               (delete-file f))
             (glob "*.so" "*.import.scm" ".forge/*.meta"))
-  ;; Exit only if --clean alone (no --rebuild, no --boot)
-  (unless (or (cli-option? "rebuild") (cli-option "boot"))
-    (flush-output)
-    (flush-output (current-error-port))
-    (exit 0)))
+  ;; Also remove stale .o files and the repl binary itself
+  ;; The repl binary links against modules - if they're gone, it's broken
+  (for-each (lambda (f)
+              (when *verbose* (print "  rm " f))
+              (delete-file f))
+            (glob "*.o"))
+  (when (file-exists? "repl")
+    (when *verbose* (print "  rm repl"))
+    (delete-file "repl"))
+  ;; After clean, rebuild the repl binary (we're running from the old one)
+  (print "Rebuilding repl...")
+  (let ((rc (system "csc -O2 -d1 repl.scm -o repl")))
+    (if (zero? rc)
+        (begin
+          ;; If --rebuild was requested, exec the new repl to continue
+          (if (cli-option? "rebuild")
+              (begin
+                (print "Restarting forge...")
+                (process-execute "./repl" '("--rebuild")))
+              ;; Otherwise just exit - user can run cs again
+              (begin
+                (print "Clean complete. Run cs to rebuild modules.")
+                (exit 0))))
+        (begin
+          (print "Error: repl rebuild failed")
+          (exit 1)))))
 
 ;; os is Level 0 (no cyberspace deps) - import early for hostname
 (import os)
