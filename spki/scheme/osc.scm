@@ -18,10 +18,33 @@
 (import (chicken bitwise))
 (import (chicken io))
 (import (chicken port))
+(import (chicken foreign))
 (import srfi-1)
 (import srfi-4)  ; u8vector
 (import srfi-18) ; threads
 (import udp)
+
+;; IEEE 754 float conversion via FFI
+(foreign-declare #<<EOF
+#include <stdint.h>
+#include <string.h>
+
+/* Convert float to big-endian bytes */
+static void float_to_bytes(float f, unsigned char *out) {
+    uint32_t bits;
+    memcpy(&bits, &f, 4);
+    /* Convert to big-endian */
+    out[0] = (bits >> 24) & 0xff;
+    out[1] = (bits >> 16) & 0xff;
+    out[2] = (bits >> 8) & 0xff;
+    out[3] = bits & 0xff;
+}
+EOF
+)
+
+(define c-float-to-bytes
+  (foreign-lambda* void ((float f) (u8vector out))
+    "float_to_bytes(f, out);"))
 
 ;; OSC packet encoding
 ;; Address: null-terminated, padded to 4 bytes
@@ -51,10 +74,10 @@
     (bitwise-and n #xff)))
 
 (define (float32->bytes f)
-  "Encode 32-bit float (IEEE 754)"
-  ;; Chicken doesn't have direct float->bytes, use FFI or approximation
-  ;; For now, convert to int representation
-  (int32->bytes (inexact->exact (round (* f 1000000)))))
+  "Encode 32-bit float (IEEE 754 big-endian)"
+  (let ((out (make-u8vector 4 0)))
+    (c-float-to-bytes (exact->inexact f) out)
+    out))
 
 (define (osc-encode address . args)
   "Encode OSC message: address + type tag + args"
