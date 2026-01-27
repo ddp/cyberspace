@@ -1233,12 +1233,37 @@
            ":" path))))
 
   (define (parse-capabilities str)
-    "Parse capability list from string like 'read,write,delegate(read)'"
+    "Parse capability list from string like 'read,write,delegate(read,write)'.
+     Handles nested parentheses in delegate(...) expressions."
     (if (or (not str) (string=? str ""))
         '()
-        ;; Simple split on comma - handles most cases
-        ;; TODO: proper parsing for nested parens in delegate(...)
-        (map string-trim-both (string-split str ","))))
+        (let loop ((chars (string->list str))
+                   (current '())
+                   (depth 0)
+                   (result '()))
+          (cond
+           ;; End of string
+           ((null? chars)
+            (if (null? current)
+                (reverse result)
+                (reverse (cons (string-trim-both (list->string (reverse current)))
+                               result))))
+           ;; Opening paren - increase depth
+           ((char=? (car chars) #\()
+            (loop (cdr chars) (cons (car chars) current) (+ depth 1) result))
+           ;; Closing paren - decrease depth
+           ((char=? (car chars) #\))
+            (loop (cdr chars) (cons (car chars) current) (- depth 1) result))
+           ;; Comma at depth 0 - split here
+           ((and (char=? (car chars) #\,) (= depth 0))
+            (loop (cdr chars)
+                  '()
+                  0
+                  (cons (string-trim-both (list->string (reverse current)))
+                        result)))
+           ;; Regular character
+           (else
+            (loop (cdr chars) (cons (car chars) current) depth result))))))
 
   (define (parse-address str)
     "Parse a cyberspace address string into components
