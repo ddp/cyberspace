@@ -39,12 +39,27 @@ static void float_to_bytes(float f, unsigned char *out) {
     out[2] = (bits >> 8) & 0xff;
     out[3] = bits & 0xff;
 }
+
+/* Convert big-endian bytes to float */
+static float bytes_to_float(unsigned char *in) {
+    uint32_t bits = ((uint32_t)in[0] << 24) |
+                    ((uint32_t)in[1] << 16) |
+                    ((uint32_t)in[2] << 8) |
+                    (uint32_t)in[3];
+    float f;
+    memcpy(&f, &bits, 4);
+    return f;
+}
 EOF
 )
 
 (define c-float-to-bytes
   (foreign-lambda* void ((float f) (u8vector out))
     "float_to_bytes(f, out);"))
+
+(define c-bytes-to-float
+  (foreign-lambda* float ((u8vector in))
+    "C_return(bytes_to_float(in));"))
 
 ;; OSC packet encoding
 ;; Address: null-terminated, padded to 4 bytes
@@ -78,6 +93,36 @@ EOF
   (let ((out (make-u8vector 4 0)))
     (c-float-to-bytes (exact->inexact f) out)
     out))
+
+(define (bytes->int32 data offset)
+  "Decode 32-bit int from big-endian bytes"
+  (let ((b0 (u8vector-ref data offset))
+        (b1 (u8vector-ref data (+ offset 1)))
+        (b2 (u8vector-ref data (+ offset 2)))
+        (b3 (u8vector-ref data (+ offset 3))))
+    (bitwise-ior (arithmetic-shift b0 24)
+                 (arithmetic-shift b1 16)
+                 (arithmetic-shift b2 8)
+                 b3)))
+
+(define (bytes->float32 data offset)
+  "Decode 32-bit float (IEEE 754 big-endian)"
+  (let ((tmp (make-u8vector 4)))
+    (u8vector-set! tmp 0 (u8vector-ref data offset))
+    (u8vector-set! tmp 1 (u8vector-ref data (+ offset 1)))
+    (u8vector-set! tmp 2 (u8vector-ref data (+ offset 2)))
+    (u8vector-set! tmp 3 (u8vector-ref data (+ offset 3)))
+    (c-bytes-to-float tmp)))
+
+(define (bytes->osc-string data offset)
+  "Decode null-terminated string, return (string . new-offset)"
+  (let loop ((i offset) (chars '()))
+    (if (or (>= i (u8vector-length data))
+            (= (u8vector-ref data i) 0))
+        (let* ((s (list->string (reverse chars)))
+               (end (pad-to-4 (+ (- i offset) 1))))
+          (cons s (+ offset end)))
+        (loop (+ i 1) (cons (integer->char (u8vector-ref data i)) chars)))))
 
 (define (osc-encode address . args)
   "Encode OSC message: address + type tag + args"
@@ -170,29 +215,54 @@ EOF
   (osc-send "/cyberspace/keys" count))
 
 ;; OSC packet decoding
-;; TODO: Decode argument values (int32, float32, string) based on type-tag.
-;;       Currently only extracts address and type-tag, not actual args.
-;;       Float decoding needs IEEE 754 FFI (bytes_to_float inverse).
 (define (osc-decode packet)
-  "Decode OSC packet, return (address type-tag). Args not yet decoded."
+  "Decode OSC packet, return (address type-tag arg1 arg2 ...)"
   (let* ((data (if (blob? packet) (blob->u8vector/shared packet) packet))
          (len (u8vector-length data)))
     (if (< len 4)
         #f
-        (let loop ((i 0) (chars '()))
-          (if (or (>= i len) (= (u8vector-ref data i) 0))
-              (let* ((address (list->string (reverse chars)))
-                     (addr-end (pad-to-4 (+ (string-length address) 1))))
-                (if (>= addr-end len)
-                    (list address "")
-                    (let type-loop ((j addr-end) (types '()))
-                      (if (or (>= j len) (= (u8vector-ref data j) 0))
-                          (list address (list->string (reverse types)))
-                          (type-loop (+ j 1)
-                                     (cons (integer->char (u8vector-ref data j))
-                                           types))))))
-              (loop (+ i 1)
-                    (cons (integer->char (u8vector-ref data i)) chars)))))))
+        ;; Parse address
+        (let* ((addr-result (bytes->osc-string data 0))
+               (address (car addr-result))
+               (tag-offset (cdr addr-result)))
+          (if (>= tag-offset len)
+              (list address)
+              ;; Parse type tag
+              (let* ((tag-result (bytes->osc-string data tag-offset))
+                     (type-tag (car tag-result))
+                     (arg-offset (cdr tag-result))
+                     ;; Skip leading comma in type-tag
+                     (types (if (and (> (string-length type-tag) 0)
+                                     (char=? (string-ref type-tag 0) #\,))
+                                (substring type-tag 1)
+                                type-tag)))
+                ;; Parse arguments based on type-tag
+                (let loop ((i 0) (offset arg-offset) (args '()))
+                  (if (>= i (string-length types))
+                      (cons address (cons type-tag (reverse args)))
+                      (let ((type (string-ref types i)))
+                        (cond
+                          ;; Integer (4 bytes)
+                          ((char=? type #\i)
+                           (if (> (+ offset 4) len)
+                               (cons address (cons type-tag (reverse args)))
+                               (loop (+ i 1) (+ offset 4)
+                                     (cons (bytes->int32 data offset) args))))
+                          ;; Float (4 bytes)
+                          ((char=? type #\f)
+                           (if (> (+ offset 4) len)
+                               (cons address (cons type-tag (reverse args)))
+                               (loop (+ i 1) (+ offset 4)
+                                     (cons (bytes->float32 data offset) args))))
+                          ;; String (null-terminated, padded)
+                          ((char=? type #\s)
+                           (let* ((str-result (bytes->osc-string data offset))
+                                  (s (car str-result))
+                                  (new-offset (cdr str-result)))
+                             (loop (+ i 1) new-offset (cons s args))))
+                          ;; Unknown type, skip
+                          (else
+                           (loop (+ i 1) offset args))))))))))))
 
 ;; Receiver
 (define (osc-listen port handler)
