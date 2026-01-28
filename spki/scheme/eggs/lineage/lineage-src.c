@@ -374,19 +374,42 @@ void linenoiseClearCommands(void) {
     completion_count = 0;
 }
 
+/* Find last word in buffer, return pointer to it and its length */
+static const char *findLastWord(const char *buf, size_t *wordlen) {
+    size_t len = strlen(buf);
+    if (len == 0) {
+        *wordlen = 0;
+        return buf;
+    }
+    /* Find start of last word (after last space) */
+    const char *last = buf;
+    for (size_t i = 0; i < len; i++) {
+        if (buf[i] == ' ' && i + 1 < len) {
+            last = buf + i + 1;
+        }
+    }
+    *wordlen = len - (last - buf);
+    return last;
+}
+
 /* Command completion callback: prefix match against command list */
 static void commandCompletionCallback(const char *buf, linenoiseCompletions *lc) {
-    size_t len = strlen(buf);
+    size_t wordlen;
+    const char *lastword = findLastWord(buf, &wordlen);
+    size_t prefix_len = lastword - buf;  /* Length of text before last word */
+
     for (int i = 0; i < completion_count; i++) {
-        if (strncmp(buf, completion_commands[i], len) == 0) {
-            if (paren_wrap) {
-                /* Schemer mode: wrap in parens */
-                char wrapped[256];
-                snprintf(wrapped, sizeof(wrapped), "(%s)", completion_commands[i]);
-                linenoiseAddCompletion(lc, wrapped);
+        if (strncmp(lastword, completion_commands[i], wordlen) == 0) {
+            char completed[512];
+            if (paren_wrap && prefix_len == 0) {
+                /* Schemer mode, first word: wrap in parens */
+                snprintf(completed, sizeof(completed), "(%s)", completion_commands[i]);
             } else {
-                linenoiseAddCompletion(lc, completion_commands[i]);
+                /* Novice mode or argument: prefix + completed word */
+                snprintf(completed, sizeof(completed), "%.*s%s",
+                         (int)prefix_len, buf, completion_commands[i]);
             }
+            linenoiseAddCompletion(lc, completed);
         }
     }
 }
@@ -406,18 +429,23 @@ void linenoiseSetHintsEnabled(int enabled) {
     hints_enabled = enabled;
 }
 
-/* Find best hint: returns suffix to show after current input, or NULL */
+/* Find best hint: returns suffix to show after last word, or NULL */
 static const char *findHint(const char *buf) {
     if (!hints_enabled || completion_count == 0) return NULL;
     size_t len = strlen(buf);
     if (len == 0) return NULL;
 
+    /* Match against last word */
+    size_t wordlen;
+    const char *lastword = findLastWord(buf, &wordlen);
+    if (wordlen == 0) return NULL;
+
     /* Find first matching command */
     for (int i = 0; i < completion_count; i++) {
-        if (strncmp(buf, completion_commands[i], len) == 0 &&
-            strlen(completion_commands[i]) > len) {
+        if (strncmp(lastword, completion_commands[i], wordlen) == 0 &&
+            strlen(completion_commands[i]) > wordlen) {
             /* Return the suffix (part after what's typed) */
-            return completion_commands[i] + len;
+            return completion_commands[i] + wordlen;
         }
     }
     return NULL;

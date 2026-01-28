@@ -7171,7 +7171,10 @@ See: Memo-0000 Declaration of Cyberspace
                 ;; Debugging
                 bt backtrace frame exception-info
                 ;; Editors
-                schemacs pencil pencil-novice teco))
+                schemacs pencil pencil-novice teco
+                ;; Common arguments (for help, soup, dashboard, etc.)
+                topics full keys releases audit wormholes crypto
+                vault network federation ceremony))
     (lineage#enable-command-completion)
     (lineage#set-hints-enabled 1)
     (set! *completions-loaded* #t)))
