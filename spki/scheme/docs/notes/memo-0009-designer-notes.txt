@@ -1098,6 +1098,68 @@ rule.
 
 
 ------------------------------------------------------------------------
+18. RESIDENT MODULES
+------------------------------------------------------------------------
+
+
+18.1 Blade Guards Disengaged
+----------------------------
+
+Resident modules extend top-level syntax. They're loaded at startup,
+always available, like LSE (Language-Sensitive Editor) on VMS or Emacs
+on Unix. The metaphor: blade guards disengaged - full power, no safety
+rails.
+
+The REPL tracks residents with the (residents) command:
+
+
+    Resident Modules
+      pencil    [ep-]   Electric Pencil - Michael Shrayer (1976)
+      schemacs  [sm-]   Schemacs - ddp & Claude (2026)
+      teco      [te-]   TECO - Dan Murphy (1962)
+    (blade guards disengaged - top-level syntax extensions)
+
+Each resident declares a prefix to avoid namespace collision. Prefixes
+appear in brackets: [ep-] for pencil, [te-] for teco, [sm-] for
+schemacs.
+
+
+18.2 The resident-info Declaration
+----------------------------------
+
+Every resident module must contain a resident-info declaration - a
+formal acknowledgment that the module knows what it's doing:
+
+
+    ;;; Resident module declaration (required)
+    ;;; "I know what I'm doing" - this module extends top-level
+    (define resident-info
+      '((name . teco)
+        (prefix . "te-")
+        (description . "TECO - Dan Murphy (1962)")
+        (entry . teco)
+        (entry-novice . teco-novice)))
+
+The declaration serves as both documentation and safety check.
+(load-resident) verifies the declaration exists before registering.
+
+
+18.3 Heritage
+-------------
+
+The three original residents honor the lineage of text editing:
+
+  * TECO (1962) - Dan Murphy at MIT. Every keystroke a command. EMACS was written in TECO before it was written in anything else.
+  * Electric Pencil (1976) - Michael Shrayer. First word processor for microcomputers, predates WordStar by two years.
+  * Schemacs (2026) - ddp & Claude. Emacs keybindings, Scheme soul. The collaboration continues.
+
+The author credits in (residents) aren't decoration - they're
+acknowledgment. Dan Murphy's TECO ran on PDP-1s. Michael Shrayer's
+Electric Pencil ran on 8K Altairs. Now they run on Cyberspace, sixty
+years of heritage compressed into lambdas.
+
+
+------------------------------------------------------------------------
 CLOSING
 ------------------------------------------------------------------------
 
@@ -1112,6 +1174,9 @@ The Lisper finally gets to write Lisp.
 ------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
+
+- 2026-01-28 — Added Resident Modules section (section 18): blade
+guards, resident-info, heritage
 
 - 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)
 

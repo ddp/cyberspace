@@ -591,6 +591,44 @@ Cyberspace soup:  Vault objects, content-addressed")
 2026  Cyberspace - synthesis of all the above"))
 
   (section
+    "18. Resident Modules"
+
+    (subsection
+      "18.1 Blade Guards Disengaged"
+      (p "Resident modules extend top-level syntax. They're loaded at startup, always available, like LSE (Language-Sensitive Editor) on VMS or Emacs on Unix. The metaphor: blade guards disengaged - full power, no safety rails.")
+      (p "The REPL tracks residents with the (residents) command:")
+      (code "Resident Modules
+
+  pencil    [ep-]   Electric Pencil - Michael Shrayer (1976)
+  schemacs  [sm-]   Schemacs - ddp & Claude (2026)
+  teco      [te-]   TECO - Dan Murphy (1962)
+
+(blade guards disengaged - top-level syntax extensions)")
+      (p "Each resident declares a prefix to avoid namespace collision. Prefixes appear in brackets: [ep-] for pencil, [te-] for teco, [sm-] for schemacs."))
+
+    (subsection
+      "18.2 The resident-info Declaration"
+      (p "Every resident module must contain a resident-info declaration - a formal acknowledgment that the module knows what it's doing:")
+      (code scheme ";;; Resident module declaration (required)
+;;; \"I know what I'm doing\" - this module extends top-level
+(define resident-info
+  '((name . teco)
+    (prefix . \"te-\")
+    (description . \"TECO - Dan Murphy (1962)\")
+    (entry . teco)
+    (entry-novice . teco-novice)))")
+      (p "The declaration serves as both documentation and safety check. (load-resident) verifies the declaration exists before registering."))
+
+    (subsection
+      "18.3 Heritage"
+      (p "The three original residents honor the lineage of text editing:")
+      (list
+        (item "TECO (1962) - Dan Murphy at MIT. Every keystroke a command. EMACS was written in TECO before it was written in anything else.")
+        (item "Electric Pencil (1976) - Michael Shrayer. First word processor for microcomputers, predates WordStar by two years.")
+        (item "Schemacs (2026) - ddp & Claude. Emacs keybindings, Scheme soul. The collaboration continues."))
+      (p "The author credits in (residents) aren't decoration - they're acknowledgment. Dan Murphy's TECO ran on PDP-1s. Michael Shrayer's Electric Pencil ran on 8K Altairs. Now they run on Cyberspace, sixty years of heritage compressed into lambdas.")))
+
+  (section
     "Closing"
     (p "In Scheme and Dylan with Newton soup.")
     (p "Forty years from asking permission to enter the kernel, to owning the whole stack.")
@@ -598,6 +636,7 @@ Cyberspace soup:  Vault objects, content-addressed")
 
   (section
     "Changelog"
+    (p "- 2026-01-28 — Added Resident Modules section (section 18): blade guards, resident-info, heritage")
     (p "- 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)")
     (p "- 2026-01-22 — Folded designer-notes.scm into memo (open kimono); added call/cc rationale")
     (p "- 2026-01-21 — Added Release Gates (section 10): Rocq for beta, TLA+ for release")
