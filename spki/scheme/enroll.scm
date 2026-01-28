@@ -12,6 +12,7 @@
 (module enroll
   (;; System introspection
    introspect-system
+   introspect-system-refresh!
    introspect-hardware
    introspect-network
    introspect-storage
@@ -363,20 +364,37 @@
               (count ,(length memos))
               (memos ,memos))))))
 
+  ;; Cache for static system info (hardware, network, versions don't change)
+  (define *system-info-cache* #f)
+
+  (define (introspect-system-static)
+    "Compute static system info (expensive, cached)"
+    `((hardware ,(cdr (introspect-hardware)))
+      (network ,(cdr (introspect-network)))
+      (storage ,(cdr (introspect-storage)))
+      (codebase ,(cdr (introspect-codebase)))
+      (versions
+       (chicken ,(shell-command "csi -version 2>&1 | head -1"))
+       (libsodium ,(shell-command "pkg-config --modversion libsodium 2>/dev/null || echo unknown")))))
+
+  (define (introspect-system-refresh!)
+    "Refresh the cached system info"
+    (set! *system-info-cache* (introspect-system-static)))
+
   (define (introspect-system)
-    "Full system introspection - all the thangs!"
+    "Full system introspection - uses cache for static info"
+    (unless *system-info-cache*
+      (introspect-system-refresh!))
     `(system-info
       (timestamp ,(current-seconds))
       (lamport-time ,(lamport-time))
       (uptime ,(shell-command "uptime | sed 's/.*up //' | sed 's/,.*//'"))
-      ,(introspect-hardware)
-      ,(introspect-network)
-      ,(introspect-storage)
-      ,(introspect-realm)
-      ,(introspect-codebase)
-      (versions
-       (chicken ,(shell-command "csi -version 2>&1 | head -1"))
-       (libsodium ,(shell-command "pkg-config --modversion libsodium 2>/dev/null || echo unknown")))))
+      (hardware ,@(cdr (assq 'hardware *system-info-cache*)))
+      (network ,@(cdr (assq 'network *system-info-cache*)))
+      (storage ,@(cdr (assq 'storage *system-info-cache*)))
+      ,(introspect-realm)  ; realm can change (vault state)
+      (codebase ,@(cdr (assq 'codebase *system-info-cache*)))
+      (versions ,@(cdr (assq 'versions *system-info-cache*)))))
 
   ;; ============================================================
   ;; Enrollment Display Formatting
