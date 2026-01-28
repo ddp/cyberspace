@@ -1012,9 +1012,9 @@
 (import (except info info))  ; hypertext doc browser with pager
 
 ;; Resident editors - load once, always ready (like LSE, VAX Emacs)
-(load "teco.scm")     ; Dan Murphy's TECO (1962)
-(load "pencil.scm")   ; Michael Shrayer's Electric Pencil (1976)
-(load "schemacs.scm") ; Emacs-style editor in Scheme (2026)
+(load "residents/teco.scm")     ; Dan Murphy's TECO (1962)
+(load "residents/pencil.scm")   ; Michael Shrayer's Electric Pencil (1976)
+(load "residents/schemacs.scm") ; Emacs-style editor in Scheme (2026)
 
 ;; Initialize libsodium
 (sodium-init)
@@ -5336,6 +5336,9 @@
     (seek      . seek)
     (sigma . sigma)
     (commandments . commandments)
+    (residents . residents)
+    (load      . load-resident)
+    (unload    . unload-resident)
     (inspect   . soup-inspect)
     (peers     . nodes)
     (listen    . node-listen)
@@ -5563,6 +5566,17 @@
      ("TECO:" "PDP-style, * prompt, ERfile$/EX")
      ("Schemacs:" "C-x C-s save, C-x C-c quit"))
 
+    (residents "Resident Modules"
+     ("(residents)" "List loaded resident modules")
+     ("(load 'name)" "Load a resident (blade guards disengaged)")
+     ("(unload 'name)" "Mark resident as unloaded")
+     ("(describe 'name)" "Describe a resident module")
+     ("Prefix:" "Each resident has a prefix [ep-], [sm-], [te-]")
+     ("pencil" "Electric Pencil - Michael Shrayer (1976)")
+     ("schemacs" "Schemacs - ddp & Claude (2026)")
+     ("teco" "TECO - Dan Murphy (1962)")
+     ("resident-info" "Required declaration in each module"))
+
     (forge "Build & Metrics"
      ("(sicp)" "SICP metrics for all modules")
      ("(loch-lambda)" "Find LOC/λ ≥ 10 modules")
@@ -5755,6 +5769,74 @@ Cyberspace Project
     M-w      Copy region     C-y      Yank
 
   Usage: (schemacs) or (schemacs \"file.txt\")")))
+
+;; Resident modules - loaded at startup, extend top-level
+;; "Running with blade guards disengaged"
+;; Format: (name prefix description loaded?)
+(define *residents*
+  (list
+   (list 'pencil   "ep-" "Electric Pencil - Michael Shrayer (1976)" #t)
+   (list 'schemacs "sm-" "Schemacs - ddp & Claude (2026)" #t)
+   (list 'teco     "te-" "TECO - Dan Murphy (1962)" #t)))
+
+(define (resident-loaded? name)
+  (let ((r (assq name *residents*)))
+    (and r (cadddr r))))
+
+(define (load-resident name)
+  "Load a resident module (blade guards disengaged)"
+  (let ((r (assq name *residents*)))
+    (cond
+     ((not r)
+      (printf "Unknown resident: ~a~%" name)
+      (printf "Known: ~a~%" (map car *residents*)))
+     ((cadddr r)
+      (printf "~a already loaded~%" name))
+     (else
+      (let ((path (string-append "residents/" (symbol->string name) ".scm")))
+        (handle-exceptions exn
+          (printf "Failed to load ~a: ~a~%" name (get-condition-property exn 'exn 'message "unknown"))
+          (load path)
+          ;; Verify resident-info exists
+          (if (not (eval 'resident-info))
+              (printf "Warning: ~a missing resident-info declaration~%" name))
+          (set-car! (cdddr r) #t)
+          (printf "Loaded ~a~%" name)))))))
+
+(define (unload-resident name)
+  "Mark a resident module as unloaded (symbols remain)"
+  (let ((r (assq name *residents*)))
+    (cond
+     ((not r)
+      (printf "Unknown resident: ~a~%" name))
+     ((not (cadddr r))
+      (printf "~a not loaded~%" name))
+     (else
+      (set-car! (cdddr r) #f)
+      (printf "Unloaded ~a (symbols remain in namespace)~%" name)))))
+
+(define (residents)
+  "List resident modules"
+  (print "")
+  (print "Resident Modules")
+  (print "")
+  (for-each
+   (lambda (r)
+     (let ((name (car r))
+           (prefix (cadr r))
+           (desc (caddr r))
+           (loaded? (cadddr r)))
+       (printf "  ~a~a  ~a~a~%"
+               (string-pad-right (symbol->string name) 10)
+               (string-pad-right (string-append "[" prefix "]") 6)
+               desc
+               (if loaded? "" " [unloaded]"))))
+   (sort *residents* (lambda (a b) (string<? (symbol->string (car a))
+                                              (symbol->string (car b))))))
+  (print "")
+  (print "(blade guards disengaged - top-level syntax extensions)")
+  (print "")
+  (void))
 
 (define (describe thing)
   "Describe a resident thing (teco, pencil, schemacs, etc.)"
