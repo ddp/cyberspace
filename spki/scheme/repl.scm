@@ -5465,7 +5465,15 @@
 ;;; ============================================================
 
 (define *help-topics*
-  '((vault "Vault & Objects"
+  '((help "Help System"
+     ("help" "Show essential commands")
+     ("help topics" "List all help topics")
+     ("help <topic>" "Show commands in topic (vault, crypto, etc.)")
+     ("help <symbol>" "Describe any command or symbol")
+     ("?" "Quick help (alternates brief/full)")
+     ("." "Quick status"))
+
+    (vault "Vault & Objects"
      ("(soup)" "Browse vault objects")
      ("(soup 'keys)" "List keys")
      ("(soup 'audit)" "List audit entries")
