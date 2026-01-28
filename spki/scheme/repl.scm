@@ -5334,6 +5334,7 @@
     (releases  . soup-releases)
     (find      . soup-find)
     (seek      . seek)
+    (sigma . sigma)
     (commandments . commandments)
     (inspect   . soup-inspect)
     (peers     . nodes)
@@ -5843,11 +5844,39 @@ Cyberspace Project
               (printf "~a = ~a~%" sym val))))))))
   (print ""))
 
-;; Easter egg for schemers: the Ten Commandments
+;; Sigma: SICP-style code complexity introspection
+(define (sigma)
+  "Σ - Code complexity metrics (SICP style)"
+  (print "")
+  (print "Σ - Code Complexity")
+  (print "")
+  (handle-exceptions exn
+    (printf "  (introspection unavailable)~%")
+    (let* ((info (introspect-system))
+           (code (assq 'codebase (cdr info)))
+           (loc (and code (assq 'loc (cdr code))))
+           (modules (and code (assq 'modules (cdr code))))
+           (memos (and code (assq 'memos (cdr code))))
+           (loc-val (if loc (cadr loc) 0))
+           (mod-val (if modules (cadr modules) 0))
+           (memo-val (if memos (cadr memos) 0)))
+      (printf "  LOC        ~a~%" (or loc-val "?"))
+      (printf "  Modules    ~a~%" (or mod-val "?"))
+      (printf "  Memos      ~a~%" (or memo-val "?"))
+      (when (and loc-val mod-val (> mod-val 0))
+        (printf "  LOC/λ      ~a~%" (quotient loc-val mod-val)))))
+  (print "")
+  (void))
+
+;; The Ten Commandments - philosophy of Cyberspace
 (define (commandments)
-  "The Ten Commandments of Cyberspace"
+  "The Ten Commandments of λ"
   (print "
-The Ten Commandments of Cyberspace
+╔══════════════════════════════════════════════════════════════════╗
+║                  The Library of Cyberspace                       ║
+╚══════════════════════════════════════════════════════════════════╝
+
+The Ten Commandments of λ
 
   0  Declaration               Thou shalt have no central authority
   1  Conventions               Thou shalt document in S-expressions
@@ -5859,10 +5888,20 @@ The Ten Commandments of Cyberspace
   7  Replication Layer         Thou shalt federate thy distribution
   8  Threshold Governance      Thou shalt seek consensus over dictators
   9  Designer Notes            Thou shalt know why it was ordained
-
-These ten form the core of the Library. All other memos build upon them.
-See: Memo-0000 Declaration of Cyberspace
 ")
+  (handle-exceptions exn
+    (void)
+    (let* ((info (introspect-system))
+           (code (assq 'codebase (cdr info)))
+           (loc (and code (assq 'loc (cdr code))))
+           (modules (and code (assq 'modules (cdr code))))
+           (memos (and code (assq 'memos (cdr code)))))
+      (printf "State: ~a modules, ~a memos, ~a lines~%"
+              (if modules (cadr modules) "?")
+              (if memos (cadr memos) "?")
+              (if loc (cadr loc) "?"))))
+  (printf "Mode:  ~a~%" (if (eq? *user-mode* 'novice) "novice (%)" "lambda (λ)"))
+  (printf "~%See: (help 'topics) for commands, (library) for memos~%")
   (void))
 
 ;; Display modes and browser opening
@@ -7109,13 +7148,12 @@ See: Memo-0000 Declaration of Cyberspace
   (print "Novice mode. Guardrails on.")
   (print "Destructive ops require confirmation. Type ? for help."))
 
-(define (schemer)
-  "Switch to schemer mode - full power, no safety rails"
+(define (lambda-mode)
+  "Switch to lambda mode - full power, no safety rails"
   (set! *user-mode* 'schemer)
   (set! *prompt* "λ ")
   (lineage#set-paren-wrap 1)  ; wrap completions in parens
-  (print "Schemer mode. Full power, no confirmations.")
-  (print "You asked for it."))
+  (print "λ mode. Full power, no confirmations."))
 
 ;; Novice mode guardrails - dangerous operations need confirmation
 (define *dangerous-ops*
@@ -7177,7 +7215,7 @@ See: Memo-0000 Declaration of Cyberspace
     (set! *prompt* "λ ")
     (lineage#set-paren-wrap 1)  ; wrap completions in parens
     (print "")
-    (print "Detected Scheme usage - switching to schemer mode.")
+    (print "Detected Scheme usage - switching to λ mode.")
     (print "Type (novice) to switch back.")))
 
 ;; Result history
@@ -7248,7 +7286,7 @@ See: Memo-0000 Declaration of Cyberspace
     (for-each (lambda (sym)
                 (lineage#add-command (symbol->string sym)))
               '(;; Mode switching
-                novice schemer
+                novice lambda-mode
                 ;; Help and quit
                 help quit exit bye
                 ;; Common Scheme forms
@@ -7999,10 +8037,9 @@ See: Memo-0000 Declaration of Cyberspace
                          (if (null? (cdr expr))
                              (begin (print "Usage: (describe OBJ)") (void))
                              (inspector#describe (eval (cadr expr)))))
-                        ;; novice/schemer mode toggles
+                        ;; novice/lambda mode toggles
                         ((equal? expr '(novice)) (novice))
-                        ((equal? expr '(schemer)) (schemer))
-                        ((equal? expr '(lambda)) (schemer))
+                        ((equal? expr '(lambda)) (lambda-mode))
                         ;; Module imports not in eval env - call directly
                         ((equal? expr '(introspect-system)) (status))
                         ((and (pair? expr) (eq? (car expr) 'dashboard))
@@ -8030,7 +8067,7 @@ See: Memo-0000 Declaration of Cyberspace
                         (else (eval expr)))))
                  ;; Track usage for mode detection (only on successful eval)
                  ;; Don't count mode toggles - they shouldn't influence mode detection
-                 (unless (member expr '((novice) (schemer) (lambda)))
+                 (unless (member expr '((novice) (lambda)))
                    (if is-scheme?
                        (set! *paren-count* (+ 1 *paren-count*))
                        (set! *command-count* (+ 1 *command-count*)))
