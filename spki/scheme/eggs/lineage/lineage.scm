@@ -15,6 +15,7 @@
 (module lineage
   (lineage
    lineage-with-initial
+   lineage-with-first-char
    history-add
    set-history-length!
    save-history-to-file
@@ -31,6 +32,7 @@
   (define save-history-to-file (foreign-lambda int linenoiseHistorySave c-string))
   (define lineage (foreign-lambda c-string linenoise c-string))
   (define lineage-with-initial (foreign-lambda c-string linenoiseWithInitial c-string c-string))
+  (define lineage-with-first-char (foreign-lambda c-string linenoiseWithFirstChar c-string int))
 
   (define (make-lineage-port #!optional prompt)
     (let ((l "")

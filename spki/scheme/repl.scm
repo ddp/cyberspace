@@ -7191,10 +7191,10 @@ See: Memo-0000 Declaration of Cyberspace
                   ((= c 63)  ; ?
                    (display "?\n")
                    "?")
-                  ;; ESC = arrow key or other escape sequence
-                  ;; Let lineage handle history navigation
+                  ;; ESC = start of escape sequence (arrow keys, etc)
+                  ;; Pass ESC to lineage so it can read the rest of the sequence
                   ((= c 27)
-                   (let ((line (lineage#lineage prompt)))
+                   (let ((line (lineage#lineage-with-first-char prompt 27)))
                      (when line (repl-history-add line))
                      (and line (strip-ansi line))))
                   ;; Ctrl-D = EOF
