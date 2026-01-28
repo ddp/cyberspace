@@ -26,6 +26,7 @@
    clear-commands
    enable-command-completion
    set-paren-wrap
+   set-hints-enabled
    make-lineage-port)
 
   (import scheme (chicken base) (chicken process signal) (chicken repl) (chicken foreign) (chicken port))
@@ -45,6 +46,7 @@
   (define clear-commands (foreign-lambda void linenoiseClearCommands))
   (define enable-command-completion (foreign-lambda void linenoiseEnableCommandCompletion))
   (define set-paren-wrap (foreign-lambda void linenoiseSetParenWrap int))
+  (define set-hints-enabled (foreign-lambda void linenoiseSetHintsEnabled int))
 
   (define (make-lineage-port #!optional prompt)
     (let ((l "")

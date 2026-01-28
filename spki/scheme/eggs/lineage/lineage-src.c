@@ -144,6 +144,7 @@ static linenoiseCompletionCallback *completionCallback = NULL;
 static char *completion_commands[MAX_COMPLETIONS];
 static int completion_count = 0;
 static int paren_wrap = 0;  /* Wrap completions in parens for schemer mode */
+static int hints_enabled = 0;  /* Show inline hints */
 
 static struct termios orig_termios; /* In order to restore at exit.*/
 static int rawmode = 0; /* For atexit() function to check if restore is needed*/
@@ -400,6 +401,28 @@ void linenoiseSetParenWrap(int wrap) {
     paren_wrap = wrap;
 }
 
+/* Enable/disable inline hints */
+void linenoiseSetHintsEnabled(int enabled) {
+    hints_enabled = enabled;
+}
+
+/* Find best hint: returns suffix to show after current input, or NULL */
+static const char *findHint(const char *buf) {
+    if (!hints_enabled || completion_count == 0) return NULL;
+    size_t len = strlen(buf);
+    if (len == 0) return NULL;
+
+    /* Find first matching command */
+    for (int i = 0; i < completion_count; i++) {
+        if (strncmp(buf, completion_commands[i], len) == 0 &&
+            strlen(completion_commands[i]) > len) {
+            /* Return the suffix (part after what's typed) */
+            return completion_commands[i] + len;
+        }
+    }
+    return NULL;
+}
+
 /* =========================== Line editing ================================= */
 
 /* Single line low level line refresh.
@@ -429,6 +452,13 @@ static void refreshSingleLine(struct linenoiseState *l) {
     /* Write the prompt and the current buffer content */
     if (write(fd,l->prompt,l->plen) == -1) return;  /* Use byte length for write */
     if (write(fd,buf,len) == -1) return;
+    /* Show hint in gray if available */
+    const char *hint = findHint(l->buf);
+    if (hint) {
+        if (write(fd,"\x1b[90m",5) == -1) return;  /* Dark gray */
+        if (write(fd,hint,strlen(hint)) == -1) return;
+        if (write(fd,"\x1b[0m",4) == -1) return;   /* Reset */
+    }
     /* Erase to right */
     snprintf(seq,64,"\x1b[0K");
     if (write(fd,seq,strlen(seq)) == -1) return;
@@ -875,13 +905,8 @@ static int linenoiseEditWithInitial(int fd, char *buf, size_t buflen, const char
     /* The latest history entry is always our current buffer */
     linenoiseHistoryAdd(buf);
 
-    /* Clear line before writing prompt */
-    if (write(fd,"\r\x1b[K",4) == -1) return -1;
-    if (write(fd,prompt,l.plen) == -1) return -1;
-    /* Write initial content */
-    if (l.len > 0) {
-        if (write(fd,buf,l.len) == -1) return -1;
-    }
+    /* Initial refresh - shows prompt, initial content, and hints */
+    refreshLine(&l);
 
     while(1) {
         char c;

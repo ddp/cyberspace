@@ -5389,13 +5389,19 @@
             #f
             (read port))
         ;; Command mode - tokenize and wrap
+        ;; Symbol arguments are auto-quoted (help topics -> (help 'topics))
         (let loop ((tokens '()))
           (let ((tok (read port)))
             (if (eof-object? tok)
                 (if (null? tokens)
                     #f
-                    (cons (resolve-command (car (reverse tokens)))
-                          (reverse (cdr (reverse tokens)))))
+                    (let ((reversed (reverse tokens)))
+                      (cons (resolve-command (car reversed))
+                            (map (lambda (arg)
+                                   (if (symbol? arg)
+                                       (list 'quote arg)
+                                       arg))
+                                 (cdr reversed)))))
                 (loop (cons tok tokens))))))))
 
 (module-end! "memos")
@@ -7011,6 +7017,8 @@ See: Memo-0000 Declaration of Cyberspace
   "Switch to novice mode - guardrails on, confirmations required"
   (set! *user-mode* 'novice)
   (set! *prompt* "% ")
+  (set! *paren-count* 0)      ; reset mode detection
+  (set! *command-count* 0)
   (lineage#set-paren-wrap 0)  ; bare word completions
   (print "Novice mode. Guardrails on.")
   (print "Destructive ops require confirmation. Type ? for help."))
@@ -7165,6 +7173,7 @@ See: Memo-0000 Declaration of Cyberspace
                 ;; Editors
                 schemacs pencil pencil-novice teco))
     (lineage#enable-command-completion)
+    (lineage#set-hints-enabled 1)
     (set! *completions-loaded* #t)))
 
 (define (repl-history-load)
@@ -7863,12 +7872,6 @@ See: Memo-0000 Declaration of Cyberspace
                 (is-scheme? (and (> (string-length trimmed) 0)
                                  (char=? (string-ref trimmed 0) #\()))
                 (expr (parse-command-line line)))
-           ;; Track usage for mode detection
-           (if is-scheme?
-               (set! *paren-count* (+ 1 *paren-count*))
-               (set! *command-count* (+ 1 *command-count*)))
-           (check-mode-shift!)
-
            (when expr
              (handle-exceptions exn
                (begin
@@ -7877,7 +7880,23 @@ See: Memo-0000 Declaration of Cyberspace
                      (begin
                        (inspector-repl exn)
                        (loop))
-                     (rich-exception-display exn)))
+                     ;; Novice mode: show friendly errors
+                     (if (eq? *user-mode* 'novice)
+                         (let ((msg (get-condition-property exn 'exn 'message "")))
+                           (cond
+                             ((string-contains msg "unbound variable")
+                              (let ((var (get-condition-property exn 'exn 'arguments '())))
+                                (printf "Unknown: ~a. Type ? for help.~%"
+                                        (if (pair? var) (car var) "?"))))
+                             ((string-contains msg "bad argument type")
+                              (print "Type error. Check your arguments."))
+                             ((string-contains msg "too few arguments")
+                              (print "Missing argument(s)."))
+                             ((string-contains msg "too many arguments")
+                              (print "Too many arguments."))
+                             (else
+                              (rich-exception-display exn))))
+                         (rich-exception-display exn))))
                ;; Handle special commands that can't be injected into eval's environment
                (let ((result
                       (cond
@@ -7920,6 +7939,20 @@ See: Memo-0000 Declaration of Cyberspace
                          (void))
                         ;; Everything else - normal eval
                         (else (eval expr)))))
+                 ;; Track usage for mode detection (only on successful eval)
+                 ;; Don't count mode toggles - they shouldn't influence mode detection
+                 (unless (member expr '((novice) (schemer) (lambda)))
+                   (if is-scheme?
+                       (set! *paren-count* (+ 1 *paren-count*))
+                       (set! *command-count* (+ 1 *command-count*)))
+                   (check-mode-shift!))
+                 ;; Dynamic completions: add newly defined symbols
+                 (when (and (pair? expr) (eq? (car expr) 'define))
+                   (let ((name (if (pair? (cadr expr))
+                                   (car (cadr expr))   ; (define (foo ...) ...)
+                                   (cadr expr))))      ; (define foo ...)
+                     (when (symbol? name)
+                       (lineage#add-command (symbol->string name)))))
                  (unless (eq? result (void))
                    (push-result! result)
                    (pp result))))))
