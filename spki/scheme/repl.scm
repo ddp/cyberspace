@@ -5381,6 +5381,8 @@
                        print display newline load begin
                        ;; Debugging
                        bt backtrace frame exception-info
+                       ;; Mode switching
+                       novice lambda-mode
                        ;; Resident editors
                        schemacs pencil pencil-novice teco)))))
 
