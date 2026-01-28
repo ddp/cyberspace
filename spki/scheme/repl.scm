@@ -7011,6 +7011,7 @@ See: Memo-0000 Declaration of Cyberspace
   "Switch to novice mode - guardrails on, confirmations required"
   (set! *user-mode* 'novice)
   (set! *prompt* "% ")
+  (lineage#set-paren-wrap 0)  ; bare word completions
   (print "Novice mode. Guardrails on.")
   (print "Destructive ops require confirmation. Type ? for help."))
 
@@ -7018,6 +7019,7 @@ See: Memo-0000 Declaration of Cyberspace
   "Switch to schemer mode - full power, no safety rails"
   (set! *user-mode* 'schemer)
   (set! *prompt* "λ ")
+  (lineage#set-paren-wrap 1)  ; wrap completions in parens
   (print "Schemer mode. Full power, no confirmations.")
   (print "You asked for it."))
 
@@ -7079,6 +7081,7 @@ See: Memo-0000 Declaration of Cyberspace
              (> *paren-count* (* 2 *command-count*)))
     (set! *user-mode* 'schemer)
     (set! *prompt* "λ ")
+    (lineage#set-paren-wrap 1)  ; wrap completions in parens
     (print "")
     (print "Detected Scheme usage - switching to schemer mode.")
     (print "Type (novice) to switch back.")))
@@ -7138,12 +7141,39 @@ See: Memo-0000 Declaration of Cyberspace
 
 (define *history-loaded* #f)
 
+(define *completions-loaded* #f)
+
+(define (repl-init-completions)
+  "Initialize TOPS-20/JSYS style command completion"
+  (unless *completions-loaded*
+    ;; Add all command aliases
+    (for-each (lambda (pair)
+                (lineage#add-command (symbol->string (car pair))))
+              *command-aliases*)
+    ;; Add common Scheme forms that novice mode accepts
+    (for-each (lambda (sym)
+                (lineage#add-command (symbol->string sym)))
+              '(;; Mode switching
+                novice schemer
+                ;; Help and quit
+                help quit exit bye
+                ;; Common Scheme forms
+                define let if cond lambda quote begin load
+                print display newline
+                ;; Debugging
+                bt backtrace frame exception-info
+                ;; Editors
+                schemacs pencil pencil-novice teco))
+    (lineage#enable-command-completion)
+    (set! *completions-loaded* #t)))
+
 (define (repl-history-load)
   "Load history from file"
   (unless *history-loaded*
     (when (file-exists? *history-file*)
       (lineage#load-history-from-file *history-file*))
-    (set! *history-loaded* #t)))
+    (set! *history-loaded* #t))
+  (repl-init-completions))
 
 (define (repl-history-add line)
   "Add line to history (skip empty, whitespace-only, and prompt strings)"
@@ -7363,7 +7393,8 @@ See: Memo-0000 Declaration of Cyberspace
          ;; Comma usage = schemer assertion
          (when (eq? *user-mode* 'novice)
            (set! *user-mode* 'schemer)
-           (set! *prompt* "λ "))
+           (set! *prompt* "λ ")
+           (lineage#set-paren-wrap 1))
          (let* ((cmd-line (substring line 1))
                 (parts (string-split cmd-line))
                 (cmd (if (null? parts) "" (car parts)))
@@ -7863,6 +7894,7 @@ See: Memo-0000 Declaration of Cyberspace
                         ;; novice/schemer mode toggles
                         ((equal? expr '(novice)) (novice))
                         ((equal? expr '(schemer)) (schemer))
+                        ((equal? expr '(lambda)) (schemer))
                         ;; Module imports not in eval env - call directly
                         ((equal? expr '(introspect-system)) (status))
                         ((and (pair? expr) (eq? (car expr) 'dashboard))

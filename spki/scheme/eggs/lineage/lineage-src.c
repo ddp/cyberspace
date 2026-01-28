@@ -139,6 +139,12 @@ static size_t utf8_display_width(const char *s) {
 static char *unsupported_term[] = {"dumb","cons25",NULL};
 static linenoiseCompletionCallback *completionCallback = NULL;
 
+/* Command completion support */
+#define MAX_COMPLETIONS 256
+static char *completion_commands[MAX_COMPLETIONS];
+static int completion_count = 0;
+static int paren_wrap = 0;  /* Wrap completions in parens for schemer mode */
+
 static struct termios orig_termios; /* In order to restore at exit.*/
 static int rawmode = 0; /* For atexit() function to check if restore is needed*/
 static int mlmode = 0;  /* Multi line mode. Default is single line. */
@@ -349,6 +355,49 @@ void linenoiseAddCompletion(linenoiseCompletions *lc, char *str) {
     memcpy(copy,str,len+1);
     lc->cvec = realloc(lc->cvec,sizeof(char*)*(lc->len+1));
     lc->cvec[lc->len++] = copy;
+}
+
+/* Command completion: add a command to the completion list */
+void linenoiseAddCommand(const char *cmd) {
+    if (completion_count < MAX_COMPLETIONS) {
+        completion_commands[completion_count++] = strdup(cmd);
+    }
+}
+
+/* Command completion: clear the list */
+void linenoiseClearCommands(void) {
+    for (int i = 0; i < completion_count; i++) {
+        free(completion_commands[i]);
+        completion_commands[i] = NULL;
+    }
+    completion_count = 0;
+}
+
+/* Command completion callback: prefix match against command list */
+static void commandCompletionCallback(const char *buf, linenoiseCompletions *lc) {
+    size_t len = strlen(buf);
+    for (int i = 0; i < completion_count; i++) {
+        if (strncmp(buf, completion_commands[i], len) == 0) {
+            if (paren_wrap) {
+                /* Schemer mode: wrap in parens */
+                char wrapped[256];
+                snprintf(wrapped, sizeof(wrapped), "(%s)", completion_commands[i]);
+                linenoiseAddCompletion(lc, wrapped);
+            } else {
+                linenoiseAddCompletion(lc, completion_commands[i]);
+            }
+        }
+    }
+}
+
+/* Enable command completion */
+void linenoiseEnableCommandCompletion(void) {
+    linenoiseSetCompletionCallback(commandCompletionCallback);
+}
+
+/* Set paren wrap mode (for schemer mode) */
+void linenoiseSetParenWrap(int wrap) {
+    paren_wrap = wrap;
 }
 
 /* =========================== Line editing ================================= */

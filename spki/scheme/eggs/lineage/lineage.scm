@@ -21,6 +21,11 @@
    set-history-length!
    save-history-to-file
    load-history-from-file
+   ;; Command completion (TOPS-20/JSYS style)
+   add-command
+   clear-commands
+   enable-command-completion
+   set-paren-wrap
    make-lineage-port)
 
   (import scheme (chicken base) (chicken process signal) (chicken repl) (chicken foreign) (chicken port))
@@ -35,6 +40,11 @@
   (define lineage (foreign-lambda c-string linenoise c-string))
   (define lineage-with-initial (foreign-lambda c-string linenoiseWithInitial c-string c-string))
   (define lineage-with-first-char (foreign-lambda c-string linenoiseWithFirstChar c-string int))
+  ;; Command completion
+  (define add-command (foreign-lambda void linenoiseAddCommand c-string))
+  (define clear-commands (foreign-lambda void linenoiseClearCommands))
+  (define enable-command-completion (foreign-lambda void linenoiseEnableCommandCompletion))
+  (define set-paren-wrap (foreign-lambda void linenoiseSetParenWrap int))
 
   (define (make-lineage-port #!optional prompt)
     (let ((l "")
