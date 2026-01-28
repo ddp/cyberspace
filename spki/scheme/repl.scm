@@ -5625,10 +5625,8 @@
                          (print "  " (string-pad-right (car cmd) 26) " - " (cadr cmd)))
                        commands)
              (print ""))
-           (begin
-             (print "Unknown topic: " topic)
-             (print "Try (help 'topics) to see available topics.")
-             (print "")))))
+           ;; Not a topic - try as symbol
+           (describe-symbol topic))))
 
     ;; (help) - essentials only, mode-aware
     (else
@@ -5758,6 +5756,84 @@ Cyberspace Project
         (print "Unknown: " sym ". Try: teco, pencil, schemacs"))))
 
 (define info describe)
+
+(define (find-in-help-topics sym)
+  "Search help topics for commands matching symbol name"
+  (let ((name (symbol->string sym))
+        (results '()))
+    (for-each
+     (lambda (topic-entry)
+       (let ((topic-name (car topic-entry))
+             (commands (cddr topic-entry)))
+         (for-each
+          (lambda (cmd)
+            (let ((cmd-str (car cmd))
+                  (desc (cadr cmd)))
+              ;; Match (sym), (sym ...), or sym
+              (when (or (string-contains cmd-str (string-append "(" name ")"))
+                        (string-contains cmd-str (string-append "(" name " "))
+                        (string=? cmd-str name))
+                (set! results (cons (list topic-name cmd-str desc) results)))))
+          commands)))
+     *help-topics*)
+    (reverse results)))
+
+(define (describe-symbol sym)
+  "Show help for a symbol - VMS-style HELP for any symbol"
+  (print "")
+  (let* ((alias (assq sym *command-aliases*))
+         (topic (assq sym *help-topics*))
+         (in-topics (find-in-help-topics sym)))
+    (cond
+      ;; Help topic - show full listing
+      (topic
+       (let ((title (cadr topic))
+             (commands (cddr topic)))
+         (printf "~a (~a commands)~%" title (length commands))
+         (for-each (lambda (cmd)
+                     (printf "  ~a~%" (car cmd)))
+                   (take commands (min 5 (length commands))))
+         (when (> (length commands) 5)
+           (printf "  ... and ~a more. (help '~a) for full list~%"
+                   (- (length commands) 5) sym))))
+      ;; Found in help topics - show matches
+      ((not (null? in-topics))
+       (for-each
+        (lambda (match)
+          (let ((topic (car match))
+                (cmd (cadr match))
+                (desc (caddr match)))
+            (printf "~a~%" cmd)
+            (printf "  ~a~%" desc)
+            (printf "  (in help '~a)~%" topic)))
+        in-topics)
+       ;; Also show alias if present
+       (when alias
+         (printf "~%Alias: ~a → ~a~%" sym (cdr alias))))
+      ;; Command alias - show what it maps to and try to get more info
+      (alias
+       (printf "~a → ~a~%" sym (cdr alias))
+       (handle-exceptions exn
+         (void)
+         (let ((proc (eval (cdr alias))))
+           (when (procedure? proc)
+             (let ((info (procedure-information proc)))
+               (when info
+                 (printf "  ~a~%" info)))))))
+      ;; Try to evaluate and describe
+      (else
+       (handle-exceptions exn
+         (printf "Unknown: ~a. Try: help topics~%" sym)
+         (let ((val (eval sym)))
+           (cond
+             ((procedure? val)
+              (let ((info (procedure-information val)))
+                (if info
+                    (printf "~a~%" info)
+                    (printf "~a: procedure~%" sym))))
+             (else
+              (printf "~a = ~a~%" sym val))))))))
+  (print ""))
 
 ;; Easter egg for schemers: the Ten Commandments
 (define (commandments)
