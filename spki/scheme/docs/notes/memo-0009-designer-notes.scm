@@ -396,8 +396,8 @@
     (subsection
       "11.2 The Road Not Taken"
       (p "We all built VAX/VMS V6.0 and then we threw it away--literally tossing our green bar printouts of our respective subsystems into an empty cube on ZK03/4. The code of what could have been. The end of DEC.")
-      (p "They must have done something similar after Prism/Mica was cancelled, ahead of that fateful offer to Gates & Co. that gifted Microsoft dominance in COTS computing.")
-      (p "Prism/Mica was being designed for TCSEC B1. That's the legacy--the mindset, the trust model, and the codebase--that Gates was gifted in an offer they couldn't refuse.")
+      (p "They must have done something similar after PRISM/Mica was cancelled, ahead of that fateful offer to Gates & Co. that gifted Microsoft dominance in COTS computing.")
+      (p "PRISM/Mica was being designed for TCSEC B1. That's the legacy--the mindset, the trust model, and the codebase--that Gates was gifted in an offer they couldn't refuse.")
       (p "Of all the people at DEC, Cutler--designer of the MicroVAX--could see the writing on the wall. The age of PCs had been born. Digital missed the train.")
       (p "The weave predates the software. The people who understood trust architectures kept finding each other:")
       (list
@@ -448,7 +448,20 @@ SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
         (item "Ada: Open(File => \"data.txt\", Mode => Read_Only)")
         (item "Dylan: open(file: \"data.txt\", mode: #\"read\")")
         (item "BLISS: OPEN(FILE = 'data.txt', MODE = READONLY)"))
-      (p "Self syntax was weird. Smalltalk doesn't work for math people (2 + 3 * 4 = 20, not 14). Scheme is honest - prefix, unambiguous, mathematical.")))
+      (p "Self syntax was weird. Smalltalk doesn't work for math people (2 + 3 * 4 = 20, not 14). Scheme is honest - prefix, unambiguous, mathematical."))
+
+    (subsection
+      "11.6 IETF Security Protocols"
+      (p "VMS Security Project Leader → TGV → Cisco → loaned to Microsoft for IPsec/IKE.")
+      (p "draft-ietf-ipsec-isakmp-gss-auth-07 (1998-2001) defined GSS-API authentication for IKE, binding Kerberos into Windows 2000's IPsec implementation. Seven revisions, co-authored with Swander on later versions.")
+      (p "The draft defined authentication method values:")
+      (list
+        (item "65001 - GSS-API using Kerberos")
+        (item "65002 - Generic GSS-API")
+        (item "65003 - GSS-API with SPNEGO")
+        (item "65004 - GSS-API using SPKM"))
+      (p "Microsoft's IKE implementation shipped with NT5 (Windows 2000) using this specification. The Windows 2000 compatibility notes in the draft - the MD5 hash over 'GSSAPI' for Vendor ID - are fingerprints in shipping code.")
+      (p "The thread: DEC security architecture → IETF protocol specification → Microsoft's authenticated IPsec. Same design principles, different decades.")))
 
   (section
     "12. Interface Philosophy"
@@ -625,17 +638,19 @@ Cyberspace soup:  Vault objects, content-addressed")
       (list
         (item "TECO (1962) - Dan Murphy at MIT. Every keystroke a command. EMACS was written in TECO before it was written in anything else.")
         (item "Electric Pencil (1976) - Michael Shrayer. First word processor for microcomputers, predates WordStar by two years.")
-        (item "Schemacs (2026) - ddp & Claude. Emacs keybindings, Scheme soul. The collaboration continues."))
-      (p "The author credits in (residents) aren't decoration - they're acknowledgment. Dan Murphy's TECO ran on PDP-1s. Michael Shrayer's Electric Pencil ran on 8K Altairs. Now they run on Cyberspace, sixty years of heritage compressed into lambdas.")))
+        (item "Schemacs (2026) - ddp & Claude, inspired by guenchi/Schemacs (Chez Scheme). Emacs keybindings, Scheme soul. The collaboration continues."))
+      (p "Hemlock (1987) - Bill Chiles and Rob MacLachlan at CMU. An Emacs-like editor written entirely in Common Lisp for CMU CL. Hemlock proved that a Lisp implementation could host its own extensible editor, the extension language and the implementation language being one and the same. Schemacs follows that tradition - the REPL is the extension language.")
+      (p "The credits in (residents) aren't decoration - they're acknowledgment. Dan Murphy's TECO ran on PDP-1s. Michael Shrayer's Electric Pencil ran on 8K Altairs. Now they run on Cyberspace, sixty years of heritage compressed into lambdas.")))
 
   (section
     "Closing"
     (p "In Scheme and Dylan with Newton soup.")
     (p "Forty years from asking permission to enter the kernel, to owning the whole stack.")
-    (p "The Lisper finally gets to write Lisp."))
+    (p "The Little Schemer finally gets to write Scheme."))
 
   (section
     "Changelog"
+    (p "- 2026-01-28 — Added IETF Security Protocols (section 11.6): draft-ietf-ipsec-isakmp-gss-auth, GSS-API/Kerberos for NT5")
     (p "- 2026-01-28 — Added Resident Modules section (section 18): blade guards, resident-info, heritage")
     (p "- 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)")
     (p "- 2026-01-22 — Folded designer-notes.scm into memo (open kimono); added call/cc rationale")
