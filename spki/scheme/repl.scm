@@ -5943,10 +5943,39 @@ Cyberspace Project
            (memos (and code (assq 'memos (cdr code))))
            (loc-val (if loc (cadr loc) 0))
            (mod-val (if modules (cadr modules) 0))
-           (memo-val (if memos (cadr memos) 0)))
-      (printf "  LOC        ~a~%" (or loc-val "?"))
-      (printf "  Modules    ~a~%" (or mod-val "?"))
+           (memo-val (if memos (cadr memos) 0))
+           ;; TCB OCaml LOC
+           (tcb-loc (handle-exceptions exn 0
+                      (let* ((result (with-input-from-pipe
+                                       "wc -l ../tcb/*.ml 2>/dev/null | tail -1 | awk '{print $1}'"
+                                       read-line)))
+                        (if (and result (not (eof-object? result)))
+                            (or (string->number (string-trim-both result)) 0)
+                            0))))
+           ;; C LOC (lineage, FFI)
+           (c-loc (handle-exceptions exn 0
+                    (let* ((result (with-input-from-pipe
+                                     "wc -l eggs/*/*.c 2>/dev/null | tail -1 | awk '{print $1}'"
+                                     read-line)))
+                      (if (and result (not (eof-object? result)))
+                          (or (string->number (string-trim-both result)) 0)
+                          0))))
+           ;; Rocq LOC (proofs)
+           (rocq-loc (handle-exceptions exn 0
+                       (let* ((result (with-input-from-pipe
+                                        "wc -l ../coq/*.v ../tcb/coq/*.v 2>/dev/null | tail -1 | awk '{print $1}'"
+                                        read-line)))
+                         (if (and result (not (eof-object? result)))
+                             (or (string->number (string-trim-both result)) 0)
+                             0)))))
       (printf "  Memos      ~a~%" (or memo-val "?"))
+      (printf "  Modules    ~a~%" (or mod-val "?"))
+      (printf "  Scheme     ~a LOC~%" (or loc-val "?"))
+      (printf "  C          ~a LOC (lineage)~%" c-loc)
+      (printf "  OCaml      ~a LOC (TCB)~%" tcb-loc)
+      (printf "  Rocq       ~a LOC (proofs)~%" rocq-loc)
+      (when (and loc-val (> tcb-loc 0))
+        (printf "  Scheme:TCB ~a:1~%" (quotient loc-val tcb-loc)))
       (when (and loc-val mod-val (> mod-val 0))
         (printf "  LOC/λ      ~a~%" (quotient loc-val mod-val)))))
   (print "")
