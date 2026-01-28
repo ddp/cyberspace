@@ -17,6 +17,7 @@
    lineage-with-initial
    lineage-with-first-char
    history-add
+   history-dump  ; debug
    set-history-length!
    save-history-to-file
    load-history-from-file
@@ -27,6 +28,7 @@
   (foreign-declare  "#include \"lineage-src.c\"")
 
   (define history-add (foreign-lambda int linenoiseHistoryAdd c-string))
+  (define history-dump (foreign-lambda void linenoiseHistoryDump))  ; debug
   (define set-history-length! (foreign-lambda int linenoiseHistorySetMaxLen int))
   (define load-history-from-file (foreign-lambda int linenoiseHistoryLoad c-string))
   (define save-history-to-file (foreign-lambda int linenoiseHistorySave c-string))

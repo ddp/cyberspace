@@ -221,7 +221,7 @@ static int enableRawMode(int fd) {
     raw.c_cc[VMIN] = 1; raw.c_cc[VTIME] = 0; /* 1 byte, no timer */
 
     /* put terminal in raw mode after flushing */
-    if (tcsetattr(fd,TCSAFLUSH,&raw) < 0) goto fatal;
+    if (tcsetattr(fd,TCSANOW,&raw) < 0) goto fatal;  /* TCSANOW: don't flush input */
     rawmode = 1;
     return 0;
 
@@ -548,15 +548,22 @@ void linenoiseEditHistoryNext(struct linenoiseState *l, int dir) {
          * overwrite it with the next one. */
         free(history[history_len - 1 - l->history_index]);
         history[history_len - 1 - l->history_index] = strdup(l->buf);
-        /* Show the new entry */
-        l->history_index += (dir == LINENOISE_HISTORY_PREV) ? 1 : -1;
-        if (l->history_index < 0) {
-            l->history_index = 0;
-            return;
-        } else if (l->history_index >= history_len) {
-            l->history_index = history_len-1;
-            return;
-        }
+        /* Show the new entry, skipping empty entries */
+        int step = (dir == LINENOISE_HISTORY_PREV) ? 1 : -1;
+        int new_index = l->history_index;
+        do {
+            new_index += step;
+            if (new_index < 0) {
+                new_index = 0;
+                break;
+            } else if (new_index >= history_len) {
+                new_index = history_len-1;
+                break;
+            }
+        } while (history[history_len - 1 - new_index][0] == '\0');
+
+        if (new_index == l->history_index) return; /* No non-empty entry found */
+        l->history_index = new_index;
         strncpy(l->buf,history[history_len - 1 - l->history_index],l->buflen);
         l->buf[l->buflen-1] = '\0';
         l->len = l->pos = strlen(l->buf);
@@ -646,7 +653,11 @@ static int linenoiseEdit(int fd, char *buf, size_t buflen, const char *prompt)
         char seq[2], seq2[2];
 
         nread = read(fd,&c,1);
-        if (nread <= 0) return l.len;
+        if (nread <= 0) {
+            history_len--;
+            free(history[history_len]);
+            return l.len;
+        }
 
         /* Only autocomplete when the callback is set. It returns < 0 when
          * there was an error reading from fd. Otherwise it will return the
@@ -654,7 +665,11 @@ static int linenoiseEdit(int fd, char *buf, size_t buflen, const char *prompt)
         if (c == 9 && completionCallback != NULL) {
             c = completeLine(&l);
             /* Return on errors */
-            if (c < 0) return l.len;
+            if (c < 0) {
+                history_len--;
+                free(history[history_len]);
+                return l.len;
+            }
             /* Read next character when 0 */
             if (c == 0) continue;
         }
@@ -665,6 +680,8 @@ static int linenoiseEdit(int fd, char *buf, size_t buflen, const char *prompt)
             free(history[history_len]);
             return (int)l.len;
         case 3:     /* ctrl-c */
+            history_len--;
+            free(history[history_len]);
             errno = EAGAIN;
             return -1;
         case 127:   /* backspace */
@@ -823,12 +840,20 @@ static int linenoiseEditWithInitial(int fd, char *buf, size_t buflen, const char
         char seq[2], seq2[2];
 
         nread = read(fd,&c,1);
-        if (nread <= 0) return l.len;
+        if (nread <= 0) {
+            history_len--;
+            free(history[history_len]);
+            return l.len;
+        }
 
         /* Only autocomplete when the callback is set. */
         if (c == 9 && completionCallback != NULL) {
             c = completeLine(&l);
-            if (c < 0) return l.len;
+            if (c < 0) {
+                history_len--;
+                free(history[history_len]);
+                return l.len;
+            }
             if (c == 0) continue;
         }
 
@@ -838,6 +863,8 @@ static int linenoiseEditWithInitial(int fd, char *buf, size_t buflen, const char
             free(history[history_len]);
             return (int)l.len;
         case 3:     /* ctrl-c */
+            history_len--;
+            free(history[history_len]);
             errno = EAGAIN;
             return -1;
         case 127:   /* backspace */
@@ -1101,7 +1128,12 @@ char *linenoiseWithFirstChar(const char *prompt, int firstChar) {
         char seq[2];
 
         nread = read(fd,&c,1);
-        if (nread <= 0) { count = l.len; break; }
+        if (nread <= 0) {
+            history_len--;
+            free(history[history_len]);
+            count = l.len;
+            break;
+        }
 
         switch(c) {
         case 13:    /* enter */
@@ -1110,6 +1142,8 @@ char *linenoiseWithFirstChar(const char *prompt, int firstChar) {
             count = l.len;
             goto done;
         case 3:     /* ctrl-c */
+            history_len--;
+            free(history[history_len]);
             errno = EAGAIN;
             count = -1;
             goto done;
@@ -1215,7 +1249,12 @@ static void linenoiseAtExit(void) {
 int linenoiseHistoryAdd(const char *line) {
     char *linecopy;
 
+
     if (history_max_len == 0) return 0;
+    /* Skip duplicates of most recent non-empty entry */
+    if (line[0] != '\0' && history_len > 0 &&
+        strcmp(history[history_len-1], line) == 0) return 0;
+
     if (history == NULL) {
         history = malloc(sizeof(char*)*history_max_len);
         if (history == NULL) return 0;
@@ -1265,15 +1304,32 @@ int linenoiseHistorySetMaxLen(int len) {
     return 1;
 }
 
+/* Debug: dump history contents to stderr */
+void linenoiseHistoryDump(void) {
+    fprintf(stderr, "=== History dump: %d entries ===\n", history_len);
+    for (int j = 0; j < history_len; j++) {
+        fprintf(stderr, "[%d] len=%zu \"", j, strlen(history[j]));
+        for (const char *p = history[j]; *p; p++) {
+            if (*p >= 32 && *p < 127) fprintf(stderr, "%c", *p);
+            else fprintf(stderr, "\\x%02x", (unsigned char)*p);
+        }
+        fprintf(stderr, "\"\n");
+    }
+    fprintf(stderr, "=== End dump ===\n");
+}
+
 /* Save the history in the specified file. On success 0 is returned
  * otherwise -1 is returned. */
 int linenoiseHistorySave(char *filename) {
     FILE *fp = fopen(filename,"w");
     int j;
-    
+
     if (fp == NULL) return -1;
-    for (j = 0; j < history_len; j++)
-        fprintf(fp,"%s\n",history[j]);
+    for (j = 0; j < history_len; j++) {
+        /* Skip empty entries (placeholders) */
+        if (history[j][0] != '\0')
+            fprintf(fp,"%s\n",history[j]);
+    }
     fclose(fp);
     return 0;
 }
@@ -1291,11 +1347,13 @@ int linenoiseHistoryLoad(char *filename) {
 
     while (fgets(buf,LINENOISE_MAX_LINE,fp) != NULL) {
         char *p;
-        
+
         p = strchr(buf,'\r');
         if (!p) p = strchr(buf,'\n');
         if (p) *p = '\0';
-        linenoiseHistoryAdd(buf);
+        /* Skip empty lines */
+        if (buf[0] != '\0')
+            linenoiseHistoryAdd(buf);
     }
     fclose(fp);
     return 0;

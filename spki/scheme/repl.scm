@@ -179,6 +179,10 @@
   (when (file-exists? "repl")
     (when *verbose* (print "  rm repl"))
     (delete-file "repl"))
+  ;; Clear REPL history for clean slate testing
+  (when (file-exists? ".vault/repl-history")
+    (when *verbose* (print "  rm .vault/repl-history"))
+    (delete-file ".vault/repl-history"))
   ;; After clean, rebuild the repl binary (we're running from the old one)
   (print "Rebuilding repl...")
   (let ((rc (system "csc -O2 -d1 repl.scm -o repl")))
@@ -482,6 +486,10 @@
 
 ;; --rebuild flag forces all modules to rebuild
 (define *force-rebuild* (cli-option? "rebuild"))
+
+;; Clear REPL history on --rebuild for clean testing
+(when (and *force-rebuild* (file-exists? ".vault/repl-history"))
+  (delete-file ".vault/repl-history"))
 
 (define (any-import-newer? so-time)
   "Check if any .import.scm file is newer than the given timestamp.
@@ -5306,6 +5314,7 @@
 
 (define *command-aliases*
   '((status    . status)
+    (dashboard . dashboard)
     (apropos   . apropos)
     (commit    . tracked-commit)
     (release   . tracked-release)
@@ -5626,8 +5635,7 @@
            (print "  global-search s - Search across soup, audit, wormhole")
            (print "")
            (print "  status          - Quick system status")
-           (print "  (dashboard)     - Full status: session, soup, audit, wormholes")
-           (print "  (session-stats) - View session activity counters")
+           (print "  dashboard       - Full status: session, soup, audit, wormholes")
            (print "")
            (print "  inspect x       - Look inside any object")
            (print "  kwic 'word      - See word in context across memos")
@@ -7138,8 +7146,14 @@ See: Memo-0000 Declaration of Cyberspace
     (set! *history-loaded* #t)))
 
 (define (repl-history-add line)
-  "Add line to history"
-  (when (and (string? line) (> (string-length line) 0))
+  "Add line to history (skip empty, whitespace-only, and prompt strings)"
+  (when (and (string? line)
+             (> (string-length line) 0)
+             ;; Skip whitespace-only
+             (not (string-every char-whitespace? line))
+             ;; Skip if it looks like a prompt (λ or %)
+             (not (string-prefix? "λ" line))
+             (not (string-prefix? "% " line)))
     (lineage#history-add line)))
 
 (define (repl-history-save)
@@ -7177,42 +7191,47 @@ See: Memo-0000 Declaration of Cyberspace
                     (read-char)))  ; Still have tty, keep waiting
               ;; Input ready - read it
               (let ((c (tty-raw-char)))
-                (tty-set-cooked)
+                ;; ESC must stay in raw mode so lineage can read the rest of the sequence
                 (cond
-                  ;; EOF
-                  ((< c 0) #f)
-                  ;; DEL/BS at prompt start - ignore, stay on line, wait for real input
-                  ((or (= c 127) (= c 8))
-                   (read-char))
-                  ;; Immediate shortcuts (no Enter needed) - prompt already shown
-                  ((= c 46)  ; .
-                   (display ".\n")
-                   ".")
-                  ((= c 63)  ; ?
-                   (display "?\n")
-                   "?")
-                  ;; ESC = start of escape sequence (arrow keys, etc)
-                  ;; Pass ESC to lineage so it can read the rest of the sequence
                   ((= c 27)
+                   ;; ESC = start of escape sequence (arrow keys, etc)
+                   ;; Stay in raw mode - lineage will read [A, [B, etc.
                    (let ((line (lineage#lineage-with-first-char prompt 27)))
+                     (tty-set-cooked)
                      (when line (repl-history-add line))
                      (and line (strip-ansi line))))
-                  ;; Ctrl-D = EOF
-                  ((= c 4) #f)
-                  ;; Ctrl-C = cancel
-                  ((= c 3)
-                   (newline)
-                   "")
-                  ;; Enter on empty line - newline, return empty (loop shows next prompt)
-                  ((or (= c 10) (= c 13))
-                   (newline)
-                   "")
-                  ;; Regular char - let lineage redraw with initial (no newline)
                   (else
-                   (let* ((initial (string (integer->char c)))
-                          (line (lineage#lineage-with-initial prompt initial)))
-                     (when line (repl-history-add line))
-                     (and line (strip-ansi line)))))))))))
+                   ;; For all other chars, switch to cooked mode first
+                   (tty-set-cooked)
+                   (cond
+                     ;; EOF
+                     ((< c 0) #f)
+                     ;; DEL/BS at prompt start - ignore, stay on line, wait for real input
+                     ((or (= c 127) (= c 8))
+                      (read-char))
+                     ;; Immediate shortcuts (no Enter needed) - prompt already shown
+                     ((= c 46)  ; .
+                      (display ".\n")
+                      ".")
+                     ((= c 63)  ; ?
+                      (display "?\n")
+                      "?")
+                     ;; Ctrl-D = EOF
+                     ((= c 4) #f)
+                     ;; Ctrl-C = cancel
+                     ((= c 3)
+                      (newline)
+                      "")
+                     ;; Enter on empty line - newline, return empty (loop shows next prompt)
+                     ((or (= c 10) (= c 13))
+                      (newline)
+                      "")
+                     ;; Regular char - let lineage redraw with initial (no newline)
+                     (else
+                      (let* ((initial (string (integer->char c)))
+                             (line (lineage#lineage-with-initial prompt initial)))
+                        (when line (repl-history-add line))
+                        (and line (strip-ansi line)))))))))))))
 
 ;; Custom REPL with comma command handling
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
@@ -7271,7 +7290,7 @@ See: Memo-0000 Declaration of Cyberspace
         ;; Inspector colon commands (Memo-052 Section 8.2)
         ((and (> (string-length line) 0)
               (char=? (string-ref line 0) #\:))
-         (repl-history-add line)
+         ;; History already added by repl-read-line
          (let* ((cmd-line (substring line 1))
                 (parts (string-split cmd-line))
                 (cmd (if (null? parts) "" (car parts)))
@@ -7340,7 +7359,7 @@ See: Memo-0000 Declaration of Cyberspace
 
         ;; Comma commands - using comma asserts schemer mode
         ((char=? (string-ref line 0) #\,)
-         (repl-history-add line)
+         ;; History already added by repl-read-line
          ;; Comma usage = schemer assertion
          (when (eq? *user-mode* 'novice)
            (set! *user-mode* 'schemer)
@@ -7808,7 +7827,7 @@ See: Memo-0000 Declaration of Cyberspace
 
         ;; Regular input - parse with command mode support
         (else
-         (repl-history-add line)
+         ;; History already added by repl-read-line
          (let* ((trimmed (string-trim-both line))
                 (is-scheme? (and (> (string-length trimmed) 0)
                                  (char=? (string-ref trimmed 0) #\()))

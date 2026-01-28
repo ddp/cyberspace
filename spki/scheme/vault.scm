@@ -2801,42 +2801,48 @@ Object Types:
                                               (make-string (max 1 (- col (string-length key-str))) #\space)
                                               val-str))))))
 
-      ;; Header
-      (print "")
-      (print (box-top b "Dashboard"))
-
-      ;; Session stats
-      (box-print b "Session")
-      (let ((stats (session-stats)))
-        (if (null? stats)
-            (box-print b "  (no activity)")
-            (begin
-              (for-each
-               (lambda (stat) (fmt-row (car stat) (cdr stat)))
-               (if show-all? stats (take stats (min 8 (length stats)))))
-              (when (and (not show-all?) (> (length stats) 8))
-                (box-print b (sprintf "  ... and ~a more (use 'full)" (- (length stats) 8)))))))
-
-      (print (box-separator b))
-
-      ;; Soup summary
-      (box-print b "Soup")
-      (let* ((objects (soup-collect-objects))
-             (by-type (make-hash-table)))
+      ;; Collect soup objects first (this increments 'reads counter)
+      ;; so session-stats reflects the dashboard's own activity
+      (let* ((soup-objects (soup-collect-objects))
+             (soup-by-type (make-hash-table)))
         (for-each
-         (lambda (obj) (hash-table-set! by-type (car obj)
-                                         (+ 1 (hash-table-ref/default by-type (car obj) 0))))
-         objects)
-        (if (null? objects)
-            (box-print b "  (empty)")
-            (for-each
-             (lambda (type)
-               (let ((count (hash-table-ref/default by-type type 0)))
-                 (when (> count 0)
-                   (fmt-row type count))))
-             '(archives releases keys audit metadata certs forge))))
+         (lambda (obj) (hash-table-set! soup-by-type (car obj)
+                                        (+ 1 (hash-table-ref/default soup-by-type (car obj) 0))))
+         soup-objects)
 
-      (print (box-separator b))
+        ;; Now capture session stats (after soup read)
+        (let* ((stats (session-stats))
+               (non-zero (filter (lambda (s) (not (equal? (cdr s) 0))) stats))
+               (session-to-show (if show-all? stats non-zero))
+               (zeros (- (length stats) (length non-zero))))
+
+          ;; Header
+          (print "")
+          (print (box-top b "Dashboard"))
+
+          ;; Session stats - show non-zero by default, all with 'full
+          (box-print b "Session")
+          (if (null? stats)
+              (box-print b "  (no activity)")
+              (begin
+                (for-each (lambda (stat) (fmt-row (car stat) (cdr stat))) session-to-show)
+                (when (and (not show-all?) (> zeros 0))
+                  (box-print b (sprintf "  ... and ~a zeros (use 'full)" zeros)))))
+
+          (print (box-separator b))
+
+          ;; Soup summary (use pre-collected data)
+          (box-print b "Soup")
+          (if (null? soup-objects)
+              (box-print b "  (empty)")
+              (for-each
+               (lambda (type)
+                 (let ((count (hash-table-ref/default soup-by-type type 0)))
+                   (when (> count 0)
+                     (fmt-row type count))))
+               '(archives releases keys audit metadata certs forge)))
+
+          (print (box-separator b))
 
       ;; Audit summary
       (box-print b "Audit")
@@ -2880,8 +2886,8 @@ Object Types:
         (when (> lt 0)
           (box-print b (sprintf "  lamport~a~a" (make-string 8 #\space) lt))))
 
-      (print (box-bottom b))
-      (print "")))
+          (print (box-bottom b))
+          (print "")))))
 
   ;;; ============================================================================
   ;;; Node Roles - Memo-037 Implementation
