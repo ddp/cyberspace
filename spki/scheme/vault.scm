@@ -56,7 +56,7 @@
    ask
 
    ;; Cross-module reflection
-   global-search          ; Search hash across soup, audit, wormhole
+   seek                   ; Search hash across soup, audit, wormhole
    dashboard              ; Unified status view
 
    ;; Node Roles (Memo-037)
@@ -2717,12 +2717,12 @@ Object Types:
   ;;; Cross-Module Reflection
   ;;; ============================================================================
 
-  (define (global-search query)
+  (define (seek query)
     "Search for a hash or identifier across soup, audit, and wormhole stores.
      Returns alist of matches: ((soup . results) (audit . results) (wormhole . results))
 
-     (global-search \"sha512:abc123\")  - search by hash prefix
-     (global-search \"2.0.0\")          - search by name/version"
+     (seek \"sha512:abc123\")  - search by hash prefix
+     (seek \"2.0.0\")          - search by name/version"
     (let ((soup-results '())
           (audit-results '())
           (wormhole-results '()))
