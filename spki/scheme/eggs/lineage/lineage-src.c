@@ -360,6 +360,12 @@ void linenoiseAddCompletion(linenoiseCompletions *lc, char *str) {
 
 /* Command completion: add a command to the completion list */
 void linenoiseAddCommand(const char *cmd) {
+    /* Check for duplicate */
+    for (int i = 0; i < completion_count; i++) {
+        if (strcmp(completion_commands[i], cmd) == 0) {
+            return;  /* Already registered */
+        }
+    }
     if (completion_count < MAX_COMPLETIONS) {
         completion_commands[completion_count++] = strdup(cmd);
     }
@@ -381,10 +387,10 @@ static const char *findLastWord(const char *buf, size_t *wordlen) {
         *wordlen = 0;
         return buf;
     }
-    /* Find start of last word (after last space) */
+    /* Find start of last word (after space or open paren) */
     const char *last = buf;
     for (size_t i = 0; i < len; i++) {
-        if (buf[i] == ' ' && i + 1 < len) {
+        if ((buf[i] == ' ' || buf[i] == '(') && i + 1 < len) {
             last = buf + i + 1;
         }
     }
@@ -397,13 +403,18 @@ static void commandCompletionCallback(const char *buf, linenoiseCompletions *lc)
     size_t wordlen;
     const char *lastword = findLastWord(buf, &wordlen);
     size_t prefix_len = lastword - buf;  /* Length of text before last word */
+    int has_open_paren = (prefix_len > 0 && buf[prefix_len - 1] == '(');
 
     for (int i = 0; i < completion_count; i++) {
         if (strncmp(lastword, completion_commands[i], wordlen) == 0) {
             char completed[512];
             if (paren_wrap && prefix_len == 0) {
-                /* Schemer mode, first word: wrap in parens */
+                /* Schemer mode, bare word: wrap in parens */
                 snprintf(completed, sizeof(completed), "(%s)", completion_commands[i]);
+            } else if (paren_wrap && has_open_paren) {
+                /* Schemer mode, user typed open paren: complete with close */
+                snprintf(completed, sizeof(completed), "%.*s%s)",
+                         (int)prefix_len, buf, completion_commands[i]);
             } else {
                 /* Novice mode or argument: prefix + completed word */
                 snprintf(completed, sizeof(completed), "%.*s%s",
@@ -431,6 +442,7 @@ void linenoiseSetHintsEnabled(int enabled) {
 
 /* Find best hint: returns suffix to show after last word, or NULL */
 static const char *findHint(const char *buf) {
+    static char hint_buf[256];
     if (!hints_enabled || completion_count == 0) return NULL;
     size_t len = strlen(buf);
     if (len == 0) return NULL;
@@ -438,6 +450,8 @@ static const char *findHint(const char *buf) {
     /* Match against last word */
     size_t wordlen;
     const char *lastword = findLastWord(buf, &wordlen);
+    size_t prefix_len = lastword - buf;
+    int has_open_paren = (prefix_len > 0 && buf[prefix_len - 1] == '(');
     if (wordlen == 0) return NULL;
 
     /* Find first matching command */
@@ -445,7 +459,13 @@ static const char *findHint(const char *buf) {
         if (strncmp(lastword, completion_commands[i], wordlen) == 0 &&
             strlen(completion_commands[i]) > wordlen) {
             /* Return the suffix (part after what's typed) */
-            return completion_commands[i] + wordlen;
+            const char *suffix = completion_commands[i] + wordlen;
+            if (paren_wrap && (prefix_len == 0 || has_open_paren)) {
+                /* Add closing paren to hint */
+                snprintf(hint_buf, sizeof(hint_buf), "%s)", suffix);
+                return hint_buf;
+            }
+            return suffix;
         }
     }
     return NULL;
