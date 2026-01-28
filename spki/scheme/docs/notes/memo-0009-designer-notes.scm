@@ -645,7 +645,6 @@ Cyberspace soup:  Vault objects, content-addressed")
   (section
     "Closing"
     (p "In Scheme and Dylan with Newton soup.")
-    (p "Forty years from asking permission to enter the kernel, to owning the whole stack.")
     (p "The Little Schemer finally gets to write Scheme."))
 
   (section
