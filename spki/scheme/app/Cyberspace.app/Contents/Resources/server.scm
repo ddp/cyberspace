@@ -828,6 +828,15 @@
         }
       });
 
+      // Ctrl-L: clear screen
+      term.attachCustomKeyEventHandler((e) => {
+        if (e.ctrlKey && e.key === 'l') {
+          term.clear();
+          return false; // Prevent default
+        }
+        return true;
+      });
+
       term.writeln('\x1b[1;36mWelcome to Cyberspace.\x1b[0m');
       term.writeln('\x1b[90mLibrary of Cyberspace v0.9.12\x1b[0m');
       term.writeln('');
