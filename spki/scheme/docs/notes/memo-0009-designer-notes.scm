@@ -352,7 +352,7 @@
     (subsection
       "11.1 VMS Security (1984-1994)"
       (p "DEC was a family. This was merely one specialty.")
-      (p "The Security Project Team was Derrell Piper, Mark Pilant, Andy Goldstein, CJ Coppersmith (MITRE evaluation liaison). TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.")
+      (p "The Security Project Team was Derrell Piper, Mark Pilant, Andy Goldstein, CJ Coppersmith (MITRE evaluation liaison), Linda Benson (DEC corporate program manager for secure systems evaluations). TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0. VAX/SVS (VMM) was still under development and under evaluation at A1.")
       (p "What we built:")
       (list
         (item "$AUDIT_EVENT[W] — write audit events")
