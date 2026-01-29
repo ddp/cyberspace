@@ -541,7 +541,11 @@ Cyberspace soup:  Vault objects, content-addressed")
       "14.4 The Easter Egg"
       (p "Someone notices their lambda is orange, asks why, and learns: 'You're seeing sunset. Somewhere, lambdas are being gathered into the weave of Cyberspace.'")
       (p "Those who need to ask are in need of enlightenment. The Library is here to provide it. They came for the RFCs, they left understanding the lambda.")
-      (p "The brahma muhurta violet isn't just pretty--it's the hour of enlightenment. If they're seeing violet, they're already up at the right time.")))
+      (p "The brahma muhurta violet isn't just pretty--it's the hour of enlightenment. If they're seeing violet, they're already up at the right time."))
+
+    (subsection
+      "14.5 Acknowledgment"
+      (p "Personal credit to Pepe Ozan--co-founder of )'(, founder of the )'( Opera with his lingams fashioned from playa clay. My last mentor, who took me to Banaras to experience Diwali on the banks of Mother Ganga. The prahar breathe because of him.")))
 
   (section
     "15. Little Fluffy Clouds"
