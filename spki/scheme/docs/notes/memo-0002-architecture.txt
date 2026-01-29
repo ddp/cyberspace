@@ -107,44 +107,43 @@ design.
     "If it's in the TCB, it's in OCaml. Otherwise it's in Scheme."
 
 
-    ┌───────────────────────────────────────────────────────────────────────┐
-    │                                                                       │
-    │   TRUSTED COMPUTING BASE (OCaml + Rocq, ~5800 lines)                  │
-    │   Post-quantum verified, Q-Day transition ready                       │
-    │                                                                       │
-    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-    │   │  Ed25519    │  │  ML-DSA-65  │  │  SLH-DSA    │  │   Verify    │ │
-    │   │  (classical)│  │  (lattice)  │  │  (hash-only)│  │   Chain     │ │
-    │   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
-    │                                                                       │
-    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-    │   │  SHA-2/512  │  │  SHAKE256   │  │  BLAKE2b    │  │  QR Merkle  │ │
-    │   │  (harvest)  │  │  (FIPS 202) │  │  (fast)     │  │  (Memo-047) │ │
-    │   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
-    │                                                                       │
-    │   OCaml: 3,600 LOC  │  C FFI: 960 LOC  │  Rocq proofs: 1,260 LOC     │
-    │   libsodium (audited)  │  liboqs (no OpenSSL)  │  libkeccak          │
-    │                                                                       │
-    └───────────────────────────────────────────────────────────────────────┘
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                                                                 │
+    │  TRUSTED COMPUTING BASE (OCaml + Rocq, ~5800 lines)             │
+    │  Post-quantum verified, Q-Day transition ready                  │
+    │                                                                 │
+    │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
+    │  │ Ed25519   │ │ ML-DSA-65 │ │ SLH-DSA   │ │  Verify   │       │
+    │  │(classical)│ │ (lattice) │ │(hash-only)│ │  Chain    │       │
+    │  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
+    │                                                                 │
+    │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
+    │  │ SHA-2/512 │ │ SHAKE256  │ │ BLAKE2b   │ │ QR Merkle │       │
+    │  │ (harvest) │ │(FIPS 202) │ │  (fast)   │ │(Memo-047) │       │
+    │  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
+    │                                                                 │
+    │  OCaml: 3,600  │  C FFI: 960  │  Rocq proofs: 1,260 LOC        │
+    │  libsodium (audited)  │  liboqs (no OpenSSL)  │  libkeccak     │
+    │                                                                 │
+    └─────────────────────────────────────────────────────────────────┘
 
-                              FFI (tiny surface)
+                            FFI (tiny surface)
 
-    ┌───────────────────────────────────────────────────────────────────────┐
-    │                                                                       │
-    │   EVERYTHING ELSE (Cyberspace Scheme, unlimited)                      │
-    │                                                                       │
-    │   Vault - Audit - Replication - Names - Discovery - Gossip            │
-    │   CLI Tools - API Server - Library - Scripts - Forge                  │
-    │                                                                       │
-    │   Change it anytime. It's just policy.                                │
-    │                                                                       │
-    └───────────────────────────────────────────────────────────────────────┘
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                                                                 │
+    │  EVERYTHING ELSE (Cyberspace Scheme, unlimited)                 │
+    │                                                                 │
+    │  Vault - Audit - Replication - Names - Discovery - Gossip       │
+    │  CLI Tools - API Server - Library - Scripts - Forge             │
+    │                                                                 │
+    │  Change it anytime. It's just policy.                           │
+    │                                                                 │
+    └─────────────────────────────────────────────────────────────────┘
 
 Rationale:
 
   * OCaml: Strong types, formal verification with Rocq, compile-time safety
-  * Cyberspace Scheme: Chicken Scheme dialect with project-specific
-    extensions, S-expressions everywhere, interactive development
+  * Cyberspace Scheme: Chicken Scheme dialect with project-specific extensions, S-expressions everywhere, interactive development
   * The boundary: Frozen TCB, proven in Rocq. Policy layer evolves freely.
 
 A smaller TCB means fewer bugs that can break security. The Rocq proofs
@@ -460,8 +459,8 @@ Each traces to original research. Each runs. Each is tested.
 7.1 TCB Minimization
 --------------------
 
-The attack surface is limited to ~3000 lines of OCaml calling libsodium
-and liboqs. This code is:
+The attack surface is limited to ~5800 lines (OCaml + C FFI + Rocq
+proofs) calling libsodium and liboqs. This code is:
 
   * Formally specified
   * Proven in Rocq
@@ -546,15 +545,17 @@ that MUST be reverified on any change to:
   * spki/tcb/coq/ - Rocq formal proofs
   * spki/scheme/ - The Cyberspace Scheme policy layer
 
-The generate-memos.sh pipeline includes a reminder, but verification
-is a human responsibility. These documents describe what exists, not
-what is planned.
+The generate-memos.sh pipeline includes a reminder, but verification is
+a human responsibility. These documents describe what exists, not what
+is planned.
 
 
 ------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
 
+  * 2026-01-29 (3)
+  * Fix box-drawing alignment in TCB diagram
   * 2026-01-29 (2)
   * Update TCB diagram: PQ algorithms, Rocq proofs, line counts
   * Rename "Chicken Scheme" to "Cyberspace Scheme" (our dialect)
