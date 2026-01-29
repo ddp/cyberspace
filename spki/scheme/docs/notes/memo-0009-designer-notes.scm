@@ -185,13 +185,13 @@
    4   Permit security profile mods when object server unavailable
    5   Permit protected object creation when cluster DB unreachable
    6   Allow SPAWN/LIB$SPAWN in CAPTIVE accounts
-   7   Reserved to VSI
-   8   Reserved to VSI
+   7   Reserved to HP
+   8   Reserved to HP
    9   Disable password sync among ACME agents
   10   Allow privileged apps to authenticate expired/restricted
   11   Allow any SYSUAF record to use external authentication
   12   Intrusion scope (0=cluster-wide, 1=local only)
-  13   Reserved to VSI
+  13   Reserved to HP
   14   Enable internal file/dir name reading with X access (POSIX)
 
   Default: 7 (bits 0-2 set) - preserves DECwindows compatibility
