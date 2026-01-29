@@ -167,37 +167,31 @@
 
     (subsection
       "7.7 Audit Trail Heritage"
-      (p "The cryptographic audit trail (Memo-0005) descends from VMS SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of VMS 6.0 (1993). That system introduced:")
+      (p "The cryptographic audit trail (Memo-0005) descends from VMS SECURITY.AUDIT$JOURNAL and the security infrastructure of VMS 6.0 (1993). That system introduced:")
       (list
-        (item "SECURITY_POLICY bit 7 propagation")
-        (item "Intrusion detection state replicated cluster-wide")
-        (item "Breakin attempts detected across all nodes as one")
+        (item "LGI (Login) callbacks for intrusion detection - John Covert (COVERT::COVERT)")
+        (item "Cluster-wide intrusion detection - Rob Adams, written in Ada")
+        (item "Break-in detection via LGI_BRK_* sysgen parameters")
         (item "TLV-encoded object store")
         (item "The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records"))
-      (p "The SECURITY_POLICY system parameter controlled C2/B1 security behavior:")
+      (p "The SECURITY_POLICY system parameter controlled C2/B1 security behavior. In VMS 6.0:")
       (pre "
-  Bit  Definition
+  Bit  Definition (VMS 6.0)
   ---  ----------------------------------------------------------
-   0   Obsolete
+   0   Allow DECwindows to display PostScript extensions
    1   Allow multiple usernames to connect to DECW$SERVER
    2   Allow unevaluated DECwindows transports (TCP/IP)
    3   Allow $SIGPRC and $PRCTERM to span job trees
    4   Permit security profile mods when object server unavailable
    5   Permit protected object creation when cluster DB unreachable
    6   Allow SPAWN/LIB$SPAWN in CAPTIVE accounts
-   7   Reserved to HP
-   8   Reserved to HP
-   9   Disable password sync among ACME agents
-  10   Allow privileged apps to authenticate expired/restricted
-  11   Allow any SYSUAF record to use external authentication
-  12   Intrusion scope (0=cluster-wide, 1=local only)
-  13   Reserved to HP
-  14   Enable internal file/dir name reading with X access (POSIX)
+   7   Cluster-wide intrusion state propagation
 
   Default: 7 (bits 0-2 set) - preserves DECwindows compatibility
   C2 mode: 0 - disables all unevaluated configurations
 ")
-      (p "Bit 7 in VMS 6.0 was cluster-wide security state propagation. When set, breakin detection and intrusion state replicated across all cluster nodes so N nodes behaved as one security domain.")
+      (p "Intrusion detection in VMS 6.0 used LGI callbacks for local break-in detection. The LGI_BRK_* parameters controlled break-in evasion: LGI_BRK_LIM (attempts before lockout), LGI_BRK_TMO (timeout window), LGI_BRK_DISUSER (disable account on breakin), LGI_BRK_TERM (disable terminal on breakin).")
+      (p "Bit 7 extended this cluster-wide. When set, breakin detection and intrusion state replicated across all cluster nodes so N nodes behaved as one security domain.")
       (p "The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.")
       (p "Cyberspace audit trails apply the same principle at IPv6 scale.")))
 
@@ -389,7 +383,7 @@
         (item "$CHECK_USER_PROTECTION[W] - user protection checking")
         (item "$IMPERSONATE[W] - impersonation framework (with Rich Bouchard)")
         (item "$AUDIT_EVENT[W] - the entire auditing subsystem (final form)")
-        (item "SYS$SUBSYSTEM - Protected Subsystem system service")
+        (item "$SUBSYSTEM[W] - Protected Subsystem system service")
         (item "C2/B1 certified security model (Orange Book compliance, proven secure)"))
       (p "The original $IMPERSONATION framework was authored by myself with Rich Bouchard. It was lost during the Mitnick incidents when Andy Goldstein and I decided we needed to rebuild our compiler chain from known good offsite backups--with Ken Thompson's 'Reflections on Trusting Trust' fresh in our minds. In doing so, we lost a year of development during Alpha, including the original kernel threads implementation and the $IMPERSONATION framework.")
       (p "Access: The security project team (or anyone we designated) were the only ones allowed in the kernel group's modules. Dave Cutler's team begrudgingly accepted this as a mandate from heaven (Ken Olsen // Maynard). We got in on a mandate. We stayed because the work was good.")
