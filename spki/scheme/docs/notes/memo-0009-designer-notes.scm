@@ -132,9 +132,10 @@
         (item "Near East: Turkish, Armenian")
         (item "Mediterranean (George Cross island): Maltese")
         (item "Detachment 101: Vietnamese, Thai, Lao, Korean")
-        (item "Indic: Sanskrit, Devanāgarī")
+        (item "Indic: Sanskrit (IAST transliteration), Devanāgarī")
         (item "Literary: Sindarin (Tolkien's Elvish), Dante's Divina Commedia"))
-      (p "Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo, and the Princeton Dante Project. All diacriticals converted to UTF-8.")
+      (p "Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo, the Princeton Dante Project, and the Cologne Digital Sanskrit Lexicon (Monier-Williams 1872). All diacriticals converted to UTF-8.")
+      (p "Sanskrit uses IAST (International Alphabet of Sanskrit Transliteration) - the standard romanization that preserves the full phonetic distinctions of Devanāgarī through diacritics (ā, ī, ū, ṇ, ṃ, ś, ṣ, etc.). IAST is reversible: any IAST text can be converted back to Devanāgarī without ambiguity.")
       (p "Sindarin preserves Tolkien's circumflexes: Manwë, Aulë, Andúril. Dante's medieval Italian sits alongside. The OSS framing is itself an easter egg - layers of meaning for those who dig."))
 
     (subsection
