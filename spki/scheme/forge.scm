@@ -77,6 +77,8 @@
       maltese
       ;; Detachment 101
       vietnamese thai lao korean
+      ;; Indic
+      sanskrit
       ;; Literary
       dante))
 
