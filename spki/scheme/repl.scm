@@ -7244,18 +7244,20 @@ The Ten Commandments of λ
 
 ;; Prahar (time-of-day) colors for lambda prompt (Memo-0009 Section 14)
 ;; Independent of theme - the lambda breathes with the day
+;; Sanskrit: brahma muhūrta, prātaḥkāla, saṅgava, madhyāhna,
+;;           aparāhṇa, sāyāhna, pradoṣa, niśītha
 (define (prahar-color)
   "Return ANSI 256-color code for current prahar (watch of the day)"
   (let ((hour (vector-ref (seconds->local-time (current-seconds)) 2)))
     (cond
-      ((and (>= hour 4) (< hour 6))   "38;5;135")  ; violet - brahma muhurta
-      ((and (>= hour 6) (< hour 8))   "38;5;220")  ; gold - dawn
-      ((and (>= hour 8) (< hour 11))  "38;5;30")   ; teal - morning
-      ((and (>= hour 11) (< hour 14)) "38;5;46")   ; phosphor - midday
-      ((and (>= hour 14) (< hour 17)) "38;5;226")  ; neon - afternoon
-      ((and (>= hour 17) (< hour 19)) "38;5;208")  ; orange - sunset
-      ((and (>= hour 19) (< hour 22)) "38;5;209")  ; coral - evening
-      (else                           "38;5;51")))) ; cyan - night (22-04)
+      ((and (>= hour 4) (< hour 6))   "38;5;135")  ; violet - brahma muhūrta
+      ((and (>= hour 6) (< hour 8))   "38;5;220")  ; gold - prātaḥkāla
+      ((and (>= hour 8) (< hour 11))  "38;5;30")   ; teal - saṅgava
+      ((and (>= hour 11) (< hour 14)) "38;5;46")   ; phosphor - madhyāhna
+      ((and (>= hour 14) (< hour 17)) "38;5;226")  ; neon - aparāhṇa
+      ((and (>= hour 17) (< hour 19)) "38;5;208")  ; orange - sāyāhna
+      ((and (>= hour 19) (< hour 22)) "38;5;209")  ; coral - pradoṣa
+      (else                           "38;5;51")))) ; cyan - niśītha (22-04)
 
 (define (prahar-prompt)
   "Return λ prompt colored by current prahar"
