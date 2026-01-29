@@ -328,9 +328,9 @@
       "9.8 Random Number Generation"
       (p "All randomness flows through libsodium's randombytes_buf(), which uses:")
       (list
-        (item "Linux: getrandom(2) syscall")
+        (item "Linux: getrandom(2) syscall (ChaCha20-based since 5.17, Ted Tso)")
         (item "macOS/BSDs: arc4random_buf() (ChaCha20-based, name is legacy)"))
-      (p "Hardware entropy (RDRAND/RDSEED) feeds the OS pool. Quantum RNG (ID Quantique, drand beacons) planned for Phase 3+."))
+      (p "All platforms now use ChaCha20 underneath - different APIs, same algorithm. Hardware entropy (RDRAND/RDSEED) feeds the OS pool. Quantum RNG (ID Quantique, drand beacons) planned for Phase 3+."))
 
     (subsection
       "9.9 The TCB Principle"
