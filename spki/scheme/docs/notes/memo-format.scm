@@ -180,6 +180,16 @@
   "Return display width of a codepoint (1 or 2 cells).
    Emojis and wide characters take 2 cells in monospace fonts."
   (cond
+    ;; Devanagari - base characters ~1.5 cells, use 2 for safety
+    ((<= #x0900 cp #x097F) 2)     ; Devanagari
+    ((<= #x0980 cp #x09FF) 2)     ; Bengali
+    ((<= #x0A00 cp #x0A7F) 2)     ; Gurmukhi
+    ((<= #x0A80 cp #x0AFF) 2)     ; Gujarati
+    ((<= #x0B00 cp #x0B7F) 2)     ; Oriya
+    ((<= #x0B80 cp #x0BFF) 2)     ; Tamil
+    ((<= #x0C00 cp #x0C7F) 2)     ; Telugu
+    ((<= #x0C80 cp #x0CFF) 2)     ; Kannada
+    ((<= #x0D00 cp #x0D7F) 2)     ; Malayalam
     ;; Emoji ranges (commonly used)
     ((<= #x1F300 cp #x1F9FF) 2)   ; Miscellaneous Symbols, Emoticons, etc.
     ((<= #x2600 cp #x26FF) 2)     ; Miscellaneous Symbols
