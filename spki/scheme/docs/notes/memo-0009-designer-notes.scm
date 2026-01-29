@@ -278,7 +278,7 @@
         (header "Algorithm" "Use" "Selection Rationale")
         (row "SHA-512" "Object identity, signatures" "Conservative choice, 256-bit quantum security")
         (row "BLAKE2b" "Content addressing, KDF" "Faster than SHA-2, proven design, libsodium native")
-        (row "SHAKE256" "Post-quantum Merkle (planned)" "XOF for variable output, SHA-3 family, NIST standard")
+        (row "SHAKE256" "Post-quantum Merkle" "XOF for variable output, SHA-3 family, NIST standard")
         (row "Argon2id" "Passphrase stretching" "Memory-hard, resists GPU/ASIC, winner of PHC"))
       (p "Hash functions survive quantum computers. Shor's algorithm (exponential speedup) breaks signatures and key exchange but not hashes. Grover's algorithm provides only quadratic speedup against hashes — halving effective security bits, not destroying them.")
       (p "SHA-512's 512 bits become 256-bit quantum security. Still beyond brute force. SHA-256 would drop to 128-bit quantum security — acceptable but less margin. We chose SHA-512 for the conservative 256-bit post-quantum level.")
