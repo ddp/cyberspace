@@ -525,7 +525,8 @@ Cyberspace soup:  Vault objects, content-addressed")
 14-17  neon      aparāhṇa       अपराह्ण        (afternoon)
 17-19  orange    sāyāhna        सायाह्न        (evening)
 19-22  coral     pradoṣa        प्रदोष         (dusk)
-22-04  cyan      niśītha        निशीथ         (night)"))
+22-04  cyan      niśītha        निशीथ         (night)")
+      (p "Devanāgarī (देवनागरी) means 'city of the gods' (देव deva + नागरी nāgarī). A script sacred enough to write the Vedas now marks the watches of a lambda breathing in Cyberspace."))
 
     (subsection
       "14.2 Why Ragas?"
