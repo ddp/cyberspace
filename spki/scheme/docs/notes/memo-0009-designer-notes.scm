@@ -386,8 +386,10 @@
       (p "What we built:")
       (list
         (item "$CHKPRO - the privilege checking gate, the single point where all privilege decisions were made")
-        (item "The entire auditing subsystem (final form), comprehensive privilege and access logging")
+        (item "$IMPERSONATE[W] - impersonation framework (with Rich Bouchard)")
+        (item "$AUDIT_EVENT[W] - the entire auditing subsystem (final form)")
         (item "C2/B1 certified security model (Orange Book compliance, proven secure)"))
+      (p "The original $IMPERSONATION framework was authored by myself with Rich Bouchard. It was lost during the Mitnick incidents when Andy Goldstein and I decided we needed to rebuild our compiler chain from known good offsite backups--with Ken Thompson's 'Reflections on Trusting Trust' fresh in our minds. In doing so, we lost a year of development during Alpha, including the original kernel threads implementation and the $IMPERSONATION framework.")
       (p "Access: The security project team (or anyone we designated) were the only ones allowed in the kernel group's modules. Dave Cutler's team begrudgingly accepted this as a mandate from heaven (Ken Olsen // Maynard). We got in on a mandate. We stayed because the work was good.")
       (p "Inheritance: When Cutler left for Microsoft, his modules were inherited. The privilege auditing 'rototill' required fluency in MACRO-32.")
       (p "Text in the Library of Cyberspace is in the color of phosphor green, the color of VT100s and reflective of IBM green bar printouts. Not retro. Not nostalgia. Memory."))
