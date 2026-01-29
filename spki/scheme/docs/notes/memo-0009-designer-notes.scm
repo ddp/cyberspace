@@ -598,12 +598,14 @@ Cyberspace soup:  Vault objects, content-addressed")
 1945  Trinity test (July 16, Alamogordo)
 1947  Bell Labs invents the transistor (Bardeen, Brattain, Shockley)
 1958  ARPA founded (response to Sputnik)
+1960  DEC PDP-1 (first minicomputer, TECO, Spacewar!)
 1965  Multics development begins (MIT/GE/Bell Labs)
 1969  ARPANET: BBN's IMPs (Honeywell 516) connect first four nodes
       UCLA: SDS Sigma 7 (SEX), SRI: SDS 940 (Genie)
       UCSB: IBM 360/75 (OS/MVT), Utah: PDP-10 (TENEX)
 1969  Bill Wulf creates BLISS at CMU
 1975  Gasser's password generator (Multics)
+1976  TOPS-20 (TWENEX) - BBN's TENEX becomes DEC product
 1984  VAXcluster, VMS security work begins
 1986  NSFnet replaces ARPANET backbone
 1985  VMS C2 certification
