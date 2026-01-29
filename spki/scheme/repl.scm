@@ -3743,7 +3743,7 @@
     (print "│  (pending)  (accept 'name)  (reject 'name)                       │")
     (print "└──────────────────────────────────────────────────────────────────┘")
     (print "")
-    (display *prompt*)  ; re-display prompt
+    (display (current-prompt))  ; re-display prompt
     (flush-output)
     (void)))
 
@@ -7240,6 +7240,32 @@ The Ten Commandments of λ
 
 ;; Settable prompt
 (define *prompt* "% ")
+(define *prompt-fn* #f)  ; thunk for dynamic prompts, or #f for static
+
+;; Prahar (time-of-day) colors for lambda prompt (Memo-0009 Section 14)
+;; Independent of theme - the lambda breathes with the day
+(define (prahar-color)
+  "Return ANSI 256-color code for current prahar (watch of the day)"
+  (let ((hour (vector-ref (seconds->local-time (current-seconds)) 2)))
+    (cond
+      ((and (>= hour 4) (< hour 6))   "38;5;135")  ; violet - brahma muhurta
+      ((and (>= hour 6) (< hour 8))   "38;5;220")  ; gold - dawn
+      ((and (>= hour 8) (< hour 11))  "38;5;30")   ; teal - morning
+      ((and (>= hour 11) (< hour 14)) "38;5;46")   ; phosphor - midday
+      ((and (>= hour 14) (< hour 17)) "38;5;226")  ; neon - afternoon
+      ((and (>= hour 17) (< hour 19)) "38;5;208")  ; orange - sunset
+      ((and (>= hour 19) (< hour 22)) "38;5;209")  ; coral - evening
+      (else                           "38;5;51")))) ; cyan - night (22-04)
+
+(define (prahar-prompt)
+  "Return λ prompt colored by current prahar"
+  (string-append "\x1b[" (prahar-color) "mλ\x1b[0m "))
+
+(define (current-prompt)
+  "Return current prompt string, evaluating thunk if dynamic"
+  (if *prompt-fn*
+      (*prompt-fn*)
+      *prompt*))
 
 ;; Help invocation tracking - second ? shows more detail
 (define *help-call-count* 0)
@@ -7255,6 +7281,7 @@ The Ten Commandments of λ
   "Switch to novice mode - guardrails on, confirmations required"
   (set! *user-mode* 'novice)
   (set! *prompt* "% ")
+  (set! *prompt-fn* #f)       ; static prompt
   (set! *paren-count* 0)      ; reset mode detection
   (set! *command-count* 0)
   (lineage#set-paren-wrap 0)  ; bare word completions
@@ -7264,7 +7291,7 @@ The Ten Commandments of λ
 (define (lambda-mode)
   "Switch to lambda mode - full power, no safety rails"
   (set! *user-mode* 'schemer)
-  (set! *prompt* "λ ")
+  (set! *prompt-fn* prahar-prompt)  ; dynamic prahar-colored λ
   (lineage#set-paren-wrap 1)  ; wrap completions in parens
   (print "λ mode. Full power, no confirmations."))
 
@@ -7325,7 +7352,7 @@ The Ten Commandments of λ
              (>= *paren-count* *mode-threshold*)
              (> *paren-count* (* 2 *command-count*)))
     (set! *user-mode* 'schemer)
-    (set! *prompt* "λ ")
+    (set! *prompt-fn* prahar-prompt)  ; dynamic prahar-colored λ
     (lineage#set-paren-wrap 1)  ; wrap completions in parens
     (print "")
     (print "Detected Scheme usage - switching to λ mode.")
@@ -7518,7 +7545,7 @@ The Ten Commandments of λ
   (let loop ()
     ;; Don't clear *last-call-chain* here - it should persist until next exception
     ;; capture-exception will overwrite it when a new exception occurs
-    (let ((line (repl-read-line *prompt*)))
+    (let ((line (repl-read-line (current-prompt))))
       (cond
         ;; EOF (lineage returns #f, read-line returns eof-object)
         ((or (not line) (eof-object? line))
@@ -7642,7 +7669,7 @@ The Ten Commandments of λ
          ;; Comma usage = schemer assertion
          (when (eq? *user-mode* 'novice)
            (set! *user-mode* 'schemer)
-           (set! *prompt* "λ ")
+           (set! *prompt-fn* prahar-prompt)  ; dynamic prahar-colored λ
            (lineage#set-paren-wrap 1))
          (let* ((cmd-line (substring line 1))
                 (parts (string-split cmd-line))
