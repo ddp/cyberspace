@@ -167,31 +167,7 @@
 
     (subsection
       "7.7 Audit Trail Heritage"
-      (p "The cryptographic audit trail (Memo-0005) descends from VMS SECURITY.AUDIT$JOURNAL and the security infrastructure of VMS 6.0 (1993). That system introduced:")
-      (list
-        (item "LGI (Login) callbacks for intrusion detection - John Covert (COVERT::COVERT)")
-        (item "Cluster-wide intrusion detection - Rob Adams, written in Ada")
-        (item "Break-in detection via LGI_BRK_* sysgen parameters")
-        (item "TLV-encoded object store")
-        (item "The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records"))
-      (p "The SECURITY_POLICY system parameter controlled C2/B1 security behavior. In VMS 6.0:")
-      (pre "
-  Bit  Definition (VMS 6.0)
-  ---  ----------------------------------------------------------
-   0   Allow DECwindows to display PostScript extensions
-   1   Allow multiple usernames to connect to DECW$SERVER
-   2   Allow unevaluated DECwindows transports (TCP/IP)
-   3   Allow $SIGPRC and $PRCTERM to span job trees
-   4   Permit security profile mods when object server unavailable
-   5   Permit protected object creation when cluster DB unreachable
-   6   Allow SPAWN/LIB$SPAWN in CAPTIVE accounts
-   7   Cluster-wide intrusion state propagation
-
-  Default: 7 (bits 0-2 set) - preserves DECwindows compatibility
-  C2 mode: 0 - disables all unevaluated configurations
-")
-      (p "Intrusion detection in VMS 6.0 used LGI callbacks for local break-in detection. The LGI_BRK_* parameters controlled break-in evasion: LGI_BRK_LIM (attempts before lockout), LGI_BRK_TMO (timeout window), LGI_BRK_DISUSER (disable account on breakin), LGI_BRK_TERM (disable terminal on breakin).")
-      (p "Bit 7 extended this cluster-wide. When set, breakin detection and intrusion state replicated across all cluster nodes so N nodes behaved as one security domain.")
+      (p "The cryptographic audit trail (Memo-0005) descends from VMS's B1 auditing subsystem and the cluster-wide security infrastructure of VMS 6.0 (1993).")
       (p "The design principle then, as now: cluster nodes behave identically. N nodes, one security domain. Every significant action audited, every audit record signed.")
       (p "Cyberspace audit trails apply the same principle at IPv6 scale.")))
 
@@ -436,7 +412,16 @@ SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
       (p "The original $IMPERSONATION framework was authored by myself with Rich Bouchard. It was lost during the Mitnick incidents when Andy Goldstein and I decided we needed to rebuild our compiler chain from known good offsite backups - with Ken Thompson's 'Reflections on Trusting Trust' fresh in our minds. In doing so, we lost a year of development during Alpha, including the original kernel threads implementation and the $IMPERSONATION framework."))
 
     (subsection
-      "11.5 Syntax Heritage"
+      "11.5 Security System Services"
+      (p "The B1 auditing subsystem exposed these system services:")
+      (list
+        (item "$AUDIT_EVENT, $AUDIT_EVENTW — write audit events")
+        (item "$CHECK_PRIVILEGE — check caller's privilege mask")
+        (item "$CHKPRO — check protection (access control evaluation)")
+        (item "$CHECK_ACCESS — evaluate access rights")))
+
+    (subsection
+      "11.6 Syntax Heritage"
       (p "Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:")
       (code scheme "(translate text from: 'en to: 'fr)
 (enroll-request name timeout: 30)")
@@ -448,7 +433,7 @@ SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
       (p "Self syntax was weird. Smalltalk doesn't work for math people (2 + 3 * 4 = 20, not 14). Scheme is honest - prefix, unambiguous, mathematical."))
 
     (subsection
-      "11.6 IETF Security Protocols"
+      "11.7 IETF Security Protocols"
       (p "VMS Security Project Leader → TGV → Cisco → loaned to Microsoft for IPsec/IKE.")
       (p "draft-ietf-ipsec-isakmp-gss-auth-07 (1998-2001) defined GSS-API authentication for IKE, binding Kerberos into Windows 2000's IPsec implementation. Seven revisions, co-authored with Swander on later versions.")
       (p "The draft defined authentication method values:")
@@ -671,7 +656,8 @@ Cyberspace soup:  Vault objects, content-addressed")
 
   (section
     "Changelog"
-    (p "- 2026-01-28 — Added IETF Security Protocols (section 11.6): draft-ietf-ipsec-isakmp-gss-auth, GSS-API/Kerberos for NT5")
+    (p "- 2026-01-29 — Simplified Audit Trail Heritage (7.7), added Security System Services (11.5)")
+    (p "- 2026-01-28 — Added IETF Security Protocols (section 11.7): draft-ietf-ipsec-isakmp-gss-auth, GSS-API/Kerberos for NT5")
     (p "- 2026-01-28 — Added Resident Modules section (section 18): blade guards, resident-info, heritage")
     (p "- 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)")
     (p "- 2026-01-22 — Folded designer-notes.scm into memo (open kimono); added call/cc rationale")
