@@ -145,7 +145,7 @@ didFinishNavigation:(WKNavigation *)navigation {
         @"windowHeight": @800,
         @"fontName": @"SF Mono",
         @"fontSize": @13,
-        @"theme": @"dark"
+        @"theme": @"phosphor"
     }];
 }
 
@@ -387,8 +387,8 @@ didFinishNavigation:(WKNavigation *)navigation {
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-    // Find an available port
-    self.backendPort = 7780;
+    // Network Alchemy clustering port
+    self.backendPort = 4321;
 
     // Restore window frame from preferences
     NSRect frame = [PreferencesManager windowFrame];
@@ -574,6 +574,10 @@ didFinishNavigation:(WKNavigation *)navigation {
                        action:@selector(showAbout:)
                 keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
+    [appMenu addItemWithTitle:@"Preferences…"
+                       action:@selector(showPreferences:)
+                keyEquivalent:@","];
+    [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Quit Cyberspace"
                        action:@selector(terminate:)
                 keyEquivalent:@"q"];
@@ -608,9 +612,9 @@ didFinishNavigation:(WKNavigation *)navigation {
     // Theme submenu
     NSMenuItem *themeMenuItem = [[NSMenuItem alloc] initWithTitle:@"Theme" action:nil keyEquivalent:@""];
     NSMenu *themeMenu = [[NSMenu alloc] initWithTitle:@"Theme"];
+    [themeMenu addItemWithTitle:@"Phosphor" action:@selector(setThemePhosphor:) keyEquivalent:@""];
+    [themeMenu addItemWithTitle:@"Amber" action:@selector(setThemeAmber:) keyEquivalent:@""];
     [themeMenu addItemWithTitle:@"Dark" action:@selector(setThemeDark:) keyEquivalent:@""];
-    [themeMenu addItemWithTitle:@"Light" action:@selector(setThemeLight:) keyEquivalent:@""];
-    [themeMenu addItemWithTitle:@"Solarized" action:@selector(setThemeSolarized:) keyEquivalent:@""];
     themeMenuItem.submenu = themeMenu;
     [viewMenu addItem:themeMenuItem];
 
@@ -660,13 +664,125 @@ didFinishNavigation:(WKNavigation *)navigation {
 
 - (void)showAbout:(id)sender {
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"Cyberspace";
-    alert.informativeText = @"Library of Cyberspace\n\n"
-                           @"A distributed preservation system with\n"
-                           @"cryptographic audit trails and SPKI authorization.\n\n"
-                           @"Copyright 2026 Yoyodyne";
+    alert.messageText = @"Library of Cyberspace";
+    alert.informativeText = @"Version 0.4.0\n\n"
+                           @"Distributed preservation with cryptographic "
+                           @"audit trails and SPKI authorization.\n\n"
+                           @"44 modules • ~71K LOC";
     alert.alertStyle = NSAlertStyleInformational;
+
+    // Set app icon if available
+    NSImage *icon = [NSImage imageNamed:NSImageNameApplicationIcon];
+    if (icon) {
+        alert.icon = icon;
+    }
+
     [alert runModal];
+}
+
+- (void)showPreferences:(id)sender {
+    // Create preferences window if needed
+    static NSWindow *prefsWindow = nil;
+    if (prefsWindow && [prefsWindow isVisible]) {
+        [prefsWindow makeKeyAndOrderFront:nil];
+        return;
+    }
+
+    prefsWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 400, 300)
+                                              styleMask:NSWindowStyleMaskTitled |
+                                                        NSWindowStyleMaskClosable
+                                                backing:NSBackingStoreBuffered
+                                                  defer:NO];
+    prefsWindow.title = @"Preferences";
+    [prefsWindow center];
+
+    NSView *contentView = prefsWindow.contentView;
+    CGFloat y = 250;
+
+    // Theme section
+    NSTextField *themeLabel = [NSTextField labelWithString:@"Theme"];
+    themeLabel.font = [NSFont boldSystemFontOfSize:13];
+    themeLabel.frame = NSMakeRect(20, y, 100, 20);
+    [contentView addSubview:themeLabel];
+    y -= 30;
+
+    NSPopUpButton *themePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(20, y, 150, 26)];
+    [themePopup addItemsWithTitles:@[@"Phosphor", @"Amber", @"Dark"]];
+    NSString *currentTheme = [PreferencesManager theme];
+    if ([currentTheme isEqualToString:@"phosphor"]) [themePopup selectItemAtIndex:0];
+    else if ([currentTheme isEqualToString:@"amber"]) [themePopup selectItemAtIndex:1];
+    else [themePopup selectItemAtIndex:2];
+    themePopup.target = self;
+    themePopup.action = @selector(themePopupChanged:);
+    [contentView addSubview:themePopup];
+    y -= 40;
+
+    // Font section
+    NSTextField *fontLabel = [NSTextField labelWithString:@"Font"];
+    fontLabel.font = [NSFont boldSystemFontOfSize:13];
+    fontLabel.frame = NSMakeRect(20, y, 100, 20);
+    [contentView addSubview:fontLabel];
+    y -= 30;
+
+    NSPopUpButton *fontPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(20, y, 200, 26)];
+    [fontPopup addItemsWithTitles:@[@"SF Mono", @"Menlo", @"Monaco", @"IBM Plex Mono", @"Courier New"]];
+    NSString *currentFont = [PreferencesManager fontName];
+    NSInteger fontIndex = [fontPopup indexOfItemWithTitle:currentFont];
+    if (fontIndex >= 0) [fontPopup selectItemAtIndex:fontIndex];
+    fontPopup.target = self;
+    fontPopup.action = @selector(fontPopupChanged:);
+    [contentView addSubview:fontPopup];
+    y -= 40;
+
+    // Font size
+    NSTextField *sizeLabel = [NSTextField labelWithString:@"Font Size"];
+    sizeLabel.font = [NSFont boldSystemFontOfSize:13];
+    sizeLabel.frame = NSMakeRect(20, y, 100, 20);
+    [contentView addSubview:sizeLabel];
+    y -= 30;
+
+    NSSlider *sizeSlider = [[NSSlider alloc] initWithFrame:NSMakeRect(20, y, 200, 26)];
+    sizeSlider.minValue = 9;
+    sizeSlider.maxValue = 24;
+    sizeSlider.integerValue = (NSInteger)[PreferencesManager fontSize];
+    sizeSlider.target = self;
+    sizeSlider.action = @selector(fontSizeSliderChanged:);
+    [contentView addSubview:sizeSlider];
+
+    NSTextField *sizeValue = [NSTextField labelWithString:[NSString stringWithFormat:@"%d pt", (int)[PreferencesManager fontSize]]];
+    sizeValue.frame = NSMakeRect(230, y, 60, 20);
+    sizeValue.tag = 100;  // Tag for updating
+    [contentView addSubview:sizeValue];
+
+    [prefsWindow makeKeyAndOrderFront:nil];
+}
+
+- (void)themePopupChanged:(NSPopUpButton *)sender {
+    NSArray *themes = @[@"phosphor", @"amber", @"dark"];
+    NSString *theme = themes[sender.indexOfSelectedItem];
+    [self applyTheme:theme];
+}
+
+- (void)fontPopupChanged:(NSPopUpButton *)sender {
+    [self applyFont:sender.titleOfSelectedItem];
+}
+
+- (void)fontSizeSliderChanged:(NSSlider *)sender {
+    CGFloat size = sender.integerValue;
+    NSString *fontName = [PreferencesManager fontName];
+    [PreferencesManager setFontName:fontName size:size];
+    [self.webView postMessage:@{
+        @"type": @"preferences.font",
+        @"fontName": fontName,
+        @"fontSize": @(size)
+    }];
+
+    // Update label in preferences window
+    NSWindow *prefsWindow = sender.window;
+    NSTextField *sizeValue = [prefsWindow.contentView viewWithTag:100];
+    if (sizeValue) {
+        sizeValue.stringValue = [NSString stringWithFormat:@"%d pt", (int)size];
+    }
 }
 
 - (void)reloadPage:(id)sender {
@@ -682,16 +798,16 @@ didFinishNavigation:(WKNavigation *)navigation {
 }
 
 // Theme actions
+- (void)setThemePhosphor:(id)sender {
+    [self applyTheme:@"phosphor"];
+}
+
+- (void)setThemeAmber:(id)sender {
+    [self applyTheme:@"amber"];
+}
+
 - (void)setThemeDark:(id)sender {
     [self applyTheme:@"dark"];
-}
-
-- (void)setThemeLight:(id)sender {
-    [self applyTheme:@"light"];
-}
-
-- (void)setThemeSolarized:(id)sender {
-    [self applyTheme:@"solarized"];
 }
 
 - (void)applyTheme:(NSString *)theme {
