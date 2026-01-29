@@ -22,6 +22,7 @@
 
   (import scheme
           (chicken base)
+          (chicken condition)
           (chicken io)
           (chicken format)
           (chicken string)
@@ -62,15 +63,31 @@
           (char=? c #\-)
           ;; Extended Latin diacritics (U+00C0-U+024F)
           (and (>= cp #x00C0) (<= cp #x024F))
+          ;; Greek and Coptic (U+0370-U+03FF)
+          (and (>= cp #x0370) (<= cp #x03FF))
+          ;; Cyrillic (U+0400-U+04FF)
+          (and (>= cp #x0400) (<= cp #x04FF))
+          ;; Armenian (U+0530-U+058F)
+          (and (>= cp #x0530) (<= cp #x058F))
+          ;; Thai (U+0E00-U+0E7F)
+          (and (>= cp #x0E00) (<= cp #x0E7F))
+          ;; Lao (U+0E80-U+0EFF)
+          (and (>= cp #x0E80) (<= cp #x0EFF))
           ;; Devanagari (U+0900-U+097F)
           (and (>= cp #x0900) (<= cp #x097F))
+          ;; Korean Hangul Syllables (U+AC00-U+D7AF)
+          (and (>= cp #xAC00) (<= cp #xD7AF))
+          ;; Korean Hangul Jamo (U+1100-U+11FF)
+          (and (>= cp #x1100) (<= cp #x11FF))
           ;; IAST diacritics in Latin Extended Additional (U+1E00-U+1EFF)
           (and (>= cp #x1E00) (<= cp #x1EFF)))))
 
   (define (valid-word? word)
-    "Check if word is suitable for analysis"
-    (and (>= (string-length word) *min-word-length*)
-         (every valid-char? (string->list (string-downcase word)))))
+    "Check if word is suitable for analysis (handles UTF-8 errors gracefully)"
+    (handle-exceptions exn
+      #f  ; Return false on any UTF-8 error
+      (and (>= (string-length word) *min-word-length*)
+           (every valid-char? (string->list (string-downcase word))))))
 
   ;; ============================================================
   ;; Digraph Extraction
@@ -78,24 +95,28 @@
 
   (define (word->digraphs word)
     "Extract digraphs from word, including terminal marker"
-    (let* ((w (string-downcase word))
-           (len (string-length w)))
-      (if (< len 2)
-          '()
-          (let loop ((i 0) (acc '()))
-            (if (>= i (- len 1))
-                ;; Add terminal digraph (last char + period)
-                (reverse (cons (string (string-ref w (- len 1)) #\.) acc))
-                (loop (+ i 1)
-                      (cons (string (string-ref w i) (string-ref w (+ i 1)))
-                            acc)))))))
+    (handle-exceptions exn
+      '()  ; Return empty on UTF-8 error
+      (let* ((w (string-downcase word))
+             (len (string-length w)))
+        (if (< len 2)
+            '()
+            (let loop ((i 0) (acc '()))
+              (if (>= i (- len 1))
+                  ;; Add terminal digraph (last char + period)
+                  (reverse (cons (string (string-ref w (- len 1)) #\.) acc))
+                  (loop (+ i 1)
+                        (cons (string (string-ref w i) (string-ref w (+ i 1)))
+                              acc))))))))
 
   (define (starting-digraph word)
     "Get the starting digraph of a word"
-    (let ((w (string-downcase word)))
-      (if (< (string-length w) 2)
-          #f
-          (string (string-ref w 0) (string-ref w 1)))))
+    (handle-exceptions exn
+      #f  ; Return false on UTF-8 error
+      (let ((w (string-downcase word)))
+        (if (< (string-length w) 2)
+            #f
+            (string (string-ref w 0) (string-ref w 1))))))
 
   ;; ============================================================
   ;; Statistics Collection
