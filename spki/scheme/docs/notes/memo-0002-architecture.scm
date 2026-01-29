@@ -32,7 +32,11 @@
       (item "Minimal TCB: prove the crypto, evolve the rest")
       (item "No central authority: SPKI/SDSI namespaces over PKI hierarchies")
       (item "Running code: every feature traces to research, runs, and is tested"))
-    (p "These principles prioritize auditability and evolution over optimization, recognizing that security systems fail when they become too complex to understand or too rigid to adapt."))
+    (p "These principles prioritize auditability and evolution over optimization, recognizing that security systems fail when they become too complex to understand or too rigid to adapt.")
+    (subsection
+      "1.1 Design Methodology"
+      (code "research → library → design specs → interface specs ⇄ implementation\n                                            ↓\n                                    [beta] verification/regression\n                                            ↓\n                                       release/publish")
+      (p "Specs and implementation exist in dialogue. The bidirectional arrow captures the feedback loop: specifications inform code, code reveals specification defects. Tests gate the release, they don't drive the design.")))
   (section
     "2. The Prime Directive"
     (blockquote "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.")
@@ -185,6 +189,8 @@
   (section
     "Changelog"
     (list
+      (item "2026-01-29")
+      (item "Add Design Methodology diagram (section 1.1)")
       (item "2026-01-24 (2)")
       (item "Add PQ Signatures to implementation status (pq-crypto.scm complete)")
       (item "Update future work: only mobile agents remain")
