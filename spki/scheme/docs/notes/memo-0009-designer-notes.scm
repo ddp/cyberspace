@@ -613,7 +613,7 @@ Cyberspace soup:  Vault objects, content-addressed")
 1985  DEC MicroVAX II (32-bit LE, VAX on a chip, Cutler)
 1985  VAX/VMS C2 certification (Orange Book)
 1986  NSFnet replaces ARPANET backbone
-1992  Dylan released (Apple Cambridge)
+1992  Dylan released (Apple Cambridge), Macintosh Common Lisp
 1993  VAX/VMS 6.0, Alpha/VMS 6.0 (C2/B1)
 1994  SDSI proposed at IETF 29 Seattle
 1995  Windows NT 3.51 C2 certified (Alpha, x86)
