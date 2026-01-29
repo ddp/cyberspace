@@ -69,7 +69,7 @@
       (item "Inspector disabled - errors show simple messages, not debug> prompts")
       (item "Exception display uses plain language, not 'unbound variable'")
       (item "Help shows commands, not S-expressions")
-      (item "The : prompt is a portal, not a lambda"))
+      (item "The % prompt is a portal, not a lambda"))
     (p "Schemers opt in with (enable-inspector!) and see the machinery. The abstraction layer is permeable but not transparent.")
     (p "This is not dumbing down. It is layered revelation - the same principle that makes Cyberspace.app feel native on Mac while running pure Scheme underneath."))
 
