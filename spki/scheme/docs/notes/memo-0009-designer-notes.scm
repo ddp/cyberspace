@@ -329,8 +329,7 @@
       (p "All randomness flows through libsodium's randombytes_buf(), which uses:")
       (list
         (item "Linux: getrandom(2) syscall")
-        (item "macOS: arc4random_buf() (ChaCha20-based, name is legacy)")
-        (item "OpenBSD: arc4random_buf() (ChaCha20-based)"))
+        (item "macOS/BSDs: arc4random_buf() (ChaCha20-based, name is legacy)"))
       (p "Hardware entropy (RDRAND/RDSEED) feeds the OS pool. Quantum RNG (ID Quantique, drand beacons) planned for Phase 3+."))
 
     (subsection
