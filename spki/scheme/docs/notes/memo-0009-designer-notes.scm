@@ -518,14 +518,14 @@ Cyberspace soup:  Vault objects, content-addressed")
 
     (subsection
       "14.1 The Prahar (Watches)"
-      (code "04-06  violet    brahma muhūrta  ब्रह्म मुहूर्त   (pre-dawn meditation)
-06-08  gold      prātaḥkāla      प्रातःकाल       (dawn)
-08-11  teal      saṅgava         सङ्गव          (morning)
-11-14  phosphor  madhyāhna       मध्याह्न        (midday)
-14-17  neon      aparāhṇa        अपराह्ण         (afternoon)
-17-19  orange    sāyāhna         सायाह्न         (evening)
-19-22  coral     pradoṣa         प्रदोष          (dusk)
-22-04  cyan      niśītha         निशीथ          (night)")
+      (code "04-06  violet    brahma muhūrta   ब्रह्म मुहूर्त    pre-dawn meditation
+06-08  gold      prātaḥkāla       प्रातःकाल         dawn
+08-11  teal      saṅgava          सङ्गव            morning
+11-14  phosphor  madhyāhna        मध्याह्न          midday
+14-17  neon      aparāhṇa         अपराह्ण           afternoon
+17-19  orange    sāyāhna          सायाह्न           evening
+19-22  coral     pradoṣa          प्रदोष            dusk
+22-04  cyan      niśītha          निशीथ            night")
       (p "Devanāgarī (देवनागरी) means 'city of the gods' (देव deva + नागरी nāgarī). A script sacred enough to write the Vedas now marks the watches of a lambda breathing in Cyberspace."))
 
     (subsection
