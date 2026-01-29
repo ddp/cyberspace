@@ -132,6 +132,7 @@
         (item "Near East: Turkish, Armenian")
         (item "Mediterranean (George Cross island): Maltese")
         (item "Detachment 101: Vietnamese, Thai, Lao, Korean")
+        (item "Indic: Sanskrit, Devanāgarī")
         (item "Literary: Sindarin (Tolkien's Elvish), Dante's Divina Commedia"))
       (p "Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo, and the Princeton Dante Project. All diacriticals converted to UTF-8.")
       (p "Sindarin preserves Tolkien's circumflexes: Manwë, Aulë, Andúril. Dante's medieval Italian sits alongside. The OSS framing is itself an easter egg - layers of meaning for those who dig."))
