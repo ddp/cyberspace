@@ -576,7 +576,7 @@ Cyberspace soup:  Vault objects, content-addressed")
       (p "The Y combinator (Y = λf.(λx.f(x x))(λx.f(x x))) is a fixed-point combinator enabling recursion without explicit self-reference. It's elegant. It's also just math that falls out of lambda calculus--derivation, not discovery.")
       (p "A certain Silicon Valley venture capital firm took the name as borrowed plumage. Value signaling to people who recognize the symbol but don't work in the calculus. The firm's founder wrote 'On Lisp', evangelized the aesthetic--but Arc didn't have call/cc. Common Lisp doesn't have it. He came from the CL side, where continuations aren't primitive.")
       (p "Naming the firm 'Y Combinator' signals: I read the cool parts. Not naming it 'call/cc' signals: I stopped before it got weird.")
-      (p "The Y combinator is page 300 of SICP. call/cc is the last chapter. Most people don't finish."))
+      (p "The Y combinator is page 300 of SICP. call/cc is the last chapter. Most people don't finish. And those who do often go on to write their own Scheme dialect. This is mine."))
 
     (subsection
       "16.4 The Distinction"
