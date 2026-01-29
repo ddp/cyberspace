@@ -386,6 +386,7 @@
       (p "What we built:")
       (list
         (item "$CHKPRO - the privilege checking gate, the single point where all privilege decisions were made")
+        (item "$CHECK_USER_PROTECTION[W] - user protection checking")
         (item "$IMPERSONATE[W] - impersonation framework (with Rich Bouchard)")
         (item "$AUDIT_EVENT[W] - the entire auditing subsystem (final form)")
         (item "C2/B1 certified security model (Orange Book compliance, proven secure)"))
