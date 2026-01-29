@@ -154,6 +154,10 @@
 (forge 'latin 3)     ; three Latin words
 (forge 'passphrase)  ; 4-word passphrase
 (forge 'german 'passphrase 6) ; 6-word German passphrase")
+      (p "Sample output:")
+      (code none "English:   duccombly (28.2 bits)   enswootic (32.3 bits)
+Sindarin:  mirima (15.2 bits)      gor-aldoli (30.0 bits)
+Sanskrit:  āsaṅkā (19.1 bits)      samānavyakarmakṣya (45.0 bits)")
       (p "Each word reports its entropy. Passphrases join words with hyphens. The forge is an easter egg - undocumented in help, discovered by schemers exploring the REPL."))
 
     (subsection
