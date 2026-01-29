@@ -178,20 +178,20 @@
       (pre "
   Bit  Definition
   ---  ----------------------------------------------------------
-   0   Obsolete (was DECwindows PostScript extensions)
+   0   Obsolete
    1   Allow multiple usernames to connect to DECW$SERVER
    2   Allow unevaluated DECwindows transports (TCP/IP)
    3   Allow $SIGPRC and $PRCTERM to span job trees
    4   Permit security profile mods when object server unavailable
    5   Permit protected object creation when cluster DB unreachable
    6   Allow SPAWN/LIB$SPAWN in CAPTIVE accounts
-   7   Reserved (VMS 6.0: cluster-wide security propagation)
-   8   Reserved for SEVMS
+   7   Reserved to VSI
+   8   Reserved to VSI
    9   Disable password sync among ACME agents
   10   Allow privileged apps to authenticate expired/restricted
   11   Allow any SYSUAF record to use external authentication
-  12   Intrusion logging scope (0=cluster-wide, 1=local only)
-  13   Reserved (possibly SEVMS)
+  12   Intrusion scope (0=cluster-wide, 1=local only)
+  13   Reserved to VSI
   14   Enable internal file/dir name reading with X access (POSIX)
 
   Default: 7 (bits 0-2 set) - preserves DECwindows compatibility
