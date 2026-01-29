@@ -152,6 +152,8 @@
 (forge 5)            ; five English words
 (forge 'sindarin)    ; one Elvish word
 (forge 'latin 3)     ; three Latin words
+(forge 'bits 40)     ; one word with >= 40 bits entropy
+(forge 'sanskrit 'bits 30 3) ; three Sanskrit words >= 30 bits
 (forge 'passphrase)  ; 4-word passphrase
 (forge 'german 'passphrase 6) ; 6-word German passphrase")
       (p "Sample output:")

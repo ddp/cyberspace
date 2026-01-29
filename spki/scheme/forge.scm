@@ -332,6 +332,20 @@
           (hash-table-set! *loaded-dbs* language db)
           db)))
 
+  (define (forge-word-min-bits db min-decibits)
+    "Generate word with at least min-decibits entropy (max 100 attempts)"
+    (let loop ((attempts 0))
+      (if (>= attempts 100)
+          (let ((result (forge-word db)))
+            (fprintf (current-error-port)
+                     "Warning: could not meet ~a bit target after 100 attempts~n"
+                     (/ min-decibits 10.0))
+            result)
+          (let ((result (forge-word db)))
+            (if (>= (cdr result) min-decibits)
+                result
+                (loop (+ attempts 1)))))))
+
   (define (forge . args)
     "Generate pronounceable passwords
 
@@ -340,22 +354,39 @@
      (forge 'sindarin)    - one Sindarin (Elvish) word
      (forge 'latin 3)     - three Latin words
      (forge 'passphrase)  - 4-word passphrase
-     (forge 'passphrase 6) - 6-word passphrase"
+     (forge 'passphrase 6) - 6-word passphrase
+     (forge 'bits 40)     - one word with >= 40 bits entropy
+     (forge 'sanskrit 'bits 30 3) - three Sanskrit words >= 30 bits each"
 
     (let* ((lang 'english)
            (count 1)
-           (mode 'words))
+           (mode 'words)
+           (min-bits #f))
 
       ;; Parse arguments
-      (for-each
-        (lambda (arg)
-          (cond
-            ((number? arg) (set! count arg))
-            ((eq? arg 'passphrase) (set! mode 'passphrase))
-            ((memq arg *forge-languages*) (set! lang arg))))
-        args)
+      (let loop ((remaining args) (expect-bits #f))
+        (when (pair? remaining)
+          (let ((arg (car remaining)))
+            (cond
+              (expect-bits
+               (when (number? arg) (set! min-bits arg))
+               (loop (cdr remaining) #f))
+              ((eq? arg 'bits)
+               (loop (cdr remaining) #t))
+              ((number? arg)
+               (set! count arg)
+               (loop (cdr remaining) #f))
+              ((eq? arg 'passphrase)
+               (set! mode 'passphrase)
+               (loop (cdr remaining) #f))
+              ((memq arg *forge-languages*)
+               (set! lang arg)
+               (loop (cdr remaining) #f))
+              (else
+               (loop (cdr remaining) #f))))))
 
-      (let ((db (get-db lang)))
+      (let ((db (get-db lang))
+            (min-decibits (and min-bits (* min-bits 10))))
         (case mode
           ((passphrase)
            (let* ((result (forge-passphrase db (if (= count 1) 4 count)))
@@ -366,7 +397,13 @@
              phrase))
 
           (else
-           (let ((results (forge-words db count)))
+           (let ((results (if min-decibits
+                              (let loop ((i 0) (acc '()))
+                                (if (>= i count)
+                                    (reverse acc)
+                                    (loop (+ i 1)
+                                          (cons (forge-word-min-bits db min-decibits) acc))))
+                              (forge-words db count))))
              (for-each
                (lambda (r)
                  (printf "~a  (~a bits)~n" (car r) (format-bits (/ (cdr r) 10.0))))
