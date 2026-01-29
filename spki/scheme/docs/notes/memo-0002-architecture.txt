@@ -104,41 +104,56 @@ design.
 ------------------------------------------------------------------------
 
 
-    "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme."
+    "If it's in the TCB, it's in OCaml. Otherwise it's in Scheme."
 
 
-    ┌─────────────────────────────────────────────────────────────┐
-    │                                                             │
-    │   TRUSTED COMPUTING BASE (OCaml, ~3000 lines)               │
-    │                                                             │
-    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-    │   │   Ed25519   │  │   SHA-512   │  │   Verify    │         │
-    │   │   Sign      │  │   Hash      │  │   Chain     │         │
-    │   └─────────────┘  └─────────────┘  └─────────────┘         │
-    │                                                             │
-    │   That's it. Everything else is policy.                     │
-    │                                                             │
-    └─────────────────────────────────────────────────────────────┘
-                            FFI (tiny surface)
-    ┌─────────────────────────────────────────────────────────────┐
-    │                                                             │
-    │   EVERYTHING ELSE (Chicken Scheme, unlimited)               │
-    │                                                             │
-    │   Vault - Audit - Replication - Names - Discovery           │
-    │   CLI Tools - API Server - Library - Scripts                │
-    │                                                             │
-    │   Change it anytime. It's just policy.                      │
-    │                                                             │
-    └─────────────────────────────────────────────────────────────┘
+    ┌───────────────────────────────────────────────────────────────────────┐
+    │                                                                       │
+    │   TRUSTED COMPUTING BASE (OCaml + Rocq, ~5800 lines)                  │
+    │   Post-quantum verified, Q-Day transition ready                       │
+    │                                                                       │
+    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+    │   │  Ed25519    │  │  ML-DSA-65  │  │  SLH-DSA    │  │   Verify    │ │
+    │   │  (classical)│  │  (lattice)  │  │  (hash-only)│  │   Chain     │ │
+    │   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
+    │                                                                       │
+    │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+    │   │  SHA-2/512  │  │  SHAKE256   │  │  BLAKE2b    │  │  QR Merkle  │ │
+    │   │  (harvest)  │  │  (FIPS 202) │  │  (fast)     │  │  (Memo-047) │ │
+    │   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
+    │                                                                       │
+    │   OCaml: 3,600 LOC  │  C FFI: 960 LOC  │  Rocq proofs: 1,260 LOC     │
+    │   libsodium (audited)  │  liboqs (no OpenSSL)  │  libkeccak          │
+    │                                                                       │
+    └───────────────────────────────────────────────────────────────────────┘
+
+                              FFI (tiny surface)
+
+    ┌───────────────────────────────────────────────────────────────────────┐
+    │                                                                       │
+    │   EVERYTHING ELSE (Cyberspace Scheme, unlimited)                      │
+    │                                                                       │
+    │   Vault - Audit - Replication - Names - Discovery - Gossip            │
+    │   CLI Tools - API Server - Library - Scripts - Forge                  │
+    │                                                                       │
+    │   Change it anytime. It's just policy.                                │
+    │                                                                       │
+    └───────────────────────────────────────────────────────────────────────┘
 
 Rationale:
 
   * OCaml: Strong types, formal verification with Rocq, compile-time safety
-  * Chicken Scheme: Interactive development, S-expressions everywhere, rapid evolution
-  * The boundary: Tiny, frozen, proven. The TCB does crypto and nothing else.
+  * Cyberspace Scheme: Chicken Scheme dialect with project-specific
+    extensions, S-expressions everywhere, interactive development
+  * The boundary: Frozen TCB, proven in Rocq. Policy layer evolves freely.
 
-A smaller TCB means fewer bugs that can break security. We prove the
-crypto in Rocq. Everything else can evolve freely.
+A smaller TCB means fewer bugs that can break security. The Rocq proofs
+guarantee tag intersection attenuates, chains validate correctly, and
+authorization decisions are sound. Everything else can evolve freely.
+
+Q-Day Transition: Classical Ed25519 runs alongside ML-DSA-65 (lattice)
+and SLH-DSA (hash-based, conservative). Hybrid signatures today; pure
+post-quantum after harvest-now threat timeline passes.
 
 
 2.1 Interface Philosophy
@@ -428,7 +443,7 @@ running.
     ✓ SPKI Certs        ✓ Vault             ✓ Audit Trails
     ✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing
     ✓ Library Directory ✓ Federation        ✓ Lamport Clocks
-    ✓ TLA+ Specs        ◐ Rocq Proofs        ✓ AEAD Encryption
+    ✓ TLA+ Specs        ✓ Rocq Proofs       ✓ AEAD Encryption
     ✓ QR Merkle Trees   ✓ FUSE Wormholes    ✓ PQ Signatures
 
 Each traces to original research. Each runs. Each is tested.
@@ -521,9 +536,31 @@ Most planned features are now implemented. Remaining work:
 
 
 ------------------------------------------------------------------------
+DOCUMENT MAINTENANCE
+------------------------------------------------------------------------
+
+This memo and Memo-0009 (Designer's Notes) are critical documentation
+that MUST be reverified on any change to:
+
+  * spki/tcb/ - The OCaml trusted computing base
+  * spki/tcb/coq/ - Rocq formal proofs
+  * spki/scheme/ - The Cyberspace Scheme policy layer
+
+The generate-memos.sh pipeline includes a reminder, but verification
+is a human responsibility. These documents describe what exists, not
+what is planned.
+
+
+------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
 
+  * 2026-01-29 (2)
+  * Update TCB diagram: PQ algorithms, Rocq proofs, line counts
+  * Rename "Chicken Scheme" to "Cyberspace Scheme" (our dialect)
+  * Add Q-Day transition note
+  * Add Document Maintenance section
+  * Mark Rocq Proofs complete (was ◐, now ✓)
   * 2026-01-29
   * Add Design Methodology diagram (section 1.1)
   * 2026-01-24 (2)

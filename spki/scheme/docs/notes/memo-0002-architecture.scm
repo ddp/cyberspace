@@ -39,14 +39,15 @@
       (p "Specs and implementation exist in dialogue. The bidirectional arrow captures the feedback loop: specifications inform code, code reveals specification defects. Tests gate the release, they don't drive the design.")))
   (section
     "2. The Prime Directive"
-    (blockquote "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.")
-    (code "┌─────────────────────────────────────────────────────────────┐\n│                                                             │\n│   TRUSTED COMPUTING BASE (OCaml, ~3000 lines)               │\n│                                                             │\n│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │\n│   │   Ed25519   │  │   SHA-512   │  │   Verify    │         │\n│   │   Sign      │  │   Hash      │  │   Chain     │         │\n│   └─────────────┘  └─────────────┘  └─────────────┘         │\n│                                                             │\n│   That's it. Everything else is policy.                     │\n│                                                             │\n└─────────────────────────────────────────────────────────────┘\n\n                        FFI (tiny surface)\n\n┌─────────────────────────────────────────────────────────────┐\n│                                                             │\n│   EVERYTHING ELSE (Chicken Scheme, unlimited)               │\n│                                                             │\n│   Vault - Audit - Replication - Names - Discovery           │\n│   CLI Tools - API Server - Library - Scripts                │\n│                                                             │\n│   Change it anytime. It's just policy.                      │\n│                                                             │\n└─────────────────────────────────────────────────────────────┘")
+    (blockquote "If it's in the TCB, it's in OCaml. Otherwise it's in Scheme.")
+    (code "┌───────────────────────────────────────────────────────────────────────┐\n│                                                                       │\n│   TRUSTED COMPUTING BASE (OCaml + Rocq, ~5800 lines)                  │\n│   Post-quantum verified, Q-Day transition ready                       │\n│                                                                       │\n│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │\n│   │  Ed25519    │  │  ML-DSA-65  │  │  SLH-DSA    │  │   Verify    │ │\n│   │  (classical)│  │  (lattice)  │  │  (hash-only)│  │   Chain     │ │\n│   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │\n│                                                                       │\n│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │\n│   │  SHA-2/512  │  │  SHAKE256   │  │  BLAKE2b    │  │  QR Merkle  │ │\n│   │  (harvest)  │  │  (FIPS 202) │  │  (fast)     │  │  (Memo-047) │ │\n│   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │\n│                                                                       │\n│   OCaml: 3,600 LOC  │  C FFI: 960 LOC  │  Rocq proofs: 1,260 LOC     │\n│   libsodium (audited)  │  liboqs (no OpenSSL)  │  libkeccak          │\n│                                                                       │\n└───────────────────────────────────────────────────────────────────────┘\n\n                              FFI (tiny surface)\n\n┌───────────────────────────────────────────────────────────────────────┐\n│                                                                       │\n│   EVERYTHING ELSE (Cyberspace Scheme, unlimited)                      │\n│                                                                       │\n│   Vault - Audit - Replication - Names - Discovery - Gossip            │\n│   CLI Tools - API Server - Library - Scripts - Forge                  │\n│                                                                       │\n│   Change it anytime. It's just policy.                                │\n│                                                                       │\n└───────────────────────────────────────────────────────────────────────┘")
     (p "Rationale:")
     (list
       (item "OCaml: Strong types, formal verification with Rocq, compile-time safety")
-      (item "Chicken Scheme: Interactive development, S-expressions everywhere, rapid evolution")
-      (item "The boundary: Tiny, frozen, proven. The TCB does crypto and nothing else."))
-    (p "A smaller TCB means fewer bugs that can break security. We prove the crypto in Rocq. Everything else can evolve freely.")
+      (item "Cyberspace Scheme: Chicken Scheme dialect with project-specific extensions, S-expressions everywhere, interactive development")
+      (item "The boundary: Frozen TCB, proven in Rocq. Policy layer evolves freely."))
+    (p "A smaller TCB means fewer bugs that can break security. The Rocq proofs guarantee tag intersection attenuates, chains validate correctly, and authorization decisions are sound. Everything else can evolve freely.")
+    (p "Q-Day Transition: Classical Ed25519 runs alongside ML-DSA-65 (lattice) and SLH-DSA (hash-based, conservative). Hybrid signatures today; pure post-quantum after harvest-now threat timeline passes.")
     (subsection
       "2.1 Interface Philosophy"
       (blockquote "English on top, Scheme for everything else.")
@@ -139,14 +140,14 @@
   (section
     "6. Implementation Status"
     (blockquote "We reject kings, presidents and voting. We believe in rough consensus and running code. — Dave Clark, IETF")
-    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory ✓ Federation        ✓ Lamport Clocks\n✓ TLA+ Specs        ◐ Rocq Proofs        ✓ AEAD Encryption\n✓ QR Merkle Trees   ✓ FUSE Wormholes    ✓ PQ Signatures")
+    (code "✓ Lamport OTP       ✓ Merkle Trees      ✓ Capabilities\n✓ ChaCha20          ✓ Poly1305          ✓ Lamport Signatures\n✓ SPKI Certs        ✓ Vault             ✓ Audit Trails\n✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing\n✓ Library Directory ✓ Federation        ✓ Lamport Clocks\n✓ TLA+ Specs        ✓ Rocq Proofs       ✓ AEAD Encryption\n✓ QR Merkle Trees   ✓ FUSE Wormholes    ✓ PQ Signatures")
     (p "Each traces to original research. Each runs. Each is tested."))
   (section
     "7. Security Considerations"
     (blockquote "You can't trust code that you did not totally create yourself. — Ken Thompson, Reflections on Trusting Trust")
     (subsection
       "7.1 TCB Minimization"
-      (p "The attack surface is limited to ~3000 lines of OCaml calling libsodium and liboqs. This code is:")
+      (p "The attack surface is limited to ~5800 lines (OCaml + C FFI + Rocq proofs) calling libsodium and liboqs. This code is:")
       (list
         (item "Formally specified")
         (item "Proven in Rocq")
@@ -187,8 +188,22 @@
       (item "Lampson, B. W. (1971). Protection.")
       (item "Ellison, C., et al. (1999). SPKI certificate theory. RFC 2693.")))
   (section
+    "Document Maintenance"
+    (p "This memo and Memo-0009 (Designer's Notes) are critical documentation that MUST be reverified on any change to:")
+    (list
+      (item "spki/tcb/ - The OCaml trusted computing base")
+      (item "spki/tcb/coq/ - Rocq formal proofs")
+      (item "spki/scheme/ - The Cyberspace Scheme policy layer"))
+    (p "The generate-memos.sh pipeline includes a reminder, but verification is a human responsibility. These documents describe what exists, not what is planned."))
+  (section
     "Changelog"
     (list
+      (item "2026-01-29 (2)")
+      (item "Update TCB diagram: PQ algorithms, Rocq proofs, line counts")
+      (item "Rename \"Chicken Scheme\" to \"Cyberspace Scheme\" (our dialect)")
+      (item "Add Q-Day transition note")
+      (item "Add Document Maintenance section")
+      (item "Mark Rocq Proofs complete (was ◐, now ✓)")
       (item "2026-01-29")
       (item "Add Design Methodology diagram (section 1.1)")
       (item "2026-01-24 (2)")
