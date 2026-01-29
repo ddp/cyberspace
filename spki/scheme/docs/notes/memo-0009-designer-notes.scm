@@ -355,12 +355,10 @@
       (p "The Security Project Team was Derrell Piper, Mark Pilant, Andy Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.")
       (p "What we built:")
       (list
-        (item "$CHKPRO - the privilege checking gate, the single point where all privilege decisions were made")
-        (item "$CHECK_USER_PROTECTION[W] - user protection checking")
-        (item "$IMPERSONATE[W] - impersonation framework (with Rich Bouchard)")
-        (item "$AUDIT_EVENT[W] - the entire auditing subsystem (final form)")
-        (item "$SUBSYSTEM[W] - Protected Subsystem system service")
-        (item "C2/B1 certified security model (Orange Book compliance, proven secure)"))
+        (item "$AUDIT_EVENT[W] — write audit events")
+        (item "$CHECK_PRIVILEGE — check caller's privilege mask")
+        (item "$CHKPRO — check protection (access control evaluation)")
+        (item "$CHECK_ACCESS — evaluate access rights"))
       (p "The original $IMPERSONATION framework was authored by myself with Rich Bouchard. It was lost during the Mitnick incidents when Andy Goldstein and I decided we needed to rebuild our compiler chain from known good offsite backups--with Ken Thompson's 'Reflections on Trusting Trust' fresh in our minds. In doing so, we lost a year of development during Alpha, including the original kernel threads implementation and the $IMPERSONATION framework.")
       (p "Access: The security project team (or anyone we designated) were the only ones allowed in the kernel group's modules. Dave Cutler's team begrudgingly accepted this as a mandate from heaven (Ken Olsen // Maynard). We got in on a mandate. We stayed because the work was good.")
       (p "Inheritance: When Cutler left for Microsoft, his modules were inherited. The privilege auditing 'rototill' required fluency in MACRO-32.")
@@ -412,16 +410,7 @@ SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
       (p "The original $IMPERSONATION framework was authored by myself with Rich Bouchard. It was lost during the Mitnick incidents when Andy Goldstein and I decided we needed to rebuild our compiler chain from known good offsite backups - with Ken Thompson's 'Reflections on Trusting Trust' fresh in our minds. In doing so, we lost a year of development during Alpha, including the original kernel threads implementation and the $IMPERSONATION framework."))
 
     (subsection
-      "11.5 Security System Services"
-      (p "The B1 auditing subsystem exposed these system services:")
-      (list
-        (item "$AUDIT_EVENT, $AUDIT_EVENTW — write audit events")
-        (item "$CHECK_PRIVILEGE — check caller's privilege mask")
-        (item "$CHKPRO — check protection (access control evaluation)")
-        (item "$CHECK_ACCESS — evaluate access rights")))
-
-    (subsection
-      "11.6 Syntax Heritage"
+      "11.5 Syntax Heritage"
       (p "Dylan-style keyword arguments are a tribute to Apple Cambridge and MIT:")
       (code scheme "(translate text from: 'en to: 'fr)
 (enroll-request name timeout: 30)")
@@ -433,7 +422,7 @@ SS$_NORMAL / SS$_NOPRIV  →  grant or deny")
       (p "Self syntax was weird. Smalltalk doesn't work for math people (2 + 3 * 4 = 20, not 14). Scheme is honest - prefix, unambiguous, mathematical."))
 
     (subsection
-      "11.7 IETF Security Protocols"
+      "11.6 IETF Security Protocols"
       (p "VMS Security Project Leader → TGV → Cisco → loaned to Microsoft for IPsec/IKE.")
       (p "draft-ietf-ipsec-isakmp-gss-auth-07 (1998-2001) defined GSS-API authentication for IKE, binding Kerberos into Windows 2000's IPsec implementation. Seven revisions, co-authored with Swander on later versions.")
       (p "The draft defined authentication method values:")
@@ -656,8 +645,8 @@ Cyberspace soup:  Vault objects, content-addressed")
 
   (section
     "Changelog"
-    (p "- 2026-01-29 — Simplified Audit Trail Heritage (7.7), added Security System Services (11.5)")
-    (p "- 2026-01-28 — Added IETF Security Protocols (section 11.7): draft-ietf-ipsec-isakmp-gss-auth, GSS-API/Kerberos for NT5")
+    (p "- 2026-01-29 — Simplified Audit Trail Heritage (7.7), consolidated security services in 11.1")
+    (p "- 2026-01-28 — Added IETF Security Protocols (section 11.6): draft-ietf-ipsec-isakmp-gss-auth, GSS-API/Kerberos for NT5")
     (p "- 2026-01-28 — Added Resident Modules section (section 18): blade guards, resident-info, heritage")
     (p "- 2026-01-22 — Added version semantics (v0.9.x/v1.0.0/v2.0.0 gates)")
     (p "- 2026-01-22 — Folded designer-notes.scm into memo (open kimono); added call/cc rationale")

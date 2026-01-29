@@ -424,7 +424,7 @@ echo "=== Publishing to yoyodyne ==="
 YOYODYNE_HOST="ddp@www.yoyodyne.com"
 YOYODYNE_BASE="/www/yoyodyne/ddp/cyberspace"
 YOYODYNE_URL="https://www.yoyodyne.com/ddp/cyberspace/"
-YOYODYNE_MEMO_PATH="$YOYODYNE_BASE/spki/scheme/docs/memo/"
+YOYODYNE_MEMO_PATH="$YOYODYNE_BASE/spki/scheme/docs/memos/"
 
 if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>/dev/null; then
   /usr/bin/ssh "$YOYODYNE_HOST" "mkdir -p $YOYODYNE_MEMO_PATH"
@@ -432,7 +432,7 @@ if /usr/bin/ssh -q -o BatchMode=yes -o ConnectTimeout=5 "$YOYODYNE_HOST" exit 2>
   echo "  -> $YOYODYNE_MEMO_PATH"
   # Ensure web-readable permissions (rsync --chmod sometimes ignored by server umask)
   /usr/bin/ssh "$YOYODYNE_HOST" 'find '"$YOYODYNE_BASE"' -type f -exec chmod 644 {} \; && find '"$YOYODYNE_BASE"' -type d -exec chmod 755 {} \;'
-  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/memo/"
+  echo "  Published Memos to ${YOYODYNE_URL}spki/scheme/docs/memos/"
 else
   echo "  [skip] Cannot reach yoyodyne"
 fi
