@@ -38,6 +38,7 @@
           srfi-1
           srfi-13
           srfi-69
+          utf8
           (only crypto-ffi random-uniform)
           (only fips test-randomness))
 
@@ -144,7 +145,7 @@
           (parse-db-file port language)))))
 
   (define (parse-db-file port language)
-    "Parse smelter .db format"
+    "Parse smelter .db format (S-expression based)"
     (let ((db (make-forge-db))
           (pairs (make-hash-table string=?)))
 
@@ -165,43 +166,28 @@
                             language
                             pairs))))))))
 
-      ;; Read pair entries
+      ;; Read pair entries as S-expressions
       (let loop ()
-        (let ((line (read-line port)))
-          (unless (eof-object? line)
-            (unless (or (string-prefix? ";" line)
-                        (string-null? (string-trim-both line)))
-              (parse-pair-line line pairs))
+        (let ((entry (read port)))
+          (unless (eof-object? entry)
+            (when (and (list? entry) (>= (length entry) 4))
+              (parse-sexp-entry entry pairs))
             (loop))))
 
       db))
 
-  (define (parse-pair-line line pairs)
-    "Parse: XX npairs nstart nentry char1 count1 char2 count2 ..."
-    (let ((tokens (string-tokenize line)))
-      (when (>= (length tokens) 4)
-        (let* ((digraph (car tokens))
-               (npairs (string->number (cadr tokens)))
-               (nstart (string->number (caddr tokens)))
-               (nentry (string->number (cadddr tokens)))
-               (rest (list-tail-4 tokens))
-               (entries (parse-entries rest)))
-          (hash-table-set! pairs digraph
-                           (list npairs nstart nentry entries))))))
-
-  (define (parse-entries tokens)
-    "Parse char count char count ... into alist"
-    (let loop ((toks tokens) (acc '()))
-      (if (or (null? toks) (null? (cdr toks)))
-          (reverse acc)
-          (let ((char (string-ref (car toks) 0))
-                (count (string->number (cadr toks))))
-            (loop (cddr toks)
-                  (cons (cons char count) acc))))))
-
-  (define (list-tail-4 lst)
-    "Return tail starting at 5th element (drop first 4)"
-    (cdr (cdddr lst)))
+  (define (parse-sexp-entry entry pairs)
+    "Parse S-expression: (digraph npairs nstart ((char . count) ...))"
+    (let* ((digraph (car entry))
+           (npairs (cadr entry))
+           (nstart (caddr entry))
+           (char-entries (cadddr entry))
+           ;; Convert string chars back to actual chars
+           (entries (map (lambda (e)
+                           (cons (string-ref (car e) 0) (cdr e)))
+                         char-entries)))
+      (hash-table-set! pairs digraph
+                       (list npairs nstart (length entries) entries))))
 
   ;; ============================================================
   ;; Database Info

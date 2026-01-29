@@ -29,7 +29,8 @@
           (chicken sort)
           srfi-1
           srfi-13
-          srfi-69)
+          srfi-69
+          utf8)
 
   ;; ============================================================
   ;; Configuration
@@ -52,18 +53,19 @@
   ;; ============================================================
 
   (define (valid-char? c)
-    "Check if character/byte is valid for digraph analysis"
-    ;; CHICKEN treats UTF-8 as bytes, so we accept:
-    ;; - ASCII letters (a-z, A-Z)
-    ;; - UTF-8 lead bytes (0xC0-0xF4) and continuation bytes (0x80-0xBF)
-    ;; - apostrophe and hyphen
-    (let ((b (char->integer c)))
-      (or (and (>= b #x41) (<= b #x5A))    ; A-Z
-          (and (>= b #x61) (<= b #x7A))    ; a-z
-          (and (>= b #x80) (<= b #xBF))    ; UTF-8 continuation bytes
-          (and (>= b #xC0) (<= b #xF4))    ; UTF-8 lead bytes
+    "Check if character is valid for digraph analysis (UTF-8 aware)"
+    ;; With utf8 egg, characters are full Unicode code points
+    ;; Accept: letters (any script), apostrophe, hyphen
+    (let ((cp (char->integer c)))
+      (or (char-alphabetic? c)            ; Any Unicode letter
           (char=? c #\')
-          (char=? c #\-))))
+          (char=? c #\-)
+          ;; Extended Latin diacritics (U+00C0-U+024F)
+          (and (>= cp #x00C0) (<= cp #x024F))
+          ;; Devanagari (U+0900-U+097F)
+          (and (>= cp #x0900) (<= cp #x097F))
+          ;; IAST diacritics in Latin Extended Additional (U+1E00-U+1EFF)
+          (and (>= cp #x1E00) (<= cp #x1EFF)))))
 
   (define (valid-word? word)
     "Check if word is suitable for analysis"
@@ -165,20 +167,20 @@
     (string-pad (number->string n) width))
 
   (define (write-pair-entry port digraph entry)
-    "Write a single pair entry line"
+    "Write a single pair entry as S-expression"
     (let* ((npairs (vector-ref entry 0))
            (nstart (vector-ref entry 1))
            (entries-hash (vector-ref entry 2))
            (entries (hash-table->alist entries-hash))
-           (nentry (length entries)))
-      ;; Format: XX npairs nstart nentry char count char count ...
-      (fprintf port "~a ~a ~a ~a"
-               digraph (pad-num npairs 8) (pad-num nstart 9) (pad-num nentry 9))
-      (for-each
-        (lambda (e)
-          (fprintf port " ~a ~a" (car e) (cdr e)))
-        (sort entries (lambda (a b) (> (cdr a) (cdr b)))))  ; sort by count desc
-      (fprintf port " ~n")))
+           (nentry (length entries))
+           (sorted-entries (sort entries (lambda (a b) (> (cdr a) (cdr b))))))
+      ;; Format: (digraph npairs nstart ((char . count) ...))
+      ;; S-expression preserves UTF-8 in strings
+      (write (list digraph npairs nstart
+                   (map (lambda (e) (cons (string (car e)) (cdr e)))
+                        sorted-entries))
+             port)
+      (newline port)))
 
   ;; ============================================================
   ;; Main Entry Points
