@@ -49,12 +49,14 @@
   (let* ((base (pathname-strip-extension memo-file))
          (txt-file (string-append base ".txt"))
          (html-file (string-append base ".html"))
-         (ps-file (string-append base ".ps")))
+         (ps-file (string-append base ".ps"))
+         (pdf-file (string-append base ".pdf")))
 
     ;; Check if regeneration needed (also check formatter itself)
     (when (or (file-newer? memo-file txt-file)
               (file-newer? memo-file html-file)
               (file-newer? memo-file ps-file)
+              (file-newer? memo-file pdf-file)
               (file-newer? "memo-format.scm" txt-file))
 
       (condition-case
@@ -67,7 +69,9 @@
                 (memo->txt doc txt-file)
                 (memo->html doc html-file)
                 (memo->ps doc ps-file)
-                (print "  " base ": txt html ps"))))
+                (if (memo->pdf ps-file pdf-file)
+                    (print "  " base ": txt html ps pdf")
+                    (print "  " base ": txt html ps (pdf failed)")))))
         (e ()
           (print "  " base ": FAILED - " (get-condition-property e 'exn 'message "")))))))
 
@@ -143,6 +147,7 @@
                             (string-append (number->string elapsed-sec) "s")))
       (print "  TXT:  " (length (glob "memo-*.txt")))
       (print "  HTML: " (length (glob "memo-*.html")))
-      (print "  PS:   " (length (glob "memo-*.ps"))))))
+      (print "  PS:   " (length (glob "memo-*.ps")))
+      (print "  PDF:  " (length (glob "memo-*.pdf"))))))
 
 (main)

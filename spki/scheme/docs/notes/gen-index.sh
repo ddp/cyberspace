@@ -126,7 +126,7 @@ for memo in "${MEMOS[@]}"; do
   if is_reserved "$memo"; then
     formats=""
   else
-    formats='<a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.html">Hypertext</a>'
+    formats='<a href="'"${memo}"'.pdf">PDF</a> <a href="'"${memo}"'.ps">PostScript</a> <a href="'"${memo}"'.txt">Text</a> <a href="'"${memo}"'.html">HTML</a>'
   fi
 
   cat >> index.html << EOF

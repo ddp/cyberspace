@@ -857,6 +857,10 @@
         ;; Theme toggle
         (display "<span class=\"theme-toggle\" onclick=\"toggleTheme()\" title=\"Toggle light/dark\">[theme]</span>\n" port)
 
+        ;; Format notice - browsers can't be trusted with box-drawing
+        (let ((base (pathname-strip-extension filename)))
+          (display (format "<p class=\"format-notice\"><em>For pixel-perfect diagrams: <a href=\"~a.ps\">PostScript</a> or <a href=\"~a.pdf\">PDF</a></em></p>\n" base base) port))
+
         ;; Title block
         (if is-memo
             (display (format "<h1>Memo ~a: ~a</h1>\n" (memo-number->string num) (html-escape title)) port)
@@ -1167,6 +1171,21 @@
           (display "%%Trailer\n" out)
           (display "%%Pages: pagenum\n" out)
           (display "%%EOF\n" out))))))
+
+;;; ============================================================
+;;; PDF Output (via Ghostscript)
+;;; ============================================================
+
+(define (memo->pdf ps-file pdf-file)
+  "Convert PostScript file to PDF using Ghostscript."
+  (let ((result (system
+                  (string-append
+                    "gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite "
+                    "-dPDFSETTINGS=/prepress "
+                    "-dEmbedAllFonts=true "
+                    "-sOutputFile=" pdf-file " "
+                    ps-file))))
+    (= result 0)))
 
 ;;; ============================================================
 ;;; LaTeX Output
