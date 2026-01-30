@@ -25,6 +25,7 @@
 </head>
 <body>
 <span class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark">[theme]</span>
+<p class="format-notice"><em>For pixel-perfect diagrams: <a href="memo-0002-architecture.ps">PostScript</a> or <a href="memo-0002-architecture.pdf">PDF</a></em></p>
 <h1>Memo 0002: Architecture</h1>
 <dl class="metadata">
 </dl>
@@ -78,46 +79,63 @@
 <li>Running code: every feature traces to research, runs, and is tested</li>
 </ul>
 <p>These principles prioritize auditability and evolution over optimization, recognizing that security systems fail when they become too complex to understand or too rigid to adapt.</p>
+<h3>1.1 Design Methodology</h3>
+<pre class="diagram">
+research → library → design specs → interface specs ⇄ implementation
+                                            ↓
+                                    [beta] verification/regression
+                                            ↓
+                                       release/publish
+</pre>
+<p>Specs and implementation exist in dialogue. The bidirectional arrow captures the feedback loop: specifications inform code, code reveals specification defects. Tests gate the release, they don't drive the design.</p>
 </section>
 <section>
 <h2>2. The Prime Directive</h2>
 <blockquote>
-<p>If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.</p>
+<p>If it's in the TCB, it's in OCaml. Otherwise it's in Scheme.</p>
 </blockquote>
 <pre class="diagram">
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│   TRUSTED COMPUTING BASE (OCaml, ~3000 lines)               │
-│                                                             │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│   │   Ed25519   │  │   SHA-512   │  │   Verify    │         │
-│   │   Sign      │  │   Hash      │  │   Chain     │         │
-│   └─────────────┘  └─────────────┘  └─────────────┘         │
-│                                                             │
-│   That's it. Everything else is policy.                     │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│  TRUSTED COMPUTING BASE (OCaml + Rocq, ~5800 lines)        │
+│  Post-quantum verified, Q-Day transition ready             │
+│                                                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
+│  │ Ed25519  │ │ ML-DSA-65│ │ SLH-DSA  │ │  Verify  │       │
+│  │(classical│ │ (lattice)│ │(hash-only│ │  Chain   │       │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │
+│                                                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
+│  │ SHA-2/512│ │ SHAKE256 │ │ BLAKE2b  │ │ QR Merkle│       │
+│  │ (harvest)│ │(FIPS 202)│ │  (fast)  │ │(Memo-047)│       │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │
+│                                                            │
+│  OCaml: 3,600  |  C FFI: 960  |  Rocq proofs: 1,260        │
+│  libsodium (audited) | liboqs (no OpenSSL) | libkeccak     │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
 
-                        FFI (tiny surface)
+                          FFI (tiny surface)
 
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│   EVERYTHING ELSE (Chicken Scheme, unlimited)               │
-│                                                             │
-│   Vault - Audit - Replication - Names - Discovery           │
-│   CLI Tools - API Server - Library - Scripts                │
-│                                                             │
-│   Change it anytime. It's just policy.                      │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│  EVERYTHING ELSE (Cyberspace Scheme, unlimited)            │
+│                                                            │
+│  Vault - Audit - Replication - Names - Discovery - Gossip  │
+│  CLI Tools - API Server - Library - Scripts - Forge        │
+│                                                            │
+│  Change it anytime. It's just policy.                      │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
 </pre>
 <p>Rationale:</p>
 <ul>
 <li>OCaml: Strong types, formal verification with Rocq, compile-time safety</li>
-<li>Chicken Scheme: Interactive development, S-expressions everywhere, rapid evolution</li>
-<li>The boundary: Tiny, frozen, proven. The TCB does crypto and nothing else.</li>
+<li>Cyberspace Scheme: Chicken Scheme dialect with project-specific extensions, S-expressions everywhere, interactive development</li>
+<li>The boundary: Frozen TCB, proven in Rocq. Policy layer evolves freely.</li>
 </ul>
-<p>A smaller TCB means fewer bugs that can break security. We prove the crypto in Rocq. Everything else can evolve freely.</p>
+<p>A smaller TCB means fewer bugs that can break security. The Rocq proofs guarantee tag intersection attenuates, chains validate correctly, and authorization decisions are sound. Everything else can evolve freely.</p>
+<p>Q-Day Transition: Classical Ed25519 runs alongside ML-DSA-65 (lattice) and SLH-DSA (hash-based, conservative). Hybrid signatures today; pure post-quantum after harvest-now threat timeline passes.</p>
 <h3>2.1 Interface Philosophy</h3>
 <blockquote>
 <p>English on top, Scheme for everything else.</p>
@@ -125,12 +143,12 @@
 <pre class="diagram">
 ┌─────────────────────────────────────────────────────────────┐
 │  &gt; status                    Command mode: English verbs    │
-│  &gt; commit "message"          No parens needed              │
+│  &gt; commit "message"          No parens needed               │
 │  &gt; soup                      Explore, inspect, act          │
 ├─────────────────────────────────────────────────────────────┤
-│  &gt; (define x (keys))         Scheme mode: Full power       │
-│  &gt; (map publish (releases))  Compose, transform, compute   │
-│  &gt; (filter signed? certs)    Lambda is home                │
+│  &gt; (define x (keys))         Scheme mode: Full power        │
+│  &gt; (map publish (releases))  Compose, transform, compute    │
+│  &gt; (filter signed? certs)    Lambda is home                 │
 └─────────────────────────────────────────────────────────────┘
 </pre>
 <p>The command layer is syntactic sugar. The Scheme layer is substrate. Users start with English, graduate to Scheme when they need composition. No mode switching—parens are the only delimiter.</p>
@@ -269,37 +287,37 @@ $ cyberspace execute proposal-42
 ┌──────────────────────────────────────────────────────────────────┐
 │                        CYBERSPACE                                │
 ├──────────────────────────────────────────────────────────────────┤
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
-│  │   Vault    │  │   Audit    │  │   SPKI     │  │  Library   │ │
-│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘ │
-│        └───────────────┴───────┬───────┴───────────────┘        │
-│                    ┌───────────▼───────────┐                    │
-│                    │    Chicken Scheme     │                    │
-│                    │    (Policy Layer)     │                    │
-│                    └───────────┬───────────┘                    │
-│                    ┌───────────▼───────────┐                    │
-│                    │    OCaml TCB          │                    │
-│                    │    (Crypto Only)      │                    │
-│                    └───────────┬───────────┘                    │
-│                    ┌───────────▼───────────┐                    │
-│                    │    libsodium          │                    │
-│                    └───────────────────────┘                    │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐  │
+│  │   Vault    │  │   Audit    │  │   SPKI     │  │  Library   │  │
+│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  │
+│        └───────────────┴───────┬───────┴───────────────┘         │
+│                    ┌───────────▼───────────┐                     │
+│                    │    Chicken Scheme     │                     │
+│                    │    (Policy Layer)     │                     │
+│                    └───────────┬───────────┘                     │
+│                    ┌───────────▼───────────┐                     │
+│                    │    OCaml TCB          │                     │
+│                    │    (Crypto Only)      │                     │
+│                    └───────────┬───────────┘                     │
+│                    ┌───────────▼───────────┐                     │
+│                    │    libsodium          │                     │
+│                    └───────────────────────┘                     │
 └──────────────────────────────────────────────────────────────────┘
 </pre>
 <h3>4.2 No Central Authority</h3>
 <pre class="diagram">
-     Alice                    Bob                     Carol
-       │                       │                        │
-       │    ┌─────────────┐    │    ┌─────────────┐    │
-       └───►│ Alice's     │◄───┴───►│ Bob's       │◄───┘
-            │ Namespace   │         │ Namespace   │
-            │             │         │             │
-            │ bob → key   │         │ alice → key │
-            │ carol → key │         │ carol → key │
-            └─────────────┘         └─────────────┘
+      Alice                   Bob                   Carol
+        │                       │                       │
+        │    ┌─────────────┐    │    ┌─────────────┐    │
+        └───►│ Alice's     │◄───┴───►│ Bob's       │◄───┘
+             │ Namespace   │         │ Namespace   │     
+             │             │         │             │     
+             │ bob → key   │         │ alice → key │     
+             │ carol → key │         │ carol → key │     
+             └─────────────┘         └─────────────┘     
 
-         No DNS. No CA. No single point of failure.
-         Just keys and local names.
+          No DNS. No CA. No single point of failure.
+          Just keys and local names.
 </pre>
 <p>SPKI/SDSI gives you: - Local namespaces: "bob" means what you say it means - Authorization without identity: Grant permissions to keys, not people - Delegation chains: Alice → Bob → Carol, each step verified</p>
 </section>
@@ -332,7 +350,7 @@ $ cyberspace execute proposal-42
 ✓ SPKI Certs        ✓ Vault             ✓ Audit Trails
 ✓ Replication       ✓ Threshold Sigs    ✓ Shamir Sharing
 ✓ Library Directory ✓ Federation        ✓ Lamport Clocks
-✓ TLA+ Specs        ◐ Rocq Proofs        ✓ AEAD Encryption
+✓ TLA+ Specs        ✓ Rocq Proofs       ✓ AEAD Encryption
 ✓ QR Merkle Trees   ✓ FUSE Wormholes    ✓ PQ Signatures
 </pre>
 <p>Each traces to original research. Each runs. Each is tested.</p>
@@ -343,7 +361,7 @@ $ cyberspace execute proposal-42
 <p>You can't trust code that you did not totally create yourself. — Ken Thompson, Reflections on Trusting Trust</p>
 </blockquote>
 <h3>7.1 TCB Minimization</h3>
-<p>The attack surface is limited to ~3000 lines of OCaml calling libsodium and liboqs. This code is:</p>
+<p>The attack surface is limited to ~5800 lines (OCaml + C FFI + Rocq proofs) calling libsodium and liboqs. This code is:</p>
 <ul>
 <li>Formally specified</li>
 <li>Proven in Rocq</li>
@@ -401,8 +419,30 @@ cd cyberspace/spki/scheme
 </ul>
 </section>
 <section>
+<h2>Document Maintenance</h2>
+<p>This memo and Memo-0009 (Designer's Notes) are critical documentation that MUST be reverified on any change to:</p>
+<ul>
+<li>spki/tcb/ - The OCaml trusted computing base</li>
+<li>spki/tcb/coq/ - Rocq formal proofs</li>
+<li>spki/scheme/ - The Cyberspace Scheme policy layer</li>
+</ul>
+<p>The generate-memos.sh pipeline includes a reminder, but verification is a human responsibility. These documents describe what exists, not what is planned.</p>
+</section>
+<section>
 <h2>Changelog</h2>
 <ul>
+<li>2026-01-29 (4)</li>
+<li>Fix box-drawing alignment (verified: all lines 67 visual chars)</li>
+<li>2026-01-29 (3)</li>
+<li>Fix box-drawing alignment in TCB diagram (still broken)</li>
+<li>2026-01-29 (2)</li>
+<li>Update TCB diagram: PQ algorithms, Rocq proofs, line counts</li>
+<li>Rename "Chicken Scheme" to "Cyberspace Scheme" (our dialect)</li>
+<li>Add Q-Day transition note</li>
+<li>Add Document Maintenance section</li>
+<li>Mark Rocq Proofs complete (was ◐, now ✓)</li>
+<li>2026-01-29</li>
+<li>Add Design Methodology diagram (section 1.1)</li>
 <li>2026-01-24 (2)</li>
 <li>Add PQ Signatures to implementation status (pq-crypto.scm complete)</li>
 <li>Update future work: only mobile agents remain</li>

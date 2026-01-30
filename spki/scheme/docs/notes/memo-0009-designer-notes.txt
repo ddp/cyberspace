@@ -275,10 +275,18 @@ recognize the geography:
   * Near East: Turkish, Armenian
   * Mediterranean (George Cross island): Maltese
   * Detachment 101: Vietnamese, Thai, Lao, Korean
+  * Indic: Sanskrit (IAST transliteration), Devanāgarī
   * Literary: Sindarin (Tolkien's Elvish), Dante's Divina Commedia
 
 Word lists sourced from Hunspell, LibreOffice, SCOWL, OpenTaal, Eldamo,
-and the Princeton Dante Project. All diacriticals converted to UTF-8.
+the Princeton Dante Project, and the Cologne Digital Sanskrit Lexicon
+(Monier-Williams 1872). All diacriticals converted to UTF-8.
+
+Sanskrit uses IAST (International Alphabet of Sanskrit Transliteration)
+- the standard romanization that preserves the full phonetic
+distinctions of Devanāgarī through diacritics (ā, ī, ū, ṇ, ṃ,
+ś, ṣ, etc.). IAST is reversible: any IAST text can be converted back
+to Devanāgarī without ambiguity.
 
 Sindarin preserves Tolkien's circumflexes: Manwë, Aulë, Andúril.
 Dante's medieval Italian sits alongside. The OSS framing is itself an
@@ -306,8 +314,17 @@ exactly how many bits of randomness it contains.
     (forge 5)            ; five English words
     (forge 'sindarin)    ; one Elvish word
     (forge 'latin 3)     ; three Latin words
+    (forge 'bits 40)     ; one word with >= 40 bits entropy
+    (forge 'sanskrit 'bits 30 3) ; three Sanskrit words >= 30 bits
     (forge 'passphrase)  ; 4-word passphrase
     (forge 'german 'passphrase 6) ; 6-word German passphrase
+
+Sample output:
+
+
+    English:   duccombly (28.2 bits)   enswootic (32.3 bits)
+    Sindarin:  mirima (15.2 bits)      gor-aldoli (30.0 bits)
+    Sanskrit:  āsaṅkā (19.1 bits)      samānavyakarmakṣya (45.0 bits)
 
 Each word reports its entropy. Passphrases join words with hyphens. The
 forge is an easter egg - undocumented in help, discovered by schemers
@@ -336,21 +353,9 @@ actual cryptographic passwords, not toys.
 7.7 Audit Trail Heritage
 ------------------------
 
-The cryptographic audit trail (Memo-0005) descends from VMS
-SECURITY.AUDIT$JOURNAL and the cluster-wide security infrastructure of
-VMS 6.0 (1993). That system introduced:
-
-  * SECURITY_POLICY bit 7 propagation
-  * Intrusion detection state replicated cluster-wide
-  * Breakin attempts detected across all nodes as one
-  * TLV-encoded object store
-  * The [000000]SECURITY.SYS file in ODS5 stored SECURITYCLASS records
-
-The SECURITY_POLICY system parameter controlled C2/B1 security behavior:
-
-Bit 7 in VMS 6.0 was cluster-wide security state propagation. When set,
-breakin detection and intrusion state replicated across all cluster
-nodes so N nodes behaved as one security domain.
+The cryptographic audit trail (Memo-0005) descends from VMS's B1
+auditing subsystem and the cluster-wide security infrastructure of VMS
+6.0 (1993).
 
 The design principle then, as now: cluster nodes behave identically. N
 nodes, one security domain. Every significant action audited, every
@@ -661,16 +666,17 @@ Release ships when:
 DEC was a family. This was merely one specialty.
 
 The Security Project Team was Derrell Piper, Mark Pilant, Andy
-Goldstein. TCSEC C2/B1 certification on VAX/VMS and Alpha VMS. VMS 6.0.
+Goldstein, CJ Coppersmith (MITRE evaluation liaison), Linda Benson (DEC
+corporate program manager for secure systems evaluations). TCSEC C2/B1
+certification on VAX/VMS and Alpha VMS. VMS 6.0. VAX/SVS (VMM) was still
+under development and under evaluation at A1.
 
 What we built:
 
-  * $CHKPRO - the privilege checking gate, the single point where all privilege decisions were made
-  * $CHECK_USER_PROTECTION[W] - user protection checking
-  * $IMPERSONATE[W] - impersonation framework (with Rich Bouchard)
-  * $AUDIT_EVENT[W] - the entire auditing subsystem (final form)
-  * SYS$SUBSYSTEM - Protected Subsystem system service
-  * C2/B1 certified security model (Orange Book compliance, proven secure)
+  * $AUDIT_EVENT[W] — write audit events
+  * $CHECK_PRIVILEGE — check caller's privilege mask
+  * $CHKPRO — check protection (access control evaluation)
+  * $CHECK_ACCESS — evaluate access rights
 
 The original $IMPERSONATION framework was authored by myself with Rich
 Bouchard. It was lost during the Mitnick incidents when Andy Goldstein
@@ -1250,6 +1256,9 @@ The Little Schemer finally gets to write Scheme.
 ------------------------------------------------------------------------
 CHANGELOG
 ------------------------------------------------------------------------
+
+- 2026-01-29 — Simplified Audit Trail Heritage (7.7), consolidated
+security services in 11.1
 
 - 2026-01-28 — Added IETF Security Protocols (section 11.6):
 draft-ietf-ipsec-isakmp-gss-auth, GSS-API/Kerberos for NT5
