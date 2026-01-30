@@ -172,6 +172,190 @@
 
       (else '()))))  ; Unknown box char - skip
 
+;;; ============================================================
+;;; Box-Drawing to PostScript Conversion
+;;; ============================================================
+;;; PostScript is a graphics language - draw boxes as paths, not glyphs.
+;;; This mirrors codepoint->svg but emits PostScript path commands.
+
+;; PostScript cell dimensions (in points, 72 points = 1 inch)
+;; Courier 10pt: ~6pt wide, 10pt high with 2pt leading = 12pt cell
+(define ps-cell-width 6)
+(define ps-cell-height 12)
+(define ps-overlap 0.5)
+
+(define (string-is-hrule? str)
+  "Check if string is a horizontal rule (all dashes, equals, or underscores)."
+  (and (> (string-length str) 3)
+       (string-every (lambda (c) (or (char=? c #\-) (char=? c #\=) (char=? c #\_))) str)))
+
+(define (ps-emit-hrule len)
+  "Emit PostScript for a horizontal rule of given character length."
+  (let ((width (* len ps-cell-width)))
+    (format "newpath margin ypos moveto margin ~a add ypos lineto stroke\n" width)))
+
+(define (codepoint->ps cp cx cy)
+  "Convert a box-drawing codepoint to PostScript path commands.
+   cx, cy are center coordinates of the cell in points.
+   Returns a string of PostScript commands."
+  (let ((hw (/ ps-cell-width 2))
+        (hh (/ ps-cell-height 2)))
+    (cond
+      ;; Horizontal lines: ─ (2500), ═ (2550)
+      ((or (= cp #x2500) (= cp #x2550))
+       (format "newpath ~a ~a moveto ~a ~a lineto stroke\n"
+               (- cx hw) cy (+ cx hw) cy))
+
+      ;; Vertical lines: │ (2502), ║ (2551)
+      ((or (= cp #x2502) (= cp #x2551))
+       (format "newpath ~a ~a moveto ~a ~a lineto stroke\n"
+               cx (- cy hh ps-overlap) cx (+ cy hh ps-overlap)))
+
+      ;; Top-left corners: ┌ (250C), ╭ (256D), ╔ (2554)
+      ((or (= cp #x250C) (= cp #x256D) (= cp #x2554))
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx cy (+ cx hw) cy)
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx cy cx (- cy hh ps-overlap))))
+
+      ;; Top-right corners: ┐ (2510), ╮ (256E), ╗ (2557)
+      ((or (= cp #x2510) (= cp #x256E) (= cp #x2557))
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" (- cx hw) cy cx cy)
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx cy cx (- cy hh ps-overlap))))
+
+      ;; Bottom-left corners: └ (2514), ╰ (2570), ╚ (255A)
+      ((or (= cp #x2514) (= cp #x2570) (= cp #x255A))
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx cy (+ cx hw) cy)
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx (+ cy hh ps-overlap) cx cy)))
+
+      ;; Bottom-right corners: ┘ (2518), ╯ (256F), ╝ (255D)
+      ((or (= cp #x2518) (= cp #x256F) (= cp #x255D))
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" (- cx hw) cy cx cy)
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx (+ cy hh ps-overlap) cx cy)))
+
+      ;; T-junctions: ├ (251C)
+      ((= cp #x251C)
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx (- cy hh ps-overlap) cx (+ cy hh ps-overlap))
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx cy (+ cx hw) cy)))
+
+      ;; ┤ (2524)
+      ((= cp #x2524)
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx (- cy hh ps-overlap) cx (+ cy hh ps-overlap))
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" (- cx hw) cy cx cy)))
+
+      ;; ┬ (252C)
+      ((= cp #x252C)
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" (- cx hw) cy (+ cx hw) cy)
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx cy cx (- cy hh ps-overlap))))
+
+      ;; ┴ (2534)
+      ((= cp #x2534)
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" (- cx hw) cy (+ cx hw) cy)
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx (+ cy hh ps-overlap) cx cy)))
+
+      ;; Cross: ┼ (253C)
+      ((= cp #x253C)
+       (string-append
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" (- cx hw) cy (+ cx hw) cy)
+        (format "newpath ~a ~a moveto ~a ~a lineto stroke\n" cx (- cy hh ps-overlap) cx (+ cy hh ps-overlap))))
+
+      ;; Arrows - draw as simple shapes
+      ((or (= cp #x2192) (= cp #x25BA) (= cp #x25B6))  ; → ► ▶
+       (format "newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto closepath fill\n"
+               (- cx hw) (+ cy 2) (+ cx hw) cy (- cx hw) (- cy 2)))
+      ((or (= cp #x2190) (= cp #x25C0))  ; ← ◀
+       (format "newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto closepath fill\n"
+               (+ cx hw) (+ cy 2) (- cx hw) cy (+ cx hw) (- cy 2)))
+      ((or (= cp #x2191) (= cp #x25B2))  ; ↑ ▲
+       (format "newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto closepath fill\n"
+               (- cx 2) (- cy hh) cx (+ cy hh) (+ cx 2) (- cy hh)))
+      ((or (= cp #x2193) (= cp #x25BC))  ; ↓ ▼
+       (format "newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto closepath fill\n"
+               (- cx 2) (+ cy hh) cx (- cy hh) (+ cx 2) (+ cy hh)))
+
+      ;; Block elements - filled rectangles
+      ((= cp #x2588)  ; █ full block
+       (format "newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto ~a ~a lineto closepath fill\n"
+               (- cx hw) (- cy hh) (+ cx hw) (- cy hh) (+ cx hw) (+ cy hh) (- cx hw) (+ cy hh)))
+
+      ;; Shade characters - gray fill
+      ((= cp #x2591)  ; ░ light
+       (format "0.75 setgray newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto ~a ~a lineto closepath fill 0 setgray\n"
+               (- cx hw) (- cy hh) (+ cx hw) (- cy hh) (+ cx hw) (+ cy hh) (- cx hw) (+ cy hh)))
+      ((= cp #x2592)  ; ▒ medium
+       (format "0.5 setgray newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto ~a ~a lineto closepath fill 0 setgray\n"
+               (- cx hw) (- cy hh) (+ cx hw) (- cy hh) (+ cx hw) (+ cy hh) (- cx hw) (+ cy hh)))
+      ((= cp #x2593)  ; ▓ dark
+       (format "0.25 setgray newpath ~a ~a moveto ~a ~a lineto ~a ~a lineto ~a ~a lineto closepath fill 0 setgray\n"
+               (- cx hw) (- cy hh) (+ cx hw) (- cy hh) (+ cx hw) (+ cy hh) (- cx hw) (+ cy hh)))
+
+      (else ""))))  ; Unknown - skip
+
+(define (ps-escape-ascii str)
+  "Escape PostScript special chars and strip non-ASCII for safe embedding."
+  (let ((out (open-output-string)))
+    (string-for-each
+     (lambda (c)
+       (let ((code (char->integer c)))
+         (cond
+           ((= code #x28) (display "\\(" out))   ; (
+           ((= code #x29) (display "\\)" out))   ; )
+           ((= code #x5c) (display "\\\\" out))  ; \
+           ((< code 128) (display c out))        ; ASCII
+           (else #f))))                          ; Skip non-ASCII
+     str)
+    (get-output-string out)))
+
+(define (text->ps-diagram text base-x base-y)
+  "Convert text block with box-drawing to PostScript.
+   base-x, base-y are the top-left corner position.
+   Returns PostScript commands as a string."
+  (let* ((lines (string-split text "\n"))
+         (out (open-output-string)))
+    ;; Process each line
+    (let row-loop ((lines lines) (row 0))
+      (when (pair? lines)
+        (let* ((line (car lines))
+               (chars (utf8-chars line))
+               (cy (- base-y (* row ps-cell-height) (/ ps-cell-height 2))))
+          ;; Process characters, grouping text runs
+          (let col-loop ((chars chars) (col 0) (text-run '()) (run-start 0))
+            (define (flush-text-run)
+              (when (pair? text-run)
+                (let* ((text-str (apply string-append (reverse text-run)))
+                       (escaped (ps-escape-ascii text-str))
+                       (start-x (+ base-x (* run-start ps-cell-width))))
+                  (display (format "~a ~a moveto (~a) show\n" start-x cy escaped) out))))
+            (if (null? chars)
+                (flush-text-run)
+                (let* ((char-pair (car chars))
+                       (cp (car char-pair))
+                       (char-str (cdr char-pair))
+                       (cx (+ base-x (* col ps-cell-width) (/ ps-cell-width 2))))
+                  (cond
+                    ;; Box-drawing character
+                    ((box-drawing-codepoint? cp)
+                     (flush-text-run)
+                     (display (codepoint->ps cp cx cy) out)
+                     (col-loop (cdr chars) (+ col 1) '() (+ col 1)))
+                    ;; Space - flush and skip
+                    ((= cp 32)
+                     (flush-text-run)
+                     (col-loop (cdr chars) (+ col 1) '() (+ col 1)))
+                    ;; Regular character - accumulate
+                    (else
+                     (col-loop (cdr chars) (+ col 1)
+                               (cons char-str text-run)
+                               (if (null? text-run) col run-start))))))))
+        (row-loop (cdr lines) (+ row 1))))
+    (get-output-string out)))
+
 (define (utf8-length str)
   "Count Unicode characters in UTF-8 string."
   (length (utf8-chars str)))
@@ -1117,7 +1301,8 @@
     (get-output-string out)))
 
 (define (memo->ps doc filename)
-  "Convert Memo S-expression to PostScript directly (no external tools)."
+  "Convert Memo S-expression to PostScript directly (no external tools).
+   Box-drawing characters are rendered as PostScript paths, not font glyphs."
   (let ((txt-file (string-append (pathname-strip-extension filename) ".txt")))
     (when (file-exists? txt-file)
       (call-with-output-file filename
@@ -1142,35 +1327,333 @@
           (display "/ypos topmargin def\n" out)
           (display "/pagenum 1 def\n\n" out)
 
-          ;; Newline procedure
+          ;; Phosphor theme colors (matches HTML dark theme)
+          (display "/phosphor { 0.2 1 0.2 setrgbcolor } def\n" out)  ; #33ff33
+          (display "/darkbg { 0 0 0 setrgbcolor } def\n" out)        ; black
+
+          ;; Prahar colors for memo-0009 table
+          (display "/violet { 0.518 0.369 0.761 setrgbcolor } def\n" out)   ; #845EC2
+          (display "/gold { 1 0.843 0 setrgbcolor } def\n" out)             ; #ffd700
+          (display "/teal { 0 0.831 0.667 setrgbcolor } def\n" out)         ; #00d4aa
+          (display "/phosphor-color { 0 1 0 setrgbcolor } def\n" out)       ; #00ff00
+          (display "/neon { 0.224 1 0.078 setrgbcolor } def\n" out)         ; #39ff14
+          (display "/orange { 1 0.4 0 setrgbcolor } def\n" out)             ; #ff6600
+          (display "/coral { 1 0.2 0.4 setrgbcolor } def\n" out)            ; #ff3366
+          (display "/cyan { 0 1 1 setrgbcolor } def\n" out)                 ; #00ffff
+
+          ;; Fill page with dark background
+          (display "/fillpage {\n" out)
+          (display "  gsave darkbg\n" out)
+          (display "  0 0 pagewidth pageheight rectfill\n" out)
+          (display "  grestore phosphor\n" out)
+          (display "} def\n\n" out)
+
+          ;; Line-drawing setup for box characters
+          (display "0.5 setlinewidth\n" out)
+          (display "1 setlinecap\n" out)   ; round caps
+          (display "1 setlinejoin\n" out)  ; round joins
+
+          ;; Newline procedure - advances y position, handles page breaks
           (display "/newline {\n" out)
           (display "  /ypos ypos leading sub def\n" out)
           (display "  ypos bottommargin lt {\n" out)
           (display "    showpage\n" out)
+          (display "    fillpage\n" out)   ; dark background on new page
           (display "    /pagenum pagenum 1 add def\n" out)
           (display "    /ypos topmargin def\n" out)
           (display "  } if\n" out)
           (display "  margin ypos moveto\n" out)
           (display "} def\n\n" out)
 
-          ;; Start first page
+          ;; Start first page with dark background
+          (display "fillpage\n" out)
           (display "margin topmargin moveto\n" out)
 
           ;; Read text file and emit lines
+          ;; Lines with box-drawing get special treatment
           (call-with-input-file txt-file
             (lambda (in)
               (let loop ((line (read-line in)))
                 (unless (eof-object? line)
-                  (display "(" out)
-                  (display (ps-escape line) out)
-                  (display ") show newline\n" out)
+                  (cond
+                    ;; Horizontal rule (all dashes or equals) - draw as line
+                    ((string-is-hrule? line)
+                     (display (ps-emit-hrule (string-length line)) out)
+                     (display "newline\n" out))
+                    ;; Box-drawing line: render as PS paths
+                    ((string-has-box-chars? line)
+                     (display "gsave\n" out)
+                     (display (ps-emit-mixed-line line) out)
+                     (display "grestore\n" out)
+                     (display "newline\n" out))
+                    ;; Regular line: check for prahar colors
+                    (else
+                     (display (ps-emit-line-with-colors line) out)))
                   (loop (read-line in))))))
 
           ;; Footer
           (display "\nshowpage\n" out)
           (display "%%Trailer\n" out)
-          (display "%%Pages: pagenum\n" out)
-          (display "%%EOF\n" out))))))
+          (display "%%Pages: " out)
+          (display "pagenum" out)  ; This is a PS variable, printed at runtime
+          (display "\n%%EOF\n" out))))))
+
+(define (unicode->ascii-fallback cp)
+  "Return ASCII fallback for Unicode codepoint, or #f if none."
+  (case cp
+    ;; Vowels with macron (long)
+    ((#x0101 #x0100) "a")  ; ā Ā
+    ((#x012B #x012A) "i")  ; ī Ī
+    ((#x016B #x016A) "u")  ; ū Ū
+    ((#x0113 #x0112) "e")  ; ē Ē
+    ((#x014D #x014C) "o")  ; ō Ō
+    ;; Vowels with dot below
+    ((#x1E5B #x1E5A) "r")  ; ṛ Ṛ
+    ((#x1E37 #x1E36) "l")  ; ḷ Ḷ
+    ;; Consonants with underdot
+    ((#x1E6D #x1E6C) "t")  ; ṭ Ṭ
+    ((#x1E0D #x1E0C) "d")  ; ḍ Ḍ
+    ((#x1E47 #x1E46) "n")  ; ṇ Ṇ
+    ((#x1E63 #x1E62) "s")  ; ṣ Ṣ
+    ((#x1E25 #x1E24) "h")  ; ḥ Ḥ
+    ;; Nasals
+    ((#x1E43 #x1E42) "m")  ; ṃ Ṃ
+    ((#x00F1 #x00D1) "n")  ; ñ Ñ
+    ((#x1E45 #x1E44) "n")  ; ṅ Ṅ
+    ;; Sibilants
+    ((#x015B #x015A) "s")  ; ś Ś
+    ;; Common punctuation
+    ((#x2014) "--")        ; em dash
+    ((#x2013) "-")         ; en dash
+    ((#x2018 #x2019) "'")  ; curly quotes
+    ((#x201C #x201D) "\"") ; curly double quotes
+    ;; Devanagari - skip entirely (return empty string)
+    (else
+     (if (and (>= cp #x0900) (<= cp #x097F))
+         ""   ; Devanagari block - omit
+         #f))))
+
+(define (ps-escape-safe str)
+  "Escape PostScript special chars, converting non-ASCII to safe representation."
+  (let ((out (open-output-string)))
+    (for-each
+     (lambda (cp-pair)
+       (let ((cp (car cp-pair))
+             (s (cdr cp-pair)))
+         (cond
+           ((= cp #x28) (display "\\(" out))   ; (
+           ((= cp #x29) (display "\\)" out))   ; )
+           ((= cp #x5c) (display "\\\\" out))  ; \
+           ((< cp 128) (display s out))        ; ASCII
+           ;; IAST/Latin Extended diacritics - degrade gracefully
+           ((unicode->ascii-fallback cp) => (lambda (x) (display x out)))
+           ;; Other non-ASCII < 256: try octal
+           ((< cp 256) (display (format "\\~o" cp) out))
+           ;; Unknown extended Unicode - skip
+           (else #f))))
+     (utf8-chars str))
+    (get-output-string out)))
+
+;; Prahar color words and their PS procedure names
+(define prahar-colors
+  '(("violet" . "violet")
+    ("gold" . "gold")
+    ("teal" . "teal")
+    ("phosphor" . "phosphor-color")
+    ("neon" . "neon")
+    ("orange" . "orange")
+    ("coral" . "coral")
+    ("cyan" . "cyan")))
+
+(define (prahar-color-for word)
+  "Return PS color procedure name if word is a prahar color, #f otherwise."
+  (let ((entry (assoc word prahar-colors)))
+    (and entry (cdr entry))))
+
+(define (ps-emit-line-with-colors line)
+  "Emit PostScript for a line, colorizing prahar color words.
+   Returns PS code that shows text with color switches for prahar words."
+  (let ((words (string-split line))
+        (out (open-output-string)))
+    (let loop ((words words) (first #t))
+      (if (null? words)
+          (begin
+            (display " newline\n" out)
+            (get-output-string out))
+          (let* ((word (car words))
+                 (color (prahar-color-for word))
+                 (escaped (ps-escape-safe word)))
+            ;; Add space between words (except first)
+            (unless first
+              (display "( ) show " out))
+            (if color
+                ;; Prahar color word - colorize it
+                (display (format "~a (~a) show phosphor " color escaped) out)
+                ;; Regular word
+                (display (format "(~a) show " escaped) out))
+            (loop (cdr words) #f))))))
+
+(define (ps-emit-mixed-line line)
+  "Emit PostScript for a line with mixed text and box-drawing.
+   Uses current margin and ypos variables from the PS environment."
+  (let ((out (open-output-string))
+        (chars (utf8-chars line)))
+    ;; Walk chars, accumulating text runs and emitting box primitives
+    (let loop ((chars chars) (col 0) (text-run '()) (run-start 0))
+      (define (flush-text)
+        (when (pair? text-run)
+          (let* ((text-str (apply string-append (reverse text-run)))
+                 (x-offset (* run-start ps-cell-width))
+                 (color (prahar-color-for text-str))
+                 (escaped (ps-escape-safe text-str)))
+            (display (format "margin ~a add ypos moveto " x-offset) out)
+            (if color
+                ;; Prahar color word - colorize it
+                (display (format "~a (~a) show phosphor\n" color escaped) out)
+                ;; Regular text
+                (display (format "(~a) show\n" escaped) out)))))
+      (if (null? chars)
+          (begin (flush-text) (get-output-string out))
+          (let* ((cp-pair (car chars))
+                 (cp (car cp-pair))
+                 (s (cdr cp-pair)))
+            (cond
+              ;; Box-drawing character
+              ((box-drawing-codepoint? cp)
+               (flush-text)
+               (let* ((cx (+ (* col ps-cell-width) (/ ps-cell-width 2)))
+                      (cy 0))  ; relative to ypos
+                 ;; Emit PS that uses margin and ypos
+                 (display (format "% box char ~x at col ~a\n" cp col) out)
+                 (display (ps-emit-box-at-ypos cp col) out))
+               (loop (cdr chars) (+ col 1) '() (+ col 1)))
+              ;; Space
+              ((= cp 32)
+               (flush-text)
+               (loop (cdr chars) (+ col 1) '() (+ col 1)))
+              ;; Regular character
+              (else
+               (loop (cdr chars) (+ col 1)
+                     (cons s text-run)
+                     (if (null? text-run) col run-start)))))))))
+
+(define (ps-emit-box-at-ypos cp col)
+  "Emit PostScript for a box-drawing char using margin/ypos PS variables.
+   Returns PS code that references margin and ypos at runtime."
+  (let* ((cx-offset (+ (* col ps-cell-width) (/ ps-cell-width 2)))
+         (hw (/ ps-cell-width 2))
+         (hh (/ ps-cell-height 2)))
+    (cond
+      ;; Horizontal line: ─
+      ((or (= cp #x2500) (= cp #x2550))
+       (format "newpath margin ~a add ~a sub ypos moveto margin ~a add ~a add ypos lineto stroke\n"
+               cx-offset hw cx-offset hw))
+
+      ;; Vertical line: │
+      ((or (= cp #x2502) (= cp #x2551))
+       (format "newpath margin ~a add ypos ~a sub moveto margin ~a add ypos ~a add lineto stroke\n"
+               cx-offset hh cx-offset hh))
+
+      ;; Top-left corner: ┌
+      ((or (= cp #x250C) (= cp #x256D) (= cp #x2554))
+       (string-append
+        (format "newpath margin ~a add ypos moveto margin ~a add ~a add ypos lineto stroke\n"
+                cx-offset cx-offset hw)
+        (format "newpath margin ~a add ypos moveto margin ~a add ypos ~a sub lineto stroke\n"
+                cx-offset cx-offset hh)))
+
+      ;; Top-right corner: ┐
+      ((or (= cp #x2510) (= cp #x256E) (= cp #x2557))
+       (string-append
+        (format "newpath margin ~a add ~a sub ypos moveto margin ~a add ypos lineto stroke\n"
+                cx-offset hw cx-offset)
+        (format "newpath margin ~a add ypos moveto margin ~a add ypos ~a sub lineto stroke\n"
+                cx-offset cx-offset hh)))
+
+      ;; Bottom-left corner: └
+      ((or (= cp #x2514) (= cp #x2570) (= cp #x255A))
+       (string-append
+        (format "newpath margin ~a add ypos moveto margin ~a add ~a add ypos lineto stroke\n"
+                cx-offset cx-offset hw)
+        (format "newpath margin ~a add ypos ~a add moveto margin ~a add ypos lineto stroke\n"
+                cx-offset hh cx-offset)))
+
+      ;; Bottom-right corner: ┘
+      ((or (= cp #x2518) (= cp #x256F) (= cp #x255D))
+       (string-append
+        (format "newpath margin ~a add ~a sub ypos moveto margin ~a add ypos lineto stroke\n"
+                cx-offset hw cx-offset)
+        (format "newpath margin ~a add ypos ~a add moveto margin ~a add ypos lineto stroke\n"
+                cx-offset hh cx-offset)))
+
+      ;; T-junctions: ├
+      ((= cp #x251C)
+       (string-append
+        (format "newpath margin ~a add ypos ~a sub moveto margin ~a add ypos ~a add lineto stroke\n"
+                cx-offset hh cx-offset hh)
+        (format "newpath margin ~a add ypos moveto margin ~a add ~a add ypos lineto stroke\n"
+                cx-offset cx-offset hw)))
+
+      ;; ┤
+      ((= cp #x2524)
+       (string-append
+        (format "newpath margin ~a add ypos ~a sub moveto margin ~a add ypos ~a add lineto stroke\n"
+                cx-offset hh cx-offset hh)
+        (format "newpath margin ~a add ~a sub ypos moveto margin ~a add ypos lineto stroke\n"
+                cx-offset hw cx-offset)))
+
+      ;; ┬
+      ((= cp #x252C)
+       (string-append
+        (format "newpath margin ~a add ~a sub ypos moveto margin ~a add ~a add ypos lineto stroke\n"
+                cx-offset hw cx-offset hw)
+        (format "newpath margin ~a add ypos moveto margin ~a add ypos ~a sub lineto stroke\n"
+                cx-offset cx-offset hh)))
+
+      ;; ┴
+      ((= cp #x2534)
+       (string-append
+        (format "newpath margin ~a add ~a sub ypos moveto margin ~a add ~a add ypos lineto stroke\n"
+                cx-offset hw cx-offset hw)
+        (format "newpath margin ~a add ypos ~a add moveto margin ~a add ypos lineto stroke\n"
+                cx-offset hh cx-offset)))
+
+      ;; Cross: ┼
+      ((= cp #x253C)
+       (string-append
+        (format "newpath margin ~a add ~a sub ypos moveto margin ~a add ~a add ypos lineto stroke\n"
+                cx-offset hw cx-offset hw)
+        (format "newpath margin ~a add ypos ~a sub moveto margin ~a add ypos ~a add lineto stroke\n"
+                cx-offset hh cx-offset hh)))
+
+      ;; Arrows - simple triangles
+      ((or (= cp #x2192) (= cp #x25BA) (= cp #x25B6))  ; →
+       (format "newpath margin ~a add ~a sub ypos 2 add moveto margin ~a add ~a add ypos lineto margin ~a add ~a sub ypos 2 sub lineto closepath fill\n"
+               cx-offset hw cx-offset hw cx-offset hw))
+
+      ((or (= cp #x2190) (= cp #x25C0))  ; ←
+       (format "newpath margin ~a add ~a add ypos 2 add moveto margin ~a add ~a sub ypos lineto margin ~a add ~a add ypos 2 sub lineto closepath fill\n"
+               cx-offset hw cx-offset hw cx-offset hw))
+
+      ((or (= cp #x2191) (= cp #x25B2))  ; ↑
+       (format "newpath margin ~a add 2 sub ypos ~a sub moveto margin ~a add ypos ~a add lineto margin ~a add 2 add ypos ~a sub lineto closepath fill\n"
+               cx-offset hh cx-offset hh cx-offset hh))
+
+      ((or (= cp #x2193) (= cp #x25BC))  ; ↓
+       (format "newpath margin ~a add 2 sub ypos ~a add moveto margin ~a add ypos ~a sub lineto margin ~a add 2 add ypos ~a add lineto closepath fill\n"
+               cx-offset hh cx-offset hh cx-offset hh))
+
+      ;; ▼ pointing down (used in diagrams)
+      ((= cp #x25BC)
+       (format "newpath margin ~a add 2 sub ypos ~a add moveto margin ~a add ypos ~a sub lineto margin ~a add 2 add ypos ~a add lineto closepath fill\n"
+               cx-offset hh cx-offset hh cx-offset hh))
+
+      ;; ▲ pointing up
+      ((= cp #x25B2)
+       (format "newpath margin ~a add 2 sub ypos ~a sub moveto margin ~a add ypos ~a add lineto margin ~a add 2 add ypos ~a sub lineto closepath fill\n"
+               cx-offset hh cx-offset hh cx-offset hh))
+
+      (else ""))))
 
 ;;; ============================================================
 ;;; PDF Output (via Ghostscript)
@@ -1400,6 +1883,322 @@
           ;; Footer
           (when footer
             (latex-emit-element footer port))
+
+          ;; End document
+          (display "\\end{document}\n" port))))))
+
+;;; ============================================================
+;;; XeLaTeX Output (Unicode-aware PDF generation)
+;;; ============================================================
+;;; Uses fontspec for proper Unicode rendering including
+;;; Devanagari, IAST diacritics, Myanmar/Burmese, Pali, etc.
+
+;; Script detection for font switching
+(define (codepoint-script cp)
+  "Return script name for a codepoint, or #f for Latin/common."
+  (cond
+    ;; Devanagari
+    ((<= #x0900 cp #x097F) 'devanagari)
+    ;; Myanmar (Burmese)
+    ((<= #x1000 cp #x109F) 'myanmar)
+    ;; Thai
+    ((<= #x0E00 cp #x0E7F) 'thai)
+    ;; Tibetan
+    ((<= #x0F00 cp #x0FFF) 'tibetan)
+    ;; Bengali
+    ((<= #x0980 cp #x09FF) 'bengali)
+    ;; Tamil
+    ((<= #x0B80 cp #x0BFF) 'tamil)
+    ;; Sinhala
+    ((<= #x0D80 cp #x0DFF) 'sinhala)
+    ;; CJK
+    ((<= #x4E00 cp #x9FFF) 'cjk)
+    ((<= #x3400 cp #x4DBF) 'cjk)
+    ;; Greek
+    ((<= #x0370 cp #x03FF) 'greek)
+    ;; Cyrillic
+    ((<= #x0400 cp #x04FF) 'cyrillic)
+    (else #f)))
+
+(define (string-has-script? str script)
+  "Check if string contains characters from given script."
+  (any (lambda (cp-pair)
+         (eq? (codepoint-script (car cp-pair)) script))
+       (utf8-chars str)))
+
+(define (xelatex-wrap-scripts str)
+  "Wrap script blocks with appropriate font commands."
+  (let ((chars (utf8-chars str))
+        (out (open-output-string)))
+    (let loop ((chars chars) (current-script #f) (run '()))
+      (define (flush-run)
+        (when (pair? run)
+          (let ((text (apply string-append (reverse (map cdr run)))))
+            (case current-script
+              ((devanagari) (display (format "{\\devanagari ~a}" text) out))
+              ((myanmar)    (display (format "{\\myanmar ~a}" text) out))
+              ((thai)       (display (format "{\\thai ~a}" text) out))
+              ((tibetan)    (display (format "{\\tibetan ~a}" text) out))
+              ((bengali)    (display (format "{\\bengali ~a}" text) out))
+              ((tamil)      (display (format "{\\tamil ~a}" text) out))
+              ((sinhala)    (display (format "{\\sinhala ~a}" text) out))
+              ((cjk)        (display (format "{\\cjk ~a}" text) out))
+              ((greek)      (display (format "{\\greekfont ~a}" text) out))
+              ((cyrillic)   (display (format "{\\cyrillicfont ~a}" text) out))
+              (else         (display text out))))))
+      (if (null? chars)
+          (begin (flush-run) (get-output-string out))
+          (let* ((cp-pair (car chars))
+                 (cp (car cp-pair))
+                 (script (codepoint-script cp)))
+            (if (eq? script current-script)
+                ;; Same script - accumulate
+                (loop (cdr chars) current-script (cons cp-pair run))
+                ;; Script change - flush and start new run
+                (begin
+                  (flush-run)
+                  (loop (cdr chars) script (list cp-pair)))))))))
+
+(define (xelatex-escape str)
+  "Escape LaTeX special chars, preserving Unicode."
+  (let ((out (open-output-string)))
+    (string-for-each
+     (lambda (c)
+       (case c
+         ((#\\) (display "\\textbackslash{}" out))
+         ((#\{) (display "\\{" out))
+         ((#\}) (display "\\}" out))
+         ((#\$) (display "\\$" out))
+         ((#\&) (display "\\&" out))
+         ((#\%) (display "\\%" out))
+         ((#\#) (display "\\#" out))
+         ((#\_) (display "\\_" out))
+         ((#\^) (display "\\textasciicircum{}" out))
+         ((#\~) (display "\\textasciitilde{}" out))
+         (else (display c out))))
+     str)
+    (get-output-string out)))
+
+;; Prahar color names for XeLaTeX
+(define xelatex-prahar-colors
+  '("violet" "gold" "teal" "phosphor" "neon" "orange" "coral" "cyan"))
+
+(define (xelatex-colorize-cell text)
+  "Wrap prahar color name in \\textcolor{} if applicable."
+  (let ((escaped (xelatex-escape (->string text))))
+    (if (member (string-downcase (->string text)) xelatex-prahar-colors)
+        (let ((color (string-downcase (->string text))))
+          (format "\\textcolor{~a}{~a}" color escaped))
+        escaped)))
+
+(define (xelatex-emit-element elem port)
+  "Emit LaTeX for element with script-aware font switching."
+  (cond
+    ((string? elem)
+     (display (xelatex-wrap-scripts (xelatex-escape elem)) port)
+     (newline port)
+     (newline port))
+    ((not (pair? elem)) #f)
+    (else
+     (case (car elem)
+       ((p)
+        (for-each (lambda (e)
+                    (if (string? e)
+                        (display (xelatex-wrap-scripts (xelatex-escape e)) port)
+                        (xelatex-emit-element e port)))
+                  (cdr elem))
+        (newline port)
+        (newline port))
+
+       ((section)
+        (display "\\section{" port)
+        (display (xelatex-wrap-scripts (xelatex-escape (cadr elem))) port)
+        (display "}\n\n" port)
+        (for-each (lambda (e) (xelatex-emit-element e port)) (cddr elem)))
+
+       ((subsection)
+        (display "\\subsection{" port)
+        (display (xelatex-wrap-scripts (xelatex-escape (cadr elem))) port)
+        (display "}\n\n" port)
+        (for-each (lambda (e) (xelatex-emit-element e port)) (cddr elem)))
+
+       ((list)
+        (display "\\begin{itemize}\n" port)
+        (for-each (lambda (item)
+                    (cond
+                      ((and (pair? item) (eq? (car item) 'item))
+                       (display "  \\item " port)
+                       (for-each (lambda (e)
+                                   (if (string? e)
+                                       (display (xelatex-wrap-scripts (xelatex-escape e)) port)
+                                       (xelatex-emit-element e port)))
+                                 (cdr item))
+                       (newline port))
+                      (else (xelatex-emit-element item port))))
+                  (cdr elem))
+        (display "\\end{itemize}\n\n" port))
+
+       ((blockquote)
+        (display "\\begin{quote}\n" port)
+        (display (xelatex-wrap-scripts (xelatex-escape (cadr elem))) port)
+        (when (and (pair? (cddr elem)) (pair? (caddr elem)) (eq? (caaddr elem) 'cite))
+          (display "\n\\hfill---" port)
+          (display (xelatex-wrap-scripts (xelatex-escape (cadr (caddr elem)))) port))
+        (display "\n\\end{quote}\n\n" port))
+
+       ((code)
+        (let* ((has-lang (and (pair? (cdr elem)) (symbol? (cadr elem))))
+               (content (if has-lang (caddr elem) (cadr elem))))
+          (display "\\begin{verbatim}\n" port)
+          (display content port)
+          (display "\n\\end{verbatim}\n\n" port)))
+
+       ((table)
+        (let* ((has-compact (and (pair? (cdr elem)) (eq? (cadr elem) 'compact)))
+               (rows (filter (lambda (e) (and (pair? e) (memq (car e) '(row header))))
+                             (if has-compact (cddr elem) (cdr elem))))
+               (ncols (if (pair? rows) (length (cdr (car rows))) 3)))
+          (display (format "\\begin{tabular}{~a}\n" (make-string ncols #\l)) port)
+          (for-each (lambda (row)
+                      (display (string-join
+                                (map (lambda (c)
+                                       ;; Apply script wrapping, then check for prahar color
+                                       (let ((text (->string c)))
+                                         (if (member (string-downcase text) xelatex-prahar-colors)
+                                             (xelatex-colorize-cell text)
+                                             (xelatex-wrap-scripts (xelatex-escape text)))))
+                                     (cdr row))
+                                " & ") port)
+                      (display " \\\\\n" port))
+                    rows)
+          (display "\\end{tabular}\n\n" port)))
+
+       ((link)
+        (let ((url (cadr elem))
+              (text (if (> (length elem) 2) (caddr elem) (cadr elem))))
+          (display "\\href{" port)
+          (display url port)
+          (display "}{" port)
+          (display (xelatex-escape text) port)
+          (display "}" port)))
+
+       ((footer sig) #f)
+
+       (else
+        (for-each (lambda (e) (xelatex-emit-element e port)) (cdr elem)))))))
+
+(define (memo->xelatex doc filename)
+  "Convert Memo S-expression to XeLaTeX with full Unicode support."
+  (call-with-output-file filename
+    (lambda (port)
+      (let ((num (get-field doc 'number 0))
+            (title (get-field doc 'title "Untitled"))
+            (date (get-field doc 'date ""))
+            (author-info (assq 'author (cdr doc)))
+            (abstract (assq 'abstract (cdr doc)))
+            (sections (filter (lambda (e) (and (pair? e) (eq? (car e) 'section))) (cdr doc)))
+            (footer (assq 'footer (cdr doc))))
+
+        (let ((author-name (if author-info (cadr author-info) "Unknown"))
+              (author-email (if (and author-info (> (length author-info) 2))
+                                (caddr author-info)
+                                "")))
+
+          ;; XeLaTeX preamble
+          (display "\\documentclass[11pt,a4paper]{article}\n\n" port)
+
+          ;; Essential packages
+          (display "% XeLaTeX Unicode support\n" port)
+          (display "\\usepackage{fontspec}\n" port)
+          (display "\\usepackage{xunicode}\n" port)
+          (display "\\usepackage{xltxtra}\n" port)
+          (display "\\usepackage{polyglossia}\n" port)
+          (display "\\usepackage{hyperref}\n" port)
+          (display "\\usepackage{geometry}\n" port)
+          (display "\\usepackage{fancyvrb}\n" port)
+          (display "\\usepackage{xcolor}\n\n" port)
+
+          ;; Page geometry - match RFC style
+          (display "\\geometry{margin=1in}\n\n" port)
+
+          ;; Phosphor theme colors
+          (display "% Phosphor theme\n" port)
+          (display "\\definecolor{phosphor}{RGB}{51,255,51}\n" port)
+          (display "\\definecolor{darkbg}{RGB}{0,0,0}\n" port)
+          (display "\\pagecolor{darkbg}\n" port)
+          (display "\\color{phosphor}\n\n" port)
+
+          ;; Prahar colors (for time-of-day table)
+          (display "% Prahar colors\n" port)
+          (display "\\definecolor{violet}{RGB}{132,94,194}\n" port)
+          (display "\\definecolor{gold}{RGB}{255,215,0}\n" port)
+          (display "\\definecolor{teal}{RGB}{0,212,170}\n" port)
+          (display "\\definecolor{neon}{RGB}{57,255,20}\n" port)
+          (display "\\definecolor{orange}{RGB}{255,102,0}\n" port)
+          (display "\\definecolor{coral}{RGB}{255,51,102}\n" port)
+          (display "\\definecolor{cyan}{RGB}{0,255,255}\n\n" port)
+
+          ;; Main font - Helvetica Neue has Latin Extended Additional (IAST diacritics)
+          (display "% Fonts - Helvetica Neue for IAST diacritics (ḥ, ṃ, etc.)\n" port)
+          (display "\\setmainfont{Helvetica Neue}[Ligatures=TeX]\n" port)
+          (display "\\setmonofont{Menlo}\n\n" port)
+
+          ;; Script-specific fonts (macOS available)
+          (display "% Script-specific fonts\n" port)
+          (display "\\newfontfamily\\devanagari{Kohinoor Devanagari}\n" port)
+          (display "\\newfontfamily\\myanmar{Noto Serif Myanmar}\n" port)
+          (display "\\newfontfamily\\thai{Thonburi}\n" port)
+          (display "\\newfontfamily\\tibetan{Kailasa}\n" port)
+          (display "\\newfontfamily\\bengali{Kohinoor Bangla}\n" port)
+          (display "\\newfontfamily\\tamil{Kohinoor Tamil}\n" port)
+          (display "\\newfontfamily\\sinhala{Sinhala Sangam MN}\n" port)
+          (display "\\newfontfamily\\cjk{PingFang SC}\n" port)
+          (display "\\newfontfamily\\greekfont{Palatino}\n" port)
+          (display "\\newfontfamily\\cyrillicfont{Palatino}\n\n" port)
+
+          ;; Language setup
+          (display "\\setdefaultlanguage{english}\n\n" port)
+
+          ;; Hyperref setup
+          (display "\\hypersetup{\n" port)
+          (display (format "  pdftitle={Memo ~a: ~a},\n"
+                           (memo-number->string num) (xelatex-escape title)) port)
+          (display (format "  pdfauthor={~a},\n" (xelatex-escape author-name)) port)
+          (display "  colorlinks=true,\n" port)
+          (display "  linkcolor=phosphor,\n" port)
+          (display "  urlcolor=phosphor\n" port)
+          (display "}\n\n" port)
+
+          ;; Title setup
+          (display (format "\\title{Memo ~a: ~a}\n"
+                           (memo-number->string num)
+                           (xelatex-wrap-scripts (xelatex-escape title))) port)
+          (display (format "\\author{~a \\texttt{<~a>}}\n"
+                           (xelatex-escape author-name)
+                           (xelatex-escape author-email)) port)
+          (display (format "\\date{~a}\n\n" (xelatex-escape date)) port)
+
+          ;; Begin document
+          (display "\\begin{document}\n" port)
+          (display "\\maketitle\n\n" port)
+
+          ;; Abstract
+          (when abstract
+            (display "\\begin{abstract}\n" port)
+            (for-each (lambda (e)
+                        (when (and (pair? e) (eq? (car e) 'p))
+                          (for-each (lambda (x)
+                                      (if (string? x)
+                                          (display (xelatex-wrap-scripts (xelatex-escape x)) port)
+                                          (xelatex-emit-element x port)))
+                                    (cdr e))))
+                      (cdr abstract))
+            (display "\n\\end{abstract}\n\n" port))
+
+          ;; Sections
+          (for-each (lambda (section)
+                      (xelatex-emit-element section port))
+                    sections)
 
           ;; End document
           (display "\\end{document}\n" port))))))
