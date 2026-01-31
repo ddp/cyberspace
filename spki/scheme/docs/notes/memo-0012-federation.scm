@@ -187,7 +187,7 @@
       (p "The registry persists in `.vault/peers.scm` as a simple alist."))
     (subsection
       "Peer Lifecycle"
-      (code "┌─────────┐   register   ┌─────────┐   verify   ┌──────────┐   trust   ┌─────────┐\n│ unknown │────────────►│  known  │──────────►│ verified │─────────►│ trusted │\n└─────────┘             └─────────┘           └──────────┘          └─────────┘\n     ▲                       │                      │                    │\n     │                       │ expire               │ revoke             │ revoke\n     │                       ▼                      ▼                    ▼\n     └───────────────────────┴──────────────────────┴────────────────────┘")
+      (code "                    register        verify          trust\n          unknown ─────────► known ─────────► verified ─────────► trusted\n              ▲                 │                 │                   │\n              │    expire       │    revoke       │      revoke       │\n              └─────────────────┴─────────────────┴───────────────────┘"))
       (code scheme ";; Add peer (starts as 'known')\n(peer-register! \"alice\"\n  uri: \"git@github.com:alice/vault.git\"\n  pubkey: alice-ed25519-pubkey)\n\n;; Verify via SPKI cert chain\n(peer-verify! \"alice\" cert-chain)\n\n;; Promote to trusted (enables auto-sync)\n(peer-trust! \"alice\")\n\n;; Revoke (demotes to unknown, blocks sync)\n(peer-revoke! \"alice\")\n\n;; Remove entirely\n(peer-remove! \"alice\")"))
     (subsection
       "Peer Groups"
