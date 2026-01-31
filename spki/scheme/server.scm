@@ -190,7 +190,11 @@
       (display "\r\n" out)
       (flush-output out)
       ;; WebSocket message loop
-      (ws-loop in out))))
+      (ws-loop in out)
+      ;; Cleanup when WebSocket closes
+      (printf "[~a][ws] Connection closed~n" (timestamp))
+      (when (eq? *ws-out* out)
+        (set! *ws-out* #f)))))
 
 (define (ws-loop in out)
   ;; Simple WebSocket frame handling
